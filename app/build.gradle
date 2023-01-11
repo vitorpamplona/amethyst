@@ -1,0 +1,101 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.vitorpamplona.amethyst'
+    compileSdk 33
+
+    defaultConfig {
+        applicationId "com.vitorpamplona.amethyst"
+        minSdk 26
+        targetSdk 33
+        versionCode 1
+        versionName "0.1"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        vectorDrawables {
+            useSupportLibrary true
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+    kotlinOptions {
+        jvmTarget = '11'
+    }
+    buildFeatures {
+        compose true
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion '1.3.2'
+    }
+    packagingOptions {
+        resources {
+            excludes += '/META-INF/{AL2.0,LGPL2.1}'
+        }
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.9.0'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.5.1'
+    implementation 'androidx.activity:activity-compose:1.6.1'
+    implementation "androidx.compose.ui:ui:$compose_ui_version"
+    implementation "androidx.compose.ui:ui-tooling-preview:$compose_ui_version"
+    implementation 'androidx.compose.material:material:1.3.1'
+
+    // Navigation
+    implementation("androidx.navigation:navigation-compose:$nav_version")
+    implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.6.0-alpha03'
+    implementation 'androidx.compose.runtime:runtime-livedata:1.4.0-alpha03'
+
+    // Input
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.5.1'
+
+    // Swipe Refresh
+    implementation 'com.google.accompanist:accompanist-swiperefresh:0.24.13-rc'
+
+    // Load images from the web.
+    implementation "io.coil-kt:coil-compose:2.2.2"
+
+    // Bitcoin secp256k1 bindings to Android
+    implementation 'fr.acinq.secp256k1:secp256k1-kmp-jni-android:0.7.0'
+
+    // Nostr Base Protocol
+    implementation('com.github.vitorpamplona.NostrPostr:nostrpostrlib:master-SNAPSHOT') {
+        exclude group:'fr.acinq.secp256k1'
+        exclude module: 'guava'
+        exclude module: 'guava-testlib'
+    }
+
+    implementation 'com.squareup.retrofit2:converter-gson:2.8.1'
+    // Websockets API
+    implementation 'com.squareup.okhttp3:okhttp:4.10.0'
+
+    // Json Serialization
+    implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.14.1'
+
+    // Rendering clickable text
+    implementation "com.google.accompanist:accompanist-flowlayout:0.28.0"
+
+    // link preview
+    implementation 'tw.com.oneup.www:Baha-UrlPreview:1.0.1'
+    implementation 'androidx.security:security-crypto-ktx:1.1.0-alpha03'
+
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+    androidTestImplementation "androidx.compose.ui:ui-test-junit4:$compose_ui_version"
+    debugImplementation "androidx.compose.ui:ui-tooling:$compose_ui_version"
+    debugImplementation "androidx.compose.ui:ui-test-manifest:$compose_ui_version"
+}
