@@ -21,6 +21,25 @@ Amethyst brings the best social network to your Android phone. Just insert your 
 
 # Development Overview
 
+## Overall Architecture 
+
+This is a native Android app made with Kotlin and Jetpack Compose.
+The app uses a modified version of the [nostrpostrlib](https://github.com/Giszmo/NostrPostr/tree/master/nostrpostrlib) to talk to Nostr relays.
+The overall architecture consists in the UI, which uses the usual State/ViewModel/Composition, the service layer that connects with Nostr relays,
+and the model/repository layer, which keeps all Nostr objects in memory, in a full OO graph.
+
+The repository layer stores Nostr Events as Notes and Users separately. Those classes use LiveData objects to
+allow the UI and other parts of the app to subscribe to each individual Note/User and receive updates when they happen.
+They are also responsible for updating viewModels when needed. Filters react to changes in the screen. As the user
+sees different Events, the Datasource classes are used to receive more information about those particular Events.
+
+Most of the UI is reactive to changes in the repository classes. The service layer assembles Nostr filters for each need of the app,
+receives the data from the Relay, and sends it to the repository. Connection with relays is never closed during the use of the app.
+The UI receives a notification that objects were updated. Instances of User and Notes are mutable directly.
+There will never be two Notes with the same ID or two User instances with the same pubkey.
+
+Lastly, the user's account information (priv key/pub key) is stored in the Android KeyStore for security.
+
 ## Setup
 
 Make sure to have the following pre-requisites installed:
