@@ -6,18 +6,18 @@ Amethyst brings the best social network to your Android phone. Just insert your 
 
 # Current Features
 
-[x] Account Management
-[x] Home Feed
-[x] Notifications Feed
-[x] Global Feed
-[x] Reactions (like, boost, reply)
-[x] Image Preview
-[x] Url Preview
-[ ] View Threads
-[ ] Private Messages
-[ ] Communities
-[ ] Profile Edit
-[ ] Relay Edit
+- [x] Account Management
+- [x] Home Feed
+- [x] Notifications Feed
+- [x] Global Feed
+- [x] Reactions (like, boost, reply)
+- [x] Image Preview
+- [x] Url Preview
+- [ ] View Threads
+- [ ] Private Messages
+- [ ] Communities
+- [ ] Profile Edit
+- [ ] Relay Edit
 
 # Development Overview
 
