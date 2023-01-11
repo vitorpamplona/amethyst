@@ -49,9 +49,6 @@ jobs:
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
           keyPassword: ${{ secrets.KEY_PASSWORD }}
 
-      - name: Build WAR
-        run: ./gradlew stage --stacktrace --no-daemon
-
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -83,15 +80,4 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: app/build/outputs/bundle/release/app-release.aab
           asset_name: app-release-${{ github.ref_name }}.aab
-          asset_content_type: application/zip
-
-      - name: Upload WAR Asset
-        id: upload-release-asset-war
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path:  web/build/libs/web.war
-          asset_name: web-release-${{ github.ref_name }}.war
           asset_content_type: application/zip
