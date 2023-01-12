@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.R
@@ -38,7 +39,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import nostr.postr.events.TextNoteEvent
 
 @Composable
-fun LikeSetCompose(likeSetCard: LikeSetCard, modifier: Modifier = Modifier, isInnerNote: Boolean = false, accountViewModel: AccountViewModel) {
+fun LikeSetCompose(likeSetCard: LikeSetCard, modifier: Modifier = Modifier, isInnerNote: Boolean = false, accountViewModel: AccountViewModel, navController: NavController) {
     val noteState by likeSetCard.note.live.observeAsState()
     val note = noteState?.note
 
@@ -83,7 +84,7 @@ fun LikeSetCompose(likeSetCard: LikeSetCard, modifier: Modifier = Modifier, isIn
                         }
                     }
 
-                    NoteCompose(note, modifier = Modifier.padding(top = 5.dp), isInnerNote = true, accountViewModel = accountViewModel)
+                    NoteCompose(note, Modifier.padding(top = 5.dp), true, accountViewModel, navController)
                 }
             }
         }

@@ -5,7 +5,7 @@ import com.vitorpamplona.amethyst.model.Note
 import java.util.Collections
 import nostr.postr.JsonFilter
 
-object NostrSingleEventDataSource: NostrDataSource("SingleEventFeed") {
+object NostrThreadDataSource: NostrDataSource("SingleThreadFeed") {
   val eventsToWatch = Collections.synchronizedList(mutableListOf<String>())
 
   fun createRepliesAndReactionsFilter(): JsonFilter? {
@@ -21,26 +21,18 @@ object NostrSingleEventDataSource: NostrDataSource("SingleEventFeed") {
   }
 
   fun createLoadEventsIfNotLoadedFilter(): JsonFilter? {
-    val directEventsToLoad = eventsToWatch
-      .mapNotNull { LocalCache.notes[it] }
+    val eventsToLoad = eventsToWatch
+      .map { LocalCache.notes[it] }
+      .filterNotNull()
       .filter { it.event == null }
-
-    val threadingEventsToLoad = eventsToWatch
-      .mapNotNull { LocalCache.notes[it] }
-      .mapNotNull { it.replyTo }
-      .flatten()
-      .filter { it.event == null }
-
-    val interestedEvents =
-      (directEventsToLoad + threadingEventsToLoad)
       .map { it.idHex.substring(0, 8) }
 
-    if (interestedEvents.isEmpty()) {
+    if (eventsToLoad.isEmpty()) {
       return null
     }
 
     return JsonFilter(
-      ids = interestedEvents
+      ids = eventsToLoad
     )
   }
 
@@ -58,13 +50,33 @@ object NostrSingleEventDataSource: NostrDataSource("SingleEventFeed") {
     loadEventsChannel.filter = createLoadEventsIfNotLoadedFilter()
   }
 
-  fun add(eventId: String) {
-    eventsToWatch.add(eventId)
+  fun loadThread(noteId: String) {
+    val note = LocalCache.notes[noteId] ?: return
+
+    val thread = mutableListOf<Note>()
+    val threadSet = mutableSetOf<Note>()
+
+    val threadRoot = note.replyTo?.firstOrNull() ?: note
+
+    loadDown(threadRoot, thread, threadSet)
+
+    // Currently orders by date of each event, descending, at each level of the reply stack
+    val order = compareByDescending<Note> { it.replyLevelSignature() }
+
+    eventsToWatch.clear()
+    eventsToWatch.addAll(thread.sortedWith(order).map { it.idHex })
+
     resetFilters()
   }
 
-  fun remove(eventId: String) {
-    eventsToWatch.remove(eventId)
-    resetFilters()
+  fun loadDown(note: Note, thread: MutableList<Note>, threadSet: MutableSet<Note>) {
+    if (note !in threadSet) {
+      thread.add(note)
+      threadSet.add(note)
+
+      note.replies.forEach {
+        loadDown(it, thread, threadSet)
+      }
+    }
   }
 }

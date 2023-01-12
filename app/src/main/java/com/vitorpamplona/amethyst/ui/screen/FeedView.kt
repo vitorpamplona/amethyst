@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.ExperimentalLifecycleComposeApi
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
@@ -30,7 +31,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @OptIn(ExperimentalLifecycleComposeApi::class)
 @Composable
-fun FeedView(viewModel: FeedViewModel, accountViewModel: AccountViewModel) {
+fun FeedView(viewModel: FeedViewModel, accountViewModel: AccountViewModel, navController: NavController) {
     val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
 
     var isRefreshing by remember { mutableStateOf(false) }
@@ -73,7 +74,7 @@ fun FeedView(viewModel: FeedViewModel, accountViewModel: AccountViewModel) {
                             state = listState
                         ) {
                             itemsIndexed(state.feed, key = { _, item -> item.idHex }) { index, item ->
-                                NoteCompose(item, isInnerNote = false, accountViewModel = accountViewModel)
+                                NoteCompose(item, isInnerNote = false, accountViewModel = accountViewModel, navController = navController)
                             }
                         }
                     }

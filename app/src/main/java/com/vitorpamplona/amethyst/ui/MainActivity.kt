@@ -15,6 +15,7 @@ import com.vitorpamplona.amethyst.service.NostrHomeDataSource
 import com.vitorpamplona.amethyst.service.NostrNotificationDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
+import com.vitorpamplona.amethyst.service.NostrThreadDataSource
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.screen.AccountScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
@@ -54,6 +55,7 @@ class MainActivity : ComponentActivity() {
     NostrNotificationDataSource.stop()
     NostrSingleEventDataSource.stop()
     NostrSingleUserDataSource.stop()
+    NostrThreadDataSource.stop()
     Client.disconnect()
     super.onPause()
   }

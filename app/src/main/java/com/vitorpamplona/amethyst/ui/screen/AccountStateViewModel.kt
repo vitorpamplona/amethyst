@@ -10,6 +10,7 @@ import com.vitorpamplona.amethyst.service.NostrHomeDataSource
 import com.vitorpamplona.amethyst.service.NostrNotificationDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
+import com.vitorpamplona.amethyst.service.NostrThreadDataSource
 import fr.acinq.secp256k1.Hex
 import java.util.regex.Pattern
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -65,6 +66,7 @@ class AccountStateViewModel(private val encryptedPreferences: EncryptedSharedPre
     NostrNotificationDataSource.start()
     NostrSingleEventDataSource.start()
     NostrSingleUserDataSource.start()
+    NostrThreadDataSource.start()
   }
 
   fun newKey() {

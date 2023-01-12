@@ -12,7 +12,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun BlankNote(modifier: Modifier = Modifier, isQuote: Boolean) {
+fun BlankNote(modifier: Modifier = Modifier, isQuote: Boolean = false) {
   Column(modifier = modifier) {
     Row(modifier = Modifier.padding(horizontal = if (!isQuote) 12.dp else 6.dp)) {
       Column(modifier = Modifier.padding(start = if (!isQuote) 10.dp else 5.dp)) {

@@ -4,6 +4,7 @@ import android.text.format.DateUtils
 import android.text.format.DateUtils.getRelativeTimeSpanString
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,6 +22,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
@@ -30,7 +33,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import nostr.postr.events.TextNoteEvent
 
 @Composable
-fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Boolean = false, accountViewModel: AccountViewModel) {
+fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Boolean = false, accountViewModel: AccountViewModel, navController: NavController) {
     val noteState by baseNote.live.observeAsState()
     val note = noteState?.note
 
@@ -41,7 +44,14 @@ fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Bool
         val author = authorState?.user
 
         Column(modifier = modifier) {
-            Row(modifier = Modifier.padding(horizontal = if (!isInnerNote) 12.dp else 0.dp)) {
+            Row(
+                modifier = Modifier
+                    .padding(
+                        start = if (!isInnerNote) 12.dp else 0.dp,
+                        end = if (!isInnerNote) 12.dp else 0.dp,
+                        top = 10.dp)
+                    .clickable ( onClick = { navController.navigate("Note/${note.idHex}") } )
+            ) {
 
                 // Draws the boosted picture outside the boosted card.
                 if (!isInnerNote) {
@@ -100,7 +110,8 @@ fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Bool
                                 note,
                                 modifier = Modifier.padding(top = 5.dp),
                                 isInnerNote = true,
-                                accountViewModel = accountViewModel
+                                accountViewModel = accountViewModel,
+                                navController = navController
                             )
                         }
 
@@ -121,7 +132,7 @@ fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Bool
                         ReactionsRowState(note, accountViewModel)
 
                         Divider(
-                            modifier = Modifier.padding(vertical = 10.dp),
+                            modifier = Modifier.padding(top = 10.dp),
                             thickness = 0.25.dp
                         )
                     }

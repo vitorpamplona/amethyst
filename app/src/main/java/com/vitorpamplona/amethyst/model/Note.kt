@@ -4,6 +4,9 @@ import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.ui.note.toDisplayHex
 import fr.acinq.secp256k1.Hex
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Collections
 import nostr.postr.events.Event
 
@@ -27,6 +30,33 @@ class Note(val idHex: String) {
         this.replyTo = replyTo
 
         refreshObservers()
+    }
+
+    fun formattedDateTime(timestamp: Long): String {
+        return Instant.ofEpochSecond(timestamp).atZone(ZoneId.systemDefault())
+            .format(DateTimeFormatter.ofPattern("uuuu-MM-dd-HH:mm:ss"))
+    }
+
+    fun replyLevelSignature(): String {
+        val replyTo = replyTo
+        if (replyTo == null || replyTo.isEmpty()) {
+            return "/" + formattedDateTime(event?.createdAt ?: 0) + ";"
+        }
+
+        return replyTo
+            .map { it.replyLevelSignature() }
+            .maxBy { it.length }.removeSuffix(";") + "/" + formattedDateTime(event?.createdAt ?: 0) + ";"
+    }
+
+    fun replyLevel(): Int {
+        val replyTo = replyTo
+        if (replyTo == null || replyTo.isEmpty()) {
+            return 0
+        }
+
+        return replyTo.maxOf {
+            it.replyLevel()
+        } + 1
     }
 
     fun addReply(note: Note) {

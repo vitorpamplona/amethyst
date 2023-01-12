@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.ExperimentalLifecycleComposeApi
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.vitorpamplona.amethyst.ui.note.BoostSetCompose
@@ -32,7 +33,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @OptIn(ExperimentalLifecycleComposeApi::class)
 @Composable
-fun CardFeedView(viewModel: CardFeedViewModel, accountViewModel: AccountViewModel) {
+fun CardFeedView(viewModel: CardFeedViewModel, accountViewModel: AccountViewModel, navController: NavController) {
     val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
 
     var isRefreshing by remember { mutableStateOf(false) }
@@ -76,9 +77,9 @@ fun CardFeedView(viewModel: CardFeedViewModel, accountViewModel: AccountViewMode
                         ) {
                             itemsIndexed(state.feed) { index, item ->
                                 when (item) {
-                                    is NoteCard -> NoteCompose(item.note, isInnerNote = false, accountViewModel = accountViewModel)
-                                    is LikeSetCard -> LikeSetCompose(item, isInnerNote = false, accountViewModel = accountViewModel)
-                                    is BoostSetCard -> BoostSetCompose(item, isInnerNote = false, accountViewModel = accountViewModel)
+                                    is NoteCard -> NoteCompose(item.note, isInnerNote = false, accountViewModel = accountViewModel, navController = navController)
+                                    is LikeSetCard -> LikeSetCompose(item, isInnerNote = false, accountViewModel = accountViewModel, navController = navController)
+                                    is BoostSetCard -> BoostSetCompose(item, isInnerNote = false, accountViewModel = accountViewModel, navController = navController)
                                 }
                             }
                         }
