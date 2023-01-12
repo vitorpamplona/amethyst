@@ -13,7 +13,7 @@ Amethyst brings the best social network to your Android phone. Just insert your 
 - [x] Reactions (like, boost, reply)
 - [x] Image Preview
 - [x] Url Preview
-- [ ] View Threads
+- [x] View Threads
 - [ ] Private Messages
 - [ ] Communities
 - [ ] Profile Edit
