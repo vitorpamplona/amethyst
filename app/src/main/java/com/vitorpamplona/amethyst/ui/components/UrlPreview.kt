@@ -41,10 +41,8 @@ fun UrlPreview(url: String, urlText: String, showUrlIfError: Boolean = true) {
 
   // Doesn't use a viewModel because of viewModel reusing issues (too many UrlPreview are created).
   LaunchedEffect(url) {
-    println("url preview ${url}")
     BahaUrlPreview(url, object : IUrlPreviewCallback {
       override fun onComplete(urlInfo: UrlInfoItem) {
-        println("completed ${urlInfo.title}")
         if (urlInfo.allFetchComplete() && urlInfo.url == url)
           urlPreviewState = UrlPreviewState.Loaded(urlInfo)
         else
@@ -52,7 +50,6 @@ fun UrlPreview(url: String, urlText: String, showUrlIfError: Boolean = true) {
       }
 
       override fun onFailed(throwable: Throwable) {
-        println("failed")
         urlPreviewState = UrlPreviewState.Error("Error parsing preview for ${url}: ${throwable.message}")
       }
     }).fetchUrlPreview()

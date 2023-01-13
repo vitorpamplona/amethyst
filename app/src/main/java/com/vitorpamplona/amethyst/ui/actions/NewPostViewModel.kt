@@ -52,7 +52,7 @@ class NewPostViewModel: ViewModel() {
         return message.split('\n').firstNotNullOfOrNull { paragraph ->
             paragraph.split(' ').firstOrNull { word: String ->
                 isValidURL(word) || noProtocolUrlValidator.matcher(word).matches()
-            }.apply { println("(${this})") }
+            }
         }
     }
 }
