@@ -23,6 +23,7 @@ import java.net.URL
 import java.util.regex.Pattern
 
 val imageExtension = Pattern.compile("(.*/)*.+\\.(png|jpg|gif|bmp|jpeg|webp)$")
+val videoExtension = Pattern.compile("(.*/)*.+\\.(mp4|avi|wmv|mpg|amv|webm)$")
 val noProtocolUrlValidator = Pattern.compile("^[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b(?:[-a-zA-Z0-9()@:%_\\+.~#?&//=]*)$")
 val tagIndex = Pattern.compile("\\#\\[([0-9]*)\\]")
 
@@ -59,6 +60,8 @@ fun RichTextViewer(content: String, tags: List<List<String>>?) {
                   .clip(shape = RoundedCornerShape(15.dp))
                   .border(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.12f), RoundedCornerShape(15.dp))
               )
+            } else if (videoExtension.matcher(removedParamsFromUrl).matches()) {
+              VideoView(word)
             } else {
               UrlPreview(word, word)
             }
