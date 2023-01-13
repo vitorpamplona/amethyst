@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.model
 
 import androidx.lifecycle.LiveData
+import com.baha.url.preview.UrlInfoItem
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.ui.note.toDisplayHex
 import fr.acinq.secp256k1.Hex
@@ -11,14 +12,19 @@ import java.util.Collections
 import nostr.postr.events.Event
 
 class Note(val idHex: String) {
+    // These fields are always available.
+    // They are immutable
     val id = Hex.decode(idHex)
     val idDisplayHex = id.toDisplayHex()
 
+    // These fields are only available after the Text Note event is received.
+    // They are immutable after that.
     var event: Event? = null
     var author: User? = null
     var mentions: List<User>? = null
     var replyTo: MutableList<Note>? = null
 
+    // These fields are updated every time an event related to this note is received.
     val replies = Collections.synchronizedSet(mutableSetOf<Note>())
     val reactions = Collections.synchronizedSet(mutableSetOf<Note>())
     val boosts = Collections.synchronizedSet(mutableSetOf<Note>())
