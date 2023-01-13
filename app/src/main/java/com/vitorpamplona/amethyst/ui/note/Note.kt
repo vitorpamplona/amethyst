@@ -43,14 +43,13 @@ fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Bool
         val authorState by note.author!!.live.observeAsState()
         val author = authorState?.user
 
-        Column(modifier = modifier) {
+        Column(modifier = modifier.clickable ( onClick = { navController.navigate("Note/${note.idHex}") } )) {
             Row(
                 modifier = Modifier
                     .padding(
                         start = if (!isInnerNote) 12.dp else 0.dp,
                         end = if (!isInnerNote) 12.dp else 0.dp,
                         top = 10.dp)
-                    .clickable ( onClick = { navController.navigate("Note/${note.idHex}") } )
             ) {
 
                 // Draws the boosted picture outside the boosted card.

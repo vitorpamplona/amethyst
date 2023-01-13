@@ -44,10 +44,15 @@ fun LikeSetCompose(likeSetCard: LikeSetCard, modifier: Modifier = Modifier, isIn
     val note = noteState?.note
 
     if (note?.event == null) {
-        BlankNote(modifier, isInnerNote)
+        BlankNote(Modifier, isInnerNote)
     } else {
         Column(modifier = modifier) {
-            Row(modifier = Modifier.padding(horizontal = if (!isInnerNote) 12.dp else 0.dp)) {
+            Row(                modifier = Modifier
+                .padding(
+                    start = if (!isInnerNote) 12.dp else 0.dp,
+                    end = if (!isInnerNote) 12.dp else 0.dp,
+                    top = 10.dp)
+            ) {
 
                 // Draws the like picture outside the boosted card.
                 if (!isInnerNote) {
