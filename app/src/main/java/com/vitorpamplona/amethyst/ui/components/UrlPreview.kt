@@ -34,30 +34,29 @@ import com.baha.url.preview.UrlInfoItem
 
 
 @Composable
-fun UrlPreview(url: String, urlText: String) {
+fun UrlPreview(url: String, urlText: String, showUrlIfError: Boolean = true) {
   var urlPreviewState by remember { mutableStateOf<UrlPreviewState>(UrlPreviewState.Loading) }
 
-  // Doesn't use a viewModel because of viewModel reusing issues (too many UrlPreview are created).
-  LaunchedEffect(urlPreviewState) {
-    if (urlPreviewState == UrlPreviewState.Loading) {
-      val urlPreview = BahaUrlPreview(url, object : IUrlPreviewCallback {
-        override fun onComplete(urlInfo: UrlInfoItem) {
-          if (urlInfo.allFetchComplete() && urlInfo.url == url)
-            urlPreviewState = UrlPreviewState.Loaded(urlInfo)
-          else
-            urlPreviewState = UrlPreviewState.Empty
-        }
-
-        override fun onFailed(throwable: Throwable) {
-          urlPreviewState = UrlPreviewState.Error("Error parsing preview for ${url}: ${throwable.message}")
-        }
-      })
-
-      urlPreview.fetchUrlPreview()
-    }
-  }
-
   val uri = LocalUriHandler.current
+
+  // Doesn't use a viewModel because of viewModel reusing issues (too many UrlPreview are created).
+  LaunchedEffect(url) {
+    println("url preview ${url}")
+    BahaUrlPreview(url, object : IUrlPreviewCallback {
+      override fun onComplete(urlInfo: UrlInfoItem) {
+        println("completed ${urlInfo.title}")
+        if (urlInfo.allFetchComplete() && urlInfo.url == url)
+          urlPreviewState = UrlPreviewState.Loaded(urlInfo)
+        else
+          urlPreviewState = UrlPreviewState.Empty
+      }
+
+      override fun onFailed(throwable: Throwable) {
+        println("failed")
+        urlPreviewState = UrlPreviewState.Error("Error parsing preview for ${url}: ${throwable.message}")
+      }
+    }).fetchUrlPreview()
+  }
 
   Crossfade(targetState = urlPreviewState) { state ->
     when (state) {
@@ -97,11 +96,13 @@ fun UrlPreview(url: String, urlText: String) {
         }
       }
       else -> {
-        ClickableText(
-          text = AnnotatedString("$urlText "),
-          onClick = { runCatching { uri.openUri(url) } },
-          style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary),
-        )
+        if (showUrlIfError) {
+          ClickableText(
+            text = AnnotatedString("$urlText "),
+            onClick = { runCatching { uri.openUri(url) } },
+            style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary),
+          )
+        }
       }
     }
   }

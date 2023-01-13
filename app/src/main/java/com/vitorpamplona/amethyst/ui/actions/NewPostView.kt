@@ -17,48 +17,73 @@ import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
+import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.components.TagLink
+import com.vitorpamplona.amethyst.ui.components.UrlPreview
+import com.vitorpamplona.amethyst.ui.components.imageExtension
+import com.vitorpamplona.amethyst.ui.components.isValidURL
+import com.vitorpamplona.amethyst.ui.components.noProtocolUrlValidator
+import com.vitorpamplona.amethyst.ui.components.tagIndex
+import com.vitorpamplona.amethyst.ui.navigation.UploadFromGallery
+import kotlinx.coroutines.delay
 import nostr.postr.events.TextNoteEvent
 
-class PostViewModel: ViewModel() {
-    var account: Account? = null
-    var message by mutableStateOf("")
-    var replyingTo: Note? = null
 
-    fun sendPost() {
-        account?.sendPost(message, replyingTo)
-    }
-}
-
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun NewPostView(onClose: () -> Unit, replyingTo: Note? = null, account: Account) {
-    val postViewModel: PostViewModel = viewModel<PostViewModel>().apply {
+    val postViewModel: NewPostViewModel = viewModel<NewPostViewModel>().apply {
         this.replyingTo = replyingTo
         this.account = account
     }
 
-    val dialogProperties = DialogProperties()
+    val context = LocalContext.current
+
+    // initialize focus reference to be able to request focus programmatically
+    val focusRequester = FocusRequester()
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    LaunchedEffect(Unit) {
+        delay(100)
+        focusRequester.requestFocus()
+    }
+
     Dialog(
-        onDismissRequest = { onClose() }, properties = dialogProperties
+        onDismissRequest = { onClose() },
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            dismissOnClickOutside = false
+        )
     ) {
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.5f)
+                .fillMaxHeight()
         ) {
             Column(
                 modifier = Modifier.padding(10.dp)
@@ -69,7 +94,14 @@ fun NewPostView(onClose: () -> Unit, replyingTo: Note? = null, account: Account)
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CloseButton(onCancel = onClose)
+                    CloseButton(onCancel = {
+                        postViewModel.cancel()
+                        onClose()
+                    })
+
+                    UploadFromGallery {
+                        postViewModel.upload(it, context)
+                    }
 
                     PostButton(
                         onPost = {
@@ -96,16 +128,26 @@ fun NewPostView(onClose: () -> Unit, replyingTo: Note? = null, account: Account)
 
                 OutlinedTextField(
                     value = postViewModel.message,
-                    onValueChange = { postViewModel.message = it },
+                    onValueChange = {
+                        postViewModel.message = it
+                        postViewModel.urlPreview = postViewModel.findUrlInMessage()
+                    },
                     keyboardOptions = KeyboardOptions.Default.copy(
                         capitalization = KeyboardCapitalization.Sentences
                     ),
-                    modifier = Modifier.fillMaxWidth().fillMaxHeight()
+                    modifier = Modifier
+                        .fillMaxWidth()
                         .border(
                             width = 1.dp,
                             color = MaterialTheme.colors.surface,
                             shape = RoundedCornerShape(8.dp)
-                        ),
+                        )
+                        .focusRequester(focusRequester)
+                        .onFocusChanged {
+                            if (it.isFocused) {
+                                keyboardController?.show()
+                            }
+                        },
                     placeholder = {
                         Text(
                             text = "What's on your mind?",
@@ -117,8 +159,32 @@ fun NewPostView(onClose: () -> Unit, replyingTo: Note? = null, account: Account)
                             unfocusedBorderColor = Color.Transparent,
                             focusedBorderColor = Color.Transparent
                         )
-
                 )
+
+                val myUrlPreview = postViewModel.urlPreview
+                if (myUrlPreview != null) {
+                    Column(modifier = Modifier.padding(top = 5.dp)) {
+                        val removedParamsFromUrl = myUrlPreview.split("?")[0].toLowerCase()
+                        if (imageExtension.matcher(removedParamsFromUrl).matches()) {
+                            AsyncImage(
+                                model = myUrlPreview,
+                                contentDescription = myUrlPreview,
+                                contentScale = ContentScale.FillWidth,
+                                modifier = Modifier
+                                    .padding(top = 4.dp)
+                                    .fillMaxWidth()
+                                    .clip(shape = RoundedCornerShape(15.dp))
+                                    .border(
+                                        1.dp,
+                                        MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
+                                        RoundedCornerShape(15.dp)
+                                    )
+                            )
+                        } else {
+                            UrlPreview("https://$myUrlPreview", myUrlPreview, false)
+                        }
+                    }
+                }
             }
         }
     }

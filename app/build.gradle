@@ -90,7 +90,10 @@ dependencies {
 
     // link preview
     implementation 'tw.com.oneup.www:Baha-UrlPreview:1.0.1'
-    implementation 'androidx.security:security-crypto-ktx:1.1.0-alpha03'
+    implementation 'androidx.security:security-crypto-ktx:1.1.0-alpha04'
+
+    // upload pictures:
+    implementation "com.google.accompanist:accompanist-permissions:0.28.0"
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'

@@ -31,7 +31,7 @@ object NostrAccountDataSource: NostrDataSource("AccountData") {
   fun createAccountFilter(): JsonFilter {
     return JsonFilter(
       authors = listOf(account.userProfile().pubkeyHex),
-      since = System.currentTimeMillis() / 1000 - (60 * 60 * 24 * 4), // 4 days
+      since = System.currentTimeMillis() / 1000 - (60 * 60 * 24 * 7), // 4 days
     )
   }
 
