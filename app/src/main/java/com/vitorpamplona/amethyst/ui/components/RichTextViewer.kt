@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.components
 
+import android.util.Patterns
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,6 +28,10 @@ val videoExtension = Pattern.compile("(.*/)*.+\\.(mp4|avi|wmv|mpg|amv|webm)$")
 val noProtocolUrlValidator = Pattern.compile("^[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b(?:[-a-zA-Z0-9()@:%_\\+.~#?&//=]*)$")
 val tagIndex = Pattern.compile("\\#\\[([0-9]*)\\]")
 
+val mentionsPattern: Pattern = Pattern.compile("@([A-Za-z0-9_-]+)")
+val hashTagsPattern: Pattern = Pattern.compile("#([A-Za-z0-9_-]+)")
+val urlPattern: Pattern = Patterns.WEB_URL
+
 fun isValidURL(url: String?): Boolean {
   return try {
     URL(url).toURI()
@@ -47,7 +52,10 @@ fun RichTextViewer(content: String, tags: List<List<String>>?) {
       FlowRow() {
         paragraph.split(' ').forEach { word: String ->
           // Explicit URL
-          if (isValidURL(word)) {
+          val lnInvoice = LnInvoiceUtil.findInvoice(word)
+          if (lnInvoice != null) {
+            InvoicePreview(lnInvoice)
+          } else if (isValidURL(word)) {
             val removedParamsFromUrl = word.split("?")[0].toLowerCase()
             if (imageExtension.matcher(removedParamsFromUrl).matches()) {
               AsyncImage(
