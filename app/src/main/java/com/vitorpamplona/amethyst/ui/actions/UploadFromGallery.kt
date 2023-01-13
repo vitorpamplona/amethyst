@@ -55,19 +55,8 @@ fun UploadFromGallery(onImageChosen: (Uri) -> Unit) {
         }
     } else {
         Column {
-            val textToShow = if (cameraPermissionState.status.shouldShowRationale) {
-                // If the user has denied the permission but the rationale can be shown,
-                // then gently explain why the app requires this permission
-                "Grant access to quickly upload pictures before posting"
-            } else {
-                // If it's the first time the user lands on this feature, or the user
-                // doesn't want to be asked again for this permission, explain that the
-                // permission is required
-                "Grant access to quickly upload pictures before posting"
-            }
-            Text(textToShow)
             Button(onClick = { cameraPermissionState.launchPermissionRequest() }) {
-                Text("Request permission")
+                Text("Add Image from Gallery")
             }
         }
     }
