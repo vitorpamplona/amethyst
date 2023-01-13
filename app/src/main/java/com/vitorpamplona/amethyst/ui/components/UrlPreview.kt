@@ -31,6 +31,7 @@ import coil.compose.AsyncImage
 import com.baha.url.preview.BahaUrlPreview
 import com.baha.url.preview.IUrlPreviewCallback
 import com.baha.url.preview.UrlInfoItem
+import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 
 
 @Composable
@@ -41,7 +42,7 @@ fun UrlPreview(url: String, urlText: String, showUrlIfError: Boolean = true) {
 
   // Doesn't use a viewModel because of viewModel reusing issues (too many UrlPreview are created).
   LaunchedEffect(url) {
-    BahaUrlPreview(url, object : IUrlPreviewCallback {
+    UrlCachedPreviewer.previewInfo(url, object : IUrlPreviewCallback {
       override fun onComplete(urlInfo: UrlInfoItem) {
         if (urlInfo.allFetchComplete() && urlInfo.url == url)
           urlPreviewState = UrlPreviewState.Loaded(urlInfo)
@@ -52,7 +53,7 @@ fun UrlPreview(url: String, urlText: String, showUrlIfError: Boolean = true) {
       override fun onFailed(throwable: Throwable) {
         urlPreviewState = UrlPreviewState.Error("Error parsing preview for ${url}: ${throwable.message}")
       }
-    }).fetchUrlPreview()
+    })
   }
 
   Crossfade(targetState = urlPreviewState) { state ->

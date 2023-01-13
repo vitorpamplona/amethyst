@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.model
 
 import android.util.Log
 import androidx.lifecycle.LiveData
+import com.baha.url.preview.UrlInfoItem
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
@@ -102,6 +103,8 @@ object LocalCache {
     replyTo.forEach {
       it.addReply(note)
     }
+
+    UrlCachedPreviewer.preloadPreviewsFor(note)
 
     refreshObservers()
   }

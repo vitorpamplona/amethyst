@@ -40,7 +40,6 @@ fun VideoView(videoUri: String) {
     }
   }
 
-  println("CCC"+exoPlayer.videoFormat?.width)
   AndroidView(
     modifier = Modifier
       .fillMaxWidth(),
