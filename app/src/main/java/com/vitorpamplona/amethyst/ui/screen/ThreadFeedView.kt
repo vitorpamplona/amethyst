@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.ReactionsRowState
 import com.vitorpamplona.amethyst.ui.note.UserDisplay
 import com.vitorpamplona.amethyst.ui.note.timeAgo
+import com.vitorpamplona.amethyst.ui.note.timeAgoLong
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.launch
 
@@ -201,7 +202,7 @@ fun NoteMaster(baseNote: Note, accountViewModel: AccountViewModel, navController
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            timeAgo(note.event?.createdAt),
+                            timeAgoLong(note.event?.createdAt),
                             color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                         )
                     }

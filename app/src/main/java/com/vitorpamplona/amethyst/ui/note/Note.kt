@@ -87,7 +87,7 @@ fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Bool
 
                         if (note.event !is RepostEvent) {
                             Text(
-                                "   " + timeAgo(note.event?.createdAt),
+                                timeAgo(note.event?.createdAt),
                                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                             )
                         } else {
