@@ -22,6 +22,11 @@ class Account(val loggedIn: Persona) {
   fun reactTo(note: Note) {
     if (!isWriteable()) return
 
+    if (note.reactions.firstOrNull { it.author == userProfile() } != null) {
+      // has already liked this note
+      return
+    }
+
     note.event?.let {
       val event = ReactionEvent.create(it, loggedIn.privKey!!)
       Client.send(event)
