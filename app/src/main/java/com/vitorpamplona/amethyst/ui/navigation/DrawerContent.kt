@@ -118,11 +118,11 @@ fun ProfileContent(accountUser: User?, modifier: Modifier = Modifier) {
         Text(" @${accountUser?.bestUsername()}", color = Color.LightGray)
         Row(modifier = Modifier.padding(top = 15.dp)) {
             Row() {
-                Text("${accountUser?.follows?.size}", fontWeight = FontWeight.Bold)
+                Text("${accountUser?.follows?.size ?: "--"}", fontWeight = FontWeight.Bold)
                 Text(" Following")
             }
             Row(modifier = Modifier.padding(start = 10.dp)) {
-                Text("${accountUser?.follower ?: "--"}", fontWeight = FontWeight.Bold)
+                Text("${accountUser?.followers?.size ?: "--"}", fontWeight = FontWeight.Bold)
                 Text(" Followers")
             }
         }

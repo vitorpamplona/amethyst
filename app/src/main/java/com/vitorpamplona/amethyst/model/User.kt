@@ -18,7 +18,7 @@ class User(val pubkey: ByteArray) {
     val follows = Collections.synchronizedSet(mutableSetOf<User>())
     val taggedPosts = Collections.synchronizedSet(mutableSetOf<Note>())
 
-    var follower: Number? = null
+    val followers = Collections.synchronizedSet(mutableSetOf<User>())
 
     fun toBestDisplayName(): String {
         return bestDisplayName() ?: bestUsername() ?: pubkeyDisplayHex
@@ -37,9 +37,26 @@ class User(val pubkey: ByteArray) {
         return info.picture ?: "https://robohash.org/${pubkeyHex}.png"
     }
 
+    fun follow(user: User) {
+        follows.add(user)
+        user.followers.add(this)
+    }
+    fun unfollow(user: User) {
+        follows.remove(user)
+        user.followers.remove(this)
+    }
+
     fun updateFollows(newFollows: List<User>, updateAt: Long) {
-        follows.clear()
-        follows.addAll(newFollows)
+        val toBeAdded = newFollows - follows
+        val toBeRemoved = follows - newFollows
+
+        toBeAdded.forEach {
+            follow(it)
+        }
+        toBeRemoved.forEach {
+            unfollow(it)
+        }
+
         updatedFollowsAt = updateAt
 
         live.refresh()
