@@ -6,6 +6,8 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import nostr.postr.JsonFilter
+import nostr.postr.events.ContactListEvent
+import nostr.postr.events.MetadataEvent
 import nostr.postr.events.TextNoteEvent
 import nostr.postr.toHex
 
@@ -30,6 +32,7 @@ object NostrAccountDataSource: NostrDataSource("AccountData") {
 
   fun createAccountFilter(): JsonFilter {
     return JsonFilter(
+      kinds = listOf(MetadataEvent.kind, ContactListEvent.kind),
       authors = listOf(account.userProfile().pubkeyHex),
       since = System.currentTimeMillis() / 1000 - (60 * 60 * 24 * 7), // 4 days
     )

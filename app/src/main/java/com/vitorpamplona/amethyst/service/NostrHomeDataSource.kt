@@ -29,11 +29,13 @@ object NostrHomeDataSource: NostrDataSource("HomeFeed") {
   }
 
   fun createFollowAccountsFilter(): JsonFilter? {
-    val follows = account.userProfile().follows?.map {
-      it.pubkey.toHex().substring(0, 6)
-    }
+    val follows = listOf(account.userProfile().pubkeyHex.substring(0, 6)).plus(
+      account.userProfile().follows?.map {
+        it.pubkey.toHex().substring(0, 6)
+      } ?: emptyList()
+    )
 
-    if (follows == null || follows.isEmpty()) return null
+    if (follows.isEmpty()) return null
 
     return JsonFilter(
       kinds = listOf(TextNoteEvent.kind, RepostEvent.kind),
