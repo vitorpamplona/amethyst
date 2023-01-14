@@ -1,19 +1,12 @@
 package com.vitorpamplona.amethyst.ui.components
 
-import android.media.browse.MediaBrowser
 import android.view.ViewGroup
 import android.widget.FrameLayout
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.google.android.exoplayer2.C
 import com.google.android.exoplayer2.ExoPlayer

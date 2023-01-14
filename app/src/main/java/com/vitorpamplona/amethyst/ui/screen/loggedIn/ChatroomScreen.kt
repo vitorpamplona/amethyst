@@ -1,7 +1,5 @@
 package com.vitorpamplona.amethyst.ui.screen
 
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.Divider
 import androidx.compose.material.MaterialTheme
@@ -24,27 +21,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChatRoomDataSource
-import com.vitorpamplona.amethyst.service.NostrThreadDataSource
-import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.PostButton
-import com.vitorpamplona.amethyst.ui.components.RichTextViewer
-import com.vitorpamplona.amethyst.ui.note.BlankNote
-import com.vitorpamplona.amethyst.ui.note.ChatroomCompose
 import com.vitorpamplona.amethyst.ui.note.UserDisplay
-import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable

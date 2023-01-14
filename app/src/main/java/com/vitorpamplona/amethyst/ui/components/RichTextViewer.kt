@@ -1,7 +1,6 @@
 package com.vitorpamplona.amethyst.ui.components
 
 import android.util.Patterns
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.ClickableText

@@ -2,7 +2,6 @@ package com.vitorpamplona.amethyst.model
 
 import android.util.Log
 import androidx.lifecycle.LiveData
-import com.baha.url.preview.UrlInfoItem
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
@@ -146,7 +145,7 @@ object LocalCache {
     val author = getOrCreateUser(event.pubKey)
     val recipient = event.recipientPubKey?.let { getOrCreateUser(it) }
 
-    //Log.d("PM", "${author.toBestDisplayName()} to ${recipient?.toBestDisplayName()}")
+    Log.d("PM", "${author.toBestDisplayName()} to ${recipient?.toBestDisplayName()}")
 
     val repliesTo = event.tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }.map { getOrCreateNote(it) }.toMutableList()
     val mentions = event.tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }.map { getOrCreateUser(decodePublicKey(it)) }
@@ -157,6 +156,8 @@ object LocalCache {
       author.addMessage(recipient, note)
       recipient.addMessage(author, note)
     }
+
+    refreshObservers()
   }
 
   fun consume(event: DeletionEvent) {

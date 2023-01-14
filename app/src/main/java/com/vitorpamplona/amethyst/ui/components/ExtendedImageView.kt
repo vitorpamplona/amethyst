@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.MaterialTheme
@@ -26,10 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
-import com.vitorpamplona.amethyst.ui.note.ReactionsRowState
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
 @OptIn(ExperimentalComposeUiApi::class)

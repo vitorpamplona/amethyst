@@ -1,7 +1,6 @@
 package com.vitorpamplona.amethyst.model
 
 import androidx.lifecycle.LiveData
-import com.baha.url.preview.UrlInfoItem
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.ui.note.toDisplayHex
 import fr.acinq.secp256k1.Hex

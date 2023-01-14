@@ -9,7 +9,6 @@ import nostr.postr.JsonFilter
 import nostr.postr.events.ContactListEvent
 import nostr.postr.events.MetadataEvent
 import nostr.postr.events.TextNoteEvent
-import nostr.postr.toHex
 
 object NostrAccountDataSource: NostrDataSource("AccountData") {
   lateinit var account: Account

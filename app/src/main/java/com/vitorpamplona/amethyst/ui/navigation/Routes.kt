@@ -10,13 +10,13 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.screen.ChatroomListScreen
 import com.vitorpamplona.amethyst.ui.screen.ChatroomScreen
 import com.vitorpamplona.amethyst.ui.screen.HomeScreen
-import com.vitorpamplona.amethyst.ui.screen.ChatroomListScreen
-import com.vitorpamplona.amethyst.ui.screen.ThreadScreen
 import com.vitorpamplona.amethyst.ui.screen.NotificationScreen
 import com.vitorpamplona.amethyst.ui.screen.ProfileScreen
 import com.vitorpamplona.amethyst.ui.screen.SearchScreen
+import com.vitorpamplona.amethyst.ui.screen.ThreadScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 

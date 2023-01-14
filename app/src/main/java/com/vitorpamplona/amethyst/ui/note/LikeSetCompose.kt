@@ -1,9 +1,5 @@
 package com.vitorpamplona.amethyst.ui.note
 
-import android.text.format.DateUtils
-import android.text.format.DateUtils.getRelativeTimeSpanString
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,10 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.Divider
 import androidx.compose.material.Icon
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -24,19 +17,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.model.ReactionEvent
-import com.vitorpamplona.amethyst.service.model.RepostEvent
-import com.vitorpamplona.amethyst.ui.components.RichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.LikeSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import nostr.postr.events.TextNoteEvent
 
 @Composable
 fun LikeSetCompose(likeSetCard: LikeSetCard, modifier: Modifier = Modifier, isInnerNote: Boolean = false, accountViewModel: AccountViewModel, navController: NavController) {

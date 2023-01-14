@@ -18,10 +18,6 @@ import androidx.compose.material.Text
 import androidx.compose.material.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -40,15 +36,10 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.components.TagLink
 import com.vitorpamplona.amethyst.ui.components.UrlPreview
 import com.vitorpamplona.amethyst.ui.components.imageExtension
-import com.vitorpamplona.amethyst.ui.components.isValidURL
-import com.vitorpamplona.amethyst.ui.components.noProtocolUrlValidator
-import com.vitorpamplona.amethyst.ui.components.tagIndex
 import com.vitorpamplona.amethyst.ui.navigation.UploadFromGallery
 import kotlinx.coroutines.delay
 import nostr.postr.events.TextNoteEvent
