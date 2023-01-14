@@ -6,7 +6,10 @@ import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 
 class RelayPoolViewModel: ViewModel() {
-  val relayPoolLiveData: LiveData<String> = Transformations.map(RelayPool.live) {
-    it.relays.report()
+  val connectedRelaysLiveData: LiveData<Int> = Transformations.map(RelayPool.live) {
+    it.relays.connectedRelays()
+  }
+  val availableRelaysLiveData: LiveData<Int> = Transformations.map(RelayPool.live) {
+    it.relays.availableRelays()
   }
 }

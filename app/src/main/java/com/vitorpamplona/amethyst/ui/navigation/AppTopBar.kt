@@ -53,7 +53,8 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
     val accountUser = accountUserState?.user
 
     val relayViewModel: RelayPoolViewModel = viewModel { RelayPoolViewModel() }
-    val relayPoolLiveData by relayViewModel.relayPoolLiveData.observeAsState()
+    val connectedRelaysLiveData by relayViewModel.connectedRelaysLiveData.observeAsState()
+    val availableRelaysLiveData by relayViewModel.availableRelaysLiveData.observeAsState()
 
     val coroutineScope = rememberCoroutineScope()
 
@@ -105,8 +106,8 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
             },
             actions = {
                 Text(
-                    relayPoolLiveData ?: "--/--",
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    "${connectedRelaysLiveData ?: "--"}/${availableRelaysLiveData ?: "--"}",
+                    color = if (connectedRelaysLiveData == 0) Color.Red else MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                 )
 
                 IconButton(
