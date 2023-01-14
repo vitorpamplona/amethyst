@@ -9,6 +9,10 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Collections
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import nostr.postr.events.Event
 
 class Note(val idHex: String) {
@@ -97,18 +101,24 @@ class Note(val idHex: String) {
 }
 
 class NoteLiveData(val note: Note): LiveData<NoteState>(NoteState(note)) {
+    val scope = CoroutineScope(Job() + Dispatchers.Main)
+
     fun refresh() {
         postValue(NoteState(note))
     }
 
     override fun onActive() {
         super.onActive()
-        NostrSingleEventDataSource.add(note.idHex)
+        scope.launch {
+            NostrSingleEventDataSource.add(note.idHex)
+        }
     }
 
     override fun onInactive() {
         super.onInactive()
-        NostrSingleEventDataSource.remove(note.idHex)
+        scope.launch {
+            NostrSingleEventDataSource.remove(note.idHex)
+        }
     }
 }
 

@@ -191,7 +191,7 @@ fun NewPostView(onClose: () -> Unit, replyingTo: Note? = null, account: Account)
 }
 
 @Composable
-private fun CloseButton(onCancel: () -> Unit) {
+fun CloseButton(onCancel: () -> Unit) {
     Button(
         onClick = {
             onCancel()
@@ -207,7 +207,7 @@ private fun CloseButton(onCancel: () -> Unit) {
 }
 
 @Composable
-private fun PostButton(onPost: () -> Unit = {}) {
+fun PostButton(onPost: () -> Unit = {}) {
     Button(
         onClick = {
             onPost()

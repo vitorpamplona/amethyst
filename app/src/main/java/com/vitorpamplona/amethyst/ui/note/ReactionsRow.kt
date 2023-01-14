@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.note
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -35,7 +36,7 @@ fun ReactionsRow(note: Note, account: Account, boost: (Note) -> Unit, reactTo: (
     NewPostView({ wantsToReplyTo = null }, wantsToReplyTo, account)
 
   Row(modifier = Modifier.padding(top = 8.dp)) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
       IconButton(
         modifier = Modifier.then(Modifier.size(24.dp)),
         onClick = { if (account.isWriteable()) wantsToReplyTo = note }

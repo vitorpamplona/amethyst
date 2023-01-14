@@ -145,7 +145,7 @@ fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Bool
                     } else {
                         val eventContent = note.event?.content
                         if (eventContent != null)
-                            RichTextViewer(eventContent, note.event?.tags)
+                            RichTextViewer(eventContent, note.event?.tags, note, accountViewModel)
 
                         ReactionsRowState(note, accountViewModel)
 
