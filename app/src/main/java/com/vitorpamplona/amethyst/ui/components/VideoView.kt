@@ -27,7 +27,6 @@ fun VideoView(videoUri: String) {
   val context = LocalContext.current
 
   val exoPlayer = ExoPlayer.Builder(LocalContext.current).build().apply {
-    playWhenReady = true
     repeatMode = Player.REPEAT_MODE_ALL
     videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
     setMediaItem(MediaItem.fromUri(videoUri))
