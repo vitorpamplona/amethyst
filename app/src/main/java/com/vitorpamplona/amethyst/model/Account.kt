@@ -5,6 +5,8 @@ import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.relays.Client
 import nostr.postr.Persona
+import nostr.postr.Utils
+import nostr.postr.events.PrivateDmEvent
 import nostr.postr.events.TextNoteEvent
 import nostr.postr.toHex
 
@@ -75,6 +77,48 @@ class Account(val loggedIn: Persona) {
       )
       Client.send(signedEvent)
       LocalCache.consume(signedEvent)
+    }
+  }
+
+  fun sendPrivateMeesage(message: String, toUser: String, replyingTo: Note? = null) {
+    if (!isWriteable()) return
+    val user = LocalCache.users[toUser] ?: return
+
+    val signedEvent = PrivateDmEvent.create(
+      recipientPubKey = user.pubkey,
+      publishedRecipientPubKey = user.pubkey,
+      msg = message,
+      privateKey = loggedIn.privKey!!,
+      advertiseNip18 = false
+    )
+    Client.send(signedEvent)
+    LocalCache.consume(signedEvent)
+  }
+
+  fun decryptContent(note: Note): String? {
+    val event = note.event
+    return if (event is PrivateDmEvent && loggedIn.privKey != null) {
+      var pubkeyToUse = event.pubKey
+      if (note.author == userProfile())
+        pubkeyToUse = event.recipientPubKey!!
+
+      val sharedSecret = Utils.getSharedSecret(loggedIn.privKey!!, pubkeyToUse)
+
+      return try {
+        val retVal = Utils.decrypt(event.content, sharedSecret)
+
+        if (retVal.startsWith(PrivateDmEvent.nip18Advertisement)) {
+          retVal.substring(16)
+        } else {
+          retVal
+        }
+
+      } catch (e: Exception) {
+        e.printStackTrace()
+        null
+      }
+    } else {
+      event?.content
     }
   }
 

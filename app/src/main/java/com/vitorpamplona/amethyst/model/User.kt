@@ -4,6 +4,7 @@ import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.ui.note.toDisplayHex
 import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
 
 class User(val pubkey: ByteArray) {
     val pubkeyHex = pubkey.toHexKey()
@@ -19,6 +20,8 @@ class User(val pubkey: ByteArray) {
     val taggedPosts = Collections.synchronizedSet(mutableSetOf<Note>())
 
     val followers = Collections.synchronizedSet(mutableSetOf<User>())
+
+    val messages = ConcurrentHashMap<User, MutableSet<Note>>()
 
     fun toBestDisplayName(): String {
         return bestDisplayName() ?: bestUsername() ?: pubkeyDisplayHex
@@ -44,6 +47,20 @@ class User(val pubkey: ByteArray) {
     fun unfollow(user: User) {
         follows.remove(user)
         user.followers.remove(this)
+    }
+
+    @Synchronized
+    fun getOrCreateChannel(user: User): MutableSet<Note> {
+        return messages[user] ?: run {
+            val channel = mutableSetOf<Note>()
+            messages[user] = channel
+            channel
+        }
+    }
+
+    fun addMessage(user: User, msg: Note) {
+        getOrCreateChannel(user).add(msg)
+        live.refresh()
     }
 
     fun updateFollows(newFollows: List<User>, updateAt: Long) {

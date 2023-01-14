@@ -107,7 +107,8 @@ fun NewPostView(onClose: () -> Unit, replyingTo: Note? = null, account: Account)
                         onPost = {
                             postViewModel.sendPost()
                             onClose()
-                        }
+                        },
+                        postViewModel.message.isNotBlank()
                     )
                 }
 
@@ -207,15 +208,17 @@ fun CloseButton(onCancel: () -> Unit) {
 }
 
 @Composable
-fun PostButton(onPost: () -> Unit = {}) {
+fun PostButton(onPost: () -> Unit = {}, isActive: Boolean) {
     Button(
         onClick = {
-            onPost()
+            if (isActive) {
+                onPost()
+            }
         },
         shape = RoundedCornerShape(20.dp),
         colors = ButtonDefaults
             .buttonColors(
-                backgroundColor = MaterialTheme.colors.primary
+                backgroundColor = if (isActive) MaterialTheme.colors.primary else Color.Gray
             )
     ) {
         Text(text = "Post", color = Color.White)

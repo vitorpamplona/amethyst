@@ -8,6 +8,7 @@ import com.vitorpamplona.amethyst.model.AccountState
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.service.relays.Client
+import nostr.postr.events.PrivateDmEvent
 
 class AccountViewModel(private val account: Account): ViewModel() {
   val accountLiveData: LiveData<AccountState> = Transformations.map(account.live) { it }
@@ -23,5 +24,9 @@ class AccountViewModel(private val account: Account): ViewModel() {
 
   fun broadcast(note: Note) {
     account.broadcast(note)
+  }
+
+  fun decrypt(note: Note): String? {
+    return account.decryptContent(note)
   }
 }

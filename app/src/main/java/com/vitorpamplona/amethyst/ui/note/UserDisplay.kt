@@ -9,14 +9,21 @@ import com.vitorpamplona.amethyst.model.User
 @Composable
 fun UserDisplay(user: User) {
     if (user.bestUsername() != null || user.bestDisplayName() != null) {
-      Text(
-        user.bestDisplayName() ?: "",
-        fontWeight = FontWeight.Bold,
-      )
-      Text(
-        "@${(user.bestUsername() ?: "")}",
-        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-      )
+      if (user.bestDisplayName().isNullOrBlank()) {
+        Text(
+          "@${(user.bestUsername() ?: "")}",
+          fontWeight = FontWeight.Bold,
+        )
+      } else {
+        Text(
+          user.bestDisplayName() ?: "",
+          fontWeight = FontWeight.Bold,
+        )
+        Text(
+          "@${(user.bestUsername() ?: "")}",
+          color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+        )
+      }
     } else {
       Text(
         user.pubkeyDisplayHex,

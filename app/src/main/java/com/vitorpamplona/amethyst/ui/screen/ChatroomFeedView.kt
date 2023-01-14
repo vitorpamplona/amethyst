@@ -1,16 +1,18 @@
 package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.compose.animation.Crossfade
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.Button
-import androidx.compose.material.OutlinedButton
+import androidx.compose.material.Divider
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -26,12 +28,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
-import com.vitorpamplona.amethyst.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.components.RichTextViewer
+import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
+import com.vitorpamplona.amethyst.ui.note.timeAgoLong
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @OptIn(ExperimentalLifecycleComposeApi::class)
 @Composable
-fun FeedView(viewModel: FeedViewModel, accountViewModel: AccountViewModel, navController: NavController) {
+fun ChatroomFeedView(userId: String, viewModel: FeedViewModel, accountViewModel: AccountViewModel, navController: NavController) {
     val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
 
     var isRefreshing by remember { mutableStateOf(false) }
@@ -73,9 +78,14 @@ fun FeedView(viewModel: FeedViewModel, accountViewModel: AccountViewModel, navCo
                             ),
                             state = listState
                         ) {
+                            var previousDate: String = ""
                             itemsIndexed(state.feed, key = { _, item -> item.idHex }) { index, item ->
-                                NoteCompose(item, isInnerNote = false, accountViewModel = accountViewModel, navController = navController)
+                                ChatroomMessageCompose(item, accountViewModel = accountViewModel, navController = navController)
                             }
+                        }
+
+                        LaunchedEffect(Unit) {
+                            listState.animateScrollToItem(state.feed.size-1, 0)
                         }
                     }
                     FeedState.Loading -> {
@@ -83,54 +93,6 @@ fun FeedView(viewModel: FeedViewModel, accountViewModel: AccountViewModel, navCo
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-fun LoadingFeed() {
-    Column(
-        Modifier
-            .fillMaxHeight()
-            .fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text("Loading feed")
-    }
-}
-
-@Composable
-fun FeedError(errorMessage: String, onRefresh: () -> Unit) {
-    Column(
-        Modifier
-            .fillMaxHeight()
-            .fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text("Error loading replies: $errorMessage")
-        Button(
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-            onClick = onRefresh
-        ) {
-            Text(text = "Try again")
-        }
-    }
-}
-
-@Composable
-fun FeedEmpty(onRefresh: () -> Unit) {
-    Column(
-        Modifier
-            .fillMaxHeight()
-            .fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text("Feed is empty.")
-        OutlinedButton(onClick = onRefresh) {
-            Text(text = "Refresh")
         }
     }
 }

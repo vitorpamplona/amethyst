@@ -62,7 +62,6 @@ class Relay(
                             it.onSendResponse(this@Relay, msg[1].asString, msg[2].asBoolean, msg[3].asString)
                         }
                         else -> listeners.forEach {
-                            println("else: " + text)
                             it.onError(
                                 this@Relay,
                                 channel,

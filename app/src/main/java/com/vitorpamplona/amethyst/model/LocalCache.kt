@@ -115,9 +115,9 @@ object LocalCache {
 
   fun consume(event: ContactListEvent) {
     val user = getOrCreateUser(event.pubKey)
-    //Log.d("CL", "${user.toBestDisplayName()} ${event.follows}")
 
     if (event.createdAt > user.updatedFollowsAt) {
+      //Log.d("CL", "${user.toBestDisplayName()} ${event.follows.size}")
       user.updateFollows(
         event.follows.map {
           try {
@@ -138,7 +138,25 @@ object LocalCache {
   }
 
   fun consume(event: PrivateDmEvent) {
-    //Log.d("PM", event.toJson())
+    val note = getOrCreateNote(event.id.toHex())
+
+    // Already processed this event.
+    if (note.event != null) return
+
+    val author = getOrCreateUser(event.pubKey)
+    val recipient = event.recipientPubKey?.let { getOrCreateUser(it) }
+
+    //Log.d("PM", "${author.toBestDisplayName()} to ${recipient?.toBestDisplayName()}")
+
+    val repliesTo = event.tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }.map { getOrCreateNote(it) }.toMutableList()
+    val mentions = event.tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }.map { getOrCreateUser(decodePublicKey(it)) }
+
+    note.loadEvent(event, author, mentions, repliesTo)
+
+    if (recipient != null) {
+      author.addMessage(recipient, note)
+      recipient.addMessage(author, note)
+    }
   }
 
   fun consume(event: DeletionEvent) {

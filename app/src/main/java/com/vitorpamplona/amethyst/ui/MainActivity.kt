@@ -8,12 +8,12 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.google.android.exoplayer2.util.Util
 import com.vitorpamplona.amethyst.KeyStorage
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrGlobalDataSource
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
 import com.vitorpamplona.amethyst.service.NostrNotificationDataSource
+import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.NostrThreadDataSource
@@ -51,6 +51,7 @@ class MainActivity : ComponentActivity() {
   override fun onPause() {
     NostrAccountDataSource.stop()
     NostrHomeDataSource.stop()
+    NostrChatroomListDataSource.stop()
 
     NostrGlobalDataSource.stop()
     NostrNotificationDataSource.stop()

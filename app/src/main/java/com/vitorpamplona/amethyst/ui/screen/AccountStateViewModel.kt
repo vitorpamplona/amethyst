@@ -8,6 +8,7 @@ import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrGlobalDataSource
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
 import com.vitorpamplona.amethyst.service.NostrNotificationDataSource
+import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.NostrThreadDataSource
@@ -59,6 +60,7 @@ class AccountStateViewModel(private val encryptedPreferences: EncryptedSharedPre
     NostrAccountDataSource.account = loggedIn
     NostrHomeDataSource.account = loggedIn
     NostrNotificationDataSource.account = loggedIn
+    NostrChatroomListDataSource.account = loggedIn
 
     NostrAccountDataSource.start()
     NostrGlobalDataSource.start()
@@ -67,6 +69,7 @@ class AccountStateViewModel(private val encryptedPreferences: EncryptedSharedPre
     NostrSingleEventDataSource.start()
     NostrSingleUserDataSource.start()
     NostrThreadDataSource.start()
+    NostrChatroomListDataSource.start()
   }
 
   fun newKey() {

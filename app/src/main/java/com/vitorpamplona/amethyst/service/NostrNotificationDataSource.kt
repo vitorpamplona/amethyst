@@ -8,7 +8,7 @@ object NostrNotificationDataSource: NostrDataSource("GlobalFeed") {
   lateinit var account: Account
 
   fun createGlobalFilter() = JsonFilter(
-    since = System.currentTimeMillis() / 1000 - (60 * 60 * 24 * 7), // 2 days
+    since = System.currentTimeMillis() / 1000 - (60 * 60 * 24 * 7), // 7 days
     tags = mapOf("p" to listOf(account.userProfile().pubkeyHex).filterNotNull())
   )
 
