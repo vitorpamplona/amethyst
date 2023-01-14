@@ -44,6 +44,12 @@ class Account(val loggedIn: Persona) {
     }
   }
 
+  fun broadcast(note: Note) {
+    note.event?.let {
+      Client.send(it)
+    }
+  }
+
   fun sendPost(message: String, replyingTo: Note?) {
     if (!isWriteable()) return
 

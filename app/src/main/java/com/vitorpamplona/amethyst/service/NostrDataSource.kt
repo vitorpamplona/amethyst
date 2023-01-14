@@ -57,6 +57,10 @@ abstract class NostrDataSource(val debugName: String) {
         resetFilters()
       }*/
     }
+
+    override fun onSendResponse(eventId: String, success: Boolean, message: String, relay: Relay) {
+
+    }
   }
 
   init {

@@ -59,10 +59,10 @@ class Relay(
                             it.onError(this@Relay, channel, Error("Relay sent notice: $channel"))
                         }
                         "OK" -> listeners.forEach {
-                            // "channel" being the second string in the string array ...
-                            // Event was saved correctly?
+                            it.onSendResponse(this@Relay, msg[1].asString, msg[2].asBoolean, msg[3].asString)
                         }
                         else -> listeners.forEach {
+                            println("else: " + text)
                             it.onError(
                                 this@Relay,
                                 channel,
@@ -155,6 +155,7 @@ class Relay(
 
         fun onError(relay: Relay, subscriptionId: String, error: Error)
 
+        fun onSendResponse(relay: Relay, eventId: String, success: Boolean, message: String)
         /**
          * Connected to or disconnected from a relay
          *

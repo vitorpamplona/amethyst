@@ -12,9 +12,12 @@ object RelayPool: Relay.Listener {
     private val relays = Collections.synchronizedList(ArrayList<Relay>())
     private val listeners = Collections.synchronizedSet(HashSet<Listener>())
 
-    fun report(): String {
-        val connected = relays.filter { it.isConnected() }
-        return "${connected.size}/${relays.size}"
+    fun availableRelays(): Int {
+        return relays.size
+    }
+
+    fun connectedRelays(): Int {
+        return relays.filter { it.isConnected() }.size
     }
 
     fun loadRelays(relayList: List<Relay>? = null){
@@ -79,6 +82,8 @@ object RelayPool: Relay.Listener {
         fun onError(error: Error, subscriptionId: String, relay: Relay)
 
         fun onRelayStateChange(type: Relay.Type, relay: Relay)
+
+        fun onSendResponse(eventId: String, success: Boolean, message: String, relay: Relay)
     }
 
     @Synchronized
@@ -94,6 +99,10 @@ object RelayPool: Relay.Listener {
     override fun onRelayStateChange(relay: Relay, type: Relay.Type) {
         listeners.forEach { it.onRelayStateChange(type, relay) }
         refreshObservers()
+    }
+
+    override fun onSendResponse(relay: Relay, eventId: String, success: Boolean, message: String) {
+        listeners.forEach { it.onSendResponse(eventId, success, message, relay) }
     }
 
     // Observers line up here.

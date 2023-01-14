@@ -1,18 +1,26 @@
 package com.vitorpamplona.amethyst.ui.components
 
 import android.util.Patterns
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.ClickableText
+import androidx.compose.material.LocalTextStyle
+import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.toNote
+import com.vitorpamplona.amethyst.ui.note.toDisplayHex
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import java.net.MalformedURLException
 import java.net.URISyntaxException
@@ -22,7 +30,7 @@ import java.util.regex.Pattern
 val imageExtension = Pattern.compile("(.*/)*.+\\.(png|jpg|gif|bmp|jpeg|webp)$")
 val videoExtension = Pattern.compile("(.*/)*.+\\.(mp4|avi|wmv|mpg|amv|webm)$")
 val noProtocolUrlValidator = Pattern.compile("^[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b(?:[-a-zA-Z0-9()@:%_\\+.~#?&//=]*)$")
-val tagIndex = Pattern.compile("\\#\\[([0-9]*)\\]")
+val tagIndex = Pattern.compile(".*\\#\\[([0-9]+)\\].*")
 
 val mentionsPattern: Pattern = Pattern.compile("@([A-Za-z0-9_-]+)")
 val hashTagsPattern: Pattern = Pattern.compile("#([A-Za-z0-9_-]+)")
@@ -41,7 +49,7 @@ fun isValidURL(url: String?): Boolean {
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun RichTextViewer(content: String, tags: List<List<String>>?, note: Note, accountViewModel: AccountViewModel) {
+fun RichTextViewer(content: String, tags: List<List<String>>?, note: Note, accountViewModel: AccountViewModel, navController: NavController) {
   Column(modifier = Modifier.padding(top = 5.dp)) {
     // FlowRow doesn't work well with paragraphs. So we need to split them
     content.split('\n').forEach { paragraph ->
@@ -64,7 +72,7 @@ fun RichTextViewer(content: String, tags: List<List<String>>?, note: Note, accou
           } else if (noProtocolUrlValidator.matcher(word).matches()) {
             UrlPreview("https://$word", word)
           } else if (tagIndex.matcher(word).matches() && tags != null) {
-            TagLink(word, tags)
+            TagLink(word, tags, navController)
           } else {
             Text(text = "$word ")
           }
@@ -76,7 +84,7 @@ fun RichTextViewer(content: String, tags: List<List<String>>?, note: Note, accou
 }
 
 @Composable
-fun TagLink(word: String, tags: List<List<String>>) {
+fun TagLink(word: String, tags: List<List<String>>, navController: NavController) {
   val matcher = tagIndex.matcher(word)
 
   val index = try {
@@ -97,15 +105,17 @@ fun TagLink(word: String, tags: List<List<String>>) {
       if (user != null) {
         val innerUserState by user.live.observeAsState()
         Text(
-          "${innerUserState?.user?.toBestDisplayName()}"
+          "@${innerUserState?.user?.toBestDisplayName()} "
         )
       }
     } else if (tags[index][0] == "e") {
       val note = LocalCache.notes[tags[index][1]]
       if (note != null) {
         val innerNoteState by note.live.observeAsState()
-        Text(
-          "${innerNoteState?.note?.idDisplayHex}"
+        ClickableText(
+          text = AnnotatedString("@${innerNoteState?.note?.id?.toNote()?.toDisplayHex()} "),
+          onClick = { navController.navigate("Note/${note.idHex}") },
+          style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary)
         )
       }
     } else

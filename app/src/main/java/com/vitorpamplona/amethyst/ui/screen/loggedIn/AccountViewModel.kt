@@ -22,8 +22,6 @@ class AccountViewModel(private val account: Account): ViewModel() {
   }
 
   fun broadcast(note: Note) {
-    note.event?.let {
-      Client.send(it)
-    }
+    account.broadcast(note)
   }
 }
