@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.ui.note
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -40,11 +39,7 @@ fun ChatroomMessageCompose(baseNote: Note, accountViewModel: AccountViewModel, n
         val authorState by note.author!!.live.observeAsState()
         val author = authorState?.user
 
-        Column(modifier =
-            Modifier.clickable(
-                onClick = { navController.navigate("User/${note.idHex}") }
-            )
-        ) {
+        Column() {
             var backgroundBubbleColor: Color
             var alignment: Arrangement.Horizontal
             var shape: Shape
