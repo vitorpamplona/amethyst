@@ -100,6 +100,7 @@ class UserMetadata {
     var display_name: String? = null
     var displayName: String? = null
     var picture: String? = null
+    var banner: String? = null
     var website: String? = null
     var about: String? = null
     var nip05: String? = null

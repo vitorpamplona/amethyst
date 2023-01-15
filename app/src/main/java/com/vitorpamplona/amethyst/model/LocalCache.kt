@@ -145,7 +145,7 @@ object LocalCache {
     val author = getOrCreateUser(event.pubKey)
     val recipient = event.recipientPubKey?.let { getOrCreateUser(it) }
 
-    Log.d("PM", "${author.toBestDisplayName()} to ${recipient?.toBestDisplayName()}")
+    //Log.d("PM", "${author.toBestDisplayName()} to ${recipient?.toBestDisplayName()}")
 
     val repliesTo = event.tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }.map { getOrCreateNote(it) }.toMutableList()
     val mentions = event.tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }.map { getOrCreateUser(decodePublicKey(it)) }
