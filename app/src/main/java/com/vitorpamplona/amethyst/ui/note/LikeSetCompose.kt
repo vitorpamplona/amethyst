@@ -68,7 +68,7 @@ fun LikeSetCompose(likeSetCard: LikeSetCard, modifier: Modifier = Modifier, isIn
                                     model = userState?.user?.profilePicture(),
                                     contentDescription = "Profile Image",
                                     modifier = Modifier
-                                        .width(35.dp)
+                                        .width(35.dp).height(35.dp)
                                         .height(35.dp)
                                         .clip(shape = CircleShape)
                                 )

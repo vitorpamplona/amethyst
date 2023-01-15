@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.ui.navigation
 import android.util.Log
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -99,7 +100,7 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
                         model = accountUser?.profilePicture() ?: "https://robohash.org/ohno.png",
                         contentDescription = "Profile Image",
                         modifier = Modifier
-                            .width(34.dp)
+                            .width(34.dp).height(34.dp)
                             .clip(shape = CircleShape),
                     )
                 }

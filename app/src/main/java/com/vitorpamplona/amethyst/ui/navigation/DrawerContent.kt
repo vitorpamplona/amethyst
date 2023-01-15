@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -103,7 +104,7 @@ fun ProfileContent(accountUser: User?, modifier: Modifier = Modifier) {
             model = accountUser?.profilePicture() ?: "https://robohash.org/ohno.png",
             contentDescription = "Profile Image",
             modifier = Modifier
-                .width(100.dp)
+                .width(100.dp).height(100.dp)
                 .clip(shape = CircleShape)
                 .border(3.dp, MaterialTheme.colors.background, CircleShape)
                 .background(MaterialTheme.colors.background)

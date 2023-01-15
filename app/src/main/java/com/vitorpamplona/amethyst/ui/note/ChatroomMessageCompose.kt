@@ -77,6 +77,7 @@ fun ChatroomMessageCompose(baseNote: Note, accountViewModel: AccountViewModel, n
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 val eventContent = accountViewModel.decrypt(note)
+
                                 if (eventContent != null)
                                     RichTextViewer(
                                         eventContent,

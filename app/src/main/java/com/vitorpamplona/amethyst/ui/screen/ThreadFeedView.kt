@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -169,7 +170,7 @@ fun NoteMaster(baseNote: Note, accountViewModel: AccountViewModel, navController
                     model = author?.profilePicture(),
                     contentDescription = "Profile Image",
                     modifier = Modifier
-                        .width(55.dp)
+                        .width(55.dp).height(55.dp)
                         .clip(shape = CircleShape)
                 )
 

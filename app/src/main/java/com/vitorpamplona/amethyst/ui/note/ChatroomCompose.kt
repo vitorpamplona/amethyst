@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.ui.note
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -66,7 +67,7 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
                     model = userToComposeOn?.profilePicture(),
                     contentDescription = "Profile Image",
                     modifier = Modifier
-                        .width(55.dp)
+                        .width(55.dp).height(55.dp)
                         .clip(shape = CircleShape)
                 )
 

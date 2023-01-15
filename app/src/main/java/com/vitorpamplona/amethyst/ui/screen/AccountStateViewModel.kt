@@ -45,6 +45,7 @@ class AccountStateViewModel(private val encryptedPreferences: EncryptedSharedPre
         Persona(Hex.decode(key))
       }
     )
+
   }
 
   fun login(person: Persona) {

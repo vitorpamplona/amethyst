@@ -7,6 +7,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -74,7 +75,7 @@ fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Bool
                             model = author?.profilePicture(),
                             contentDescription = "Profile Image",
                             modifier = Modifier
-                                .width(55.dp)
+                                .width(55.dp).height(55.dp)
                                 .clip(shape = CircleShape)
                         )
 
@@ -85,7 +86,7 @@ fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Bool
                                 model = boostedPosts[0].author?.profilePicture(),
                                 contentDescription = "Profile Image",
                                 modifier = Modifier
-                                    .width(35.dp)
+                                    .width(35.dp).height(35.dp)
                                     .clip(shape = CircleShape)
                                     .align(Alignment.BottomEnd)
                                     .background(MaterialTheme.colors.background)
