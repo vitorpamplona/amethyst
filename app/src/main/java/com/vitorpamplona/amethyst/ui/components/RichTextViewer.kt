@@ -46,7 +46,6 @@ fun isValidURL(url: String?): Boolean {
   }
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun RichTextViewer(content: String, tags: List<List<String>>?, note: Note, accountViewModel: AccountViewModel, navController: NavController) {
   Column(modifier = Modifier.padding(top = 5.dp)) {
@@ -98,7 +97,7 @@ fun TagLink(word: String, tags: List<List<String>>, navController: NavController
     return Text(text = "$word ")
   }
 
-  if (index > 0 && index < tags.size) {
+  if (index >= 0 && index < tags.size) {
     if (tags[index][0] == "p") {
       val user = LocalCache.users[tags[index][1]]
       if (user != null) {
