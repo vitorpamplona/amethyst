@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.Button
 import androidx.compose.material.Icon
@@ -67,6 +68,7 @@ fun LoginPage(accountViewModel: AccountStateViewModel) {
     ) {
 
         val key = remember { mutableStateOf(TextFieldValue("")) }
+        var errorMessage by remember { mutableStateOf("") }
 
         Image(
             painterResource(id = R.drawable.amethyst_logo),
@@ -89,7 +91,7 @@ fun LoginPage(accountViewModel: AccountStateViewModel) {
             keyboardOptions = KeyboardOptions(
                 autoCorrect = false,
                 keyboardType = KeyboardType.Ascii,
-                imeAction = ImeAction.Next
+                imeAction = ImeAction.Go
             ),
             placeholder = {
                 Text(
@@ -105,14 +107,36 @@ fun LoginPage(accountViewModel: AccountStateViewModel) {
                     )
                 }
             },
-            visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation()
+            visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+            keyboardActions = KeyboardActions(
+                onGo = {
+                    try {
+                        accountViewModel.login(key.value.text)
+                    } catch (e: Exception) {
+                        errorMessage = "Invalid key"
+                    }
+                }
+            )
         )
+        if (errorMessage.isNotBlank()) {
+            Text(
+                text = "${errorMessage}",
+                color = MaterialTheme.colors.error,
+                style = MaterialTheme.typography.caption
+            )
+        }
 
         Spacer(modifier = Modifier.height(20.dp))
 
         Box(modifier = Modifier.padding(40.dp, 0.dp, 40.dp, 0.dp)) {
             Button(
-                onClick = { accountViewModel.login(key.value.text) },
+                onClick = {
+                    try {
+                        accountViewModel.login(key.value.text)
+                    } catch (e: Exception) {
+                        errorMessage = "Invalid key"
+                    }
+                },
                 shape = RoundedCornerShape(35.dp),
                 modifier = Modifier
                     .fillMaxWidth()
