@@ -13,7 +13,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.ExperimentalLifecycleComposeApi
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.google.accompanist.swiperefresh.SwipeRefresh
@@ -21,7 +20,6 @@ import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
-@OptIn(ExperimentalLifecycleComposeApi::class)
 @Composable
 fun ChatroomFeedView(userId: String, viewModel: FeedViewModel, accountViewModel: AccountViewModel, navController: NavController) {
     val feedState by viewModel.feedContent.collectAsStateWithLifecycle()

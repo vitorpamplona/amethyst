@@ -9,7 +9,6 @@ import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.compose.ExperimentalLifecycleComposeApi
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
@@ -51,7 +50,6 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
     }
 }
 
-@OptIn(ExperimentalLifecycleComposeApi::class)
 @Composable
 fun FloatingButton(navController: NavHostController, accountViewModel: AccountStateViewModel) {
     val accountState by accountViewModel.accountContent.collectAsStateWithLifecycle()

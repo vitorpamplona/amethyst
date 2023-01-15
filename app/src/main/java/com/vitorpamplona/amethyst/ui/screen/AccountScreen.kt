@@ -4,11 +4,9 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.lifecycle.compose.ExperimentalLifecycleComposeApi
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
-@OptIn(ExperimentalLifecycleComposeApi::class)
 @Composable
 fun AccountScreen(accountStateViewModel: AccountStateViewModel) {
   val accountState by accountStateViewModel.accountContent.collectAsStateWithLifecycle()

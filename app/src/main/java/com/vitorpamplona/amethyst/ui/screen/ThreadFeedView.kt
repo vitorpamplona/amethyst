@@ -28,7 +28,6 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.ExperimentalLifecycleComposeApi
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
@@ -43,7 +42,6 @@ import com.vitorpamplona.amethyst.ui.note.UserDisplay
 import com.vitorpamplona.amethyst.ui.note.timeAgoLong
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
-@OptIn(ExperimentalLifecycleComposeApi::class)
 @Composable
 fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: AccountViewModel, navController: NavController) {
     val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
