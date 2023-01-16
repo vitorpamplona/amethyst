@@ -32,6 +32,8 @@ class Note(val idHex: String) {
     val reactions = Collections.synchronizedSet(mutableSetOf<Note>())
     val boosts = Collections.synchronizedSet(mutableSetOf<Note>())
 
+    var channel: Channel? = null
+
     fun loadEvent(event: Event, author: User, mentions: List<User>, replyTo: MutableList<Note>) {
         this.event = event
         this.author = author

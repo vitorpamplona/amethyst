@@ -1,6 +1,11 @@
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
+import com.vitorpamplona.amethyst.service.model.ChannelHideMessageEvent
+import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
+import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
+import com.vitorpamplona.amethyst.service.model.ChannelMuteUserEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.relays.Client
@@ -33,6 +38,12 @@ abstract class NostrDataSource<T>(val debugName: String) {
           else -> when (event.kind) {
             RepostEvent.kind -> LocalCache.consume(RepostEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
             ReactionEvent.kind -> LocalCache.consume(ReactionEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
+
+            ChannelCreateEvent.kind -> LocalCache.consume(ChannelCreateEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
+            ChannelMetadataEvent.kind -> LocalCache.consume(ChannelMetadataEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
+            ChannelMessageEvent.kind -> LocalCache.consume(ChannelMessageEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
+            ChannelHideMessageEvent.kind -> LocalCache.consume(ChannelHideMessageEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
+            ChannelMuteUserEvent.kind -> LocalCache.consume(ChannelMuteUserEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
           }
         }
       }

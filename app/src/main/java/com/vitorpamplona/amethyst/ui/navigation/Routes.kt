@@ -10,6 +10,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.screen.ChannelScreen
 import com.vitorpamplona.amethyst.ui.screen.ChatroomListScreen
 import com.vitorpamplona.amethyst.ui.screen.ChatroomScreen
 import com.vitorpamplona.amethyst.ui.screen.HomeScreen
@@ -45,6 +46,11 @@ sealed class Route(
         arguments = listOf(navArgument("id") { type = NavType.StringType } ),
         buildScreen = { acc, nav -> { ChatroomScreen(it.arguments?.getString("id"), acc, nav) }}
     )
+
+    object Channel : Route("Channel/{id}", R.drawable.ic_moments,
+        arguments = listOf(navArgument("id") { type = NavType.StringType } ),
+        buildScreen = { acc, nav -> { ChannelScreen(it.arguments?.getString("id"), acc, nav) }}
+    )
 }
 
 val Routes = listOf(
@@ -57,7 +63,8 @@ val Routes = listOf(
     //drawer
     Route.Profile,
     Route.Note,
-    Route.Room
+    Route.Room,
+    Route.Channel
 )
 
 @Composable

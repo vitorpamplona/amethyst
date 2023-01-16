@@ -4,6 +4,11 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
+import com.vitorpamplona.amethyst.service.model.ChannelHideMessageEvent
+import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
+import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
+import com.vitorpamplona.amethyst.service.model.ChannelMuteUserEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import java.io.ByteArrayInputStream
@@ -28,6 +33,7 @@ object LocalCache {
 
   val users = ConcurrentHashMap<HexKey, User>()
   val notes = ConcurrentHashMap<HexKey, Note>()
+  val channels = ConcurrentHashMap<HexKey, Channel>()
 
   @Synchronized
   fun getOrCreateUser(pubkey: ByteArray): User {
@@ -47,6 +53,16 @@ object LocalCache {
       answer
     }
   }
+
+  @Synchronized
+  fun getOrCreateChannel(key: String): Channel {
+    return channels[key] ?: run {
+      val answer = Channel(key.toByteArray())
+      channels.put(key, answer)
+      answer
+    }
+  }
+
 
   fun consume(event: MetadataEvent) {
     //Log.d("MT", "New User ${users.size} ${event.contactMetaData.name}")
@@ -227,6 +243,73 @@ object LocalCache {
         it.addReaction(note)
       }
     }
+  }
+
+  fun consume(event: ChannelCreateEvent) {
+    // new event
+    val oldChannel = getOrCreateChannel(event.id.toHex())
+    if (event.createdAt > oldChannel.updatedMetadataAt) {
+      oldChannel.updateChannelInfo(event.channelInfo, event.createdAt)
+    } else {
+      // older data, does nothing
+    }
+  }
+  fun consume(event: ChannelMetadataEvent) {
+    //Log.d("MT", "New User ${users.size} ${event.contactMetaData.name}")
+    if (event.channel.isNullOrBlank()) return
+
+    // new event
+    val oldChannel = getOrCreateChannel(event.channel)
+    if (event.createdAt > oldChannel.updatedMetadataAt) {
+      oldChannel.updateChannelInfo(event.channelInfo, event.createdAt)
+    } else {
+      //Log.d("MT","Relay sent a previous Metadata Event ${oldUser.toBestDisplayName()} ${formattedDateTime(event.createdAt)} > ${formattedDateTime(oldUser.updatedAt)}")
+    }
+  }
+
+  fun consume(event: ChannelMessageEvent) {
+    if (event.channel.isNullOrBlank()) return
+
+    val channel = getOrCreateChannel(event.channel)
+
+    val note = channel.getOrCreateNote(event.id.toHex())
+
+    // Already processed this event.
+    if (note.event != null) return
+
+    val author = getOrCreateUser(event.pubKey)
+    val mentions = Collections.synchronizedList(event.mentions.map { getOrCreateUser(decodePublicKey(it)) })
+    val replyTo = Collections.synchronizedList(event.replyTos.map { getOrCreateNote(it) }.toMutableList())
+
+    note.channel = channel
+    note.loadEvent(event, author, mentions, replyTo)
+
+    //Log.d("CM", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${note.event?.content} ${formattedDateTime(event.createdAt)}")
+
+    // Adds notifications to users.
+    mentions.forEach {
+      it.taggedPosts.add(note)
+    }
+    replyTo.forEach {
+      it.author?.taggedPosts?.add(note)
+    }
+
+    // Counts the replies
+    replyTo.forEach {
+      it.addReply(note)
+    }
+
+    UrlCachedPreviewer.preloadPreviewsFor(note)
+
+    refreshObservers()
+  }
+
+  fun consume(event: ChannelHideMessageEvent) {
+
+  }
+
+  fun consume(event: ChannelMuteUserEvent) {
+
   }
 
   // Observers line up here.

@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.Constants
+import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.relays.Client
@@ -13,11 +14,19 @@ import nostr.postr.events.PrivateDmEvent
 import nostr.postr.events.TextNoteEvent
 import nostr.postr.toHex
 
-class Account(val loggedIn: Persona) {
+val DefaultChannels = setOf(
+  "25e5c82273a271cb1a840d0060391a0bf4965cafeb029d5ab55350b418953fbb" // -> Anigma's Nostr
+)
+
+class Account(val loggedIn: Persona, val followingChannels: MutableSet<String> = DefaultChannels.toMutableSet()) {
   var seeReplies: Boolean = true
 
   fun userProfile(): User {
     return LocalCache.getOrCreateUser(loggedIn.pubKey)
+  }
+
+  fun followingChannels(): List<Channel> {
+    return followingChannels.map { LocalCache.getOrCreateChannel(it) }
   }
 
   fun isWriteable(): Boolean {
@@ -33,7 +42,7 @@ class Account(val loggedIn: Persona) {
     }
 
     note.event?.let {
-      val event = ReactionEvent.create(it, loggedIn.privKey!!)
+      val event = ReactionEvent.createLike(it, loggedIn.privKey!!)
       Client.send(event)
       LocalCache.consume(event)
     }
@@ -107,6 +116,18 @@ class Account(val loggedIn: Persona) {
       Client.send(signedEvent)
       LocalCache.consume(signedEvent)
     }
+  }
+
+  fun sendChannelMeesage(message: String, toChannel: String, replyingTo: Note? = null) {
+    if (!isWriteable()) return
+
+    val signedEvent = ChannelMessageEvent.create(
+      message = message,
+      channel = toChannel,
+      privateKey = loggedIn.privKey!!
+    )
+    Client.send(signedEvent)
+    LocalCache.consume(signedEvent)
   }
 
   fun sendPrivateMeesage(message: String, toUser: String, replyingTo: Note? = null) {

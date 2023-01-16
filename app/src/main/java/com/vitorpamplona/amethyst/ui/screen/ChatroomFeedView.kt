@@ -21,7 +21,7 @@ import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun ChatroomFeedView(userId: String, viewModel: FeedViewModel, accountViewModel: AccountViewModel, navController: NavController) {
+fun ChatroomFeedView(viewModel: FeedViewModel, accountViewModel: AccountViewModel, navController: NavController) {
     val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
 
     var isRefreshing by remember { mutableStateOf(false) }

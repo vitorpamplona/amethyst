@@ -23,33 +23,39 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrChatRoomDataSource
 import com.vitorpamplona.amethyst.ui.actions.PostButton
 import com.vitorpamplona.amethyst.ui.note.UserDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navController: NavController) {
+fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, navController: NavController) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account
 
-    if (account != null && userId != null) {
+    if (account != null && channelId != null) {
         val newPost = remember { mutableStateOf(TextFieldValue("")) }
 
-        NostrChatRoomDataSource.loadMessagesBetween(account, userId)
+        NostrChannelDataSource.loadMessagesBetween(channelId)
 
-        val feedViewModel: FeedViewModel = viewModel { FeedViewModel( NostrChatRoomDataSource ) }
+        val channelState by NostrChannelDataSource.channel!!.live.observeAsState()
+        val channel = channelState?.channel ?: return
+
+        val feedViewModel: FeedViewModel = viewModel { FeedViewModel( NostrChannelDataSource ) }
 
         Column(Modifier.fillMaxHeight()) {
-            NostrChatRoomDataSource.withUser?.let {
-                ChatroomHeader(
+            channel?.let {
+                ChannelHeader(
                     it,
                     accountViewModel = accountViewModel,
                     navController = navController
@@ -84,7 +90,7 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
 
                 PostButton(
                     onPost = {
-                        account.sendPrivateMeesage(newPost.value.text, userId)
+                        account.sendChannelMeesage(newPost.value.text, channel.idHex)
                         newPost.value = TextFieldValue("")
                     },
                     newPost.value.text.isNotBlank()
@@ -96,21 +102,18 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
 
 
 @Composable
-fun ChatroomHeader(baseUser: User, accountViewModel: AccountViewModel, navController: NavController) {
-    val authorState by baseUser.live.observeAsState()
-    val author = authorState?.user
+fun ChannelHeader(baseChannel: Channel, accountViewModel: AccountViewModel, navController: NavController) {
+    val channelState by baseChannel.live.observeAsState()
+    val channel = channelState?.channel
 
     Column(modifier =
         Modifier
             .padding(12.dp)
-            .clickable(
-                onClick = { navController.navigate("User/${author?.pubkeyHex}") }
-            )
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
 
             AsyncImage(
-                model = author?.profilePicture(),
+                model = channel?.profilePicture(),
                 contentDescription = "Profile Image",
                 modifier = Modifier
                     .width(35.dp).height(35.dp)
@@ -119,8 +122,17 @@ fun ChatroomHeader(baseUser: User, accountViewModel: AccountViewModel, navContro
 
             Column(modifier = Modifier.padding(start = 10.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (author != null)
-                        UserDisplay(author)
+                    Text(
+                        "${channel?.info?.name}",
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "${channel?.info?.about}",
+                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    )
                 }
             }
         }

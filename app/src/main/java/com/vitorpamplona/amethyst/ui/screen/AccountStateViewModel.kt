@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.ui.screen
 import androidx.lifecycle.ViewModel
 import androidx.security.crypto.EncryptedSharedPreferences
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.DefaultChannels
 import com.vitorpamplona.amethyst.model.toByteArray
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
@@ -27,41 +28,47 @@ class AccountStateViewModel(private val encryptedPreferences: EncryptedSharedPre
 
   init {
     // pulls account from storage.
-    loadFromEncryptedStorage()?.let { login(it) }
+    loadFromEncryptedStorage()?.let {
+      login(it)
+    }
   }
 
   fun login(key: String) {
     val pattern = Pattern.compile(".+@.+\\.[a-z]+")
 
-    login(
+    val account =
       if (key.startsWith("nsec")) {
-        Persona(privKey = key.bechToBytes())
+        Account(Persona(privKey = key.bechToBytes()))
       } else if (key.startsWith("npub")) {
-        Persona(pubKey = key.bechToBytes())
+        Account(Persona(pubKey = key.bechToBytes()))
       } else if (pattern.matcher(key).matches()) {
         // Evaluate NIP-5
-        Persona()
+        Account(Persona())
       } else {
-        Persona(Hex.decode(key))
+        Account(Persona(Hex.decode(key)))
       }
-    )
 
+    saveToEncryptedStorage(account)
+
+    login(account)
   }
 
-  fun login(person: Persona) {
-    val loggedIn = Account(person)
+  fun newKey() {
+    val account = Account(Persona())
+    saveToEncryptedStorage(account)
+    login(account)
+  }
 
-    if (person.privKey != null)
-      _accountContent.update { AccountState.LoggedIn ( loggedIn ) }
+  fun login(account: Account) {
+    if (account.loggedIn.privKey != null)
+      _accountContent.update { AccountState.LoggedIn ( account ) }
     else
-      _accountContent.update { AccountState.LoggedInViewOnly ( Account(person) ) }
+      _accountContent.update { AccountState.LoggedInViewOnly ( account ) }
 
-    saveToEncryptedStorage(person)
-
-    NostrAccountDataSource.account = loggedIn
-    NostrHomeDataSource.account = loggedIn
-    NostrNotificationDataSource.account = loggedIn
-    NostrChatroomListDataSource.account = loggedIn
+    NostrAccountDataSource.account = account
+    NostrHomeDataSource.account = account
+    NostrNotificationDataSource.account = account
+    NostrChatroomListDataSource.account = account
 
     NostrAccountDataSource.start()
     NostrGlobalDataSource.start()
@@ -71,10 +78,6 @@ class AccountStateViewModel(private val encryptedPreferences: EncryptedSharedPre
     NostrSingleUserDataSource.start()
     NostrThreadDataSource.start()
     NostrChatroomListDataSource.start()
-  }
-
-  fun newKey() {
-    login(Persona())
   }
 
   fun logOff() {
@@ -90,20 +93,22 @@ class AccountStateViewModel(private val encryptedPreferences: EncryptedSharedPre
     }.apply()
   }
 
-  fun saveToEncryptedStorage(login: Persona) {
+  fun saveToEncryptedStorage(account: Account) {
     encryptedPreferences.edit().apply {
-      login.privKey?.let { putString("nostr_privkey", it.toHex()) }
-      login.pubKey.let { putString("nostr_pubkey", it.toHex()) }
+      account.loggedIn.privKey?.let { putString("nostr_privkey", it.toHex()) }
+      account.loggedIn.pubKey.let { putString("nostr_pubkey", it.toHex()) }
+      account.followingChannels.let { putStringSet("following_channels", account.followingChannels) }
     }.apply()
   }
 
-  fun loadFromEncryptedStorage(): Persona? {
+  fun loadFromEncryptedStorage(): Account? {
     encryptedPreferences.apply {
       val privKey = getString("nostr_privkey", null)
       val pubKey = getString("nostr_pubkey", null)
+      val followingChannels = getStringSet("following_channels", DefaultChannels)?.toMutableSet() ?: DefaultChannels.toMutableSet()
 
       if (pubKey != null) {
-        return Persona(privKey = privKey?.toByteArray(), pubKey = pubKey.toByteArray())
+        return Account(Persona(privKey = privKey?.toByteArray(), pubKey = pubKey.toByteArray()), followingChannels)
       } else {
         return null
       }

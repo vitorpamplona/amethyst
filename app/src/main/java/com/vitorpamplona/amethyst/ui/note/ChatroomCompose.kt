@@ -16,12 +16,14 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.RichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import nostr.postr.events.TextNoteEvent
 
 @Composable
 fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navController: NavController) {
@@ -33,6 +35,61 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
 
     if (note?.event == null) {
         BlankNote(Modifier)
+    } else if (note.channel != null) {
+        val authorState by note.author!!.live.observeAsState()
+        val author = authorState?.user
+
+        val channelState by note.channel!!.live.observeAsState()
+        val channel = channelState?.channel
+
+        Column(modifier =
+        Modifier.clickable(
+            onClick = { navController.navigate("Channel/${channel?.idHex}") }
+        )
+        ) {
+            Row(
+                modifier = Modifier
+                    .padding(
+                        start = 12.dp,
+                        end = 12.dp,
+                        top = 10.dp)
+            ) {
+
+                AsyncImage(
+                    model = channel?.profilePicture(),
+                    contentDescription = "Public Channel Image",
+                    modifier = Modifier
+                        .width(55.dp).height(55.dp)
+                        .clip(shape = CircleShape)
+                )
+
+                Column(modifier = Modifier.padding(start = 10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "${channel?.info?.name}",
+                            fontWeight = FontWeight.Bold,
+                        )
+
+                        Text(
+                            timeAgo(note.event?.createdAt),
+                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                        )
+                    }
+
+                    val eventContent = accountViewModel.decrypt(note)
+                    if (eventContent != null)
+                        RichTextViewer("${author?.toBestDisplayName()}: " + eventContent.take(100), note.event?.tags, note, accountViewModel, navController)
+                    else
+                        RichTextViewer("Referenced event not found", note.event?.tags, note, accountViewModel, navController)
+                }
+            }
+
+            Divider(
+                modifier = Modifier.padding(top = 10.dp),
+                thickness = 0.25.dp
+            )
+        }
+
     } else {
         val authorState by note.author!!.live.observeAsState()
         val author = authorState?.user
@@ -96,4 +153,5 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
             )
         }
     }
+
 }

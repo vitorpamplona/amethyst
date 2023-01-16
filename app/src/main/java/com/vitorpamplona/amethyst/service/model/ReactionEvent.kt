@@ -25,8 +25,11 @@ class ReactionEvent (
   companion object {
     const val kind = 7
 
-    fun create(originalNote: Event, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ReactionEvent {
-      val content = "+"
+    fun createLike(originalNote: Event, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ReactionEvent {
+      return create("+", originalNote, privateKey, createdAt)
+    }
+
+    fun create(content: String, originalNote: Event, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ReactionEvent {
       val pubKey = Utils.pubkeyCreate(privateKey)
       val tags = listOf( listOf("e", originalNote.id.toHex()), listOf("p", originalNote.pubKey.toHex()))
       val id = generateId(pubKey, createdAt, kind, tags, content)
