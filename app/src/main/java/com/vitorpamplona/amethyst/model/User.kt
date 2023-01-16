@@ -2,14 +2,14 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
-import com.vitorpamplona.amethyst.ui.note.toDisplayHex
+import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import nostr.postr.events.ContactListEvent
 
 class User(val pubkey: ByteArray) {
     val pubkeyHex = pubkey.toHexKey()
-    val pubkeyDisplayHex = pubkey.toDisplayHex()
+    val pubkeyDisplayHex = pubkey.toShortenHex()
 
     var info = UserMetadata()
 

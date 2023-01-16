@@ -3,22 +3,16 @@ package com.vitorpamplona.amethyst.ui.components
 import android.util.Patterns
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.ClickableText
-import androidx.compose.material.LocalTextStyle
-import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowRow
+import com.vitorpamplona.amethyst.lnurl.LnInvoiceUtil
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.toNote
-import com.vitorpamplona.amethyst.ui.note.toDisplayHex
+import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import java.net.MalformedURLException
 import java.net.URISyntaxException
@@ -100,22 +94,19 @@ fun TagLink(word: String, tags: List<List<String>>, navController: NavController
     if (tags[index][0] == "p") {
       val user = LocalCache.users[tags[index][1]]
       if (user != null) {
-        val innerUserState by user.live.observeAsState()
-        Text(
-          "@${innerUserState?.user?.toBestDisplayName()} "
-        )
+        ClickableUserTag(user, navController)
+      } else {
+        Text(text = "${tags[index][1].toShortenHex()} ")
       }
     } else if (tags[index][0] == "e") {
       val note = LocalCache.notes[tags[index][1]]
       if (note != null) {
-        val innerNoteState by note.live.observeAsState()
-        ClickableText(
-          text = AnnotatedString("@${innerNoteState?.note?.id?.toNote()?.toDisplayHex()} "),
-          onClick = { navController.navigate("Note/${note.idHex}") },
-          style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary)
-        )
+        ClickableNoteTag(note, navController)
+      } else {
+        Text(text = "${tags[index][1].toShortenHex()} ")
       }
     } else
       Text(text = "$word ")
   }
 }
+

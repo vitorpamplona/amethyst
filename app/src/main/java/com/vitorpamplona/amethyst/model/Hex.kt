@@ -1,6 +1,6 @@
 package com.vitorpamplona.amethyst.model
 
-import com.vitorpamplona.amethyst.ui.note.toDisplayHex
+import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import fr.acinq.secp256k1.Hex
 import java.util.regex.Pattern
 import nostr.postr.Bech32
@@ -22,7 +22,7 @@ fun HexKey.toByteArray(): ByteArray {
 }
 
 fun HexKey.toDisplayHexKey(): String {
-  return this.toDisplayHex()
+  return this.toShortenHex()
 }
 
 fun decodePublicKey(key: String): ByteArray {

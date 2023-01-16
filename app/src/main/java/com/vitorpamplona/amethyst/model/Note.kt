@@ -2,7 +2,7 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
-import com.vitorpamplona.amethyst.ui.note.toDisplayHex
+import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import fr.acinq.secp256k1.Hex
 import java.time.Instant
 import java.time.ZoneId
@@ -18,7 +18,7 @@ class Note(val idHex: String) {
     // These fields are always available.
     // They are immutable
     val id = Hex.decode(idHex)
-    val idDisplayHex = id.toDisplayHex()
+    val idDisplayHex = id.toShortenHex()
 
     // These fields are only available after the Text Note event is received.
     // They are immutable after that.

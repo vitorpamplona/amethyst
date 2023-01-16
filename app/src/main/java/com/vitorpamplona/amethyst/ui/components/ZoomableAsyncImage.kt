@@ -44,7 +44,6 @@ fun ZoomableAsyncImage(imageUrl: String) {
                 }
             }
     ) {
-
         AsyncImage(
             model = imageUrl,
             contentDescription = "Profile Image",

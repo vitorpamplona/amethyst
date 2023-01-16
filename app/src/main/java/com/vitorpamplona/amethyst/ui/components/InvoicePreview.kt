@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat.startActivity
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.lnurl.LnInvoiceUtil
 
 @Composable
 fun InvoicePreview(lnInvoice: String) {
