@@ -38,14 +38,13 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun AppTopBar(navController: NavHostController, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
+
+
     when (currentRoute(navController)) {
-        Route.Profile.route,
-        Route.Lists.route,
-        Route.Topics.route,
-        Route.Bookmarks.route,
-        Route.Moments.route -> TopBarWithBackButton(navController)
+        //Route.Profile.route -> TopBarWithBackButton(navController)
         else -> MainTopBar(scaffoldState, accountViewModel)
     }
+
 }
 
 @Composable

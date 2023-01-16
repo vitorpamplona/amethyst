@@ -5,7 +5,7 @@ import com.vitorpamplona.amethyst.model.Note
 import java.util.Collections
 import nostr.postr.JsonFilter
 
-object NostrThreadDataSource: NostrDataSource("SingleThreadFeed") {
+object NostrThreadDataSource: NostrDataSource<Note>("SingleThreadFeed") {
   val eventsToWatch = Collections.synchronizedList(mutableListOf<String>())
 
   fun createRepliesAndReactionsFilter(): JsonFilter? {

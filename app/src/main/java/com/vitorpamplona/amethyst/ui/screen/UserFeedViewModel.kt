@@ -4,17 +4,26 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.LocalCacheState
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrDataSource
+import com.vitorpamplona.amethyst.service.NostrUserProfileFollowersDataSource
+import com.vitorpamplona.amethyst.service.NostrUserProfileFollowsDataSource
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+class NostrUserProfileFollowsUserFeedViewModel(): UserFeedViewModel(
+    NostrUserProfileFollowsDataSource
+)
 
-class FeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel() {
-    private val _feedContent = MutableStateFlow<FeedState>(FeedState.Loading)
+class NostrUserProfileFollowersUserFeedViewModel(): UserFeedViewModel(
+    NostrUserProfileFollowersDataSource
+)
+
+open class UserFeedViewModel(val dataSource: NostrDataSource<User>): ViewModel() {
+    private val _feedContent = MutableStateFlow<UserFeedState>(UserFeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
 
     fun refresh() {
@@ -28,7 +37,7 @@ class FeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel() {
         val notes = dataSource.loadTop()
 
         val oldNotesState = feedContent.value
-        if (oldNotesState is FeedState.Loaded) {
+        if (oldNotesState is UserFeedState.Loaded) {
             if (notes != oldNotesState.feed) {
                 updateFeed(notes)
             }
@@ -37,18 +46,18 @@ class FeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel() {
         }
     }
 
-    fun updateFeed(notes: List<Note>) {
+    fun updateFeed(notes: List<User>) {
         if (notes.isEmpty()) {
-            _feedContent.update { FeedState.Empty }
+            _feedContent.update { UserFeedState.Empty }
         } else {
-            _feedContent.update { FeedState.Loaded(notes) }
+            _feedContent.update { UserFeedState.Loaded(notes) }
         }
     }
 
     fun refreshCurrentList() {
         val state = feedContent.value
-        if (state is FeedState.Loaded) {
-            _feedContent.update { FeedState.Loaded(state.feed) }
+        if (state is UserFeedState.Loaded) {
+            _feedContent.update { UserFeedState.Loaded(state.feed) }
         }
     }
 

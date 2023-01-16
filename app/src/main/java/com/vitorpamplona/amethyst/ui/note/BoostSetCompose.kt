@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.note
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -71,6 +72,11 @@ fun BoostSetCompose(likeSetCard: BoostSetCard, isInnerNote: Boolean = false, acc
                                         .width(35.dp)
                                         .height(35.dp)
                                         .clip(shape = CircleShape)
+                                        .clickable(onClick = {
+                                            userState?.let {
+                                                navController.navigate("User/${it.user.pubkeyHex}")
+                                            }
+                                        })
                                 )
                             }
                         }

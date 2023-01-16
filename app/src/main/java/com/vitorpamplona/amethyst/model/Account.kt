@@ -1,11 +1,14 @@
 package com.vitorpamplona.amethyst.model
 
 import androidx.lifecycle.LiveData
+import com.vitorpamplona.amethyst.service.Constants
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.relays.Client
+import nostr.postr.Contact
 import nostr.postr.Persona
 import nostr.postr.Utils
+import nostr.postr.events.ContactListEvent
 import nostr.postr.events.PrivateDmEvent
 import nostr.postr.events.TextNoteEvent
 import nostr.postr.toHex
@@ -49,6 +52,32 @@ class Account(val loggedIn: Persona) {
   fun broadcast(note: Note) {
     note.event?.let {
       Client.send(it)
+    }
+  }
+
+  fun follow(user: User) {
+    if (!isWriteable()) return
+
+    val lastestContactList = userProfile().lastestContactList
+    val event = if (lastestContactList != null) {
+      ContactListEvent.create(lastestContactList.follows.plus(Contact(user.pubkeyHex, null)), lastestContactList.relayUse, loggedIn.privKey!!)
+    } else {
+      val relays = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) }
+      ContactListEvent.create(listOf(Contact(user.pubkeyHex, null)), relays, loggedIn.privKey!!)
+    }
+
+    Client.send(event)
+    LocalCache.consume(event)
+  }
+
+  fun unfollow(user: User) {
+    if (!isWriteable()) return
+
+    val lastestContactList = userProfile().lastestContactList
+    if (lastestContactList != null) {
+      val event = ContactListEvent.create(lastestContactList.follows.filter { it.pubKeyHex != user.pubkeyHex }, lastestContactList.relayUse, loggedIn.privKey!!)
+      Client.send(event)
+      LocalCache.consume(event)
     }
   }
 
@@ -99,12 +128,15 @@ class Account(val loggedIn: Persona) {
     val event = note.event
     return if (event is PrivateDmEvent && loggedIn.privKey != null) {
       var pubkeyToUse = event.pubKey
-      if (note.author == userProfile())
-        pubkeyToUse = event.recipientPubKey!!
 
-      val sharedSecret = Utils.getSharedSecret(loggedIn.privKey!!, pubkeyToUse)
+      val recepientPK = event.recipientPubKey
+
+      if (note.author == userProfile() && recepientPK != null)
+        pubkeyToUse = recepientPK
 
       return try {
+        val sharedSecret = Utils.getSharedSecret(loggedIn.privKey!!, pubkeyToUse)
+
         val retVal = Utils.decrypt(event.content, sharedSecret)
 
         if (retVal.startsWith(PrivateDmEvent.nip18Advertisement)) {

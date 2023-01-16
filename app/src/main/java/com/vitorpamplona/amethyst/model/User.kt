@@ -5,6 +5,7 @@ import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.ui.note.toDisplayHex
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
+import nostr.postr.events.ContactListEvent
 
 class User(val pubkey: ByteArray) {
     val pubkeyHex = pubkey.toHexKey()
@@ -14,6 +15,8 @@ class User(val pubkey: ByteArray) {
 
     var updatedMetadataAt: Long = 0;
     var updatedFollowsAt: Long = 0;
+
+    var lastestContactList: ContactListEvent? = null
 
     val notes = Collections.synchronizedSet(mutableSetOf<Note>())
     val follows = Collections.synchronizedSet(mutableSetOf<User>())

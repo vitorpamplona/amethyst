@@ -99,6 +99,10 @@ dependencies {
     // view videos
     implementation 'com.google.android.exoplayer:exoplayer:2.18.2'
 
+    // tabs for user profiles
+    implementation "com.google.accompanist:accompanist-pager:$accompanist_version" // Pager
+    implementation "com.google.accompanist:accompanist-pager-indicators:$accompanist_version" // Pager Indicators
+
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'

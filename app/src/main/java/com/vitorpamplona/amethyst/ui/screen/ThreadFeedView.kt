@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -164,7 +165,14 @@ fun NoteMaster(baseNote: Note, accountViewModel: AccountViewModel, navController
             Modifier
                 .fillMaxWidth()
                 .padding(top = 10.dp)) {
-            Row(modifier = Modifier.padding(start = 12.dp, end = 12.dp)) {
+            Row(modifier = Modifier
+                .padding(start = 12.dp, end = 12.dp)
+                .clickable(onClick = {
+                    author?.let {
+                        navController.navigate("User/${it.pubkeyHex}")
+                    }
+                })
+            ) {
                 // Draws the boosted picture outside the boosted card.
                 AsyncImage(
                     model = author?.profilePicture(),

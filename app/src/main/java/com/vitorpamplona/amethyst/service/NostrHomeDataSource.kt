@@ -9,7 +9,7 @@ import nostr.postr.JsonFilter
 import nostr.postr.events.TextNoteEvent
 import nostr.postr.toHex
 
-object NostrHomeDataSource: NostrDataSource("HomeFeed") {
+object NostrHomeDataSource: NostrDataSource<Note>("HomeFeed") {
   lateinit var account: Account
 
   private val cacheListener: (UserState) -> Unit = {

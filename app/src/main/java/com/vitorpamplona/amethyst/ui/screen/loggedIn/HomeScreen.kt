@@ -15,9 +15,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
 fun HomeScreen(accountViewModel: AccountViewModel, navController: NavController) {
-    val account by accountViewModel.accountLiveData.observeAsState()
+    val accountState by accountViewModel.accountLiveData.observeAsState()
 
-    if (account != null) {
+    if (accountState != null) {
         val feedViewModel: FeedViewModel = viewModel { FeedViewModel( NostrHomeDataSource ) }
 
         Column(Modifier.fillMaxHeight()) {

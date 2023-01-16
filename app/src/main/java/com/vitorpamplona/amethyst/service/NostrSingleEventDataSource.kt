@@ -8,7 +8,7 @@ import java.util.Collections
 import nostr.postr.JsonFilter
 import nostr.postr.events.TextNoteEvent
 
-object NostrSingleEventDataSource: NostrDataSource("SingleEventFeed") {
+object NostrSingleEventDataSource: NostrDataSource<Note>("SingleEventFeed") {
   val eventsToWatch = Collections.synchronizedList(mutableListOf<String>())
 
   fun createRepliesAndReactionsFilter(): JsonFilter? {

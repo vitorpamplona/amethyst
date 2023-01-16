@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.ui.note
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -77,6 +78,11 @@ fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Bool
                             modifier = Modifier
                                 .width(55.dp).height(55.dp)
                                 .clip(shape = CircleShape)
+                                .clickable(onClick = {
+                                    author?.let {
+                                        navController.navigate("User/${it.pubkeyHex}")
+                                    }
+                                })
                         )
 
                         // boosted picture
@@ -91,12 +97,23 @@ fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Bool
                                     .align(Alignment.BottomEnd)
                                     .background(MaterialTheme.colors.background)
                                     .border(2.dp, MaterialTheme.colors.primary, CircleShape)
+                                    .clickable(onClick = {
+                                        boostedPosts[0].author?.let {
+                                            navController.navigate("User/${it.pubkeyHex}")
+                                        }
+                                    })
                             )
                         }
                     }
                 }
 
-                Column(modifier = Modifier.padding(start = if (!isInnerNote) 10.dp else 0.dp)) {
+                Column(modifier = Modifier.padding(start = if (!isInnerNote) 10.dp else 0.dp)
+                    .clickable(onClick = {
+                        note?.let {
+                            navController.navigate("Note/${note.idHex}")
+                        }
+                    })
+                ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (author != null)
                             UserDisplay(author)

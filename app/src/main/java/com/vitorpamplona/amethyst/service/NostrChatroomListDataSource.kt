@@ -5,7 +5,7 @@ import com.vitorpamplona.amethyst.model.Note
 import nostr.postr.JsonFilter
 import nostr.postr.events.PrivateDmEvent
 
-object NostrChatroomListDataSource: NostrDataSource("MailBoxFeed") {
+object NostrChatroomListDataSource: NostrDataSource<Note>("MailBoxFeed") {
   lateinit var account: Account
 
   fun createMessagesToMeFilter() = JsonFilter(

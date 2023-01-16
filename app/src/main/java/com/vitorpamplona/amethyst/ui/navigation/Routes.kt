@@ -30,11 +30,11 @@ sealed class Route(
     object Search : Route("Search", R.drawable.ic_search, buildScreen = { acc, nav -> { _ -> SearchScreen(acc, nav) }})
     object Notification : Route("Notification", R.drawable.ic_notifications,buildScreen = { acc, nav -> { _ -> NotificationScreen(acc, nav) }})
     object Message : Route("Message", R.drawable.ic_dm, buildScreen = { acc, nav -> { _ -> ChatroomListScreen(acc, nav) }})
-    object Profile : Route("Profile", R.drawable.ic_profile, buildScreen = { acc, nav -> { _ -> ProfileScreen(acc) }})
-    object Lists : Route("Lists", R.drawable.ic_lists, buildScreen = { acc, nav -> { _ -> ProfileScreen(acc) }})
-    object Topics : Route("Topics", R.drawable.ic_topics, buildScreen = { acc, nav -> { _ -> ProfileScreen(acc) }})
-    object Bookmarks : Route("Bookmarks", R.drawable.ic_bookmarks, buildScreen = { acc, nav -> { _ -> ProfileScreen(acc) }})
-    object Moments : Route("Moments", R.drawable.ic_moments, buildScreen = { acc, nav -> { _ -> ProfileScreen(acc) }})
+
+    object Profile : Route("User/{id}", R.drawable.ic_profile,
+        arguments = listOf(navArgument("id") { type = NavType.StringType } ),
+        buildScreen = { acc, nav -> { ProfileScreen(it.arguments?.getString("id"), acc, nav) }}
+    )
 
     object Note : Route("Note/{id}", R.drawable.ic_moments,
         arguments = listOf(navArgument("id") { type = NavType.StringType } ),
@@ -56,12 +56,6 @@ val Routes = listOf(
 
     //drawer
     Route.Profile,
-    Route.Lists,
-    Route.Topics,
-    Route.Bookmarks,
-    Route.Moments,
-
-    //inner
     Route.Note,
     Route.Room
 )

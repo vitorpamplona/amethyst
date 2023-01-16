@@ -43,7 +43,6 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.theme.Purple700
 
 @Composable
 fun LoginPage(accountViewModel: AccountStateViewModel) {

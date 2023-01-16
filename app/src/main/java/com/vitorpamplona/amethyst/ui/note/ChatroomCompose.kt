@@ -52,7 +52,7 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
 
         Column(modifier =
             Modifier.clickable(
-                onClick = { navController.navigate("Room/${userToComposeOn?.pubkeyHex}") }
+                    onClick = { navController.navigate("Room/${userToComposeOn?.pubkeyHex}") }
             )
         ) {
             Row(

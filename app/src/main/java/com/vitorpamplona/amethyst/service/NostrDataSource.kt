@@ -1,7 +1,6 @@
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.relays.Client
@@ -15,7 +14,7 @@ import nostr.postr.events.PrivateDmEvent
 import nostr.postr.events.RecommendRelayEvent
 import nostr.postr.events.TextNoteEvent
 
-abstract class NostrDataSource(val debugName: String) {
+abstract class NostrDataSource<T>(val debugName: String) {
   private val channels = Collections.synchronizedSet(mutableSetOf<Channel>())
   private val channelIds =  Collections.synchronizedSet(mutableSetOf<String>())
 
@@ -78,7 +77,7 @@ abstract class NostrDataSource(val debugName: String) {
     }
   }
 
-  fun loadTop(): List<Note> {
+  fun loadTop(): List<T> {
     return feed().take(100)
   }
 
@@ -135,5 +134,5 @@ abstract class NostrDataSource(val debugName: String) {
   }
 
   abstract fun updateChannelFilters()
-  abstract fun feed(): List<Note>
+  abstract fun feed(): List<T>
 }

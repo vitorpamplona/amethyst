@@ -7,7 +7,7 @@ import com.vitorpamplona.amethyst.model.User
 import nostr.postr.JsonFilter
 import nostr.postr.events.PrivateDmEvent
 
-object NostrChatRoomDataSource: NostrDataSource("ChatroomFeed") {
+object NostrChatRoomDataSource: NostrDataSource<Note>("ChatroomFeed") {
   lateinit var account: Account
   var withUser: User? = null
 

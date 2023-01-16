@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class CardFeedViewModel(val dataSource: NostrDataSource): ViewModel() {
+class CardFeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel() {
     private val _feedContent = MutableStateFlow<CardFeedState>(CardFeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
 

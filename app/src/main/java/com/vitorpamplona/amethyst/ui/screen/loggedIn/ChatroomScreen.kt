@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -102,9 +103,9 @@ fun ChatroomHeader(baseUser: User, accountViewModel: AccountViewModel, navContro
     Column(modifier =
         Modifier
             .padding(12.dp)
-            //.clickable(
-                //onClick = { navController.navigate("User/${author?.pubkeyHex}") }
-            //)
+            .clickable(
+                onClick = { navController.navigate("User/${author?.pubkeyHex}") }
+            )
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
 

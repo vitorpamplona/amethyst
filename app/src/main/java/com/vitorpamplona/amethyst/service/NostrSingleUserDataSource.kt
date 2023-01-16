@@ -6,7 +6,7 @@ import java.util.Collections
 import nostr.postr.JsonFilter
 import nostr.postr.events.MetadataEvent
 
-object NostrSingleUserDataSource: NostrDataSource("SingleUserFeed") {
+object NostrSingleUserDataSource: NostrDataSource<Note>("SingleUserFeed") {
   val usersToWatch = Collections.synchronizedList(mutableListOf<String>())
 
   fun createUserFilter(): JsonFilter? {

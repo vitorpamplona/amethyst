@@ -17,6 +17,9 @@ import com.vitorpamplona.amethyst.service.NostrNotificationDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.NostrThreadDataSource
+import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
+import com.vitorpamplona.amethyst.service.NostrUserProfileFollowersDataSource
+import com.vitorpamplona.amethyst.service.NostrUserProfileFollowsDataSource
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.screen.AccountScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
@@ -52,6 +55,9 @@ class MainActivity : ComponentActivity() {
     NostrAccountDataSource.stop()
     NostrHomeDataSource.stop()
     NostrChatroomListDataSource.stop()
+    NostrUserProfileDataSource.stop()
+    NostrUserProfileFollowersDataSource.stop()
+    NostrUserProfileFollowsDataSource.stop()
 
     NostrGlobalDataSource.stop()
     NostrNotificationDataSource.stop()

@@ -116,7 +116,7 @@ object LocalCache {
     val user = getOrCreateUser(event.pubKey)
 
     if (event.createdAt > user.updatedFollowsAt) {
-      //Log.d("CL", "${user.toBestDisplayName()} ${event.follows.size}")
+      Log.d("CL", "AAA ${user.toBestDisplayName()} ${event.follows.size}")
       user.updateFollows(
         event.follows.map {
           try {
@@ -131,6 +131,8 @@ object LocalCache {
         }.filterNotNull(),
         event.createdAt
       )
+
+      user.lastestContactList = event
     }
 
     refreshObservers()

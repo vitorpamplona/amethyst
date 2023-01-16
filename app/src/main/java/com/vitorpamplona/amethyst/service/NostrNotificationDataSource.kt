@@ -4,7 +4,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import nostr.postr.JsonFilter
 
-object NostrNotificationDataSource: NostrDataSource("GlobalFeed") {
+object NostrNotificationDataSource: NostrDataSource<Note>("GlobalFeed") {
   lateinit var account: Account
 
   fun createGlobalFilter() = JsonFilter(

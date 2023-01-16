@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
@@ -16,6 +17,12 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 @Composable
 fun ThreadScreen(noteId: String?, accountViewModel: AccountViewModel, navController: NavController) {
     val account by accountViewModel.accountLiveData.observeAsState()
+
+    DisposableEffect(account) {
+        onDispose {
+            NostrThreadDataSource.stop()
+        }
+    }
 
     if (account != null && noteId != null) {
         NostrThreadDataSource.loadThread(noteId)

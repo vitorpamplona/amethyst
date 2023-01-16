@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Divider
 import androidx.compose.material.Icon
@@ -35,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontWeight.Companion.W500
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
@@ -42,14 +42,6 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.launch
-
-val bottomNavigations = listOf(
-    Route.Profile,
-    Route.Lists,
-    //Route.Topics,
-    Route.Bookmarks,
-    //Route.Moments
-)
 
 @Composable
 fun DrawerContent(navController: NavHostController,
@@ -66,19 +58,31 @@ fun DrawerContent(navController: NavHostController,
     ) {
         Column() {
             Box {
-                Image(
-                    painter = painterResource(R.drawable.profile_banner),
-                    contentDescription = "Profile Banner",
-                    contentScale = ContentScale.FillWidth,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                val banner = accountUser?.info?.banner
+                if (banner != null && banner.isNotBlank()) {
+                    AsyncImage(
+                        model = banner,
+                        contentDescription = "Profile Image",
+                        contentScale = ContentScale.FillWidth,
+                        modifier = Modifier.fillMaxWidth().height(150.dp)
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(R.drawable.profile_banner),
+                        contentDescription = "Profile Banner",
+                        contentScale = ContentScale.FillWidth,
+                        modifier = Modifier.fillMaxWidth().height(150.dp)
+                    )
+                }
 
                 ProfileContent(
                     accountUser,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 25.dp)
-                        .padding(top = 125.dp)
+                        .padding(top = 100.dp),
+                    scaffoldState,
+                    navController
                 )
             }
             Divider(
@@ -86,6 +90,7 @@ fun DrawerContent(navController: NavHostController,
                 modifier = Modifier.padding(top = 20.dp)
             )
             ListContent(
+                accountUser,
                 navController,
                 scaffoldState,
                 modifier = Modifier
@@ -98,7 +103,9 @@ fun DrawerContent(navController: NavHostController,
 }
 
 @Composable
-fun ProfileContent(accountUser: User?, modifier: Modifier = Modifier) {
+fun ProfileContent(accountUser: User?, modifier: Modifier = Modifier, scaffoldState: ScaffoldState, navController: NavController) {
+    val coroutineScope = rememberCoroutineScope()
+
     Column(modifier = modifier) {
         AsyncImage(
             model = accountUser?.profilePicture() ?: "https://robohash.org/ohno.png",
@@ -108,6 +115,14 @@ fun ProfileContent(accountUser: User?, modifier: Modifier = Modifier) {
                 .clip(shape = CircleShape)
                 .border(3.dp, MaterialTheme.colors.background, CircleShape)
                 .background(MaterialTheme.colors.background)
+                .clickable(onClick = {
+                    accountUser?.let {
+                        navController.navigate("User/${it.pubkeyHex}")
+                    }
+                    coroutineScope.launch {
+                        scaffoldState.drawerState.close()
+                    }
+                })
         )
         Text(
             accountUser?.bestDisplayName() ?: "",
@@ -131,21 +146,25 @@ fun ProfileContent(accountUser: User?, modifier: Modifier = Modifier) {
 
 @Composable
 fun ListContent(
+    accountUser: User?,
     navController: NavHostController,
     scaffoldState: ScaffoldState,
     modifier: Modifier,
     accountViewModel: AccountStateViewModel
 ) {
-    Column(
-        modifier = modifier
-    ) {
+    Column(modifier = modifier) {
         LazyColumn() {
-            items(items = bottomNavigations) {
-                NavigationRow(navController, scaffoldState, it)
-            }
             item {
+                if (accountUser != null)
+                    NavigationRow(navController,
+                        scaffoldState,
+                        "User/${accountUser.pubkeyHex}",
+                        Route.Profile.icon,
+                        "Profile"
+                    )
+
                 Divider(
-                    modifier = Modifier.padding(vertical = 15.dp),
+                    modifier = Modifier.padding(bottom = 15.dp),
                     thickness = 0.25.dp
                 )
                 Column(modifier = modifier.padding(horizontal = 25.dp)) {
@@ -171,31 +190,36 @@ fun ListContent(
 }
 
 @Composable
-fun NavigationRow(navController: NavHostController, scaffoldState: ScaffoldState, route: Route) {
+fun NavigationRow(navController: NavHostController, scaffoldState: ScaffoldState, route: String, icon: Int, title: String) {
     val coroutineScope = rememberCoroutineScope()
     val currentRoute = currentRoute(navController)
-    Row(
-        modifier = Modifier
-            .padding(vertical = 15.dp, horizontal = 25.dp)
-            .clickable(onClick = {
-                if (currentRoute != route.route) {
-                    navController.navigate(route.route)
-                }
-                coroutineScope.launch {
-                    scaffoldState.drawerState.close()
-                }
-            }),
-        verticalAlignment = Alignment.CenterVertically
+    Row(modifier = Modifier
+        .fillMaxWidth()
+        .clickable(onClick = {
+            if (currentRoute != route) {
+                navController.navigate(route)
+            }
+            coroutineScope.launch {
+                scaffoldState.drawerState.close()
+            }
+        })
     ) {
-        Icon(
-            painter = painterResource(route.icon), null,
-            modifier = Modifier.size(22.dp),
-            tint = MaterialTheme.colors.primary
-        )
-        Text(
-            modifier = Modifier.padding(start = 16.dp),
-            text = route.route,
-            fontSize = 18.sp,
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth()
+                .padding(vertical = 15.dp, horizontal = 25.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = painterResource(icon), null,
+                modifier = Modifier.size(22.dp),
+                tint = MaterialTheme.colors.primary
+            )
+            Text(
+                modifier = Modifier.padding(start = 16.dp),
+                text = title,
+                fontSize = 18.sp,
+            )
+        }
     }
+
 }

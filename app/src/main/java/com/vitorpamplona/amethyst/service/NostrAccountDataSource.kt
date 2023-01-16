@@ -10,7 +10,7 @@ import nostr.postr.events.ContactListEvent
 import nostr.postr.events.MetadataEvent
 import nostr.postr.events.TextNoteEvent
 
-object NostrAccountDataSource: NostrDataSource("AccountData") {
+object NostrAccountDataSource: NostrDataSource<Note>("AccountData") {
   lateinit var account: Account
 
   private val cacheListener: (UserState) -> Unit = {

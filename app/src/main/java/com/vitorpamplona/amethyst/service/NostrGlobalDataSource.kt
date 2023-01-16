@@ -1,10 +1,11 @@
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.Note
 import nostr.postr.JsonFilter
 import nostr.postr.events.TextNoteEvent
 
-object NostrGlobalDataSource: NostrDataSource("GlobalFeed") {
+object NostrGlobalDataSource: NostrDataSource<Note>("GlobalFeed") {
   val fifteenMinutes = (60*15) // 15 mins
 
   fun createGlobalFilter() = JsonFilter(
