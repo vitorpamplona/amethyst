@@ -14,11 +14,13 @@ Amethyst brings the best social network to your Android phone. Just insert your 
 - [x] Image Preview (gifs, svgs)
 - [x] Url Preview
 - [x] View Threads
-- [x] Private Messages
+- [x] Private Messages (NIP-04)
 - [x] User Profiles (follow/unfollow)
+- [x] Public Chats (NIP-28)
 - [ ] Notification Bubbles
 - [ ] Dropdown to Link Users/Posts when writting
-- [ ] Communities
+- [ ] Identity Verification (NIP-05)
+- [ ] Event Delegation (NIP-09)
 - [ ] Profile Edit
 - [ ] Relay Edit
 
