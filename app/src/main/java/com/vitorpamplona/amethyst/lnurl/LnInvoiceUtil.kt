@@ -6,7 +6,7 @@ import java.util.regex.Pattern
 
 /** based on litecoinj */
 object LnInvoiceUtil {
-  private val invoicePattern = Pattern.compile("lnbc((?<amount>\\d+)(?<multiplier>[munp])?)?1[^1\\s]+")
+  private val invoicePattern = Pattern.compile("lnbc((?<amount>\\d+)(?<multiplier>[munp])?)?1[^1\\s]+", Pattern.CASE_INSENSITIVE)
 
   /** The Bech32 character set for encoding.  */
   private const val CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
