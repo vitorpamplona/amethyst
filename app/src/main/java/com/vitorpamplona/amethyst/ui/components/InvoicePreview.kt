@@ -30,7 +30,12 @@ import com.vitorpamplona.amethyst.R
 
 @Composable
 fun InvoicePreview(lnInvoice: String) {
-  val amount = LnInvoiceUtil.getAmountInSats(lnInvoice)
+  val amount = try {
+    LnInvoiceUtil.getAmountInSats(lnInvoice)
+  } catch (e: Exception) {
+    e.printStackTrace()
+    null
+  }
 
   val context = LocalContext.current
 
@@ -70,14 +75,16 @@ fun InvoicePreview(lnInvoice: String) {
 
       Divider()
 
-      Text(
-        text = "${amount.toInt()} sats",
-        fontSize = 25.sp,
-        fontWeight = FontWeight.W500,
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(vertical = 10.dp),
-      )
+      amount?.let {
+        Text(
+          text = "${amount.toInt()} sats",
+          fontSize = 25.sp,
+          fontWeight = FontWeight.W500,
+          modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 10.dp),
+        )
+      } 
 
       Button(
         modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
