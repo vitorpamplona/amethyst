@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui
 
+import android.os.Build.VERSION.SDK_INT
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -8,6 +9,11 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.Coil
+import coil.ImageLoader
+import coil.decode.GifDecoder
+import coil.decode.ImageDecoderDecoder
+import coil.decode.SvgDecoder
 import com.vitorpamplona.amethyst.KeyStorage
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
@@ -28,6 +34,17 @@ import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+
+    Coil.setImageLoader {
+      ImageLoader.Builder(this).components {
+        if (SDK_INT >= 28) {
+          add(ImageDecoderDecoder.Factory())
+        } else {
+          add(GifDecoder.Factory())
+        }
+        add(SvgDecoder.Factory())
+      }.build()
+    }
 
     setContent {
       AmethystTheme {

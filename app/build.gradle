@@ -99,9 +99,14 @@ dependencies {
     // view videos
     implementation 'com.google.android.exoplayer:exoplayer:2.18.2'
 
+    // view gifs
+    implementation "io.coil-kt:coil-gif:2.2.2"
+    // view svgs
+    implementation("io.coil-kt:coil-svg:2.2.2")
+
     // tabs for user profiles
     implementation "com.google.accompanist:accompanist-pager:$accompanist_version" // Pager
-    implementation "com.google.accompanist:accompanist-pager-indicators:$accompanist_version" // Pager Indicators
+    implementation "com.google.accompanist:accompanist-pager-indicators:$accompanist_version"
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'

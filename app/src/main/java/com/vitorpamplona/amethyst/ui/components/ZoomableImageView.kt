@@ -29,7 +29,7 @@ import com.vitorpamplona.amethyst.ui.actions.CloseButton
 
 @Composable
 @OptIn(ExperimentalComposeUiApi::class)
-fun ExtendedImageView(word: String) {
+fun ZoomableImageView(word: String) {
   // store the dialog open or close state
   var dialogOpen by remember {
     mutableStateOf(false)
