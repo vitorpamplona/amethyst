@@ -1,7 +1,9 @@
 package com.vitorpamplona.amethyst.ui.components
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,15 +23,20 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
+import nostr.postr.toNpub
 
 @Composable
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
 fun ZoomableImageView(word: String) {
+  val clipboardManager = LocalClipboardManager.current
+
   // store the dialog open or close state
   var dialogOpen by remember {
     mutableStateOf(false)
@@ -44,8 +51,9 @@ fun ZoomableImageView(word: String) {
       .fillMaxWidth()
       .clip(shape = RoundedCornerShape(15.dp))
       .border(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.12f), RoundedCornerShape(15.dp))
-      .clickable(
-        onClick = { dialogOpen = true }
+      .combinedClickable(
+        onClick = { dialogOpen = true },
+        onLongClick = { clipboardManager.setText(AnnotatedString(word)) },
       )
   )
 
