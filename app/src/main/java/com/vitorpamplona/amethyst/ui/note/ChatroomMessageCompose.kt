@@ -6,6 +6,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -30,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.model.Note
@@ -37,8 +39,8 @@ import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.ui.components.RichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
-val ChatBubbleShapeMe = RoundedCornerShape(20.dp, 20.dp, 3.dp, 20.dp)
-val ChatBubbleShapeThem = RoundedCornerShape(20.dp, 20.dp, 20.dp, 3.dp)
+val ChatBubbleShapeMe = RoundedCornerShape(15.dp, 15.dp, 3.dp, 15.dp)
+val ChatBubbleShapeThem = RoundedCornerShape(3.dp, 15.dp, 15.dp, 15.dp)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -57,56 +59,60 @@ fun ChatroomMessageCompose(baseNote: Note, accountViewModel: AccountViewModel, n
         val authorState by note.author!!.live.observeAsState()
         val author = authorState?.user
 
+        var backgroundBubbleColor: Color
+        var alignment: Arrangement.Horizontal
+        var shape: Shape
+
+        if (author == accountUser) {
+            backgroundBubbleColor = MaterialTheme.colors.primary.copy(alpha = 0.32f)
+            alignment = Arrangement.End
+            shape = ChatBubbleShapeMe
+        } else {
+            backgroundBubbleColor = MaterialTheme.colors.onSurface.copy(alpha = 0.12f)
+            alignment = Arrangement.Start
+            shape = ChatBubbleShapeThem
+        }
+
         Column() {
-            var backgroundBubbleColor: Color
-            var alignment: Arrangement.Horizontal
-            var shape: Shape
-
-            if (author == accountUser) {
-                backgroundBubbleColor = MaterialTheme.colors.primary.copy(alpha = 0.32f)
-                alignment = Arrangement.End
-                shape = ChatBubbleShapeMe
-            } else {
-                backgroundBubbleColor = MaterialTheme.colors.onSurface.copy(alpha = 0.12f)
-                alignment = Arrangement.Start
-                shape = ChatBubbleShapeThem
-            }
-
             Row(
-                horizontalArrangement = alignment,
-                modifier = Modifier.fillMaxWidth()
-                    .padding(
-                        start = 12.dp,
-                        end = 12.dp,
-                        top = 5.dp,
-                        bottom = 5.dp
-                    ).combinedClickable(
-                        onClick = {  },
-                        onLongClick = { popupExpanded = true }
-                    )
+                modifier = Modifier.fillMaxWidth(1f).padding(
+                    start = 12.dp,
+                    end = 12.dp,
+                    top = 5.dp,
+                    bottom = 5.dp
+                ),
+                horizontalArrangement = alignment
             ) {
-
                 Row(
-                    verticalAlignment = Alignment.CenterVertically
+                    horizontalArrangement = alignment,
+                    modifier = Modifier.fillMaxWidth(0.85f)
                 ) {
+
                     Surface(
                         color = backgroundBubbleColor,
-                        shape = shape
+                        shape = shape,
+                        modifier = Modifier
+                            .combinedClickable(
+                                onClick = { },
+                                onLongClick = { popupExpanded = true }
+                            )
                     ) {
                         Column(
-                            modifier = Modifier.padding(10.dp),
+                            modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 5.dp),
                         ) {
 
                             if (author != accountUser && note.event is ChannelMessageEvent) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = alignment
+                                    horizontalArrangement = alignment,
+                                    modifier = Modifier.padding(top = 5.dp)
                                 ) {
                                     AsyncImage(
                                         model = author?.profilePicture(),
                                         contentDescription = "Profile Image",
                                         modifier = Modifier
-                                            .width(25.dp).height(25.dp)
+                                            .width(25.dp)
+                                            .height(25.dp)
                                             .clip(shape = CircleShape)
                                             .clickable(onClick = {
                                                 author?.let {
@@ -127,9 +133,7 @@ fun ChatroomMessageCompose(baseNote: Note, accountViewModel: AccountViewModel, n
                                 }
                             }
 
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 val eventContent = accountViewModel.decrypt(note)
 
                                 if (eventContent != null)
@@ -148,24 +152,26 @@ fun ChatroomMessageCompose(baseNote: Note, accountViewModel: AccountViewModel, n
                                         accountViewModel,
                                         navController
                                     )
-
                             }
 
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = alignment
+                                horizontalArrangement = Arrangement.End,
+                                modifier = Modifier.padding(top = 2.dp)
                             ) {
                                 Text(
                                     timeAgoLong(note.event?.createdAt),
-                                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                                    fontSize = 12.sp
                                 )
                             }
                         }
                     }
-                }
-            }
 
-            NoteDropDownMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
+                }
+
+                NoteDropDownMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
+            }
         }
     }
 }

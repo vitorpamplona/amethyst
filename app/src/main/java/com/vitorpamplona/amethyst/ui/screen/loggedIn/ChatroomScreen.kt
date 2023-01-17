@@ -15,6 +15,7 @@ import androidx.compose.material.Divider
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
+import androidx.compose.material.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -67,27 +68,29 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                OutlinedTextField(
+                TextField(
                     value = newPost.value,
                     onValueChange = { newPost.value = it },
                     keyboardOptions = KeyboardOptions.Default.copy(
                         capitalization = KeyboardCapitalization.Sentences
                     ),
-                    modifier = Modifier.weight(1f, true).padding(end = 10.dp),
+                    modifier = Modifier.weight(1f, true),
                     placeholder = {
                         Text(
                             text = "reply here.. ",
                             color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                         )
-                    }
-                )
-
-                PostButton(
-                    onPost = {
-                        account.sendPrivateMeesage(newPost.value.text, userId)
-                        newPost.value = TextFieldValue("")
                     },
-                    newPost.value.text.isNotBlank()
+                    trailingIcon = {
+                        PostButton(
+                            onPost = {
+                                account.sendPrivateMeesage(newPost.value.text, userId)
+                                newPost.value = TextFieldValue("")
+                            },
+                            newPost.value.text.isNotBlank(),
+                            modifier = Modifier.padding(end = 10.dp)
+                        )
+                    }
                 )
             }
         }
@@ -100,33 +103,32 @@ fun ChatroomHeader(baseUser: User, accountViewModel: AccountViewModel, navContro
     val authorState by baseUser.live.observeAsState()
     val author = authorState?.user
 
-    Column(modifier =
-        Modifier
-            .padding(12.dp)
-            .clickable(
-                onClick = { navController.navigate("User/${author?.pubkeyHex}") }
-            )
+    Column(modifier = Modifier.clickable(
+            onClick = { navController.navigate("User/${author?.pubkeyHex}") }
+        )
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
 
-            AsyncImage(
-                model = author?.profilePicture(),
-                contentDescription = "Profile Image",
-                modifier = Modifier
-                    .width(35.dp).height(35.dp)
-                    .clip(shape = CircleShape)
-            )
+                AsyncImage(
+                    model = author?.profilePicture(),
+                    contentDescription = "Profile Image",
+                    modifier = Modifier
+                        .width(35.dp).height(35.dp)
+                        .clip(shape = CircleShape)
+                )
 
-            Column(modifier = Modifier.padding(start = 10.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (author != null)
-                        UserDisplay(author)
+                Column(modifier = Modifier.padding(start = 10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (author != null)
+                            UserDisplay(author)
+                    }
                 }
             }
         }
 
         Divider(
-            modifier = Modifier.padding(top = 12.dp, start = 12.dp, end = 12.dp),
+            modifier = Modifier.padding(start = 12.dp, end = 12.dp),
             thickness = 0.25.dp
         )
     }

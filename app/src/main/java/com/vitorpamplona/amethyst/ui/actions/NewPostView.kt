@@ -199,8 +199,9 @@ fun CloseButton(onCancel: () -> Unit) {
 }
 
 @Composable
-fun PostButton(onPost: () -> Unit = {}, isActive: Boolean) {
+fun PostButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifier = Modifier) {
     Button(
+        modifier = modifier,
         onClick = {
             if (isActive) {
                 onPost()

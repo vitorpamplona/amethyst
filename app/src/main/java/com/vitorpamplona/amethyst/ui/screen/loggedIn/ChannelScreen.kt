@@ -15,6 +15,7 @@ import androidx.compose.material.Divider
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
+import androidx.compose.material.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -26,7 +27,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
@@ -54,13 +57,11 @@ fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, navCon
         val feedViewModel: FeedViewModel = viewModel { FeedViewModel( NostrChannelDataSource ) }
 
         Column(Modifier.fillMaxHeight()) {
-            channel?.let {
-                ChannelHeader(
-                    it,
-                    accountViewModel = accountViewModel,
-                    navController = navController
-                )
-            }
+            ChannelHeader(
+                channel,
+                accountViewModel = accountViewModel,
+                navController = navController
+            )
 
             Column(
                 modifier = Modifier.fillMaxHeight().padding(vertical = 0.dp).weight(1f, true)
@@ -73,7 +74,7 @@ fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, navCon
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                OutlinedTextField(
+                TextField(
                     value = newPost.value,
                     onValueChange = { newPost.value = it },
                     keyboardOptions = KeyboardOptions.Default.copy(
@@ -85,60 +86,63 @@ fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, navCon
                             text = "reply here.. ",
                             color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                         )
-                    }
-                )
-
-                PostButton(
-                    onPost = {
-                        account.sendChannelMeesage(newPost.value.text, channel.idHex)
-                        newPost.value = TextFieldValue("")
                     },
-                    newPost.value.text.isNotBlank()
+                    trailingIcon = {
+                        PostButton(
+                            onPost = {
+                                account.sendChannelMeesage(newPost.value.text, channel.idHex)
+                                newPost.value = TextFieldValue("")
+                            },
+                            newPost.value.text.isNotBlank(),
+                            modifier = Modifier.padding(end = 10.dp)
+                        )
+                    }
                 )
             }
         }
     }
 }
 
-
 @Composable
 fun ChannelHeader(baseChannel: Channel, accountViewModel: AccountViewModel, navController: NavController) {
     val channelState by baseChannel.live.observeAsState()
     val channel = channelState?.channel
 
-    Column(modifier =
-        Modifier
-            .padding(12.dp)
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+    Column() {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
 
-            AsyncImage(
-                model = channel?.profilePicture(),
-                contentDescription = "Profile Image",
-                modifier = Modifier
-                    .width(35.dp).height(35.dp)
-                    .clip(shape = CircleShape)
-            )
+                AsyncImage(
+                    model = channel?.profilePicture(),
+                    contentDescription = "Profile Image",
+                    modifier = Modifier
+                        .width(35.dp).height(35.dp)
+                        .clip(shape = CircleShape)
+                )
 
-            Column(modifier = Modifier.padding(start = 10.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        "${channel?.info?.name}",
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
+                Column(modifier = Modifier.padding(start = 10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "${channel?.info?.name}",
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        "${channel?.info?.about}",
-                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "${channel?.info?.about}",
+                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            fontSize = 12.sp
+                        )
+                    }
                 }
             }
         }
 
         Divider(
-            modifier = Modifier.padding(top = 12.dp, start = 12.dp, end = 12.dp),
+            modifier = Modifier.padding(start = 12.dp, end = 12.dp),
             thickness = 0.25.dp
         )
     }

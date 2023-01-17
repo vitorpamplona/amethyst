@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
@@ -17,10 +18,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.RichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import nostr.postr.events.TextNoteEvent
@@ -42,52 +45,18 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
         val channelState by note.channel!!.live.observeAsState()
         val channel = channelState?.channel
 
-        Column(modifier =
-        Modifier.clickable(
-            onClick = { navController.navigate("Channel/${channel?.idHex}") }
-        )
-        ) {
-            Row(
-                modifier = Modifier
-                    .padding(
-                        start = 12.dp,
-                        end = 12.dp,
-                        top = 10.dp)
-            ) {
-
-                AsyncImage(
-                    model = channel?.profilePicture(),
-                    contentDescription = "Public Channel Image",
-                    modifier = Modifier
-                        .width(55.dp).height(55.dp)
-                        .clip(shape = CircleShape)
-                )
-
-                Column(modifier = Modifier.padding(start = 10.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            "${channel?.info?.name}",
-                            fontWeight = FontWeight.Bold,
-                        )
-
-                        Text(
-                            timeAgo(note.event?.createdAt),
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                        )
-                    }
-
-                    val eventContent = accountViewModel.decrypt(note)
-                    if (eventContent != null)
-                        RichTextViewer("${author?.toBestDisplayName()}: " + eventContent.take(100), note.event?.tags, note, accountViewModel, navController)
-                    else
-                        RichTextViewer("Referenced event not found", note.event?.tags, note, accountViewModel, navController)
-                }
-            }
-
-            Divider(
-                modifier = Modifier.padding(top = 10.dp),
-                thickness = 0.25.dp
-            )
+        channel?.let {
+            ChannelName(
+                channelPicture = it.profilePicture(),
+                channelTitle = {
+                    Text(
+                        "${it.info.name}",
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                channelLastTime = note.event?.createdAt,
+                channelLastContent = "${author?.toBestDisplayName()}: " + note.event?.content,
+                onClick = { navController.navigate("Channel/${it.idHex}") })
         }
 
     } else {
@@ -107,51 +76,74 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
             }
         }
 
-        Column(modifier =
-            Modifier.clickable(
-                    onClick = { navController.navigate("Room/${userToComposeOn?.pubkeyHex}") }
-            )
-        ) {
-            Row(
-                modifier = Modifier
-                    .padding(
-                        start = 12.dp,
-                        end = 12.dp,
-                        top = 10.dp)
-            ) {
-
-                AsyncImage(
-                    model = userToComposeOn?.profilePicture(),
-                    contentDescription = "Profile Image",
-                    modifier = Modifier
-                        .width(55.dp).height(55.dp)
-                        .clip(shape = CircleShape)
-                )
-
-                Column(modifier = Modifier.padding(start = 10.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (userToComposeOn != null)
-                            UserDisplay(userToComposeOn)
-
-                        Text(
-                            timeAgo(note.event?.createdAt),
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                        )
-                    }
-
-                    val eventContent = accountViewModel.decrypt(note)
-                    if (eventContent != null)
-                        RichTextViewer(eventContent.take(100), note.event?.tags, note, accountViewModel, navController)
-                    else
-                        RichTextViewer("Referenced event not found", note.event?.tags, note, accountViewModel, navController)
-                }
-            }
-
-            Divider(
-                modifier = Modifier.padding(top = 10.dp),
-                thickness = 0.25.dp
-            )
+        userToComposeOn?.let {
+            ChannelName(
+                channelPicture = it.profilePicture(),
+                channelTitle = { UserDisplay(it) },
+                channelLastTime = note.event?.createdAt,
+                channelLastContent = accountViewModel.decrypt(note),
+                onClick = { navController.navigate("Room/${it.pubkeyHex}") })
         }
     }
 
+}
+
+@Composable
+private fun ChannelName(
+    channelPicture: String,
+    channelTitle: @Composable () -> Unit,
+    channelLastTime: Long?,
+    channelLastContent: String?,
+    onClick: () -> Unit
+) {
+    Column(modifier = Modifier.clickable(onClick = onClick) ) {
+        Row(
+            modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp)
+        ) {
+
+            AsyncImage(
+                model = channelPicture,
+                contentDescription = "Profile Image",
+                modifier = Modifier
+                    .width(55.dp)
+                    .height(55.dp)
+                    .clip(shape = CircleShape)
+            )
+
+            Column(modifier = Modifier.padding(start = 10.dp),
+            verticalArrangement = Arrangement.SpaceAround) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                ) {
+                    channelTitle()
+
+                    Text(
+                        timeAgo(channelLastTime),
+                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.52f)
+                    )
+                }
+
+                if (channelLastContent != null)
+                    Text(
+                        channelLastContent,
+                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.52f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                else
+                    Text(
+                        "Referenced event not found",
+                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.52f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+            }
+        }
+
+        Divider(
+            modifier = Modifier.padding(top = 10.dp),
+            thickness = 0.25.dp
+        )
+    }
 }
