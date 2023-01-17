@@ -24,6 +24,13 @@ import com.vitorpamplona.amethyst.model.User
 
 @Composable
 fun ReplyInformation(replyTo: MutableList<Note>?, mentions: List<User>?, navController: NavController) {
+  ReplyInformation(replyTo, mentions) {
+    navController.navigate("User/${it.pubkeyHex}")
+  }
+}
+
+@Composable
+fun ReplyInformation(replyTo: MutableList<Note>?, mentions: List<User>?, prefix: String = "", onUserTagClick: (User) -> Unit) {
   FlowRow() {
     if (mentions != null && mentions.isNotEmpty()) {
       if (replyTo != null && replyTo.isNotEmpty()) {
@@ -39,11 +46,9 @@ fun ReplyInformation(replyTo: MutableList<Note>?, mentions: List<User>?, navCont
 
           innerUser?.let { myUser ->
             ClickableText(
-              AnnotatedString("@${myUser.toBestDisplayName()}"),
+              AnnotatedString("${prefix}@${myUser.toBestDisplayName()}"),
               style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(alpha = 0.52f), fontSize = 13.sp),
-              onClick = {
-                  navController.navigate("User/${myUser.pubkeyHex}")
-              }
+              onClick = { onUserTagClick(myUser) }
             )
 
             if (idx < mentions.size - 2) {

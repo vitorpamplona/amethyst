@@ -41,17 +41,17 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.UrlPreview
 import com.vitorpamplona.amethyst.ui.components.imageExtension
 import com.vitorpamplona.amethyst.ui.navigation.UploadFromGallery
+import com.vitorpamplona.amethyst.ui.note.ReplyInformation
 import kotlinx.coroutines.delay
 import nostr.postr.events.TextNoteEvent
 
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun NewPostView(onClose: () -> Unit, replyingTo: Note? = null, account: Account) {
-    val postViewModel: NewPostViewModel = viewModel<NewPostViewModel>().apply {
-        this.replyingTo = replyingTo
-        this.account = account
-    }
+fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, account: Account) {
+    val postViewModel: NewPostViewModel = viewModel()
+
+    postViewModel.load(account, baseReplyTo)
 
     val context = LocalContext.current
 
@@ -103,18 +103,9 @@ fun NewPostView(onClose: () -> Unit, replyingTo: Note? = null, account: Account)
                     )
                 }
 
-                if (replyingTo != null && replyingTo.event is TextNoteEvent) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        val replyList = replyingTo.replyTo!!.plus(replyingTo).joinToString(", ",  "", "", 2) { it.idDisplayHex }
-                        val withList = replyingTo.mentions!!.plus(replyingTo.author!!).joinToString(", ",  "", "", 2) { it.toBestDisplayName() }
-
-                        Text(
-                            "in reply to ${replyList} with ${withList}",
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                        )
+                if (postViewModel.replyTos != null && baseReplyTo?.event is TextNoteEvent) {
+                    ReplyInformation(postViewModel.replyTos, postViewModel.mentions, "✖ ") {
+                        postViewModel.removeFromReplyList(it)
                     }
                 }
 

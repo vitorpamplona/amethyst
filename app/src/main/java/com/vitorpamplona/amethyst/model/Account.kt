@@ -90,13 +90,17 @@ class Account(val loggedIn: Persona, val followingChannels: MutableSet<String> =
     }
   }
 
-  fun sendPost(message: String, replyingTo: Note?) {
+  fun sendPost(message: String, originalNote: Note?, modifiedMentions: List<User>?) {
     if (!isWriteable()) return
 
-    val replyToEvent = replyingTo?.event
+    val replyToEvent = originalNote?.event
     if (replyToEvent is TextNoteEvent) {
+      val modifiedMentionsHex = modifiedMentions?.map { it.pubkeyHex }?.toSet() ?: emptySet()
+
       val repliesTo = replyToEvent.replyTos.plus(replyToEvent.id.toHex())
-      val mentions = replyToEvent.mentions.plus(replyToEvent.pubKey.toHex())
+      val mentions = replyToEvent.mentions.plus(replyToEvent.pubKey.toHex()).filter {
+        it in modifiedMentionsHex
+      }
 
       val signedEvent = TextNoteEvent.create(
         msg = message,

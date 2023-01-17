@@ -11,18 +11,33 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.isValidURL
 import com.vitorpamplona.amethyst.ui.components.noProtocolUrlValidator
 
 class NewPostViewModel: ViewModel() {
-    var account: Account? = null
-    var replyingTo: Note? = null
+    private var account: Account? = null
+    private var originalNote: Note? = null
+
+    var mentions by mutableStateOf<List<User>?>(null)
+    var replyTos by mutableStateOf<MutableList<Note>?>(null)
 
     var message by mutableStateOf("")
     var urlPreview by mutableStateOf<String?>(null)
 
+    fun load(account: Account, replyingTo: Note?) {
+        originalNote = replyingTo
+        replyingTo?.let { replyNote ->
+            this.replyTos = (replyNote.replyTo ?: mutableListOf()).plus(replyNote).toMutableList()
+            replyNote.author?.let { replyUser ->
+                this.mentions = (replyNote.mentions ?: emptyList()).plus(replyUser)
+            }
+        }
+        this.account = account
+    }
+
     fun sendPost() {
-        account?.sendPost(message, replyingTo)
+        account?.sendPost(message, originalNote, mentions)
         message = ""
         urlPreview = null
     }
@@ -53,5 +68,9 @@ class NewPostViewModel: ViewModel() {
                 isValidURL(word) || noProtocolUrlValidator.matcher(word).matches()
             }
         }
+    }
+
+    fun removeFromReplyList(it: User) {
+        mentions = mentions?.minus(it)
     }
 }
