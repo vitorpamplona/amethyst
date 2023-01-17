@@ -21,7 +21,7 @@ class ChannelMuteUserEvent (
   }
 
   companion object {
-    const val kind = 43
+    const val kind = 44
 
     fun create(reason: String, usersToMute: List<String>?, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ChannelMuteUserEvent {
       val content = reason

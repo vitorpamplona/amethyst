@@ -64,7 +64,7 @@ fun UserCompose(baseUser: User, accountViewModel: AccountViewModel, navControlle
             }
 
             Column(modifier = Modifier.padding(start = 10.dp)) {
-                if (accountState?.account?.userProfile()?.follows?.contains(user) == true) {
+                if (accountState?.account?.userProfile()?.isFollowing(user) == true) {
                     UnfollowButton { accountState?.account?.unfollow(user) }
                 } else {
                     FollowButton { accountState?.account?.follow(user) }

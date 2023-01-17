@@ -50,14 +50,14 @@ object NostrChatroomListDataSource: NostrDataSource<Note>("MailBoxFeed") {
     val messagingWith = messages.keys().toList()
 
     val privateMessages = messagingWith.mapNotNull {
-      messages[it]?.sortedBy { it.event?.createdAt }?.last { it.event != null }
+      messages[it]?.sortedBy { it.event?.createdAt }?.lastOrNull { it.event != null }
     }
 
     val publicChannels = account.followingChannels().map {
-      it.notes.values.sortedBy { it.event?.createdAt }.last { it.event != null }
+      it.notes.values.sortedBy { it.event?.createdAt }.lastOrNull { it.event != null }
     }
 
-    return (privateMessages + publicChannels).sortedBy { it.event?.createdAt }.reversed()
+    return (privateMessages + publicChannels).filterNotNull().sortedBy { it.event?.createdAt }.reversed()
   }
 
   override fun updateChannelFilters() {

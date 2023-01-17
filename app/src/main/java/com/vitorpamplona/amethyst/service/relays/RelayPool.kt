@@ -9,8 +9,8 @@ import nostr.postr.events.Event
  * RelayPool manages the connection to multiple Relays and lets consumers deal with simple events.
  */
 object RelayPool: Relay.Listener {
-    private val relays = Collections.synchronizedList(ArrayList<Relay>())
-    private val listeners = Collections.synchronizedSet(HashSet<Listener>())
+    private var relays = listOf<Relay>()
+    private var listeners = setOf<Listener>()
 
     fun availableRelays(): Int {
         return relays.size
@@ -29,7 +29,8 @@ object RelayPool: Relay.Listener {
     }
 
     fun unloadRelays() {
-        relays.toList().forEach { removeRelay(it) }
+        relays.forEach { it.unregister(this) }
+        relays = listOf()
     }
 
     fun requestAndWatch() {
@@ -40,8 +41,8 @@ object RelayPool: Relay.Listener {
         relays.forEach { it.sendFilter(subscriptionId) }
     }
 
-    fun sendFilterOnlyIfDisconnected(subscriptionId: String) {
-        relays.forEach { it.sendFilterOnlyIfDisconnected(subscriptionId) }
+    fun sendFilterOnlyIfDisconnected() {
+        relays.forEach { it.sendFilterOnlyIfDisconnected() }
     }
 
     fun send(signedEvent: Event) {
@@ -61,19 +62,17 @@ object RelayPool: Relay.Listener {
         relays += relay
     }
 
-    fun removeRelay(relay: Relay): Boolean {
+    fun removeRelay(relay: Relay) {
         relay.unregister(this)
-        return relays.remove(relay)
+        relays = relays.minus(relay)
     }
-
-    fun getRelays(): List<Relay> = relays
 
     fun register(listener: Listener) {
-        listeners.add(listener)
+        listeners = listeners.plus(listener)
     }
 
-    fun unregister(listener: Listener): Boolean {
-        return listeners.remove(listener)
+    fun unregister(listener: Listener) {
+        listeners = listeners.minus(listener)
     }
 
     interface Listener {

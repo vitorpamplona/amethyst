@@ -9,9 +9,9 @@ import nostr.postr.JsonFilter
 import nostr.postr.events.TextNoteEvent
 
 object NostrSingleEventDataSource: NostrDataSource<Note>("SingleEventFeed") {
-  val eventsToWatch = Collections.synchronizedList(mutableListOf<String>())
+  private var eventsToWatch = listOf<String>()
 
-  fun createRepliesAndReactionsFilter(): JsonFilter? {
+  private fun createRepliesAndReactionsFilter(): JsonFilter? {
     val reactionsToWatch = eventsToWatch.map { it.substring(0, 8) }
 
     if (reactionsToWatch.isEmpty()) {
@@ -65,12 +65,12 @@ object NostrSingleEventDataSource: NostrDataSource<Note>("SingleEventFeed") {
   }
 
   fun add(eventId: String) {
-    eventsToWatch.add(eventId)
+    eventsToWatch = eventsToWatch.plus(eventId)
     resetFilters()
   }
 
   fun remove(eventId: String) {
-    eventsToWatch.remove(eventId)
+    eventsToWatch = eventsToWatch.minus(eventId)
     resetFilters()
   }
 }

@@ -71,7 +71,7 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
                 ) {
                     IconButton(
                         onClick = {
-                            Client.subscriptions.map { "${it.key} ${it.value.joinToString { it.toJson() }}" }.forEach {
+                            Client.allSubscriptions().map { "${it} ${Client.getSubscriptionFilters(it).joinToString { it.toJson() }}" }.forEach {
                                 Log.d("CURRENT FILTERS", it)
                             }
                         }

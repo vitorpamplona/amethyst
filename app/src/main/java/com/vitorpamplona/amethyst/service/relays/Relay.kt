@@ -2,7 +2,6 @@ package com.vitorpamplona.amethyst.service.relays
 
 import com.google.gson.JsonElement
 import java.util.Collections
-import nostr.postr.JsonFilter
 import nostr.postr.events.Event
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -16,27 +15,29 @@ class Relay(
     var write: Boolean = true
 ) {
     private val httpClient = OkHttpClient()
-    private val listeners = Collections.synchronizedSet(HashSet<Listener>())
+    private var listeners = setOf<Listener>()
     private var socket: WebSocket? = null
 
     fun register(listener: Listener) {
-        listeners.add(listener)
+        listeners = listeners.plus(listener)
+    }
+
+    fun unregister(listener: Listener) {
+        listeners = listeners.minus(listener)
     }
 
     fun isConnected(): Boolean {
         return socket != null
     }
 
-    fun unregister(listener: Listener) = listeners.remove(listener)
-
-    fun requestAndWatch(reconnectTs: Long? = null) {
+    fun requestAndWatch() {
         val request = Request.Builder().url(url).build()
         val listener = object : WebSocketListener() {
 
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 // Sends everything.
-                Client.subscriptions.forEach {
-                    sendFilter(requestId = it.key, reconnectTs = reconnectTs)
+                Client.allSubscriptions().forEach {
+                    sendFilter(requestId = it)
                 }
                 listeners.forEach { it.onRelayStateChange(this@Relay, Type.CONNECT) }
             }
@@ -101,28 +102,22 @@ class Relay(
         socket?.close(1000, "Normal close")
     }
 
-    fun sendFilter(requestId: String, reconnectTs: Long? = null) {
+    fun sendFilter(requestId: String) {
         if (socket == null) {
-            requestAndWatch(reconnectTs)
+            requestAndWatch()
         } else {
-            val filters = if (reconnectTs != null) {
-                Client.subscriptions[requestId]?.let {
-                    it.map { filter ->
-                        JsonFilter(filter.ids, filter.authors, filter.kinds, filter.tags, since = reconnectTs)
-                    }
-                } ?: error("No filter(s) found.")
-            } else {
-                Client.subscriptions[requestId] ?: error("No filter(s) found.")
+            val filters = Client.getSubscriptionFilters(requestId)
+            if (filters.isNotEmpty()) {
+                val request = """["REQ","$requestId",${filters.joinToString(",") { it.toJson() }}]"""
+                //println("FILTERSSENT " + """["REQ","$requestId",${filters.joinToString(",") { it.toJson() }}]""")
+                socket!!.send(request)
             }
-            val request = """["REQ","$requestId",${filters.joinToString(",") { it.toJson() }}]"""
-            //println("FILTERSSENT " + """["REQ","$requestId",${filters.joinToString(",") { it.toJson() }}]""")
-            socket!!.send(request)
         }
     }
 
-    fun sendFilterOnlyIfDisconnected(requestId: String, reconnectTs: Long? = null) {
+    fun sendFilterOnlyIfDisconnected() {
         if (socket == null) {
-            requestAndWatch(reconnectTs)
+            requestAndWatch()
         }
     }
 

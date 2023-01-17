@@ -23,9 +23,9 @@ object Client: RelayPool.Listener {
      *        something.
      **/
     var lenient: Boolean = false
-    private val listeners = Collections.synchronizedSet(HashSet<Listener>())
-    internal var relays = Constants.defaultRelays
-    internal val subscriptions = ConcurrentHashMap<String, MutableList<JsonFilter>>()
+    private var listeners = setOf<Listener>()
+    private var relays = Constants.defaultRelays
+    private val subscriptions = mutableMapOf<String, List<JsonFilter>>()
 
     fun connect(
         relays: Array<Relay> = Constants.defaultRelays
@@ -35,17 +35,9 @@ object Client: RelayPool.Listener {
         this.relays = relays
     }
 
-    fun requestAndWatch(
-        subscriptionId: String = UUID.randomUUID().toString().substring(0..10),
-        filters: MutableList<JsonFilter> = mutableListOf(JsonFilter())
-    ) {
-        subscriptions[subscriptionId] = filters
-        RelayPool.requestAndWatch()
-    }
-
     fun sendFilter(
         subscriptionId: String = UUID.randomUUID().toString().substring(0..10),
-        filters: MutableList<JsonFilter> = mutableListOf(JsonFilter())
+        filters: List<JsonFilter> = listOf(JsonFilter())
     ) {
         subscriptions[subscriptionId] = filters
         RelayPool.sendFilter(subscriptionId)
@@ -53,10 +45,10 @@ object Client: RelayPool.Listener {
 
     fun sendFilterOnlyIfDisconnected(
         subscriptionId: String = UUID.randomUUID().toString().substring(0..10),
-        filters: MutableList<JsonFilter> = mutableListOf(JsonFilter())
+        filters: List<JsonFilter> = listOf(JsonFilter())
     ) {
         subscriptions[subscriptionId] = filters
-        RelayPool.sendFilterOnlyIfDisconnected(subscriptionId)
+        RelayPool.sendFilterOnlyIfDisconnected()
     }
 
     fun send(signedEvent: Event) {
@@ -90,13 +82,22 @@ object Client: RelayPool.Listener {
     }
 
     fun subscribe(listener: Listener) {
-        listeners.add(listener)
+        listeners = listeners.plus(listener)
     }
 
-    fun unsubscribe(listener: Listener): Boolean {
-        return listeners.remove(listener)
+    fun unsubscribe(listener: Listener) {
+        listeners = listeners.minus(listener)
     }
 
+    fun allSubscriptions(): List<String> {
+        return synchronized(subscriptions) {
+            subscriptions.keys.toList()
+        }
+    }
+
+    fun getSubscriptionFilters(subId: String): List<JsonFilter> {
+        return subscriptions[subId] ?: emptyList()
+    }
 
     abstract class Listener {
         /**

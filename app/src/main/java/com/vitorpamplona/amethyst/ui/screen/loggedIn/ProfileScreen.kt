@@ -143,7 +143,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                             if (accountUser == user) {
                                 EditButton()
                             } else {
-                                if (accountUser.follows?.contains(user) == true) {
+                                if (accountUser.isFollowing(user) == true) {
                                     UnfollowButton { account.unfollow(user) }
                                 } else {
                                     FollowButton { account.follow(user) }

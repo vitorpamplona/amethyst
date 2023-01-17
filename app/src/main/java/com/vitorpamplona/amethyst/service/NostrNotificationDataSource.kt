@@ -32,10 +32,12 @@ object NostrNotificationDataSource: NostrDataSource<Note>("GlobalFeed") {
   }
 
   override fun feed(): List<Note> {
-    return account.userProfile().taggedPosts
-      .filter { it.event != null }
-      .sortedBy { it.event!!.createdAt }
-      .reversed()
+    val set = account.userProfile().taggedPosts
+    val filtered = synchronized(set) {
+      set.filter { it.event != null }
+    }
+
+    return filtered.sortedBy { it.event!!.createdAt }.reversed()
   }
 
   override fun updateChannelFilters() {

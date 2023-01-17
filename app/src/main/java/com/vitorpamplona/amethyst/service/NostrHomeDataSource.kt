@@ -29,17 +29,21 @@ object NostrHomeDataSource: NostrDataSource<Note>("HomeFeed") {
   }
 
   fun createFollowAccountsFilter(): JsonFilter? {
-    val follows = listOf(account.userProfile().pubkeyHex.substring(0, 6)).plus(
-      account.userProfile().follows?.map {
-        it.pubkey.toHex().substring(0, 6)
-      } ?: emptyList()
-    )
+    val follows = account.userProfile().follows ?: emptySet()
 
-    if (follows.isEmpty()) return null
+    val followKeys = synchronized(follows) {
+      follows.map {
+        it.pubkey.toHex().substring(0, 6)
+      }
+    }
+
+    val followSet = followKeys.plus(account.userProfile().pubkeyHex.substring(0, 6))
+
+    if (followSet.isEmpty()) return null
 
     return JsonFilter(
       kinds = listOf(TextNoteEvent.kind, RepostEvent.kind),
-      authors = follows,
+      authors = followSet,
       since = System.currentTimeMillis() / 1000 - (60 * 60 * 24 * 1), // 24 hours
     )
   }
@@ -64,10 +68,16 @@ object NostrHomeDataSource: NostrDataSource<Note>("HomeFeed") {
 
   override fun feed(): List<Note> {
     val user = account.userProfile()
-    val follows = user.follows.map { it.pubkeyHex }.plus(user.pubkeyHex).toSet()
+
+    val follows = user.follows
+    val followKeys = synchronized(follows) {
+      follows.map { it.pubkeyHex }
+    }
+
+    val allowSet = followKeys.plus(user.pubkeyHex).toSet()
 
     return LocalCache.notes.values
-      .filter { (it.event is TextNoteEvent || it.event is RepostEvent) && it.author?.pubkeyHex in follows }
+      .filter { (it.event is TextNoteEvent || it.event is RepostEvent) && it.author?.pubkeyHex in allowSet }
       .sortedBy { it.event!!.createdAt }
       .reversed()
   }

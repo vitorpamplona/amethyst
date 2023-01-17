@@ -7,7 +7,7 @@ import nostr.postr.JsonFilter
 import nostr.postr.events.MetadataEvent
 
 object NostrSingleUserDataSource: NostrDataSource<Note>("SingleUserFeed") {
-  val usersToWatch = Collections.synchronizedList(mutableListOf<String>())
+  var usersToWatch = listOf<String>()
 
   fun createUserFilter(): JsonFilter? {
     if (usersToWatch.isEmpty()) return null
@@ -31,12 +31,12 @@ object NostrSingleUserDataSource: NostrDataSource<Note>("SingleUserFeed") {
   }
 
   fun add(userId: String) {
-    usersToWatch.add(userId)
+    usersToWatch = usersToWatch.plus(userId)
     resetFilters()
   }
 
   fun remove(userId: String) {
-    usersToWatch.remove(userId)
+    usersToWatch = usersToWatch.minus(userId)
     resetFilters()
   }
 }

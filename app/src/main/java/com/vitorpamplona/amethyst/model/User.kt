@@ -67,9 +67,12 @@ class User(val pubkey: ByteArray) {
     }
 
     fun updateFollows(newFollows: List<User>, updateAt: Long) {
-        val toBeAdded = newFollows - follows
-        val toBeRemoved = follows - newFollows
-
+        val toBeAdded = synchronized(follows) {
+            newFollows - follows
+        }
+        val toBeRemoved = synchronized(follows) {
+            follows - newFollows
+        }
         toBeAdded.forEach {
             follow(it)
         }
@@ -87,6 +90,12 @@ class User(val pubkey: ByteArray) {
         updatedMetadataAt = updateAt
 
         live.refresh()
+    }
+
+    fun isFollowing(user: User): Boolean {
+        return synchronized(follows) {
+            follows.contains(user)
+        }
     }
 
     // Observers line up here.

@@ -35,7 +35,11 @@ object NostrUserProfileDataSource: NostrDataSource<Note>("UserProfileFeed") {
   val notesChannel = requestNewChannel()
 
   override fun feed(): List<Note> {
-    return user?.notes?.sortedBy { it.event?.createdAt }?.reversed() ?: emptyList()
+    val notes = user?.notes ?: return emptyList()
+    val sortedNotes = synchronized(notes) {
+      notes.sortedBy { it.event?.createdAt }
+    }
+    return sortedNotes.reversed()
   }
 
   override fun updateChannelFilters() {

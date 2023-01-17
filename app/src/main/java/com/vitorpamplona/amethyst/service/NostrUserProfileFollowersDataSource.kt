@@ -22,7 +22,11 @@ object NostrUserProfileFollowersDataSource: NostrDataSource<User>("UserProfileFo
   val followerChannel = requestNewChannel()
 
   override fun feed(): List<User> {
-    return user?.followers?.toList() ?: emptyList()
+    val followers = user?.followers ?: emptyList()
+
+    return synchronized(followers) {
+      followers.toList()
+    }
   }
 
   override fun updateChannelFilters() {

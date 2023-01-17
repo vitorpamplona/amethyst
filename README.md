@@ -26,6 +26,7 @@ Amethyst brings the best social network to your Android phone. Just insert your 
 - [ ] Profile Edit
 - [ ] Relay Edit
 - [ ] Account Creation / Backup Guidance
+- [ ] Message Sent feedback
 
 # Development Overview
 
