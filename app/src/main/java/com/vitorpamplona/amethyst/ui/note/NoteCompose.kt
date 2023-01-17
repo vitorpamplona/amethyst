@@ -109,7 +109,7 @@ fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Bool
 
                 Column(modifier = Modifier.padding(start = if (!isInnerNote) 10.dp else 0.dp)
                     .clickable(onClick = {
-                        note?.let {
+                        note.let {
                             navController.navigate("Note/${note.idHex}")
                         }
                     })
@@ -133,7 +133,7 @@ fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Bool
                     }
 
                     if (note.event is TextNoteEvent && (note.replyTo != null || note.mentions != null)) {
-                        ReplyInformation(note.replyTo, note.mentions)
+                        ReplyInformation(note.replyTo, note.mentions, navController)
                     }
 
                     if (note.event is ReactionEvent || note.event is RepostEvent) {
