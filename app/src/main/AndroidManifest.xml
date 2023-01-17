@@ -9,9 +9,8 @@
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
-        android:icon="@drawable/amethyst_logo"
+        android:icon="@drawable/amethyst"
         android:label="@string/app_name"
-        android:roundIcon="@drawable/amethyst_logo"
         android:enableOnBackInvokedCallback="true"
         android:supportsRtl="true"
         android:theme="@style/Theme.Amethyst"
@@ -19,7 +18,6 @@
         <activity
             android:name=".ui.MainActivity"
             android:exported="true"
-            android:label="@string/app_name"
             android:theme="@style/Theme.Amethyst">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

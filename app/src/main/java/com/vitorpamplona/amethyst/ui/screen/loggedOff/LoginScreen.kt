@@ -70,7 +70,7 @@ fun LoginPage(accountViewModel: AccountStateViewModel) {
         var errorMessage by remember { mutableStateOf("") }
 
         Image(
-            painterResource(id = R.drawable.amethyst_logo),
+            painterResource(id = R.drawable.amethyst),
             contentDescription = "App Logo",
             modifier = Modifier.size(300.dp),
             contentScale = ContentScale.Inside

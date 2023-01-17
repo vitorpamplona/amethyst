@@ -38,13 +38,10 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun AppTopBar(navController: NavHostController, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
-
-
     when (currentRoute(navController)) {
         //Route.Profile.route -> TopBarWithBackButton(navController)
         else -> MainTopBar(scaffoldState, accountViewModel)
     }
-
 }
 
 @Composable
@@ -77,14 +74,13 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
                         }
                     ) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_amethyst),
+                            painter = painterResource(R.drawable.amethyst),
                             null,
-                            modifier = Modifier.size(32.dp),
-                            tint = MaterialTheme.colors.primary
+                            modifier = Modifier.size(40.dp),
+                            tint = Color.Unspecified
                         )
                     }
                 }
-
             },
             navigationIcon = {
                 IconButton(
