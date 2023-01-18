@@ -70,7 +70,6 @@ object NostrSingleEventDataSource: NostrDataSource<Note>("SingleEventFeed") {
 
   fun add(eventId: String) {
     eventsToWatch = eventsToWatch.plus(eventId)
-    println("AAA: Event Watching ${eventsToWatch.size}")
     resetFilters()
   }
 

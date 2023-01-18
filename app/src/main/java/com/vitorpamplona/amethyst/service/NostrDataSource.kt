@@ -1,6 +1,8 @@
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelHideMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
@@ -11,6 +13,12 @@ import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Relay
 import java.util.Collections
+import kotlin.time.ExperimentalTime
+import kotlin.time.measureTimedValue
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import nostr.postr.events.ContactListEvent
 import nostr.postr.events.DeletionEvent
 import nostr.postr.events.Event
@@ -104,8 +112,25 @@ abstract class NostrDataSource<T>(val debugName: String) {
     }
   }
 
+  @OptIn(ExperimentalTime::class)
   fun loadTop(): List<T> {
-    return feed().take(100)
+    val returningList = feed().take(100)
+
+    // prepare previews
+    val scope = CoroutineScope(Job() + Dispatchers.Main)
+    scope.launch {
+      loadPreviews(returningList)
+    }
+
+    return returningList
+  }
+
+  suspend fun loadPreviews(list: List<T>) {
+    list.forEach {
+      if (it is Note) {
+        UrlCachedPreviewer.preloadPreviewsFor(it)
+      }
+    }
   }
 
   fun requestNewChannel(): Channel {
