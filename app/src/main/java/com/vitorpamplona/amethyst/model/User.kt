@@ -1,5 +1,7 @@
 package com.vitorpamplona.amethyst.model
 
+import android.os.Handler
+import android.os.Looper
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
@@ -28,7 +30,6 @@ class User(val pubkey: ByteArray) {
     val taggedPosts = Collections.synchronizedSet(mutableSetOf<Note>())
 
     val followers = Collections.synchronizedSet(mutableSetOf<User>())
-
     val messages = ConcurrentHashMap<User, MutableSet<Note>>()
 
     fun toBestDisplayName(): String {
@@ -51,10 +52,16 @@ class User(val pubkey: ByteArray) {
     fun follow(user: User) {
         follows.add(user)
         user.followers.add(this)
+
+        invalidateData()
+        user.invalidateData()
     }
     fun unfollow(user: User) {
         follows.remove(user)
         user.followers.remove(this)
+
+        invalidateData()
+        user.invalidateData()
     }
 
     @Synchronized
@@ -86,15 +93,13 @@ class User(val pubkey: ByteArray) {
         }
 
         updatedFollowsAt = updateAt
-
-        refreshObservers()
     }
 
     fun updateUserInfo(newUserInfo: UserMetadata, updateAt: Long) {
         info = newUserInfo
         updatedMetadataAt = updateAt
 
-        refreshObservers()
+        invalidateData()
     }
 
     fun isFollowing(user: User): Boolean {
@@ -106,8 +111,18 @@ class User(val pubkey: ByteArray) {
     // Observers line up here.
     val live: UserLiveData = UserLiveData(this)
 
-    private fun refreshObservers() {
-        live.refresh()
+    // Refreshes observers in batches.
+    val filterHandler = Handler(Looper.getMainLooper())
+    var handlerWaiting = false
+    @Synchronized
+    fun invalidateData() {
+        if (handlerWaiting) return
+
+        handlerWaiting = true
+        filterHandler.postDelayed({
+            live.refresh()
+            handlerWaiting = false
+        }, 100)
     }
 }
 

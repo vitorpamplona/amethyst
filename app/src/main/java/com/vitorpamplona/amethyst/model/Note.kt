@@ -1,5 +1,7 @@
 package com.vitorpamplona.amethyst.model
 
+import android.os.Handler
+import android.os.Looper
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
@@ -40,7 +42,7 @@ class Note(val idHex: String) {
         this.mentions = mentions
         this.replyTo = replyTo
 
-        refreshObservers()
+        invalidateData()
     }
 
     fun formattedDateTime(timestamp: Long): String {
@@ -72,17 +74,17 @@ class Note(val idHex: String) {
 
     fun addReply(note: Note) {
         if (replies.add(note))
-            refreshObservers()
+            invalidateData()
     }
 
     fun addBoost(note: Note) {
         if (boosts.add(note))
-            refreshObservers()
+            invalidateData()
     }
 
     fun addReaction(note: Note) {
         if (reactions.add(note))
-            refreshObservers()
+            invalidateData()
     }
 
     fun isReactedBy(user: User): Boolean {
@@ -96,8 +98,18 @@ class Note(val idHex: String) {
     // Observers line up here.
     val live: NoteLiveData = NoteLiveData(this)
 
-    private fun refreshObservers() {
-        live.refresh()
+    // Refreshes observers in batches.
+    val filterHandler = Handler(Looper.getMainLooper())
+    var handlerWaiting = false
+    @Synchronized
+    fun invalidateData() {
+        if (handlerWaiting) return
+
+        handlerWaiting = true
+        filterHandler.postDelayed({
+            live.refresh()
+            handlerWaiting = false
+        }, 100)
     }
 }
 
