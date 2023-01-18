@@ -8,6 +8,10 @@ import com.vitorpamplona.amethyst.ui.components.isValidURL
 import com.vitorpamplona.amethyst.ui.components.noProtocolUrlValidator
 import com.vitorpamplona.amethyst.ui.components.videoExtension
 import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 object UrlCachedPreviewer {
   val cache = ConcurrentHashMap<String, UrlInfoItem>()
@@ -18,16 +22,19 @@ object UrlCachedPreviewer {
       return
     }
 
-    BahaUrlPreview(url, object : IUrlPreviewCallback {
-      override fun onComplete(urlInfo: UrlInfoItem) {
-        cache.put(url, urlInfo)
-        callback?.onComplete(urlInfo)
-      }
+    val scope = CoroutineScope(Job() + Dispatchers.Main)
+    scope.launch {
+      BahaUrlPreview(url, object : IUrlPreviewCallback {
+        override fun onComplete(urlInfo: UrlInfoItem) {
+          cache.put(url, urlInfo)
+          callback?.onComplete(urlInfo)
+        }
 
-      override fun onFailed(throwable: Throwable) {
-        callback?.onFailed(throwable)
-      }
-    }).fetchUrlPreview()
+        override fun onFailed(throwable: Throwable) {
+          callback?.onFailed(throwable)
+        }
+      }).fetchUrlPreview()
+    }
   }
 
   fun findUrlsInMessage(message: String): List<String> {

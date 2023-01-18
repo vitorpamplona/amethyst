@@ -297,8 +297,6 @@ object LocalCache {
       it.addReply(note)
     }
 
-    UrlCachedPreviewer.preloadPreviewsFor(note)
-
     refreshObservers()
   }
 

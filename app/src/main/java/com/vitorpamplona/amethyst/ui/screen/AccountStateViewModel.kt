@@ -6,6 +6,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.DefaultChannels
 import com.vitorpamplona.amethyst.model.toByteArray
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
+import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
 import com.vitorpamplona.amethyst.service.NostrGlobalDataSource
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
@@ -70,6 +71,7 @@ class AccountStateViewModel(private val encryptedPreferences: EncryptedSharedPre
     NostrNotificationDataSource.account = account
     NostrChatroomListDataSource.account = account
 
+    NostrChannelDataSource.start()
     NostrAccountDataSource.start()
     NostrGlobalDataSource.start()
     NostrHomeDataSource.start()

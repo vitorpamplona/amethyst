@@ -1,5 +1,7 @@
 package com.vitorpamplona.amethyst.service
 
+import android.os.Handler
+import android.os.Looper
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
@@ -125,7 +127,7 @@ abstract class NostrDataSource<T>(val debugName: String) {
     return returningList
   }
 
-  suspend fun loadPreviews(list: List<T>) {
+  fun loadPreviews(list: List<T>) {
     list.forEach {
       if (it is Note) {
         UrlCachedPreviewer.preloadPreviewsFor(it)
@@ -144,6 +146,19 @@ abstract class NostrDataSource<T>(val debugName: String) {
     Client.close(channel.id)
     channels.remove(channel)
     channelIds.remove(channel.id)
+  }
+
+  val filterHandler = Handler(Looper.getMainLooper())
+  var handlerWaiting = false
+  @Synchronized
+  fun invalidateFilters() {
+    if (handlerWaiting) return
+
+    handlerWaiting = true
+    filterHandler.postDelayed({
+      resetFilters()
+      handlerWaiting = false
+    }, 200)
   }
 
   fun resetFilters() {

@@ -70,11 +70,11 @@ object NostrSingleEventDataSource: NostrDataSource<Note>("SingleEventFeed") {
 
   fun add(eventId: String) {
     eventsToWatch = eventsToWatch.plus(eventId)
-    resetFilters()
+    invalidateFilters()
   }
 
   fun remove(eventId: String) {
     eventsToWatch = eventsToWatch.minus(eventId)
-    resetFilters()
+    invalidateFilters()
   }
 }

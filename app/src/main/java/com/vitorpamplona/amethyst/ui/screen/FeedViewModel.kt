@@ -6,6 +6,9 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.LocalCacheState
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.NostrDataSource
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,13 +21,6 @@ class FeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel() {
     val feedContent = _feedContent.asStateFlow()
 
     fun refresh() {
-        // For some reason, view Model Scope doesn't call
-        viewModelScope.launch {
-            refreshSuspend()
-        }
-    }
-
-    fun refreshSuspend() {
         val notes = dataSource.loadTop()
 
         val oldNotesState = feedContent.value

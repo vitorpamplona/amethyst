@@ -137,13 +137,14 @@ class UserMetadata {
 }
 
 class UserLiveData(val user: User): LiveData<UserState>(UserState(user)) {
+    val scope = CoroutineScope(Job() + Dispatchers.Main)
+
     fun refresh() {
         postValue(UserState(user))
     }
 
     override fun onActive() {
         super.onActive()
-        val scope = CoroutineScope(Job() + Dispatchers.Main)
         scope.launch {
             NostrSingleUserDataSource.add(user.pubkeyHex)
         }
@@ -151,7 +152,6 @@ class UserLiveData(val user: User): LiveData<UserState>(UserState(user)) {
 
     override fun onInactive() {
         super.onInactive()
-        val scope = CoroutineScope(Job() + Dispatchers.Main)
         scope.launch {
             NostrSingleUserDataSource.remove(user.pubkeyHex)
         }

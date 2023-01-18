@@ -35,11 +35,11 @@ object NostrSingleUserDataSource: NostrDataSource<Note>("SingleUserFeed") {
 
   fun add(userId: String) {
     usersToWatch = usersToWatch.plus(userId)
-    resetFilters()
+    invalidateFilters()
   }
 
   fun remove(userId: String) {
     usersToWatch = usersToWatch.minus(userId)
-    resetFilters()
+    invalidateFilters()
   }
 }

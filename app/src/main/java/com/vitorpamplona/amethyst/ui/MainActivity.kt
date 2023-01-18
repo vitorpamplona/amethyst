@@ -16,6 +16,7 @@ import coil.decode.ImageDecoderDecoder
 import coil.decode.SvgDecoder
 import com.vitorpamplona.amethyst.KeyStorage
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
+import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
 import com.vitorpamplona.amethyst.service.NostrGlobalDataSource
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
@@ -71,6 +72,7 @@ class MainActivity : ComponentActivity() {
   override fun onPause() {
     NostrAccountDataSource.stop()
     NostrHomeDataSource.stop()
+    NostrChannelDataSource.stop()
     NostrChatroomListDataSource.stop()
     NostrUserProfileDataSource.stop()
     NostrUserProfileFollowersDataSource.stop()
