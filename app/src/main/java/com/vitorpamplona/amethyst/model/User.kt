@@ -124,6 +124,11 @@ class UserMetadata {
     var iris: String? = null
     var main_relay: String? = null
     var twitter: String? = null
+
+    fun anyNameStartsWith(prefix: String): Boolean {
+        return listOfNotNull(name, username, display_name, displayName, nip05, lud06, lud16)
+              .filter { it.startsWith(prefix, true) }.isNotEmpty()
+    }
 }
 
 class UserLiveData(val user: User): LiveData<UserState>(UserState(user)) {

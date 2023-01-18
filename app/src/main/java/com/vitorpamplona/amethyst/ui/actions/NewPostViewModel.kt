@@ -8,12 +8,17 @@ import android.provider.MediaStore
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.decodePublicKey
 import com.vitorpamplona.amethyst.ui.components.isValidURL
 import com.vitorpamplona.amethyst.ui.components.noProtocolUrlValidator
+import nostr.postr.toNpub
 
 class NewPostViewModel: ViewModel() {
     private var account: Account? = null
@@ -22,8 +27,11 @@ class NewPostViewModel: ViewModel() {
     var mentions by mutableStateOf<List<User>?>(null)
     var replyTos by mutableStateOf<MutableList<Note>?>(null)
 
-    var message by mutableStateOf("")
+    var message by mutableStateOf(TextFieldValue(""))
     var urlPreview by mutableStateOf<String?>(null)
+
+    var userSuggestions by mutableStateOf<List<User>>(emptyList())
+    var userSuggestionAnchor: TextRange? = null
 
     fun load(account: Account, replyingTo: Note?) {
         originalNote = replyingTo
@@ -36,9 +44,53 @@ class NewPostViewModel: ViewModel() {
         this.account = account
     }
 
+    fun addUserToMentionsIfNotInAndReturnIndex(user: User): Int {
+        val replyToSize = replyTos?.size ?: 0
+
+        var myMentions = mentions
+        if (myMentions == null) {
+            mentions = listOf(user)
+            return replyToSize + 0 // position of the user
+        }
+
+        val index = myMentions.indexOf(user)
+
+        if (index >= 0) return replyToSize + index
+
+        myMentions = myMentions.plus(user)
+        mentions = myMentions
+        return replyToSize + myMentions.indexOf(user)
+    }
+
     fun sendPost() {
-        account?.sendPost(message, originalNote, mentions)
-        message = ""
+        // Moves @npub to mentions
+        val newMessage = message.text.split('\n').map { paragraph: String ->
+            paragraph.split(' ').map { word: String ->
+                try {
+                    if (word.startsWith("@npub") && word.length >= 64) {
+                        val keyB32 = word.substring(0, 64)
+                        val restOfWord = word.substring(64)
+
+                        val key = decodePublicKey(keyB32.removePrefix("@"))
+                        val user = LocalCache.getOrCreateUser(key)
+
+                        val index = addUserToMentionsIfNotInAndReturnIndex(user)
+
+                        val newWord = "#[${index}]"
+
+                        newWord + restOfWord
+                    } else {
+                        word
+                    }
+                } catch (e: Exception) {
+                    // if it can't parse the key, don't try to change.
+                    word
+                }
+            }.joinToString(" ")
+        }.joinToString("\n")
+
+        account?.sendPost(newMessage, originalNote, mentions)
+        message = TextFieldValue("")
         urlPreview = null
     }
 
@@ -51,19 +103,19 @@ class NewPostViewModel: ViewModel() {
 
         img?.let {
             ImageUploader.uploadImage(img) {
-                message = message + "\n\n" + it
+                message = TextFieldValue(message.text + "\n\n" + it)
                 urlPreview = findUrlInMessage()
             }
         }
     }
 
     fun cancel() {
-        message = ""
+        message = TextFieldValue("")
         urlPreview = null
     }
 
     fun findUrlInMessage(): String? {
-        return message.split('\n').firstNotNullOfOrNull { paragraph ->
+        return message.text.split('\n').firstNotNullOfOrNull { paragraph ->
             paragraph.split(' ').firstOrNull { word: String ->
                 isValidURL(word) || noProtocolUrlValidator.matcher(word).matches()
             }
@@ -72,5 +124,35 @@ class NewPostViewModel: ViewModel() {
 
     fun removeFromReplyList(it: User) {
         mentions = mentions?.minus(it)
+    }
+
+    fun updateMessage(it: TextFieldValue) {
+        message = it
+        urlPreview = findUrlInMessage()
+
+        if (it.selection.collapsed) {
+            val lastWord = it.text.substring(0, it.selection.end).substringAfterLast("\n").substringAfterLast(" ")
+            userSuggestionAnchor = it.selection
+            if (lastWord.startsWith("@") && lastWord.length > 2) {
+                userSuggestions = LocalCache.findUsersStartingWith(lastWord.removePrefix("@"))
+            } else {
+                userSuggestions = emptyList()
+            }
+        }
+    }
+
+    fun autocompleteWithUser(item: User) {
+        userSuggestionAnchor?.let {
+            val lastWord = message.text.substring(0, it.end).substringAfterLast("\n").substringAfterLast(" ")
+            val lastWordStart = it.end - lastWord.length
+            val wordToInsert = "@${item.pubkey.toNpub()} "
+
+            message = TextFieldValue(
+                message.text.replaceRange(lastWordStart, it.end, wordToInsert),
+                TextRange(lastWordStart + wordToInsert.length, lastWordStart + wordToInsert.length)
+            )
+            userSuggestionAnchor = null
+            userSuggestions = emptyList()
+        }
     }
 }

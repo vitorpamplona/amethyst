@@ -98,7 +98,7 @@ class Account(val loggedIn: Persona, val followingChannels: MutableSet<String> =
       val modifiedMentionsHex = modifiedMentions?.map { it.pubkeyHex }?.toSet() ?: emptySet()
 
       val repliesTo = replyToEvent.replyTos.plus(replyToEvent.id.toHex())
-      val mentions = replyToEvent.mentions.plus(replyToEvent.pubKey.toHex()).filter {
+      val mentions = replyToEvent.mentions.plus(replyToEvent.pubKey.toHex()).plus(modifiedMentionsHex).filter {
         it in modifiedMentionsHex
       }
 
@@ -114,7 +114,7 @@ class Account(val loggedIn: Persona, val followingChannels: MutableSet<String> =
       val signedEvent = TextNoteEvent.create(
         msg = message,
         replyTos = null,
-        mentions = null,
+        mentions = modifiedMentions?.map { it.pubkeyHex } ?: emptyList(),
         privateKey = loggedIn.privKey!!
       )
       Client.send(signedEvent)
