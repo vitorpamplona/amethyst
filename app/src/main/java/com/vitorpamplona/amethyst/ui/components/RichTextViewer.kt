@@ -60,6 +60,10 @@ fun RichTextViewer(content: String, tags: List<List<String>>?, note: Note, accou
             } else {
               UrlPreview(word, word)
             }
+          } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
+            ClickableEmail(word)
+          } else if (Patterns.PHONE.matcher(word).matches()) {
+            ClickablePhone(word)
           } else if (noProtocolUrlValidator.matcher(word).matches()) {
             UrlPreview("https://$word", word)
           } else if (tagIndex.matcher(word).matches() && tags != null) {
