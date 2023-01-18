@@ -160,7 +160,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                         Text(" @${user.bestUsername()}", color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f))
                         Text(
                             "${user.info.about}",
-                            color = Color.White,
+                            color = MaterialTheme.colors.onSurface,
                             modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)
                         )
 
