@@ -19,8 +19,7 @@ fun NotificationScreen(accountViewModel: AccountViewModel, navController: NavCon
     val account by accountViewModel.accountLiveData.observeAsState()
 
     if (account != null) {
-        val feedViewModel: CardFeedViewModel =
-            viewModel { CardFeedViewModel( NostrNotificationDataSource ) }
+        val feedViewModel: CardFeedViewModel = viewModel { CardFeedViewModel( NostrNotificationDataSource ) }
 
         LaunchedEffect(Unit) {
             feedViewModel.refresh()

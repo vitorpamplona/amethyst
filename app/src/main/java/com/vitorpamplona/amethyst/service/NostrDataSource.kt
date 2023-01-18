@@ -114,7 +114,6 @@ abstract class NostrDataSource<T>(val debugName: String) {
     }
   }
 
-  @OptIn(ExperimentalTime::class)
   fun loadTop(): List<T> {
     val returningList = feed().take(100)
 

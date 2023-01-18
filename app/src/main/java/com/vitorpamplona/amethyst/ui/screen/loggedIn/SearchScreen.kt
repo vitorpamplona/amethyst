@@ -56,7 +56,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
 fun SearchScreen(accountViewModel: AccountViewModel, navController: NavController) {
-    val feedViewModel: FeedViewModel = viewModel { FeedViewModel( NostrGlobalDataSource ) }
+    val feedViewModel: NostrGlobalFeedViewModel = viewModel()
 
     LaunchedEffect(Unit) {
         feedViewModel.refresh()

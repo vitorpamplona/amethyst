@@ -19,7 +19,7 @@ fun ChatroomListScreen(accountViewModel: AccountViewModel, navController: NavCon
     val account by accountViewModel.accountLiveData.observeAsState()
 
     if (account != null) {
-        val feedViewModel: FeedViewModel = viewModel { FeedViewModel( NostrChatroomListDataSource ) }
+        val feedViewModel: NostrChatroomListFeedViewModel = viewModel()
 
         LaunchedEffect(Unit) {
             feedViewModel.refresh()

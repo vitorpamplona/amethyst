@@ -50,7 +50,7 @@ fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, navCon
         val channelState by NostrChannelDataSource.channel!!.live.observeAsState()
         val channel = channelState?.channel ?: return
 
-        val feedViewModel: FeedViewModel = viewModel { FeedViewModel( NostrChannelDataSource ) }
+        val feedViewModel: NostrChannelFeedViewModel = viewModel()
 
         LaunchedEffect(Unit) {
             feedViewModel.refresh()

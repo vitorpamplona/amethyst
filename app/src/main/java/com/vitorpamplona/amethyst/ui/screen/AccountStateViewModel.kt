@@ -71,7 +71,6 @@ class AccountStateViewModel(private val encryptedPreferences: EncryptedSharedPre
     NostrNotificationDataSource.account = account
     NostrChatroomListDataSource.account = account
 
-    NostrChannelDataSource.start()
     NostrAccountDataSource.start()
     NostrGlobalDataSource.start()
     NostrHomeDataSource.start()

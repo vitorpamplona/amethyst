@@ -25,7 +25,7 @@ fun HomeScreen(accountViewModel: AccountViewModel, navController: NavController)
     val accountState by accountViewModel.accountLiveData.observeAsState()
 
     if (accountState != null) {
-        val feedViewModel: FeedViewModel = viewModel { FeedViewModel( NostrHomeDataSource ) }
+        val feedViewModel: NostrHomeFeedViewModel = viewModel()
 
         LaunchedEffect(Unit) {
             feedViewModel.refresh()

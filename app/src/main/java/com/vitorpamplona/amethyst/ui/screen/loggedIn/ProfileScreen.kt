@@ -222,7 +222,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
 fun TabNotes(user: User, accountViewModel: AccountViewModel, navController: NavController) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     if (accountState != null) {
-        val feedViewModel: FeedViewModel = viewModel { FeedViewModel( NostrUserProfileDataSource ) }
+        val feedViewModel: NostrUserProfileFeedViewModel = viewModel()
 
         Column(Modifier.fillMaxHeight()) {
             Column(

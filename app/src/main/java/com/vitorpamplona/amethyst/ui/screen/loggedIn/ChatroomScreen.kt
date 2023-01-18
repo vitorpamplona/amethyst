@@ -46,7 +46,7 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
 
         NostrChatRoomDataSource.loadMessagesBetween(account, userId)
 
-        val feedViewModel: FeedViewModel = viewModel { FeedViewModel( NostrChatRoomDataSource ) }
+        val feedViewModel: NostrChatRoomFeedViewModel = viewModel()
 
         LaunchedEffect(Unit) {
             feedViewModel.refresh()

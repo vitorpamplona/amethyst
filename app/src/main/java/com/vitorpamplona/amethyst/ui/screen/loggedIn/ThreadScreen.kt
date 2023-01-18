@@ -27,7 +27,7 @@ fun ThreadScreen(noteId: String?, accountViewModel: AccountViewModel, navControl
     if (account != null && noteId != null) {
         NostrThreadDataSource.loadThread(noteId)
 
-        val feedViewModel: FeedViewModel = viewModel { FeedViewModel( NostrThreadDataSource ) }
+        val feedViewModel: NostrThreadFeedViewModel = viewModel()
 
         Column(Modifier.fillMaxHeight()) {
             Column(

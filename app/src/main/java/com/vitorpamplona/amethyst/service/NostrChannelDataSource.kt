@@ -10,22 +10,28 @@ object NostrChannelDataSource: NostrDataSource<Note>("ChatroomFeed") {
 
   fun loadMessagesBetween(channelId: String) {
     channel = LocalCache.channels[channelId]
+    resetFilters()
   }
 
-  fun createMessagesToChannelFilter() = JsonFilter(
-    kinds = listOf(ChannelMessageEvent.kind),
-    tags = mapOf("e" to listOf(channel?.idHex).filterNotNull()),
-    limit = 100
-  )
+  fun createMessagesToChannelFilter(): JsonFilter? {
+    if (channel != null) {
+      return JsonFilter(
+        kinds = listOf(ChannelMessageEvent.kind),
+        tags = mapOf("e" to listOfNotNull(channel?.idHex)),
+        since = System.currentTimeMillis() / 1000 - (60 * 60 * 24 * 1), // 24 hours
+      )
+    }
+    return null
+  }
 
   val messagesChannel = requestNewChannel()
 
   // returns the last Note of each user.
   override fun feed(): List<Note> {
-    return channel?.notes?.values?.sortedBy { it.event!!.createdAt } ?: emptyList()
+    return channel?.notes?.values?.sortedBy { it.event?.createdAt } ?: emptyList()
   }
 
   override fun updateChannelFilters() {
-    messagesChannel.filter = listOf(createMessagesToChannelFilter()).ifEmpty { null }
+    messagesChannel.filter = listOfNotNull(createMessagesToChannelFilter()).ifEmpty { null }
   }
 }
