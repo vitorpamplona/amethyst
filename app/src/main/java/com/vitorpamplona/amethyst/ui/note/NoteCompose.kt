@@ -178,7 +178,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
         expanded = popupExpanded,
         onDismissRequest = onDismiss
     ) {
-        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(note.event?.content ?: "")); onDismiss() }) {
+        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(accountViewModel.decrypt(note) ?: "")); onDismiss() }) {
             Text("Copy Text")
         }
         DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(note.author?.pubkey?.toNpub() ?: "")); onDismiss() }) {
