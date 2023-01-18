@@ -40,7 +40,7 @@ import com.vitorpamplona.amethyst.ui.components.RichTextViewer
 import com.vitorpamplona.amethyst.ui.note.BlankNote
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.ReactionsRowState
-import com.vitorpamplona.amethyst.ui.note.UserDisplay
+import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.timeAgoLong
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -185,7 +185,7 @@ fun NoteMaster(baseNote: Note, accountViewModel: AccountViewModel, navController
                 Column(modifier = Modifier.padding(start = 10.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (author != null)
-                            UserDisplay(author)
+                            UsernameDisplay(author)
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {

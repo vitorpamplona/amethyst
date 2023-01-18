@@ -23,10 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.components.RichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import nostr.postr.events.TextNoteEvent
 
 @Composable
 fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navController: NavController) {
@@ -79,7 +76,7 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
         userToComposeOn?.let {
             ChannelName(
                 channelPicture = it.profilePicture(),
-                channelTitle = { UserDisplay(it) },
+                channelTitle = { UsernameDisplay(it) },
                 channelLastTime = note.event?.createdAt,
                 channelLastContent = accountViewModel.decrypt(note),
                 onClick = { navController.navigate("Room/${it.pubkeyHex}") })

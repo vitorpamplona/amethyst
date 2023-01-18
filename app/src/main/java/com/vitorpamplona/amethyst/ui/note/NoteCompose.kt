@@ -110,7 +110,7 @@ fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Bool
                 Column(modifier = Modifier.padding(start = if (!isInnerNote) 10.dp else 0.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (author != null)
-                            UserDisplay(author)
+                            UsernameDisplay(author)
 
                         if (note.event !is RepostEvent) {
                             Text(

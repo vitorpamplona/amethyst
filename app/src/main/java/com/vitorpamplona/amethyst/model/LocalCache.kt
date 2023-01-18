@@ -24,6 +24,7 @@ import nostr.postr.events.PrivateDmEvent
 import nostr.postr.events.RecommendRelayEvent
 import nostr.postr.events.TextNoteEvent
 import nostr.postr.toHex
+import nostr.postr.toNpub
 
 
 object LocalCache {
@@ -309,7 +310,11 @@ object LocalCache {
   }
 
   fun findUsersStartingWith(username: String): List<User> {
-    return users.values.filter { it.info.anyNameStartsWith(username) }
+    return users.values.filter {
+           it.info.anyNameStartsWith(username)
+        || it.pubkeyHex.startsWith(username, true)
+        || it.pubkey.toNpub().startsWith(username, true)
+    }
   }
 
   // Observers line up here.

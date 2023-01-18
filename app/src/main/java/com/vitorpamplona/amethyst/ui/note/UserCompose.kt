@@ -54,7 +54,7 @@ fun UserCompose(baseUser: User, accountViewModel: AccountViewModel, navControlle
 
             Column(modifier = Modifier.padding(start = 10.dp).weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    UserDisplay(user)
+                    UsernameDisplay(user)
                 }
 
                 Text(

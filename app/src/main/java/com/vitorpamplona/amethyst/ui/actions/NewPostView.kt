@@ -1,24 +1,21 @@
 package com.vitorpamplona.amethyst.ui.actions
 
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Divider
+import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Surface
@@ -37,16 +34,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.input.TransformedText
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.UrlPreview
@@ -57,7 +52,7 @@ import com.vitorpamplona.amethyst.ui.components.noProtocolUrlValidator
 import com.vitorpamplona.amethyst.ui.components.videoExtension
 import com.vitorpamplona.amethyst.ui.navigation.UploadFromGallery
 import com.vitorpamplona.amethyst.ui.note.ReplyInformation
-import com.vitorpamplona.amethyst.ui.note.UserDisplay
+import com.vitorpamplona.amethyst.ui.screen.UserLine
 import kotlinx.coroutines.delay
 import nostr.postr.events.TextNoteEvent
 
@@ -169,41 +164,8 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, account: Account
                         )
                     ) {
                         itemsIndexed(userSuggestions, key = { _, item -> item.pubkeyHex }) { index, item ->
-                            Column(modifier = Modifier.fillMaxWidth().clickable(onClick = {
+                            UserLine(item) {
                                 postViewModel.autocompleteWithUser(item)
-                            })) {
-                                Row(
-                                    modifier = Modifier
-                                        .padding(
-                                            start = 12.dp,
-                                            end = 12.dp,
-                                            top = 10.dp)
-                                ) {
-
-                                    AsyncImage(
-                                        model = item.profilePicture(),
-                                        contentDescription = "Profile Image",
-                                        modifier = Modifier
-                                            .width(55.dp).height(55.dp)
-                                            .clip(shape = CircleShape)
-                                    )
-
-                                    Column(modifier = Modifier.padding(start = 10.dp).weight(1f)) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            UserDisplay(item)
-                                        }
-
-                                        Text(
-                                            item.info.about?.take(100) ?: "",
-                                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                                        )
-                                    }
-                                }
-
-                                Divider(
-                                    modifier = Modifier.padding(top = 10.dp),
-                                    thickness = 0.25.dp
-                                )
                             }
                         }
                     }
@@ -276,5 +238,29 @@ fun PostButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifier = 
             )
     ) {
         Text(text = "Post", color = Color.White)
+    }
+}
+
+@Composable
+fun SearchButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifier = Modifier) {
+    Button(
+        modifier = modifier,
+        onClick = {
+            if (isActive) {
+                onPost()
+            }
+        },
+        shape = RoundedCornerShape(20.dp),
+        colors = ButtonDefaults
+            .buttonColors(
+                backgroundColor = if (isActive) MaterialTheme.colors.primary else Color.Gray
+            )
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_search),
+            null,
+            modifier = Modifier.size(26.dp),
+            tint = Color.White
+        )
     }
 }

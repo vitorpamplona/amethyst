@@ -7,7 +7,7 @@ import androidx.compose.ui.text.font.FontWeight
 import com.vitorpamplona.amethyst.model.User
 
 @Composable
-fun UserDisplay(user: User) {
+fun UsernameDisplay(user: User) {
     if (user.bestUsername() != null || user.bestDisplayName() != null) {
       if (user.bestDisplayName().isNullOrBlank()) {
         Text(
