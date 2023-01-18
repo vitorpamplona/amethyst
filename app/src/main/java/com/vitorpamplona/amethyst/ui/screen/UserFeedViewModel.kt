@@ -10,6 +10,9 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileFollowersDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileFollowsDataSource
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,22 +32,18 @@ open class UserFeedViewModel(val dataSource: NostrDataSource<User>): ViewModel()
     val feedContent = _feedContent.asStateFlow()
 
     fun refresh() {
-        // For some reason, view Model Scope doesn't call
-        viewModelScope.launch {
-            refreshSuspend()
-        }
-    }
+        val scope = CoroutineScope(Job() + Dispatchers.Main)
+        scope.launch {
+            val notes = dataSource.loadTop()
 
-    fun refreshSuspend() {
-        val notes = dataSource.loadTop()
-
-        val oldNotesState = feedContent.value
-        if (oldNotesState is UserFeedState.Loaded) {
-            if (notes != oldNotesState.feed) {
+            val oldNotesState = feedContent.value
+            if (oldNotesState is UserFeedState.Loaded) {
+                if (notes != oldNotesState.feed) {
+                    updateFeed(notes)
+                }
+            } else {
                 updateFeed(notes)
             }
-        } else {
-            updateFeed(notes)
         }
     }
 

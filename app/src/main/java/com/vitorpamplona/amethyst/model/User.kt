@@ -87,14 +87,14 @@ class User(val pubkey: ByteArray) {
 
         updatedFollowsAt = updateAt
 
-        live.refresh()
+        refreshObservers()
     }
 
     fun updateUserInfo(newUserInfo: UserMetadata, updateAt: Long) {
         info = newUserInfo
         updatedMetadataAt = updateAt
 
-        live.refresh()
+        refreshObservers()
     }
 
     fun isFollowing(user: User): Boolean {

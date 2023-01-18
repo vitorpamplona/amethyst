@@ -10,6 +10,9 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.NostrDataSource
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,28 +26,24 @@ class CardFeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel() {
     private var lastNotes: List<Note>? = null
 
     fun refresh() {
-        // For some reason, view Model Scope doesn't call
-        viewModelScope.launch {
-            refreshSuspend()
-        }
-    }
+        val scope = CoroutineScope(Job() + Dispatchers.Main)
+        scope.launch {
+            val notes = dataSource.loadTop()
 
-    fun refreshSuspend() {
-        val notes = dataSource.loadTop()
+            val lastNotesCopy = lastNotes
 
-        val lastNotesCopy = lastNotes
-
-        val oldNotesState = feedContent.value
-        if (lastNotesCopy != null && oldNotesState is CardFeedState.Loaded) {
-            val newCards = convertToCard(notes.minus(lastNotesCopy))
-            if (newCards.isNotEmpty()) {
+            val oldNotesState = feedContent.value
+            if (lastNotesCopy != null && oldNotesState is CardFeedState.Loaded) {
+                val newCards = convertToCard(notes.minus(lastNotesCopy))
+                if (newCards.isNotEmpty()) {
+                    lastNotes = notes
+                    updateFeed((oldNotesState.feed + newCards).sortedBy { it.createdAt() }.reversed())
+                }
+            } else {
+                val cards = convertToCard(notes)
                 lastNotes = notes
-                updateFeed((oldNotesState.feed + newCards).sortedBy { it.createdAt() }.reversed())
+                updateFeed(cards)
             }
-        } else {
-            val cards = convertToCard(notes)
-            lastNotes = notes
-            updateFeed(cards)
         }
     }
 

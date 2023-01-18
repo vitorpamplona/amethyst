@@ -24,23 +24,19 @@ class FeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel() {
     private val _feedContent = MutableStateFlow<FeedState>(FeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
 
-    @OptIn(ExperimentalTime::class)
     fun refresh() {
         val scope = CoroutineScope(Job() + Dispatchers.Main)
         scope.launch {
-            println("AAA" + measureTimedValue {
-                val notes = dataSource.loadTop()
+            val notes = dataSource.loadTop()
 
-                val oldNotesState = feedContent.value
-                if (oldNotesState is FeedState.Loaded) {
-                    if (notes != oldNotesState.feed) {
-                        updateFeed(notes)
-                    }
-                } else {
+            val oldNotesState = feedContent.value
+            if (oldNotesState is FeedState.Loaded) {
+                if (notes != oldNotesState.feed) {
                     updateFeed(notes)
                 }
-            }.duration)
-
+            } else {
+                updateFeed(notes)
+            }
         }
     }
 
