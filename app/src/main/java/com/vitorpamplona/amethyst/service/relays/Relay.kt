@@ -1,7 +1,6 @@
 package com.vitorpamplona.amethyst.service.relays
 
 import com.google.gson.JsonElement
-import java.util.Collections
 import nostr.postr.events.Event
 import okhttp3.OkHttpClient
 import okhttp3.Request

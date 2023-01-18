@@ -17,6 +17,7 @@ import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -47,6 +48,10 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
         NostrChatRoomDataSource.loadMessagesBetween(account, userId)
 
         val feedViewModel: FeedViewModel = viewModel { FeedViewModel( NostrChatRoomDataSource ) }
+
+        LaunchedEffect(Unit) {
+            feedViewModel.refresh()
+        }
 
         Column(Modifier.fillMaxHeight()) {
             NostrChatRoomDataSource.withUser?.let {

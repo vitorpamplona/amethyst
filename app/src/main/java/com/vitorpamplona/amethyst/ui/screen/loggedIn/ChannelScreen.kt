@@ -57,6 +57,10 @@ fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, navCon
 
         val feedViewModel: FeedViewModel = viewModel { FeedViewModel( NostrChannelDataSource ) }
 
+        LaunchedEffect(Unit) {
+            feedViewModel.refresh()
+        }
+
         Column(Modifier.fillMaxHeight()) {
             ChannelHeader(
                 channel,

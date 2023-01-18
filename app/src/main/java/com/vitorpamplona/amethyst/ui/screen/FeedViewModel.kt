@@ -1,11 +1,15 @@
 package com.vitorpamplona.amethyst.ui.screen
 
+import android.os.Handler
+import android.os.Looper
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.LocalCacheState
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.NostrDataSource
+import kotlin.time.ExperimentalTime
+import kotlin.time.measureTimedValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -20,16 +24,23 @@ class FeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel() {
     private val _feedContent = MutableStateFlow<FeedState>(FeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
 
+    @OptIn(ExperimentalTime::class)
     fun refresh() {
-        val notes = dataSource.loadTop()
+        val scope = CoroutineScope(Job() + Dispatchers.Main)
+        scope.launch {
+            println("AAA" + measureTimedValue {
+                val notes = dataSource.loadTop()
 
-        val oldNotesState = feedContent.value
-        if (oldNotesState is FeedState.Loaded) {
-            if (notes != oldNotesState.feed) {
-                updateFeed(notes)
-            }
-        } else {
-            updateFeed(notes)
+                val oldNotesState = feedContent.value
+                if (oldNotesState is FeedState.Loaded) {
+                    if (notes != oldNotesState.feed) {
+                        updateFeed(notes)
+                    }
+                } else {
+                    updateFeed(notes)
+                }
+            }.duration)
+
         }
     }
 
@@ -48,8 +59,21 @@ class FeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel() {
         }
     }
 
+    val filterHandler = Handler(Looper.getMainLooper())
+    var handlerWaiting = false
+    @Synchronized
+    fun invalidateData() {
+        if (handlerWaiting) return
+
+        handlerWaiting = true
+        filterHandler.postDelayed({
+            refresh()
+            handlerWaiting = false
+        }, 100)
+    }
+
     private val cacheListener: (LocalCacheState) -> Unit = {
-        refresh()
+        invalidateData()
     }
 
     init {

@@ -8,7 +8,7 @@ import nostr.postr.events.TextNoteEvent
 object NostrGlobalDataSource: NostrDataSource<Note>("GlobalFeed") {
   fun createGlobalFilter() = JsonFilter(
     kinds = listOf(TextNoteEvent.kind),
-    limit = 200
+    limit = 50
   )
 
   val globalFeedChannel = requestNewChannel()

@@ -1,5 +1,7 @@
 package com.vitorpamplona.amethyst.ui.screen
 
+import android.os.Handler
+import android.os.Looper
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -61,8 +63,21 @@ open class UserFeedViewModel(val dataSource: NostrDataSource<User>): ViewModel()
         }
     }
 
+    val filterHandler = Handler(Looper.getMainLooper())
+    var handlerWaiting = false
+    @Synchronized
+    fun invalidateData() {
+        if (handlerWaiting) return
+
+        handlerWaiting = true
+        filterHandler.postDelayed({
+            refresh()
+            handlerWaiting = false
+        }, 100)
+    }
+
     private val cacheListener: (LocalCacheState) -> Unit = {
-        refresh()
+        invalidateData()
     }
 
     init {

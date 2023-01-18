@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
@@ -20,6 +21,10 @@ fun NotificationScreen(accountViewModel: AccountViewModel, navController: NavCon
     if (account != null) {
         val feedViewModel: CardFeedViewModel =
             viewModel { CardFeedViewModel( NostrNotificationDataSource ) }
+
+        LaunchedEffect(Unit) {
+            feedViewModel.refresh()
+        }
 
         Column(Modifier.fillMaxHeight()) {
             Column(
