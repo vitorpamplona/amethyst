@@ -2,8 +2,11 @@ package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.model.ReactionEvent
+import com.vitorpamplona.amethyst.service.model.RepostEvent
 import java.util.Collections
 import nostr.postr.JsonFilter
+import nostr.postr.events.TextNoteEvent
 
 object NostrThreadDataSource: NostrDataSource<Note>("SingleThreadFeed") {
   val eventsToWatch = Collections.synchronizedList(mutableListOf<String>())
@@ -16,6 +19,7 @@ object NostrThreadDataSource: NostrDataSource<Note>("SingleThreadFeed") {
     }
 
     return JsonFilter(
+      kinds = listOf(TextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind),
       tags = mapOf("e" to reactionsToWatch)
     )
   }
@@ -46,8 +50,8 @@ object NostrThreadDataSource: NostrDataSource<Note>("SingleThreadFeed") {
   }
 
   override fun updateChannelFilters() {
-    repliesAndReactionsChannel.filter = createRepliesAndReactionsFilter()
-    loadEventsChannel.filter = createLoadEventsIfNotLoadedFilter()
+    repliesAndReactionsChannel.filter = listOfNotNull(createRepliesAndReactionsFilter()).ifEmpty { null }
+    loadEventsChannel.filter = listOfNotNull(createLoadEventsIfNotLoadedFilter()).ifEmpty { null }
   }
 
   fun loadThread(noteId: String) {

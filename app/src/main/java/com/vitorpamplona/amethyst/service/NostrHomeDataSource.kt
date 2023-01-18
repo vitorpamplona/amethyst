@@ -28,7 +28,7 @@ object NostrHomeDataSource: NostrDataSource<Note>("HomeFeed") {
       account.userProfile().live.removeObserver(cacheListener)
   }
 
-  fun createFollowAccountsFilter(): JsonFilter? {
+  fun createFollowAccountsFilter(): JsonFilter {
     val follows = account.userProfile().follows ?: emptySet()
 
     val followKeys = synchronized(follows) {
@@ -39,12 +39,10 @@ object NostrHomeDataSource: NostrDataSource<Note>("HomeFeed") {
 
     val followSet = followKeys.plus(account.userProfile().pubkeyHex.substring(0, 6))
 
-    if (followSet.isEmpty()) return null
-
     return JsonFilter(
       kinds = listOf(TextNoteEvent.kind, RepostEvent.kind),
       authors = followSet,
-      since = System.currentTimeMillis() / 1000 - (60 * 60 * 24 * 1), // 24 hours
+      limit = 200
     )
   }
 
@@ -85,8 +83,8 @@ object NostrHomeDataSource: NostrDataSource<Note>("HomeFeed") {
   override fun updateChannelFilters() {
     val newFollowAccountsFilter = createFollowAccountsFilter()
 
-    if (!equalAuthors(newFollowAccountsFilter, followAccountChannel.filter)) {
-      followAccountChannel.filter = newFollowAccountsFilter
+    if (!equalAuthors(newFollowAccountsFilter, followAccountChannel.filter?.firstOrNull())) {
+      followAccountChannel.filter = listOf(newFollowAccountsFilter).ifEmpty { null }
     }
   }
 }

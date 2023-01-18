@@ -23,9 +23,25 @@ abstract class NostrDataSource<T>(val debugName: String) {
   private val channels = Collections.synchronizedSet(mutableSetOf<Channel>())
   private val channelIds =  Collections.synchronizedSet(mutableSetOf<String>())
 
+  private val eventCounter = mutableMapOf<String, Int>()
+
+  fun printCounter() {
+    eventCounter.forEach {
+      println("AAA Count ${it.key}: ${it.value}")
+    }
+  }
+
   private val clientListener = object : Client.Listener() {
     override fun onEvent(event: Event, subscriptionId: String, relay: Relay) {
       if (subscriptionId in channelIds) {
+        val key = "${debugName} ${subscriptionId} ${event.kind}"
+        if (eventCounter.contains(key)) {
+          eventCounter.put(key, eventCounter.get(key)!! + 1)
+        } else {
+          eventCounter.put(key, 1)
+        }
+
+        //println("AAA ${debugName} ${subscriptionId} ${event.kind}")
         when (event) {
           is MetadataEvent -> LocalCache.consume(event)
           is TextNoteEvent -> LocalCache.consume(event)
@@ -109,7 +125,7 @@ abstract class NostrDataSource<T>(val debugName: String) {
     // saves the channels that are currently active
     val activeChannels = channels.filter { it.filter != null }
     // saves the current content to only update if it changes
-    val currentFilter = activeChannels.associate { it.id to it.filter!!.toJson() }
+    val currentFilter = activeChannels.associate { it.id to it.filter!!.joinToString("|") { it.toJson() }  }
 
     updateChannelFilters()
 
@@ -123,12 +139,12 @@ abstract class NostrDataSource<T>(val debugName: String) {
           Client.close(channel.id)
         } else {
           // was active and is still active, check if it has changed.
-          if (channelsNewFilter.toJson() != currentFilter[channel.id]) {
+          if (channelsNewFilter.joinToString("|") { it.toJson() } != currentFilter[channel.id]) {
             Client.close(channel.id)
-            Client.sendFilter(channel.id, mutableListOf(channelsNewFilter))
+            Client.sendFilter(channel.id, channelsNewFilter)
           } else {
             // hasn't changed, does nothing.
-            Client.sendFilterOnlyIfDisconnected(channel.id, mutableListOf(channelsNewFilter))
+            Client.sendFilterOnlyIfDisconnected(channel.id, channelsNewFilter)
           }
         }
       } else {
@@ -136,8 +152,8 @@ abstract class NostrDataSource<T>(val debugName: String) {
           // was not active and is still not active, does nothing
         } else {
           // was not active and becomes active, sends the filter.
-          if (channelsNewFilter.toJson() != currentFilter[channel.id]) {
-            Client.sendFilter(channel.id, mutableListOf(channelsNewFilter))
+          if (channelsNewFilter.joinToString("|") { it.toJson() } != currentFilter[channel.id]) {
+            Client.sendFilter(channel.id, channelsNewFilter)
           }
         }
       }

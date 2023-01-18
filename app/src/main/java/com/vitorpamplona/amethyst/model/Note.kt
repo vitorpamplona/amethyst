@@ -102,14 +102,13 @@ class Note(val idHex: String) {
 }
 
 class NoteLiveData(val note: Note): LiveData<NoteState>(NoteState(note)) {
-    val scope = CoroutineScope(Job() + Dispatchers.Main)
-
     fun refresh() {
         postValue(NoteState(note))
     }
 
     override fun onActive() {
         super.onActive()
+        val scope = CoroutineScope(Job() + Dispatchers.Main)
         scope.launch {
             NostrSingleEventDataSource.add(note.idHex)
         }
@@ -117,6 +116,7 @@ class NoteLiveData(val note: Note): LiveData<NoteState>(NoteState(note)) {
 
     override fun onInactive() {
         super.onInactive()
+        val scope = CoroutineScope(Job() + Dispatchers.Main)
         scope.launch {
             NostrSingleEventDataSource.remove(note.idHex)
         }

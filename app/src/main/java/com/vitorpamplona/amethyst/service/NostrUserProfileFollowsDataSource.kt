@@ -17,7 +17,7 @@ object NostrUserProfileFollowsDataSource: NostrDataSource<User>("UserProfileFoll
     return JsonFilter(
       kinds = listOf(ContactListEvent.kind),
       authors = listOf(user!!.pubkeyHex),
-      since = System.currentTimeMillis() / 1000 - (60 * 60 * 24 * 7), // 4 days
+      limit = 1
     )
   }
 
@@ -28,6 +28,6 @@ object NostrUserProfileFollowsDataSource: NostrDataSource<User>("UserProfileFoll
   }
 
   override fun updateChannelFilters() {
-    followChannel.filter = createFollowFilter()
+    followChannel.filter = listOf(createFollowFilter()).ifEmpty { null }
   }
 }

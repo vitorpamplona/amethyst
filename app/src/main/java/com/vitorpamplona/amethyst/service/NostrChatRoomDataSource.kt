@@ -39,7 +39,7 @@ object NostrChatRoomDataSource: NostrDataSource<Note>("ChatroomFeed") {
   }
 
   override fun updateChannelFilters() {
-    incomingChannel.filter = createMessagesToMeFilter()
-    outgoingChannel.filter = createMessagesFromMeFilter()
+    incomingChannel.filter = listOf(createMessagesToMeFilter()).ifEmpty { null }
+    outgoingChannel.filter = listOf(createMessagesFromMeFilter()).ifEmpty { null }
   }
 }

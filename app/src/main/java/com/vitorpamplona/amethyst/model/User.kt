@@ -1,10 +1,15 @@
 package com.vitorpamplona.amethyst.model
 
 import androidx.lifecycle.LiveData
+import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import nostr.postr.events.ContactListEvent
 
 class User(val pubkey: ByteArray) {
@@ -138,12 +143,18 @@ class UserLiveData(val user: User): LiveData<UserState>(UserState(user)) {
 
     override fun onActive() {
         super.onActive()
-        NostrSingleUserDataSource.add(user.pubkeyHex)
+        val scope = CoroutineScope(Job() + Dispatchers.Main)
+        scope.launch {
+            NostrSingleUserDataSource.add(user.pubkeyHex)
+        }
     }
 
     override fun onInactive() {
         super.onInactive()
-        NostrSingleUserDataSource.remove(user.pubkeyHex)
+        val scope = CoroutineScope(Job() + Dispatchers.Main)
+        scope.launch {
+            NostrSingleUserDataSource.remove(user.pubkeyHex)
+        }
     }
 }
 

@@ -65,11 +65,11 @@ object LocalCache {
 
 
   fun consume(event: MetadataEvent) {
-    //Log.d("MT", "New User ${users.size} ${event.contactMetaData.name}")
-
     // new event
     val oldUser = getOrCreateUser(event.pubKey)
     if (event.createdAt > oldUser.updatedMetadataAt) {
+      //Log.d("MT", "New User ${users.size} ${event.contactMetaData.name}")
+
       val newUser = try {
         metadataParser.readValue<UserMetadata>(ByteArrayInputStream(event.content.toByteArray(Charsets.UTF_8)), UserMetadata::class.java)
       } catch (e: Exception) {
@@ -101,7 +101,7 @@ object LocalCache {
 
     note.loadEvent(event, author, mentions, replyTo)
 
-    //Log.d("TN", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${note.event?.content} ${formattedDateTime(event.createdAt)}")
+    //Log.d("TN", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${note.event?.content?.take(100)} ${formattedDateTime(event.createdAt)}")
 
     // Prepares user's profile view.
     author.notes.add(note)
@@ -188,7 +188,7 @@ object LocalCache {
     // Already processed this event.
     if (note.event != null) return
 
-    //Log.d("TN", "New Boost (${notes.size},${users.size}) ${note.author.toBestDisplayName()} ${formattedDateTime(event.createdAt)}")
+    //Log.d("TN", "New Boost (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${formattedDateTime(event.createdAt)}")
 
     val author = getOrCreateUser(event.pubKey)
     val mentions = event.originalAuthor.map { getOrCreateUser(decodePublicKey(it)) }.toList()

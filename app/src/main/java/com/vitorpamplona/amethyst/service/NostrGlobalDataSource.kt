@@ -6,30 +6,12 @@ import nostr.postr.JsonFilter
 import nostr.postr.events.TextNoteEvent
 
 object NostrGlobalDataSource: NostrDataSource<Note>("GlobalFeed") {
-  val fifteenMinutes = (60*15) // 15 mins
-
   fun createGlobalFilter() = JsonFilter(
-      kinds = listOf(TextNoteEvent.kind),
-      since = System.currentTimeMillis() / 1000 - fifteenMinutes
-    )
+    kinds = listOf(TextNoteEvent.kind),
+    limit = 200
+  )
 
   val globalFeedChannel = requestNewChannel()
-
-  fun equalTime(list1:Long?, list2:Long?): Boolean {
-    if (list1 == null && list2 == null) return true
-    if (list1 == null) return false
-    if (list2 == null) return false
-
-    return Math.abs(list1 - list2) < (4*fifteenMinutes)
-  }
-
-  fun equalFilters(list1:JsonFilter?, list2:JsonFilter?): Boolean {
-    if (list1 == null && list2 == null) return true
-    if (list1 == null) return false
-    if (list2 == null) return false
-
-    return equalTime(list1.since, list2.since)
-  }
 
   override fun feed() = LocalCache.notes.values
     .filter {
@@ -39,10 +21,6 @@ object NostrGlobalDataSource: NostrDataSource<Note>("GlobalFeed") {
     .reversed()
 
   override fun updateChannelFilters() {
-    val newFilter = createGlobalFilter()
-
-    if (!equalFilters(newFilter, globalFeedChannel.filter)) {
-      globalFeedChannel.filter = newFilter
-    }
+    globalFeedChannel.filter = listOf(createGlobalFilter()).ifEmpty { null }
   }
 }

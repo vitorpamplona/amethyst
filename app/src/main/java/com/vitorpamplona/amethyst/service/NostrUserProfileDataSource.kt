@@ -19,7 +19,7 @@ object NostrUserProfileDataSource: NostrDataSource<Note>("UserProfileFeed") {
     return JsonFilter(
       kinds = listOf(MetadataEvent.kind),
       authors = listOf(user!!.pubkeyHex),
-      since = System.currentTimeMillis() / 1000 - (60 * 60 * 24 * 7)
+      limit = 1
     )
   }
 
@@ -27,7 +27,7 @@ object NostrUserProfileDataSource: NostrDataSource<Note>("UserProfileFeed") {
     return JsonFilter(
       kinds = listOf(TextNoteEvent.kind),
       authors = listOf(user!!.pubkeyHex),
-      since = System.currentTimeMillis() / 1000 - (60 * 60 * 24 * 4)
+      limit = 100
     )
   }
 
@@ -43,7 +43,7 @@ object NostrUserProfileDataSource: NostrDataSource<Note>("UserProfileFeed") {
   }
 
   override fun updateChannelFilters() {
-    userInfoChannel.filter = createUserInfoFilter()
-    notesChannel.filter = createUserPostsFilter()
+    userInfoChannel.filter = listOf(createUserInfoFilter()).ifEmpty { null }
+    notesChannel.filter = listOf(createUserPostsFilter()).ifEmpty { null }
   }
 }

@@ -293,7 +293,7 @@ private fun MessageButton(user: User, navController: NavController) {
             painter = painterResource(R.drawable.ic_dm),
             "Send a Direct Message",
             modifier = Modifier.size(20.dp),
-            tint = Color.Unspecified
+            tint = Color.White
         )
     }
 }

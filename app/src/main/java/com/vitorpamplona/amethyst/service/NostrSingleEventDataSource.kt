@@ -9,7 +9,7 @@ import nostr.postr.JsonFilter
 import nostr.postr.events.TextNoteEvent
 
 object NostrSingleEventDataSource: NostrDataSource<Note>("SingleEventFeed") {
-  private var eventsToWatch = listOf<String>()
+  private var eventsToWatch = setOf<String>()
 
   private fun createRepliesAndReactionsFilter(): JsonFilter? {
     val reactionsToWatch = eventsToWatch.map { it.substring(0, 8) }
@@ -46,6 +46,7 @@ object NostrSingleEventDataSource: NostrDataSource<Note>("SingleEventFeed") {
 
     // downloads linked events to this event.
     return JsonFilter(
+      kinds = listOf(TextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind),
       ids = interestedEvents
     )
   }
@@ -60,12 +61,16 @@ object NostrSingleEventDataSource: NostrDataSource<Note>("SingleEventFeed") {
   }
 
   override fun updateChannelFilters() {
-    repliesAndReactionsChannel.filter = createRepliesAndReactionsFilter()
-    loadEventsChannel.filter = createLoadEventsIfNotLoadedFilter()
+    val reactions = createRepliesAndReactionsFilter()
+    val missing = createLoadEventsIfNotLoadedFilter()
+
+    repliesAndReactionsChannel.filter = listOfNotNull(reactions).ifEmpty { null }
+    loadEventsChannel.filter = listOfNotNull(missing).ifEmpty { null }
   }
 
   fun add(eventId: String) {
     eventsToWatch = eventsToWatch.plus(eventId)
+    println("AAA: Event Watching ${eventsToWatch.size}")
     resetFilters()
   }
 

@@ -15,7 +15,7 @@ object NostrChannelDataSource: NostrDataSource<Note>("ChatroomFeed") {
   fun createMessagesToChannelFilter() = JsonFilter(
     kinds = listOf(ChannelMessageEvent.kind),
     tags = mapOf("e" to listOf(channel?.idHex).filterNotNull()),
-    since = System.currentTimeMillis() / 1000 - (60 * 60 * 24 * 1), // 24 hours
+    limit = 100
   )
 
   val messagesChannel = requestNewChannel()
@@ -26,6 +26,6 @@ object NostrChannelDataSource: NostrDataSource<Note>("ChatroomFeed") {
   }
 
   override fun updateChannelFilters() {
-    messagesChannel.filter = createMessagesToChannelFilter()
+    messagesChannel.filter = listOf(createMessagesToChannelFilter()).ifEmpty { null }
   }
 }

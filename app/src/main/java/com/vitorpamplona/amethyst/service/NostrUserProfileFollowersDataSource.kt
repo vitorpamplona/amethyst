@@ -15,8 +15,7 @@ object NostrUserProfileFollowersDataSource: NostrDataSource<User>("UserProfileFo
 
   fun createFollowersFilter() = JsonFilter(
     kinds = listOf(ContactListEvent.kind),
-    since = System.currentTimeMillis() / 1000 - (60 * 60 * 24 * 7), // 7 days
-    tags = mapOf("p" to listOf(user!!.pubkeyHex).filterNotNull())
+    tags = mapOf("p" to listOf(user!!.pubkeyHex))
   )
 
   val followerChannel = requestNewChannel()
@@ -30,6 +29,6 @@ object NostrUserProfileFollowersDataSource: NostrDataSource<User>("UserProfileFo
   }
 
   override fun updateChannelFilters() {
-    followerChannel.filter = createFollowersFilter()
+    followerChannel.filter = listOf(createFollowersFilter()).ifEmpty { null }
   }
 }

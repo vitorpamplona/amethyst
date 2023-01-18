@@ -29,31 +29,24 @@ object NostrAccountDataSource: NostrDataSource<Note>("AccountData") {
       account.userProfile().live.removeObserver(cacheListener)
   }
 
-  fun createAccountFilter(): JsonFilter {
+  fun createAccountContactListFilter(): JsonFilter {
     return JsonFilter(
-      kinds = listOf(MetadataEvent.kind, ContactListEvent.kind),
+      kinds = listOf(ContactListEvent.kind),
       authors = listOf(account.userProfile().pubkeyHex),
-      since = System.currentTimeMillis() / 1000 - (60 * 60 * 24 * 7), // 4 days
+      limit = 1
     )
   }
 
-  val accountChannel = requestNewChannel()
-
-  fun <T> equalsIgnoreOrder(list1:List<T>?, list2:List<T>?): Boolean {
-    if (list1 == null && list2 == null) return true
-    if (list1 == null) return false
-    if (list2 == null) return false
-
-    return list1.size == list2.size && list1.toSet() == list2.toSet()
+  fun createAccountMetadataFilter(): JsonFilter {
+    return JsonFilter(
+      kinds = listOf(MetadataEvent.kind),
+      authors = listOf(account.userProfile().pubkeyHex),
+      limit = 1
+    )
   }
 
-  fun equalAuthors(list1:JsonFilter?, list2:JsonFilter?): Boolean {
-    if (list1 == null && list2 == null) return true
-    if (list1 == null) return false
-    if (list2 == null) return false
-
-    return equalsIgnoreOrder(list1.authors, list2.authors)
-  }
+  val accountMetadataChannel = requestNewChannel()
+  val accountContactListChannel = requestNewChannel()
 
   override fun feed(): List<Note> {
     val user = account.userProfile()
@@ -72,10 +65,10 @@ object NostrAccountDataSource: NostrDataSource<Note>("AccountData") {
 
   override fun updateChannelFilters() {
     // gets everthing about the user logged in
-    val newAccountFilter = createAccountFilter()
+    val newAccountMetadataFilter = createAccountMetadataFilter()
+    accountMetadataChannel.filter = listOf(newAccountMetadataFilter).ifEmpty { null }
 
-    if (!equalAuthors(newAccountFilter, accountChannel.filter)) {
-      accountChannel.filter = newAccountFilter
-    }
+    val newAccountContactListEvent = createAccountContactListFilter()
+    accountContactListChannel.filter = listOf(newAccountContactListEvent).ifEmpty { null }
   }
 }

@@ -7,15 +7,18 @@ import nostr.postr.JsonFilter
 import nostr.postr.events.MetadataEvent
 
 object NostrSingleUserDataSource: NostrDataSource<Note>("SingleUserFeed") {
-  var usersToWatch = listOf<String>()
+  var usersToWatch = setOf<String>()
 
-  fun createUserFilter(): JsonFilter? {
+  fun createUserFilter(): List<JsonFilter>? {
     if (usersToWatch.isEmpty()) return null
 
-    return JsonFilter(
-      kinds = listOf(MetadataEvent.kind),
-      authors = usersToWatch.map { it.substring(0, 8) }
-    )
+    return usersToWatch.map {
+      JsonFilter(
+        kinds = listOf(MetadataEvent.kind),
+        authors = listOf(it.substring(0, 8)),
+        limit = 1
+      )
+    }
   }
 
   val userChannel = requestNewChannel()
@@ -32,6 +35,7 @@ object NostrSingleUserDataSource: NostrDataSource<Note>("SingleUserFeed") {
 
   fun add(userId: String) {
     usersToWatch = usersToWatch.plus(userId)
+    println("AAA: User Watching ${usersToWatch.size}")
     resetFilters()
   }
 

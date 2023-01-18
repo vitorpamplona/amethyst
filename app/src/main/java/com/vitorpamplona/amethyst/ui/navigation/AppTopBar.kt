@@ -31,6 +31,19 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.service.NostrAccountDataSource
+import com.vitorpamplona.amethyst.service.NostrChannelDataSource
+import com.vitorpamplona.amethyst.service.NostrChatRoomDataSource
+import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
+import com.vitorpamplona.amethyst.service.NostrGlobalDataSource
+import com.vitorpamplona.amethyst.service.NostrHomeDataSource
+import com.vitorpamplona.amethyst.service.NostrNotificationDataSource
+import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
+import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
+import com.vitorpamplona.amethyst.service.NostrThreadDataSource
+import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
+import com.vitorpamplona.amethyst.service.NostrUserProfileFollowersDataSource
+import com.vitorpamplona.amethyst.service.NostrUserProfileFollowsDataSource
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.screen.RelayPoolViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -71,6 +84,23 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
                             Client.allSubscriptions().map { "${it} ${Client.getSubscriptionFilters(it).joinToString { it.toJson() }}" }.forEach {
                                 Log.d("CURRENT FILTERS", it)
                             }
+
+                            NostrAccountDataSource.printCounter()
+                            NostrChannelDataSource.printCounter()
+                            NostrChatRoomDataSource.printCounter()
+                            NostrChatroomListDataSource.printCounter()
+
+                            NostrGlobalDataSource.printCounter()
+                            NostrHomeDataSource.printCounter()
+                            NostrNotificationDataSource.printCounter()
+
+                            NostrSingleEventDataSource.printCounter()
+                            NostrSingleUserDataSource.printCounter()
+                            NostrThreadDataSource.printCounter()
+
+                            NostrUserProfileDataSource.printCounter()
+                            NostrUserProfileFollowersDataSource.printCounter()
+                            NostrUserProfileFollowsDataSource.printCounter()
                         }
                     ) {
                         Icon(

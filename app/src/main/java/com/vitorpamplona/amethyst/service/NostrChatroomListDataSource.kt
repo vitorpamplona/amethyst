@@ -26,16 +26,25 @@ object NostrChatroomListDataSource: NostrDataSource<Note>("MailBoxFeed") {
     ids = account.followingChannels.toList()
   )
 
-  fun createMyChannelsInfoFilter() = JsonFilter(
-    kinds = listOf(ChannelMetadataEvent.kind),
-    tags = mapOf("e" to account.followingChannels.toList())
-  )
+  fun createLastChannelInfoFilter(): List<JsonFilter> {
+    return account.followingChannels.map {
+      JsonFilter(
+        kinds = listOf(ChannelMetadataEvent.kind),
+        tags = mapOf("e" to listOf(it)),
+        limit = 1
+      )
+    }
+  }
 
-  fun createMessagesToMyChannelsFilter() = JsonFilter(
-    kinds = listOf(ChannelMessageEvent.kind),
-    tags = mapOf("e" to account.followingChannels.toList()),
-    since = System.currentTimeMillis() / 1000 - (60 * 60 * 24 * 1), // 24 hours
-  )
+  fun createLastMessageOfEachChannelFilter(): List<JsonFilter> {
+    return account.followingChannels.map {
+      JsonFilter(
+        kinds = listOf(ChannelMessageEvent.kind),
+        tags = mapOf("e" to listOf(it)),
+        limit = 1
+      )
+    }
+  }
 
   val incomingChannel = requestNewChannel()
   val outgoingChannel = requestNewChannel()
@@ -61,10 +70,10 @@ object NostrChatroomListDataSource: NostrDataSource<Note>("MailBoxFeed") {
   }
 
   override fun updateChannelFilters() {
-    incomingChannel.filter = createMessagesToMeFilter()
-    outgoingChannel.filter = createMessagesFromMeFilter()
-    myChannelsChannel.filter = createMyChannelsFilter()
-    myChannelsInfoChannel.filter = createMyChannelsInfoFilter()
-    myChannelsMessagesChannel.filter = createMessagesToMyChannelsFilter()
+    incomingChannel.filter = listOf(createMessagesToMeFilter()).ifEmpty { null }
+    outgoingChannel.filter = listOf(createMessagesFromMeFilter()).ifEmpty { null }
+    myChannelsChannel.filter = listOf(createMyChannelsFilter()).ifEmpty { null }
+    myChannelsInfoChannel.filter = createLastChannelInfoFilter().ifEmpty { null }
+    myChannelsMessagesChannel.filter = createLastMessageOfEachChannelFilter().ifEmpty { null }
   }
 }
