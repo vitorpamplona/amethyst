@@ -21,10 +21,6 @@ fun NotificationScreen(accountViewModel: AccountViewModel, navController: NavCon
     if (account != null) {
         val feedViewModel: CardFeedViewModel = viewModel { CardFeedViewModel( NostrNotificationDataSource ) }
 
-        LaunchedEffect(Unit) {
-            feedViewModel.refresh()
-        }
-
         Column(Modifier.fillMaxHeight()) {
             Column(
                 modifier = Modifier.padding(vertical = 0.dp)
