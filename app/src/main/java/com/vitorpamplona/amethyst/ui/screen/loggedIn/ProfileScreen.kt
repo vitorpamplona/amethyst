@@ -70,9 +70,9 @@ data class TabRowItem(
 @Composable
 fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navController: NavController) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account
+    val account = accountState?.account ?: return
 
-    val accountUserState by accountViewModel.userLiveData.observeAsState()
+    val accountUserState by account.userProfile().live.observeAsState()
     val accountUser = accountUserState?.user
 
     if (userId != null && account != null && accountUser != null) {
