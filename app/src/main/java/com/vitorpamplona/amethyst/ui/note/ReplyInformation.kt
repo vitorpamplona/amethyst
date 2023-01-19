@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowRow
+import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 
@@ -34,6 +35,80 @@ fun ReplyInformation(replyTo: MutableList<Note>?, mentions: List<User>?, prefix:
   FlowRow() {
     if (mentions != null && mentions.isNotEmpty()) {
       if (replyTo != null && replyTo.isNotEmpty()) {
+        Text(
+          "replying to ",
+          fontSize = 13.sp,
+          color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+        )
+
+        mentions.toSet().forEachIndexed { idx, user ->
+          val innerUserState by user.live.observeAsState()
+          val innerUser = innerUserState?.user
+
+          innerUser?.let { myUser ->
+            ClickableText(
+              AnnotatedString("${prefix}@${myUser.toBestDisplayName()}"),
+              style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(alpha = 0.52f), fontSize = 13.sp),
+              onClick = { onUserTagClick(myUser) }
+            )
+
+            if (idx < mentions.size - 2) {
+              Text(
+                ", ",
+                fontSize = 13.sp,
+                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+              )
+            } else if (idx < mentions.size - 1) {
+              Text(
+                " and ",
+                fontSize = 13.sp,
+                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+              )
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+
+@Composable
+fun ReplyInformationChannel(replyTo: MutableList<Note>?, mentions: List<User>?, channel: Channel, navController: NavController) {
+  ReplyInformationChannel(replyTo, mentions, channel,
+    onUserTagClick = {
+      navController.navigate("User/${it.pubkeyHex}")
+    },
+    onChannelTagClick = {
+      navController.navigate("Channel/${it.idHex}")
+    }
+  )
+}
+
+
+@Composable
+fun ReplyInformationChannel(replyTo: MutableList<Note>?,
+                     mentions: List<User>?,
+                     channel: Channel,
+                     prefix: String = "",
+                     onUserTagClick: (User) -> Unit,
+                     onChannelTagClick: (Channel) -> Unit
+) {
+  FlowRow() {
+    if (mentions != null && mentions.isNotEmpty()) {
+      if (replyTo != null && replyTo.isNotEmpty()) {
+        Text(
+          "in channel ",
+          fontSize = 13.sp,
+          color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+        )
+
+        ClickableText(
+          AnnotatedString("${channel.info.name} "),
+          style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(alpha = 0.52f), fontSize = 13.sp),
+          onClick = { onChannelTagClick(channel) }
+        )
+
         Text(
           "replying to ",
           fontSize = 13.sp,
