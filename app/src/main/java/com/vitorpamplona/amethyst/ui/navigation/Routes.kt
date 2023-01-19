@@ -10,6 +10,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.ChannelScreen
 import com.vitorpamplona.amethyst.ui.screen.ChatroomListScreen
 import com.vitorpamplona.amethyst.ui.screen.ChatroomScreen
@@ -25,31 +26,31 @@ sealed class Route(
     val route: String,
     val icon: Int,
     val arguments: List<NamedNavArgument> = emptyList(),
-    val buildScreen: (AccountViewModel, NavController) -> @Composable (NavBackStackEntry) -> Unit
+    val buildScreen: (AccountViewModel, AccountStateViewModel, NavController) -> @Composable (NavBackStackEntry) -> Unit
 ) {
-    object Home : Route("Home", R.drawable.ic_home, buildScreen = { acc, nav -> { _ -> HomeScreen(acc, nav) } })
-    object Search : Route("Search", R.drawable.ic_search, buildScreen = { acc, nav -> { _ -> SearchScreen(acc, nav) }})
-    object Notification : Route("Notification", R.drawable.ic_notifications,buildScreen = { acc, nav -> { _ -> NotificationScreen(acc, nav) }})
-    object Message : Route("Message", R.drawable.ic_dm, buildScreen = { acc, nav -> { _ -> ChatroomListScreen(acc, nav) }})
+    object Home : Route("Home", R.drawable.ic_home, buildScreen = { acc, accSt, nav -> { _ -> HomeScreen(acc, nav) } })
+    object Search : Route("Search", R.drawable.ic_search, buildScreen = { acc, accSt, nav -> { _ -> SearchScreen(acc, nav) }})
+    object Notification : Route("Notification", R.drawable.ic_notifications,buildScreen = { acc, accSt, nav -> { _ -> NotificationScreen(acc, nav) }})
+    object Message : Route("Message", R.drawable.ic_dm, buildScreen = { acc, accSt, nav -> { _ -> ChatroomListScreen(acc, nav) }})
 
     object Profile : Route("User/{id}", R.drawable.ic_profile,
         arguments = listOf(navArgument("id") { type = NavType.StringType } ),
-        buildScreen = { acc, nav -> { ProfileScreen(it.arguments?.getString("id"), acc, nav) }}
+        buildScreen = { acc, accSt, nav -> { ProfileScreen(it.arguments?.getString("id"), acc, nav) }}
     )
 
     object Note : Route("Note/{id}", R.drawable.ic_moments,
         arguments = listOf(navArgument("id") { type = NavType.StringType } ),
-        buildScreen = { acc, nav -> { ThreadScreen(it.arguments?.getString("id"), acc, nav) }}
+        buildScreen = { acc, accSt, nav -> { ThreadScreen(it.arguments?.getString("id"), acc, nav) }}
     )
 
     object Room : Route("Room/{id}", R.drawable.ic_moments,
         arguments = listOf(navArgument("id") { type = NavType.StringType } ),
-        buildScreen = { acc, nav -> { ChatroomScreen(it.arguments?.getString("id"), acc, nav) }}
+        buildScreen = { acc, accSt, nav -> { ChatroomScreen(it.arguments?.getString("id"), acc, nav) }}
     )
 
     object Channel : Route("Channel/{id}", R.drawable.ic_moments,
         arguments = listOf(navArgument("id") { type = NavType.StringType } ),
-        buildScreen = { acc, nav -> { ChannelScreen(it.arguments?.getString("id"), acc, nav) }}
+        buildScreen = { acc, accSt, nav -> { ChannelScreen(it.arguments?.getString("id"), acc, accSt, nav) }}
     )
 }
 

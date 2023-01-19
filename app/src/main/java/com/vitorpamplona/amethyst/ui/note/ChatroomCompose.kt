@@ -23,6 +23,8 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
+import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
@@ -42,6 +44,13 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
         val channelState by note.channel!!.live.observeAsState()
         val channel = channelState?.channel
 
+        val description = if (note.event is ChannelCreateEvent) {
+            "Channel created"
+        } else if (note.event is ChannelMetadataEvent) {
+            "Channel Information changed to "
+        } else {
+            note.event?.content
+        }
         channel?.let {
             ChannelName(
                 channelPicture = it.profilePicture(),
@@ -52,7 +61,7 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
                     )
                 },
                 channelLastTime = note.event?.createdAt,
-                channelLastContent = "${author?.toBestDisplayName()}: " + note.event?.content,
+                channelLastContent = "${author?.toBestDisplayName()}: " + description,
                 onClick = { navController.navigate("Channel/${it.idHex}") })
         }
 

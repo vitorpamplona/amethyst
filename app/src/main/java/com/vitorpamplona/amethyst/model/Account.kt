@@ -2,10 +2,14 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.Constants
+import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
+import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.relays.Client
+import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import nostr.postr.Contact
 import nostr.postr.Persona
 import nostr.postr.Utils
@@ -15,7 +19,8 @@ import nostr.postr.events.TextNoteEvent
 import nostr.postr.toHex
 
 val DefaultChannels = setOf(
-  "25e5c82273a271cb1a840d0060391a0bf4965cafeb029d5ab55350b418953fbb" // -> Anigma's Nostr
+  "25e5c82273a271cb1a840d0060391a0bf4965cafeb029d5ab55350b418953fbb", // -> Anigma's Nostr
+  "42224859763652914db53052103f0b744df79dfc4efef7e950fc0802fc3df3c5"  // -> Amethyst's Group
 )
 
 class Account(val loggedIn: Persona, val followingChannels: MutableSet<String> = DefaultChannels.toMutableSet()) {
@@ -147,6 +152,44 @@ class Account(val loggedIn: Persona, val followingChannels: MutableSet<String> =
     )
     Client.send(signedEvent)
     LocalCache.consume(signedEvent)
+  }
+
+  fun sendCreateNewChannel(name: String, about: String, picture: String, accountStateViewModel: AccountStateViewModel) {
+    if (!isWriteable()) return
+
+    val metadata = ChannelCreateEvent.ChannelData(
+      name, about, picture
+    )
+
+    val event = ChannelCreateEvent.create(
+      channelInfo = metadata,
+      privateKey = loggedIn.privKey!!
+    )
+
+    Client.send(event)
+    LocalCache.consume(event)
+
+    followingChannels.add(event.id.toHex())
+    accountStateViewModel.saveToEncryptedStorage(this)
+  }
+
+  fun sendChangeChannel(name: String, about: String, picture: String, channel: Channel) {
+    if (!isWriteable()) return
+
+    val metadata = ChannelCreateEvent.ChannelData(
+      name, about, picture
+    )
+
+    val event = ChannelMetadataEvent.create(
+      newChannelInfo = metadata,
+      originalChannelIdHex = channel.idHex,
+      privateKey = loggedIn.privKey!!
+    )
+
+    Client.send(event)
+    LocalCache.consume(event)
+
+    followingChannels.add(event.id.toHex())
   }
 
   fun decryptContent(note: Note): String? {

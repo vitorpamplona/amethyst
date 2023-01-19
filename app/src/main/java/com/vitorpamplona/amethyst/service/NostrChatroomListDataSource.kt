@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
@@ -18,6 +19,11 @@ object NostrChatroomListDataSource: NostrDataSource<Note>("MailBoxFeed") {
 
   fun createMessagesFromMeFilter() = JsonFilter(
     kinds = listOf(PrivateDmEvent.kind),
+    authors = listOf(account.userProfile().pubkeyHex)
+  )
+
+  fun createChannelsCreatedbyMeFilter() = JsonFilter(
+    kinds = listOf(ChannelCreateEvent.kind, ChannelMetadataEvent.kind),
     authors = listOf(account.userProfile().pubkeyHex)
   )
 
@@ -53,6 +59,8 @@ object NostrChatroomListDataSource: NostrDataSource<Note>("MailBoxFeed") {
   val myChannelsInfoChannel = requestNewChannel()
   val myChannelsMessagesChannel = requestNewChannel()
 
+  val myChannelsCreatedbyMeChannel = requestNewChannel()
+
   // returns the last Note of each user.
   override fun feed(): List<Note> {
     val messages = account.userProfile().messages
@@ -66,6 +74,12 @@ object NostrChatroomListDataSource: NostrDataSource<Note>("MailBoxFeed") {
       it.notes.values.sortedBy { it.event?.createdAt }.lastOrNull { it.event != null }
     }
 
+    val channelsCreatedByMe = LocalCache.channels.values.filter {
+      it.creator == account.userProfile()
+    }.map {
+      it.notes.values.sortedBy { it.event?.createdAt }.lastOrNull { it.event != null }
+    }
+
     return (privateMessages + publicChannels).filterNotNull().sortedBy { it.event?.createdAt }.reversed()
   }
 
@@ -75,5 +89,7 @@ object NostrChatroomListDataSource: NostrDataSource<Note>("MailBoxFeed") {
     myChannelsChannel.filter = listOf(createMyChannelsFilter()).ifEmpty { null }
     myChannelsInfoChannel.filter = createLastChannelInfoFilter().ifEmpty { null }
     myChannelsMessagesChannel.filter = createLastMessageOfEachChannelFilter().ifEmpty { null }
+
+    //myChannelsCreatedbyMeChannel.filter = listOf(createChannelsCreatedbyMeFilter()).ifEmpty { null }
   }
 }

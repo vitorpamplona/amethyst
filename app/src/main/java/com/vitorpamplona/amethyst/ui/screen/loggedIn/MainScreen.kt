@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
+import com.vitorpamplona.amethyst.buttons.NewChannelButton
 import com.vitorpamplona.amethyst.buttons.NewNoteButton
 import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.AppNavigation
@@ -49,7 +50,7 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
         scaffoldState = scaffoldState
     ) {
         Column(modifier = Modifier.padding(bottom = it.calculateBottomPadding())) {
-            AppNavigation(navController, accountViewModel)
+            AppNavigation(navController, accountViewModel, accountStateViewModel)
         }
     }
 }
@@ -69,6 +70,22 @@ fun FloatingButton(navController: NavHostController, accountViewModel: AccountSt
                 }
                 is AccountState.LoggedIn -> {
                     NewNoteButton(state.account)
+                }
+            }
+        }
+    }
+
+    if (currentRoute(navController) == Route.Message.route) {
+        Crossfade(targetState = accountState) { state ->
+            when (state) {
+                is AccountState.LoggedInViewOnly -> {
+                    // Does nothing.
+                }
+                is AccountState.LoggedOff -> {
+                    // Does nothing.
+                }
+                is AccountState.LoggedIn -> {
+                    NewChannelButton(state.account, accountViewModel)
                 }
             }
         }

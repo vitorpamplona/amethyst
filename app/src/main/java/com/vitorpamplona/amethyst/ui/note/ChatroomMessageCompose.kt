@@ -35,7 +35,9 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
+import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.ui.components.RichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -134,25 +136,40 @@ fun ChatroomMessageCompose(baseNote: Note, accountViewModel: AccountViewModel, n
                             }
 
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                val eventContent = accountViewModel.decrypt(note)
+                                val event = note.event
+                                if (event is ChannelCreateEvent) {
+                                    Text(text = "${note.author?.toBestDisplayName()} created " +
+                                      "${event.channelInfo.name ?: ""} with " +
+                                      "description of '${event.channelInfo.about ?: ""}', " +
+                                      "and picture '${event.channelInfo.picture ?: ""}'")
+                                } else if (event is ChannelMetadataEvent) {
+                                    Text(text = "${note.author?.toBestDisplayName()} changed " +
+                                      "chat name to '${event.channelInfo.name ?: ""}', " +
+                                      "description to '${event.channelInfo.about ?: ""}', " +
+                                      "and picture to '${event.channelInfo.picture ?: ""}'")
+                                } else {
+                                    val eventContent = accountViewModel.decrypt(note)
 
-                                if (eventContent != null)
-                                    RichTextViewer(
-                                        eventContent,
-                                        note.event?.tags,
-                                        note,
-                                        accountViewModel,
-                                        navController
-                                    )
-                                else
-                                    RichTextViewer(
-                                        "Could Not decrypt the message",
-                                        note.event?.tags,
-                                        note,
-                                        accountViewModel,
-                                        navController
-                                    )
+                                    if (eventContent != null)
+                                        RichTextViewer(
+                                            eventContent,
+                                            note.event?.tags,
+                                            note,
+                                            accountViewModel,
+                                            navController
+                                        )
+                                    else
+                                        RichTextViewer(
+                                            "Could Not decrypt the message",
+                                            note.event?.tags,
+                                            note,
+                                            accountViewModel,
+                                            navController
+                                        )
+
+                                }
                             }
+
 
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,

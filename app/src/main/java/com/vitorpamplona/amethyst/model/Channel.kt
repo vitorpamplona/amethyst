@@ -13,6 +13,7 @@ class Channel(val id: ByteArray) {
     val idHex = id.toHexKey()
     val idDisplayHex = id.toShortenHex()
 
+    var creator: User? = null
     var info = ChannelCreateEvent.ChannelData(null, null, null)
 
     var updatedMetadataAt: Long = 0;
@@ -28,9 +29,10 @@ class Channel(val id: ByteArray) {
         }
     }
 
-    fun updateChannelInfo(channelInfo: ChannelCreateEvent.ChannelData, updatedAt: Long) {
-        info = channelInfo
-        updatedMetadataAt = updatedAt
+    fun updateChannelInfo(creator: User, channelInfo: ChannelCreateEvent.ChannelData, updatedAt: Long) {
+        this.creator = creator
+        this.info = channelInfo
+        this.updatedMetadataAt = updatedAt
 
         live.refresh()
     }

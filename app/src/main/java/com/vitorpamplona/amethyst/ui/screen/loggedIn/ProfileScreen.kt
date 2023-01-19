@@ -51,7 +51,9 @@ import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.google.accompanist.pager.rememberPagerState
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.toNote
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileFollowersDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileFollowsDataSource
@@ -72,8 +74,6 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
 
     val accountUserState by accountViewModel.userLiveData.observeAsState()
     val accountUser = accountUserState?.user
-
-    val clipboardManager = LocalClipboardManager.current
 
     if (userId != null && account != null && accountUser != null) {
         DisposableEffect(account) {
@@ -138,7 +138,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
 
                             MessageButton(user, navController)
 
-                            NPubCopyButton(clipboardManager, user)
+                            NPubCopyButton(user)
 
                             if (accountUser == user) {
                                 EditButton()
@@ -262,9 +262,10 @@ fun TabFollowers(user: User, accountViewModel: AccountViewModel, navController: 
 
 @Composable
 private fun NPubCopyButton(
-    clipboardManager: ClipboardManager,
     user: User
 ) {
+    val clipboardManager = LocalClipboardManager.current
+
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = { clipboardManager.setText(AnnotatedString(user.pubkey.toNpub())) },

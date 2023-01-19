@@ -30,14 +30,14 @@ class ChannelMetadataEvent (
   companion object {
     const val kind = 41
 
-    fun create(newChannelInfo: ChannelCreateEvent.ChannelData?, originalChannel: ChannelCreateEvent, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ChannelMetadataEvent {
+    fun create(newChannelInfo: ChannelCreateEvent.ChannelData?, originalChannelIdHex: String, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ChannelMetadataEvent {
       val content = if (newChannelInfo != null)
         gson.toJson(newChannelInfo)
       else
         ""
 
       val pubKey = Utils.pubkeyCreate(privateKey)
-      val tags = listOf( listOf("e", originalChannel.id.toHex(), "", "root") )
+      val tags = listOf( listOf("e", originalChannelIdHex, "", "root") )
       val id = generateId(pubKey, createdAt, kind, tags, content)
       val sig = Utils.sign(id, privateKey)
       return ChannelMetadataEvent(id, pubKey, createdAt, tags, content, sig)
