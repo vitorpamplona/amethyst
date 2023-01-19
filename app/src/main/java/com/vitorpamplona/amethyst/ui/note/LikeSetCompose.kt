@@ -31,7 +31,7 @@ fun LikeSetCompose(likeSetCard: LikeSetCard, modifier: Modifier = Modifier, isIn
     val noteState by likeSetCard.note.live.observeAsState()
     val note = noteState?.note
 
-    if (note?.event == null) {
+    if (note == null) {
         BlankNote(Modifier, isInnerNote)
     } else {
         Column(modifier = modifier) {
