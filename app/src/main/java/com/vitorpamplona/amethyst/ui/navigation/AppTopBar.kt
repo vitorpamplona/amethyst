@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileFollowersDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileFollowsDataSource
 import com.vitorpamplona.amethyst.service.relays.Client
+import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.ui.screen.RelayPoolViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.launch
@@ -59,7 +60,10 @@ fun AppTopBar(navController: NavHostController, scaffoldState: ScaffoldState, ac
 
 @Composable
 fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
-    val accountUserState by accountViewModel.userLiveData.observeAsState()
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val account = accountState?.account ?: return
+
+    val accountUserState by account.userProfile().live.observeAsState()
     val accountUser = accountUserState?.user
 
     val relayViewModel: RelayPoolViewModel = viewModel { RelayPoolViewModel() }
@@ -101,6 +105,8 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
                             NostrUserProfileDataSource.printCounter()
                             NostrUserProfileFollowersDataSource.printCounter()
                             NostrUserProfileFollowsDataSource.printCounter()
+
+                            println("AAA: " + RelayPool.connectedRelays())
                         }
                     ) {
                         Icon(

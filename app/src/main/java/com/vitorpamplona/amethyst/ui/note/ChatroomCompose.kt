@@ -32,7 +32,10 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
     val noteState by baseNote.live.observeAsState()
     val note = noteState?.note
 
-    val accountUserState by accountViewModel.userLiveData.observeAsState()
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val account = accountState?.account ?: return
+
+    val accountUserState by account.userProfile().live.observeAsState()
     val accountUser = accountUserState?.user
 
     if (note?.event == null) {

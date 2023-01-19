@@ -50,7 +50,10 @@ fun ChatroomMessageCompose(baseNote: Note, accountViewModel: AccountViewModel, n
     val noteState by baseNote.live.observeAsState()
     val note = noteState?.note
 
-    val accountUserState by accountViewModel.userLiveData.observeAsState()
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val account = accountState?.account ?: return
+
+    val accountUserState by account.userProfile().live.observeAsState()
     val accountUser = accountUserState?.user
 
     var popupExpanded by remember { mutableStateOf(false) }
