@@ -16,7 +16,7 @@ object NostrSingleUserDataSource: NostrDataSource<Note>("SingleUserFeed") {
       JsonFilter(
         kinds = listOf(MetadataEvent.kind),
         authors = listOf(it.substring(0, 8)),
-        limit = 1
+        limit = 10
       )
     }
   }

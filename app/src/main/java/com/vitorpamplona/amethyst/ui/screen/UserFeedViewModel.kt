@@ -14,6 +14,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -32,26 +33,33 @@ open class UserFeedViewModel(val dataSource: NostrDataSource<User>): ViewModel()
     val feedContent = _feedContent.asStateFlow()
 
     fun refresh() {
-        val scope = CoroutineScope(Job() + Dispatchers.Main)
+        val scope = CoroutineScope(Job() + Dispatchers.IO)
         scope.launch {
-            val notes = dataSource.loadTop()
+            refreshSuspended()
+        }
+    }
 
-            val oldNotesState = feedContent.value
-            if (oldNotesState is UserFeedState.Loaded) {
-                if (notes != oldNotesState.feed) {
-                    updateFeed(notes)
-                }
-            } else {
+    private fun refreshSuspended() {
+        val notes = dataSource.loadTop()
+
+        val oldNotesState = feedContent.value
+        if (oldNotesState is UserFeedState.Loaded) {
+            if (notes != oldNotesState.feed) {
                 updateFeed(notes)
             }
+        } else {
+            updateFeed(notes)
         }
     }
 
     fun updateFeed(notes: List<User>) {
-        if (notes.isEmpty()) {
-            _feedContent.update { UserFeedState.Empty }
-        } else {
-            _feedContent.update { UserFeedState.Loaded(notes) }
+        val scope = CoroutineScope(Job() + Dispatchers.Main)
+        scope.launch {
+            if (notes.isEmpty()) {
+                _feedContent.update { UserFeedState.Empty }
+            } else {
+                _feedContent.update { UserFeedState.Loaded(notes) }
+            }
         }
     }
 
@@ -62,17 +70,18 @@ open class UserFeedViewModel(val dataSource: NostrDataSource<User>): ViewModel()
         }
     }
 
-    val filterHandler = Handler(Looper.getMainLooper())
+    val scope = CoroutineScope(Job() + Dispatchers.IO)
     var handlerWaiting = false
     @Synchronized
     fun invalidateData() {
         if (handlerWaiting) return
 
         handlerWaiting = true
-        filterHandler.postDelayed({
+        scope.launch {
+            delay(100)
             refresh()
             handlerWaiting = false
-        }, 100)
+        }
     }
 
     private val cacheListener: (LocalCacheState) -> Unit = {

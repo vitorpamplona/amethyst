@@ -14,6 +14,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -26,24 +27,28 @@ class CardFeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel() {
     private var lastNotes: List<Note>? = null
 
     fun refresh() {
-        val scope = CoroutineScope(Job() + Dispatchers.Main)
+        val scope = CoroutineScope(Job() + Dispatchers.IO)
         scope.launch {
-            val notes = dataSource.loadTop()
+            refreshSuspended()
+        }
+    }
 
-            val lastNotesCopy = lastNotes
+    private fun refreshSuspended() {
+        val notes = dataSource.loadTop()
 
-            val oldNotesState = feedContent.value
-            if (lastNotesCopy != null && oldNotesState is CardFeedState.Loaded) {
-                val newCards = convertToCard(notes.minus(lastNotesCopy))
-                if (newCards.isNotEmpty()) {
-                    lastNotes = notes
-                    updateFeed((oldNotesState.feed + newCards).sortedBy { it.createdAt() }.reversed())
-                }
-            } else {
-                val cards = convertToCard(notes)
+        val lastNotesCopy = lastNotes
+
+        val oldNotesState = feedContent.value
+        if (lastNotesCopy != null && oldNotesState is CardFeedState.Loaded) {
+            val newCards = convertToCard(notes.minus(lastNotesCopy))
+            if (newCards.isNotEmpty()) {
                 lastNotes = notes
-                updateFeed(cards)
+                updateFeed((oldNotesState.feed + newCards).sortedBy { it.createdAt() }.reversed())
             }
+        } else {
+            val cards = convertToCard(notes)
+            lastNotes = notes
+            updateFeed(cards)
         }
     }
 
@@ -76,31 +81,28 @@ class CardFeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel() {
     }
 
     fun updateFeed(notes: List<Card>) {
-        if (notes.isEmpty()) {
-            _feedContent.update { CardFeedState.Empty }
-        } else {
-            _feedContent.update { CardFeedState.Loaded(notes) }
+        val scope = CoroutineScope(Job() + Dispatchers.Main)
+        scope.launch {
+            if (notes.isEmpty()) {
+                _feedContent.update { CardFeedState.Empty }
+            } else {
+                _feedContent.update { CardFeedState.Loaded(notes) }
+            }
         }
     }
 
-    fun refreshCurrentList() {
-        val state = feedContent.value
-        if (state is CardFeedState.Loaded) {
-            _feedContent.update { CardFeedState.Loaded(state.feed) }
-        }
-    }
-
-    val filterHandler = Handler(Looper.getMainLooper())
+    val scope = CoroutineScope(Job() + Dispatchers.IO)
     var handlerWaiting = false
     @Synchronized
     fun invalidateData() {
         if (handlerWaiting) return
 
         handlerWaiting = true
-        filterHandler.postDelayed({
+        scope.launch {
+            delay(100)
             refresh()
             handlerWaiting = false
-        }, 100)
+        }
     }
 
     private val cacheListener: (LocalCacheState) -> Unit = {

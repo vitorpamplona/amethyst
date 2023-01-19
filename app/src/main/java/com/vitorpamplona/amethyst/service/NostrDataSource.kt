@@ -20,6 +20,7 @@ import kotlin.time.measureTimedValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import nostr.postr.events.ContactListEvent
 import nostr.postr.events.DeletionEvent
@@ -118,7 +119,7 @@ abstract class NostrDataSource<T>(val debugName: String) {
     val returningList = feed().take(100)
 
     // prepare previews
-    val scope = CoroutineScope(Job() + Dispatchers.Main)
+    val scope = CoroutineScope(Job() + Dispatchers.IO)
     scope.launch {
       loadPreviews(returningList)
     }
@@ -147,17 +148,18 @@ abstract class NostrDataSource<T>(val debugName: String) {
     channelIds.remove(channel.id)
   }
 
-  val filterHandler = Handler(Looper.getMainLooper())
+  val scope = CoroutineScope(Job() + Dispatchers.IO)
   var handlerWaiting = false
   @Synchronized
   fun invalidateFilters() {
     if (handlerWaiting) return
 
     handlerWaiting = true
-    filterHandler.postDelayed({
+    scope.launch {
+      delay(200)
       resetFilters()
       handlerWaiting = false
-    }, 200)
+    }
   }
 
   fun resetFilters() {

@@ -11,6 +11,7 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import nostr.postr.events.ContactListEvent
 
@@ -112,18 +113,18 @@ class User(val pubkey: ByteArray) {
     val live: UserLiveData = UserLiveData(this)
 
     // Refreshes observers in batches.
-    val filterHandler = Handler(Looper.getMainLooper())
+    val scope = CoroutineScope(Job() + Dispatchers.Main)
     var handlerWaiting = false
     @Synchronized
     fun invalidateData() {
         if (handlerWaiting) return
 
         handlerWaiting = true
-        filterHandler.postDelayed({
-            println("User Refresh")
+        scope.launch {
+            delay(100)
             live.refresh()
             handlerWaiting = false
-        }, 100)
+        }
     }
 }
 
@@ -153,24 +154,18 @@ class UserMetadata {
 }
 
 class UserLiveData(val user: User): LiveData<UserState>(UserState(user)) {
-    val scope = CoroutineScope(Job() + Dispatchers.Main)
-
     fun refresh() {
         postValue(UserState(user))
     }
 
     override fun onActive() {
         super.onActive()
-        scope.launch {
-            NostrSingleUserDataSource.add(user.pubkeyHex)
-        }
+        NostrSingleUserDataSource.add(user.pubkeyHex)
     }
 
     override fun onInactive() {
         super.onInactive()
-        scope.launch {
-            NostrSingleUserDataSource.remove(user.pubkeyHex)
-        }
+        NostrSingleUserDataSource.remove(user.pubkeyHex)
     }
 }
 

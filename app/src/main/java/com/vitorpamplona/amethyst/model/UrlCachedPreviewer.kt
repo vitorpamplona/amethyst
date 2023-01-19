@@ -22,7 +22,7 @@ object UrlCachedPreviewer {
       return
     }
 
-    val scope = CoroutineScope(Job() + Dispatchers.Main)
+    val scope = CoroutineScope(Job() + Dispatchers.IO)
     scope.launch {
       BahaUrlPreview(url, object : IUrlPreviewCallback {
         override fun onComplete(urlInfo: UrlInfoItem) {

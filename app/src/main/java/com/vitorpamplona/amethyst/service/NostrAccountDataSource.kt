@@ -41,7 +41,7 @@ object NostrAccountDataSource: NostrDataSource<Note>("AccountData") {
     return JsonFilter(
       kinds = listOf(MetadataEvent.kind),
       authors = listOf(account.userProfile().pubkeyHex),
-      limit = 1
+      limit = 3
     )
   }
 

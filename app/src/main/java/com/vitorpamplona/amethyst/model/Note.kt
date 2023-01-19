@@ -13,6 +13,7 @@ import java.util.Collections
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import nostr.postr.events.Event
 
@@ -99,17 +100,18 @@ class Note(val idHex: String) {
     val live: NoteLiveData = NoteLiveData(this)
 
     // Refreshes observers in batches.
-    val filterHandler = Handler(Looper.getMainLooper())
+    val scope = CoroutineScope(Job() + Dispatchers.Main)
     var handlerWaiting = false
     @Synchronized
     fun invalidateData() {
         if (handlerWaiting) return
 
         handlerWaiting = true
-        filterHandler.postDelayed({
+        scope.launch {
+            delay(100)
             live.refresh()
             handlerWaiting = false
-        }, 100)
+        }
     }
 }
 
@@ -120,18 +122,12 @@ class NoteLiveData(val note: Note): LiveData<NoteState>(NoteState(note)) {
 
     override fun onActive() {
         super.onActive()
-        val scope = CoroutineScope(Job() + Dispatchers.Main)
-        scope.launch {
-            NostrSingleEventDataSource.add(note.idHex)
-        }
+        NostrSingleEventDataSource.add(note.idHex)
     }
 
     override fun onInactive() {
         super.onInactive()
-        val scope = CoroutineScope(Job() + Dispatchers.Main)
-        scope.launch {
-            NostrSingleEventDataSource.remove(note.idHex)
-        }
+        NostrSingleEventDataSource.remove(note.idHex)
     }
 }
 

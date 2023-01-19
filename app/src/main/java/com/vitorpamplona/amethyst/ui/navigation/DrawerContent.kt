@@ -49,7 +49,10 @@ fun DrawerContent(navController: NavHostController,
                   accountViewModel: AccountViewModel,
                   accountStateViewModel: AccountStateViewModel) {
 
-    val accountUserState by accountViewModel.userLiveData.observeAsState()
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val account = accountState?.account ?: return
+
+    val accountUserState by account.userProfile().live.observeAsState()
     val accountUser = accountUserState?.user
 
     Surface(
@@ -64,14 +67,18 @@ fun DrawerContent(navController: NavHostController,
                         model = banner,
                         contentDescription = "Profile Image",
                         contentScale = ContentScale.FillWidth,
-                        modifier = Modifier.fillMaxWidth().height(150.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(150.dp)
                     )
                 } else {
                     Image(
                         painter = painterResource(R.drawable.profile_banner),
                         contentDescription = "Profile Banner",
                         contentScale = ContentScale.FillWidth,
-                        modifier = Modifier.fillMaxWidth().height(150.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(150.dp)
                     )
                 }
 
@@ -106,12 +113,15 @@ fun DrawerContent(navController: NavHostController,
 fun ProfileContent(accountUser: User?, modifier: Modifier = Modifier, scaffoldState: ScaffoldState, navController: NavController) {
     val coroutineScope = rememberCoroutineScope()
 
+    println("AAA " + accountUser?.profilePicture())
+
     Column(modifier = modifier) {
         AsyncImage(
             model = accountUser?.profilePicture() ?: "https://robohash.org/ohno.png",
             contentDescription = "Profile Image",
             modifier = Modifier
-                .width(100.dp).height(100.dp)
+                .width(100.dp)
+                .height(100.dp)
                 .clip(shape = CircleShape)
                 .border(3.dp, MaterialTheme.colors.background, CircleShape)
                 .background(MaterialTheme.colors.background)
@@ -205,7 +215,8 @@ fun NavigationRow(navController: NavHostController, scaffoldState: ScaffoldState
         })
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
                 .padding(vertical = 15.dp, horizontal = 25.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
