@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class NostrChannelFeedViewModel: FeedViewModel(NostrChannelDataSource)
 class NostrChatroomListFeedViewModel: FeedViewModel(NostrChatroomListDataSource)
@@ -43,50 +44,39 @@ abstract class FeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel()
     val feedContent = _feedContent.asStateFlow()
 
     fun refresh() {
-        val scope = CoroutineScope(Job() + Dispatchers.IO)
-        scope.launch {
-            refreshSuspended()
-        }
-    }
+        viewModelScope.launch(Dispatchers.IO) {
+            val notes = dataSource.loadTop()
 
-    private fun refreshSuspended() {
-        val notes = dataSource.loadTop()
-
-        val oldNotesState = feedContent.value
-        if (oldNotesState is FeedState.Loaded) {
-            if (notes != oldNotesState.feed) {
-                updateFeed(notes)
+            val oldNotesState = feedContent.value
+            if (oldNotesState is FeedState.Loaded) {
+                if (notes != oldNotesState.feed) {
+                    withContext(Dispatchers.Main) {
+                        updateFeed(notes)
+                    }
+                }
+            } else {
+                withContext(Dispatchers.Main) {
+                    updateFeed(notes)
+                }
             }
-        } else {
-            updateFeed(notes)
         }
     }
 
     fun updateFeed(notes: List<Note>) {
-        val scope = CoroutineScope(Job() + Dispatchers.Main)
-        scope.launch {
-            if (notes.isEmpty()) {
-                _feedContent.update { FeedState.Empty }
-            } else {
-                _feedContent.update { FeedState.Loaded(notes) }
-            }
+        if (notes.isEmpty()) {
+            _feedContent.update { FeedState.Empty }
+        } else {
+            _feedContent.update { FeedState.Loaded(notes) }
         }
     }
 
-    fun refreshCurrentList() {
-        val state = feedContent.value
-        if (state is FeedState.Loaded) {
-            _feedContent.update { FeedState.Loaded(state.feed) }
-        }
-    }
-
-    val scope = CoroutineScope(Job() + Dispatchers.IO)
     var handlerWaiting = false
     @Synchronized
     fun invalidateData() {
         if (handlerWaiting) return
 
         handlerWaiting = true
+        val scope = CoroutineScope(Job() + Dispatchers.IO)
         scope.launch {
             delay(100)
             refresh()
