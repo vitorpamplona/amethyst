@@ -110,12 +110,13 @@ fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Bool
                 Column(modifier = Modifier.padding(start = if (!isInnerNote) 10.dp else 0.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (author != null)
-                            UsernameDisplay(author)
+                            UsernameDisplay(author, Modifier.weight(1f))
 
                         if (note.event !is RepostEvent) {
                             Text(
                                 timeAgo(note.event?.createdAt),
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                                maxLines = 1
                             )
                         } else {
                             Text(
