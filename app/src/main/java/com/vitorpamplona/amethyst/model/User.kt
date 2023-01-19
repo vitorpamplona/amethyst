@@ -120,6 +120,7 @@ class User(val pubkey: ByteArray) {
 
         handlerWaiting = true
         filterHandler.postDelayed({
+            println("User Refresh")
             live.refresh()
             handlerWaiting = false
         }, 100)

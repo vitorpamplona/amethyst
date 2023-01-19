@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.actions.PostButton
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
@@ -72,17 +73,23 @@ fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, accoun
         Column(Modifier.fillMaxHeight()) {
             ChannelHeader(
                 channel, account,
-                accountStateViewModel = accountStateViewModel
+                accountStateViewModel = accountStateViewModel,
+                navController = navController
             )
 
             Column(
-                modifier = Modifier.fillMaxHeight().padding(vertical = 0.dp).weight(1f, true)
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .padding(vertical = 0.dp)
+                    .weight(1f, true)
             ) {
                 ChatroomFeedView(feedViewModel, accountViewModel, navController)
             }
 
             //LAST ROW
-            Row(modifier = Modifier.padding(10.dp).fillMaxWidth(),
+            Row(modifier = Modifier
+                .padding(10.dp)
+                .fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -92,7 +99,9 @@ fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, accoun
                     keyboardOptions = KeyboardOptions.Default.copy(
                         capitalization = KeyboardCapitalization.Sentences
                     ),
-                    modifier = Modifier.weight(1f, true).padding(end = 10.dp),
+                    modifier = Modifier
+                        .weight(1f, true)
+                        .padding(end = 10.dp),
                     placeholder = {
                         Text(
                             text = "reply here.. ",
@@ -116,7 +125,7 @@ fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, accoun
 }
 
 @Composable
-fun ChannelHeader(baseChannel: Channel, account: Account, accountStateViewModel: AccountStateViewModel) {
+fun ChannelHeader(baseChannel: Channel, account: Account, accountStateViewModel: AccountStateViewModel, navController: NavController) {
     val channelState by baseChannel.live.observeAsState()
     val channel = channelState?.channel
 
@@ -128,11 +137,14 @@ fun ChannelHeader(baseChannel: Channel, account: Account, accountStateViewModel:
                     model = channel?.profilePicture(),
                     contentDescription = "Profile Image",
                     modifier = Modifier
-                        .width(35.dp).height(35.dp)
+                        .width(35.dp)
+                        .height(35.dp)
                         .clip(shape = CircleShape)
                 )
 
-                Column(modifier = Modifier.padding(start = 10.dp).weight(1f)) {
+                Column(modifier = Modifier
+                    .padding(start = 10.dp)
+                    .weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             "${channel?.info?.name}",
@@ -153,7 +165,17 @@ fun ChannelHeader(baseChannel: Channel, account: Account, accountStateViewModel:
 
                 channel?.let { NoteCopyButton(it) }
 
-                channel?.let { EditButton(account, it, accountStateViewModel) }
+                channel?.let {
+                    if (channel.creator == account.userProfile()) {
+                        EditButton(account, it, accountStateViewModel)
+                    } else {
+                        if (account.followingChannels.contains(channel.idHex)) {
+                            LeaveButton(account,channel,accountStateViewModel, navController)
+                        } else {
+                            JoinButton(account,channel,accountStateViewModel, navController)
+                        }
+                    }
+                }
             }
         }
 
@@ -180,7 +202,7 @@ private fun NoteCopyButton(
                 backgroundColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
             ),
     ) {
-        Text(text = "npub", color = Color.White)
+        Text(text = "note", color = Color.White)
     }
 }
 
@@ -203,5 +225,41 @@ private fun EditButton(account: Account, channel: Channel, accountStateViewModel
             )
     ) {
         Text(text = "Edit", color = Color.White)
+    }
+}
+
+@Composable
+private fun JoinButton(account: Account, channel: Channel, accountStateViewModel: AccountStateViewModel, navController: NavController) {
+    Button(
+        modifier = Modifier.padding(horizontal = 3.dp),
+        onClick = {
+            account.joinChannel(channel.idHex, accountStateViewModel)
+            navController.navigate(Route.Message.route)
+        },
+        shape = RoundedCornerShape(20.dp),
+        colors = ButtonDefaults
+            .buttonColors(
+                backgroundColor = MaterialTheme.colors.primary
+            )
+    ) {
+        Text(text = "Join", color = Color.White)
+    }
+}
+
+@Composable
+private fun LeaveButton(account: Account, channel: Channel, accountStateViewModel: AccountStateViewModel, navController: NavController) {
+    Button(
+        modifier = Modifier.padding(horizontal = 3.dp),
+        onClick = {
+            account.leaveChannel(channel.idHex, accountStateViewModel)
+            navController.navigate(Route.Message.route)
+        },
+        shape = RoundedCornerShape(20.dp),
+        colors = ButtonDefaults
+            .buttonColors(
+                backgroundColor = MaterialTheme.colors.primary
+            )
+    ) {
+        Text(text = "Leave", color = Color.White)
     }
 }

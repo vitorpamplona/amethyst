@@ -169,7 +169,16 @@ class Account(val loggedIn: Persona, val followingChannels: MutableSet<String> =
     Client.send(event)
     LocalCache.consume(event)
 
-    followingChannels.add(event.id.toHex())
+    joinChannel(event.id.toHex(), accountStateViewModel)
+  }
+
+  fun joinChannel(idHex: String, accountStateViewModel: AccountStateViewModel) {
+    followingChannels.add(idHex)
+    accountStateViewModel.saveToEncryptedStorage(this)
+  }
+
+  fun leaveChannel(idHex: String, accountStateViewModel: AccountStateViewModel) {
+    followingChannels.remove(idHex)
     accountStateViewModel.saveToEncryptedStorage(this)
   }
 

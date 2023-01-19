@@ -42,6 +42,11 @@ class Channel(val id: ByteArray) {
         return info.picture ?: "https://robohash.org/${idHex}.png"
     }
 
+    fun anyNameStartsWith(prefix: String): Boolean {
+        return listOfNotNull(info.name, info.about)
+            .filter { it.startsWith(prefix, true) }.isNotEmpty()
+    }
+
     // Observers line up here.
     val live: ChannelLiveData = ChannelLiveData(this)
 

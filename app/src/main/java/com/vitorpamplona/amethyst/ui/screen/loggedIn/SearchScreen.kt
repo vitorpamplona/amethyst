@@ -39,6 +39,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
@@ -46,11 +47,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrGlobalDataSource
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.SearchButton
+import com.vitorpamplona.amethyst.ui.note.ChannelName
+import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -66,16 +71,18 @@ fun SearchScreen(accountViewModel: AccountViewModel, navController: NavControlle
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            SearchBar(navController)
+            SearchBar(accountViewModel, navController)
             FeedView(feedViewModel, accountViewModel, navController)
         }
     }
 }
 
 @Composable
-private fun SearchBar(navController: NavController) {
+private fun SearchBar(accountViewModel: AccountViewModel, navController: NavController) {
     val searchValue = remember { mutableStateOf(TextFieldValue("")) }
     val searchResults = remember { mutableStateOf<List<User>>(emptyList()) }
+    val searchResultsNotes = remember { mutableStateOf<List<Note>>(emptyList()) }
+    val searchResultsChannels = remember { mutableStateOf<List<Channel>>(emptyList()) }
 
     val isTrailingIconVisible by remember {
         derivedStateOf {
@@ -96,6 +103,8 @@ private fun SearchBar(navController: NavController) {
             onValueChange = {
                 searchValue.value = it
                 searchResults.value = LocalCache.findUsersStartingWith(it.text)
+                searchResultsNotes.value = LocalCache.findNotesStartingWith(it.text)
+                searchResultsChannels.value = LocalCache.findChannelsStartingWith(it.text)
             },
             keyboardOptions = KeyboardOptions.Default.copy(
                 capitalization = KeyboardCapitalization.Sentences
@@ -123,6 +132,8 @@ private fun SearchBar(navController: NavController) {
                         onClick = {
                             searchValue.value = TextFieldValue("")
                             searchResults.value = emptyList()
+                            searchResultsChannels.value = emptyList()
+                            searchResultsNotes.value = emptyList()
                         }
                     ) {
                         Icon(
@@ -147,6 +158,24 @@ private fun SearchBar(navController: NavController) {
                 UserLine(item) {
                     navController.navigate("User/${item.pubkeyHex}")
                 }
+            }
+
+            itemsIndexed(searchResultsChannels.value, key = { _, item -> item.idHex }) { index, item ->
+                ChannelName(
+                    channelPicture = item.profilePicture(),
+                    channelTitle = {
+                        Text(
+                            "${item.info.name}",
+                            fontWeight = FontWeight.Bold
+                        )
+                    },
+                    channelLastTime = null,
+                    channelLastContent = item.info.about,
+                    onClick = { navController.navigate("Channel/${item.idHex}") })
+            }
+
+            itemsIndexed(searchResultsNotes.value, key = { _, item -> item.idHex }) { index, item ->
+                NoteCompose(item, accountViewModel = accountViewModel, navController = navController)
             }
         }
     }

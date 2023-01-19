@@ -260,6 +260,8 @@ object LocalCache {
     } else {
       // older data, does nothing
     }
+
+    refreshObservers()
   }
   fun consume(event: ChannelMetadataEvent) {
     //Log.d("MT", "New User ${users.size} ${event.contactMetaData.name}")
@@ -279,6 +281,8 @@ object LocalCache {
     } else {
       //Log.d("MT","Relay sent a previous Metadata Event ${oldUser.toBestDisplayName()} ${formattedDateTime(event.createdAt)} > ${formattedDateTime(oldUser.updatedAt)}")
     }
+
+    refreshObservers()
   }
 
   fun consume(event: ChannelMessageEvent) {
@@ -293,7 +297,7 @@ object LocalCache {
 
     val author = getOrCreateUser(event.pubKey)
     val mentions = Collections.synchronizedList(event.mentions.map { getOrCreateUser(decodePublicKey(it)) })
-    val replyTo = Collections.synchronizedList(event.replyTos.map { getOrCreateNote(it) }.toMutableList())
+    val replyTo = Collections.synchronizedList(event.replyTos.map { channel.getOrCreateNote(it) }.toMutableList())
 
     note.channel = channel
     note.loadEvent(event, author, mentions, replyTo)
@@ -329,6 +333,22 @@ object LocalCache {
            it.info.anyNameStartsWith(username)
         || it.pubkeyHex.startsWith(username, true)
         || it.pubkey.toNpub().startsWith(username, true)
+    }
+  }
+
+  fun findNotesStartingWith(text: String): List<Note> {
+    return notes.values.filter {
+      (it.event is TextNoteEvent && it.event?.content?.contains(text) ?: false)
+        || it.idHex.startsWith(text, true)
+        || it.id.toNote().startsWith(text, true)
+    }
+  }
+
+  fun findChannelsStartingWith(text: String): List<Channel> {
+    return channels.values.filter {
+      it.anyNameStartsWith(text)
+        || it.idHex.startsWith(text, true)
+        || it.id.toNote().startsWith(text, true)
     }
   }
 

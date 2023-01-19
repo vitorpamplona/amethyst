@@ -95,7 +95,7 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
 }
 
 @Composable
-private fun ChannelName(
+fun ChannelName(
     channelPicture: String,
     channelTitle: @Composable () -> Unit,
     channelLastTime: Long?,
@@ -124,10 +124,13 @@ private fun ChannelName(
                 ) {
                     channelTitle()
 
-                    Text(
-                        timeAgo(channelLastTime),
-                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.52f)
-                    )
+                    channelLastTime?.let {
+                        Text(
+                            timeAgo(channelLastTime),
+                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.52f)
+                        )
+                    }
+
                 }
 
                 if (channelLastContent != null)

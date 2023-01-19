@@ -23,9 +23,9 @@ class NewChannelViewModel: ViewModel() {
         this.account = account
         if (channel != null) {
             originalChannel = channel
-            channelName.value = TextFieldValue()
-            channelPicture.value = TextFieldValue()
-            channelDescription.value = TextFieldValue()
+            channelName.value = TextFieldValue(channel.info.name ?: "")
+            channelPicture.value = TextFieldValue(channel.info.picture ?: "")
+            channelDescription.value = TextFieldValue(channel.info.about ?: "")
         }
     }
 
