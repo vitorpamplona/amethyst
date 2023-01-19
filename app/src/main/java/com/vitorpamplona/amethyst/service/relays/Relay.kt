@@ -30,6 +30,7 @@ class Relay(
     }
 
     fun requestAndWatch() {
+        println("Connecting with ${url}")
         val request = Request.Builder().url(url).build()
         val listener = object : WebSocketListener() {
 
@@ -87,6 +88,9 @@ class Relay(
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                // Failures disconnect the relay. 
+                socket = null
+                //println("Relay onFailure ${url}, ${response?.message}")
                 t.printStackTrace()
                 listeners.forEach {
                     it.onError(this@Relay, "", Error("WebSocket Failure. Response: ${response}. Exception: ${t.message}", t))
@@ -99,6 +103,7 @@ class Relay(
     fun disconnect() {
         //httpClient.dispatcher.executorService.shutdown()
         socket?.close(1000, "Normal close")
+        socket = null
     }
 
     fun sendFilter(requestId: String) {
