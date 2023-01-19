@@ -100,13 +100,13 @@ class Note(val idHex: String) {
     val live: NoteLiveData = NoteLiveData(this)
 
     // Refreshes observers in batches.
-    val scope = CoroutineScope(Job() + Dispatchers.Main)
     var handlerWaiting = false
     @Synchronized
     fun invalidateData() {
         if (handlerWaiting) return
 
         handlerWaiting = true
+        val scope = CoroutineScope(Job() + Dispatchers.Main)
         scope.launch {
             delay(100)
             live.refresh()

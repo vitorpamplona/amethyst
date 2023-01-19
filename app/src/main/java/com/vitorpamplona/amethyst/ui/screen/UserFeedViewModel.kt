@@ -63,20 +63,13 @@ open class UserFeedViewModel(val dataSource: NostrDataSource<User>): ViewModel()
         }
     }
 
-    fun refreshCurrentList() {
-        val state = feedContent.value
-        if (state is UserFeedState.Loaded) {
-            _feedContent.update { UserFeedState.Loaded(state.feed) }
-        }
-    }
-
-    val scope = CoroutineScope(Job() + Dispatchers.IO)
     var handlerWaiting = false
     @Synchronized
     fun invalidateData() {
         if (handlerWaiting) return
 
         handlerWaiting = true
+        val scope = CoroutineScope(Job() + Dispatchers.IO)
         scope.launch {
             delay(100)
             refresh()

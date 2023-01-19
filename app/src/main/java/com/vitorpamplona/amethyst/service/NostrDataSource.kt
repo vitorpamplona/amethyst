@@ -148,21 +148,28 @@ abstract class NostrDataSource<T>(val debugName: String) {
     channelIds.remove(channel.id)
   }
 
-  val scope = CoroutineScope(Job() + Dispatchers.IO)
   var handlerWaiting = false
   @Synchronized
   fun invalidateFilters() {
     if (handlerWaiting) return
 
     handlerWaiting = true
+    val scope = CoroutineScope(Job() + Dispatchers.IO)
     scope.launch {
       delay(200)
-      resetFilters()
+      resetFiltersSuspend()
       handlerWaiting = false
     }
   }
 
   fun resetFilters() {
+    val scope = CoroutineScope(Job() + Dispatchers.IO)
+    scope.launch {
+      resetFiltersSuspend()
+    }
+  }
+
+  fun resetFiltersSuspend() {
     // saves the channels that are currently active
     val activeChannels = channels.filter { it.filter != null }
     // saves the current content to only update if it changes

@@ -91,13 +91,13 @@ class CardFeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel() {
         }
     }
 
-    val scope = CoroutineScope(Job() + Dispatchers.IO)
     var handlerWaiting = false
     @Synchronized
     fun invalidateData() {
         if (handlerWaiting) return
 
         handlerWaiting = true
+        val scope = CoroutineScope(Job() + Dispatchers.IO)
         scope.launch {
             delay(100)
             refresh()

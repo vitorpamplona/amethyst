@@ -3,6 +3,10 @@ package com.vitorpamplona.amethyst.service.relays
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.Constants
 import java.util.Collections
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import nostr.postr.events.Event
 
 /**
@@ -108,7 +112,10 @@ object RelayPool: Relay.Listener {
     val live: RelayPoolLiveData = RelayPoolLiveData(this)
 
     private fun refreshObservers() {
-        live.refresh()
+        val scope = CoroutineScope(Job() + Dispatchers.Main)
+        scope.launch {
+            live.refresh()
+        }
     }
 }
 
