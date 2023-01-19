@@ -34,6 +34,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.toNote
+import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.ui.components.RichTextViewer
@@ -50,14 +51,25 @@ fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Bool
     var popupExpanded by remember { mutableStateOf(false) }
 
     if (note?.event == null) {
-        BlankNote(modifier, isInnerNote)
+        BlankNote(modifier.combinedClickable(
+            onClick = {  },
+            onLongClick = { popupExpanded = true },
+        ), isInnerNote)
     } else {
         val authorState by note.author!!.live.observeAsState()
         val author = authorState?.user
 
         Column(modifier =
             modifier.combinedClickable(
-                onClick = { navController.navigate("Note/${note.idHex}") },
+                onClick = {
+                    if (note.event !is ChannelMessageEvent) {
+                        navController.navigate("Note/${note.idHex}")
+                    } else {
+                        note.channel?.let {
+                            navController.navigate("Channel/${it.idHex}")
+                        }
+                    }
+                },
                 onLongClick = { popupExpanded = true },
             )
         ) {
@@ -129,6 +141,10 @@ fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Bool
 
                     if (note.event is TextNoteEvent && (note.replyTo != null || note.mentions != null)) {
                         ReplyInformation(note.replyTo, note.mentions, navController)
+                    } else if (note.event is ChannelMessageEvent && (note.replyTo != null || note.mentions != null)) {
+                        note.channel?.let {
+                            ReplyInformationChannel(note.replyTo, note.mentions, it, navController)
+                        }
                     }
 
                     if (note.event is ReactionEvent || note.event is RepostEvent) {
@@ -156,7 +172,9 @@ fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Bool
                         if (eventContent != null)
                             RichTextViewer(eventContent, note.event?.tags, note, accountViewModel, navController)
 
-                        ReactionsRowState(note, accountViewModel)
+                        if (note.event !is ChannelMessageEvent) {
+                            ReactionsRowState(note, accountViewModel)
+                        }
 
                         Divider(
                             modifier = Modifier.padding(top = 10.dp),
