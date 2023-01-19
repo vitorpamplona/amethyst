@@ -38,6 +38,8 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
+import com.vitorpamplona.amethyst.service.model.ReactionEvent
+import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.ui.components.RichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -46,7 +48,7 @@ val ChatBubbleShapeThem = RoundedCornerShape(3.dp, 15.dp, 15.dp, 15.dp)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ChatroomMessageCompose(baseNote: Note, accountViewModel: AccountViewModel, navController: NavController) {
+fun ChatroomMessageCompose(baseNote: Note, innerQuote: Boolean = false, accountViewModel: AccountViewModel, navController: NavController) {
     val noteState by baseNote.live.observeAsState()
     val note = noteState?.note
 
@@ -90,7 +92,7 @@ fun ChatroomMessageCompose(baseNote: Note, accountViewModel: AccountViewModel, n
             ) {
                 Row(
                     horizontalArrangement = alignment,
-                    modifier = Modifier.fillMaxWidth(0.85f)
+                    modifier = Modifier.fillMaxWidth(if (innerQuote) 1f else 0.85f)
                 ) {
 
                     Surface(
@@ -106,7 +108,7 @@ fun ChatroomMessageCompose(baseNote: Note, accountViewModel: AccountViewModel, n
                             modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 5.dp),
                         ) {
 
-                            if (author != accountUser && note.event is ChannelMessageEvent) {
+                            if (innerQuote || author != accountUser && note.event is ChannelMessageEvent) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = alignment,
@@ -135,6 +137,20 @@ fun ChatroomMessageCompose(baseNote: Note, accountViewModel: AccountViewModel, n
                                                 }
                                             })
                                     )
+                                }
+                            }
+
+                            val replyTo = note.replyTo
+                            if (replyTo != null && replyTo.isNotEmpty()) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    replyTo.mapIndexed { index, note ->
+                                        ChatroomMessageCompose(
+                                            note,
+                                            innerQuote = true,
+                                            accountViewModel = accountViewModel,
+                                            navController = navController
+                                        )
+                                    }
                                 }
                             }
 
@@ -172,7 +188,6 @@ fun ChatroomMessageCompose(baseNote: Note, accountViewModel: AccountViewModel, n
 
                                 }
                             }
-
 
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
