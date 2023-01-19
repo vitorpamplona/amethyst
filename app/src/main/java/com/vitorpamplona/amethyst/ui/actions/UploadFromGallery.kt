@@ -48,14 +48,14 @@ fun UploadFromGallery(onImageChosen: (Uri) -> Unit) {
                         showGallerySelect = true
                     }
                 ) {
-                    Text("Add Image from Gallery")
+                    Text("Upload Image")
                 }
             }
         }
     } else {
         Column {
             Button(onClick = { cameraPermissionState.launchPermissionRequest() }) {
-                Text("Add Image from Gallery")
+                Text("Upload Image")
             }
         }
     }
