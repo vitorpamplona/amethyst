@@ -245,7 +245,7 @@ object LocalCache {
   }
 
   fun consume(event: ChannelCreateEvent) {
-    Log.d("MT", "New Event ${event.content} ${event.id.toHex()}")
+    //Log.d("MT", "New Event ${event.content} ${event.id.toHex()}")
     // new event
     val oldChannel = getOrCreateChannel(event.id.toHex())
     val author = getOrCreateUser(event.pubKey)

@@ -10,7 +10,6 @@ import com.vitorpamplona.amethyst.model.UserState
 
 class AccountViewModel(private val account: Account): ViewModel() {
   val accountLiveData: LiveData<AccountState> = Transformations.map(account.live) { it }
-  val userLiveData: LiveData<UserState> = Transformations.map(account.userProfile().live) { it }
 
   fun reactTo(note: Note) {
     account.reactTo(note)

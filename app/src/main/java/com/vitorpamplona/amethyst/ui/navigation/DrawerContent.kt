@@ -113,8 +113,6 @@ fun DrawerContent(navController: NavHostController,
 fun ProfileContent(accountUser: User?, modifier: Modifier = Modifier, scaffoldState: ScaffoldState, navController: NavController) {
     val coroutineScope = rememberCoroutineScope()
 
-    println("AAA " + accountUser?.profilePicture())
-
     Column(modifier = modifier) {
         AsyncImage(
             model = accountUser?.profilePicture() ?: "https://robohash.org/ohno.png",
