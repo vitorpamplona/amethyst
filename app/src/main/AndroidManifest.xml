@@ -14,6 +14,7 @@
         android:enableOnBackInvokedCallback="true"
         android:supportsRtl="true"
         android:theme="@style/Theme.Amethyst"
+        android:largeHeap="true"
         tools:targetApi="31">
         <activity
             android:name=".ui.MainActivity"
