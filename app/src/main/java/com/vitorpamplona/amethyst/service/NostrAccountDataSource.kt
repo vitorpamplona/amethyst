@@ -59,7 +59,7 @@ object NostrAccountDataSource: NostrDataSource<Note>("AccountData") {
 
     return LocalCache.notes.values
       .filter { (it.event is TextNoteEvent || it.event is RepostEvent) && it.author?.pubkeyHex in allowSet }
-      .sortedBy { it.event!!.createdAt }
+      .sortedBy { it.event?.createdAt }
       .reversed()
   }
 

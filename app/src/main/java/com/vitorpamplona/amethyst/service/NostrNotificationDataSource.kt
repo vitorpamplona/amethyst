@@ -20,7 +20,7 @@ object NostrNotificationDataSource: NostrDataSource<Note>("NotificationFeed") {
       set.filter { it.event != null }
     }
 
-    return filtered.sortedBy { it.event!!.createdAt }.reversed()
+    return filtered.sortedBy { it.event?.createdAt }.reversed()
   }
 
   override fun updateChannelFilters() {

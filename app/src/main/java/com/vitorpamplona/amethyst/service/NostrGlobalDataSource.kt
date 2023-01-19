@@ -17,7 +17,7 @@ object NostrGlobalDataSource: NostrDataSource<Note>("GlobalFeed") {
     .filter {
       it.event is TextNoteEvent && (it.event as TextNoteEvent).replyTos.isEmpty()
     }
-    .sortedBy { it.event!!.createdAt }
+    .sortedBy { it.event?.createdAt }
     .reversed()
 
   override fun updateChannelFilters() {
