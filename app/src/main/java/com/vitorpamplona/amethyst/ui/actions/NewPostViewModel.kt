@@ -38,7 +38,13 @@ class NewPostViewModel: ViewModel() {
         replyingTo?.let { replyNote ->
             this.replyTos = (replyNote.replyTo ?: mutableListOf()).plus(replyNote).toMutableList()
             replyNote.author?.let { replyUser ->
-                this.mentions = (replyNote.mentions ?: emptyList()).plus(replyUser)
+                val currentMentions = replyNote.mentions ?: emptyList()
+                if (currentMentions.contains(replyUser)) {
+                    this.mentions = currentMentions
+                } else {
+                    this.mentions = currentMentions.plus(replyUser)
+                }
+
             }
         }
         this.account = account
@@ -89,7 +95,7 @@ class NewPostViewModel: ViewModel() {
             }.joinToString(" ")
         }.joinToString("\n")
 
-        account?.sendPost(newMessage, originalNote, mentions)
+        account?.sendPost(newMessage, replyTos, mentions)
         message = TextFieldValue("")
         urlPreview = null
     }

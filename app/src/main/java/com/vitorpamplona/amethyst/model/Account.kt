@@ -95,36 +95,20 @@ class Account(val loggedIn: Persona, val followingChannels: MutableSet<String> =
     }
   }
 
-  fun sendPost(message: String, originalNote: Note?, modifiedMentions: List<User>?) {
+  fun sendPost(message: String, replyTo: List<Note>?, mentions: List<User>?) {
     if (!isWriteable()) return
 
-    val replyToEvent = originalNote?.event
-    if (replyToEvent is TextNoteEvent) {
-      val modifiedMentionsHex = modifiedMentions?.map { it.pubkeyHex }?.toSet() ?: emptySet()
+    val repliesToHex = replyTo?.map { it.idHex }
+    val mentionsHex = mentions?.map { it.pubkeyHex }
 
-      val repliesTo = replyToEvent.replyTos.plus(replyToEvent.id.toHex())
-      val mentions = replyToEvent.mentions.plus(replyToEvent.pubKey.toHex()).plus(modifiedMentionsHex).filter {
-        it in modifiedMentionsHex
-      }
-
-      val signedEvent = TextNoteEvent.create(
-        msg = message,
-        replyTos = repliesTo,
-        mentions = mentions,
-        privateKey = loggedIn.privKey!!
-      )
-      Client.send(signedEvent)
-      LocalCache.consume(signedEvent)
-    } else {
-      val signedEvent = TextNoteEvent.create(
-        msg = message,
-        replyTos = null,
-        mentions = modifiedMentions?.map { it.pubkeyHex } ?: emptyList(),
-        privateKey = loggedIn.privKey!!
-      )
-      Client.send(signedEvent)
-      LocalCache.consume(signedEvent)
-    }
+    val signedEvent = TextNoteEvent.create(
+      msg = message,
+      replyTos = repliesToHex,
+      mentions = mentionsHex,
+      privateKey = loggedIn.privKey!!
+    )
+    Client.send(signedEvent)
+    LocalCache.consume(signedEvent)
   }
 
   fun sendChannelMeesage(message: String, toChannel: String, replyingTo: Note? = null) {
