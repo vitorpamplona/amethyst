@@ -19,3 +19,7 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+# For the Secp256k1 library
+-keep class fr.acinq.secp256k1.jni.** { *; }
+# For the NostrPostr library
+-keep class nostr.postr.** { *; }
