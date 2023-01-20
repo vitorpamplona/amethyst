@@ -12,7 +12,7 @@ object NostrThreadDataSource: NostrDataSource<Note>("SingleThreadFeed") {
   val eventsToWatch = Collections.synchronizedList(mutableListOf<String>())
 
   fun createRepliesAndReactionsFilter(): JsonFilter? {
-    val reactionsToWatch = eventsToWatch.map { it.substring(0, 8) }
+    val reactionsToWatch = eventsToWatch.map { it }
 
     if (reactionsToWatch.isEmpty()) {
       return null

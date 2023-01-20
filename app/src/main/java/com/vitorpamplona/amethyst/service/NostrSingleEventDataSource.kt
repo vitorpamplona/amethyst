@@ -12,7 +12,7 @@ object NostrSingleEventDataSource: NostrDataSource<Note>("SingleEventFeed") {
   private var eventsToWatch = setOf<String>()
 
   private fun createRepliesAndReactionsFilter(): JsonFilter? {
-    val reactionsToWatch = eventsToWatch.map { it.substring(0, 8) }
+    val reactionsToWatch = eventsToWatch.map { it }
 
     if (reactionsToWatch.isEmpty()) {
       return null
@@ -38,7 +38,7 @@ object NostrSingleEventDataSource: NostrDataSource<Note>("SingleEventFeed") {
 
     val interestedEvents =
       (directEventsToLoad + threadingEventsToLoad)
-      .map { it.idHex.substring(0, 8) }
+      .map { it.idHex }
 
     if (interestedEvents.isEmpty()) {
       return null
