@@ -47,10 +47,24 @@ fun AppBottomBar(navController: NavHostController) {
                     selected = currentRoute == item.route,
                     onClick = {
                         if (currentRoute != item.route) {
-                            navController.navigate(item.route)
+                            navController.navigate(item.route){
+                                navController.graph.startDestinationRoute?.let { start ->
+                                    popUpTo(start)
+                                    restoreState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
                         } else {
                             // TODO: Make it scrool to the top
-                            navController.navigate(item.route)
+                            navController.navigate(item.route){
+                                navController.graph.startDestinationRoute?.let { start ->
+                                    popUpTo(start)
+                                    restoreState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
                         }
                     }
                 )
