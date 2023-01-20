@@ -114,7 +114,7 @@ class Relay(
             if (filters.isNotEmpty()) {
                 val request = """["REQ","$requestId",${filters.joinToString(",") { it.toJson() }}]"""
                 //println("FILTERSSENT " + """["REQ","$requestId",${filters.joinToString(",") { it.toJson() }}]""")
-                socket!!.send(request)
+                socket?.send(request)
             }
         }
     }
