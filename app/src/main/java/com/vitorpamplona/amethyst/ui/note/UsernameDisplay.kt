@@ -15,6 +15,9 @@ fun UsernameDisplay(user: User, weight: Modifier = Modifier) {
         Text(
           "@${(user.bestUsername() ?: "")}",
           fontWeight = FontWeight.Bold,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
+          modifier = weight
         )
       } else {
         Text(
@@ -33,6 +36,9 @@ fun UsernameDisplay(user: User, weight: Modifier = Modifier) {
       Text(
         user.pubkeyDisplayHex,
         fontWeight = FontWeight.Bold,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = weight
       )
     }
 }
