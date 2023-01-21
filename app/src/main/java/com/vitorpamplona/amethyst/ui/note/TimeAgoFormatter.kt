@@ -15,7 +15,7 @@ fun timeAgo(mills: Long?): String {
     humanReadable = "now";
   }
 
-  return " • " + humanReadable
+  return humanReadable
     .replace(" hr. ago", "h")
     .replace(" min. ago", "m")
     .replace(" days ago", "d")

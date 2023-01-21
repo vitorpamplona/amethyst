@@ -54,18 +54,19 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
         } else {
             note.event?.content
         }
-        channel?.let {
+        channel?.let { channel ->
             ChannelName(
-                channelPicture = it.profilePicture(),
+                channelPicture = channel.profilePicture(),
                 channelTitle = {
                     Text(
-                        "${it.info.name}",
-                        fontWeight = FontWeight.Bold
+                        "${channel.info.name}",
+                        fontWeight = FontWeight.Bold,
+                        modifier = it
                     )
                 },
                 channelLastTime = note.event?.createdAt,
                 channelLastContent = "${author?.toBestDisplayName()}: " + description,
-                onClick = { navController.navigate("Channel/${it.idHex}") })
+                onClick = { navController.navigate("Channel/${channel.idHex}") })
         }
 
     } else {
@@ -85,13 +86,13 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
             }
         }
 
-        userToComposeOn?.let {
+        userToComposeOn?.let { user ->
             ChannelName(
-                channelPicture = it.profilePicture(),
-                channelTitle = { UsernameDisplay(it) },
+                channelPicture = user.profilePicture(),
+                channelTitle = { UsernameDisplay(user, it) },
                 channelLastTime = note.event?.createdAt,
                 channelLastContent = accountViewModel.decrypt(note),
-                onClick = { navController.navigate("Room/${it.pubkeyHex}") })
+                onClick = { navController.navigate("Room/${user.pubkeyHex}") })
         }
     }
 
@@ -100,7 +101,7 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
 @Composable
 fun ChannelName(
     channelPicture: String,
-    channelTitle: @Composable () -> Unit,
+    channelTitle: @Composable (Modifier) -> Unit,
     channelLastTime: Long?,
     channelLastContent: String?,
     onClick: () -> Unit
@@ -125,7 +126,7 @@ fun ChannelName(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(bottom = 4.dp)
                 ) {
-                    channelTitle()
+                    channelTitle(Modifier.weight(1f))
 
                     channelLastTime?.let {
                         Text(
