@@ -58,6 +58,10 @@ abstract class FeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel()
         return dataSource.loadTop()
     }
 
+    fun hardRefresh() {
+        dataSource.resetFilters()
+    }
+
     fun refresh() {
         viewModelScope.launch(Dispatchers.IO) {
             val notes = newListFromDataSource()

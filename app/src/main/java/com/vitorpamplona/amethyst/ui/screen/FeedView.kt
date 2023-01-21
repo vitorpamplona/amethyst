@@ -39,7 +39,7 @@ fun FeedView(viewModel: FeedViewModel, accountViewModel: AccountViewModel, navCo
 
     LaunchedEffect(isRefreshing) {
         if (isRefreshing) {
-            viewModel.refresh()
+            viewModel.hardRefresh()
             isRefreshing = false
         }
     }
