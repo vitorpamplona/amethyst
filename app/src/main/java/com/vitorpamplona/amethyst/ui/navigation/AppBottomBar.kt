@@ -59,9 +59,10 @@ fun AppBottomBar(navController: NavHostController) {
                             // TODO: Make it scrool to the top
                             navController.navigate(item.route){
                                 navController.graph.startDestinationRoute?.let { start ->
-                                    popUpTo(start)
+                                    popUpTo(start) { inclusive = item.route == Route.Home.route }
                                     restoreState = true
                                 }
+
                                 launchSingleTop = true
                                 restoreState = true
                             }
