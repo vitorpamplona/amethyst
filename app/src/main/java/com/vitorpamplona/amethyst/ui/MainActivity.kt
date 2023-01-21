@@ -44,7 +44,9 @@ class MainActivity : ComponentActivity() {
           add(GifDecoder.Factory())
         }
         add(SvgDecoder.Factory())
-      }.build()
+      }
+        .respectCacheHeaders(false)
+        .build()
     }
 
     setContent {
