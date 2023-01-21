@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.Icon
@@ -35,88 +36,87 @@ fun ReactionsRow(note: Note, account: Account, boost: (Note) -> Unit, reactTo: (
   if (wantsToReplyTo != null)
     NewPostView({ wantsToReplyTo = null }, wantsToReplyTo, account)
 
-  Row(modifier = Modifier.padding(top = 8.dp)) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-      IconButton(
-        modifier = Modifier.then(Modifier.size(24.dp)),
-        onClick = { if (account.isWriteable()) wantsToReplyTo = note }
-      ) {
+  Row(
+    modifier = Modifier.padding(top = 8.dp).fillMaxWidth(),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.SpaceBetween
+  ) {
+    IconButton(
+      modifier = Modifier.then(Modifier.size(24.dp)),
+      onClick = { if (account.isWriteable()) wantsToReplyTo = note }
+    ) {
+      Icon(
+        painter = painterResource(R.drawable.ic_comment),
+        null,
+        modifier = Modifier.size(15.dp),
+        tint = grayTint,
+      )
+    }
+
+    Text(
+      "  ${showCount(note.replies?.size)}",
+      fontSize = 14.sp,
+      color = grayTint,
+      modifier = Modifier.weight(1f)
+    )
+
+    IconButton(
+      modifier = Modifier.then(Modifier.size(24.dp)),
+      onClick = { if (account.isWriteable()) boost(note) }
+    ) {
+      if (note.isBoostedBy(account.userProfile())) {
         Icon(
-          painter = painterResource(R.drawable.ic_comment),
+          painter = painterResource(R.drawable.ic_retweeted),
           null,
-          modifier = Modifier.size(15.dp),
-          tint = grayTint,
+          modifier = Modifier.size(20.dp),
+          tint = Color.Unspecified
+        )
+      } else {
+        Icon(
+          painter = painterResource(R.drawable.ic_retweet),
+          null,
+          modifier = Modifier.size(20.dp),
+          tint = grayTint
         )
       }
-
-      Text(
-        "  ${showCount(note.replies?.size)}",
-        fontSize = 14.sp,
-        color = grayTint
-      )
     }
-    Row(
-      modifier = Modifier.padding(start = 40.dp),
-      verticalAlignment = Alignment.CenterVertically
+
+    Text(
+      "  ${showCount(note.boosts?.size)}",
+      fontSize = 14.sp,
+      color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+      modifier = Modifier.weight(1f)
+    )
+
+    IconButton(
+      modifier = Modifier.then(Modifier.size(24.dp)),
+      onClick = { if (account.isWriteable()) reactTo(note) }
     ) {
-      IconButton(
-        modifier = Modifier.then(Modifier.size(24.dp)),
-        onClick = { if (account.isWriteable()) boost(note) }
-      ) {
-        if (note.isBoostedBy(account.userProfile())) {
-          Icon(
-            painter = painterResource(R.drawable.ic_retweeted),
-            null,
-            modifier = Modifier.size(20.dp),
-            tint = Color.Unspecified
-          )
-        } else {
-          Icon(
-            painter = painterResource(R.drawable.ic_retweet),
-            null,
-            modifier = Modifier.size(20.dp),
-            tint = grayTint
-          )
-        }
+      if (note.isReactedBy(account.userProfile())) {
+        Icon(
+          painter = painterResource(R.drawable.ic_liked),
+          null,
+          modifier = Modifier.size(16.dp),
+          tint = Color.Unspecified
+        )
+      } else {
+        Icon(
+          painter = painterResource(R.drawable.ic_like),
+          null,
+          modifier = Modifier.size(16.dp),
+          tint = grayTint
+        )
       }
-
-      Text(
-        "  ${showCount(note.boosts?.size)}",
-        fontSize = 14.sp,
-        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-      )
     }
-    Row(
-      modifier = Modifier.padding(start = 40.dp),
-      verticalAlignment = Alignment.CenterVertically
-    ) {
-      IconButton(
-        modifier = Modifier.then(Modifier.size(24.dp)),
-        onClick = { if (account.isWriteable()) reactTo(note) }
-      ) {
-        if (note.isReactedBy(account.userProfile())) {
-          Icon(
-            painter = painterResource(R.drawable.ic_liked),
-            null,
-            modifier = Modifier.size(16.dp),
-            tint = Color.Unspecified
-          )
-        } else {
-          Icon(
-            painter = painterResource(R.drawable.ic_like),
-            null,
-            modifier = Modifier.size(16.dp),
-            tint = grayTint
-          )
-        }
-      }
 
-      Text(
-        "  ${showCount(note.reactions?.size)}",
-        fontSize = 14.sp,
-        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-      )
-    }
+    Text(
+      "  ${showCount(note.reactions?.size)}",
+      fontSize = 14.sp,
+      color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+      modifier = Modifier.weight(1f)
+    )
+
+    /*
     Row(
       modifier = Modifier.padding(start = 40.dp),
       verticalAlignment = Alignment.CenterVertically
@@ -133,6 +133,8 @@ fun ReactionsRow(note: Note, account: Account, boost: (Note) -> Unit, reactTo: (
         )
       }
     }
+
+     */
   }
 }
 
