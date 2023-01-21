@@ -89,11 +89,15 @@ class Note(val idHex: String) {
     }
 
     fun isReactedBy(user: User): Boolean {
-        return reactions.any { it.author == user }
+        return synchronized(reactions) {
+            reactions.any { it.author == user }
+        }
     }
 
     fun isBoostedBy(user: User): Boolean {
-        return boosts.any { it.author == user }
+        return synchronized(boosts) {
+            boosts.any { it.author == user }
+        }
     }
 
     // Observers line up here.
