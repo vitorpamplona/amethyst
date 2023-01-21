@@ -28,46 +28,42 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalPagerApi::class)
 @Composable
 fun ChatroomListScreen(accountViewModel: AccountViewModel, navController: NavController) {
-    val account by accountViewModel.accountLiveData.observeAsState()
+    val pagerState = rememberPagerState()
+    val coroutineScope = rememberCoroutineScope()
 
-    if (account != null) {
-        val pagerState = rememberPagerState()
-        val coroutineScope = rememberCoroutineScope()
-
-        Column(Modifier.fillMaxHeight()) {
-            Column(
-                modifier = Modifier.padding(vertical = 0.dp)
+    Column(Modifier.fillMaxHeight()) {
+        Column(
+            modifier = Modifier.padding(vertical = 0.dp)
+        ) {
+            TabRow(
+                selectedTabIndex = pagerState.currentPage,
+                indicator = { tabPositions ->
+                    TabRowDefaults.Indicator(
+                        Modifier.pagerTabIndicatorOffset(pagerState, tabPositions),
+                        color = MaterialTheme.colors.primary
+                    )
+                },
             ) {
-                TabRow(
-                    selectedTabIndex = pagerState.currentPage,
-                    indicator = { tabPositions ->
-                        TabRowDefaults.Indicator(
-                            Modifier.pagerTabIndicatorOffset(pagerState, tabPositions),
-                            color = MaterialTheme.colors.primary
-                        )
-                    },
-                ) {
-                    Tab(
-                        selected = pagerState.currentPage == 0,
-                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
-                        text = {
-                            Text(text = "Known")
-                        }
-                    )
-
-                    Tab(
-                        selected = pagerState.currentPage == 1,
-                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
-                        text = {
-                            Text(text = "New Requests")
-                        }
-                    )
-                }
-                HorizontalPager(count = 2, state = pagerState) {
-                    when (pagerState.currentPage) {
-                        0 -> TabKnown(accountViewModel, navController)
-                        1 -> TabNew(accountViewModel, navController)
+                Tab(
+                    selected = pagerState.currentPage == 0,
+                    onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
+                    text = {
+                        Text(text = "Known")
                     }
+                )
+
+                Tab(
+                    selected = pagerState.currentPage == 1,
+                    onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
+                    text = {
+                        Text(text = "New Requests")
+                    }
+                )
+            }
+            HorizontalPager(count = 2, state = pagerState) {
+                when (pagerState.currentPage) {
+                    0 -> TabKnown(accountViewModel, navController)
+                    1 -> TabNew(accountViewModel, navController)
                 }
             }
         }

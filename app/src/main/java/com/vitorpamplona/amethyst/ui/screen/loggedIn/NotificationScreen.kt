@@ -16,17 +16,13 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
 fun NotificationScreen(accountViewModel: AccountViewModel, navController: NavController) {
-    val account by accountViewModel.accountLiveData.observeAsState()
+    val feedViewModel: CardFeedViewModel = viewModel { CardFeedViewModel( NostrNotificationDataSource ) }
 
-    if (account != null) {
-        val feedViewModel: CardFeedViewModel = viewModel { CardFeedViewModel( NostrNotificationDataSource ) }
-
-        Column(Modifier.fillMaxHeight()) {
-            Column(
-                modifier = Modifier.padding(vertical = 0.dp)
-            ) {
-                CardFeedView(feedViewModel, accountViewModel = accountViewModel, navController)
-            }
+    Column(Modifier.fillMaxHeight()) {
+        Column(
+            modifier = Modifier.padding(vertical = 0.dp)
+        ) {
+            CardFeedView(feedViewModel, accountViewModel = accountViewModel, navController)
         }
     }
 }

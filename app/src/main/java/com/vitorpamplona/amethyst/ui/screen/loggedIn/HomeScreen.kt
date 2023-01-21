@@ -22,21 +22,17 @@ import java.lang.System.currentTimeMillis
 
 @Composable
 fun HomeScreen(accountViewModel: AccountViewModel, navController: NavController) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val feedViewModel: NostrHomeFeedViewModel = viewModel()
 
-    if (accountState != null) {
-        val feedViewModel: NostrHomeFeedViewModel = viewModel()
+    LaunchedEffect(Unit) {
+        feedViewModel.refresh()
+    }
 
-        LaunchedEffect(Unit) {
-            feedViewModel.refresh()
-        }
-
-        Column(Modifier.fillMaxHeight()) {
-            Column(
-                modifier = Modifier.padding(vertical = 0.dp)
-            ) {
-                FeedView(feedViewModel, accountViewModel, navController)
-            }
+    Column(Modifier.fillMaxHeight()) {
+        Column(
+            modifier = Modifier.padding(vertical = 0.dp)
+        ) {
+            FeedView(feedViewModel, accountViewModel, navController)
         }
     }
 }
