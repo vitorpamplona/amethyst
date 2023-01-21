@@ -80,6 +80,7 @@ object LocalCache {
       }
 
       oldUser.updateUserInfo(newUser, event.createdAt)
+      oldUser.latestMetadata = event
     } else {
       //Log.d("MT","Relay sent a previous Metadata Event ${oldUser.toBestDisplayName()} ${formattedDateTime(event.createdAt)} > ${formattedDateTime(oldUser.updatedAt)}")
     }
@@ -147,7 +148,7 @@ object LocalCache {
         event.createdAt
       )
 
-      user.lastestContactList = event
+      user.latestContactList = event
     }
 
     refreshObservers()

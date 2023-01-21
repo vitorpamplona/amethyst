@@ -30,7 +30,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,20 +54,18 @@ import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.google.accompanist.pager.rememberPagerState
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.toNote
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileFollowersDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileFollowsDataSource
+import com.vitorpamplona.amethyst.ui.actions.NewChannelView
+import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.launch
 import nostr.postr.toNpub
-
-data class TabRowItem(
-    val title: String,
-    val screen: @Composable () -> Unit,
-)
 
 @OptIn(ExperimentalPagerApi::class)
 @Composable
@@ -75,7 +76,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
     val accountUserState by account.userProfile().live.observeAsState()
     val accountUser = accountUserState?.user
 
-    if (userId != null && account != null && accountUser != null) {
+    if (userId != null && accountUser != null) {
         DisposableEffect(account) {
             NostrUserProfileDataSource.loadUserProfile(userId)
             NostrUserProfileFollowersDataSource.loadUserProfile(userId)
@@ -93,6 +94,8 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
         val userState by baseUser.live.observeAsState()
         val user = userState?.user ?: return
 
+        println("AAA Surface recompose")
+
         Surface(
             modifier = Modifier.fillMaxWidth(),
             color = MaterialTheme.colors.background
@@ -105,14 +108,18 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                             model = banner,
                             contentDescription = "Profile Image",
                             contentScale = ContentScale.FillWidth,
-                            modifier = Modifier.fillMaxWidth().height(125.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(125.dp)
                         )
                     } else {
                         Image(
                             painter = painterResource(R.drawable.profile_banner),
                             contentDescription = "Profile Banner",
                             contentScale = ContentScale.FillWidth,
-                            modifier = Modifier.fillMaxWidth().height(125.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(125.dp)
                         )
                     }
 
@@ -141,9 +148,9 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                             NPubCopyButton(user)
 
                             if (accountUser == user) {
-                                EditButton()
+                                EditButton(account)
                             } else {
-                                if (accountUser.isFollowing(user) == true) {
+                                if (accountUser.isFollowing(user)) {
                                     UnfollowButton { account.unfollow(user) }
                                 } else {
                                     FollowButton { account.follow(user) }
@@ -300,10 +307,17 @@ private fun MessageButton(user: User, navController: NavController) {
 }
 
 @Composable
-private fun EditButton() {
+private fun EditButton(account: Account) {
+    var wantsToEdit by remember {
+        mutableStateOf(false)
+    }
+
+    if (wantsToEdit)
+        NewUserMetadataView({ wantsToEdit = false }, account)
+
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
-        onClick = {},
+        onClick = { wantsToEdit = true },
         shape = RoundedCornerShape(20.dp),
         colors = ButtonDefaults
             .buttonColors(

@@ -9,11 +9,13 @@ import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import java.util.Date
 import nostr.postr.Contact
 import nostr.postr.Persona
 import nostr.postr.Utils
 import nostr.postr.events.ContactListEvent
+import nostr.postr.events.Event
+import nostr.postr.events.MetadataEvent
 import nostr.postr.events.PrivateDmEvent
 import nostr.postr.events.TextNoteEvent
 import nostr.postr.toHex
@@ -36,6 +38,23 @@ class Account(val loggedIn: Persona, val followingChannels: MutableSet<String> =
 
   fun isWriteable(): Boolean {
     return loggedIn.privKey != null
+  }
+
+  fun sendNewUserMetadata(toString: String) {
+    if (!isWriteable()) return
+
+    loggedIn.privKey?.let {
+      val createdAt = Date().time / 1000
+      val content = toString
+      val pubKey = Utils.pubkeyCreate(it)
+      val tags = listOf<List<String>>()
+      val id = Event.generateId(pubKey, createdAt, MetadataEvent.kind, tags, content)
+      val sig = Utils.sign(id, it)
+      val event = MetadataEvent(id, pubKey, createdAt, tags, content, sig)
+
+      Client.send(event)
+      LocalCache.consume(event)
+    }
   }
 
   fun reactTo(note: Note) {
@@ -72,7 +91,7 @@ class Account(val loggedIn: Persona, val followingChannels: MutableSet<String> =
   fun follow(user: User) {
     if (!isWriteable()) return
 
-    val lastestContactList = userProfile().lastestContactList
+    val lastestContactList = userProfile().latestContactList
     val event = if (lastestContactList != null) {
       ContactListEvent.create(lastestContactList.follows.plus(Contact(user.pubkeyHex, null)), lastestContactList.relayUse, loggedIn.privKey!!)
     } else {
@@ -87,7 +106,7 @@ class Account(val loggedIn: Persona, val followingChannels: MutableSet<String> =
   fun unfollow(user: User) {
     if (!isWriteable()) return
 
-    val lastestContactList = userProfile().lastestContactList
+    val lastestContactList = userProfile().latestContactList
     if (lastestContactList != null) {
       val event = ContactListEvent.create(lastestContactList.follows.filter { it.pubKeyHex != user.pubkeyHex }, lastestContactList.relayUse, loggedIn.privKey!!)
       Client.send(event)
@@ -221,6 +240,8 @@ class Account(val loggedIn: Persona, val followingChannels: MutableSet<String> =
   private fun refreshObservers() {
     live.refresh()
   }
+
+
 }
 
 class AccountLiveData(private val account: Account): LiveData<AccountState>(AccountState(account)) {

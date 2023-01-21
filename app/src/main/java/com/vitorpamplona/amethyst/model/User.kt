@@ -1,9 +1,6 @@
 package com.vitorpamplona.amethyst.model
 
-import android.os.Handler
-import android.os.Looper
 import androidx.lifecycle.LiveData
-import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import java.util.Collections
@@ -14,6 +11,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import nostr.postr.events.ContactListEvent
+import nostr.postr.events.MetadataEvent
 
 class User(val pubkey: ByteArray) {
     val pubkeyHex = pubkey.toHexKey()
@@ -24,7 +22,8 @@ class User(val pubkey: ByteArray) {
     var updatedMetadataAt: Long = 0;
     var updatedFollowsAt: Long = 0;
 
-    var lastestContactList: ContactListEvent? = null
+    var latestContactList: ContactListEvent? = null
+    var latestMetadata: MetadataEvent? = null
 
     val notes = Collections.synchronizedSet(mutableSetOf<Note>())
     val follows = Collections.synchronizedSet(mutableSetOf<User>())
