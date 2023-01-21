@@ -298,7 +298,12 @@ object LocalCache {
 
     val author = getOrCreateUser(event.pubKey)
     val mentions = Collections.synchronizedList(event.mentions.map { getOrCreateUser(decodePublicKey(it)) })
-    val replyTo = Collections.synchronizedList(event.replyTos.map { channel.getOrCreateNote(it) }.toMutableList())
+    val replyTo = Collections.synchronizedList(
+      event.replyTos
+        .map { channel.getOrCreateNote(it) }
+        .filter { it.event !is ChannelCreateEvent }
+        .toMutableList()
+    )
 
     note.channel = channel
     note.loadEvent(event, author, mentions, replyTo)
