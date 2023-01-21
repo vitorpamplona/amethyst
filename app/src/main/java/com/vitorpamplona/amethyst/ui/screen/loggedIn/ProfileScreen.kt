@@ -94,8 +94,6 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
         val userState by baseUser.live.observeAsState()
         val user = userState?.user ?: return
 
-        println("AAA Surface recompose")
-
         Surface(
             modifier = Modifier.fillMaxWidth(),
             color = MaterialTheme.colors.background

@@ -88,6 +88,7 @@ class Relay(
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                socket?.close(1000, "Normal close")
                 // Failures disconnect the relay. 
                 socket = null
                 //println("Relay onFailure ${url}, ${response?.message}")

@@ -35,7 +35,7 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
     LaunchedEffect(Unit) {
         postViewModel.load(account)
     }
-    
+
     Dialog(
         onDismissRequest = { onClose() },
         properties = DialogProperties(
