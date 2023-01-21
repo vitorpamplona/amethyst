@@ -23,3 +23,5 @@
 -keep class fr.acinq.secp256k1.jni.** { *; }
 # For the NostrPostr library
 -keep class nostr.postr.** { *; }
+-keep class com.vitorpamplona.amethyst.model.** { *; }
+-keep class com.vitorpamplona.amethyst.service.** { *; }
