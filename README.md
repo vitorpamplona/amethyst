@@ -19,7 +19,7 @@ Amethyst brings the best social network to your Android phone. Just insert your 
 - [x] Public Chats (NIP-28)
 - [ ] Notification Bubbles
 - [ ] Infinity Scroll 
-- [ ] Dropdown to Link Users/Posts when writting
+- [ ] Dropdown to Link Users/Posts when writing
 - [ ] Identity Verification (NIP-05)
 - [ ] Event Delegation (NIP-09)
 - [ ] Filter messages from Unknown People
