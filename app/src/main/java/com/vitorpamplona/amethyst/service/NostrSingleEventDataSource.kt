@@ -27,18 +27,18 @@ object NostrSingleEventDataSource: NostrDataSource<Note>("SingleEventFeed") {
 
   fun createLoadEventsIfNotLoadedFilter(): JsonFilter? {
     val directEventsToLoad = eventsToWatch
-      .mapNotNull { LocalCache.notes[it] }
+      .map { LocalCache.getOrCreateNote(it) }
       .filter { it.event == null }
 
     val threadingEventsToLoad = eventsToWatch
-      .mapNotNull { LocalCache.notes[it] }
+      .map { LocalCache.getOrCreateNote(it) }
       .mapNotNull { it.replyTo }
       .flatten()
       .filter { it.event == null }
 
     val interestedEvents =
       (directEventsToLoad + threadingEventsToLoad)
-      .map { it.idHex }
+      .map { it.idHex }.toSet()
 
     if (interestedEvents.isEmpty()) {
       return null
@@ -47,7 +47,7 @@ object NostrSingleEventDataSource: NostrDataSource<Note>("SingleEventFeed") {
     // downloads linked events to this event.
     return JsonFilter(
       kinds = listOf(TextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind),
-      ids = interestedEvents
+      ids = interestedEvents.toList()
     )
   }
 
@@ -55,9 +55,11 @@ object NostrSingleEventDataSource: NostrDataSource<Note>("SingleEventFeed") {
   val loadEventsChannel = requestNewChannel()
 
   override fun feed(): List<Note> {
-    return eventsToWatch.map {
-      LocalCache.notes[it]
-    }.filterNotNull()
+    return synchronized(eventsToWatch) {
+      eventsToWatch.map {
+        LocalCache.notes[it]
+      }.filterNotNull()
+    }
   }
 
   override fun updateChannelFilters() {
