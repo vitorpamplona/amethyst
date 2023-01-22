@@ -26,8 +26,6 @@ fun HexKey.toDisplayHexKey(): String {
 }
 
 fun decodePublicKey(key: String): ByteArray {
-  val pattern = Pattern.compile(".+@.+\\.[a-z]+")
-
   return if (key.startsWith("nsec")) {
     Persona(privKey = key.bechToBytes()).pubKey
   } else if (key.startsWith("npub")) {
