@@ -63,6 +63,10 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
                         fontWeight = FontWeight.Bold,
                         modifier = it
                     )
+                    Text(
+                        " Public Chat",
+                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    )
                 },
                 channelLastTime = note.event?.createdAt,
                 channelLastContent = "${author?.toBestDisplayName()}: " + description,
