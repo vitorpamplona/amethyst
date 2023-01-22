@@ -25,6 +25,7 @@ import androidx.compose.material.TextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -48,6 +49,8 @@ import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
+import com.vitorpamplona.amethyst.service.NostrThreadDataSource
 import com.vitorpamplona.amethyst.ui.note.ChannelName
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -78,9 +81,17 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
     val searchResultsNotes = remember { mutableStateOf<List<Note>>(emptyList()) }
     val searchResultsChannels = remember { mutableStateOf<List<Channel>>(emptyList()) }
 
+    val onlineSearch = NostrSearchEventOrUserDataSource
+
     val isTrailingIconVisible by remember {
         derivedStateOf {
             searchValue.value.text.isNotBlank()
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            NostrSearchEventOrUserDataSource.clear()
         }
     }
 
@@ -96,6 +107,10 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
             value = searchValue.value,
             onValueChange = {
                 searchValue.value = it
+
+                if (it.text.removePrefix("npub").removePrefix("note").length >= 4)
+                    onlineSearch.search(it.text)
+
                 searchResults.value = LocalCache.findUsersStartingWith(it.text)
                 searchResultsNotes.value = LocalCache.findNotesStartingWith(it.text)
                 searchResultsChannels.value = LocalCache.findChannelsStartingWith(it.text)
@@ -128,6 +143,8 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
                             searchResults.value = emptyList()
                             searchResultsChannels.value = emptyList()
                             searchResultsNotes.value = emptyList()
+
+                            onlineSearch.clear()
                         }
                     ) {
                         Icon(
@@ -148,13 +165,13 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
                 bottom = 10.dp
             )
         ) {
-            itemsIndexed(searchResults.value, key = { _, item -> item.pubkeyHex }) { index, item ->
+            itemsIndexed(searchResults.value, key = { _, item -> "u"+item.pubkeyHex }) { index, item ->
                 UserLine(item) {
                     navController.navigate("User/${item.pubkeyHex}")
                 }
             }
 
-            itemsIndexed(searchResultsChannels.value, key = { _, item -> item.idHex }) { index, item ->
+            itemsIndexed(searchResultsChannels.value, key = { _, item -> "c"+item.idHex }) { index, item ->
                 ChannelName(
                     channelPicture = item.profilePicture(),
                     channelTitle = {
@@ -168,7 +185,7 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
                     onClick = { navController.navigate("Channel/${item.idHex}") })
             }
 
-            itemsIndexed(searchResultsNotes.value, key = { _, item -> item.idHex }) { index, item ->
+            itemsIndexed(searchResultsNotes.value, key = { _, item -> "n"+item.idHex }) { index, item ->
                 NoteCompose(item, accountViewModel = accountViewModel, navController = navController)
             }
         }
