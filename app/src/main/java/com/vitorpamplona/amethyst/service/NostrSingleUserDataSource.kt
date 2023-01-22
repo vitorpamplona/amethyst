@@ -2,11 +2,12 @@ package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
 import java.util.Collections
 import nostr.postr.JsonFilter
 import nostr.postr.events.MetadataEvent
 
-object NostrSingleUserDataSource: NostrDataSource<Note>("SingleUserFeed") {
+object NostrSingleUserDataSource: NostrDataSource<User>("SingleUserFeed") {
   var usersToWatch = setOf<String>()
 
   fun createUserFilter(): List<JsonFilter>? {
@@ -15,7 +16,7 @@ object NostrSingleUserDataSource: NostrDataSource<Note>("SingleUserFeed") {
     return usersToWatch.map {
       JsonFilter(
         kinds = listOf(MetadataEvent.kind),
-        authors = listOf(it.substring(0, 8)),
+        authors = listOf(it),
         limit = 1
       )
     }
@@ -23,10 +24,12 @@ object NostrSingleUserDataSource: NostrDataSource<Note>("SingleUserFeed") {
 
   val userChannel = requestNewChannel()
 
-  override fun feed(): List<Note> {
-    return usersToWatch.map {
-      LocalCache.notes[it]
-    }.filterNotNull()
+  override fun feed(): List<User> {
+    return synchronized(usersToWatch) {
+      usersToWatch.map {
+        LocalCache.users[it]
+      }.filterNotNull()
+    }
   }
 
   override fun updateChannelFilters() {
