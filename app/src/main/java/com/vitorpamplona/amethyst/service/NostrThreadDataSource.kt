@@ -44,9 +44,11 @@ object NostrThreadDataSource: NostrDataSource<Note>("SingleThreadFeed") {
   val loadEventsChannel = requestNewChannel()
 
   override fun feed(): List<Note> {
-    return eventsToWatch.map {
-      LocalCache.notes[it]
-    }.filterNotNull()
+    return synchronized(eventsToWatch) {
+      eventsToWatch.map {
+        LocalCache.notes[it]
+      }.filterNotNull()
+    }
   }
 
   override fun updateChannelFilters() {
