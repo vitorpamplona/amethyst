@@ -16,6 +16,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
@@ -58,8 +59,10 @@ fun UserCompose(baseUser: User, accountViewModel: AccountViewModel, navControlle
                 }
 
                 Text(
-                    user.info.about?.take(100) ?: "",
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    user.info.about ?: "",
+                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 
