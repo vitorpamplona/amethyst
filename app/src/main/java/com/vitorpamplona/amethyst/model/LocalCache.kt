@@ -144,7 +144,7 @@ object LocalCache {
             e.printStackTrace()
             null
           }
-        }.filterNotNull(),
+        }.filterNotNull().toSet(),
         event.createdAt
       )
 

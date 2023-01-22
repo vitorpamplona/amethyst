@@ -49,7 +49,7 @@ class User(val pubkey: ByteArray) {
         return info.picture ?: "https://robohash.org/${pubkeyHex}.png"
     }
 
-    fun follow(user: User) {
+    fun follow(user: User, followedAt: Long) {
         follows.add(user)
         user.followers.add(this)
 
@@ -78,7 +78,7 @@ class User(val pubkey: ByteArray) {
         live.refresh()
     }
 
-    fun updateFollows(newFollows: List<User>, updateAt: Long) {
+    fun updateFollows(newFollows: Set<User>, updateAt: Long) {
         val toBeAdded = synchronized(follows) {
             newFollows - follows
         }
@@ -86,7 +86,7 @@ class User(val pubkey: ByteArray) {
             follows - newFollows
         }
         toBeAdded.forEach {
-            follow(it)
+            follow(it, updateAt)
         }
         toBeRemoved.forEach {
             unfollow(it)
