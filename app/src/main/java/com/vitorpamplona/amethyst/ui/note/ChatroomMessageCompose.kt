@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -141,15 +142,16 @@ fun ChatroomMessageCompose(baseNote: Note, innerQuote: Boolean = false, accountV
                             }
 
                             val replyTo = note.replyTo
-                            if (replyTo != null && replyTo.isNotEmpty()) {
+                            if (!innerQuote && replyTo != null && replyTo.isNotEmpty()) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    replyTo.mapIndexed { index, note ->
-                                        ChatroomMessageCompose(
-                                            note,
-                                            innerQuote = true,
-                                            accountViewModel = accountViewModel,
-                                            navController = navController
-                                        )
+                                    replyTo.toSet().mapIndexed { index, note ->
+                                        if (note.event != null)
+                                            ChatroomMessageCompose(
+                                                note,
+                                                innerQuote = true,
+                                                accountViewModel = accountViewModel,
+                                                navController = navController
+                                            )
                                     }
                                 }
                             }
