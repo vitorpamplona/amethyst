@@ -65,6 +65,8 @@ class NewRelayListViewModel: ViewModel() {
     }
 
     fun addRelay(relay: Relay) {
+        if (relays.value.filter { it.url == relay.url }.isNotEmpty()) return
+
         _relays.update {
             it.plus(relay)
         }
