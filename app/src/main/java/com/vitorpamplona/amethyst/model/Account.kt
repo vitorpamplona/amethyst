@@ -112,10 +112,17 @@ class Account(val loggedIn: Persona, val followingChannels: MutableSet<String> =
 
     val lastestContactList = userProfile().latestContactList
     val event = if (lastestContactList != null) {
-      ContactListEvent.create(lastestContactList.follows.plus(Contact(user.pubkeyHex, null)), lastestContactList.relayUse, loggedIn.privKey!!)
+      ContactListEvent.create(
+        lastestContactList.follows.plus(Contact(user.pubkeyHex, null)),
+        userProfile().relays,
+        loggedIn.privKey!!)
     } else {
       val relays = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) }
-      ContactListEvent.create(listOf(Contact(user.pubkeyHex, null)), relays, loggedIn.privKey!!)
+      ContactListEvent.create(
+        listOf(Contact(user.pubkeyHex, null)),
+        relays,
+        loggedIn.privKey!!
+      )
     }
 
     Client.send(event)
@@ -127,7 +134,10 @@ class Account(val loggedIn: Persona, val followingChannels: MutableSet<String> =
 
     val lastestContactList = userProfile().latestContactList
     if (lastestContactList != null) {
-      val event = ContactListEvent.create(lastestContactList.follows.filter { it.pubKeyHex != user.pubkeyHex }, lastestContactList.relayUse, loggedIn.privKey!!)
+      val event = ContactListEvent.create(
+        lastestContactList.follows.filter { it.pubKeyHex != user.pubkeyHex },
+        userProfile().relays,
+        loggedIn.privKey!!)
       Client.send(event)
       LocalCache.consume(event)
     }
