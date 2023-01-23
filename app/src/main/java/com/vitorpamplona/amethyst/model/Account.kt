@@ -260,7 +260,6 @@ class Account(val loggedIn: Persona, val followingChannels: MutableSet<String> =
   init {
     userProfile().subscribe(object: User.Listener() {
       override fun onRelayChange() {
-        println("Updating Relays AAA Account")
         Client.disconnect()
         Client.connect(activeRelays() ?: Constants.defaultRelays)
         RelayPool.requestAndWatch()

@@ -150,13 +150,8 @@ object LocalCache {
         event.createdAt
       )
 
-      if (user.pubkeyHex == "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c")
-        println("Updating Relays AAA ${user.toBestDisplayName()} ${event.content} ${formattedDateTime(event.createdAt)}")
-
       try {
         if (event.content.isNotEmpty()) {
-          if (user.pubkeyHex == "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c")
-            println("Updating Relays AAA 1 ${user.toBestDisplayName()} ${event.content}")
           val relays: Map<String, ContactListEvent.ReadWrite> =
             Event.gson.fromJson(
               event.content,
@@ -165,8 +160,6 @@ object LocalCache {
           user.updateRelays(relays)
         }
       } catch (e: Exception) {
-        if (user.pubkeyHex == "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c")
-          println("Updating Relays AAA 2 for ${user.bestUsername()} ${e.message}")
         e.printStackTrace()
       }
 
