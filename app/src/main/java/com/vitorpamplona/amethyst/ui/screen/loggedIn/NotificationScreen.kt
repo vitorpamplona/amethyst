@@ -18,6 +18,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 fun NotificationScreen(accountViewModel: AccountViewModel, navController: NavController) {
     val feedViewModel: CardFeedViewModel = viewModel { CardFeedViewModel( NostrNotificationDataSource ) }
 
+    LaunchedEffect(Unit) {
+        feedViewModel.refresh()
+    }
+
     Column(Modifier.fillMaxHeight()) {
         Column(
             modifier = Modifier.padding(vertical = 0.dp)

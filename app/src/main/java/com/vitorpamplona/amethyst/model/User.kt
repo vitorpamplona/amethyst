@@ -182,7 +182,7 @@ class User(val pubkey: ByteArray) {
         if (handlerWaiting) return
 
         handlerWaiting = true
-        val scope = CoroutineScope(Job() + Dispatchers.Main)
+        val scope = CoroutineScope(Job() + Dispatchers.Default)
         scope.launch {
             delay(100)
             live.refresh()

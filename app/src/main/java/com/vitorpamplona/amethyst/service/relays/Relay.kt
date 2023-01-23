@@ -1,7 +1,11 @@
 package com.vitorpamplona.amethyst.service.relays
 
+import android.util.Log
 import com.google.gson.JsonElement
+import com.vitorpamplona.amethyst.model.LocalCache
+import nostr.postr.events.ContactListEvent
 import nostr.postr.events.Event
+import nostr.postr.toNpub
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -34,7 +38,6 @@ class Relay(
     }
 
     fun requestAndWatch() {
-        println("Connecting with ${url}")
         val request = Request.Builder().url(url).build()
         val listener = object : WebSocketListener() {
 
@@ -98,8 +101,8 @@ class Relay(
                 socket?.close(1000, "Normal close")
                 // Failures disconnect the relay. 
                 socket = null
-                //println("Relay onFailure ${url}, ${response?.message}")
-                t.printStackTrace()
+                Log.w("Relay", "Relay onFailure ${url}, ${response?.message}")
+                //t.printStackTrace()
                 listeners.forEach {
                     it.onError(this@Relay, "", Error("WebSocket Failure. Response: ${response}. Exception: ${t.message}", t))
                 }

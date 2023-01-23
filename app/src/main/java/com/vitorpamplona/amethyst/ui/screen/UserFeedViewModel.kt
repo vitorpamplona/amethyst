@@ -33,7 +33,7 @@ open class UserFeedViewModel(val dataSource: NostrDataSource<User>): ViewModel()
     val feedContent = _feedContent.asStateFlow()
 
     fun refresh() {
-        val scope = CoroutineScope(Job() + Dispatchers.IO)
+        val scope = CoroutineScope(Job() + Dispatchers.Default)
         scope.launch {
             refreshSuspended()
         }
@@ -64,16 +64,17 @@ open class UserFeedViewModel(val dataSource: NostrDataSource<User>): ViewModel()
     }
 
     var handlerWaiting = false
-    @Synchronized
     fun invalidateData() {
-        if (handlerWaiting) return
+        synchronized(handlerWaiting) {
+            if (handlerWaiting) return
 
-        handlerWaiting = true
-        val scope = CoroutineScope(Job() + Dispatchers.IO)
-        scope.launch {
-            delay(100)
-            refresh()
-            handlerWaiting = false
+            handlerWaiting = true
+            val scope = CoroutineScope(Job() + Dispatchers.Default)
+            scope.launch {
+                delay(100)
+                refresh()
+                handlerWaiting = false
+            }
         }
     }
 

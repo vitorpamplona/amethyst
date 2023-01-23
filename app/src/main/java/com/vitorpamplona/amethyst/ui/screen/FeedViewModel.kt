@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -63,7 +64,7 @@ abstract class FeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel()
     }
 
     fun refresh() {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.Default) {
             val notes = newListFromDataSource()
 
             val oldNotesState = feedContent.value
@@ -90,16 +91,17 @@ abstract class FeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel()
     }
 
     var handlerWaiting = false
-    @Synchronized
     fun invalidateData() {
-        if (handlerWaiting) return
+        synchronized(handlerWaiting) {
+            if (handlerWaiting) return
 
-        handlerWaiting = true
-        val scope = CoroutineScope(Job() + Dispatchers.IO)
-        scope.launch {
-            delay(100)
-            refresh()
-            handlerWaiting = false
+            handlerWaiting = true
+            val scope = CoroutineScope(Job() + Dispatchers.Default)
+            scope.launch {
+                delay(100)
+                refresh()
+                handlerWaiting = false
+            }
         }
     }
 

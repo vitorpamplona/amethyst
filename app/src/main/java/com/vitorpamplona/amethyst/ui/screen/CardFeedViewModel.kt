@@ -27,7 +27,7 @@ class CardFeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel() {
     private var lastNotes: List<Note>? = null
 
     fun refresh() {
-        val scope = CoroutineScope(Job() + Dispatchers.IO)
+        val scope = CoroutineScope(Job() + Dispatchers.Default)
         scope.launch {
             refreshSuspended()
         }
@@ -92,16 +92,17 @@ class CardFeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel() {
     }
 
     var handlerWaiting = false
-    @Synchronized
     fun invalidateData() {
-        if (handlerWaiting) return
+        synchronized(handlerWaiting) {
+            if (handlerWaiting) return
 
-        handlerWaiting = true
-        val scope = CoroutineScope(Job() + Dispatchers.IO)
-        scope.launch {
-            delay(100)
-            refresh()
-            handlerWaiting = false
+            handlerWaiting = true
+            val scope = CoroutineScope(Job() + Dispatchers.Default)
+            scope.launch {
+                delay(100)
+                refresh()
+                handlerWaiting = false
+            }
         }
     }
 
