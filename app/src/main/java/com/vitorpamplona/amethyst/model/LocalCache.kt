@@ -142,7 +142,7 @@ object LocalCache {
             getOrCreateUser(pubKey)
           } catch (e: Exception) {
             println("Could not parse Hex key: ${it.pubKeyHex}")
-            println(event.toJson())
+            println("UpdateFollows: " + event.toJson())
             e.printStackTrace()
             null
           }
@@ -165,8 +165,6 @@ object LocalCache {
 
       user.latestContactList = event
     }
-
-    refreshObservers()
   }
 
   fun consume(event: PrivateDmEvent) {
@@ -272,12 +270,12 @@ object LocalCache {
         val note = oldChannel.getOrCreateNote(event.id.toHex())
         note.channel = oldChannel
         note.loadEvent(event, author, emptyList(), mutableListOf())
+
+        refreshObservers()
       }
     } else {
       // older data, does nothing
     }
-
-    refreshObservers()
   }
   fun consume(event: ChannelMetadataEvent) {
     //Log.d("MT", "New User ${users.size} ${event.contactMetaData.name}")
@@ -293,12 +291,12 @@ object LocalCache {
         val note = oldChannel.getOrCreateNote(event.id.toHex())
         note.channel = oldChannel
         note.loadEvent(event, author, emptyList(), mutableListOf())
+
+        refreshObservers()
       }
     } else {
       //Log.d("MT","Relay sent a previous Metadata Event ${oldUser.toBestDisplayName()} ${formattedDateTime(event.createdAt)} > ${formattedDateTime(oldUser.updatedAt)}")
     }
-
-    refreshObservers()
   }
 
   fun consume(event: ChannelMessageEvent) {
