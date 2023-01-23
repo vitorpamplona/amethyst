@@ -15,6 +15,8 @@ import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.decode.SvgDecoder
 import com.vitorpamplona.amethyst.KeyStorage
+import com.vitorpamplona.amethyst.ServiceManager
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
@@ -68,24 +70,13 @@ class MainActivity : ComponentActivity() {
 
   override fun onResume() {
     super.onResume()
-    Client.connect()
+
+    ServiceManager.start()
   }
 
   override fun onPause() {
-    NostrAccountDataSource.stop()
-    NostrHomeDataSource.stop()
-    NostrChannelDataSource.stop()
-    NostrChatroomListDataSource.stop()
-    NostrUserProfileDataSource.stop()
-    NostrUserProfileFollowersDataSource.stop()
-    NostrUserProfileFollowsDataSource.stop()
+    ServiceManager.pause()
 
-    NostrGlobalDataSource.stop()
-    NostrNotificationDataSource.stop()
-    NostrSingleEventDataSource.stop()
-    NostrSingleUserDataSource.stop()
-    NostrThreadDataSource.stop()
-    Client.disconnect()
     super.onPause()
   }
 }

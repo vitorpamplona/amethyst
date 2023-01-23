@@ -2,6 +2,8 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
+import com.vitorpamplona.amethyst.service.relays.Client
+import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
@@ -11,6 +13,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import nostr.postr.events.ContactListEvent
+import nostr.postr.events.Event
 import nostr.postr.events.MetadataEvent
 
 class User(val pubkey: ByteArray) {
@@ -27,7 +30,10 @@ class User(val pubkey: ByteArray) {
 
     val notes = Collections.synchronizedSet(mutableSetOf<Note>())
     val follows = Collections.synchronizedSet(mutableSetOf<User>())
+
     val taggedPosts = Collections.synchronizedSet(mutableSetOf<Note>())
+
+    var relays: Map<String, ContactListEvent.ReadWrite>? = null
 
     val followers = Collections.synchronizedSet(mutableSetOf<User>())
     val messages = ConcurrentHashMap<User, MutableSet<Note>>()
@@ -55,6 +61,10 @@ class User(val pubkey: ByteArray) {
 
         invalidateData()
         user.invalidateData()
+
+        listeners.forEach {
+            it.onFollowsChange()
+        }
     }
     fun unfollow(user: User) {
         follows.remove(user)
@@ -62,6 +72,15 @@ class User(val pubkey: ByteArray) {
 
         invalidateData()
         user.invalidateData()
+
+        updateSubscribers {
+            it.onFollowsChange()
+        }
+    }
+
+    fun addTaggedPost(note: Note) {
+        taggedPosts.add(note)
+        updateSubscribers { it.onNewPosts() }
     }
 
     @Synchronized
@@ -76,6 +95,7 @@ class User(val pubkey: ByteArray) {
     fun addMessage(user: User, msg: Note) {
         getOrCreateChannel(user).add(msg)
         live.refresh()
+        updateSubscribers { it.onNewMessage() }
     }
 
     fun updateFollows(newFollows: Set<User>, updateAt: Long) {
@@ -95,6 +115,15 @@ class User(val pubkey: ByteArray) {
         updatedFollowsAt = updateAt
     }
 
+    fun updateRelays(relayUse: Map<String, ContactListEvent.ReadWrite>) {
+        if (relays != relayUse) {
+            relays = relayUse
+            listeners.forEach {
+                it.onRelayChange()
+            }
+        }
+    }
+
     fun updateUserInfo(newUserInfo: UserMetadata, updateAt: Long) {
         info = newUserInfo
         updatedMetadataAt = updateAt
@@ -108,7 +137,42 @@ class User(val pubkey: ByteArray) {
         }
     }
 
-    // Observers line up here.
+    // Model Observers
+    private var listeners = setOf<Listener>()
+
+    fun subscribe(listener: Listener) {
+        listeners = listeners.plus(listener)
+    }
+
+    fun unsubscribe(listener: Listener) {
+        listeners = listeners.minus(listener)
+    }
+
+    abstract class Listener {
+        open fun onRelayChange() = Unit
+        open fun onFollowsChange() = Unit
+        open fun onNewPosts() = Unit
+        open fun onNewMessage() = Unit
+    }
+
+    // Refreshes observers in batches.
+    var modelHandlerWaiting = false
+    @Synchronized
+    fun updateSubscribers(on: (Listener) -> Unit) {
+        if (modelHandlerWaiting) return
+
+        modelHandlerWaiting = true
+        val scope = CoroutineScope(Job() + Dispatchers.Main)
+        scope.launch {
+            delay(100)
+            listeners.forEach {
+                on(it)
+            }
+            modelHandlerWaiting = false
+        }
+    }
+
+    // UI Observers line up here.
     val live: UserLiveData = UserLiveData(this)
 
     // Refreshes observers in batches.

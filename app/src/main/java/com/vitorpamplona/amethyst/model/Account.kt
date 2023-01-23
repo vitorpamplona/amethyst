@@ -8,6 +8,8 @@ import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.relays.Client
+import com.vitorpamplona.amethyst.service.relays.Relay
+import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import java.util.Date
 import nostr.postr.Contact
@@ -38,6 +40,23 @@ class Account(val loggedIn: Persona, val followingChannels: MutableSet<String> =
 
   fun isWriteable(): Boolean {
     return loggedIn.privKey != null
+  }
+
+  fun sendNewRelayList(relays: Map<String, ContactListEvent.ReadWrite>) {
+    if (!isWriteable()) return
+
+    val lastestContactList = userProfile().latestContactList
+    val event = if (lastestContactList != null) {
+      ContactListEvent.create(
+        lastestContactList.follows,
+        relays,
+        loggedIn.privKey!!)
+    } else {
+      ContactListEvent.create(listOf(), relays, loggedIn.privKey!!)
+    }
+
+    Client.send(event)
+    LocalCache.consume(event)
   }
 
   fun sendNewUserMetadata(toString: String) {
@@ -232,6 +251,21 @@ class Account(val loggedIn: Persona, val followingChannels: MutableSet<String> =
     } else {
       event?.content
     }
+  }
+
+  fun activeRelays(): Array<Relay>? {
+    return userProfile().relays?.map { Relay(it.key, it.value.read, it.value.write) }?.toTypedArray()
+  }
+
+  init {
+    userProfile().subscribe(object: User.Listener() {
+      override fun onRelayChange() {
+        println("Updating Relays AAA Account")
+        Client.disconnect()
+        Client.connect(activeRelays() ?: Constants.defaultRelays)
+        RelayPool.requestAndWatch()
+      }
+    })
   }
 
   // Observers line up here.

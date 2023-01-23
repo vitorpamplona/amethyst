@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.google.gson.reflect.TypeToken
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelHideMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
@@ -19,6 +20,7 @@ import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import nostr.postr.events.ContactListEvent
 import nostr.postr.events.DeletionEvent
+import nostr.postr.events.Event
 import nostr.postr.events.MetadataEvent
 import nostr.postr.events.PrivateDmEvent
 import nostr.postr.events.RecommendRelayEvent
@@ -110,10 +112,10 @@ object LocalCache {
 
     // Adds notifications to users.
     mentions.forEach {
-      it.taggedPosts.add(note)
+      it.addTaggedPost(note)
     }
     replyTo.forEach {
-      it.author?.taggedPosts?.add(note)
+      it.author?.addTaggedPost(note)
     }
 
     // Counts the replies
@@ -147,6 +149,26 @@ object LocalCache {
         }.filterNotNull().toSet(),
         event.createdAt
       )
+
+      if (user.pubkeyHex == "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c")
+        println("Updating Relays AAA ${user.toBestDisplayName()} ${event.content} ${formattedDateTime(event.createdAt)}")
+
+      try {
+        if (event.content.isNotEmpty()) {
+          if (user.pubkeyHex == "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c")
+            println("Updating Relays AAA 1 ${user.toBestDisplayName()} ${event.content}")
+          val relays: Map<String, ContactListEvent.ReadWrite> =
+            Event.gson.fromJson(
+              event.content,
+              object : TypeToken<Map<String, ContactListEvent.ReadWrite>>() {}.type
+            )
+          user.updateRelays(relays)
+        }
+      } catch (e: Exception) {
+        if (user.pubkeyHex == "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c")
+          println("Updating Relays AAA 2 for ${user.bestUsername()} ${e.message}")
+        e.printStackTrace()
+      }
 
       user.latestContactList = event
     }
@@ -201,10 +223,10 @@ object LocalCache {
 
     // Adds notifications to users.
     mentions.forEach {
-      it.taggedPosts.add(note)
+      it.addTaggedPost(note)
     }
     repliesTo.forEach {
-      it.author?.taggedPosts?.add(note)
+      it.author?.addTaggedPost(note)
     }
 
     // Counts the replies
@@ -231,10 +253,10 @@ object LocalCache {
 
     // Adds notifications to users.
     mentions.forEach {
-      it.taggedPosts.add(note)
+      it.addTaggedPost(note)
     }
     repliesTo.forEach {
-      it.author?.taggedPosts?.add(note)
+      it.author?.addTaggedPost(note)
     }
 
     if (event.content == "" || event.content == "+" || event.content == "\uD83E\uDD19") {
@@ -312,10 +334,10 @@ object LocalCache {
 
     // Adds notifications to users.
     mentions.forEach {
-      it.taggedPosts.add(note)
+      it.addTaggedPost(note)
     }
     replyTo.forEach {
-      it.author?.taggedPosts?.add(note)
+      it.author?.addTaggedPost(note)
     }
 
     // Counts the replies

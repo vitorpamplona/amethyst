@@ -24,6 +24,10 @@ object RelayPool: Relay.Listener {
         return relays.filter { it.isConnected() }.size
     }
 
+    fun getRelay(url: String): Relay? {
+        return relays.firstOrNull() { it.url == url }
+    }
+
     fun loadRelays(relayList: List<Relay>? = null){
         if (!relayList.isNullOrEmpty()){
             relayList.forEach { addRelay(it) }

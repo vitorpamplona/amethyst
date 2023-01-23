@@ -1,7 +1,9 @@
 package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.security.crypto.EncryptedSharedPreferences
+import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.DefaultChannels
 import com.vitorpamplona.amethyst.model.toByteArray
@@ -13,16 +15,24 @@ import com.vitorpamplona.amethyst.service.NostrNotificationDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.NostrThreadDataSource
+import com.vitorpamplona.amethyst.service.relays.Client
+import com.vitorpamplona.amethyst.ui.MainActivity
 import fr.acinq.secp256k1.Hex
 import java.util.regex.Pattern
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import nostr.postr.Persona
 import nostr.postr.bechToBytes
 import nostr.postr.toHex
 
-class AccountStateViewModel(private val encryptedPreferences: EncryptedSharedPreferences): ViewModel() {
+class AccountStateViewModel(
+  private val encryptedPreferences: EncryptedSharedPreferences
+): ViewModel() {
   private val _accountContent = MutableStateFlow<AccountState>(AccountState.LoggedOff)
   val accountContent = _accountContent.asStateFlow()
 
@@ -65,19 +75,9 @@ class AccountStateViewModel(private val encryptedPreferences: EncryptedSharedPre
     else
       _accountContent.update { AccountState.LoggedInViewOnly ( account ) }
 
-    NostrAccountDataSource.account = account
-    NostrHomeDataSource.account = account
-    NostrNotificationDataSource.account = account
-    NostrChatroomListDataSource.account = account
-
-    NostrAccountDataSource.start()
-    NostrGlobalDataSource.start()
-    NostrHomeDataSource.start()
-    NostrNotificationDataSource.start()
-    NostrSingleEventDataSource.start()
-    NostrSingleUserDataSource.start()
-    NostrThreadDataSource.start()
-    NostrChatroomListDataSource.start()
+    viewModelScope.launch(Dispatchers.IO) {
+      ServiceManager.start(account)
+    }
   }
 
   fun logOff() {
@@ -90,6 +90,7 @@ class AccountStateViewModel(private val encryptedPreferences: EncryptedSharedPre
     encryptedPreferences.edit().apply {
       remove("nostr_privkey")
       remove("nostr_pubkey")
+      remove("following_channels")
     }.apply()
   }
 

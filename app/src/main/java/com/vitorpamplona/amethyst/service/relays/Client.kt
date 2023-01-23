@@ -27,10 +27,9 @@ object Client: RelayPool.Listener {
     private var relays = Constants.defaultRelays
     private val subscriptions = mutableMapOf<String, List<JsonFilter>>()
 
-    fun connect(
-        relays: Array<Relay> = Constants.defaultRelays
-    ) {
+    fun connect(relays: Array<Relay> = Constants.defaultRelays) {
         RelayPool.register(this)
+        RelayPool.unloadRelays()
         RelayPool.loadRelays(relays.toList())
         this.relays = relays
     }

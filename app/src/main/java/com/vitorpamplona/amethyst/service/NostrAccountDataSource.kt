@@ -13,27 +13,11 @@ import nostr.postr.events.TextNoteEvent
 object NostrAccountDataSource: NostrDataSource<Note>("AccountData") {
   lateinit var account: Account
 
-  private val cacheListener: (UserState) -> Unit = {
-    resetFilters()
-  }
-
-  override fun start() {
-    if (this::account.isInitialized)
-      account.userProfile().live.observeForever(cacheListener)
-    super.start()
-  }
-
-  override fun stop() {
-    super.stop()
-    if (this::account.isInitialized)
-      account.userProfile().live.removeObserver(cacheListener)
-  }
-
   fun createAccountContactListFilter(): JsonFilter {
     return JsonFilter(
       kinds = listOf(ContactListEvent.kind),
       authors = listOf(account.userProfile().pubkeyHex),
-      limit = 1
+      limit = 5
     )
   }
 
@@ -41,7 +25,7 @@ object NostrAccountDataSource: NostrDataSource<Note>("AccountData") {
     return JsonFilter(
       kinds = listOf(MetadataEvent.kind),
       authors = listOf(account.userProfile().pubkeyHex),
-      limit = 3
+      limit = 5
     )
   }
 

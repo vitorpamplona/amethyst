@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
 import nostr.postr.JsonFilter
 
 object NostrNotificationDataSource: NostrDataSource<Note>("NotificationFeed") {

@@ -9,13 +9,17 @@ import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 
 class Relay(
-    val url: String,
-    var read: Boolean = true,
-    var write: Boolean = true
+  var url: String,
+  var read: Boolean = true,
+  var write: Boolean = true
 ) {
     private val httpClient = OkHttpClient()
     private var listeners = setOf<Listener>()
     private var socket: WebSocket? = null
+
+    var eventDownloadCounter = 0
+    var eventUploadCounter = 0
+    var errorCounter = 0
 
     fun register(listener: Listener) {
         listeners = listeners.plus(listener)
@@ -49,6 +53,7 @@ class Relay(
                     val channel = msg[1].asString
                     when (type) {
                         "EVENT" -> {
+                            eventDownloadCounter++
                             val event = Event.fromJson(msg[2], Client.lenient)
                             listeners.forEach { it.onEvent(this@Relay, channel, event) }
                         }
@@ -88,6 +93,8 @@ class Relay(
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                errorCounter++
+
                 socket?.close(1000, "Normal close")
                 // Failures disconnect the relay. 
                 socket = null
@@ -98,6 +105,7 @@ class Relay(
                 }
             }
         }
+
         socket = httpClient.newWebSocket(request, listener)
     }
 
@@ -108,14 +116,17 @@ class Relay(
     }
 
     fun sendFilter(requestId: String) {
-        if (socket == null) {
-            requestAndWatch()
-        } else {
-            val filters = Client.getSubscriptionFilters(requestId)
-            if (filters.isNotEmpty()) {
-                val request = """["REQ","$requestId",${filters.joinToString(",") { it.toJson() }}]"""
-                //println("FILTERSSENT " + """["REQ","$requestId",${filters.joinToString(",") { it.toJson() }}]""")
-                socket?.send(request)
+        if (read) {
+            if (socket == null) {
+                requestAndWatch()
+            } else {
+                val filters = Client.getSubscriptionFilters(requestId)
+                if (filters.isNotEmpty()) {
+                    val request =
+                        """["REQ","$requestId",${filters.joinToString(",") { it.toJson() }}]"""
+                    //println("FILTERSSENT " + """["REQ","$requestId",${filters.joinToString(",") { it.toJson() }}]""")
+                    socket?.send(request)
+                }
             }
         }
     }
@@ -127,8 +138,10 @@ class Relay(
     }
 
     fun send(signedEvent: Event) {
-        if (write)
+        if (write) {
             socket?.send("""["EVENT",${signedEvent.toJson()}]""")
+            eventUploadCounter++
+        }
     }
 
     fun close(subscriptionId: String){

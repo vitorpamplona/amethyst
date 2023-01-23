@@ -1,7 +1,11 @@
 package com.vitorpamplona.amethyst.ui.navigation
 
 import android.util.Log
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -20,12 +24,17 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -46,6 +55,8 @@ import com.vitorpamplona.amethyst.service.NostrUserProfileFollowersDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileFollowsDataSource
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.RelayPool
+import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
+import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
 import com.vitorpamplona.amethyst.ui.screen.RelayPoolViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.launch
@@ -72,49 +83,92 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
 
     val coroutineScope = rememberCoroutineScope()
 
+    var wantsToEditRelays by remember {
+        mutableStateOf(false)
+    }
+
+    if (wantsToEditRelays)
+        NewRelayListView({ wantsToEditRelays = false }, account)
+
     Column() {
         TopAppBar(
             elevation = 0.dp,
             backgroundColor = Color(0xFFFFFF),
             title = {
                 Column(
-                    modifier = Modifier
-                        .padding(start = 22.dp, end = 0.dp)
-                        .fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    IconButton(
-                        onClick = {
-                            Client.allSubscriptions().map { "${it} ${Client.getSubscriptionFilters(it).joinToString { it.toJson() }}" }.forEach {
-                                Log.d("CURRENT FILTERS", it)
+                    Box() {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 0.dp, end = 20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    Client.allSubscriptions().map {
+                                        "${it} ${
+                                            Client.getSubscriptionFilters(it)
+                                                .joinToString { it.toJson() }
+                                        }"
+                                    }.forEach {
+                                        Log.d("CURRENT FILTERS", it)
+                                    }
+
+                                    NostrAccountDataSource.printCounter()
+                                    NostrChannelDataSource.printCounter()
+                                    NostrChatRoomDataSource.printCounter()
+                                    NostrChatroomListDataSource.printCounter()
+
+                                    NostrGlobalDataSource.printCounter()
+                                    NostrHomeDataSource.printCounter()
+                                    NostrNotificationDataSource.printCounter()
+
+                                    NostrSingleEventDataSource.printCounter()
+                                    NostrSingleUserDataSource.printCounter()
+                                    NostrThreadDataSource.printCounter()
+
+                                    NostrUserProfileDataSource.printCounter()
+                                    NostrUserProfileFollowersDataSource.printCounter()
+                                    NostrUserProfileFollowsDataSource.printCounter()
+
+                                    println("AAA: " + RelayPool.connectedRelays())
+                                }
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.amethyst),
+                                    null,
+                                    modifier = Modifier.size(40.dp),
+                                    tint = Color.Unspecified
+                                )
                             }
-
-                            NostrAccountDataSource.printCounter()
-                            NostrChannelDataSource.printCounter()
-                            NostrChatRoomDataSource.printCounter()
-                            NostrChatroomListDataSource.printCounter()
-
-                            NostrGlobalDataSource.printCounter()
-                            NostrHomeDataSource.printCounter()
-                            NostrNotificationDataSource.printCounter()
-
-                            NostrSingleEventDataSource.printCounter()
-                            NostrSingleUserDataSource.printCounter()
-                            NostrThreadDataSource.printCounter()
-
-                            NostrUserProfileDataSource.printCounter()
-                            NostrUserProfileFollowersDataSource.printCounter()
-                            NostrUserProfileFollowsDataSource.printCounter()
-
-                            println("AAA: " + RelayPool.connectedRelays())
                         }
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.amethyst),
-                            null,
-                            modifier = Modifier.size(40.dp),
-                            tint = Color.Unspecified
-                        )
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .fillMaxHeight(),
+                            horizontalAlignment = Alignment.End,
+
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxHeight(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    "${connectedRelaysLiveData ?: "--"}/${availableRelaysLiveData ?: "--"}",
+                                    color = if (connectedRelaysLiveData == 0) Color.Red else MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                                    style = MaterialTheme.typography.subtitle1,
+                                    modifier = Modifier.clickable(
+                                        onClick = {
+                                            wantsToEditRelays = true
+                                        }
+                                    )
+                                )
+                            }
+                        }
                     }
                 }
             },
@@ -131,17 +185,13 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
                         model = accountUser?.profilePicture() ?: "https://robohash.org/ohno.png",
                         contentDescription = "Profile Image",
                         modifier = Modifier
-                            .width(34.dp).height(34.dp)
+                            .width(34.dp)
+                            .height(34.dp)
                             .clip(shape = CircleShape),
                     )
                 }
             },
             actions = {
-                Text(
-                    "${connectedRelaysLiveData ?: "--"}/${availableRelaysLiveData ?: "--"}",
-                    color = if (connectedRelaysLiveData == 0) Color.Red else MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                )
-
                 IconButton(
                     onClick = {}, modifier = Modifier
                 ) {
