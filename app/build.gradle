@@ -64,13 +64,13 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.6.0-alpha04'
 
     // Swipe Refresh
-    implementation 'com.google.accompanist:accompanist-swiperefresh:0.24.13-rc'
+    implementation 'com.google.accompanist:accompanist-swiperefresh:0.29.0-alpha'
 
     // Load images from the web.
     implementation "io.coil-kt:coil-compose:2.2.2"
 
     // Bitcoin secp256k1 bindings to Android
-    implementation 'fr.acinq.secp256k1:secp256k1-kmp-jni-android:0.7.0'
+    implementation 'fr.acinq.secp256k1:secp256k1-kmp-jni-android:0.7.1'
 
     // Nostr Base Protocol
     implementation('com.github.vitorpamplona.NostrPostr:nostrpostrlib:master-SNAPSHOT') {
@@ -79,7 +79,7 @@ dependencies {
         exclude module: 'guava-testlib'
     }
 
-    implementation 'com.squareup.retrofit2:converter-gson:2.8.1'
+    implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
     // Websockets API
     implementation 'com.squareup.okhttp3:okhttp:5.0.0-alpha.11'
 
