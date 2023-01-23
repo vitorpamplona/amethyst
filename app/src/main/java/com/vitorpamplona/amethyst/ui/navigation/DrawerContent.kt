@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
+import coil.compose.rememberAsyncImagePainter
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
@@ -117,6 +118,7 @@ fun ProfileContent(accountUser: User?, modifier: Modifier = Modifier, scaffoldSt
         AsyncImage(
             model = accountUser?.profilePicture() ?: "https://robohash.org/ohno.png",
             contentDescription = "Profile Image",
+            placeholder = rememberAsyncImagePainter("https://robohash.org/${accountUser?.pubkeyHex}.png"),
             modifier = Modifier
                 .width(100.dp)
                 .height(100.dp)

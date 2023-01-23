@@ -21,6 +21,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import coil.compose.rememberAsyncImagePainter
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.screen.LikeSetCard
@@ -67,6 +68,7 @@ fun LikeSetCompose(likeSetCard: LikeSetCard, modifier: Modifier = Modifier, isIn
 
                                 AsyncImage(
                                     model = userState?.user?.profilePicture(),
+                                    placeholder = rememberAsyncImagePainter("https://robohash.org/${userState?.user?.pubkeyHex}.png"),
                                     contentDescription = "Profile Image",
                                     modifier = Modifier
                                         .width(35.dp).height(35.dp)

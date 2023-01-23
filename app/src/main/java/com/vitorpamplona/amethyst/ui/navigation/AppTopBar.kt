@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
+import coil.compose.rememberAsyncImagePainter
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
@@ -183,6 +184,7 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
                 ) {
                     AsyncImage(
                         model = accountUser?.profilePicture() ?: "https://robohash.org/ohno.png",
+                        placeholder = rememberAsyncImagePainter("https://robohash.org/${accountUser?.pubkeyHex}.png"),
                         contentDescription = "Profile Image",
                         modifier = Modifier
                             .width(34.dp)

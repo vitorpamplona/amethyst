@@ -20,6 +20,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import coil.compose.rememberAsyncImagePainter
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.FollowButton
 import com.vitorpamplona.amethyst.ui.screen.UnfollowButton
@@ -47,6 +48,7 @@ fun UserCompose(baseUser: User, accountViewModel: AccountViewModel, navControlle
 
             AsyncImage(
                 model = user.profilePicture(),
+                placeholder = rememberAsyncImagePainter("https://robohash.org/${user.pubkeyHex}.png"),
                 contentDescription = "Profile Image",
                 modifier = Modifier
                     .width(55.dp).height(55.dp)

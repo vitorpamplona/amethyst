@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import coil.compose.rememberAsyncImagePainter
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.Note
@@ -135,6 +136,7 @@ fun ChannelHeader(baseChannel: Channel, account: Account, accountStateViewModel:
 
                 AsyncImage(
                     model = channel?.profilePicture(),
+                    placeholder = null,
                     contentDescription = "Profile Image",
                     modifier = Modifier
                         .width(35.dp)

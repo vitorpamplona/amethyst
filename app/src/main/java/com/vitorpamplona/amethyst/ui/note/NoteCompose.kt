@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import coil.compose.rememberAsyncImagePainter
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.toNote
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
@@ -87,6 +88,7 @@ fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Bool
                         AsyncImage(
                             model = author?.profilePicture(),
                             contentDescription = "Profile Image",
+                            placeholder = rememberAsyncImagePainter("https://robohash.org/${author?.pubkeyHex}.png"),
                             modifier = Modifier
                                 .width(55.dp).height(55.dp)
                                 .clip(shape = CircleShape)
@@ -103,6 +105,7 @@ fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Bool
                             AsyncImage(
                                 model = boostedPosts[0].author?.profilePicture(),
                                 contentDescription = "Profile Image",
+                                placeholder = rememberAsyncImagePainter("https://robohash.org/${boostedPosts[0].author?.pubkeyHex}.png"),
                                 modifier = Modifier
                                     .width(35.dp).height(35.dp)
                                     .clip(shape = CircleShape)

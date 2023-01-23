@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import coil.compose.rememberAsyncImagePainter
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
@@ -117,6 +118,7 @@ fun ChatroomMessageCompose(baseNote: Note, innerQuote: Boolean = false, accountV
                                 ) {
                                     AsyncImage(
                                         model = author?.profilePicture(),
+                                        placeholder = rememberAsyncImagePainter("https://robohash.org/${author?.pubkeyHex}.png"),
                                         contentDescription = "Profile Image",
                                         modifier = Modifier
                                             .width(25.dp)

@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import coil.compose.rememberAsyncImagePainter
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.pagerTabIndicatorOffset
@@ -130,6 +131,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                             verticalAlignment = Alignment.Bottom) {
                             AsyncImage(
                                 model = user.profilePicture(),
+                                placeholder = rememberAsyncImagePainter("https://robohash.org/${user?.pubkeyHex}.png"),
                                 contentDescription = "Profile Image",
                                 modifier = Modifier
                                     .width(100.dp)

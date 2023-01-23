@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import coil.compose.rememberAsyncImagePainter
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -174,6 +175,7 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
             itemsIndexed(searchResultsChannels.value, key = { _, item -> "c"+item.idHex }) { index, item ->
                 ChannelName(
                     channelPicture = item.profilePicture(),
+                    channelPicturePlaceholder = null,
                     channelTitle = {
                         Text(
                             "${item.info.name}",
@@ -215,6 +217,7 @@ fun UserLine(
 
             AsyncImage(
                 model = user.profilePicture(),
+                placeholder = rememberAsyncImagePainter("https://robohash.org/${user.pubkeyHex}.png"),
                 contentDescription = "Profile Image",
                 modifier = Modifier
                     .width(55.dp)

@@ -17,11 +17,13 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import coil.compose.rememberAsyncImagePainter
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
@@ -57,6 +59,7 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
         channel?.let { channel ->
             ChannelName(
                 channelPicture = channel.profilePicture(),
+                channelPicturePlaceholder = null,
                 channelTitle = {
                     Text(
                         "${channel.info.name}",
@@ -93,6 +96,7 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
         userToComposeOn?.let { user ->
             ChannelName(
                 channelPicture = user.profilePicture(),
+                channelPicturePlaceholder = rememberAsyncImagePainter("https://robohash.org/${user.pubkeyHex}.png"),
                 channelTitle = { UsernameDisplay(user, it) },
                 channelLastTime = note.event?.createdAt,
                 channelLastContent = accountViewModel.decrypt(note),
@@ -105,6 +109,7 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
 @Composable
 fun ChannelName(
     channelPicture: String,
+    channelPicturePlaceholder: Painter?,
     channelTitle: @Composable (Modifier) -> Unit,
     channelLastTime: Long?,
     channelLastContent: String?,
@@ -117,6 +122,7 @@ fun ChannelName(
 
             AsyncImage(
                 model = channelPicture,
+                placeholder = channelPicturePlaceholder,
                 contentDescription = "Profile Image",
                 modifier = Modifier
                     .width(55.dp)
