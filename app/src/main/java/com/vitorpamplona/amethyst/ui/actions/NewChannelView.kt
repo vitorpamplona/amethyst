@@ -15,6 +15,7 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -26,10 +27,11 @@ import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun NewChannelView(onClose: () -> Unit, account: Account, accountStateViewModel: AccountStateViewModel, channel: Channel? = null) {
+fun NewChannelView(onClose: () -> Unit, account: Account, channel: Channel? = null) {
     val postViewModel: NewChannelViewModel = viewModel()
+    val context = LocalContext.current.applicationContext
 
-    postViewModel.load(account, channel, accountStateViewModel)
+    postViewModel.load(account, channel)
 
     Dialog(
         onDismissRequest = { onClose() },
@@ -55,7 +57,7 @@ fun NewChannelView(onClose: () -> Unit, account: Account, accountStateViewModel:
 
                     PostButton(
                         onPost = {
-                            postViewModel.create()
+                            postViewModel.create(context)
                             onClose()
                         },
                         postViewModel.channelName.value.text.isNotBlank()

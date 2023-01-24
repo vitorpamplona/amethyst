@@ -85,7 +85,7 @@ fun FloatingButton(navController: NavHostController, accountViewModel: AccountSt
                     // Does nothing.
                 }
                 is AccountState.LoggedIn -> {
-                    NewChannelButton(state.account, accountViewModel)
+                    NewChannelButton(state.account)
                 }
             }
         }

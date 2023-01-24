@@ -33,7 +33,7 @@ object NostrChatRoomDataSource: NostrDataSource<Note>("ChatroomFeed") {
 
   // returns the last Note of each user.
   override fun feed(): List<Note> {
-    val messages = account.userProfile().messages[withUser]
+    val messages = account.userProfile().messages[withUser]?.filter { account.isAcceptable(it) }
 
     return messages?.sortedBy { it.event?.createdAt } ?: emptyList()
   }

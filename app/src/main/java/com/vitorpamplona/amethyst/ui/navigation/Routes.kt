@@ -14,6 +14,7 @@ import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.ChannelScreen
 import com.vitorpamplona.amethyst.ui.screen.ChatroomListScreen
 import com.vitorpamplona.amethyst.ui.screen.ChatroomScreen
+import com.vitorpamplona.amethyst.ui.screen.FiltersScreen
 import com.vitorpamplona.amethyst.ui.screen.HomeScreen
 import com.vitorpamplona.amethyst.ui.screen.NotificationScreen
 import com.vitorpamplona.amethyst.ui.screen.ProfileScreen
@@ -32,6 +33,7 @@ sealed class Route(
     object Search : Route("Search", R.drawable.ic_search, buildScreen = { acc, accSt, nav -> { _ -> SearchScreen(acc, nav) }})
     object Notification : Route("Notification", R.drawable.ic_notifications,buildScreen = { acc, accSt, nav -> { _ -> NotificationScreen(acc, nav) }})
     object Message : Route("Message", R.drawable.ic_dm, buildScreen = { acc, accSt, nav -> { _ -> ChatroomListScreen(acc, nav) }})
+    object Filters : Route("Filters", R.drawable.ic_dm, buildScreen = { acc, accSt, nav -> { _ -> FiltersScreen(acc, nav) }})
 
     object Profile : Route("User/{id}", R.drawable.ic_profile,
         arguments = listOf(navArgument("id") { type = NavType.StringType } ),
@@ -65,7 +67,8 @@ val Routes = listOf(
     Route.Profile,
     Route.Note,
     Route.Room,
-    Route.Channel
+    Route.Channel,
+    Route.Filters
 )
 
 @Composable

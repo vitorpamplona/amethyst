@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.lnurl
 
+import androidx.compose.ui.text.toLowerCase
 import java.math.BigDecimal
 import java.util.Locale
 import java.util.regex.Pattern
@@ -128,7 +129,7 @@ object LnInvoiceUtil {
   }
 
   private fun multiplier(multiplier: String): BigDecimal {
-    return when (multiplier) {
+    return when (multiplier.toLowerCase()) {
       "m" -> BigDecimal("0.001")
       "u" -> BigDecimal("0.000001")
       "n" -> BigDecimal("0.000000001")

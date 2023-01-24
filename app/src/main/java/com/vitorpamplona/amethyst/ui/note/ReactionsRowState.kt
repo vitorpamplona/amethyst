@@ -16,5 +16,5 @@ fun ReactionsRowState(baseNote: Note, accountViewModel: AccountViewModel) {
 
   if (account == null || note == null) return
 
-  ReactionsRow(note, account, accountViewModel::boost, accountViewModel::reactTo)
+  ReactionsRow(note, account, accountViewModel)
 }

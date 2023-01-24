@@ -162,6 +162,8 @@ fun ListContent(
     modifier: Modifier,
     accountViewModel: AccountStateViewModel
 ) {
+    val coroutineScope = rememberCoroutineScope()
+
     Column(modifier = modifier) {
         LazyColumn() {
             item {
@@ -178,14 +180,19 @@ fun ListContent(
                     thickness = 0.25.dp
                 )
                 Column(modifier = modifier.padding(horizontal = 25.dp)) {
-                    Text(
-                        text = "Settings",
-                        fontSize = 18.sp,
-                        fontWeight = W500
-                    )
-                    Row(
-                        modifier = Modifier.clickable(onClick = { accountViewModel.logOff() }),
-                    ) {
+                    Row(modifier = Modifier.clickable(onClick = {
+                        navController.navigate(Route.Filters.route)
+                        coroutineScope.launch {
+                            scaffoldState.drawerState.close()
+                        }
+                    })) {
+                        Text(
+                            text = "Security Filters",
+                            fontSize = 18.sp,
+                            fontWeight = W500
+                        )
+                    }
+                    Row(modifier = Modifier.clickable(onClick = { accountViewModel.logOff() })) {
                         Text(
                             text = "Log out",
                             modifier = Modifier.padding(vertical = 15.dp),

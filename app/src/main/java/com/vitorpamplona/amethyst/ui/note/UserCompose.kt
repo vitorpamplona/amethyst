@@ -16,22 +16,28 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
+import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.FollowButton
+import com.vitorpamplona.amethyst.ui.screen.ShowUserButton
 import com.vitorpamplona.amethyst.ui.screen.UnfollowButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
 fun UserCompose(baseUser: User, accountViewModel: AccountViewModel, navController: NavController) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
+    val account = accountState?.account
 
     val userState by baseUser.live.observeAsState()
     val user = userState?.user ?: return
+
+    val ctx = LocalContext.current.applicationContext
 
     Column(modifier =
         Modifier.clickable(
@@ -69,10 +75,15 @@ fun UserCompose(baseUser: User, accountViewModel: AccountViewModel, navControlle
             }
 
             Column(modifier = Modifier.padding(start = 10.dp)) {
-                if (accountState?.account?.userProfile()?.isFollowing(user) == true) {
-                    UnfollowButton { accountState?.account?.unfollow(user) }
+                if (account?.isAcceptable(user) == false) {
+                    ShowUserButton {
+                        account.showUser(user.pubkeyHex)
+                        LocalPreferences(ctx).saveToEncryptedStorage(account)
+                    }
+                } else if (account?.userProfile()?.isFollowing(user) == true) {
+                    UnfollowButton { account.unfollow(user) }
                 } else {
-                    FollowButton { accountState?.account?.follow(user) }
+                    FollowButton { account?.follow(user) }
                 }
             }
         }

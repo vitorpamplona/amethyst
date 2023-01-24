@@ -18,7 +18,7 @@ object NostrNotificationDataSource: NostrDataSource<Note>("NotificationFeed") {
   override fun feed(): List<Note> {
     val set = account.userProfile().taggedPosts
     val filtered = synchronized(set) {
-      set.filter { it.event != null }
+      set.filter { it.event != null }.filter { account.isAcceptable(it) }
     }
 
     return filtered.sortedBy { it.event?.createdAt }.reversed()

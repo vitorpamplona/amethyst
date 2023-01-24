@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.ui.screen
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.security.crypto.EncryptedSharedPreferences
+import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.DefaultChannels
@@ -30,15 +31,13 @@ import nostr.postr.Persona
 import nostr.postr.bechToBytes
 import nostr.postr.toHex
 
-class AccountStateViewModel(
-  private val encryptedPreferences: EncryptedSharedPreferences
-): ViewModel() {
+class AccountStateViewModel(private val localPreferences: LocalPreferences): ViewModel() {
   private val _accountContent = MutableStateFlow<AccountState>(AccountState.LoggedOff)
   val accountContent = _accountContent.asStateFlow()
 
   init {
     // pulls account from storage.
-    loadFromEncryptedStorage()?.let {
+    localPreferences.loadFromEncryptedStorage()?.let {
       login(it)
     }
   }
@@ -58,14 +57,14 @@ class AccountStateViewModel(
         Account(Persona(Hex.decode(key)))
       }
 
-    saveToEncryptedStorage(account)
+    localPreferences.saveToEncryptedStorage(account)
 
     login(account)
   }
 
   fun newKey() {
     val account = Account(Persona())
-    saveToEncryptedStorage(account)
+    localPreferences.saveToEncryptedStorage(account)
     login(account)
   }
 
@@ -83,36 +82,6 @@ class AccountStateViewModel(
   fun logOff() {
     _accountContent.update { AccountState.LoggedOff }
 
-    clearEncryptedStorage()
-  }
-
-  fun clearEncryptedStorage() {
-    encryptedPreferences.edit().apply {
-      remove("nostr_privkey")
-      remove("nostr_pubkey")
-      remove("following_channels")
-    }.apply()
-  }
-
-  fun saveToEncryptedStorage(account: Account) {
-    encryptedPreferences.edit().apply {
-      account.loggedIn.privKey?.let { putString("nostr_privkey", it.toHex()) }
-      account.loggedIn.pubKey.let { putString("nostr_pubkey", it.toHex()) }
-      account.followingChannels.let { putStringSet("following_channels", account.followingChannels) }
-    }.apply()
-  }
-
-  fun loadFromEncryptedStorage(): Account? {
-    encryptedPreferences.apply {
-      val privKey = getString("nostr_privkey", null)
-      val pubKey = getString("nostr_pubkey", null)
-      val followingChannels = getStringSet("following_channels", DefaultChannels)?.toMutableSet() ?: DefaultChannels.toMutableSet()
-
-      if (pubKey != null) {
-        return Account(Persona(privKey = privKey?.toByteArray(), pubKey = pubKey.toByteArray()), followingChannels)
-      } else {
-        return null
-      }
-    }
+    localPreferences.clearEncryptedStorage()
   }
 }

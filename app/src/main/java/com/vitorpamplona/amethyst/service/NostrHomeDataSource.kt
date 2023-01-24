@@ -82,6 +82,7 @@ object NostrHomeDataSource: NostrDataSource<Note>("HomeFeed") {
 
     return LocalCache.notes.values
       .filter { (it.event is TextNoteEvent || it.event is RepostEvent) && it.author?.pubkeyHex in allowSet }
+      .filter { account.isAcceptable(it) }
       .sortedBy { it.event?.createdAt }
       .reversed()
   }

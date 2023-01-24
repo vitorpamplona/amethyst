@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Divider
 import androidx.compose.material.DropdownMenu
 import androidx.compose.material.DropdownMenuItem
+import androidx.compose.material.LocalContentColor
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
@@ -27,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -46,6 +48,9 @@ import nostr.postr.toNpub
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Boolean = false, accountViewModel: AccountViewModel, navController: NavController) {
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val account = accountState?.account
+
     val noteState by baseNote.live.observeAsState()
     val note = noteState?.note
 
@@ -53,6 +58,11 @@ fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Bool
 
     if (note?.event == null) {
         BlankNote(modifier.combinedClickable(
+            onClick = {  },
+            onLongClick = { popupExpanded = true },
+        ), isInnerNote)
+    } else if (account?.isAcceptable(note) == false) {
+        HiddenNote(modifier.combinedClickable(
             onClick = {  },
             onLongClick = { popupExpanded = true },
         ), isInnerNote)
@@ -195,6 +205,7 @@ fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Bool
 @Composable
 fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, accountViewModel: AccountViewModel) {
     val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current.applicationContext
 
     DropdownMenu(
         expanded = popupExpanded,
@@ -212,6 +223,13 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
         Divider()
         DropdownMenuItem(onClick = { accountViewModel.broadcast(note); onDismiss() }) {
             Text("Broadcast")
+        }
+        Divider()
+        DropdownMenuItem(onClick = { accountViewModel.report(note); onDismiss() }) {
+            Text("Report Post")
+        }
+        DropdownMenuItem(onClick = { note.author?.let { accountViewModel.hide(it, context) }; onDismiss() }) {
+            Text("Hide User")
         }
     }
 }

@@ -36,6 +36,13 @@ object ServiceManager {
       NostrNotificationDataSource.account = myAccount
       NostrChatroomListDataSource.account = myAccount
 
+      NostrGlobalDataSource.account = myAccount
+      NostrChannelDataSource.account = myAccount
+
+      NostrUserProfileDataSource.account = myAccount
+      NostrUserProfileFollowsDataSource.account = myAccount
+      NostrUserProfileFollowersDataSource.account = myAccount
+
       NostrAccountDataSource.start()
       NostrGlobalDataSource.start()
       NostrHomeDataSource.start()

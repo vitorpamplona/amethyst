@@ -256,6 +256,13 @@ object LocalCache {
         it.addReaction(note)
       }
     }
+
+    if (event.content == "\u26A0\uFE0F") {
+      // Counts the replies
+      repliesTo.forEach {
+        it.addReport(note)
+      }
+    }
   }
 
   fun consume(event: ChannelCreateEvent) {

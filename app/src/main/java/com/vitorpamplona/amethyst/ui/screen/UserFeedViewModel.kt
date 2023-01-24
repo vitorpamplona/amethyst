@@ -8,6 +8,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.LocalCacheState
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrDataSource
+import com.vitorpamplona.amethyst.service.NostrHiddenAccountsDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileFollowersDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileFollowsDataSource
 import kotlinx.coroutines.CoroutineScope
@@ -26,6 +27,10 @@ class NostrUserProfileFollowsUserFeedViewModel(): UserFeedViewModel(
 
 class NostrUserProfileFollowersUserFeedViewModel(): UserFeedViewModel(
     NostrUserProfileFollowersDataSource
+)
+
+class NostrHiddenAccountsFeedViewModel(): UserFeedViewModel(
+    NostrHiddenAccountsDataSource
 )
 
 open class UserFeedViewModel(val dataSource: NostrDataSource<User>): ViewModel() {

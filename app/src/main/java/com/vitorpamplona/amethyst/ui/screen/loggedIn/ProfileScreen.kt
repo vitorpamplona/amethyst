@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -54,6 +55,7 @@ import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.google.accompanist.pager.rememberPagerState
+import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
@@ -67,6 +69,7 @@ import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.launch
 import nostr.postr.toNpub
+import nostr.postr.toNsec
 
 @OptIn(ExperimentalPagerApi::class)
 @Composable
@@ -76,6 +79,8 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
 
     val accountUserState by account.userProfile().live.observeAsState()
     val accountUser = accountUserState?.user
+
+    val ctx = LocalContext.current.applicationContext
 
     if (userId != null && accountUser != null) {
         DisposableEffect(account) {
@@ -145,12 +150,21 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
 
                             MessageButton(user, navController)
 
+                            if (accountUser == user && account.isWriteable()) {
+                                NSecCopyButton(account)
+                            }
+
                             NPubCopyButton(user)
 
                             if (accountUser == user) {
                                 EditButton(account)
                             } else {
-                                if (accountUser.isFollowing(user)) {
+                                if (account?.isAcceptable(user) == false) {
+                                    ShowUserButton {
+                                        account.showUser(user.pubkeyHex)
+                                        LocalPreferences(ctx).saveToEncryptedStorage(account)
+                                    }
+                                } else if (accountUser.isFollowing(user)) {
                                     UnfollowButton { account.unfollow(user) }
                                 } else {
                                     FollowButton { account.follow(user) }
@@ -268,6 +282,25 @@ fun TabFollowers(user: User, accountViewModel: AccountViewModel, navController: 
 }
 
 @Composable
+private fun NSecCopyButton(
+    account: Account
+) {
+    val clipboardManager = LocalClipboardManager.current
+
+    Button(
+        modifier = Modifier.padding(horizontal = 3.dp),
+        onClick = { account.loggedIn.privKey?.let { clipboardManager.setText(AnnotatedString(it.toNsec())) } },
+        shape = RoundedCornerShape(20.dp),
+        colors = ButtonDefaults
+            .buttonColors(
+                backgroundColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+            ),
+    ) {
+        Text(text = "nsec", color = Color.White)
+    }
+}
+
+@Composable
 private fun NPubCopyButton(
     user: User
 ) {
@@ -358,4 +391,18 @@ fun FollowButton(onClick: () -> Unit) {
     }
 }
 
+@Composable
+fun ShowUserButton(onClick: () -> Unit) {
+    Button(
+        modifier = Modifier.padding(start = 3.dp),
+        onClick = onClick,
+        shape = RoundedCornerShape(20.dp),
+        colors = ButtonDefaults
+            .buttonColors(
+                backgroundColor = MaterialTheme.colors.primary
+            )
+    ) {
+        Text(text = "Unblock", color = Color.White)
+    }
+}
 

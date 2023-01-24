@@ -14,21 +14,9 @@ import coil.ImageLoader
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.decode.SvgDecoder
-import com.vitorpamplona.amethyst.KeyStorage
+import com.vitorpamplona.amethyst.EncryptedStorage
+import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.NostrAccountDataSource
-import com.vitorpamplona.amethyst.service.NostrChannelDataSource
-import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
-import com.vitorpamplona.amethyst.service.NostrGlobalDataSource
-import com.vitorpamplona.amethyst.service.NostrHomeDataSource
-import com.vitorpamplona.amethyst.service.NostrNotificationDataSource
-import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
-import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
-import com.vitorpamplona.amethyst.service.NostrThreadDataSource
-import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
-import com.vitorpamplona.amethyst.service.NostrUserProfileFollowersDataSource
-import com.vitorpamplona.amethyst.service.NostrUserProfileFollowsDataSource
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.screen.AccountScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
@@ -57,7 +45,7 @@ class MainActivity : ComponentActivity() {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background) {
 
           val accountViewModel: AccountStateViewModel = viewModel {
-            AccountStateViewModel(KeyStorage().encryptedPreferences(applicationContext))
+            AccountStateViewModel(LocalPreferences(applicationContext))
           }
 
           AccountScreen(accountViewModel)

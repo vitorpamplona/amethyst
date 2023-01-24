@@ -26,7 +26,38 @@ fun BlankNote(modifier: Modifier = Modifier, isQuote: Boolean = false) {
           verticalAlignment = Alignment.CenterVertically
         ) {
           Text(
-            text = "Referenced event not found",
+            text = "Referenced post not found",
+            modifier = Modifier.padding(30.dp),
+            color = Color.Gray,
+          )
+        }
+
+        Divider(
+          modifier = Modifier.padding(vertical = 10.dp),
+          thickness = 0.25.dp
+        )
+      }
+    }
+  }
+}
+
+
+@Composable
+fun HiddenNote(modifier: Modifier = Modifier, isQuote: Boolean = false) {
+  Column(modifier = modifier) {
+    Row(modifier = Modifier.padding(horizontal = if (!isQuote) 12.dp else 6.dp)) {
+      Column(modifier = Modifier.padding(start = if (!isQuote) 10.dp else 5.dp)) {
+        Row(
+          modifier = Modifier.padding(
+            start = 20.dp,
+            end = 20.dp,
+            bottom = 25.dp,
+            top = 15.dp
+          ),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Text(
+            text = "Post was flagged as inappropriate",
             modifier = Modifier.padding(30.dp),
             color = Color.Gray,
           )

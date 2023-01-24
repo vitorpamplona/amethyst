@@ -23,6 +23,7 @@ import androidx.compose.material.Text
 import androidx.compose.material.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -67,7 +68,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, account: Account
     val context = LocalContext.current
 
     // initialize focus reference to be able to request focus programmatically
-    val focusRequester = FocusRequester()
+    val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
 
     LaunchedEffect(Unit) {

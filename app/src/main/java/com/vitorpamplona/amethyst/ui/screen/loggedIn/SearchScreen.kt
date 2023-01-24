@@ -40,6 +40,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -54,6 +55,7 @@ import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.service.NostrThreadDataSource
 import com.vitorpamplona.amethyst.ui.note.ChannelName
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -167,9 +169,7 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
             )
         ) {
             itemsIndexed(searchResults.value, key = { _, item -> "u"+item.pubkeyHex }) { index, item ->
-                UserLine(item) {
-                    navController.navigate("User/${item.pubkeyHex}")
-                }
+                UserCompose(item, accountViewModel = accountViewModel, navController = navController)
             }
 
             itemsIndexed(searchResultsChannels.value, key = { _, item -> "c"+item.idHex }) { index, item ->
@@ -236,7 +236,9 @@ fun UserLine(
 
                 Text(
                     user.info.about?.take(100) ?: "",
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }

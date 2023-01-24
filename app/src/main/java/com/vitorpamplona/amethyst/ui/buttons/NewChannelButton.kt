@@ -28,13 +28,13 @@ import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun NewChannelButton(account: Account, accountStateViewModel: AccountStateViewModel) {
+fun NewChannelButton(account: Account) {
     var wantsToPost by remember {
         mutableStateOf(false)
     }
 
     if (wantsToPost)
-        NewChannelView({ wantsToPost = false }, account = account, accountStateViewModel)
+        NewChannelView({ wantsToPost = false }, account = account)
 
     OutlinedButton(
         onClick = { wantsToPost = true },

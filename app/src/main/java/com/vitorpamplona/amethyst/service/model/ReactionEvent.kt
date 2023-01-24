@@ -25,6 +25,10 @@ class ReactionEvent (
   companion object {
     const val kind = 7
 
+    fun createWarning(originalNote: Event, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ReactionEvent {
+      return create("\u26A0\uFE0F", originalNote, privateKey, createdAt)
+    }
+
     fun createLike(originalNote: Event, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ReactionEvent {
       return create("+", originalNote, privateKey, createdAt)
     }

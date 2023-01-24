@@ -10,8 +10,12 @@ import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.RelayPool
-import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import java.util.Date
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import nostr.postr.Contact
 import nostr.postr.Persona
 import nostr.postr.Utils
@@ -27,8 +31,11 @@ val DefaultChannels = setOf(
   "42224859763652914db53052103f0b744df79dfc4efef7e950fc0802fc3df3c5"  // -> Amethyst's Group
 )
 
-class Account(val loggedIn: Persona, val followingChannels: MutableSet<String> = DefaultChannels.toMutableSet()) {
-  var seeReplies: Boolean = true
+class Account(
+  val loggedIn: Persona,
+  val followingChannels: MutableSet<String> = DefaultChannels.toMutableSet(),
+  val hiddenUsers: MutableSet<String> = DefaultChannels.toMutableSet()
+) {
 
   fun userProfile(): User {
     return LocalCache.getOrCreateUser(loggedIn.pubKey)
@@ -36,6 +43,10 @@ class Account(val loggedIn: Persona, val followingChannels: MutableSet<String> =
 
   fun followingChannels(): List<Channel> {
     return followingChannels.map { LocalCache.getOrCreateChannel(it) }
+  }
+
+  fun hiddenUsers(): List<User> {
+    return hiddenUsers.map { LocalCache.getOrCreateUser(it.toByteArray()) }
   }
 
   fun isWriteable(): Boolean {
@@ -79,13 +90,30 @@ class Account(val loggedIn: Persona, val followingChannels: MutableSet<String> =
   fun reactTo(note: Note) {
     if (!isWriteable()) return
 
-    if (note.reactions.firstOrNull { it.author == userProfile() } != null) {
+    if (note.reactions.firstOrNull { it.author == userProfile() && it.event?.content == "+️" } != null) {
       // has already liked this note
       return
     }
 
     note.event?.let {
       val event = ReactionEvent.createLike(it, loggedIn.privKey!!)
+      Client.send(event)
+      LocalCache.consume(event)
+    }
+  }
+
+  fun report(note: Note) {
+    if (!isWriteable()) return
+
+    if (
+      note.reactions.firstOrNull { it.author == userProfile() && it.event?.content == "⚠️"} != null
+    ) {
+      // has already liked this note
+      return
+    }
+
+    note.event?.let {
+      val event = ReactionEvent.createWarning(it, loggedIn.privKey!!)
       Client.send(event)
       LocalCache.consume(event)
     }
@@ -186,7 +214,7 @@ class Account(val loggedIn: Persona, val followingChannels: MutableSet<String> =
     LocalCache.consume(signedEvent)
   }
 
-  fun sendCreateNewChannel(name: String, about: String, picture: String, accountStateViewModel: AccountStateViewModel) {
+  fun sendCreateNewChannel(name: String, about: String, picture: String) {
     if (!isWriteable()) return
 
     val metadata = ChannelCreateEvent.ChannelData(
@@ -201,17 +229,25 @@ class Account(val loggedIn: Persona, val followingChannels: MutableSet<String> =
     Client.send(event)
     LocalCache.consume(event)
 
-    joinChannel(event.id.toHex(), accountStateViewModel)
+    joinChannel(event.id.toHex())
   }
 
-  fun joinChannel(idHex: String, accountStateViewModel: AccountStateViewModel) {
+  fun joinChannel(idHex: String) {
     followingChannels.add(idHex)
-    accountStateViewModel.saveToEncryptedStorage(this)
   }
 
-  fun leaveChannel(idHex: String, accountStateViewModel: AccountStateViewModel) {
+  fun leaveChannel(idHex: String) {
     followingChannels.remove(idHex)
-    accountStateViewModel.saveToEncryptedStorage(this)
+  }
+
+  fun hideUser(pubkeyHex: String) {
+    hiddenUsers.add(pubkeyHex)
+    invalidateData()
+  }
+
+  fun showUser(pubkeyHex: String) {
+    hiddenUsers.remove(pubkeyHex)
+    invalidateData()
   }
 
   fun sendChangeChannel(name: String, about: String, picture: String, channel: Channel) {
@@ -280,24 +316,43 @@ class Account(val loggedIn: Persona, val followingChannels: MutableSet<String> =
   // Observers line up here.
   val live: AccountLiveData = AccountLiveData(this)
 
-  private fun refreshObservers() {
-    live.refresh()
+  // Refreshes observers in batches.
+  var handlerWaiting = false
+  @Synchronized
+  fun invalidateData() {
+    if (handlerWaiting) return
+
+    handlerWaiting = true
+    val scope = CoroutineScope(Job() + Dispatchers.Default)
+    scope.launch {
+      delay(100)
+      live.refresh()
+      handlerWaiting = false
+    }
   }
 
 
+  fun isAcceptable(user: User): Boolean {
+    return user !in hiddenUsers()  // if user hasn't hided this author
+  }
+
+  fun isAcceptableDirect(note: Note): Boolean {
+    return note.reports.firstOrNull { it.author == userProfile() } == null // if user has not reported this post
+        && note.reports.filter { it.author in userProfile().follows }.size < 5 // if it has 5 reports by reliable users
+  }
+
+  fun isAcceptable(note: Note): Boolean {
+    return note.author?.let { isAcceptable(it) } ?: true // if user hasn't hided this author
+        && isAcceptableDirect(note)
+        && (note.event !is ReactionEvent
+          || (note.event is ReactionEvent && note.replyTo?.firstOrNull { isAcceptableDirect(note) } == null)
+        ) // is not a reaction about a blocked post
+  }
 }
 
 class AccountLiveData(private val account: Account): LiveData<AccountState>(AccountState(account)) {
   fun refresh() {
     postValue(AccountState(account))
-  }
-
-  override fun onActive() {
-    super.onActive()
-  }
-
-  override fun onInactive() {
-    super.onInactive()
   }
 }
 

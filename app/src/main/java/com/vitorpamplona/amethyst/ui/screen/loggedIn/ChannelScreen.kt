@@ -30,6 +30,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -41,6 +42,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
+import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.Note
@@ -169,12 +171,12 @@ fun ChannelHeader(baseChannel: Channel, account: Account, accountStateViewModel:
 
                 channel?.let {
                     if (channel.creator == account.userProfile()) {
-                        EditButton(account, it, accountStateViewModel)
+                        EditButton(account, it)
                     } else {
                         if (account.followingChannels.contains(channel.idHex)) {
-                            LeaveButton(account,channel,accountStateViewModel, navController)
+                            LeaveButton(account,channel, navController)
                         } else {
-                            JoinButton(account,channel,accountStateViewModel, navController)
+                            JoinButton(account,channel, navController)
                         }
                     }
                 }
@@ -209,13 +211,13 @@ private fun NoteCopyButton(
 }
 
 @Composable
-private fun EditButton(account: Account, channel: Channel, accountStateViewModel: AccountStateViewModel) {
+private fun EditButton(account: Account, channel: Channel) {
     var wantsToPost by remember {
         mutableStateOf(false)
     }
 
     if (wantsToPost)
-        NewChannelView({ wantsToPost = false }, account = account, accountStateViewModel, channel)
+        NewChannelView({ wantsToPost = false }, account = account, channel)
 
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
@@ -231,11 +233,14 @@ private fun EditButton(account: Account, channel: Channel, accountStateViewModel
 }
 
 @Composable
-private fun JoinButton(account: Account, channel: Channel, accountStateViewModel: AccountStateViewModel, navController: NavController) {
+private fun JoinButton(account: Account, channel: Channel, navController: NavController) {
+    val context = LocalContext.current.applicationContext
+
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
-            account.joinChannel(channel.idHex, accountStateViewModel)
+            account.joinChannel(channel.idHex)
+            LocalPreferences(context).saveToEncryptedStorage(account)
             navController.navigate(Route.Message.route)
         },
         shape = RoundedCornerShape(20.dp),
@@ -249,11 +254,14 @@ private fun JoinButton(account: Account, channel: Channel, accountStateViewModel
 }
 
 @Composable
-private fun LeaveButton(account: Account, channel: Channel, accountStateViewModel: AccountStateViewModel, navController: NavController) {
+private fun LeaveButton(account: Account, channel: Channel, navController: NavController) {
+    val context = LocalContext.current.applicationContext
+
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
-            account.leaveChannel(channel.idHex, accountStateViewModel)
+            account.leaveChannel(channel.idHex)
+            LocalPreferences(context).saveToEncryptedStorage(account)
             navController.navigate(Route.Message.route)
         },
         shape = RoundedCornerShape(20.dp),

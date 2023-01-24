@@ -14,6 +14,8 @@ import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.runtime.Composable
@@ -39,10 +41,13 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun ReactionsRow(note: Note, account: Account, boost: (Note) -> Unit, reactTo: (Note) -> Unit) {
+fun ReactionsRow(note: Note, account: Account, accountViewModel: AccountViewModel) {
   val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+
+  var popupExpanded by remember { mutableStateOf(false) }
 
   var wantsToReplyTo by remember {
     mutableStateOf<Note?>(null)
@@ -79,7 +84,7 @@ fun ReactionsRow(note: Note, account: Account, boost: (Note) -> Unit, reactTo: (
 
     IconButton(
       modifier = Modifier.then(Modifier.size(24.dp)),
-      onClick = { if (account.isWriteable()) boost(note) }
+      onClick = { if (account.isWriteable()) accountViewModel.boost(note) }
     ) {
       if (note.isBoostedBy(account.userProfile())) {
         Icon(
@@ -107,7 +112,7 @@ fun ReactionsRow(note: Note, account: Account, boost: (Note) -> Unit, reactTo: (
 
     IconButton(
       modifier = Modifier.then(Modifier.size(24.dp)),
-      onClick = { if (account.isWriteable()) reactTo(note) }
+      onClick = { if (account.isWriteable()) accountViewModel.reactTo(note) }
     ) {
       if (note.isReactedBy(account.userProfile())) {
         Icon(
@@ -161,8 +166,20 @@ fun ReactionsRow(note: Note, account: Account, boost: (Note) -> Unit, reactTo: (
     }
 
 
-
+    IconButton(
+      modifier = Modifier.then(Modifier.size(24.dp)),
+      onClick = { popupExpanded = true }
+    ) {
+      Icon(
+        imageVector = Icons.Default.MoreVert,
+        null,
+        modifier = Modifier.size(15.dp),
+        tint = grayTint,
+      )
+    }
   }
+
+  NoteDropDownMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
 }
 
 fun showCount(size: Int?): String {
