@@ -1,1 +1,1 @@
-Nostr client for Android
+Nostr Client for Android
