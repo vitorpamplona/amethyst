@@ -35,7 +35,7 @@ object NostrChatRoomDataSource: NostrDataSource<Note>("ChatroomFeed") {
   override fun feed(): List<Note> {
     val messages = account.userProfile().messages[withUser]?.filter { account.isAcceptable(it) }
 
-    return messages?.sortedBy { it.event?.createdAt } ?: emptyList()
+    return messages?.sortedBy { it.event?.createdAt }?.reversed() ?: emptyList()
   }
 
   override fun updateChannelFilters() {

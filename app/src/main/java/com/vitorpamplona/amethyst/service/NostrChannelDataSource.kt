@@ -30,7 +30,7 @@ object NostrChannelDataSource: NostrDataSource<Note>("ChatroomFeed") {
 
   // returns the last Note of each user.
   override fun feed(): List<Note> {
-    return channel?.notes?.values?.filter { account.isAcceptable(it) }?.sortedBy { it.event?.createdAt } ?: emptyList()
+    return channel?.notes?.values?.filter { account.isAcceptable(it) }?.sortedBy { it.event?.createdAt }?.reversed() ?: emptyList()
   }
 
   override fun updateChannelFilters() {

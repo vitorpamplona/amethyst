@@ -61,16 +61,13 @@ fun ChatroomFeedView(viewModel: FeedViewModel, accountViewModel: AccountViewMode
                                 top = 10.dp,
                                 bottom = 10.dp
                             ),
+                            reverseLayout = true,
                             state = listState
                         ) {
                             var previousDate: String = ""
                             itemsIndexed(state.feed, key = { _, item -> item.idHex }) { index, item ->
                                 ChatroomMessageCompose(item, accountViewModel = accountViewModel, navController = navController)
                             }
-                        }
-
-                        LaunchedEffect(Unit) {
-                            listState.animateScrollToItem(state.feed.size-1, 0)
                         }
                     }
                     FeedState.Loading -> {
