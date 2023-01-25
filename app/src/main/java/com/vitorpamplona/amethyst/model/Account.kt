@@ -122,6 +122,15 @@ class Account(
   fun boost(note: Note) {
     if (!isWriteable()) return
 
+    val currentTime = Date().time / 1000
+
+    if (
+      note.boosts.firstOrNull { it.author == userProfile() && (it?.event?.createdAt ?: 0) > currentTime - (60 * 5)} != null // 5 minute protection
+    ) {
+      // has already bosted in the past 5mins 
+      return
+    }
+
     note.event?.let {
       val event = RepostEvent.create(it, loggedIn.privKey!!)
       Client.send(event)
