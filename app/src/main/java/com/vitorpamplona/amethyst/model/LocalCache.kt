@@ -364,7 +364,7 @@ object LocalCache {
 
   fun findNotesStartingWith(text: String): List<Note> {
     return notes.values.filter {
-      (it.event is TextNoteEvent && it.event?.content?.contains(text) ?: false)
+      (it.event is TextNoteEvent && it.event?.content?.contains(text, true) ?: false)
         || it.idHex.startsWith(text, true)
         || it.id.toNote().startsWith(text, true)
     }
