@@ -177,16 +177,12 @@ fun ChatroomMessageCompose(baseNote: Note, innerQuote: Boolean = false, accountV
                                         RichTextViewer(
                                             eventContent,
                                             note.event?.tags,
-                                            note,
-                                            accountViewModel,
                                             navController
                                         )
                                     else
                                         RichTextViewer(
                                             "Could Not decrypt the message",
                                             note.event?.tags,
-                                            note,
-                                            accountViewModel,
                                             navController
                                         )
 

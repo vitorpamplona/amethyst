@@ -203,7 +203,7 @@ fun NoteMaster(baseNote: Note, accountViewModel: AccountViewModel, navController
                 Column() {
                     val eventContent = note.event?.content
                     if (eventContent != null)
-                        RichTextViewer(eventContent, note.event?.tags, note, accountViewModel, navController)
+                        RichTextViewer(eventContent, note.event?.tags, navController)
 
                     ReactionsRowState(note, accountViewModel)
 

@@ -40,7 +40,7 @@ fun isValidURL(url: String?): Boolean {
 }
 
 @Composable
-fun RichTextViewer(content: String, tags: List<List<String>>?, note: Note, accountViewModel: AccountViewModel, navController: NavController) {
+fun RichTextViewer(content: String, tags: List<List<String>>?, navController: NavController) {
   Column(modifier = Modifier.padding(top = 5.dp)) {
     // FlowRow doesn't work well with paragraphs. So we need to split them
     content.split('\n').forEach { paragraph ->

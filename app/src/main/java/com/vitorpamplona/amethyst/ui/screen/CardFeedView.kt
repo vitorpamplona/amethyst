@@ -66,7 +66,7 @@ fun CardFeedView(viewModel: CardFeedViewModel, accountViewModel: AccountViewMode
                             ),
                             state = listState
                         ) {
-                            itemsIndexed(state.feed) { index, item ->
+                            itemsIndexed(state.feed, key = { _, item -> item.id() }) { index, item ->
                                 when (item) {
                                     is NoteCard -> NoteCompose(item.note, isInnerNote = false, accountViewModel = accountViewModel, navController = navController)
                                     is LikeSetCard -> LikeSetCompose(item, isInnerNote = false, accountViewModel = accountViewModel, navController = navController)

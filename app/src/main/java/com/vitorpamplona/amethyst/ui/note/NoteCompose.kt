@@ -183,7 +183,7 @@ fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Bool
                     } else {
                         val eventContent = note.event?.content
                         if (eventContent != null)
-                            RichTextViewer(eventContent, note.event?.tags, note, accountViewModel, navController)
+                            RichTextViewer(eventContent, note.event?.tags, navController)
 
                         if (note.event !is ChannelMessageEvent) {
                             ReactionsRowState(note, accountViewModel)
