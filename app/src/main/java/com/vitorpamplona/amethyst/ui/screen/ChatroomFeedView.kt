@@ -65,7 +65,7 @@ fun ChatroomFeedView(viewModel: FeedViewModel, accountViewModel: AccountViewMode
                             state = listState
                         ) {
                             var previousDate: String = ""
-                            itemsIndexed(state.feed, key = { _, item -> item.idHex }) { index, item ->
+                            itemsIndexed(state.feed, key = { index, item -> if (index == 0) index else item.idHex }) { index, item ->
                                 ChatroomMessageCompose(item, accountViewModel = accountViewModel, navController = navController)
                             }
                         }
