@@ -14,9 +14,13 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Divider
+import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -206,7 +210,11 @@ private fun NoteCopyButton(
                 backgroundColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
             ),
     ) {
-        Text(text = "note", color = Color.White)
+        Icon(
+            tint = Color.White,
+            imageVector = Icons.Default.Share,
+            contentDescription = "Copies the Note ID to the clipboard for sharing"
+        )
     }
 }
 

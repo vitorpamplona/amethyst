@@ -26,6 +26,9 @@ import androidx.compose.material.Tab
 import androidx.compose.material.TabRow
 import androidx.compose.material.TabRowDefaults
 import androidx.compose.material.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Password
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -296,7 +299,11 @@ private fun NSecCopyButton(
                 backgroundColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
             ),
     ) {
-        Text(text = "nsec", color = Color.White)
+        Icon(
+            tint = Color.White,
+            imageVector = Icons.Default.Password,
+            contentDescription = "Copies the Nsec ID (your password) to the clipboard for backup"
+        )
     }
 }
 
@@ -315,7 +322,11 @@ private fun NPubCopyButton(
                 backgroundColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
             ),
     ) {
-        Text(text = "npub", color = Color.White)
+        Icon(
+            tint = Color.White,
+            imageVector = Icons.Default.Share,
+            contentDescription = "Copies the Note ID to the clipboard for sharing"
+        )
     }
 }
 
