@@ -34,7 +34,7 @@ val DefaultChannels = setOf(
 class Account(
   val loggedIn: Persona,
   val followingChannels: MutableSet<String> = DefaultChannels.toMutableSet(),
-  val hiddenUsers: MutableSet<String> = DefaultChannels.toMutableSet()
+  val hiddenUsers: MutableSet<String> = mutableSetOf()
 ) {
 
   fun userProfile(): User {
