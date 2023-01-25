@@ -15,10 +15,16 @@ import kotlinx.coroutines.launch
 
 object UrlCachedPreviewer {
   val cache = ConcurrentHashMap<String, UrlInfoItem>()
+  val failures = ConcurrentHashMap<String, Throwable>()
 
   fun previewInfo(url: String, callback: IUrlPreviewCallback? = null) {
     cache[url]?.let {
       callback?.onComplete(it)
+      return
+    }
+
+    failures[url]?.let {
+      callback?.onFailed(it)
       return
     }
 
@@ -31,6 +37,7 @@ object UrlCachedPreviewer {
         }
 
         override fun onFailed(throwable: Throwable) {
+          failures.put(url, throwable)
           callback?.onFailed(throwable)
         }
       }).fetchUrlPreview()
@@ -53,8 +60,10 @@ object UrlCachedPreviewer {
           // Preload Images? Isn't this too heavy?
         } else if (videoExtension.matcher(removedParamsFromUrl).matches()) {
           // Do nothing for now.
-        } else {
+        } else if (isValidURL(removedParamsFromUrl)) {
           previewInfo(it)
+        } else {
+          previewInfo("https://${it}")
         }
       }
     }
