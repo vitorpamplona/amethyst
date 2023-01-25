@@ -25,8 +25,11 @@ object NostrThreadDataSource: NostrDataSource<Note>("SingleThreadFeed") {
   }
 
   fun createLoadEventsIfNotLoadedFilter(): JsonFilter? {
-    val eventsToLoad = eventsToWatch
-      .map { LocalCache.notes[it] }
+    val nodes = synchronized(eventsToWatch) {
+      eventsToWatch.map { LocalCache.notes[it] }
+    }
+
+    val eventsToLoad = nodes
       .filterNotNull()
       .filter { it.event == null }
       .map { it.idHex.substring(0, 8) }
@@ -85,7 +88,9 @@ object NostrThreadDataSource: NostrDataSource<Note>("SingleThreadFeed") {
       thread.add(note)
       threadSet.add(note)
 
-      note.replies.forEach {
+      synchronized(note.replies) {
+        note.replies.toList()
+      }.forEach {
         loadDown(it, thread, threadSet)
       }
     }

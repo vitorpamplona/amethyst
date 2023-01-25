@@ -79,8 +79,6 @@ fun HomeScreen(accountViewModel: AccountViewModel, navController: NavController)
                     1 -> FeedView(feedViewModelReplies, accountViewModel, navController)
                 }
             }
-
-
         }
     }
 }
