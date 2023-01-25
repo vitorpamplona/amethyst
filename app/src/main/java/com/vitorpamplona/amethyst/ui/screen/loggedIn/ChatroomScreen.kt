@@ -24,8 +24,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -86,6 +88,7 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
                             color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                         )
                     },
+                    textStyle = TextStyle(textDirection = TextDirection.Content),
                     trailingIcon = {
                         PostButton(
                             onPost = {

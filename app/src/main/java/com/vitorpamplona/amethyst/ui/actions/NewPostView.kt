@@ -36,7 +36,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -153,7 +155,8 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, account: Account
                             unfocusedBorderColor = Color.Transparent,
                             focusedBorderColor = Color.Transparent
                         ),
-                    visualTransformation = UrlUserTagTransformation(MaterialTheme.colors.primary)
+                    visualTransformation = UrlUserTagTransformation(MaterialTheme.colors.primary),
+                    textStyle = TextStyle(textDirection = TextDirection.Content)
                 )
 
                 val userSuggestions = postViewModel.userSuggestions

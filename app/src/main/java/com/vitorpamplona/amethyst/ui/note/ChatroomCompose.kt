@@ -18,7 +18,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -64,7 +66,8 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
                     Text(
                         "${channel.info.name}",
                         fontWeight = FontWeight.Bold,
-                        modifier = it
+                        modifier = it,
+                        style = TextStyle(textDirection = TextDirection.Content)
                     )
                     Text(
                         " Public Chat",
@@ -152,7 +155,8 @@ fun ChannelName(
                         channelLastContent,
                         color = MaterialTheme.colors.onSurface.copy(alpha = 0.52f),
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        style = TextStyle(textDirection = TextDirection.Content)
                     )
                 else
                     Text(
