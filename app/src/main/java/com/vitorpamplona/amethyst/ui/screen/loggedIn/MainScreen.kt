@@ -27,7 +27,7 @@ import com.vitorpamplona.amethyst.ui.navigation.currentRoute
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: AccountStateViewModel) {
+fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: AccountStateViewModel, startingPage: String? = null) {
     val navController = rememberNavController()
     val scaffoldState = rememberScaffoldState(rememberDrawerState(DrawerValue.Closed))
 
@@ -50,7 +50,7 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
         scaffoldState = scaffoldState
     ) {
         Column(modifier = Modifier.padding(bottom = it.calculateBottomPadding())) {
-            AppNavigation(navController, accountViewModel, accountStateViewModel)
+            AppNavigation(navController, accountViewModel, accountStateViewModel, startingPage)
         }
     }
 }

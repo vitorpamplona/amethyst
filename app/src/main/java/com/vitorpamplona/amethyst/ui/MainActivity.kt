@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui
 
+import android.net.Uri
 import android.os.Build.VERSION.SDK_INT
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -17,14 +18,27 @@ import coil.decode.SvgDecoder
 import com.vitorpamplona.amethyst.EncryptedStorage
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
+import com.vitorpamplona.amethyst.model.decodePublicKey
+import com.vitorpamplona.amethyst.model.toHexKey
+import com.vitorpamplona.amethyst.service.Nip19
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.screen.AccountScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
+import fr.acinq.secp256k1.Hex
+import nostr.postr.Persona
+import nostr.postr.bechToBytes
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+
+    val nip19 = Nip19().uriToRoute(intent?.data?.toString())
+    val startingPage = when (nip19?.type) {
+      Nip19.Type.USER -> "User/${nip19.hex}"
+      Nip19.Type.NOTE -> "Note/${nip19.hex}"
+      else -> null
+    }
 
     Coil.setImageLoader {
       ImageLoader.Builder(this).components {
@@ -39,6 +53,7 @@ class MainActivity : ComponentActivity() {
         .build()
     }
 
+
     setContent {
       AmethystTheme {
         // A surface container using the 'background' color from the theme
@@ -48,7 +63,7 @@ class MainActivity : ComponentActivity() {
             AccountStateViewModel(LocalPreferences(applicationContext))
           }
 
-          AccountScreen(accountViewModel)
+          AccountScreen(accountViewModel, startingPage)
         }
       }
     }

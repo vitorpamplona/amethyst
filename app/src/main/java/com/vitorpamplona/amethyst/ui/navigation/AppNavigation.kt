@@ -11,11 +11,16 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 fun AppNavigation(
     navController: NavHostController,
     accountViewModel: AccountViewModel,
-    accountStateViewModel: AccountStateViewModel
+    accountStateViewModel: AccountStateViewModel,
+    nextPage: String? = null
 ) {
     NavHost(navController, startDestination = Route.Home.route) {
         Routes.forEach {
             composable(it.route, it.arguments, content = it.buildScreen(accountViewModel, accountStateViewModel, navController))
         }
+    }
+
+    if (nextPage != null) {
+        navController.navigate(nextPage)
     }
 }

@@ -57,20 +57,25 @@ object NostrThreadDataSource: NostrDataSource<Note>("SingleThreadFeed") {
   }
 
   fun loadThread(noteId: String) {
-    val note = LocalCache.notes[noteId] ?: return
+    val note = LocalCache.notes[noteId]
 
-    val thread = mutableListOf<Note>()
-    val threadSet = mutableSetOf<Note>()
+    if (note != null) {
+      val thread = mutableListOf<Note>()
+      val threadSet = mutableSetOf<Note>()
 
-    val threadRoot = note.replyTo?.firstOrNull() ?: note
+      val threadRoot = note.replyTo?.firstOrNull() ?: note
 
-    loadDown(threadRoot, thread, threadSet)
+      loadDown(threadRoot, thread, threadSet)
 
-    // Currently orders by date of each event, descending, at each level of the reply stack
-    val order = compareByDescending<Note> { it.replyLevelSignature() }
+      // Currently orders by date of each event, descending, at each level of the reply stack
+      val order = compareByDescending<Note> { it.replyLevelSignature() }
 
-    eventsToWatch.clear()
-    eventsToWatch.addAll(thread.sortedWith(order).map { it.idHex })
+      eventsToWatch.clear()
+      eventsToWatch.addAll(thread.sortedWith(order).map { it.idHex })
+    } else {
+      eventsToWatch.clear()
+      eventsToWatch.add(noteId)
+    }
 
     resetFilters()
   }

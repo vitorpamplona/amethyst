@@ -8,7 +8,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun AccountScreen(accountStateViewModel: AccountStateViewModel) {
+fun AccountScreen(accountStateViewModel: AccountStateViewModel, startingPage: String?) {
   val accountState by accountStateViewModel.accountContent.collectAsStateWithLifecycle()
 
   Column() {
@@ -18,10 +18,10 @@ fun AccountScreen(accountStateViewModel: AccountStateViewModel) {
           LoginPage(accountStateViewModel)
         }
         is AccountState.LoggedIn -> {
-          MainScreen(AccountViewModel(state.account), accountStateViewModel)
+          MainScreen(AccountViewModel(state.account), accountStateViewModel, startingPage)
         }
         is AccountState.LoggedInViewOnly -> {
-          MainScreen(AccountViewModel(state.account), accountStateViewModel)
+          MainScreen(AccountViewModel(state.account), accountStateViewModel, startingPage)
         }
       }
     }
