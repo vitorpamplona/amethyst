@@ -74,7 +74,9 @@ fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Bool
             modifier.combinedClickable(
                 onClick = {
                     if (note.event !is ChannelMessageEvent) {
-                        navController.navigate("Note/${note.idHex}")
+                        navController.navigate("Note/${note.idHex}"){
+                            launchSingleTop = true
+                        }
                     } else {
                         note.channel?.let {
                             navController.navigate("Channel/${it.idHex}")

@@ -16,7 +16,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -79,7 +81,8 @@ fun NewChannelView(onClose: () -> Unit, account: Account, channel: Channel? = nu
                     },
                     keyboardOptions = KeyboardOptions.Default.copy(
                         capitalization = KeyboardCapitalization.Sentences
-                    )
+                    ),
+                    textStyle = TextStyle(textDirection = TextDirection.Content)
                 )
 
                 Spacer(modifier = Modifier.height(15.dp))
@@ -113,6 +116,7 @@ fun NewChannelView(onClose: () -> Unit, account: Account, channel: Channel? = nu
                     keyboardOptions = KeyboardOptions.Default.copy(
                         capitalization = KeyboardCapitalization.Sentences
                     ),
+                    textStyle = TextStyle(textDirection = TextDirection.Content),
                     maxLines = 10
 
                 )
