@@ -243,10 +243,12 @@ class Account(
 
   fun joinChannel(idHex: String) {
     followingChannels.add(idHex)
+    invalidateData()
   }
 
   fun leaveChannel(idHex: String) {
     followingChannels.remove(idHex)
+    invalidateData()
   }
 
   fun hideUser(pubkeyHex: String) {

@@ -186,7 +186,7 @@ fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Bool
                             RichTextViewer(eventContent, note.event?.tags, navController)
 
                         if (note.event !is ChannelMessageEvent) {
-                            ReactionsRowState(note, accountViewModel)
+                            ReactionsRow(note, accountViewModel)
                         }
 
                         Divider(

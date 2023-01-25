@@ -14,13 +14,12 @@ import com.vitorpamplona.amethyst.ui.note.toShortenHex
 
 @Composable
 fun ClickableNoteTag(
-  note: Note,
+  baesNote: Note,
   navController: NavController
 ) {
-  val innerNoteState by note.live.observeAsState()
   ClickableText(
-    text = AnnotatedString("@${innerNoteState?.note?.id?.toNote()?.toShortenHex()} "),
-    onClick = { navController.navigate("Note/${innerNoteState?.note?.idHex}") },
+    text = AnnotatedString("@${baesNote.id.toNote().toShortenHex()} "),
+    onClick = { navController.navigate("Note/${baesNote.idHex}") },
     style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary)
   )
 }

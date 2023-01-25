@@ -40,7 +40,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.RichTextViewer
 import com.vitorpamplona.amethyst.ui.note.BlankNote
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
-import com.vitorpamplona.amethyst.ui.note.ReactionsRowState
+import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.timeAgoLong
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -205,7 +205,7 @@ fun NoteMaster(baseNote: Note, accountViewModel: AccountViewModel, navController
                     if (eventContent != null)
                         RichTextViewer(eventContent, note.event?.tags, navController)
 
-                    ReactionsRowState(note, accountViewModel)
+                    ReactionsRow(note, accountViewModel)
 
                     Divider(
                         modifier = Modifier.padding(top = 10.dp),

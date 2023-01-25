@@ -45,7 +45,7 @@ class Note(val idHex: String) {
         this.mentions = mentions
         this.replyTo = replyTo
 
-        invalidateData()
+        invalidateData(live)
     }
 
     fun formattedDateTime(timestamp: Long): String {
@@ -77,22 +77,22 @@ class Note(val idHex: String) {
 
     fun addReply(note: Note) {
         if (replies.add(note))
-            invalidateData()
+            invalidateData(liveReplies)
     }
 
     fun addBoost(note: Note) {
         if (boosts.add(note))
-            invalidateData()
+            invalidateData(liveBoosts)
     }
 
     fun addReaction(note: Note) {
         if (reactions.add(note))
-            invalidateData()
+            invalidateData(liveReactions)
     }
 
     fun addReport(note: Note) {
         if (reports.add(note))
-            invalidateData()
+            invalidateData(liveReports)
     }
 
     fun isReactedBy(user: User): Boolean {
@@ -110,10 +110,15 @@ class Note(val idHex: String) {
     // Observers line up here.
     val live: NoteLiveData = NoteLiveData(this)
 
+    val liveReactions: NoteLiveData = NoteLiveData(this)
+    val liveBoosts: NoteLiveData = NoteLiveData(this)
+    val liveReplies: NoteLiveData = NoteLiveData(this)
+    val liveReports: NoteLiveData = NoteLiveData(this)
+
     // Refreshes observers in batches.
     var handlerWaiting = false
     @Synchronized
-    fun invalidateData() {
+    fun invalidateData(live: NoteLiveData) {
         if (handlerWaiting) return
 
         handlerWaiting = true

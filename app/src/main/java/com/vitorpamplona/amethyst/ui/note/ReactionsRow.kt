@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.ui.note
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,6 +20,7 @@ import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -44,7 +44,19 @@ import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun ReactionsRow(note: Note, account: Account, accountViewModel: AccountViewModel) {
+fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel) {
+  val accountState by accountViewModel.accountLiveData.observeAsState()
+  val account = accountState?.account ?: return
+
+  val reactionsState by baseNote.liveReactions.observeAsState()
+  val reactedNote = reactionsState?.note
+
+  val boostsState by baseNote.liveBoosts.observeAsState()
+  val boostedNote = boostsState?.note
+
+  val repliesState by baseNote.liveReplies.observeAsState()
+  val replies = repliesState?.note?.replies ?: emptySet()
+
   val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
 
   var popupExpanded by remember { mutableStateOf(false) }
@@ -65,7 +77,7 @@ fun ReactionsRow(note: Note, account: Account, accountViewModel: AccountViewMode
   ) {
     IconButton(
       modifier = Modifier.then(Modifier.size(24.dp)),
-      onClick = { if (account.isWriteable()) wantsToReplyTo = note }
+      onClick = { if (account.isWriteable()) wantsToReplyTo = baseNote }
     ) {
       Icon(
         painter = painterResource(R.drawable.ic_comment),
@@ -76,7 +88,7 @@ fun ReactionsRow(note: Note, account: Account, accountViewModel: AccountViewMode
     }
 
     Text(
-      "  ${showCount(note.replies?.size)}",
+      "  ${showCount(replies.size)}",
       fontSize = 14.sp,
       color = grayTint,
       modifier = Modifier.weight(1f)
@@ -84,9 +96,9 @@ fun ReactionsRow(note: Note, account: Account, accountViewModel: AccountViewMode
 
     IconButton(
       modifier = Modifier.then(Modifier.size(24.dp)),
-      onClick = { if (account.isWriteable()) accountViewModel.boost(note) }
+      onClick = { if (account.isWriteable()) accountViewModel.boost(baseNote) }
     ) {
-      if (note.isBoostedBy(account.userProfile())) {
+      if (boostedNote?.isBoostedBy(account.userProfile()) == true) {
         Icon(
           painter = painterResource(R.drawable.ic_retweeted),
           null,
@@ -104,7 +116,7 @@ fun ReactionsRow(note: Note, account: Account, accountViewModel: AccountViewMode
     }
 
     Text(
-      "  ${showCount(note.boosts?.size)}",
+      "  ${showCount(boostedNote?.boosts?.size)}",
       fontSize = 14.sp,
       color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
       modifier = Modifier.weight(1f)
@@ -112,9 +124,9 @@ fun ReactionsRow(note: Note, account: Account, accountViewModel: AccountViewMode
 
     IconButton(
       modifier = Modifier.then(Modifier.size(24.dp)),
-      onClick = { if (account.isWriteable()) accountViewModel.reactTo(note) }
+      onClick = { if (account.isWriteable()) accountViewModel.reactTo(baseNote) }
     ) {
-      if (note.isReactedBy(account.userProfile())) {
+      if (reactedNote?.isReactedBy(account.userProfile()) == true) {
         Icon(
           painter = painterResource(R.drawable.ic_liked),
           null,
@@ -132,7 +144,7 @@ fun ReactionsRow(note: Note, account: Account, accountViewModel: AccountViewMode
     }
 
     Text(
-      "  ${showCount(note.reactions?.size)}",
+      "  ${showCount(reactedNote?.reactions?.size)}",
       fontSize = 14.sp,
       color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
       modifier = Modifier.weight(1f)
@@ -154,7 +166,7 @@ fun ReactionsRow(note: Note, account: Account, accountViewModel: AccountViewMode
     Row(modifier = Modifier.weight(1f)) {
       AsyncImage(
         model = ImageRequest.Builder(LocalContext.current)
-          .data("https://counter.amethyst.social/${note.idHex}.svg?label=+&color=00000000")
+          .data("https://counter.amethyst.social/${baseNote.idHex}.svg?label=+&color=00000000")
           .crossfade(true)
           .diskCachePolicy(CachePolicy.DISABLED)
           .memoryCachePolicy(CachePolicy.ENABLED)
@@ -179,7 +191,7 @@ fun ReactionsRow(note: Note, account: Account, accountViewModel: AccountViewMode
     }
   }
 
-  NoteDropDownMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
+  NoteDropDownMenu(baseNote, popupExpanded, { popupExpanded = false }, accountViewModel)
 }
 
 fun showCount(size: Int?): String {
