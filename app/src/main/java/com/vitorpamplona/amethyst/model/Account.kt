@@ -90,7 +90,7 @@ class Account(
   fun reactTo(note: Note) {
     if (!isWriteable()) return
 
-    if (note.reactions.firstOrNull { it.author == userProfile() && it.event?.content == "+️" } != null) {
+    if (note.reactions.firstOrNull { it.author == userProfile() && it.event?.content == "+" } != null) {
       // has already liked this note
       return
     }
