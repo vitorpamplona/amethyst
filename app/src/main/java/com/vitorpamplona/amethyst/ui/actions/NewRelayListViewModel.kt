@@ -60,7 +60,7 @@ class NewRelayListViewModel: ViewModel() {
                     val eventUploadCounter = liveRelay?.eventUploadCounter ?: 0
 
                     Relay(it.url, it.read, it.write, errorCounter, eventDownloadCounter, eventUploadCounter)
-                }
+                }.sortedBy { it.downloadCount }.reversed()
         }
     }
 
