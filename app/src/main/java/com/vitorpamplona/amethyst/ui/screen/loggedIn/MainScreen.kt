@@ -11,6 +11,7 @@ import androidx.compose.material.Scaffold
 import androidx.compose.material.rememberDrawerState
 import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -57,7 +58,7 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
 
 @Composable
 fun FloatingButton(navController: NavHostController, accountViewModel: AccountStateViewModel) {
-    val accountState by accountViewModel.accountContent.collectAsStateWithLifecycle()
+    val accountState by accountViewModel.accountContent.collectAsState()
 
     if (currentRoute(navController) == Route.Home.route) {
         Crossfade(targetState = accountState) { state ->
