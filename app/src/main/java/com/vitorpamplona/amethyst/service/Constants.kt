@@ -12,7 +12,7 @@ object Constants {
       Relay("wss://relay.damus.io", read = true, write = true),
       Relay("wss://nostr.fmt.wiz.biz", read = true, write = true),
       Relay("wss://nostr.oxtr.dev", read = true, write = true),
-      Relay("wss://nostr-relay.wlvs.space", read = true, write = true),
+      Relay("wss://eden.nostr.land", read = true, write = true),
       //Relay("wss://nostr-2.zebedee.cloud", read = true, write = true),
       Relay("wss://nostr-pub.wellorder.net", read = true, write = true),
       Relay("wss://nostr.mom", read = true, write = true),
