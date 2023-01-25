@@ -344,8 +344,8 @@ class Account(
   fun isAcceptable(note: Note): Boolean {
     return note.author?.let { isAcceptable(it) } ?: true // if user hasn't hided this author
         && isAcceptableDirect(note)
-        && (note.event !is ReactionEvent
-          || (note.event is ReactionEvent && note.replyTo?.firstOrNull { isAcceptableDirect(note) } == null)
+        && (note.event !is RepostEvent
+          || (note.event is RepostEvent && note.replyTo?.firstOrNull { isAcceptableDirect(note) } != null)
         ) // is not a reaction about a blocked post
   }
 }
