@@ -56,7 +56,7 @@ class NewUserMetadataViewModel: ViewModel() {
         currentJson.put("website", website.value)
         currentJson.put("about", about.value)
         currentJson.put("nip05", nip05.value)
-        currentJson.put("lud06", lnAddress.value)
+        currentJson.put("lud16", lnAddress.value)
 
         val writer = StringWriter()
         ObjectMapper().writeValue(writer, currentJson)
