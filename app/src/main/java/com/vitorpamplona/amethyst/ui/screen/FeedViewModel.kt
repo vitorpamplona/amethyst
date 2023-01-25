@@ -14,6 +14,7 @@ import com.vitorpamplona.amethyst.service.NostrGlobalDataSource
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
 import com.vitorpamplona.amethyst.service.NostrThreadDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
+import com.vitorpamplona.amethyst.service.model.RepostEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -24,10 +25,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import nostr.postr.events.TextNoteEvent
 
 class NostrChannelFeedViewModel: FeedViewModel(NostrChannelDataSource)
 class NostrChatRoomFeedViewModel: FeedViewModel(NostrChatRoomDataSource)
-class NostrHomeFeedViewModel: FeedViewModel(NostrHomeDataSource)
 class NostrGlobalFeedViewModel: FeedViewModel(NostrGlobalDataSource)
 class NostrThreadFeedViewModel: FeedViewModel(NostrThreadDataSource)
 class NostrUserProfileFeedViewModel: FeedViewModel(NostrUserProfileDataSource)
@@ -50,6 +51,18 @@ class NostrChatroomListNewFeedViewModel: FeedViewModel(NostrChatroomListDataSour
         }
     }
 }
+
+class NostrHomeFeedViewModel: FeedViewModel(NostrHomeDataSource) {
+    override fun newListFromDataSource(): List<Note> {
+        // Filter: no replies
+        return dataSource.feed().filter {
+            it.replyTo == null || it.replyTo?.size == 0
+        }.take(100)
+    }
+}
+
+class NostrHomeRepliesFeedViewModel: FeedViewModel(NostrHomeDataSource) {}
+
 
 abstract class FeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel() {
     private val _feedContent = MutableStateFlow<FeedState>(FeedState.Loading)
