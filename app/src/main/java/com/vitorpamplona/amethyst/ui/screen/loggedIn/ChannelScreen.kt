@@ -20,6 +20,7 @@ import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -171,16 +172,18 @@ fun ChannelHeader(baseChannel: Channel, account: Account, accountStateViewModel:
                     }
                 }
 
-                channel?.let { NoteCopyButton(it) }
+                Row(modifier = Modifier.height(35.dp).padding(bottom = 3.dp)) {
+                    channel?.let { NoteCopyButton(it) }
 
-                channel?.let {
-                    if (channel.creator == account.userProfile()) {
-                        EditButton(account, it)
-                    } else {
-                        if (account.followingChannels.contains(channel.idHex)) {
-                            LeaveButton(account,channel, navController)
+                    channel?.let {
+                        if (channel.creator == account.userProfile()) {
+                            EditButton(account, it)
                         } else {
-                            JoinButton(account,channel, navController)
+                            if (account.followingChannels.contains(channel.idHex)) {
+                                LeaveButton(account, channel, navController)
+                            } else {
+                                JoinButton(account, channel, navController)
+                            }
                         }
                     }
                 }
@@ -202,7 +205,7 @@ private fun NoteCopyButton(
     val clipboardManager = LocalClipboardManager.current
 
     Button(
-        modifier = Modifier.padding(horizontal = 3.dp),
+        modifier = Modifier.padding(horizontal = 3.dp).width(50.dp),
         onClick = { clipboardManager.setText(AnnotatedString(note.id.toNote())) },
         shape = RoundedCornerShape(20.dp),
         colors = ButtonDefaults
@@ -228,7 +231,7 @@ private fun EditButton(account: Account, channel: Channel) {
         NewChannelView({ wantsToPost = false }, account = account, channel)
 
     Button(
-        modifier = Modifier.padding(horizontal = 3.dp),
+        modifier = Modifier.padding(horizontal = 3.dp).width(50.dp),
         onClick = { wantsToPost = true },
         shape = RoundedCornerShape(20.dp),
         colors = ButtonDefaults
@@ -236,7 +239,11 @@ private fun EditButton(account: Account, channel: Channel) {
                 backgroundColor = MaterialTheme.colors.primary
             )
     ) {
-        Text(text = "Edit", color = Color.White)
+        Icon(
+            tint = Color.White,
+            imageVector = Icons.Default.EditNote,
+            contentDescription = "Edits the Channel Metadata"
+        )
     }
 }
 

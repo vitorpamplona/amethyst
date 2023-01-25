@@ -27,6 +27,7 @@ import androidx.compose.material.TabRow
 import androidx.compose.material.TabRowDefaults
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Password
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.runtime.Composable
@@ -151,26 +152,28 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
 
                             Spacer(Modifier.weight(1f))
 
-                            MessageButton(user, navController)
+                            Row(modifier = Modifier.height(35.dp).padding(bottom = 3.dp)) {
+                                MessageButton(user, navController)
 
-                            if (accountUser == user && account.isWriteable()) {
-                                NSecCopyButton(account)
-                            }
+                                if (accountUser == user && account.isWriteable()) {
+                                    NSecCopyButton(account)
+                                }
 
-                            NPubCopyButton(user)
+                                NPubCopyButton(user)
 
-                            if (accountUser == user) {
-                                EditButton(account)
-                            } else {
-                                if (account?.isAcceptable(user) == false) {
-                                    ShowUserButton {
-                                        account.showUser(user.pubkeyHex)
-                                        LocalPreferences(ctx).saveToEncryptedStorage(account)
-                                    }
-                                } else if (accountUser.isFollowing(user)) {
-                                    UnfollowButton { account.unfollow(user) }
+                                if (accountUser == user) {
+                                    EditButton(account)
                                 } else {
-                                    FollowButton { account.follow(user) }
+                                    if (account?.isAcceptable(user) == false) {
+                                        ShowUserButton {
+                                            account.showUser(user.pubkeyHex)
+                                            LocalPreferences(ctx).saveToEncryptedStorage(account)
+                                        }
+                                    } else if (accountUser.isFollowing(user)) {
+                                        UnfollowButton { account.unfollow(user) }
+                                    } else {
+                                        FollowButton { account.follow(user) }
+                                    }
                                 }
                             }
                         }
@@ -291,7 +294,7 @@ private fun NSecCopyButton(
     val clipboardManager = LocalClipboardManager.current
 
     Button(
-        modifier = Modifier.padding(horizontal = 3.dp),
+        modifier = Modifier.padding(horizontal = 3.dp).width(50.dp),
         onClick = { account.loggedIn.privKey?.let { clipboardManager.setText(AnnotatedString(it.toNsec())) } },
         shape = RoundedCornerShape(20.dp),
         colors = ButtonDefaults
@@ -314,7 +317,7 @@ private fun NPubCopyButton(
     val clipboardManager = LocalClipboardManager.current
 
     Button(
-        modifier = Modifier.padding(horizontal = 3.dp),
+        modifier = Modifier.padding(horizontal = 3.dp).width(50.dp),
         onClick = { clipboardManager.setText(AnnotatedString(user.pubkey.toNpub())) },
         shape = RoundedCornerShape(20.dp),
         colors = ButtonDefaults
@@ -333,7 +336,7 @@ private fun NPubCopyButton(
 @Composable
 private fun MessageButton(user: User, navController: NavController) {
     Button(
-        modifier = Modifier.padding(horizontal = 3.dp),
+        modifier = Modifier.padding(horizontal = 3.dp).width(50.dp),
         onClick = { navController.navigate("Room/${user.pubkeyHex}") },
         shape = RoundedCornerShape(20.dp),
         colors = ButtonDefaults
@@ -360,7 +363,7 @@ private fun EditButton(account: Account) {
         NewUserMetadataView({ wantsToEdit = false }, account)
 
     Button(
-        modifier = Modifier.padding(horizontal = 3.dp),
+        modifier = Modifier.padding(horizontal = 3.dp).width(50.dp),
         onClick = { wantsToEdit = true },
         shape = RoundedCornerShape(20.dp),
         colors = ButtonDefaults
@@ -368,7 +371,11 @@ private fun EditButton(account: Account) {
                 backgroundColor = MaterialTheme.colors.primary
             )
     ) {
-        Text(text = "Edit", color = Color.White)
+        Icon(
+            tint = Color.White,
+            imageVector = Icons.Default.EditNote,
+            contentDescription = "Edits the User's Metadata"
+        )
     }
 }
 
