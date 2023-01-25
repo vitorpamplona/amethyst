@@ -37,9 +37,11 @@ import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -116,6 +118,7 @@ fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, accoun
                             color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                         )
                     },
+                    textStyle = TextStyle(textDirection = TextDirection.Content),
                     trailingIcon = {
                         PostButton(
                             onPost = {
