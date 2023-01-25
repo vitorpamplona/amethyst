@@ -164,7 +164,7 @@ fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Bool
                         note.replyTo?.mapIndexed { index, note ->
                             NoteCompose(
                                 note,
-                                modifier = Modifier.padding(top = 5.dp),
+                                modifier = Modifier,
                                 isInnerNote = true,
                                 accountViewModel = accountViewModel,
                                 navController = navController

@@ -56,7 +56,7 @@ class NostrHomeFeedViewModel: FeedViewModel(NostrHomeDataSource) {
     override fun newListFromDataSource(): List<Note> {
         // Filter: no replies
         return dataSource.feed().filter {
-            it.replyTo == null || it.replyTo?.size == 0
+            it.event is RepostEvent || it.replyTo == null || it.replyTo?.size == 0
         }.take(100)
     }
 }
