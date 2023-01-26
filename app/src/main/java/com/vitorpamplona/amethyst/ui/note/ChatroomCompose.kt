@@ -42,7 +42,7 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
     val account = accountState?.account ?: return
 
     val accountUserState by account.userProfile().live.observeAsState()
-    val accountUser = accountUserState?.user
+    val accountUser = accountUserState?.user ?: return
 
     if (note?.event == null) {
         BlankNote(Modifier)
@@ -100,8 +100,7 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
 
         userToComposeOn?.let { user ->
             ChannelName(
-                channelPicture = user.profilePicture(),
-                channelPicturePlaceholder = rememberAsyncImagePainter("https://robohash.org/${user.pubkeyHex}.png"),
+                channelPicture = { UserPicture(user = user, userAccount = accountUser, size = 55.dp) },
                 channelTitle = { UsernameDisplay(user, it) },
                 channelLastTime = note.event?.createdAt,
                 channelLastContent = accountViewModel.decrypt(note),
@@ -120,11 +119,8 @@ fun ChannelName(
     channelLastContent: String?,
     onClick: () -> Unit
 ) {
-    Column(modifier = Modifier.clickable(onClick = onClick) ) {
-        Row(
-            modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp)
-        ) {
-
+    ChannelName(
+        channelPicture = {
             AsyncImage(
                 model = channelPicture,
                 placeholder = channelPicturePlaceholder,
@@ -134,6 +130,27 @@ fun ChannelName(
                     .height(55.dp)
                     .clip(shape = CircleShape)
             )
+        },
+        channelTitle,
+        channelLastTime,
+        channelLastContent,
+        onClick
+    )
+}
+
+@Composable
+fun ChannelName(
+    channelPicture: @Composable () -> Unit,
+    channelTitle: @Composable (Modifier) -> Unit,
+    channelLastTime: Long?,
+    channelLastContent: String?,
+    onClick: () -> Unit
+) {
+    Column(modifier = Modifier.clickable(onClick = onClick) ) {
+        Row(
+            modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp)
+        ) {
+            channelPicture()
 
             Column(modifier = Modifier.padding(start = 10.dp),
             verticalArrangement = Arrangement.SpaceAround) {

@@ -8,13 +8,17 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Divider
 import androidx.compose.material.DropdownMenu
 import androidx.compose.material.DropdownMenuItem
+import androidx.compose.material.Icon
 import androidx.compose.material.LocalContentColor
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
@@ -27,21 +31,29 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.toNote
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.ui.components.RichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.Following
 import nostr.postr.events.TextNoteEvent
 import nostr.postr.toNpub
 
@@ -49,7 +61,7 @@ import nostr.postr.toNpub
 @Composable
 fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Boolean = false, accountViewModel: AccountViewModel, navController: NavController) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account
+    val account = accountState?.account ?: return
 
     val noteState by baseNote.live.observeAsState()
     val note = noteState?.note
@@ -67,8 +79,8 @@ fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Bool
             onLongClick = { popupExpanded = true },
         ), isInnerNote)
     } else {
-        val authorState by note.author!!.live.observeAsState()
-        val author = authorState?.user
+        val authorState by note.author?.live!!.observeAsState()
+        val author = authorState?.user ?: return // if it has event, it should have an author
 
         Column(modifier =
             modifier.combinedClickable(
@@ -96,40 +108,24 @@ fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Bool
 
                 // Draws the boosted picture outside the boosted card.
                 if (!isInnerNote) {
-                    Box(modifier = Modifier.width(55.dp).padding(0.dp)) {
-                        AsyncImage(
-                            model = author?.profilePicture(),
-                            contentDescription = "Profile Image",
-                            placeholder = rememberAsyncImagePainter("https://robohash.org/${author?.pubkeyHex}.png"),
-                            modifier = Modifier
-                                .width(55.dp).height(55.dp)
-                                .clip(shape = CircleShape)
-                                .clickable(onClick = {
-                                    author?.let {
-                                        navController.navigate("User/${it.pubkeyHex}")
-                                    }
-                                })
-                        )
+                    Box(modifier = Modifier
+                        .width(55.dp)
+                        .padding(0.dp)) {
+                        UserPicture(author, navController, account.userProfile(), 55.dp)
 
                         // boosted picture
                         val boostedPosts = note.replyTo
                         if (note.event is RepostEvent && boostedPosts != null && boostedPosts.isNotEmpty()) {
-                            AsyncImage(
-                                model = boostedPosts[0].author?.profilePicture(),
-                                contentDescription = "Profile Image",
-                                placeholder = rememberAsyncImagePainter("https://robohash.org/${boostedPosts[0].author?.pubkeyHex}.png"),
-                                modifier = Modifier
-                                    .width(35.dp).height(35.dp)
-                                    .clip(shape = CircleShape)
-                                    .align(Alignment.BottomEnd)
-                                    .background(MaterialTheme.colors.background)
-                                    .border(2.dp, MaterialTheme.colors.primary, CircleShape)
-                                    .clickable(onClick = {
-                                        boostedPosts[0].author?.let {
-                                            navController.navigate("User/${it.pubkeyHex}")
-                                        }
-                                    })
-                            )
+                            val boostedAuthor = boostedPosts[0].author
+                            Box(
+                                Modifier
+                                    .width(30.dp)
+                                    .height(30.dp)
+                                    .align(Alignment.BottomEnd)) {
+                                UserPicture(boostedAuthor, navController, account.userProfile(), 35.dp,
+                                    pictureModifier = Modifier.border(2.dp, MaterialTheme.colors.background, CircleShape)
+                                )
+                            }
                         }
                     }
                 }
@@ -198,6 +194,90 @@ fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Bool
                     }
 
                     NoteDropDownMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun UserPicture(
+    user: User?,
+    navController: NavController,
+    userAccount: User,
+    size: Dp,
+    pictureModifier: Modifier = Modifier
+) {
+    UserPicture(user, userAccount, size, pictureModifier) {
+        user?.let {
+            navController.navigate("User/${it.pubkeyHex}")
+        }
+    }
+}
+
+@Composable
+fun UserPicture(
+    user: User?,
+    userAccount: User,
+    size: Dp,
+    pictureModifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null
+) {
+    Box(
+        Modifier
+            .width(size)
+            .height(size)) {
+        if (user == null) {
+            AsyncImage(
+                model = "https://robohash.org/ohno.png",
+                contentDescription = "Profile Image",
+                placeholder = rememberAsyncImagePainter("https://robohash.org/ohno.png"),
+                modifier = pictureModifier
+                    .fillMaxSize(1f)
+                    .clip(shape = CircleShape)
+                    .background(MaterialTheme.colors.background)
+            )
+        } else {
+            AsyncImage(
+                model = user.profilePicture(),
+                contentDescription = "Profile Image",
+                placeholder = rememberAsyncImagePainter("https://robohash.org/${user.pubkeyHex}.png"),
+                modifier = pictureModifier
+                    .fillMaxSize(1f)
+                    .clip(shape = CircleShape)
+                    .background(MaterialTheme.colors.background)
+                    .run {
+                        if (onClick != null)
+                            this.clickable(onClick = onClick)
+                        else
+                            this
+                    }
+
+            )
+
+            if (userAccount.isFollowing(user) || user == userAccount) {
+                Box(Modifier
+                    .width(size.div(3.5f))
+                    .height(size.div(3.5f))
+                    .align(Alignment.TopEnd),
+                    contentAlignment = Alignment.Center
+                ) {
+                    // Background for the transparent checkmark
+                    Text(
+                        "x",
+                          Modifier
+                        .padding(4.dp).fillMaxSize()
+                        .align(Alignment.Center)
+                        .background(MaterialTheme.colors.background)
+                        .clip(shape = CircleShape)
+                    )
+
+                    Icon(
+                        painter = painterResource(R.drawable.ic_verified),
+                        "Following",
+                        modifier = Modifier.fillMaxSize(),
+                        tint = Following
+                    )
                 }
             }
         }

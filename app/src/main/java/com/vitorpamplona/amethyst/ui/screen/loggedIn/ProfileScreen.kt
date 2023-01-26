@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.service.NostrUserProfileFollowersDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileFollowsDataSource
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
+import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.launch
 import nostr.postr.toNpub
@@ -138,17 +139,9 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
 
                         Row(horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.Bottom) {
-                            AsyncImage(
-                                model = user.profilePicture(),
-                                placeholder = rememberAsyncImagePainter("https://robohash.org/${user?.pubkeyHex}.png"),
-                                contentDescription = "Profile Image",
-                                modifier = Modifier
-                                    .width(100.dp)
-                                    .height(100.dp)
-                                    .clip(shape = CircleShape)
-                                    .border(3.dp, MaterialTheme.colors.background, CircleShape)
-                                    .background(MaterialTheme.colors.background)
-                            )
+
+                            UserPicture(user, navController, account.userProfile(), 100.dp,
+                                pictureModifier = Modifier.border(3.dp, MaterialTheme.colors.background, CircleShape))
 
                             Spacer(Modifier.weight(1f))
 

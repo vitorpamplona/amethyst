@@ -32,7 +32,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 @Composable
 fun UserCompose(baseUser: User, accountViewModel: AccountViewModel, navController: NavController) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account
+    val account = accountState?.account ?: return
 
     val userState by baseUser.live.observeAsState()
     val user = userState?.user ?: return
@@ -52,14 +52,7 @@ fun UserCompose(baseUser: User, accountViewModel: AccountViewModel, navControlle
                     top = 10.dp)
         ) {
 
-            AsyncImage(
-                model = user.profilePicture(),
-                placeholder = rememberAsyncImagePainter("https://robohash.org/${user.pubkeyHex}.png"),
-                contentDescription = "Profile Image",
-                modifier = Modifier
-                    .width(55.dp).height(55.dp)
-                    .clip(shape = CircleShape)
-            )
+            UserPicture(user, navController, account.userProfile(), 55.dp)
 
             Column(modifier = Modifier.padding(start = 10.dp).weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {

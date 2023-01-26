@@ -47,6 +47,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -56,6 +57,7 @@ import com.vitorpamplona.amethyst.service.NostrThreadDataSource
 import com.vitorpamplona.amethyst.ui.note.ChannelName
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.UserCompose
+import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -197,6 +199,7 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
 @Composable
 fun UserLine(
     baseUser: User,
+    account: Account,
     onClick: () -> Unit
 ) {
     val userState by baseUser.live.observeAsState()
@@ -215,15 +218,7 @@ fun UserLine(
                 )
         ) {
 
-            AsyncImage(
-                model = user.profilePicture(),
-                placeholder = rememberAsyncImagePainter("https://robohash.org/${user.pubkeyHex}.png"),
-                contentDescription = "Profile Image",
-                modifier = Modifier
-                    .width(55.dp)
-                    .height(55.dp)
-                    .clip(shape = CircleShape)
-            )
+            UserPicture(user, account.userProfile(), 55.dp, Modifier, null)
 
             Column(
                 modifier = Modifier
