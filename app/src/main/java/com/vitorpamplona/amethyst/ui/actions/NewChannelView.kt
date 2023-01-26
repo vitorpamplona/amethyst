@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Surface
@@ -20,6 +21,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -82,7 +84,7 @@ fun NewChannelView(onClose: () -> Unit, account: Account, channel: Channel? = nu
                     keyboardOptions = KeyboardOptions.Default.copy(
                         capitalization = KeyboardCapitalization.Sentences
                     ),
-                    textStyle = TextStyle(textDirection = TextDirection.Content)
+                    textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
                 )
 
                 Spacer(modifier = Modifier.height(15.dp))
@@ -116,7 +118,7 @@ fun NewChannelView(onClose: () -> Unit, account: Account, channel: Channel? = nu
                     keyboardOptions = KeyboardOptions.Default.copy(
                         capitalization = KeyboardCapitalization.Sentences
                     ),
-                    textStyle = TextStyle(textDirection = TextDirection.Content),
+                    textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
                     maxLines = 10
 
                 )

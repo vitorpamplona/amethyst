@@ -3,12 +3,14 @@ package com.vitorpamplona.amethyst.ui.components
 import android.util.Patterns
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.lnurl.LnInvoiceUtil
@@ -71,7 +73,10 @@ fun RichTextViewer(content: String, tags: List<List<String>>?, navController: Na
           } else if (tagIndex.matcher(word).matches() && tags != null) {
             TagLink(word, tags, navController)
           } else {
-            Text(text = "$word ", style = TextStyle(textDirection = TextDirection.Content))
+            Text(
+              text = "$word ",
+              style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+            )
           }
         }
       }

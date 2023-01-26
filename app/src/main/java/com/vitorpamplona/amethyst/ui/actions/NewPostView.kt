@@ -16,6 +16,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Icon
+import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Surface
@@ -40,6 +41,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -156,7 +158,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, account: Account
                             focusedBorderColor = Color.Transparent
                         ),
                     visualTransformation = UrlUserTagTransformation(MaterialTheme.colors.primary),
-                    textStyle = TextStyle(textDirection = TextDirection.Content)
+                    textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
                 )
 
                 val userSuggestions = postViewModel.userSuggestions

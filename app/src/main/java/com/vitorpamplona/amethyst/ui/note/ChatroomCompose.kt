@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Divider
+import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
@@ -23,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
@@ -67,7 +69,7 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
                         "${channel.info.name}",
                         fontWeight = FontWeight.Bold,
                         modifier = it,
-                        style = TextStyle(textDirection = TextDirection.Content)
+                        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
                     )
                     Text(
                         " Public Chat",
@@ -156,7 +158,7 @@ fun ChannelName(
                         color = MaterialTheme.colors.onSurface.copy(alpha = 0.52f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        style = TextStyle(textDirection = TextDirection.Content)
+                        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
                     )
                 else
                     Text(

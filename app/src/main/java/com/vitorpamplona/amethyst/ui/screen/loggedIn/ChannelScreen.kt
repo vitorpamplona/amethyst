@@ -15,6 +15,7 @@ import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Divider
 import androidx.compose.material.Icon
+import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
@@ -118,7 +119,7 @@ fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, accoun
                             color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                         )
                     },
-                    textStyle = TextStyle(textDirection = TextDirection.Content),
+                    textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
                     trailingIcon = {
                         PostButton(
                             onPost = {
