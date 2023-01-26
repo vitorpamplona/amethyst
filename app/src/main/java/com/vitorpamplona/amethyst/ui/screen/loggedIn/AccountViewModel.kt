@@ -2,17 +2,16 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.content.Context
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.Transformations
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountState
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.UserState
 
 class AccountViewModel(private val account: Account): ViewModel() {
-  val accountLiveData: LiveData<AccountState> = Transformations.map(account.live) { it }
+  val accountLiveData: LiveData<AccountState> = account.live.map { it }
 
   fun reactTo(note: Note) {
     account.reactTo(note)

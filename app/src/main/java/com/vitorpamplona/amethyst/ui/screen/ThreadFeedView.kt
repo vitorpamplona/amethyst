@@ -30,7 +30,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.collectAsState
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
@@ -47,7 +47,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
 fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: AccountViewModel, navController: NavController) {
-    val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
+    val feedState by viewModel.feedContent.collectAsState()
 
     var isRefreshing by remember { mutableStateOf(false) }
     val swipeRefreshState = rememberSwipeRefreshState(isRefreshing)
