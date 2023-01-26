@@ -20,8 +20,12 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 # For the Secp256k1 library
+-keepattributes InnerClasses
+
 -keep class fr.acinq.secp256k1.jni.** { *; }
 # For the NostrPostr library
 -keep class nostr.postr.** { *; }
+-keep class nostr.postr.events.** { *; }
+-keep class com.google.gson.reflect.** { *; }
 -keep class com.vitorpamplona.amethyst.model.** { *; }
 -keep class com.vitorpamplona.amethyst.service.** { *; }
