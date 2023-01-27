@@ -86,7 +86,7 @@ class User(val pubkey: ByteArray) {
     @Synchronized
     fun getOrCreateChannel(user: User): MutableSet<Note> {
         return messages[user] ?: run {
-            val channel = mutableSetOf<Note>()
+            val channel = Collections.synchronizedSet(mutableSetOf<Note>())
             messages[user] = channel
             channel
         }
@@ -134,6 +134,14 @@ class User(val pubkey: ByteArray) {
     fun isFollowing(user: User): Boolean {
         return synchronized(follows) {
             follows.contains(user)
+        }
+    }
+
+    fun hasSentMessagesTo(user: User?): Boolean {
+        val messagesToUser = messages[user] ?: return false
+
+        return synchronized(messagesToUser) {
+            messagesToUser.firstOrNull { this == it.author } != null
         }
     }
 

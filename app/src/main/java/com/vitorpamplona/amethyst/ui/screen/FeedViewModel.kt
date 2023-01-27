@@ -39,7 +39,7 @@ class NostrChatroomListKnownFeedViewModel: FeedViewModel(NostrChatroomListDataSo
         // Filter: all channels + PMs the account has replied to
         return super.newListFromDataSource().filter {
             val me = NostrChatroomListDataSource.account.userProfile()
-            it.channel != null || me.messages[it.author]?.firstOrNull { me == it.author } != null
+            it.channel != null || me.hasSentMessagesTo(it.author)
         }
     }
 }
@@ -48,7 +48,7 @@ class NostrChatroomListNewFeedViewModel: FeedViewModel(NostrChatroomListDataSour
         // Filter: no channels + PMs the account has never replied to
         return super.newListFromDataSource().filter {
             val me = NostrChatroomListDataSource.account.userProfile()
-            it.channel == null && me.messages[it.author]?.firstOrNull { me == it.author } == null
+            it.channel == null && !me.hasSentMessagesTo(it.author)
         }
     }
 }

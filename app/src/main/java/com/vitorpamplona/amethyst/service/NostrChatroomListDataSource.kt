@@ -67,17 +67,18 @@ object NostrChatroomListDataSource: NostrDataSource<Note>("MailBoxFeed") {
     val messagingWith = messages.keys().toList().filter { account.isAcceptable(it) }
 
     val privateMessages = messagingWith.mapNotNull {
-      messages[it]?.sortedBy { it.event?.createdAt }?.lastOrNull { it.event != null }
+      val conversation = messages[it]
+      if (conversation != null) {
+        synchronized(conversation) {
+          conversation.sortedBy { it.event?.createdAt }.lastOrNull { it.event != null }
+        }
+      } else {
+        null
+      }
     }
 
     val publicChannels = account.followingChannels().map {
       it.notes.values.filter { account.isAcceptable(it) }.sortedBy { it.event?.createdAt }.lastOrNull { it.event != null }
-    }
-
-    val channelsCreatedByMe = LocalCache.channels.values.filter {
-      it.creator == account.userProfile()
-    }.map {
-      it.notes.values.sortedBy { it.event?.createdAt }.lastOrNull { it.event != null }
     }
 
     return (privateMessages + publicChannels).filterNotNull().sortedBy { it.event?.createdAt }.reversed()
