@@ -38,7 +38,7 @@ class Relay(
     }
 
     fun requestAndWatch() {
-        val request = Request.Builder().url(url).build()
+        val request = Request.Builder().url(url.trim()).build()
         val listener = object : WebSocketListener() {
 
             override fun onOpen(webSocket: WebSocket, response: Response) {
