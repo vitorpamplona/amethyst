@@ -32,12 +32,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import coil.Coil
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import com.vitorpamplona.amethyst.R
@@ -83,6 +85,8 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
     val availableRelaysLiveData by relayViewModel.availableRelaysLiveData.observeAsState()
 
     val coroutineScope = rememberCoroutineScope()
+
+    val context = LocalContext.current
 
     var wantsToEditRelays by remember {
         mutableStateOf(false)
@@ -136,6 +140,10 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
                                     NostrUserProfileFollowsDataSource.printCounter()
 
                                     println("AAA: " + RelayPool.connectedRelays())
+
+                                    val imageLoader = Coil.imageLoader(context)
+                                    println("${imageLoader.diskCache?.size}/${imageLoader.diskCache?.maxSize}")
+                                    println("${imageLoader.memoryCache?.size}/${imageLoader.memoryCache?.maxSize}")
                                 }
                             ) {
                                 Icon(
