@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.screen
 
 import android.os.Handler
 import android.os.Looper
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -43,7 +44,7 @@ class CardFeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel() {
             val newCards = convertToCard(notes.minus(lastNotesCopy))
             if (newCards.isNotEmpty()) {
                 lastNotes = notes
-                updateFeed((oldNotesState.feed + newCards).sortedBy { it.createdAt() }.reversed())
+                updateFeed((oldNotesState.feed.value + newCards).sortedBy { it.createdAt() }.reversed())
             }
         } else {
             val cards = convertToCard(notes)
@@ -83,13 +84,19 @@ class CardFeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel() {
     fun updateFeed(notes: List<Card>) {
         val scope = CoroutineScope(Job() + Dispatchers.Main)
         scope.launch {
+            val currentState = feedContent.value
+
             if (notes.isEmpty()) {
                 _feedContent.update { CardFeedState.Empty }
+            } else if (currentState is CardFeedState.Loaded) {
+                // updates the current list
+                currentState.feed.value = notes
             } else {
-                _feedContent.update { CardFeedState.Loaded(notes) }
+                _feedContent.update { CardFeedState.Loaded(mutableStateOf(notes)) }
             }
         }
     }
+
 
     var handlerWaiting = false
     fun invalidateData() {

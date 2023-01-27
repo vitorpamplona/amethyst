@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.Button
@@ -40,8 +41,6 @@ fun FeedView(viewModel: FeedViewModel, accountViewModel: AccountViewModel, navCo
     var isRefreshing by remember { mutableStateOf(false) }
     val swipeRefreshState = rememberSwipeRefreshState(isRefreshing)
 
-    val listState = rememberLazyListState()
-
     LaunchedEffect(isRefreshing) {
         if (isRefreshing) {
             viewModel.hardRefresh()
@@ -49,12 +48,15 @@ fun FeedView(viewModel: FeedViewModel, accountViewModel: AccountViewModel, navCo
         }
     }
 
+    println("FeedView Refresh ${feedState}")
+
     SwipeRefresh(
         state = swipeRefreshState,
         onRefresh = {
             isRefreshing = true
         },
     ) {
+
         Column() {
             Crossfade(targetState = feedState) { state ->
                 when (state) {
@@ -69,28 +71,46 @@ fun FeedView(viewModel: FeedViewModel, accountViewModel: AccountViewModel, navCo
                         }
                     }
                     is FeedState.Loaded -> {
-                        LazyColumn(
-                            contentPadding = PaddingValues(
-                                top = 10.dp,
-                                bottom = 10.dp
-                            ),
-                            state = listState
-                        ) {
-                            itemsIndexed(state.feed, key = { _, item -> item.idHex }) { index, item ->
-                                NoteCompose(item,
-                                    isInnerNote = false,
-                                    routeForLastRead = routeForLastRead,
-                                    accountViewModel = accountViewModel,
-                                    navController = navController
-                                )
-                            }
-                        }
+                        FeedLoaded(
+                            state,
+                            routeForLastRead,
+                            accountViewModel,
+                            navController
+                        )
                     }
                     FeedState.Loading -> {
                         LoadingFeed()
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun FeedLoaded(
+    state: FeedState.Loaded,
+    routeForLastRead: String?,
+    accountViewModel: AccountViewModel,
+    navController: NavController
+) {
+    val listState = rememberLazyListState()
+
+    LazyColumn(
+        contentPadding = PaddingValues(
+            top = 10.dp,
+            bottom = 10.dp
+        ),
+        state = listState
+    ) {
+        itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { index, item ->
+            NoteCompose(
+                item,
+                isInnerNote = false,
+                routeForLastRead = routeForLastRead,
+                accountViewModel = accountViewModel,
+                navController = navController
+            )
         }
     }
 }

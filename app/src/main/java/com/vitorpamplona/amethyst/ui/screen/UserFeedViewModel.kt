@@ -2,10 +2,12 @@ package com.vitorpamplona.amethyst.ui.screen
 
 import android.os.Handler
 import android.os.Looper
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.LocalCacheState
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrDataSource
 import com.vitorpamplona.amethyst.service.NostrHiddenAccountsDataSource
@@ -60,10 +62,15 @@ open class UserFeedViewModel(val dataSource: NostrDataSource<User>): ViewModel()
     fun updateFeed(notes: List<User>) {
         val scope = CoroutineScope(Job() + Dispatchers.Main)
         scope.launch {
+            val currentState = feedContent.value
+
             if (notes.isEmpty()) {
                 _feedContent.update { UserFeedState.Empty }
+            } else if (currentState is UserFeedState.Loaded) {
+                // updates the current list
+                currentState.feed.value = notes
             } else {
-                _feedContent.update { UserFeedState.Loaded(notes) }
+                _feedContent.update { UserFeedState.Loaded(mutableStateOf(notes)) }
             }
         }
     }

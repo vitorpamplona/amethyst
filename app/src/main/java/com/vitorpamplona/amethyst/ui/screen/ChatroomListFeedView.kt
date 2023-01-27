@@ -68,7 +68,7 @@ fun ChatroomListFeedView(viewModel: FeedViewModel, accountViewModel: AccountView
                             ),
                             state = listState
                         ) {
-                            itemsIndexed(state.feed, key = { index, item -> item.idHex }) { index, item ->
+                            itemsIndexed(state.feed.value, key = { index, item -> item.idHex }) { index, item ->
                                 ChatroomCompose(item, accountViewModel = accountViewModel, navController = navController)
                             }
                         }

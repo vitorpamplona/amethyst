@@ -25,7 +25,6 @@ fun ChatroomFeedView(viewModel: FeedViewModel, accountViewModel: AccountViewMode
     val feedState by viewModel.feedContent.collectAsState()
 
     var isRefreshing by remember { mutableStateOf(false) }
-    val swipeRefreshState = rememberSwipeRefreshState(isRefreshing)
 
     val listState = rememberLazyListState()
 
@@ -36,43 +35,36 @@ fun ChatroomFeedView(viewModel: FeedViewModel, accountViewModel: AccountViewMode
         }
     }
 
-    SwipeRefresh(
-        state = swipeRefreshState,
-        onRefresh = {
-            isRefreshing = true
-        },
-    ) {
-        Column() {
-            Crossfade(targetState = feedState) { state ->
-                when (state) {
-                    is FeedState.Empty -> {
-                        FeedEmpty {
-                            isRefreshing = true
+    Column() {
+        Crossfade(targetState = feedState) { state ->
+            when (state) {
+                is FeedState.Empty -> {
+                    FeedEmpty {
+                        isRefreshing = true
+                    }
+                }
+                is FeedState.FeedError -> {
+                    FeedError(state.errorMessage) {
+                        isRefreshing = true
+                    }
+                }
+                is FeedState.Loaded -> {
+                    LazyColumn(
+                        contentPadding = PaddingValues(
+                            top = 10.dp,
+                            bottom = 10.dp
+                        ),
+                        reverseLayout = true,
+                        state = listState
+                    ) {
+                        var previousDate: String = ""
+                        itemsIndexed(state.feed.value, key = { index, item -> if (index == 0) index else item.idHex }) { index, item ->
+                            ChatroomMessageCompose(item, routeForLastRead, accountViewModel = accountViewModel, navController = navController)
                         }
                     }
-                    is FeedState.FeedError -> {
-                        FeedError(state.errorMessage) {
-                            isRefreshing = true
-                        }
-                    }
-                    is FeedState.Loaded -> {
-                        LazyColumn(
-                            contentPadding = PaddingValues(
-                                top = 10.dp,
-                                bottom = 10.dp
-                            ),
-                            reverseLayout = true,
-                            state = listState
-                        ) {
-                            var previousDate: String = ""
-                            itemsIndexed(state.feed, key = { index, item -> if (index == 0) index else item.idHex }) { index, item ->
-                                ChatroomMessageCompose(item, routeForLastRead, accountViewModel = accountViewModel, navController = navController)
-                            }
-                        }
-                    }
-                    FeedState.Loading -> {
-                        LoadingFeed()
-                    }
+                }
+                FeedState.Loading -> {
+                    LoadingFeed()
                 }
             }
         }

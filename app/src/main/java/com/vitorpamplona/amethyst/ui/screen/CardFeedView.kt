@@ -4,6 +4,7 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
@@ -29,8 +30,6 @@ fun CardFeedView(viewModel: CardFeedViewModel, accountViewModel: AccountViewMode
 
     var isRefreshing by remember { mutableStateOf(false) }
     val swipeRefreshState = rememberSwipeRefreshState(isRefreshing)
-
-    val listState = rememberLazyListState()
 
     LaunchedEffect(isRefreshing) {
         if (isRefreshing) {
@@ -59,26 +58,61 @@ fun CardFeedView(viewModel: CardFeedViewModel, accountViewModel: AccountViewMode
                         }
                     }
                     is CardFeedState.Loaded -> {
-                        LazyColumn(
-                            contentPadding = PaddingValues(
-                                top = 10.dp,
-                                bottom = 10.dp
-                            ),
-                            state = listState
-                        ) {
-                            itemsIndexed(state.feed, key = { _, item -> item.id() }) { index, item ->
-                                when (item) {
-                                    is NoteCard -> NoteCompose(item.note, isInnerNote = false, accountViewModel = accountViewModel, navController = navController, routeForLastRead = routeForLastRead)
-                                    is LikeSetCard -> LikeSetCompose(item, isInnerNote = false, accountViewModel = accountViewModel, navController = navController, routeForLastRead = routeForLastRead)
-                                    is BoostSetCard -> BoostSetCompose(item, isInnerNote = false, accountViewModel = accountViewModel, navController = navController, routeForLastRead = routeForLastRead)
-                                }
-                            }
-                        }
+                        FeedLoaded(
+                            state,
+                            accountViewModel,
+                            navController,
+                            routeForLastRead
+                        )
                     }
                     CardFeedState.Loading -> {
                         LoadingFeed()
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FeedLoaded(
+    state: CardFeedState.Loaded,
+    accountViewModel: AccountViewModel,
+    navController: NavController,
+    routeForLastRead: String
+) {
+    val listState = rememberLazyListState()
+
+    LazyColumn(
+        contentPadding = PaddingValues(
+            top = 10.dp,
+            bottom = 10.dp
+        ),
+        state = listState
+    ) {
+        itemsIndexed(state.feed.value, key = { _, item -> item.id() }) { index, item ->
+            when (item) {
+                is NoteCard -> NoteCompose(
+                    item.note,
+                    isInnerNote = false,
+                    accountViewModel = accountViewModel,
+                    navController = navController,
+                    routeForLastRead = routeForLastRead
+                )
+                is LikeSetCard -> LikeSetCompose(
+                    item,
+                    isInnerNote = false,
+                    accountViewModel = accountViewModel,
+                    navController = navController,
+                    routeForLastRead = routeForLastRead
+                )
+                is BoostSetCard -> BoostSetCompose(
+                    item,
+                    isInnerNote = false,
+                    accountViewModel = accountViewModel,
+                    navController = navController,
+                    routeForLastRead = routeForLastRead
+                )
             }
         }
     }

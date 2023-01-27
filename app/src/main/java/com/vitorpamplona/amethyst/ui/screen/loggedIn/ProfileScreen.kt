@@ -50,6 +50,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -425,7 +426,7 @@ fun FollowButton(onClick: () -> Unit) {
                 backgroundColor = MaterialTheme.colors.primary
             )
     ) {
-        Text(text = "Follow", color = Color.White)
+        Text(text = "Follow", color = Color.White, textAlign = TextAlign.Center)
     }
 }
 

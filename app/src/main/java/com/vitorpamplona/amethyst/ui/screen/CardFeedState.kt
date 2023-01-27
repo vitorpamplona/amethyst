@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen
 
+import androidx.compose.runtime.MutableState
 import com.vitorpamplona.amethyst.model.Note
 
 abstract class Card() {
@@ -37,7 +38,7 @@ class BoostSetCard(val note: Note, val boostEvents: List<Note>): Card() {
 
 sealed class CardFeedState {
     object Loading: CardFeedState()
-    class Loaded(val feed: List<Card>): CardFeedState()
+    class Loaded(val feed: MutableState<List<Card>>): CardFeedState()
     object Empty: CardFeedState()
     class FeedError(val errorMessage: String): CardFeedState()
 }

@@ -88,9 +88,9 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
                             listState.animateScrollToItem(noteIdPositionInThread, 0)
                         }
 
-                        val notePosition = state.feed.filter { it.idHex == noteId}.firstOrNull()
+                        val notePosition = state.feed.value.filter { it.idHex == noteId}.firstOrNull()
                         if (notePosition != null) {
-                            noteIdPositionInThread = state.feed.indexOf(notePosition)
+                            noteIdPositionInThread = state.feed.value.indexOf(notePosition)
                         }
 
                         LazyColumn(
@@ -100,7 +100,7 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
                             ),
                             state = listState
                         ) {
-                            itemsIndexed(state.feed, key = { _, item -> item.idHex }) { index, item ->
+                            itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { index, item ->
                                 if (index == 0)
                                     NoteMaster(item, accountViewModel = accountViewModel, navController = navController)
                                 else {

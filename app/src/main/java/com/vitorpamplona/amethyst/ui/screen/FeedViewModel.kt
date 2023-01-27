@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.screen
 
 import android.util.Log
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -97,10 +98,15 @@ abstract class FeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel()
     }
 
     fun updateFeed(notes: List<Note>) {
+        val currentState = feedContent.value
+
         if (notes.isEmpty()) {
             _feedContent.update { FeedState.Empty }
+        } else if (currentState is FeedState.Loaded) {
+            // updates the current list
+            currentState.feed.value = notes
         } else {
-            _feedContent.update { FeedState.Loaded(notes) }
+            _feedContent.update { FeedState.Loaded(mutableStateOf(notes)) }
         }
     }
 
