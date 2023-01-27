@@ -250,14 +250,22 @@ object LocalCache {
       it.author?.addTaggedPost(note)
     }
 
-    if (event.content == "" || event.content == "+" || event.content == "\uD83E\uDD19") {
+    if (
+      event.content == "" ||
+      event.content == "+" ||
+      event.content == "\u2764\uFE0F" || // red heart
+      event.content == "\uD83E\uDD19" || // call me hand
+      event.content == "\uD83D\uDC4D" // thumbs up
+    ) {
       // Counts the replies
       repliesTo.forEach {
         it.addReaction(note)
       }
     }
 
-    if (event.content == "\u26A0\uFE0F") {
+    if (event.content == "!" // nostr_console hide.
+      || event.content == "\u26A0\uFE0F"  // Warning sign
+    ) {
       // Counts the replies
       repliesTo.forEach {
         it.addReport(note)
