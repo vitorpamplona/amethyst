@@ -59,6 +59,32 @@ object NostrThreadDataSource: NostrDataSource<Note>("SingleThreadFeed") {
     loadEventsChannel.filter = listOfNotNull(createLoadEventsIfNotLoadedFilter()).ifEmpty { null }
   }
 
+  fun searchRoot(note: Note, testedNotes: MutableSet<Note> = mutableSetOf()): Note? {
+    if (note.replyTo == null || note.replyTo?.isEmpty() == true) return note
+
+    val markedAsRoot = note.event?.tags?.firstOrNull { it[0] == "e" && it.size > 3 && it[3] == "root" }?.getOrNull(1)
+    if (markedAsRoot != null) return LocalCache.getOrCreateNote(markedAsRoot)
+
+    val hasNoReplyTo = note.replyTo?.firstOrNull { it.replyTo?.isEmpty() == true }
+    if (hasNoReplyTo != null) return hasNoReplyTo
+
+    testedNotes.add(note)
+
+    // recursive
+    val roots = note.replyTo?.map {
+      if (it !in testedNotes)
+        searchRoot(it, testedNotes)
+      else
+        null
+    }?.filterNotNull()
+
+    if (roots != null && roots.isNotEmpty()) {
+      return roots[0]
+    }
+
+    return null
+  }
+
   fun loadThread(noteId: String) {
     val note = LocalCache.notes[noteId]
 
@@ -66,7 +92,7 @@ object NostrThreadDataSource: NostrDataSource<Note>("SingleThreadFeed") {
       val thread = mutableListOf<Note>()
       val threadSet = mutableSetOf<Note>()
 
-      val threadRoot = note.replyTo?.firstOrNull() ?: note
+      val threadRoot = searchRoot(note) ?: note
 
       loadDown(threadRoot, thread, threadSet)
 
