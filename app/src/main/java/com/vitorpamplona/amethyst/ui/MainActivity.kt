@@ -50,11 +50,10 @@ class MainActivity : ComponentActivity() {
           add(GifDecoder.Factory())
         }
         add(SvgDecoder.Factory())
-      }.memoryCachePolicy(CachePolicy.DISABLED)
+      }
         .respectCacheHeaders(false)
         .build()
     }
-
 
     setContent {
       AmethystTheme {
