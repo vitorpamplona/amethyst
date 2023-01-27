@@ -41,7 +41,9 @@ fun ReplyInformation(replyTo: MutableList<Note>?, mentions: List<User>?, prefix:
           color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
         )
 
-        mentions.toSet().forEachIndexed { idx, user ->
+        val mentionSet = mentions.toSet()
+
+        mentionSet.toSet().forEachIndexed { idx, user ->
           val innerUserState by user.live.observeAsState()
           val innerUser = innerUserState?.user
 
@@ -52,13 +54,13 @@ fun ReplyInformation(replyTo: MutableList<Note>?, mentions: List<User>?, prefix:
               onClick = { onUserTagClick(myUser) }
             )
 
-            if (idx < mentions.size - 2) {
+            if (idx < mentionSet.size - 2) {
               Text(
                 ", ",
                 fontSize = 13.sp,
                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
               )
-            } else if (idx < mentions.size - 1) {
+            } else if (idx < mentionSet.size - 1) {
               Text(
                 " and ",
                 fontSize = 13.sp,
@@ -115,7 +117,9 @@ fun ReplyInformationChannel(replyTo: MutableList<Note>?,
           color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
         )
 
-        mentions.toSet().forEachIndexed { idx, user ->
+        val mentionSet = mentions.toSet()
+
+        mentionSet.forEachIndexed { idx, user ->
           val innerUserState by user.live.observeAsState()
           val innerUser = innerUserState?.user
 
@@ -126,13 +130,13 @@ fun ReplyInformationChannel(replyTo: MutableList<Note>?,
               onClick = { onUserTagClick(myUser) }
             )
 
-            if (idx < mentions.size - 2) {
+            if (idx < mentionSet.size - 2) {
               Text(
                 ", ",
                 fontSize = 13.sp,
                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
               )
-            } else if (idx < mentions.size - 1) {
+            } else if (idx < mentionSet.size - 1) {
               Text(
                 " and ",
                 fontSize = 13.sp,
