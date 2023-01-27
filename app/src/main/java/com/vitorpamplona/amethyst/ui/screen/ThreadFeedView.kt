@@ -178,7 +178,7 @@ fun NoteMaster(baseNote: Note, accountViewModel: AccountViewModel, navController
                     }
                 })
             ) {
-                UserPicture(user = author, userAccount = account.userProfile(), size = 55.dp)
+                UserPicture(user = author, navController, userAccount = account.userProfile(), size = 55.dp)
 
                 Column(modifier = Modifier.padding(start = 10.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {

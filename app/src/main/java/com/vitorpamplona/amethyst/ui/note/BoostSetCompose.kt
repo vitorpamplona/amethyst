@@ -82,7 +82,12 @@ fun BoostSetCompose(likeSetCard: BoostSetCard, isInnerNote: Boolean = false, rou
                             if (cardNote?.author != null) {
                                 val userState by cardNote.author!!.live.observeAsState()
 
-                                UserPicture(user = userState?.user, userAccount = account.userProfile(), size = 35.dp)
+                                UserPicture(
+                                    user = userState?.user,
+                                    navController = navController,
+                                    userAccount = account.userProfile(),
+                                    size = 35.dp
+                                )
                             }
                         }
                     }
