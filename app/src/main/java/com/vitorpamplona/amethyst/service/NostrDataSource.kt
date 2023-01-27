@@ -15,6 +15,7 @@ import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Relay
 import java.util.Collections
+import java.util.UUID
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTimedValue
 import kotlinx.coroutines.CoroutineScope
@@ -140,7 +141,7 @@ abstract class NostrDataSource<T>(val debugName: String) {
   }
 
   fun requestNewChannel(): Channel {
-    val newChannel = Channel()
+    val newChannel = Channel(debugName+UUID.randomUUID().toString().substring(0,4))
     channels.add(newChannel)
     channelIds.add(newChannel.id)
     return newChannel

@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.service.relays
 import android.util.Log
 import com.google.gson.JsonElement
 import com.vitorpamplona.amethyst.model.LocalCache
+import java.util.Date
 import nostr.postr.events.ContactListEvent
 import nostr.postr.events.Event
 import nostr.postr.toNpub
@@ -24,6 +25,8 @@ class Relay(
     var eventDownloadCounter = 0
     var eventUploadCounter = 0
     var errorCounter = 0
+
+    var closingTime = 0L
 
     fun register(listener: Listener) {
         listeners = listeners.plus(listener)
@@ -92,6 +95,7 @@ class Relay(
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
                 socket = null
+                closingTime = Date().time / 1000
                 listeners.forEach { it.onRelayStateChange(this@Relay, Type.DISCONNECT) }
             }
 
@@ -101,6 +105,8 @@ class Relay(
                 socket?.close(1000, "Normal close")
                 // Failures disconnect the relay. 
                 socket = null
+                closingTime = Date().time / 1000
+
                 Log.w("Relay", "Relay onFailure ${url}, ${response?.message}")
                 //t.printStackTrace()
                 listeners.forEach {
@@ -114,6 +120,7 @@ class Relay(
 
     fun disconnect() {
         //httpClient.dispatcher.executorService.shutdown()
+        closingTime = Date().time / 1000
         socket?.close(1000, "Normal close")
         socket = null
     }
@@ -121,13 +128,16 @@ class Relay(
     fun sendFilter(requestId: String) {
         if (read) {
             if (socket == null) {
-                requestAndWatch()
+                // waits 10 seconds
+                if (Date().time / 1000 > closingTime + 10) {
+                    requestAndWatch()
+                }
             } else {
                 val filters = Client.getSubscriptionFilters(requestId)
                 if (filters.isNotEmpty()) {
                     val request =
                         """["REQ","$requestId",${filters.joinToString(",") { it.toJson() }}]"""
-                    //println("FILTERSSENT " + """["REQ","$requestId",${filters.joinToString(",") { it.toJson() }}]""")
+                    //println("FILTERSSENT ${url} " + """["REQ","$requestId",${filters.joinToString(",") { it.toJson() }}]""")
                     socket?.send(request)
                 }
             }

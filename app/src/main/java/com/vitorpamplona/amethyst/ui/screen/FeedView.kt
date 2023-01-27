@@ -48,8 +48,6 @@ fun FeedView(viewModel: FeedViewModel, accountViewModel: AccountViewModel, navCo
         }
     }
 
-    println("FeedView Refresh ${feedState}")
-
     SwipeRefresh(
         state = swipeRefreshState,
         onRefresh = {
