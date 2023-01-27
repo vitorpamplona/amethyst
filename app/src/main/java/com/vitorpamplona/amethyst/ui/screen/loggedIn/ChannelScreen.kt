@@ -94,7 +94,7 @@ fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, accoun
                     .padding(vertical = 0.dp)
                     .weight(1f, true)
             ) {
-                ChatroomFeedView(feedViewModel, accountViewModel, navController)
+                ChatroomFeedView(feedViewModel, accountViewModel, navController, "Channel/${channelId}")
             }
 
             //LAST ROW

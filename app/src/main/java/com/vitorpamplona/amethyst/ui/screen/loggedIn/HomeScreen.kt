@@ -16,6 +16,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -23,10 +24,13 @@ import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.google.accompanist.pager.rememberPagerState
+import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileFollowersDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileFollowsDataSource
+import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.Routes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import java.lang.System.currentTimeMillis
 import kotlinx.coroutines.launch
@@ -75,8 +79,8 @@ fun HomeScreen(accountViewModel: AccountViewModel, navController: NavController)
             }
             HorizontalPager(count = 2, state = pagerState) {
                 when (pagerState.currentPage) {
-                    0 -> FeedView(feedViewModel, accountViewModel, navController)
-                    1 -> FeedView(feedViewModelReplies, accountViewModel, navController)
+                    0 -> FeedView(feedViewModel, accountViewModel, navController, Route.Home.route + "Follows")
+                    1 -> FeedView(feedViewModelReplies, accountViewModel, navController, Route.Home.route + "FollowsReplies")
                 }
             }
         }

@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.service.NostrNotificationDataSource
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
@@ -26,7 +27,7 @@ fun NotificationScreen(accountViewModel: AccountViewModel, navController: NavCon
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            CardFeedView(feedViewModel, accountViewModel = accountViewModel, navController)
+            CardFeedView(feedViewModel, accountViewModel = accountViewModel, navController, Route.Notification.route)
         }
     }
 }

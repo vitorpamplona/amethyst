@@ -1,12 +1,19 @@
 package com.vitorpamplona.amethyst.ui.note
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Arrangement.Center
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Divider
 import androidx.compose.material.LocalTextStyle
@@ -18,9 +25,12 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -28,6 +38,8 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
+import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
@@ -44,6 +56,11 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
     val accountUserState by account.userProfile().live.observeAsState()
     val accountUser = accountUserState?.user ?: return
 
+    val notificationCacheState = NotificationCache.live.observeAsState()
+    val notificationCache = notificationCacheState.value ?: return
+
+    val context = LocalContext.current.applicationContext
+
     if (note?.event == null) {
         BlankNote(Modifier)
     } else if (note.channel != null) {
@@ -53,14 +70,22 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
         val channelState by note.channel!!.live.observeAsState()
         val channel = channelState?.channel
 
-        val description = if (note.event is ChannelCreateEvent) {
+        val noteEvent = note.event
+
+        val description = if (noteEvent is ChannelCreateEvent) {
             "Channel created"
-        } else if (note.event is ChannelMetadataEvent) {
+        } else if (noteEvent is ChannelMetadataEvent) {
             "Channel Information changed to "
         } else {
-            note.event?.content
+            noteEvent?.content
         }
         channel?.let { channel ->
+            val hasNewMessages =
+                if (noteEvent != null)
+                    noteEvent.createdAt > notificationCache.cache.load("Channel/${channel.idHex}", context)
+                else
+                    false
+
             ChannelName(
                 channelPicture = channel.profilePicture(),
                 channelPicturePlaceholder = null,
@@ -78,6 +103,7 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
                 },
                 channelLastTime = note.event?.createdAt,
                 channelLastContent = "${author?.toBestDisplayName()}: " + description,
+                hasNewMessages = hasNewMessages,
                 onClick = { navController.navigate("Channel/${channel.idHex}") })
         }
 
@@ -98,12 +124,21 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
             }
         }
 
+        val noteEvent = note.event
+
         userToComposeOn?.let { user ->
+            val hasNewMessages =
+                if (noteEvent != null)
+                    noteEvent.createdAt > notificationCache.cache.load("Room/${userToComposeOn.pubkeyHex}", context)
+                else
+                    false
+
             ChannelName(
                 channelPicture = { UserPicture(user = user, userAccount = accountUser, size = 55.dp) },
                 channelTitle = { UsernameDisplay(user, it) },
-                channelLastTime = note.event?.createdAt,
+                channelLastTime = noteEvent?.createdAt,
                 channelLastContent = accountViewModel.decrypt(note),
+                hasNewMessages = hasNewMessages,
                 onClick = { navController.navigate("Room/${user.pubkeyHex}") })
         }
     }
@@ -117,6 +152,7 @@ fun ChannelName(
     channelTitle: @Composable (Modifier) -> Unit,
     channelLastTime: Long?,
     channelLastContent: String?,
+    hasNewMessages: Boolean,
     onClick: () -> Unit
 ) {
     ChannelName(
@@ -134,6 +170,7 @@ fun ChannelName(
         channelTitle,
         channelLastTime,
         channelLastContent,
+        hasNewMessages,
         onClick
     )
 }
@@ -144,6 +181,7 @@ fun ChannelName(
     channelTitle: @Composable (Modifier) -> Unit,
     channelLastTime: Long?,
     channelLastContent: String?,
+    hasNewMessages: Boolean,
     onClick: () -> Unit
 ) {
     Column(modifier = Modifier.clickable(onClick = onClick) ) {
@@ -169,27 +207,58 @@ fun ChannelName(
 
                 }
 
-                if (channelLastContent != null)
-                    Text(
-                        channelLastContent,
-                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.52f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-                    )
-                else
-                    Text(
-                        "Referenced event not found",
-                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.52f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    if (channelLastContent != null)
+                        Text(
+                            channelLastContent,
+                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.52f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+                            modifier = Modifier.weight(1f)
+                        )
+                    else
+                        Text(
+                            "Referenced event not found",
+                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.52f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+
+                    if (hasNewMessages) {
+                        NewItemsBubble()
+                    }
+                }
             }
         }
 
         Divider(
             modifier = Modifier.padding(top = 10.dp),
             thickness = 0.25.dp
+        )
+    }
+}
+
+@Composable
+fun NewItemsBubble() {
+    Box(
+        modifier = Modifier
+            .padding(start = 3.dp)
+            .width(10.dp)
+            .height(10.dp)
+            .clip(shape = CircleShape)
+            .background(MaterialTheme.colors.primary),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            "",
+            color = Color.White,
+            textAlign = TextAlign.Center,
+            fontSize = 12.sp,
+            modifier = Modifier
+                .wrapContentHeight()
+                .align(Alignment.Center)
         )
     }
 }

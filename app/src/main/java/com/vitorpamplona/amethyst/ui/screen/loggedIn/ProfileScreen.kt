@@ -248,7 +248,7 @@ fun TabNotes(user: User, accountViewModel: AccountViewModel, navController: NavC
             Column(
                 modifier = Modifier.padding(vertical = 0.dp)
             ) {
-                FeedView(feedViewModel, accountViewModel, navController)
+                FeedView(feedViewModel, accountViewModel, navController, null)
             }
         }
     }

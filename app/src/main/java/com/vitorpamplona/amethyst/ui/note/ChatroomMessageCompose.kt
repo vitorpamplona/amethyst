@@ -30,12 +30,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
+import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
@@ -50,7 +52,7 @@ val ChatBubbleShapeThem = RoundedCornerShape(3.dp, 15.dp, 15.dp, 15.dp)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ChatroomMessageCompose(baseNote: Note, innerQuote: Boolean = false, accountViewModel: AccountViewModel, navController: NavController) {
+fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote: Boolean = false, accountViewModel: AccountViewModel, navController: NavController) {
     val noteState by baseNote.live.observeAsState()
     val note = noteState?.note
 
@@ -61,6 +63,8 @@ fun ChatroomMessageCompose(baseNote: Note, innerQuote: Boolean = false, accountV
     val accountUser = accountUserState?.user
 
     var popupExpanded by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current.applicationContext
 
     if (note?.event == null) {
         BlankNote(Modifier)
@@ -80,6 +84,17 @@ fun ChatroomMessageCompose(baseNote: Note, innerQuote: Boolean = false, accountV
             backgroundBubbleColor = MaterialTheme.colors.onSurface.copy(alpha = 0.12f)
             alignment = Arrangement.Start
             shape = ChatBubbleShapeThem
+        }
+
+        // Mark read
+        val isNew = routeForLastRead?.run {
+            val isNew = NotificationCache.load(this, context)
+
+            val createdAt = note.event?.createdAt
+            if (createdAt != null)
+                NotificationCache.markAsRead(this, createdAt, context)
+
+            isNew
         }
 
         Column() {
@@ -150,6 +165,7 @@ fun ChatroomMessageCompose(baseNote: Note, innerQuote: Boolean = false, accountV
                                         if (note.event != null)
                                             ChatroomMessageCompose(
                                                 note,
+                                                null,
                                                 innerQuote = true,
                                                 accountViewModel = accountViewModel,
                                                 navController = navController

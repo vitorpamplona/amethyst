@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
+import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
@@ -59,7 +60,14 @@ import nostr.postr.toNpub
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Boolean = false, accountViewModel: AccountViewModel, navController: NavController) {
+fun NoteCompose(
+    baseNote: Note,
+    routeForLastRead: String? = null,
+    modifier: Modifier = Modifier,
+    isInnerNote: Boolean = false,
+    accountViewModel: AccountViewModel,
+    navController: NavController
+) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
@@ -67,6 +75,8 @@ fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Bool
     val note = noteState?.note
 
     var popupExpanded by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current.applicationContext
 
     if (note?.event == null) {
         BlankNote(modifier.combinedClickable(
@@ -82,6 +92,18 @@ fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Bool
         val authorState by note.author?.live!!.observeAsState()
         val author = authorState?.user ?: return // if it has event, it should have an author
 
+        val isNew = routeForLastRead?.run {
+            val lastTime = NotificationCache.load(this, context)
+
+            val createdAt = note.event?.createdAt
+            if (createdAt != null) {
+                NotificationCache.markAsRead(this, createdAt, context)
+                createdAt > lastTime
+            } else {
+                false
+            }
+        } ?: false
+
         Column(modifier =
             modifier.combinedClickable(
                 onClick = {
@@ -95,8 +117,14 @@ fun NoteCompose(baseNote: Note, modifier: Modifier = Modifier, isInnerNote: Bool
                         }
                     }
                 },
-                onLongClick = { popupExpanded = true },
-            )
+                onLongClick = { popupExpanded = true }
+            ).run {
+                if (isNew) {
+                    this.background(MaterialTheme.colors.primary.copy(0.12f))
+                } else {
+                    this
+                }
+            }
         ) {
             Row(
                 modifier = Modifier

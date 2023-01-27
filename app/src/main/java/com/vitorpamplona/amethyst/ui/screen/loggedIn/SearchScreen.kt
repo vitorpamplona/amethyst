@@ -74,7 +74,7 @@ fun SearchScreen(accountViewModel: AccountViewModel, navController: NavControlle
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
             SearchBar(accountViewModel, navController)
-            FeedView(feedViewModel, accountViewModel, navController)
+            FeedView(feedViewModel, accountViewModel, navController, null)
         }
     }
 }
@@ -186,6 +186,7 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
                     },
                     channelLastTime = null,
                     channelLastContent = item.info.about,
+                    false,
                     onClick = { navController.navigate("Channel/${item.idHex}") })
             }
 

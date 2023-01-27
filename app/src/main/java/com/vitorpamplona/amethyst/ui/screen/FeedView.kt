@@ -21,16 +21,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import com.vitorpamplona.amethyst.NotificationCache
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun FeedView(viewModel: FeedViewModel, accountViewModel: AccountViewModel, navController: NavController) {
+fun FeedView(viewModel: FeedViewModel, accountViewModel: AccountViewModel, navController: NavController, routeForLastRead: String?) {
     val feedState by viewModel.feedContent.collectAsState()
 
     var isRefreshing by remember { mutableStateOf(false) }
@@ -73,7 +77,12 @@ fun FeedView(viewModel: FeedViewModel, accountViewModel: AccountViewModel, navCo
                             state = listState
                         ) {
                             itemsIndexed(state.feed, key = { _, item -> item.idHex }) { index, item ->
-                                NoteCompose(item, isInnerNote = false, accountViewModel = accountViewModel, navController = navController)
+                                NoteCompose(item,
+                                    isInnerNote = false,
+                                    routeForLastRead = routeForLastRead,
+                                    accountViewModel = accountViewModel,
+                                    navController = navController
+                                )
                             }
                         }
                     }

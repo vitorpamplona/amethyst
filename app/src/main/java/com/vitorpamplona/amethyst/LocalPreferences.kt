@@ -2,8 +2,11 @@ package com.vitorpamplona.amethyst
 
 import android.content.Context
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.DefaultChannels
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.toByteArray
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import nostr.postr.Persona
 import nostr.postr.toHex
 
@@ -44,6 +47,18 @@ class LocalPreferences(context: Context) {
       } else {
         return null
       }
+    }
+  }
+
+  fun saveLastRead(route: String, timestampInSecs: Long) {
+    encryptedPreferences.edit().apply {
+      putLong("last_read_route_${route}", timestampInSecs)
+    }.apply()
+  }
+
+  fun loadLastRead(route: String): Long {
+    encryptedPreferences.run {
+      return getLong("last_read_route_${route}", 0)
     }
   }
 

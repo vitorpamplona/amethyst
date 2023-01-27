@@ -107,7 +107,7 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
                                         Row() {
                                             NoteCompose(
                                                 item,
-                                                Modifier.drawReplyLevel(item.replyLevel(), MaterialTheme.colors.onSurface.copy(alpha = 0.32f)),
+                                                modifier = Modifier.drawReplyLevel(item.replyLevel(), MaterialTheme.colors.onSurface.copy(alpha = 0.32f)),
                                                 isInnerNote = false,
                                                 accountViewModel = accountViewModel,
                                                 navController = navController,

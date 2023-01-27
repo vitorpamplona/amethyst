@@ -69,7 +69,7 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
             Column(
                 modifier = Modifier.fillMaxHeight().padding(vertical = 0.dp).weight(1f, true)
             ) {
-                ChatroomFeedView(feedViewModel, accountViewModel, navController)
+                ChatroomFeedView(feedViewModel, accountViewModel, navController, "Room/${userId}")
             }
 
             //LAST ROW

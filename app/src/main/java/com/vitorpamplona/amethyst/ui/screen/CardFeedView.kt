@@ -24,7 +24,7 @@ import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun CardFeedView(viewModel: CardFeedViewModel, accountViewModel: AccountViewModel, navController: NavController) {
+fun CardFeedView(viewModel: CardFeedViewModel, accountViewModel: AccountViewModel, navController: NavController, routeForLastRead: String) {
     val feedState by viewModel.feedContent.collectAsState()
 
     var isRefreshing by remember { mutableStateOf(false) }
@@ -68,9 +68,9 @@ fun CardFeedView(viewModel: CardFeedViewModel, accountViewModel: AccountViewMode
                         ) {
                             itemsIndexed(state.feed, key = { _, item -> item.id() }) { index, item ->
                                 when (item) {
-                                    is NoteCard -> NoteCompose(item.note, isInnerNote = false, accountViewModel = accountViewModel, navController = navController)
-                                    is LikeSetCard -> LikeSetCompose(item, isInnerNote = false, accountViewModel = accountViewModel, navController = navController)
-                                    is BoostSetCard -> BoostSetCompose(item, isInnerNote = false, accountViewModel = accountViewModel, navController = navController)
+                                    is NoteCard -> NoteCompose(item.note, isInnerNote = false, accountViewModel = accountViewModel, navController = navController, routeForLastRead = routeForLastRead)
+                                    is LikeSetCard -> LikeSetCompose(item, isInnerNote = false, accountViewModel = accountViewModel, navController = navController, routeForLastRead = routeForLastRead)
+                                    is BoostSetCard -> BoostSetCompose(item, isInnerNote = false, accountViewModel = accountViewModel, navController = navController, routeForLastRead = routeForLastRead)
                                 }
                             }
                         }
