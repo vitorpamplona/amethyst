@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen
 
+import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -110,83 +111,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
             color = MaterialTheme.colors.background
         ) {
             Column() {
-                Box {
-                    val banner = user.info.banner
-                    if (banner != null && banner.isNotBlank()) {
-                        AsyncImage(
-                            model = banner,
-                            contentDescription = "Profile Image",
-                            contentScale = ContentScale.FillWidth,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(125.dp)
-                        )
-                    } else {
-                        Image(
-                            painter = painterResource(R.drawable.profile_banner),
-                            contentDescription = "Profile Banner",
-                            contentScale = ContentScale.FillWidth,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(125.dp)
-                        )
-                    }
-
-                    Column(modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 10.dp)
-                        .padding(top = 75.dp)) {
-
-                        Row(horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.Bottom) {
-
-                            UserPicture(user, navController, account.userProfile(), 100.dp,
-                                pictureModifier = Modifier.border(3.dp, MaterialTheme.colors.background, CircleShape))
-
-                            Spacer(Modifier.weight(1f))
-
-                            Row(modifier = Modifier.height(35.dp).padding(bottom = 3.dp)) {
-                                MessageButton(user, navController)
-
-                                if (accountUser == user && account.isWriteable()) {
-                                    NSecCopyButton(account)
-                                }
-
-                                NPubCopyButton(user)
-
-                                if (accountUser == user) {
-                                    EditButton(account)
-                                } else {
-                                    if (account?.isAcceptable(user) == false) {
-                                        ShowUserButton {
-                                            account.showUser(user.pubkeyHex)
-                                            LocalPreferences(ctx).saveToEncryptedStorage(account)
-                                        }
-                                    } else if (accountUser.isFollowing(user)) {
-                                        UnfollowButton { account.unfollow(user) }
-                                    } else {
-                                        FollowButton { account.follow(user) }
-                                    }
-                                }
-                            }
-                        }
-
-                        Text(
-                            user.bestDisplayName() ?: "",
-                            modifier = Modifier.padding(top = 7.dp),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 25.sp
-                        )
-                        Text(" @${user.bestUsername()}", color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f))
-                        Text(
-                            "${user.info.about}",
-                            color = MaterialTheme.colors.onSurface,
-                            modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)
-                        )
-
-                        Divider(modifier = Modifier.padding(top = 6.dp))
-                    }
-                }
+                ProfileHeader(user, navController, account, accountUser, ctx)
 
                 val pagerState = rememberPagerState()
                 val coroutineScope = rememberCoroutineScope()
@@ -234,6 +159,108 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ProfileHeader(
+    user: User,
+    navController: NavController,
+    account: Account,
+    accountUser: User,
+    ctx: Context
+) {
+    Box {
+        val banner = user.info.banner
+        if (banner != null && banner.isNotBlank()) {
+            AsyncImage(
+                model = banner,
+                contentDescription = "Profile Image",
+                contentScale = ContentScale.FillWidth,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(125.dp)
+            )
+        } else {
+            Image(
+                painter = painterResource(R.drawable.profile_banner),
+                contentDescription = "Profile Banner",
+                contentScale = ContentScale.FillWidth,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(125.dp)
+            )
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp)
+                .padding(top = 75.dp)
+        ) {
+
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Bottom
+            ) {
+
+                UserPicture(
+                    user, navController, account.userProfile(), 100.dp,
+                    pictureModifier = Modifier.border(
+                        3.dp,
+                        MaterialTheme.colors.background,
+                        CircleShape
+                    )
+                )
+
+                Spacer(Modifier.weight(1f))
+
+                Row(modifier = Modifier
+                    .height(35.dp)
+                    .padding(bottom = 3.dp)) {
+                    MessageButton(user, navController)
+
+                    if (accountUser == user && account.isWriteable()) {
+                        NSecCopyButton(account)
+                    }
+
+                    NPubCopyButton(user)
+
+                    if (accountUser == user) {
+                        EditButton(account)
+                    } else {
+                        if (account?.isAcceptable(user) == false) {
+                            ShowUserButton {
+                                account.showUser(user.pubkeyHex)
+                                LocalPreferences(ctx).saveToEncryptedStorage(account)
+                            }
+                        } else if (accountUser.isFollowing(user)) {
+                            UnfollowButton { account.unfollow(user) }
+                        } else {
+                            FollowButton { account.follow(user) }
+                        }
+                    }
+                }
+            }
+
+            Text(
+                user.bestDisplayName() ?: "",
+                modifier = Modifier.padding(top = 7.dp),
+                fontWeight = FontWeight.Bold,
+                fontSize = 25.sp
+            )
+            Text(
+                " @${user.bestUsername()}",
+                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+            )
+            Text(
+                "${user.info.about}",
+                color = MaterialTheme.colors.onSurface,
+                modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)
+            )
+
+            Divider(modifier = Modifier.padding(top = 6.dp))
         }
     }
 }
