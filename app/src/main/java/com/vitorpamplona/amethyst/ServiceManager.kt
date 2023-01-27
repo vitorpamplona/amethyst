@@ -8,6 +8,7 @@ import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
 import com.vitorpamplona.amethyst.service.NostrGlobalDataSource
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
 import com.vitorpamplona.amethyst.service.NostrNotificationDataSource
+import com.vitorpamplona.amethyst.service.NostrSingleChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.NostrThreadDataSource
@@ -48,6 +49,7 @@ object ServiceManager {
       NostrHomeDataSource.start()
       NostrNotificationDataSource.start()
       NostrSingleEventDataSource.start()
+      NostrSingleChannelDataSource.start()
       NostrSingleUserDataSource.start()
       NostrThreadDataSource.start()
       NostrChatroomListDataSource.start()
@@ -68,6 +70,7 @@ object ServiceManager {
 
     NostrGlobalDataSource.stop()
     NostrNotificationDataSource.stop()
+    NostrSingleChannelDataSource.stop()
     NostrSingleEventDataSource.stop()
     NostrSingleUserDataSource.stop()
     NostrThreadDataSource.stop()

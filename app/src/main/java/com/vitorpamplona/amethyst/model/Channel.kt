@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.model
 
 import androidx.lifecycle.LiveData
+import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import java.util.concurrent.ConcurrentHashMap
@@ -51,6 +52,16 @@ class Channel(val id: ByteArray) {
 class ChannelLiveData(val channel: Channel): LiveData<ChannelState>(ChannelState(channel)) {
     fun refresh() {
         postValue(ChannelState(channel))
+    }
+
+    override fun onActive() {
+        super.onActive()
+        NostrSingleEventDataSource.add(channel.idHex)
+    }
+
+    override fun onInactive() {
+        super.onInactive()
+        NostrSingleEventDataSource.remove(channel.idHex)
     }
 }
 

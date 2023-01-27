@@ -155,6 +155,33 @@ fun NoteCompose(
                                 )
                             }
                         }
+
+                        // boosted picture
+                        val baseChannel = note.channel
+                        if (note.event is ChannelMessageEvent && baseChannel != null) {
+                            val channelState by baseChannel.live.observeAsState()
+                            val channel = channelState?.channel
+
+                            if (channel != null) {
+                                Box(
+                                    Modifier
+                                        .width(30.dp)
+                                        .height(30.dp)
+                                        .align(Alignment.BottomEnd)) {
+                                    AsyncImage(
+                                        model = channel.profilePicture(),
+                                        placeholder = null,
+                                        contentDescription = "Group Picture",
+                                        modifier = Modifier
+                                            .width(30.dp)
+                                            .height(30.dp)
+                                            .clip(shape = CircleShape)
+                                            .background(MaterialTheme.colors.background)
+                                            .border(2.dp, MaterialTheme.colors.background, CircleShape)
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
 

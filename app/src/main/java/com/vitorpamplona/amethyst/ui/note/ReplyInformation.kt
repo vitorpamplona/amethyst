@@ -91,11 +91,14 @@ fun ReplyInformationChannel(replyTo: MutableList<Note>?, mentions: List<User>?, 
 @Composable
 fun ReplyInformationChannel(replyTo: MutableList<Note>?,
                      mentions: List<User>?,
-                     channel: Channel,
+                     baseChannel: Channel,
                      prefix: String = "",
                      onUserTagClick: (User) -> Unit,
                      onChannelTagClick: (Channel) -> Unit
 ) {
+  val channelState by baseChannel.live.observeAsState()
+  val channel = channelState?.channel ?: return
+
   FlowRow() {
     Text(
       "in channel ",
