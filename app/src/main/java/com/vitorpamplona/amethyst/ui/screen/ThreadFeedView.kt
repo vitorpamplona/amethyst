@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.ui.components.RichTextViewer
 import com.vitorpamplona.amethyst.ui.note.BlankNote
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
+import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.timeAgoLong
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -156,6 +157,9 @@ fun NoteMaster(baseNote: Note, accountViewModel: AccountViewModel, navController
     val noteState by baseNote.live.observeAsState()
     val note = noteState?.note
 
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val account = accountState?.account ?: return
+
     if (note?.event == null) {
         BlankNote()
     } else {
@@ -174,15 +178,7 @@ fun NoteMaster(baseNote: Note, accountViewModel: AccountViewModel, navController
                     }
                 })
             ) {
-                // Draws the boosted picture outside the boosted card.
-                AsyncImage(
-                    model = author?.profilePicture(),
-                    placeholder = rememberAsyncImagePainter("https://robohash.org/${author?.pubkeyHex}.png"),
-                    contentDescription = "Profile Image",
-                    modifier = Modifier
-                        .width(55.dp).height(55.dp)
-                        .clip(shape = CircleShape)
-                )
+                UserPicture(user = author, userAccount = account.userProfile(), size = 55.dp)
 
                 Column(modifier = Modifier.padding(start = 10.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {

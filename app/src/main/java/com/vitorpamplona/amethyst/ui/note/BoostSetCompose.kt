@@ -36,6 +36,9 @@ fun BoostSetCompose(likeSetCard: BoostSetCard, isInnerNote: Boolean = false, rou
     val noteState by likeSetCard.note.live.observeAsState()
     val note = noteState?.note
 
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val account = accountState?.account ?: return
+
     val context = LocalContext.current.applicationContext
 
     if (note?.event == null) {
@@ -79,20 +82,7 @@ fun BoostSetCompose(likeSetCard: BoostSetCard, isInnerNote: Boolean = false, rou
                             if (cardNote?.author != null) {
                                 val userState by cardNote.author!!.live.observeAsState()
 
-                                AsyncImage(
-                                    model = userState?.user?.profilePicture(),
-                                    placeholder = rememberAsyncImagePainter("https://robohash.org/${userState?.user?.pubkeyHex}.png"),
-                                    contentDescription = "Profile Image",
-                                    modifier = Modifier
-                                        .width(35.dp)
-                                        .height(35.dp)
-                                        .clip(shape = CircleShape)
-                                        .clickable(onClick = {
-                                            userState?.let {
-                                                navController.navigate("User/${it.user.pubkeyHex}")
-                                            }
-                                        })
-                                )
+                                UserPicture(user = userState?.user, userAccount = account.userProfile(), size = 35.dp)
                             }
                         }
                     }
