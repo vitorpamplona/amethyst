@@ -19,6 +19,7 @@ import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
+import androidx.compose.material.TextFieldDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.EditNote
@@ -110,6 +111,7 @@ fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, accoun
                     keyboardOptions = KeyboardOptions.Default.copy(
                         capitalization = KeyboardCapitalization.Sentences
                     ),
+                    shape = RoundedCornerShape(25.dp),
                     modifier = Modifier
                         .weight(1f, true)
                         .padding(end = 10.dp),
@@ -129,7 +131,11 @@ fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, accoun
                             newPost.value.text.isNotBlank(),
                             modifier = Modifier.padding(end = 10.dp)
                         )
-                    }
+                    },
+                    colors = TextFieldDefaults.textFieldColors(
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent
+                    )
                 )
             }
         }

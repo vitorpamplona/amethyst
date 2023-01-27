@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.Divider
 import androidx.compose.material.Icon
@@ -22,6 +23,7 @@ import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
+import androidx.compose.material.TextFieldDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.runtime.Composable
@@ -120,6 +122,7 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
                 searchResultsNotes.value = LocalCache.findNotesStartingWith(it.text)
                 searchResultsChannels.value = LocalCache.findChannelsStartingWith(it.text)
             },
+            shape = RoundedCornerShape(25.dp),
             keyboardOptions = KeyboardOptions.Default.copy(
                 capitalization = KeyboardCapitalization.Sentences
             ),
@@ -158,7 +161,11 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
                         )
                     }
                 }
-            }
+            },
+            colors = TextFieldDefaults.textFieldColors(
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent
+            )
         )
     }
 
