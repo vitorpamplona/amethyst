@@ -282,7 +282,8 @@ object LocalCache {
       if (oldChannel.creator == null || oldChannel.creator == author) {
         oldChannel.updateChannelInfo(author, event.channelInfo, event.createdAt)
 
-        val note = oldChannel.getOrCreateNote(event.id.toHex())
+        val note = getOrCreateNote(event.id.toHex())
+        oldChannel.addNote(note)
         note.channel = oldChannel
         note.loadEvent(event, author, emptyList(), mutableListOf())
 
@@ -303,7 +304,8 @@ object LocalCache {
       if (oldChannel.creator == null || oldChannel.creator == author) {
         oldChannel.updateChannelInfo(author, event.channelInfo, event.createdAt)
 
-        val note = oldChannel.getOrCreateNote(event.id.toHex())
+        val note = getOrCreateNote(event.id.toHex())
+        oldChannel.addNote(note)
         note.channel = oldChannel
         note.loadEvent(event, author, emptyList(), mutableListOf())
 
@@ -319,7 +321,8 @@ object LocalCache {
 
     val channel = getOrCreateChannel(event.channel)
 
-    val note = channel.getOrCreateNote(event.id.toHex())
+    val note = getOrCreateNote(event.id.toHex())
+    channel.addNote(note)
 
     // Already processed this event.
     if (note.event != null) return
@@ -328,7 +331,7 @@ object LocalCache {
     val mentions = Collections.synchronizedList(event.mentions.map { getOrCreateUser(decodePublicKey(it)) })
     val replyTo = Collections.synchronizedList(
       event.replyTos
-        .map { channel.getOrCreateNote(it) }
+        .map { getOrCreateNote(it) }
         .filter { it.event !is ChannelCreateEvent }
         .toMutableList()
     )
@@ -373,6 +376,7 @@ object LocalCache {
   fun findNotesStartingWith(text: String): List<Note> {
     return notes.values.filter {
       (it.event is TextNoteEvent && it.event?.content?.contains(text, true) ?: false)
+        || (it.event is ChannelMessageEvent && it.event?.content?.contains(text, true) ?: false)
         || it.idHex.startsWith(text, true)
         || it.id.toNote().startsWith(text, true)
     }

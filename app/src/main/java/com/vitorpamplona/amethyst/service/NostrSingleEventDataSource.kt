@@ -2,6 +2,9 @@ package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
+import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
+import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import java.util.Collections
@@ -20,7 +23,9 @@ object NostrSingleEventDataSource: NostrDataSource<Note>("SingleEventFeed") {
 
     // downloads all the reactions to a given event.
     return JsonFilter(
-      kinds = listOf(TextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind),
+      kinds = listOf(
+        TextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind, ChannelMessageEvent.kind
+      ),
       tags = mapOf("e" to reactionsToWatch)
     )
   }
@@ -46,7 +51,10 @@ object NostrSingleEventDataSource: NostrDataSource<Note>("SingleEventFeed") {
 
     // downloads linked events to this event.
     return JsonFilter(
-      kinds = listOf(TextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind),
+      kinds = listOf(
+        TextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind,
+        ChannelMessageEvent.kind, ChannelCreateEvent.kind, ChannelMetadataEvent.kind
+      ),
       ids = interestedEvents.toList()
     )
   }

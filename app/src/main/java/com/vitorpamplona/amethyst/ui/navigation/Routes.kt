@@ -146,10 +146,6 @@ private fun messagesHasNewItems(cache: NotificationCache): Boolean {
             cache.load("Room/${it.author?.pubkeyHex}", context)
         }
 
-        if (NostrChatroomListDataSource.account.isAcceptable(it) && it.event != null && it.event!!.createdAt > lastTime) {
-            println("${it.author?.toBestDisplayName()}")
-        }
-
         NostrChatroomListDataSource.account.isAcceptable(it) && it.event != null && it.event!!.createdAt > lastTime
     }.isNotEmpty()
 }

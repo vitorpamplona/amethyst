@@ -211,9 +211,9 @@ fun NoteCompose(
                         if (eventContent != null)
                             RichTextViewer(eventContent, note.event?.tags, navController)
 
-                        if (note.event !is ChannelMessageEvent) {
-                            ReactionsRow(note, accountViewModel)
-                        }
+                        //if (note.event !is ChannelMessageEvent) {
+                        ReactionsRow(note, accountViewModel)
+                        //}
 
                         Divider(
                             modifier = Modifier.padding(top = 10.dp),

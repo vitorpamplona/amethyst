@@ -97,20 +97,20 @@ fun ReplyInformationChannel(replyTo: MutableList<Note>?,
                      onChannelTagClick: (Channel) -> Unit
 ) {
   FlowRow() {
+    Text(
+      "in channel ",
+      fontSize = 13.sp,
+      color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+    )
+
+    ClickableText(
+      AnnotatedString("${channel.info.name} "),
+      style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(alpha = 0.52f), fontSize = 13.sp),
+      onClick = { onChannelTagClick(channel) }
+    )
+
     if (mentions != null && mentions.isNotEmpty()) {
       if (replyTo != null && replyTo.isNotEmpty()) {
-        Text(
-          "in channel ",
-          fontSize = 13.sp,
-          color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-        )
-
-        ClickableText(
-          AnnotatedString("${channel.info.name} "),
-          style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(alpha = 0.52f), fontSize = 13.sp),
-          onClick = { onChannelTagClick(channel) }
-        )
-
         Text(
           "replying to ",
           fontSize = 13.sp,

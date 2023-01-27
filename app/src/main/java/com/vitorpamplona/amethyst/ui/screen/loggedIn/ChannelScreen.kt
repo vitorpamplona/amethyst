@@ -125,7 +125,7 @@ fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, accoun
                     trailingIcon = {
                         PostButton(
                             onPost = {
-                                account.sendChannelMeesage(newPost.value.text, channel.idHex)
+                                account.sendChannelMeesage(newPost.value.text, channel.idHex, null, null)
                                 newPost.value = TextFieldValue("")
                             },
                             newPost.value.text.isNotBlank(),

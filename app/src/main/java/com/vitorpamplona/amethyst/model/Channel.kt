@@ -1,13 +1,9 @@
 package com.vitorpamplona.amethyst.model
 
 import androidx.lifecycle.LiveData
-import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
-import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
-import nostr.postr.events.ContactListEvent
 
 class Channel(val id: ByteArray) {
     val idHex = id.toHexKey()
@@ -21,12 +17,8 @@ class Channel(val id: ByteArray) {
     val notes = ConcurrentHashMap<HexKey, Note>()
 
     @Synchronized
-    fun getOrCreateNote(idHex: String): Note {
-        return notes[idHex] ?: run {
-            val answer = Note(idHex)
-            notes.put(idHex, answer)
-            answer
-        }
+    fun addNote(note: Note) {
+        notes[note.idHex] = note
     }
 
     fun updateChannelInfo(creator: User, channelInfo: ChannelCreateEvent.ChannelData, updatedAt: Long) {

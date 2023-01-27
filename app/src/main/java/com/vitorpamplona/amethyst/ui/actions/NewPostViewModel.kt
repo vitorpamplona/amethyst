@@ -95,7 +95,12 @@ class NewPostViewModel: ViewModel() {
             }.joinToString(" ")
         }.joinToString("\n")
 
-        account?.sendPost(newMessage, replyTos, mentions)
+        if (originalNote?.channel != null) {
+            account?.sendChannelMeesage(newMessage, originalNote!!.channel!!.idHex, originalNote!!, mentions)
+        } else {
+            account?.sendPost(newMessage, replyTos, mentions)
+        }
+
         message = TextFieldValue("")
         urlPreview = null
     }

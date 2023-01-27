@@ -196,12 +196,17 @@ class Account(
     LocalCache.consume(signedEvent)
   }
 
-  fun sendChannelMeesage(message: String, toChannel: String, replyingTo: Note? = null) {
+  fun sendChannelMeesage(message: String, toChannel: String, replyingTo: Note? = null, mentions: List<User>?) {
     if (!isWriteable()) return
+
+    val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
+    val mentionsHex = mentions?.map { it.pubkeyHex }
 
     val signedEvent = ChannelMessageEvent.create(
       message = message,
       channel = toChannel,
+      replyTos = repliesToHex,
+      mentions = mentionsHex,
       privateKey = loggedIn.privKey!!
     )
     Client.send(signedEvent)
