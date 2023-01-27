@@ -52,27 +52,31 @@ abstract class NostrDataSource<T>(val debugName: String) {
           eventCounter.put(key, 1)
         }
 
-        //println("AAA ${debugName} ${subscriptionId} ${event.kind}")
-        when (event) {
-          is MetadataEvent -> LocalCache.consume(event)
-          is TextNoteEvent -> LocalCache.consume(event)
-          is RecommendRelayEvent -> LocalCache.consume(event)
-          is ContactListEvent -> LocalCache.consume(event)
-          is PrivateDmEvent -> LocalCache.consume(event)
-          is DeletionEvent -> LocalCache.consume(event)
-          is RepostEvent -> LocalCache.consume(event)
-          is ReactionEvent -> LocalCache.consume(event)
-          else -> when (event.kind) {
-            RepostEvent.kind -> LocalCache.consume(RepostEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
-            ReactionEvent.kind -> LocalCache.consume(ReactionEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
+        try {
+          when (event) {
+            is MetadataEvent -> LocalCache.consume(event)
+            is TextNoteEvent -> LocalCache.consume(event)
+            is RecommendRelayEvent -> LocalCache.consume(event)
+            is ContactListEvent -> LocalCache.consume(event)
+            is PrivateDmEvent -> LocalCache.consume(event)
+            is DeletionEvent -> LocalCache.consume(event)
+            is RepostEvent -> LocalCache.consume(event)
+            is ReactionEvent -> LocalCache.consume(event)
+            else -> when (event.kind) {
+              RepostEvent.kind -> LocalCache.consume(RepostEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
+              ReactionEvent.kind -> LocalCache.consume(ReactionEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
 
-            ChannelCreateEvent.kind -> LocalCache.consume(ChannelCreateEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
-            ChannelMetadataEvent.kind -> LocalCache.consume(ChannelMetadataEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
-            ChannelMessageEvent.kind -> LocalCache.consume(ChannelMessageEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
-            ChannelHideMessageEvent.kind -> LocalCache.consume(ChannelHideMessageEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
-            ChannelMuteUserEvent.kind -> LocalCache.consume(ChannelMuteUserEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
+              ChannelCreateEvent.kind -> LocalCache.consume(ChannelCreateEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
+              ChannelMetadataEvent.kind -> LocalCache.consume(ChannelMetadataEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
+              ChannelMessageEvent.kind -> LocalCache.consume(ChannelMessageEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
+              ChannelHideMessageEvent.kind -> LocalCache.consume(ChannelHideMessageEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
+              ChannelMuteUserEvent.kind -> LocalCache.consume(ChannelMuteUserEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
+            }
           }
+        } catch (e: Exception) {
+          e.printStackTrace()
         }
+
       }
     }
 
