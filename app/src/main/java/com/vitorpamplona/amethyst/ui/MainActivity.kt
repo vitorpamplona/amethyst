@@ -15,6 +15,8 @@ import coil.ImageLoader
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.decode.SvgDecoder
+import coil.memory.MemoryCache
+import coil.request.CachePolicy
 import com.vitorpamplona.amethyst.EncryptedStorage
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
@@ -48,7 +50,7 @@ class MainActivity : ComponentActivity() {
           add(GifDecoder.Factory())
         }
         add(SvgDecoder.Factory())
-      }
+      }.memoryCachePolicy(CachePolicy.DISABLED)
         .respectCacheHeaders(false)
         .build()
     }
