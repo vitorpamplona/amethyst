@@ -177,7 +177,11 @@ fun NoteCompose(
                                             .height(30.dp)
                                             .clip(shape = CircleShape)
                                             .background(MaterialTheme.colors.background)
-                                            .border(2.dp, MaterialTheme.colors.background, CircleShape)
+                                            .border(
+                                                2.dp,
+                                                MaterialTheme.colors.background,
+                                                CircleShape
+                                            )
                                     )
                                 }
                             }
@@ -278,6 +282,9 @@ fun UserPicture(
     pictureModifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null
 ) {
+    val accountState by userAccount.live.observeAsState()
+    val accountUser = accountState?.user ?: return
+
     Box(
         Modifier
             .width(size)
@@ -293,10 +300,13 @@ fun UserPicture(
                     .background(MaterialTheme.colors.background)
             )
         } else {
+            val userState by user.live.observeAsState()
+            val userLive = userState?.user ?: return
+
             AsyncImage(
-                model = user.profilePicture(),
+                model = userLive.profilePicture(),
                 contentDescription = "Profile Image",
-                placeholder = rememberAsyncImagePainter("https://robohash.org/${user.pubkeyHex}.png"),
+                placeholder = rememberAsyncImagePainter("https://robohash.org/${userLive.pubkeyHex}.png"),
                 modifier = pictureModifier
                     .fillMaxSize(1f)
                     .clip(shape = CircleShape)
@@ -310,21 +320,23 @@ fun UserPicture(
 
             )
 
-            if (userAccount.isFollowing(user) || user == userAccount) {
-                Box(Modifier
-                    .width(size.div(3.5f))
-                    .height(size.div(3.5f))
-                    .align(Alignment.TopEnd),
+            if (accountUser.isFollowing(userLive) || userLive == accountUser) {
+                Box(
+                    Modifier
+                        .width(size.div(3.5f))
+                        .height(size.div(3.5f))
+                        .align(Alignment.TopEnd),
                     contentAlignment = Alignment.Center
                 ) {
                     // Background for the transparent checkmark
                     Text(
                         "x",
-                          Modifier
-                        .padding(4.dp).fillMaxSize()
-                        .align(Alignment.Center)
-                        .background(MaterialTheme.colors.background)
-                        .clip(shape = CircleShape)
+                        Modifier
+                            .padding(4.dp)
+                            .fillMaxSize()
+                            .align(Alignment.Center)
+                            .background(MaterialTheme.colors.background)
+                            .clip(shape = CircleShape)
                     )
 
                     Icon(
