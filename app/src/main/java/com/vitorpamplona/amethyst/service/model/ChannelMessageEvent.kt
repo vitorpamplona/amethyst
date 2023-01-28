@@ -19,7 +19,7 @@ class ChannelMessageEvent (
 
   init {
     channel = tags.firstOrNull { it[0] == "e" && it.size > 3 && it[3] == "root" }?.getOrNull(1) ?: tags.firstOrNull { it.firstOrNull() == "e" }?.getOrNull(1)
-    replyTos = tags.filter { it.firstOrNull() == "e" && (it.size < 3 || (it.size > 3 && it[3] != "root")) }.mapNotNull { it.getOrNull(1) }
+    replyTos = tags.filter { it.getOrNull(1) != channel }.mapNotNull { it.getOrNull(1) }
     mentions = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
   }
 
