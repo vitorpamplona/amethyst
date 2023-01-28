@@ -128,6 +128,14 @@ class User(val pubkey: ByteArray) {
         info = newUserInfo
         updatedMetadataAt = updateAt
 
+        if (info.picture?.startsWith( "http://") == true) {
+            info.picture = info.picture?.replaceFirst("http://", "https://")
+        }
+
+        if (info.banner?.startsWith( "http://") == true) {
+            info.banner = info.banner?.replaceFirst("http://", "https://")
+        }
+
         invalidateData()
     }
 
