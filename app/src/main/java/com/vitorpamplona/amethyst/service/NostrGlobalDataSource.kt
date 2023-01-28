@@ -11,7 +11,7 @@ object NostrGlobalDataSource: NostrDataSource<Note>("GlobalFeed") {
   lateinit var account: Account
   fun createGlobalFilter() = JsonFilter(
     kinds = listOf(TextNoteEvent.kind, ChannelMessageEvent.kind),
-    limit = 50
+    limit = 200
   )
 
   val globalFeedChannel = requestNewChannel()
