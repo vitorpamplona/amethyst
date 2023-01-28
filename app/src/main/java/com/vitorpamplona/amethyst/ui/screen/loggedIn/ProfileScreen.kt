@@ -7,9 +7,11 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -20,7 +22,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Divider
+import androidx.compose.material.DropdownMenu
+import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Tab
@@ -29,6 +34,7 @@ import androidx.compose.material.TabRowDefaults
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Password
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.runtime.Composable
@@ -87,8 +93,6 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
     val accountUserState by account.userProfile().live.observeAsState()
     val accountUser = accountUserState?.user
 
-    val ctx = LocalContext.current.applicationContext
-
     if (userId != null && accountUser != null) {
         DisposableEffect(account) {
             NostrUserProfileDataSource.loadUserProfile(userId)
@@ -112,7 +116,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
             color = MaterialTheme.colors.background
         ) {
             Column() {
-                ProfileHeader(user, navController, account, accountUser, ctx)
+                ProfileHeader(user, navController, account, accountUser, accountViewModel)
 
                 val pagerState = rememberPagerState()
                 val coroutineScope = rememberCoroutineScope()
@@ -170,8 +174,11 @@ private fun ProfileHeader(
     navController: NavController,
     account: Account,
     accountUser: User,
-    ctx: Context
+    accountViewModel: AccountViewModel
 ) {
+    val ctx = LocalContext.current.applicationContext
+    var popupExpanded by remember { mutableStateOf(false) }
+
     Box {
         val banner = user.info.banner
         if (banner != null && banner.isNotBlank()) {
@@ -192,6 +199,34 @@ private fun ProfileHeader(
                     .fillMaxWidth()
                     .height(125.dp)
             )
+        }
+
+        Box(modifier = Modifier
+            .padding(horizontal = 10.dp)
+            .size(40.dp)
+            .align(Alignment.TopEnd)) {
+
+            Button(
+                modifier = Modifier
+                    .size(30.dp)
+                    .align(Alignment.Center),
+                onClick = { popupExpanded = true },
+                shape = RoundedCornerShape(20.dp),
+                colors = ButtonDefaults
+                    .buttonColors(
+                        backgroundColor = MaterialTheme.colors.background
+                    ),
+                contentPadding = PaddingValues(0.dp)
+            ) {
+                Icon(
+                    tint = Color.White,
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = "More Options",
+                )
+
+                UserProfileDropDownMenu(user, popupExpanded, { popupExpanded = false }, accountViewModel)
+            }
+
         }
 
         Column(
@@ -231,7 +266,7 @@ private fun ProfileHeader(
                     if (accountUser == user) {
                         EditButton(account)
                     } else {
-                        if (account?.isAcceptable(user) == false) {
+                        if (!account.isAcceptable(user)) {
                             ShowUserButton {
                                 account.showUser(user.pubkeyHex)
                                 LocalPreferences(ctx).saveToEncryptedStorage(account)
@@ -315,7 +350,9 @@ private fun NSecCopyButton(
     val clipboardManager = LocalClipboardManager.current
 
     Button(
-        modifier = Modifier.padding(horizontal = 3.dp).width(50.dp),
+        modifier = Modifier
+            .padding(horizontal = 3.dp)
+            .width(50.dp),
         onClick = { account.loggedIn.privKey?.let { clipboardManager.setText(AnnotatedString(it.toNsec())) } },
         shape = RoundedCornerShape(20.dp),
         colors = ButtonDefaults
@@ -338,7 +375,9 @@ private fun NPubCopyButton(
     val clipboardManager = LocalClipboardManager.current
 
     Button(
-        modifier = Modifier.padding(horizontal = 3.dp).width(50.dp),
+        modifier = Modifier
+            .padding(horizontal = 3.dp)
+            .width(50.dp),
         onClick = { clipboardManager.setText(AnnotatedString(user.pubkey.toNpub())) },
         shape = RoundedCornerShape(20.dp),
         colors = ButtonDefaults
@@ -357,7 +396,9 @@ private fun NPubCopyButton(
 @Composable
 private fun MessageButton(user: User, navController: NavController) {
     Button(
-        modifier = Modifier.padding(horizontal = 3.dp).width(50.dp),
+        modifier = Modifier
+            .padding(horizontal = 3.dp)
+            .width(50.dp),
         onClick = { navController.navigate("Room/${user.pubkeyHex}") },
         shape = RoundedCornerShape(20.dp),
         colors = ButtonDefaults
@@ -384,7 +425,9 @@ private fun EditButton(account: Account) {
         NewUserMetadataView({ wantsToEdit = false }, account)
 
     Button(
-        modifier = Modifier.padding(horizontal = 3.dp).width(50.dp),
+        modifier = Modifier
+            .padding(horizontal = 3.dp)
+            .width(50.dp),
         onClick = { wantsToEdit = true },
         shape = RoundedCornerShape(20.dp),
         colors = ButtonDefaults
@@ -409,7 +452,8 @@ fun UnfollowButton(onClick: () -> Unit) {
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = MaterialTheme.colors.primary
-            )
+            ),
+        contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
     ) {
         Text(text = "Unfollow", color = Color.White)
     }
@@ -424,7 +468,8 @@ fun FollowButton(onClick: () -> Unit) {
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = MaterialTheme.colors.primary
-            )
+            ),
+        contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
     ) {
         Text(text = "Follow", color = Color.White, textAlign = TextAlign.Center)
     }
@@ -439,9 +484,45 @@ fun ShowUserButton(onClick: () -> Unit) {
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = MaterialTheme.colors.primary
-            )
+            ),
+        contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
     ) {
         Text(text = "Unblock", color = Color.White)
     }
 }
 
+
+@Composable
+fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () -> Unit, accountViewModel: AccountViewModel) {
+    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current.applicationContext
+
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val account = accountState?.account ?: return
+
+    DropdownMenu(
+        expanded = popupExpanded,
+        onDismissRequest = onDismiss
+    ) {
+        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(user.pubkey.toNpub() ?: "")); onDismiss() }) {
+            Text("Copy User ID")
+        }
+        Divider()
+        if (!account.isAcceptable(user)) {
+            DropdownMenuItem(onClick = {
+                user.let {
+                    accountViewModel.show(
+                        it,
+                        context
+                    )
+                }; onDismiss()
+            }) {
+                Text("Unblock User")
+            }
+        } else {
+            DropdownMenuItem(onClick = { user.let { accountViewModel.hide(it, context) }; onDismiss() }) {
+                Text("Block User")
+            }
+        }
+    }
+}

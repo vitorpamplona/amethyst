@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -272,7 +273,8 @@ private fun JoinButton(account: Account, channel: Channel, navController: NavCon
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = MaterialTheme.colors.primary
-            )
+            ),
+        contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
     ) {
         Text(text = "Join", color = Color.White)
     }
@@ -293,7 +295,8 @@ private fun LeaveButton(account: Account, channel: Channel, navController: NavCo
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = MaterialTheme.colors.primary
-            )
+            ),
+        contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
     ) {
         Text(text = "Leave", color = Color.White)
     }
