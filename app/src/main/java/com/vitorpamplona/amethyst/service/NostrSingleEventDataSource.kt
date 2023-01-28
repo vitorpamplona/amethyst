@@ -24,7 +24,7 @@ object NostrSingleEventDataSource: NostrDataSource<Note>("SingleEventFeed") {
     // downloads all the reactions to a given event.
     return JsonFilter(
       kinds = listOf(
-        TextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind, ChannelMessageEvent.kind
+        TextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind
       ),
       tags = mapOf("e" to reactionsToWatch)
     )
