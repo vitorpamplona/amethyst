@@ -4,6 +4,7 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
@@ -31,7 +32,6 @@ fun ChatroomListFeedView(viewModel: FeedViewModel, accountViewModel: AccountView
     var isRefreshing by remember { mutableStateOf(false) }
     val swipeRefreshState = rememberSwipeRefreshState(isRefreshing)
 
-    val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(isRefreshing) {
@@ -61,23 +61,38 @@ fun ChatroomListFeedView(viewModel: FeedViewModel, accountViewModel: AccountView
                         }
                     }
                     is FeedState.Loaded -> {
-                        LazyColumn(
-                            contentPadding = PaddingValues(
-                                top = 10.dp,
-                                bottom = 10.dp
-                            ),
-                            state = listState
-                        ) {
-                            itemsIndexed(state.feed.value, key = { index, item -> item.idHex }) { index, item ->
-                                ChatroomCompose(item, accountViewModel = accountViewModel, navController = navController)
-                            }
-                        }
+                        FeedLoaded(state, accountViewModel, navController)
                     }
                     FeedState.Loading -> {
                         LoadingFeed()
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun FeedLoaded(
+    state: FeedState.Loaded,
+    accountViewModel: AccountViewModel,
+    navController: NavController
+) {
+    val listState = rememberLazyListState()
+
+    LazyColumn(
+        contentPadding = PaddingValues(
+            top = 10.dp,
+            bottom = 10.dp
+        ),
+        state = listState
+    ) {
+        itemsIndexed(state.feed.value, key = { index, item -> item.idHex }) { index, item ->
+            ChatroomCompose(
+                item,
+                accountViewModel = accountViewModel,
+                navController = navController
+            )
         }
     }
 }
