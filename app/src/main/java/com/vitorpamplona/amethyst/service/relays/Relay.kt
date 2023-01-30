@@ -41,81 +41,87 @@ class Relay(
     }
 
     fun requestAndWatch() {
-        val request = Request.Builder().url(url.trim()).build()
-        val listener = object : WebSocketListener() {
+        try {
+            val request = Request.Builder().url(url.trim()).build()
+            val listener = object : WebSocketListener() {
 
-            override fun onOpen(webSocket: WebSocket, response: Response) {
-                // Sends everything.
-                Client.allSubscriptions().forEach {
-                    sendFilter(requestId = it)
+                override fun onOpen(webSocket: WebSocket, response: Response) {
+                    // Sends everything.
+                    Client.allSubscriptions().forEach {
+                        sendFilter(requestId = it)
+                    }
+                    listeners.forEach { it.onRelayStateChange(this@Relay, Type.CONNECT) }
                 }
-                listeners.forEach { it.onRelayStateChange(this@Relay, Type.CONNECT) }
-            }
 
-            override fun onMessage(webSocket: WebSocket, text: String) {
-                try {
-                    val msg = Event.gson.fromJson(text, JsonElement::class.java).asJsonArray
-                    val type = msg[0].asString
-                    val channel = msg[1].asString
-                    when (type) {
-                        "EVENT" -> {
-                            eventDownloadCounter++
-                            val event = Event.fromJson(msg[2], Client.lenient)
-                            listeners.forEach { it.onEvent(this@Relay, channel, event) }
+                override fun onMessage(webSocket: WebSocket, text: String) {
+                    try {
+                        val msg = Event.gson.fromJson(text, JsonElement::class.java).asJsonArray
+                        val type = msg[0].asString
+                        val channel = msg[1].asString
+                        when (type) {
+                            "EVENT" -> {
+                                eventDownloadCounter++
+                                val event = Event.fromJson(msg[2], Client.lenient)
+                                listeners.forEach { it.onEvent(this@Relay, channel, event) }
+                            }
+                            "EOSE" -> listeners.forEach {
+                                it.onRelayStateChange(this@Relay, Type.EOSE)
+                            }
+                            "NOTICE" -> listeners.forEach {
+                                // "channel" being the second string in the string array ...
+                                it.onError(this@Relay, channel, Error("Relay sent notice: $channel"))
+                            }
+                            "OK" -> listeners.forEach {
+                                it.onSendResponse(this@Relay, msg[1].asString, msg[2].asBoolean, msg[3].asString)
+                            }
+                            else -> listeners.forEach {
+                                it.onError(
+                                    this@Relay,
+                                    channel,
+                                    Error("Unknown type $type on channel $channel. Msg was $text")
+                                )
+                            }
                         }
-                        "EOSE" -> listeners.forEach {
-                            it.onRelayStateChange(this@Relay, Type.EOSE)
-                        }
-                        "NOTICE" -> listeners.forEach {
-                            // "channel" being the second string in the string array ...
-                            it.onError(this@Relay, channel, Error("Relay sent notice: $channel"))
-                        }
-                        "OK" -> listeners.forEach {
-                            it.onSendResponse(this@Relay, msg[1].asString, msg[2].asBoolean, msg[3].asString)
-                        }
-                        else -> listeners.forEach {
-                            it.onError(
-                                this@Relay,
-                                channel,
-                                Error("Unknown type $type on channel $channel. Msg was $text")
-                            )
+                    } catch (t: Throwable) {
+                        t.printStackTrace()
+                        text.chunked(2000) { chunked ->
+                            listeners.forEach { it.onError(this@Relay, "", Error("Problem with $chunked")) }
                         }
                     }
-                } catch (t: Throwable) {
-                    t.printStackTrace()
-                    text.chunked(2000) { chunked ->
-                        listeners.forEach { it.onError(this@Relay, "", Error("Problem with $chunked")) }
+                }
+
+                override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
+                    listeners.forEach { it.onRelayStateChange(this@Relay, Type.DISCONNECTING) }
+                }
+
+                override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                    socket = null
+                    closingTime = Date().time / 1000
+                    listeners.forEach { it.onRelayStateChange(this@Relay, Type.DISCONNECT) }
+                }
+
+                override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                    errorCounter++
+
+                    socket?.close(1000, "Normal close")
+                    // Failures disconnect the relay.
+                    socket = null
+                    closingTime = Date().time / 1000
+
+                    Log.w("Relay", "Relay onFailure ${url}, ${response?.message}")
+                    //t.printStackTrace()
+                    listeners.forEach {
+                        it.onError(this@Relay, "", Error("WebSocket Failure. Response: ${response}. Exception: ${t.message}", t))
                     }
                 }
             }
 
-            override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
-                listeners.forEach { it.onRelayStateChange(this@Relay, Type.DISCONNECTING) }
-            }
-
-            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-                socket = null
-                closingTime = Date().time / 1000
-                listeners.forEach { it.onRelayStateChange(this@Relay, Type.DISCONNECT) }
-            }
-
-            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                errorCounter++
-
-                socket?.close(1000, "Normal close")
-                // Failures disconnect the relay. 
-                socket = null
-                closingTime = Date().time / 1000
-
-                Log.w("Relay", "Relay onFailure ${url}, ${response?.message}")
-                //t.printStackTrace()
-                listeners.forEach {
-                    it.onError(this@Relay, "", Error("WebSocket Failure. Response: ${response}. Exception: ${t.message}", t))
-                }
-            }
+            socket = httpClient.newWebSocket(request, listener)
+        } catch (e: Exception) {
+            closingTime = Date().time / 1000
+            Log.e("Relay", "Relay Invalid ${url}")
+            e.printStackTrace()
         }
-
-        socket = httpClient.newWebSocket(request, listener)
     }
 
     fun disconnect() {
