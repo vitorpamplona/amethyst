@@ -107,6 +107,18 @@ class Note(val idHex: String) {
         }
     }
 
+    fun reportsBy(user: User): List<Note> {
+        return synchronized(reports) {
+            reports.filter { it.author == user }
+        }
+    }
+
+    fun reportsBy(users: Set<User>): List<Note> {
+        return synchronized(reports) {
+            reports.filter { it.author in users }
+        }
+    }
+
     // Observers line up here.
     val live: NoteLiveData = NoteLiveData(this)
 

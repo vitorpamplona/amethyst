@@ -93,6 +93,18 @@ class User(val pubkey: ByteArray) {
         }
     }
 
+    fun reportsBy(user: User): List<Note> {
+        return synchronized(reports) {
+            reports.filter { it.author == user }
+        }
+    }
+
+    fun reportsBy(users: Set<User>): List<Note> {
+        return synchronized(reports) {
+            reports.filter { it.author in users }
+        }
+    }
+
     @Synchronized
     fun getOrCreateChannel(user: User): MutableSet<Note> {
         return messages[user] ?: run {
