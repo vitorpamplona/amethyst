@@ -20,6 +20,7 @@ object Constants {
       Relay("wss://nostr-pub.semisol.dev", read = true, write = true),
       Relay("wss://nostr.onsats.org", read = true, write = true),
       Relay("wss://nostr.sandwich.farm", read = true, write = true),
+      Relay("wss://nostr.swiss-enigma.ch", read = true, write = true),
       Relay("wss://relay.nostr.ch", read = true, write = true)
     )
 }
