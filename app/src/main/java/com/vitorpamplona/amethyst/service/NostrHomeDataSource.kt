@@ -48,7 +48,7 @@ object NostrHomeDataSource: NostrDataSource<Note>("HomeFeed") {
     return JsonFilter(
       kinds = listOf(TextNoteEvent.kind, RepostEvent.kind),
       authors = followSet,
-      limit = 200
+      limit = 400
     )
   }
 
