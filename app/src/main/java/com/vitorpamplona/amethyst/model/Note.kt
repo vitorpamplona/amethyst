@@ -22,7 +22,7 @@ class Note(val idHex: String) {
     // These fields are always available.
     // They are immutable
     val id = Hex.decode(idHex)
-    val idDisplayHex = id.toShortenHex()
+    val idDisplayNote = id.toNote().toShortenHex()
 
     // These fields are only available after the Text Note event is received.
     // They are immutable after that.

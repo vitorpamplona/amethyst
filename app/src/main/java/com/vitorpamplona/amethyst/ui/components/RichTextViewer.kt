@@ -17,12 +17,16 @@ import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.lnurl.LnInvoiceUtil
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.toByteArray
+import com.vitorpamplona.amethyst.model.toNote
+import com.vitorpamplona.amethyst.service.Nip19
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import java.net.MalformedURLException
 import java.net.URISyntaxException
 import java.net.URL
 import java.util.regex.Pattern
+import nostr.postr.toNpub
 
 val imageExtension = Pattern.compile("(.*/)*.+\\.(png|jpg|gif|bmp|jpeg|webp|svg)$")
 val videoExtension = Pattern.compile("(.*/)*.+\\.(mp4|avi|wmv|mpg|amv|webm)$")
@@ -74,6 +78,8 @@ fun RichTextViewer(content: String, tags: List<List<String>>?, navController: Na
             UrlPreview("https://$word", word)
           } else if (tagIndex.matcher(word).matches() && tags != null) {
             TagLink(word, tags, navController)
+          } else if (isBechLink(word)) {
+            BechLink(word, navController)
           } else {
             Text(
               text = "$word ",
@@ -86,6 +92,42 @@ fun RichTextViewer(content: String, tags: List<List<String>>?, navController: Na
     }
   }
 }
+
+fun isBechLink(word: String): Boolean {
+  return word.startsWith("nostr:", true)
+    || word.startsWith("npub1", true)
+    || word.startsWith("note1", true)
+    || word.startsWith("nprofile1", true)
+    || word.startsWith("nevent1", true)
+    || word.startsWith("@npub1", true)
+    || word.startsWith("@note1", true)
+    || word.startsWith("@nprofile1", true)
+    || word.startsWith("@nevent1", true)
+}
+
+@Composable
+fun BechLink(word: String, navController: NavController) {
+  val uri = if (word.startsWith("nostr", true)) {
+    word
+  } else if (word.startsWith("@")) {
+    word.replaceFirst("@", "nostr:")
+  } else {
+    "nostr:${word}"
+  }
+
+  val nip19Route = try {
+    Nip19().uriToRoute(uri)
+  } catch (e: Exception) {
+    null
+  }
+
+  if (nip19Route == null) {
+    Text(text = "$word ")
+  } else {
+    ClickableRoute(nip19Route, navController)
+  }
+}
+
 
 @Composable
 fun TagLink(word: String, tags: List<List<String>>, navController: NavController) {
@@ -109,14 +151,14 @@ fun TagLink(word: String, tags: List<List<String>>, navController: NavController
       if (user != null) {
         ClickableUserTag(user, navController)
       } else {
-        Text(text = "${tags[index][1].toShortenHex()} ")
+        Text(text = "${tags[index][1].toByteArray().toNpub().toShortenHex()} ")
       }
     } else if (tags[index][0] == "e") {
       val note = LocalCache.notes[tags[index][1]]
       if (note != null) {
         ClickableNoteTag(note, navController)
       } else {
-        Text(text = "${tags[index][1].toShortenHex()} ")
+        Text(text = "${tags[index][1].toByteArray().toNote().toShortenHex()} ")
       }
     } else
       Text(text = "$word ")

@@ -15,10 +15,11 @@ import kotlinx.coroutines.launch
 import nostr.postr.events.ContactListEvent
 import nostr.postr.events.Event
 import nostr.postr.events.MetadataEvent
+import nostr.postr.toNpub
 
 class User(val pubkey: ByteArray) {
     val pubkeyHex = pubkey.toHexKey()
-    val pubkeyDisplayHex = pubkey.toShortenHex()
+    val pubkeyDisplayHex = pubkey.toNpub().toShortenHex()
 
     var info = UserMetadata()
 
