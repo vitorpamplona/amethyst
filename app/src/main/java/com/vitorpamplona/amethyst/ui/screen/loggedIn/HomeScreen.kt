@@ -65,7 +65,7 @@ fun HomeScreen(accountViewModel: AccountViewModel, navController: NavController)
                     selected = pagerState.currentPage == 0,
                     onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
                     text = {
-                        Text(text = "Follows")
+                        Text(text = "New Threads")
                     }
                 )
 
@@ -73,7 +73,7 @@ fun HomeScreen(accountViewModel: AccountViewModel, navController: NavController)
                     selected = pagerState.currentPage == 1,
                     onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
                     text = {
-                        Text(text = "Follows + Replies")
+                        Text(text = "Conversations")
                     }
                 )
             }
