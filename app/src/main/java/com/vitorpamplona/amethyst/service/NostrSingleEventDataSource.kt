@@ -6,6 +6,7 @@ import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
+import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import java.util.Collections
 import nostr.postr.JsonFilter
@@ -24,7 +25,7 @@ object NostrSingleEventDataSource: NostrDataSource<Note>("SingleEventFeed") {
     // downloads all the reactions to a given event.
     return JsonFilter(
       kinds = listOf(
-        TextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind
+        TextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind, ReportEvent.kind
       ),
       tags = mapOf("e" to reactionsToWatch)
     )

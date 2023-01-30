@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.components
 
 import android.util.Patterns
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.Text
@@ -46,6 +47,7 @@ fun isValidURL(url: String?): Boolean {
 @Composable
 fun RichTextViewer(content: String, tags: List<List<String>>?, navController: NavController) {
   Column(modifier = Modifier.padding(top = 5.dp)) {
+
     // FlowRow doesn't work well with paragraphs. So we need to split them
     content.split('\n').forEach { paragraph ->
 

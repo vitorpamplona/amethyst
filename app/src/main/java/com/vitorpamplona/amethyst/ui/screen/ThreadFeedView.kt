@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -39,6 +40,7 @@ import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.RichTextViewer
 import com.vitorpamplona.amethyst.ui.note.BlankNote
+import com.vitorpamplona.amethyst.ui.note.HiddenNote
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.UserPicture
@@ -157,11 +159,16 @@ fun NoteMaster(baseNote: Note, accountViewModel: AccountViewModel, navController
     val noteState by baseNote.live.observeAsState()
     val note = noteState?.note
 
+    val noteReportsState by baseNote.liveReports.observeAsState()
+    val noteForReports = noteReportsState?.note ?: return
+
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
     if (note?.event == null) {
         BlankNote()
+    } else if (!account.isAcceptable(noteForReports)) {
+        HiddenNote()
     } else {
         val authorState by note.author!!.live.observeAsState()
         val author = authorState?.user

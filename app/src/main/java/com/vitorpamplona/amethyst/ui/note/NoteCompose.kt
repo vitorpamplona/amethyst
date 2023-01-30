@@ -20,6 +20,7 @@ import androidx.compose.material.DropdownMenu
 import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.Icon
 import androidx.compose.material.LocalContentColor
+import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
@@ -38,6 +39,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -51,6 +53,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.toNote
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
+import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.ui.components.RichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -74,6 +77,9 @@ fun NoteCompose(
     val noteState by baseNote.live.observeAsState()
     val note = noteState?.note
 
+    val noteReportsState by baseNote.liveReports.observeAsState()
+    val noteForReports = noteReportsState?.note ?: return
+
     var popupExpanded by remember { mutableStateOf(false) }
 
     val context = LocalContext.current.applicationContext
@@ -83,7 +89,7 @@ fun NoteCompose(
             onClick = {  },
             onLongClick = { popupExpanded = true },
         ), isInnerNote)
-    } else if (account?.isAcceptable(note) == false) {
+    } else if (!account.isAcceptable(noteForReports)) {
         HiddenNote(modifier.combinedClickable(
             onClick = {  },
             onLongClick = { popupExpanded = true },
@@ -239,8 +245,20 @@ fun NoteCompose(
                         }
                     } else {
                         val eventContent = note.event?.content
-                        if (eventContent != null)
-                            RichTextViewer(eventContent, note.event?.tags, navController)
+                        if (eventContent != null) {
+                            if (note.reports.size > 0) {
+                                // Doesn't load images
+                                Row() {
+                                    Text(
+                                        text = eventContent,
+                                        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+                                    )
+                                }
+                            } else {
+                                RichTextViewer(eventContent, note.event?.tags, navController)
+                            }
+                        }
+
 
                         //if (note.event !is ChannelMessageEvent) {
                         ReactionsRow(note, accountViewModel)
@@ -364,7 +382,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
             Text("Copy Text")
         }
         DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(note.author?.pubkey?.toNpub() ?: "")); onDismiss() }) {
-            Text("Copy User ID")
+            Text("Copy User PubKey")
         }
         DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(note.id.toNote())); onDismiss() }) {
             Text("Copy Note ID")
@@ -374,11 +392,37 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
             Text("Broadcast")
         }
         Divider()
-        DropdownMenuItem(onClick = { accountViewModel.report(note); onDismiss() }) {
-            Text("Report Post")
-        }
         DropdownMenuItem(onClick = { note.author?.let { accountViewModel.hide(it, context) }; onDismiss() }) {
             Text("Hide User")
+        }
+        Divider()
+        DropdownMenuItem(onClick = {
+            accountViewModel.report(note, ReportEvent.ReportType.SPAM);
+            note.author?.let { accountViewModel.hide(it, context) }
+            onDismiss()
+        }) {
+            Text("Report Spam / Scam")
+        }
+        DropdownMenuItem(onClick = {
+            accountViewModel.report(note, ReportEvent.ReportType.IMPERSONATION);
+            note.author?.let { accountViewModel.hide(it, context) }
+            onDismiss()
+        }) {
+            Text("Report Impersonation")
+        }
+        DropdownMenuItem(onClick = {
+            accountViewModel.report(note, ReportEvent.ReportType.EXPLICIT);
+            note.author?.let { accountViewModel.hide(it, context) }
+            onDismiss()
+        }) {
+            Text("Report Explicit Content")
+        }
+        DropdownMenuItem(onClick = {
+            accountViewModel.report(note, ReportEvent.ReportType.ILLEGAL);
+            note.author?.let { accountViewModel.hide(it, context) }
+            onDismiss()
+        }) {
+            Text("Report Illegal Behaviour")
         }
     }
 }

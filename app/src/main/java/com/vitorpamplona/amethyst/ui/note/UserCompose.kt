@@ -68,7 +68,7 @@ fun UserCompose(baseUser: User, accountViewModel: AccountViewModel, navControlle
             }
 
             Column(modifier = Modifier.padding(start = 10.dp)) {
-                if (account?.isAcceptable(user) == false) {
+                if (account?.isHidden(user) == false) {
                     ShowUserButton {
                         account.showUser(user.pubkeyHex)
                         LocalPreferences(ctx).saveToEncryptedStorage(account)

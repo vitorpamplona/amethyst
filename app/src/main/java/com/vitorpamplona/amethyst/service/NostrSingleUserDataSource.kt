@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.service
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.model.ReportEvent
 import java.util.Collections
 import nostr.postr.JsonFilter
 import nostr.postr.events.MetadataEvent
@@ -22,7 +23,19 @@ object NostrSingleUserDataSource: NostrDataSource<User>("SingleUserFeed") {
     }
   }
 
+  fun createUserReportFilter(): List<JsonFilter>? {
+    if (usersToWatch.isEmpty()) return null
+
+    return usersToWatch.map {
+      JsonFilter(
+        kinds = listOf(ReportEvent.kind),
+        tags = mapOf("p" to listOf(it))
+      )
+    }
+  }
+
   val userChannel = requestNewChannel()
+  val userReportChannel = requestNewChannel()
 
   override fun feed(): List<User> {
     return synchronized(usersToWatch) {
@@ -34,6 +47,7 @@ object NostrSingleUserDataSource: NostrDataSource<User>("SingleUserFeed") {
 
   override fun updateChannelFilters() {
     userChannel.filter = createUserFilter()
+    userReportChannel.filter = createUserReportFilter()
   }
 
   fun add(userId: String) {

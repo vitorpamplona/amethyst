@@ -76,6 +76,7 @@ import com.vitorpamplona.amethyst.model.toNote
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileFollowersDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileFollowsDataSource
+import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
 import com.vitorpamplona.amethyst.ui.note.UserPicture
@@ -266,7 +267,7 @@ private fun ProfileHeader(
                     if (accountUser == user) {
                         EditButton(account)
                     } else {
-                        if (!account.isAcceptable(user)) {
+                        if (!account.isHidden(user)) {
                             ShowUserButton {
                                 account.showUser(user.pubkeyHex)
                                 LocalPreferences(ctx).saveToEncryptedStorage(account)
@@ -507,21 +508,53 @@ fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () ->
         DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(user.pubkey.toNpub() ?: "")); onDismiss() }) {
             Text("Copy User ID")
         }
-        Divider()
-        if (!account.isAcceptable(user)) {
-            DropdownMenuItem(onClick = {
-                user.let {
-                    accountViewModel.show(
-                        it,
-                        context
-                    )
-                }; onDismiss()
-            }) {
-                Text("Unblock User")
+
+        if ( account.userProfile() != user) {
+            Divider()
+            if (!account.isHidden(user)) {
+                DropdownMenuItem(onClick = {
+                    user.let {
+                        accountViewModel.show(
+                            it,
+                            context
+                        )
+                    }; onDismiss()
+                }) {
+                    Text("Unblock User")
+                }
+            } else {
+                DropdownMenuItem(onClick = { user.let { accountViewModel.hide(it, context) }; onDismiss() }) {
+                    Text("Hide User")
+                }
             }
-        } else {
-            DropdownMenuItem(onClick = { user.let { accountViewModel.hide(it, context) }; onDismiss() }) {
-                Text("Block User")
+            Divider()
+            DropdownMenuItem(onClick = {
+                accountViewModel.report(user, ReportEvent.ReportType.SPAM);
+                user.let { accountViewModel.hide(it, context) }
+                onDismiss()
+            }) {
+                Text("Report Spam / Scam")
+            }
+            DropdownMenuItem(onClick = {
+                accountViewModel.report(user, ReportEvent.ReportType.IMPERSONATION);
+                user.let { accountViewModel.hide(it, context) }
+                onDismiss()
+            }) {
+                Text("Report Impersonation")
+            }
+            DropdownMenuItem(onClick = {
+                accountViewModel.report(user, ReportEvent.ReportType.EXPLICIT);
+                user.let { accountViewModel.hide(it, context) }
+                onDismiss()
+            }) {
+                Text("Report Explicit Content")
+            }
+            DropdownMenuItem(onClick = {
+                accountViewModel.report(user, ReportEvent.ReportType.ILLEGAL);
+                user.let { accountViewModel.hide(it, context) }
+                onDismiss()
+            }) {
+                Text("Report Illegal Behaviour")
             }
         }
     }

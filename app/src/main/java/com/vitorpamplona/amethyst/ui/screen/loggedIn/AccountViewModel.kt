@@ -9,6 +9,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountState
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.model.ReportEvent
 
 class AccountViewModel(private val account: Account): ViewModel() {
   val accountLiveData: LiveData<AccountState> = account.live.map { it }
@@ -17,8 +18,12 @@ class AccountViewModel(private val account: Account): ViewModel() {
     account.reactTo(note)
   }
 
-  fun report(note: Note) {
-    account.report(note)
+  fun report(note: Note, type: ReportEvent.ReportType) {
+    account.report(note, type)
+  }
+
+  fun report(user: User, type: ReportEvent.ReportType) {
+    account.report(user, type)
   }
 
   fun boost(note: Note) {

@@ -35,7 +35,6 @@ class Note(val idHex: String) {
     val replies = Collections.synchronizedSet(mutableSetOf<Note>())
     val reactions = Collections.synchronizedSet(mutableSetOf<Note>())
     val boosts = Collections.synchronizedSet(mutableSetOf<Note>())
-
     val reports = Collections.synchronizedSet(mutableSetOf<Note>())
 
     var channel: Channel? = null

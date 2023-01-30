@@ -11,6 +11,7 @@ import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMuteUserEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
+import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import java.io.ByteArrayInputStream
 import java.time.Instant
@@ -270,6 +271,28 @@ object LocalCache {
       repliesTo.forEach {
         it.addReport(note)
       }
+    }
+  }
+
+  fun consume(event: ReportEvent) {
+    val note = getOrCreateNote(event.id.toHex())
+
+    // Already processed this event.
+    if (note.event != null) return
+
+    val author = getOrCreateUser(event.pubKey)
+    val mentions = event.reportedAuthor.map { getOrCreateUser(decodePublicKey(it)) }
+    val repliesTo = event.reportedPost.map { getOrCreateNote(it) }.toMutableList()
+
+    note.loadEvent(event, author, mentions, repliesTo)
+
+    //Log.d("RP", "New Report ${event.content} by ${note.author?.toBestDisplayName()} ${formattedDateTime(event.createdAt)}")
+    // Adds notifications to users.
+    mentions.forEach {
+      it.addReport(note)
+    }
+    repliesTo.forEach {
+      it.addReport(note)
     }
   }
 

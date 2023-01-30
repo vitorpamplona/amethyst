@@ -38,6 +38,8 @@ class User(val pubkey: ByteArray) {
     val followers = Collections.synchronizedSet(mutableSetOf<User>())
     val messages = ConcurrentHashMap<User, MutableSet<Note>>()
 
+    val reports = Collections.synchronizedSet(mutableSetOf<Note>())
+
     fun toBestDisplayName(): String {
         return bestDisplayName() ?: bestUsername() ?: pubkeyDisplayHex
     }
@@ -81,6 +83,13 @@ class User(val pubkey: ByteArray) {
     fun addTaggedPost(note: Note) {
         taggedPosts.add(note)
         updateSubscribers { it.onNewPosts() }
+    }
+
+    fun addReport(note: Note) {
+        if (reports.add(note)) {
+            updateSubscribers { it.onNewReports() }
+            invalidateData()
+        }
     }
 
     @Synchronized
@@ -169,6 +178,7 @@ class User(val pubkey: ByteArray) {
         open fun onFollowsChange() = Unit
         open fun onNewPosts() = Unit
         open fun onNewMessage() = Unit
+        open fun onNewReports() = Unit
     }
 
     // Refreshes observers in batches.

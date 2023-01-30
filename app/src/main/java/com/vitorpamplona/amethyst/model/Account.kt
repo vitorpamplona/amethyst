@@ -6,6 +6,7 @@ import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
+import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Relay
@@ -102,7 +103,7 @@ class Account(
     }
   }
 
-  fun report(note: Note) {
+  fun report(note: Note, type: ReportEvent.ReportType) {
     if (!isWriteable()) return
 
     if (
@@ -117,6 +118,27 @@ class Account(
       Client.send(event)
       LocalCache.consume(event)
     }
+
+    note.event?.let {
+      val event = ReportEvent.create(it, type, loggedIn.privKey!!)
+      Client.send(event)
+      LocalCache.consume(event)
+    }
+  }
+
+  fun report(user: User, type: ReportEvent.ReportType) {
+    if (!isWriteable()) return
+
+    if (
+      user.reports.firstOrNull { it.author == userProfile() && it.event is ReportEvent && (it.event as ReportEvent).reportType.contains(type) } != null
+    ) {
+      // has already reported this note
+      return
+    }
+
+    val event = ReportEvent.create(user.pubkeyHex, type, loggedIn.privKey!!)
+    Client.send(event)
+    LocalCache.consume(event)
   }
 
   fun boost(note: Note) {
@@ -347,9 +369,12 @@ class Account(
     }
   }
 
+  fun isHidden(user: User) = user !in hiddenUsers()
 
   fun isAcceptable(user: User): Boolean {
     return user !in hiddenUsers()  // if user hasn't hided this author
+        && user.reports.firstOrNull { it.author == userProfile() } == null // if user has not reported this post
+        && user.reports.filter { it.author in userProfile().follows }.size < 5
   }
 
   fun isAcceptableDirect(note: Note): Boolean {
@@ -364,6 +389,7 @@ class Account(
           || (note.event is RepostEvent && note.replyTo?.firstOrNull { isAcceptableDirect(note) } != null)
         ) // is not a reaction about a blocked post
   }
+
 }
 
 class AccountLiveData(private val account: Account): LiveData<AccountState>(AccountState(account)) {
