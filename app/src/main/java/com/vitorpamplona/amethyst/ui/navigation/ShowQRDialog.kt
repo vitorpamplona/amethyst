@@ -131,7 +131,7 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
               onClick = { presenting = true },
               shape = RoundedCornerShape(35.dp),
               modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxWidth().padding(30.dp)
                 .height(50.dp),
               colors = ButtonDefaults
                 .buttonColors(

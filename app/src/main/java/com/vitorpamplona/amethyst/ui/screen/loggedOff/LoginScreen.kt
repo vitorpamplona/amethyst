@@ -88,7 +88,7 @@ fun LoginPage(accountViewModel: AccountStateViewModel) {
         Image(
             painterResource(id = R.drawable.amethyst),
             contentDescription = "App Logo",
-            modifier = Modifier.size(250.dp),
+            modifier = Modifier.size(200.dp),
             contentScale = ContentScale.Inside
         )
 
