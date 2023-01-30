@@ -23,7 +23,7 @@ class LikeSetCard(val note: Note, val likeEvents: List<Note>): Card() {
         return createdAt
     }
 
-    override fun id() = note.idHex + createdAt
+    override fun id() = note.idHex + "L" + createdAt
 }
 
 class BoostSetCard(val note: Note, val boostEvents: List<Note>): Card() {
@@ -33,7 +33,7 @@ class BoostSetCard(val note: Note, val boostEvents: List<Note>): Card() {
         return createdAt
     }
 
-    override fun id() = note.idHex + createdAt
+    override fun id() = note.idHex + "B" + createdAt
 }
 
 sealed class CardFeedState {
