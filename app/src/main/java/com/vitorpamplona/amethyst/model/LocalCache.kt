@@ -19,6 +19,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
+import com.vitorpamplona.amethyst.service.relays.Relay
 import nostr.postr.events.ContactListEvent
 import nostr.postr.events.DeletionEvent
 import nostr.postr.events.Event
@@ -94,8 +95,11 @@ object LocalCache {
       .format(DateTimeFormatter.ofPattern("uuuu MMM d hh:mm a"))
   }
 
-  fun consume(event: TextNoteEvent) {
+  fun consume(event: TextNoteEvent, relay: Relay? = null) {
     val note = getOrCreateNote(event.id.toHex())
+
+    if (relay != null)
+      note.addRelay(relay)
 
     // Already processed this event.
     if (note.event != null) return

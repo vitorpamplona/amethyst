@@ -16,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.vitorpamplona.amethyst.service.relays.Relay
 import nostr.postr.events.Event
 
 class Note(val idHex: String) {
@@ -38,6 +39,8 @@ class Note(val idHex: String) {
     val reports = Collections.synchronizedSet(mutableSetOf<Note>())
 
     var channel: Channel? = null
+
+    val relays = Collections.synchronizedSet(mutableSetOf<Relay>())
 
     fun loadEvent(event: Event, author: User, mentions: List<User>, replyTo: MutableList<Note>) {
         this.event = event
@@ -90,6 +93,11 @@ class Note(val idHex: String) {
             invalidateData(liveReactions)
     }
 
+    fun addRelay(relay: Relay) {
+        if (relays.add(relay))
+            invalidateData(liveRelays)
+    }
+
     fun addReport(note: Note) {
         if (reports.add(note))
             invalidateData(liveReports)
@@ -126,6 +134,7 @@ class Note(val idHex: String) {
     val liveBoosts: NoteLiveData = NoteLiveData(this)
     val liveReplies: NoteLiveData = NoteLiveData(this)
     val liveReports: NoteLiveData = NoteLiveData(this)
+    val liveRelays: NoteLiveData = NoteLiveData(this)
 
     // Refreshes observers in batches.
     var handlerWaiting = false
