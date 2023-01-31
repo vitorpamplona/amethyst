@@ -225,7 +225,7 @@ class User(val pubkey: ByteArray) {
         if (modelHandlerWaiting) return
 
         modelHandlerWaiting = true
-        val scope = CoroutineScope(Job() + Dispatchers.Main)
+        val scope = CoroutineScope(Job() + Dispatchers.Default)
         scope.launch {
             delay(100)
             listeners.forEach {
