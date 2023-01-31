@@ -98,13 +98,14 @@ object LocalCache {
   fun consume(event: TextNoteEvent, relay: Relay? = null) {
     val note = getOrCreateNote(event.id.toHex())
 
+    val author = getOrCreateUser(event.pubKey)
+
     if (relay != null)
-      note.addRelay(relay)
+      author.addRelay(relay, event.createdAt)
 
     // Already processed this event.
     if (note.event != null) return
 
-    val author = getOrCreateUser(event.pubKey)
     val mentions = Collections.synchronizedList(event.mentions.map { getOrCreateUser(decodePublicKey(it)) })
     val replyTo = Collections.synchronizedList(event.replyTos.map { getOrCreateNote(it) }.toMutableList())
 

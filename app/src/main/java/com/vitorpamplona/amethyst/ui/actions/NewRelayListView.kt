@@ -60,7 +60,7 @@ import java.lang.Math.round
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun NewRelayListView(onClose: () -> Unit, account: Account) {
+fun NewRelayListView(onClose: () -> Unit, account: Account, relayToAdd: String = "") {
     val postViewModel: NewRelayListViewModel = viewModel()
 
     val feedState by postViewModel.relays.collectAsState()
@@ -131,7 +131,7 @@ fun NewRelayListView(onClose: () -> Unit, account: Account) {
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                EditableServerConfig() {
+                EditableServerConfig(relayToAdd) {
                     postViewModel.addRelay(it)
                 }
             }
@@ -295,8 +295,8 @@ fun ServerConfig(
 }
 
 @Composable
-fun EditableServerConfig(onNewRelay: (NewRelayListViewModel.Relay) -> Unit) {
-    var url by remember { mutableStateOf<String>("") }
+fun EditableServerConfig(relayToAdd: String, onNewRelay: (NewRelayListViewModel.Relay) -> Unit) {
+    var url by remember { mutableStateOf<String>(relayToAdd) }
     var read by remember { mutableStateOf(true) }
     var write by remember { mutableStateOf(true) }
 

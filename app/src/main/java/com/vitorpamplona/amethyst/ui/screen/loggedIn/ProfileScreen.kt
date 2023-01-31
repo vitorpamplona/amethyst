@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.service.NostrUserProfileFollowersDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileFollowsDataSource
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
+import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -144,7 +145,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                             selected = pagerState.currentPage == 1,
                             onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
                             text = {
-                                Text(text = "${user.follows?.size ?: "--"} Following")
+                                Text(text = "${user.follows?.size ?: "--"} Follows")
                             }
                         )
 
@@ -152,15 +153,24 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                             selected = pagerState.currentPage == 2,
                             onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
                             text = {
-                                Text(text = "${user.followers?.size ?: "--"} Followers")
+                                Text(text = "${user.followers?.size ?: "--"} Follower")
+                            }
+                        )
+
+                        Tab(
+                            selected = pagerState.currentPage == 3,
+                            onClick = { coroutineScope.launch { pagerState.animateScrollToPage(3) } },
+                            text = {
+                                Text(text = "${user.relaysBeingUsed.size ?: "--"} / ${user.relays?.size ?: "--"} Relays")
                             }
                         )
                     }
-                    HorizontalPager(count = 3, state = pagerState) {
+                    HorizontalPager(count = 4, state = pagerState) {
                         when (pagerState.currentPage) {
                             0 -> TabNotes(user, accountViewModel, navController)
                             1 -> TabFollows(user, accountViewModel, navController)
                             2 -> TabFollowers(user, accountViewModel, navController)
+                            3 -> TabRelays(user, accountViewModel, navController)
                         }
                     }
                 }
@@ -340,6 +350,26 @@ fun TabFollowers(user: User, accountViewModel: AccountViewModel, navController: 
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
             UserFeedView(feedViewModel, accountViewModel, navController)
+        }
+    }
+}
+
+@Composable
+fun TabRelays(user: User, accountViewModel: AccountViewModel, navController: NavController) {
+    val feedViewModel: RelayFeedViewModel = viewModel()
+
+    DisposableEffect(key1 = user) {
+        feedViewModel.subscribeTo(user)
+        onDispose {
+            feedViewModel.unsubscribeTo(user)
+        }
+    }
+
+    Column(Modifier.fillMaxHeight()) {
+        Column(
+            modifier = Modifier.padding(vertical = 0.dp)
+        ) {
+            RelayFeedView(feedViewModel, accountViewModel, navController)
         }
     }
 }

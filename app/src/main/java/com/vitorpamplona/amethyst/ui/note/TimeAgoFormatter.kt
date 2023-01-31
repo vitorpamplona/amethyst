@@ -4,6 +4,7 @@ import android.text.format.DateUtils
 
 fun timeAgo(mills: Long?): String {
   if (mills == null) return " "
+  if (mills == 0L) return " • never"
 
   var humanReadable = DateUtils.getRelativeTimeSpanString(
     mills * 1000,

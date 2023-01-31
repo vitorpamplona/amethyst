@@ -1,7 +1,5 @@
 package com.vitorpamplona.amethyst.model
 
-import android.os.Handler
-import android.os.Looper
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
@@ -10,7 +8,6 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Collections
-import java.util.Date
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -39,8 +36,6 @@ class Note(val idHex: String) {
     val reports = Collections.synchronizedSet(mutableSetOf<Note>())
 
     var channel: Channel? = null
-
-    val relays = Collections.synchronizedSet(mutableSetOf<Relay>())
 
     fun loadEvent(event: Event, author: User, mentions: List<User>, replyTo: MutableList<Note>) {
         this.event = event
@@ -93,11 +88,6 @@ class Note(val idHex: String) {
             invalidateData(liveReactions)
     }
 
-    fun addRelay(relay: Relay) {
-        if (relays.add(relay))
-            invalidateData(liveRelays)
-    }
-
     fun addReport(note: Note) {
         if (reports.add(note))
             invalidateData(liveReports)
@@ -134,7 +124,6 @@ class Note(val idHex: String) {
     val liveBoosts: NoteLiveData = NoteLiveData(this)
     val liveReplies: NoteLiveData = NoteLiveData(this)
     val liveReports: NoteLiveData = NoteLiveData(this)
-    val liveRelays: NoteLiveData = NoteLiveData(this)
 
     // Refreshes observers in batches.
     var handlerWaiting = false

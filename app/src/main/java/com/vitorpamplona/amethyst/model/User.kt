@@ -40,6 +40,7 @@ class User(val pubkey: ByteArray) {
     val messages = ConcurrentHashMap<User, MutableSet<Note>>()
 
     val reports = Collections.synchronizedSet(mutableSetOf<Note>())
+    val relaysBeingUsed = mutableMapOf<String, RelayInfo>()
 
     fun toBestDisplayName(): String {
         return bestDisplayName() ?: bestUsername() ?: pubkeyDisplayHex
@@ -120,6 +121,26 @@ class User(val pubkey: ByteArray) {
         updateSubscribers { it.onNewMessage() }
     }
 
+    data class RelayInfo (
+        val url: String,
+        var lastEvent: Long,
+        var counter: Long
+    )
+
+    fun addRelay(relay: Relay, eventTime: Long) {
+        val here = relaysBeingUsed.get(relay.url)
+        if (here == null) {
+            relaysBeingUsed.put(relay.url, RelayInfo(relay.url, eventTime, 1) )
+        } else {
+            if (eventTime > here.lastEvent) {
+                here.lastEvent = eventTime
+            }
+            here.counter++
+        }
+
+        updateSubscribers { it.onNewRelayInfo() }
+    }
+
     fun updateFollows(newFollows: Set<User>, updateAt: Long) {
         val toBeAdded = synchronized(follows) {
             newFollows - follows
@@ -191,6 +212,7 @@ class User(val pubkey: ByteArray) {
         open fun onFollowsChange() = Unit
         open fun onNewPosts() = Unit
         open fun onNewMessage() = Unit
+        open fun onNewRelayInfo() = Unit
         open fun onNewReports() = Unit
     }
 
