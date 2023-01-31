@@ -123,7 +123,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                 val pagerState = rememberPagerState()
                 val coroutineScope = rememberCoroutineScope()
 
-                Column(modifier = Modifier.padding(start = 10.dp, end = 10.dp)) {
+                Column(modifier = Modifier.padding()) {
                     TabRow(
                         selectedTabIndex = pagerState.currentPage,
                         indicator = { tabPositions ->
@@ -153,7 +153,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                             selected = pagerState.currentPage == 2,
                             onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
                             text = {
-                                Text(text = "${user.followers?.size ?: "--"} Follower")
+                                Text(text = "${user.followers?.size ?: "--"} Followers")
                             }
                         )
 

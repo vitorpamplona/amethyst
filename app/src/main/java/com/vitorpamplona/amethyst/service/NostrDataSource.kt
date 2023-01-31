@@ -62,10 +62,13 @@ abstract class NostrDataSource<T>(val debugName: String) {
             is ContactListEvent -> LocalCache.consume(event)
             is PrivateDmEvent -> LocalCache.consume(event)
             is DeletionEvent -> LocalCache.consume(event)
-            is RepostEvent -> LocalCache.consume(event)
-            is ReactionEvent -> LocalCache.consume(event)
             else -> when (event.kind) {
-              RepostEvent.kind -> LocalCache.consume(RepostEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
+              RepostEvent.kind -> {
+                val repostEvent = RepostEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig)
+
+                repostEvent.containedPost?.let { onEvent(it, subscriptionId, relay) }
+                LocalCache.consume(repostEvent)
+              }
               ReactionEvent.kind -> LocalCache.consume(ReactionEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
               ReportEvent.kind -> LocalCache.consume(ReportEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
 

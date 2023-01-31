@@ -224,9 +224,9 @@ fun NoteCompose(
                     }
 
                     if (note.event is ReactionEvent || note.event is RepostEvent) {
-                        note.replyTo?.mapIndexed { index, note ->
+                        note.replyTo?.lastOrNull()?.let {
                             NoteCompose(
-                                note,
+                                it,
                                 modifier = Modifier,
                                 isInnerNote = true,
                                 accountViewModel = accountViewModel,
@@ -258,7 +258,7 @@ fun NoteCompose(
                                 RichTextViewer(eventContent, note.event?.tags, navController)
                             }
                         }
-                        
+
                         ReactionsRow(note, accountViewModel)
 
                         Divider(
