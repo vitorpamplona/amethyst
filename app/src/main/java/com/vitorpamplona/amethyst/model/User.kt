@@ -117,7 +117,7 @@ class User(val pubkey: ByteArray) {
 
     fun addMessage(user: User, msg: Note) {
         getOrCreateChannel(user).add(msg)
-        live.refresh()
+        invalidateData()
         updateSubscribers { it.onNewMessage() }
     }
 
@@ -165,6 +165,8 @@ class User(val pubkey: ByteArray) {
                 it.onRelayChange()
             }
         }
+
+        invalidateData()
     }
 
     fun updateUserInfo(newUserInfo: UserMetadata, updateAt: Long) {
