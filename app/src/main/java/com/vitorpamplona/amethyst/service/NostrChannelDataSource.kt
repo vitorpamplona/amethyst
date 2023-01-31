@@ -11,7 +11,7 @@ object NostrChannelDataSource: NostrDataSource<Note>("ChatroomFeed") {
   var channel: com.vitorpamplona.amethyst.model.Channel? = null
 
   fun loadMessagesBetween(channelId: String) {
-    channel = LocalCache.channels[channelId]
+    channel = LocalCache.getOrCreateChannel(channelId)
     resetFilters()
   }
 

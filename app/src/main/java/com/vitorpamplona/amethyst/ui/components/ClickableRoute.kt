@@ -23,7 +23,7 @@ fun ClickableRoute(
   navController: NavController
 ) {
   if (nip19.type == Nip19.Type.USER) {
-    val userBase = LocalCache.getOrCreateUser(nip19.hex.toByteArray())
+    val userBase = LocalCache.getOrCreateUser(nip19.hex)
     val userState by userBase.live.observeAsState()
     val user = userState?.user ?: return
 
@@ -48,8 +48,8 @@ fun ClickableRoute(
       )
     } else if (note.channel != null) {
       ClickableText(
-        text = AnnotatedString("@${note.channel} "),
-        onClick = { navController.navigate("Channel/${nip19.hex}") },
+        text = AnnotatedString("@${note.channel?.toBestDisplayName()} "),
+        onClick = { navController.navigate("Channel/${note.channel?.idHex}") },
         style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary)
       )
     } else {
