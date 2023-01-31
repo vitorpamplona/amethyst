@@ -5,6 +5,7 @@ import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
+import fr.acinq.secp256k1.Hex
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
@@ -17,8 +18,8 @@ import nostr.postr.events.Event
 import nostr.postr.events.MetadataEvent
 import nostr.postr.toNpub
 
-class User(val pubkey: ByteArray) {
-    val pubkeyHex = pubkey.toHexKey()
+class User(val pubkeyHex: String) {
+    val pubkey = Hex.decode(pubkeyHex)
     val pubkeyDisplayHex = pubkey.toNpub().toShortenHex()
 
     var info = UserMetadata()

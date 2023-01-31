@@ -39,7 +39,7 @@ class Account(
 ) {
 
   fun userProfile(): User {
-    return LocalCache.getOrCreateUser(loggedIn.pubKey)
+    return LocalCache.getOrCreateUser(loggedIn.pubKey.toHexKey())
   }
 
   fun followingChannels(): List<Channel> {
@@ -47,7 +47,7 @@ class Account(
   }
 
   fun hiddenUsers(): List<User> {
-    return hiddenUsers.map { LocalCache.getOrCreateUser(it.toByteArray()) }
+    return hiddenUsers.map { LocalCache.getOrCreateUser(it) }
   }
 
   fun isWriteable(): Boolean {

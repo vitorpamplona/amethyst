@@ -14,7 +14,7 @@ object NostrUserProfileDataSource: NostrDataSource<Note>("UserProfileFeed") {
   var user: User? = null
 
   fun loadUserProfile(userId: String) {
-    user = LocalCache.getOrCreateUser(userId.toByteArray())
+    user = LocalCache.getOrCreateUser(userId)
     resetFilters()
   }
 

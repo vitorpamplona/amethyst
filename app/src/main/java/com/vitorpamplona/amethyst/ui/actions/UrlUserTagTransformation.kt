@@ -12,6 +12,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.decodePublicKey
+import com.vitorpamplona.amethyst.model.toHexKey
 import kotlin.math.roundToInt
 
 data class RangesChanges(val original: TextRange, val modified: TextRange)
@@ -43,7 +44,7 @@ fun buildAnnotatedStringWithUrlHighlighting(text: AnnotatedString, color: Color)
                 val endIndex = startIndex + keyB32.length
 
                 val key = decodePublicKey(keyB32.removePrefix("@"))
-                val user = LocalCache.getOrCreateUser(key)
+                val user = LocalCache.getOrCreateUser(key.toHexKey())
 
                 val newWord = "@${user.toBestDisplayName()}"
                 val startNew = builderAfter.toString().length

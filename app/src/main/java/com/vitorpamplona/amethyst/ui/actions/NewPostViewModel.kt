@@ -16,6 +16,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.decodePublicKey
+import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.ui.components.isValidURL
 import com.vitorpamplona.amethyst.ui.components.noProtocolUrlValidator
 import nostr.postr.toNpub
@@ -78,7 +79,7 @@ class NewPostViewModel: ViewModel() {
                         val restOfWord = word.substring(64)
 
                         val key = decodePublicKey(keyB32.removePrefix("@"))
-                        val user = LocalCache.getOrCreateUser(key)
+                        val user = LocalCache.getOrCreateUser(key.toHexKey())
 
                         val index = addUserToMentionsIfNotInAndReturnIndex(user)
 

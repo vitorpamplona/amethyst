@@ -41,10 +41,9 @@ object LocalCache {
   val channels = ConcurrentHashMap<HexKey, Channel>()
 
   @Synchronized
-  fun getOrCreateUser(pubkey: ByteArray): User {
-    val key = pubkey.toHexKey()
+  fun getOrCreateUser(key: HexKey): User {
     return users[key] ?: run {
-      val answer = User(pubkey)
+      val answer = User(key)
       users.put(key, answer)
       answer
     }
@@ -71,7 +70,7 @@ object LocalCache {
 
   fun consume(event: MetadataEvent) {
     // new event
-    val oldUser = getOrCreateUser(event.pubKey)
+    val oldUser = getOrCreateUser(event.pubKey.toHexKey())
     if (event.createdAt > oldUser.updatedMetadataAt) {
       //Log.d("MT", "New User ${users.size} ${event.contactMetaData.name}")
 
@@ -98,7 +97,7 @@ object LocalCache {
   fun consume(event: TextNoteEvent, relay: Relay? = null) {
     val note = getOrCreateNote(event.id.toHex())
 
-    val author = getOrCreateUser(event.pubKey)
+    val author = getOrCreateUser(event.pubKey.toHexKey())
 
     if (relay != null)
       author.addRelay(relay, event.createdAt)
@@ -106,7 +105,7 @@ object LocalCache {
     // Already processed this event.
     if (note.event != null) return
 
-    val mentions = Collections.synchronizedList(event.mentions.map { getOrCreateUser(decodePublicKey(it)) })
+    val mentions = Collections.synchronizedList(event.mentions.map { getOrCreateUser(it) })
     val replyTo = Collections.synchronizedList(event.replyTos.map { getOrCreateNote(it) }.toMutableList())
 
     note.loadEvent(event, author, mentions, replyTo)
@@ -137,7 +136,7 @@ object LocalCache {
   }
 
   fun consume(event: ContactListEvent) {
-    val user = getOrCreateUser(event.pubKey)
+    val user = getOrCreateUser(event.pubKey.toHexKey())
 
     if (event.createdAt > user.updatedFollowsAt) {
       //Log.d("CL", "AAA ${user.toBestDisplayName()} ${event.follows.size}")
@@ -145,7 +144,7 @@ object LocalCache {
         event.follows.map {
           try {
             val pubKey = decodePublicKey(it.pubKeyHex)
-            getOrCreateUser(pubKey)
+            getOrCreateUser(pubKey.toHexKey())
           } catch (e: Exception) {
             println("Could not parse Hex key: ${it.pubKeyHex}")
             println("UpdateFollows: " + event.toJson())
@@ -179,13 +178,13 @@ object LocalCache {
     // Already processed this event.
     if (note.event != null) return
 
-    val author = getOrCreateUser(event.pubKey)
-    val recipient = event.recipientPubKey?.let { getOrCreateUser(it) }
+    val author = getOrCreateUser(event.pubKey.toHexKey())
+    val recipient = event.recipientPubKey?.let { getOrCreateUser(it.toHexKey()) }
 
     //Log.d("PM", "${author.toBestDisplayName()} to ${recipient?.toBestDisplayName()}")
 
     val repliesTo = event.tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }.map { getOrCreateNote(it) }.toMutableList()
-    val mentions = event.tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }.map { getOrCreateUser(decodePublicKey(it)) }
+    val mentions = event.tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }.map { getOrCreateUser(it) }
 
     note.loadEvent(event, author, mentions, repliesTo)
 
@@ -209,8 +208,8 @@ object LocalCache {
 
     //Log.d("TN", "New Boost (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${formattedDateTime(event.createdAt)}")
 
-    val author = getOrCreateUser(event.pubKey)
-    val mentions = event.originalAuthor.map { getOrCreateUser(decodePublicKey(it)) }.toList()
+    val author = getOrCreateUser(event.pubKey.toHexKey())
+    val mentions = event.originalAuthor.map { getOrCreateUser(it) }.toList()
     val repliesTo = event.boostedPost.map { getOrCreateNote(it) }.toMutableList()
 
     note.loadEvent(event, author, mentions, repliesTo)
@@ -235,13 +234,13 @@ object LocalCache {
   }
 
   fun consume(event: ReactionEvent) {
-    val note = getOrCreateNote(event.id.toHex())
+    val note = getOrCreateNote(event.id.toHexKey())
 
     // Already processed this event.
     if (note.event != null) return
 
-    val author = getOrCreateUser(event.pubKey)
-    val mentions = event.originalAuthor.map { getOrCreateUser(decodePublicKey(it)) }
+    val author = getOrCreateUser(event.pubKey.toHexKey())
+    val mentions = event.originalAuthor.map { getOrCreateUser(it) }
     val repliesTo = event.originalPost.map { getOrCreateNote(it) }.toMutableList()
 
     note.loadEvent(event, author, mentions, repliesTo)
@@ -285,8 +284,8 @@ object LocalCache {
     // Already processed this event.
     if (note.event != null) return
 
-    val author = getOrCreateUser(event.pubKey)
-    val mentions = event.reportedAuthor.map { getOrCreateUser(decodePublicKey(it)) }
+    val author = getOrCreateUser(event.pubKey.toHexKey())
+    val mentions = event.reportedAuthor.map { getOrCreateUser(it) }
     val repliesTo = event.reportedPost.map { getOrCreateNote(it) }.toMutableList()
 
     note.loadEvent(event, author, mentions, repliesTo)
@@ -305,7 +304,7 @@ object LocalCache {
     //Log.d("MT", "New Event ${event.content} ${event.id.toHex()}")
     // new event
     val oldChannel = getOrCreateChannel(event.id.toHex())
-    val author = getOrCreateUser(event.pubKey)
+    val author = getOrCreateUser(event.pubKey.toHexKey())
     if (event.createdAt > oldChannel.updatedMetadataAt) {
       if (oldChannel.creator == null || oldChannel.creator == author) {
         oldChannel.updateChannelInfo(author, event.channelInfo, event.createdAt)
@@ -327,7 +326,7 @@ object LocalCache {
 
     // new event
     val oldChannel = getOrCreateChannel(event.channel)
-    val author = getOrCreateUser(event.pubKey)
+    val author = getOrCreateUser(event.pubKey.toHexKey())
     if (event.createdAt > oldChannel.updatedMetadataAt) {
       if (oldChannel.creator == null || oldChannel.creator == author) {
         oldChannel.updateChannelInfo(author, event.channelInfo, event.createdAt)
@@ -355,11 +354,18 @@ object LocalCache {
     // Already processed this event.
     if (note.event != null) return
 
-    val author = getOrCreateUser(event.pubKey)
-    val mentions = Collections.synchronizedList(event.mentions.map { getOrCreateUser(decodePublicKey(it)) })
+    val author = getOrCreateUser(event.pubKey.toHexKey())
+    val mentions = Collections.synchronizedList(event.mentions.map { getOrCreateUser(it) })
     val replyTo = Collections.synchronizedList(
       event.replyTos
-        .map { getOrCreateNote(it) }
+        .mapNotNull {
+          try {
+            getOrCreateNote(it)
+          } catch (e: Exception) {
+            println("Failed to parse Key: $it")
+            null
+          }
+        }
         .filter { it.event !is ChannelCreateEvent }
         .toMutableList()
     )

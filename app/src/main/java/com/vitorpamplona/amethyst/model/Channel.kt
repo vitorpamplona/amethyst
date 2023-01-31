@@ -17,6 +17,10 @@ class Channel(val id: ByteArray) {
 
     val notes = ConcurrentHashMap<HexKey, Note>()
 
+    fun toBestDisplayName(): String {
+        return info.name ?: idDisplayHex
+    }
+
     @Synchronized
     fun addNote(note: Note) {
         notes[note.idHex] = note

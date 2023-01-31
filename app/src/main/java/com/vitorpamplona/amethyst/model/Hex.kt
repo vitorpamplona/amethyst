@@ -11,6 +11,17 @@ import nostr.postr.toHex
 /** Makes the distinction between String and Hex **/
 typealias HexKey = String
 
+typealias NPubKey = String
+typealias NoteId = String
+
+fun NPubKey.toDisplayKey(): String {
+  return this.toShortenHex()
+}
+
+fun NoteId.toDisplayId(): String {
+  return this.toShortenHex()
+}
+
 fun ByteArray.toNote() = Bech32.encodeBytes(hrp = "note", this, Bech32.Encoding.Bech32)
 
 fun ByteArray.toHexKey(): HexKey {
