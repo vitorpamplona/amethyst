@@ -18,11 +18,9 @@ class NoteCard(val note: Note): Card() {
 
 class LikeSetCard(val note: Note, val likeEvents: List<Note>): Card() {
     val createdAt = likeEvents.maxOf { it.event?.createdAt ?: 0 }
-
     override fun createdAt(): Long {
         return createdAt
     }
-
     override fun id() = note.idHex + "L" + createdAt
 }
 

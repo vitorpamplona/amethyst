@@ -9,6 +9,8 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.LocalCacheState
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.NostrDataSource
+import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
+import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import kotlinx.coroutines.CoroutineScope
@@ -56,9 +58,9 @@ class CardFeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel() {
     private fun convertToCard(notes: List<Note>): List<Card> {
         val reactionsPerEvent = mutableMapOf<Note, MutableList<Note>>()
         notes
-            .filter { it.event is ReactionEvent }
+            .filter { it.event is ReactionEvent}
             .forEach {
-                val reactedPost = it.replyTo?.last()
+                val reactedPost = it.replyTo?.lastOrNull() { it.event !is ChannelMetadataEvent && it.event !is ChannelCreateEvent }
                 if (reactedPost != null)
                     reactionsPerEvent.getOrPut(reactedPost, { mutableListOf() }).add(it)
             }
@@ -69,7 +71,7 @@ class CardFeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel() {
         notes
             .filter { it.event is RepostEvent }
             .forEach {
-                val boostedPost = it.replyTo?.last()
+                val boostedPost = it.replyTo?.lastOrNull() { it.event !is ChannelMetadataEvent && it.event !is ChannelCreateEvent }
                 if (boostedPost != null)
                     boostsPerEvent.getOrPut(boostedPost, { mutableListOf() }).add(it)
             }
