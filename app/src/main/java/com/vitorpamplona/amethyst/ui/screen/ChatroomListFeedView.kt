@@ -87,7 +87,7 @@ private fun FeedLoaded(
         ),
         state = listState
     ) {
-        itemsIndexed(state.feed.value, key = { index, item -> item.idHex }) { index, item ->
+        itemsIndexed(state.feed.value, key = { index, item -> if (index == 0) index else item.idHex }) { index, item ->
             ChatroomCompose(
                 item,
                 accountViewModel = accountViewModel,
