@@ -50,9 +50,11 @@ class RelayFeedViewModel: ViewModel() {
             }
         } ?: emptyList()
 
+        val newList = (beingUsed + newRelaysFromRecord).sortedWith(order)
+
         viewModelScope.launch {
             withContext(Dispatchers.Main) {
-                _feedContent.update { (beingUsed + newRelaysFromRecord).sortedWith(order) }
+                _feedContent.update { newList }
             }
         }
     }
