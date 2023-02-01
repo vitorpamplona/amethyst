@@ -15,6 +15,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Divider
+import androidx.compose.material.DropdownMenu
+import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.Icon
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
@@ -63,6 +65,7 @@ import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.actions.PostButton
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import nostr.postr.toNpub
 
 @Composable
 fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, accountStateViewModel: AccountStateViewModel, navController: NavController) {
@@ -214,10 +217,11 @@ private fun NoteCopyButton(
     note: Channel
 ) {
     val clipboardManager = LocalClipboardManager.current
+    var popupExpanded by remember { mutableStateOf(false) }
 
     Button(
         modifier = Modifier.padding(horizontal = 3.dp).width(50.dp),
-        onClick = { clipboardManager.setText(AnnotatedString(note.id.toNote())) },
+        onClick = { popupExpanded = true },
         shape = RoundedCornerShape(20.dp),
         colors = ButtonDefaults
             .buttonColors(
@@ -229,6 +233,15 @@ private fun NoteCopyButton(
             imageVector = Icons.Default.Share,
             contentDescription = "Copies the Note ID to the clipboard for sharing"
         )
+
+        DropdownMenu(
+            expanded = popupExpanded,
+            onDismissRequest = { popupExpanded = false }
+        ) {
+            DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(note.id.toNote())); popupExpanded = false }) {
+                Text("Copy Channel ID (Note) to the Clipboard")
+            }
+        }
     }
 }
 

@@ -34,6 +34,7 @@ import androidx.compose.material.TabRowDefaults
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Password
 import androidx.compose.material.icons.filled.Share
@@ -377,23 +378,33 @@ private fun NSecCopyButton(
     account: Account
 ) {
     val clipboardManager = LocalClipboardManager.current
+    var popupExpanded by remember { mutableStateOf(false) }
 
     Button(
         modifier = Modifier
             .padding(horizontal = 3.dp)
             .width(50.dp),
-        onClick = { account.loggedIn.privKey?.let { clipboardManager.setText(AnnotatedString(it.toNsec())) } },
+        onClick = { popupExpanded = true },
         shape = RoundedCornerShape(20.dp),
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-            ),
+            )
     ) {
         Icon(
             tint = Color.White,
-            imageVector = Icons.Default.Password,
+            imageVector = Icons.Default.Key,
             contentDescription = "Copies the Nsec ID (your password) to the clipboard for backup"
         )
+
+        DropdownMenu(
+            expanded = popupExpanded,
+            onDismissRequest = { popupExpanded = false }
+        ) {
+            DropdownMenuItem(onClick = {  account.loggedIn.privKey?.let { clipboardManager.setText(AnnotatedString(it.toNsec())) }; popupExpanded = false }) {
+                Text("Copy Private Key to the Clipboard")
+            }
+        }
     }
 }
 
@@ -402,12 +413,13 @@ private fun NPubCopyButton(
     user: User
 ) {
     val clipboardManager = LocalClipboardManager.current
+    var popupExpanded by remember { mutableStateOf(false) }
 
     Button(
         modifier = Modifier
             .padding(horizontal = 3.dp)
             .width(50.dp),
-        onClick = { clipboardManager.setText(AnnotatedString(user.pubkey.toNpub())) },
+        onClick = { popupExpanded = true },
         shape = RoundedCornerShape(20.dp),
         colors = ButtonDefaults
             .buttonColors(
@@ -417,8 +429,17 @@ private fun NPubCopyButton(
         Icon(
             tint = Color.White,
             imageVector = Icons.Default.Share,
-            contentDescription = "Copies the Note ID to the clipboard for sharing"
+            contentDescription = "Copies the public key to the clipboard for sharing"
         )
+
+        DropdownMenu(
+            expanded = popupExpanded,
+            onDismissRequest = { popupExpanded = false }
+        ) {
+            DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(user.pubkey.toNpub())); popupExpanded = false }) {
+                Text("Copy Public Key (NPub) to the Clipboard")
+            }
+        }
     }
 }
 
