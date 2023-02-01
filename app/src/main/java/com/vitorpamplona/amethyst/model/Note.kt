@@ -2,6 +2,8 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
+import com.vitorpamplona.amethyst.service.model.ReactionEvent
+import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import fr.acinq.secp256k1.Hex
 import java.time.Instant
@@ -14,7 +16,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.vitorpamplona.amethyst.service.relays.Relay
+import java.util.regex.Matcher
+import java.util.regex.Pattern
 import nostr.postr.events.Event
+
+val tagSearch = Pattern.compile("(?:\\s|\\A)\\#\\[([0-9]+)\\]")
 
 class Note(val idHex: String) {
     // These fields are always available.
@@ -115,6 +121,29 @@ class Note(val idHex: String) {
         return synchronized(reports) {
             reports.filter { it.author in users }
         }
+    }
+
+    fun directlyCiteUsers(): Set<User> {
+        val matcher = tagSearch.matcher(event?.content ?: "")
+        val returningList = mutableSetOf<User>()
+        while (matcher.find()) {
+            try {
+                val tag = event?.tags?.get(matcher.group(1).toInt())
+                if (tag != null && tag[0] == "p") {
+                    returningList.add(LocalCache.getOrCreateUser(tag[1]))
+                }
+            } catch (e: Exception) {
+
+            }
+        }
+        return returningList
+    }
+
+    fun directlyCites(userProfile: User): Boolean {
+        return author == userProfile
+          || (userProfile in directlyCiteUsers())
+          || (event is ReactionEvent && replyTo?.lastOrNull()?.directlyCites(userProfile) == true)
+          || (event is RepostEvent && replyTo?.lastOrNull()?.directlyCites(userProfile) == true)
     }
 
     // Observers line up here.
