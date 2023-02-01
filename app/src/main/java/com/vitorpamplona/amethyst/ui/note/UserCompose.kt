@@ -52,11 +52,11 @@ fun UserCompose(baseUser: User, accountViewModel: AccountViewModel, navControlle
                     top = 10.dp)
         ) {
 
-            UserPicture(user, navController, account.userProfile(), 55.dp)
+            UserPicture(baseUser, navController, account.userProfile(), 55.dp)
 
             Column(modifier = Modifier.padding(start = 10.dp).weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    UsernameDisplay(user)
+                    UsernameDisplay(baseUser)
                 }
 
                 Text(

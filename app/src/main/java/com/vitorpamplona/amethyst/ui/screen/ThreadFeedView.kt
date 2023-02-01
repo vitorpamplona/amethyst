@@ -41,7 +41,9 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.RichTextViewer
 import com.vitorpamplona.amethyst.ui.note.BlankNote
 import com.vitorpamplona.amethyst.ui.note.HiddenNote
+import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -185,12 +187,16 @@ fun NoteMaster(baseNote: Note, accountViewModel: AccountViewModel, navController
                     }
                 })
             ) {
-                UserPicture(user = author, navController, userAccount = account.userProfile(), size = 55.dp)
+                NoteAuthorPicture(
+                    note = baseNote,
+                    navController = navController,
+                    userAccount = account.userProfile(),
+                    size = 55.dp
+                )
 
                 Column(modifier = Modifier.padding(start = 10.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (author != null)
-                            UsernameDisplay(author)
+                        NoteUsernameDisplay(baseNote)
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {

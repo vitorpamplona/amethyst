@@ -134,7 +134,7 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
                     false
 
             ChannelName(
-                channelPicture = { UserPicture(user = user, userAccount = accountUser, size = 55.dp) },
+                channelPicture = { UserPicture(user, accountUser, size = 55.dp) },
                 channelTitle = { UsernameDisplay(user, it) },
                 channelLastTime = noteEvent?.createdAt,
                 channelLastContent = accountViewModel.decrypt(note),

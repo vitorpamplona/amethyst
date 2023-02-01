@@ -139,8 +139,7 @@ fun ChatroomHeader(baseUser: User, accountViewModel: AccountViewModel, navContro
 
                 Column(modifier = Modifier.padding(start = 10.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (author != null)
-                            UsernameDisplay(author)
+                        UsernameDisplay(baseUser)
                     }
                 }
             }

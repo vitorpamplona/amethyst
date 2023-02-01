@@ -76,19 +76,12 @@ fun LikeSetCompose(likeSetCard: LikeSetCard, modifier: Modifier = Modifier, isIn
                 Column(modifier = Modifier.padding(start = if (!isInnerNote) 10.dp else 0.dp)) {
                     FlowRow() {
                         likeSetCard.likeEvents.forEach {
-                            val cardNoteState by it.live.observeAsState()
-                            val cardNote = cardNoteState?.note
-
-                            if (cardNote?.author != null) {
-                                val userState by cardNote.author!!.live.observeAsState()
-
-                                UserPicture(
-                                    user = userState?.user,
-                                    navController = navController,
-                                    userAccount = account.userProfile(),
-                                    size = 35.dp
-                                )
-                            }
+                            NoteAuthorPicture(
+                                note = it,
+                                navController = navController,
+                                userAccount = account.userProfile(),
+                                size = 35.dp
+                            )
                         }
                     }
 

@@ -234,7 +234,7 @@ fun UserLine(
                     .weight(1f)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    UsernameDisplay(user)
+                    UsernameDisplay(baseUser)
                 }
 
                 Text(

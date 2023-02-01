@@ -95,9 +95,6 @@ fun NoteCompose(
             onLongClick = { popupExpanded = true },
         ), isInnerNote)
     } else {
-        val authorState by note.author?.live!!.observeAsState()
-        val author = authorState?.user ?: return // if it has event, it should have an author
-
         val isNew = routeForLastRead?.run {
             val lastTime = NotificationCache.load(this, context)
 
@@ -145,20 +142,20 @@ fun NoteCompose(
                     Box(modifier = Modifier
                         .width(55.dp)
                         .padding(0.dp)) {
-                        UserPicture(author, navController, account.userProfile(), 55.dp)
 
-                        // boosted picture
-                        val boostedPosts = note.replyTo
-                        if (note.event is RepostEvent && boostedPosts != null && boostedPosts.isNotEmpty()) {
-                            val boostedAuthor = boostedPosts[0].author
-                            Box(
-                                Modifier
-                                    .width(30.dp)
-                                    .height(30.dp)
-                                    .align(Alignment.BottomEnd)) {
-                                UserPicture(boostedAuthor, navController, account.userProfile(), 35.dp,
-                                    pictureModifier = Modifier.border(2.dp, MaterialTheme.colors.background, CircleShape)
-                                )
+                        NoteAuthorPicture(note, navController, account.userProfile(), 55.dp)
+
+                        if (note.event is RepostEvent) {
+                            note.replyTo?.lastOrNull()?.let {
+                                Box(
+                                    Modifier
+                                        .width(30.dp)
+                                        .height(30.dp)
+                                        .align(Alignment.BottomEnd)) {
+                                    NoteAuthorPicture(it, navController, account.userProfile(), 35.dp,
+                                        pictureModifier = Modifier.border(2.dp, MaterialTheme.colors.background, CircleShape)
+                                    )
+                                }
                             }
                         }
 
@@ -197,8 +194,7 @@ fun NoteCompose(
 
                 Column(modifier = Modifier.padding(start = if (!isInnerNote) 10.dp else 0.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (author != null)
-                            UsernameDisplay(author, Modifier.weight(1f))
+                        NoteUsernameDisplay(note, Modifier.weight(1f))
 
                         if (note.event !is RepostEvent) {
                             Text(
@@ -274,40 +270,42 @@ fun NoteCompose(
     }
 }
 
+
 @Composable
-fun UserPicture(
-    user: User?,
+fun NoteAuthorPicture(
+    note: Note,
     navController: NavController,
     userAccount: User,
     size: Dp,
     pictureModifier: Modifier = Modifier
 ) {
-    UserPicture(user, userAccount, size, pictureModifier) {
-        user?.let {
-            navController.navigate("User/${it.pubkeyHex}")
-        }
+    NoteAuthorPicture(note, userAccount, size, pictureModifier) {
+        navController.navigate("User/${it.pubkeyHex}")
     }
 }
 
+
 @Composable
-fun UserPicture(
-    user: User?,
-    userAccount: User,
+fun NoteAuthorPicture(
+    baseNote: Note,
+    baseUserAccount: User,
     size: Dp,
     pictureModifier: Modifier = Modifier,
-    onClick: (() -> Unit)? = null
+    onClick: ((User) -> Unit)? = null
 ) {
-    val accountState by userAccount.live.observeAsState()
-    val accountUser = accountState?.user ?: return
+    val noteState by baseNote.live.observeAsState()
+    val note = noteState?.note ?: return
+
+    val author = note.author
 
     Box(
         Modifier
             .width(size)
             .height(size)) {
-        if (user == null) {
+        if (author == null) {
             AsyncImage(
                 model = "https://robohash.org/ohno.png",
-                contentDescription = "Profile Image",
+                contentDescription = "Unknown Author",
                 placeholder = rememberAsyncImagePainter("https://robohash.org/ohno.png"),
                 modifier = pictureModifier
                     .fillMaxSize(1f)
@@ -315,54 +313,88 @@ fun UserPicture(
                     .background(MaterialTheme.colors.background)
             )
         } else {
-            val userState by user.live.observeAsState()
-            val userLive = userState?.user ?: return
+            UserPicture(author, baseUserAccount, size, pictureModifier, onClick)
+        }
+    }
+}
 
-            AsyncImage(
-                model = userLive.profilePicture(),
-                contentDescription = "Profile Image",
-                placeholder = rememberAsyncImagePainter("https://robohash.org/${userLive.pubkeyHex}.png"),
-                modifier = pictureModifier
-                    .fillMaxSize(1f)
-                    .clip(shape = CircleShape)
-                    .background(MaterialTheme.colors.background)
-                    .run {
-                        if (onClick != null)
-                            this.clickable(onClick = onClick)
-                        else
-                            this
-                    }
+@Composable
+fun UserPicture(
+    user: User,
+    navController: NavController,
+    userAccount: User,
+    size: Dp,
+    pictureModifier: Modifier = Modifier
+) {
+    UserPicture(user, userAccount, size, pictureModifier) {
+        navController.navigate("User/${it.pubkeyHex}")
+    }
+}
 
-            )
+@Composable
+fun UserPicture(
+    baseUser: User,
+    baseUserAccount: User,
+    size: Dp,
+    pictureModifier: Modifier = Modifier,
+    onClick: ((User) -> Unit)? = null
+) {
+    val accountState by baseUserAccount.live.observeAsState()
+    val accountUser = accountState?.user ?: return
 
-            if (accountUser.isFollowing(userLive) || userLive == accountUser) {
-                Box(
-                    Modifier
-                        .width(size.div(3.5f))
-                        .height(size.div(3.5f))
-                        .align(Alignment.TopEnd),
-                    contentAlignment = Alignment.Center
-                ) {
-                    // Background for the transparent checkmark
-                    Text(
-                        "x",
-                        Modifier
-                            .padding(4.dp)
-                            .fillMaxSize()
-                            .align(Alignment.Center)
-                            .background(MaterialTheme.colors.background)
-                            .clip(shape = CircleShape)
-                    )
+    val userState by baseUser.live.observeAsState()
+    val user = userState?.user ?: return
 
-                    Icon(
-                        painter = painterResource(R.drawable.ic_verified),
-                        "Following",
-                        modifier = Modifier.fillMaxSize(),
-                        tint = Following
-                    )
+    Box(
+        Modifier
+            .width(size)
+            .height(size)) {
+
+        AsyncImage(
+            model = user.profilePicture(),
+            contentDescription = "Profile Image",
+            placeholder = rememberAsyncImagePainter("https://robohash.org/${user.pubkeyHex}.png"),
+            modifier = pictureModifier
+                .fillMaxSize(1f)
+                .clip(shape = CircleShape)
+                .background(MaterialTheme.colors.background)
+                .run {
+                    if (onClick != null)
+                        this.clickable(onClick = { onClick(user) } )
+                    else
+                        this
                 }
+
+        )
+
+        if (accountUser.isFollowing(user) || user == accountUser) {
+            Box(
+                Modifier
+                    .width(size.div(3.5f))
+                    .height(size.div(3.5f))
+                    .align(Alignment.TopEnd),
+                contentAlignment = Alignment.Center
+            ) {
+                // Background for the transparent checkmark
+                Text(
+                    "x",
+                    Modifier
+                        .padding(4.dp)
+                        .fillMaxSize()
+                        .align(Alignment.Center)
+                        .background(MaterialTheme.colors.background)
+                        .clip(shape = CircleShape)
+                )
+
+                Icon(
+                    painter = painterResource(R.drawable.ic_verified),
+                    "Following",
+                    modifier = Modifier.fillMaxSize(),
+                    tint = Following
+                )
             }
         }
+
     }
 }
 
