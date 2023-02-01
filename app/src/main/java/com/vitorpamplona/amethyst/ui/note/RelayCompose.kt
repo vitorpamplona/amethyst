@@ -39,8 +39,6 @@ fun RelayCompose(
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
-    val ctx = LocalContext.current.applicationContext
-
     Column() {
         Row(
             modifier = Modifier

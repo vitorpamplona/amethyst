@@ -35,7 +35,7 @@ class LocalPreferences(context: Context) {
     encryptedPreferences.apply {
       val privKey = getString("nostr_privkey", null)
       val pubKey = getString("nostr_pubkey", null)
-      val followingChannels = getStringSet("following_channels", DefaultChannels)?.toMutableSet() ?: DefaultChannels.toMutableSet()
+      val followingChannels = getStringSet("following_channels", null)?.toMutableSet() ?: mutableSetOf()
       val hiddenUsers = getStringSet("hidden_users", emptySet())?.toMutableSet() ?: mutableSetOf()
 
       if (pubKey != null) {
