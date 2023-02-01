@@ -23,12 +23,14 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
 import com.vitorpamplona.amethyst.ui.note.RelayCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class RelayFeedViewModel: ViewModel() {
     val order = compareByDescending<User.RelayInfo> { it.lastEvent }.thenByDescending { it.counter }.thenBy { it.url }
@@ -39,29 +41,27 @@ class RelayFeedViewModel: ViewModel() {
     var currentUser: User? = null
 
     fun refresh() {
-        val beingUsed = currentUser?.relaysBeingUsed?.values?.toList() ?: emptyList()
-        val beingUsedSet =  currentUser?.relaysBeingUsed?.keys ?: emptySet()
+        viewModelScope.launch(Dispatchers.Default) {
+            val beingUsed = currentUser?.getRelayValuesBeingUsed() ?: emptyList()
+            val beingUsedSet = currentUser?.getRelayKeysBeingUsed() ?: emptySet()
 
-        val newRelaysFromRecord = currentUser?.relays?.entries?.mapNotNull {
-            if (it.key !in beingUsedSet) {
-                User.RelayInfo(it.key, 0, 0)
-            } else {
-                null
-            }
-        } ?: emptyList()
+            val newRelaysFromRecord = currentUser?.relays?.entries?.mapNotNull {
+                if (it.key !in beingUsedSet) {
+                    User.RelayInfo(it.key, 0, 0)
+                } else {
+                    null
+                }
+            } ?: emptyList()
 
-        val newList = (beingUsed + newRelaysFromRecord).sortedWith(order)
+            val newList = (beingUsed + newRelaysFromRecord).sortedWith(order)
 
-        viewModelScope.launch {
-            withContext(Dispatchers.Main) {
-                _feedContent.update { newList }
-            }
+            _feedContent.update { newList }
         }
     }
 
     inner class CacheListener: User.Listener() {
-        override fun onNewRelayInfo() { refresh() }
-        override fun onRelayChange() { refresh() }
+        override fun onNewRelayInfo() { invalidateData() }
+        override fun onRelayChange() { invalidateData() }
     }
 
     val listener = CacheListener()
@@ -69,12 +69,30 @@ class RelayFeedViewModel: ViewModel() {
     fun subscribeTo(user: User) {
         currentUser = user
         user.subscribe(listener)
-        refresh()
+        invalidateData()
     }
 
     fun unsubscribeTo(user: User) {
         user.unsubscribe(listener)
         currentUser = null
+    }
+
+    override fun onCleared() {
+        currentUser?.let { unsubscribeTo(it) }
+    }
+
+    var handlerWaiting = false
+    @Synchronized
+    fun invalidateData() {
+        if (handlerWaiting) return
+
+        handlerWaiting = true
+        val scope = CoroutineScope(Job() + Dispatchers.Default)
+        scope.launch {
+            delay(100)
+            refresh()
+            handlerWaiting = false
+        }
     }
 }
 

@@ -41,7 +41,7 @@ class User(val pubkeyHex: String) {
     val messages = ConcurrentHashMap<User, MutableSet<Note>>()
 
     val reports = Collections.synchronizedSet(mutableSetOf<Note>())
-    val relaysBeingUsed = mutableMapOf<String, RelayInfo>()
+    val relaysBeingUsed = Collections.synchronizedMap(mutableMapOf<String, RelayInfo>())
 
     fun toBestDisplayName(): String {
         return bestDisplayName() ?: bestUsername() ?: pubkeyDisplayHex
@@ -188,6 +188,18 @@ class User(val pubkeyHex: String) {
     fun isFollowing(user: User): Boolean {
         return synchronized(follows) {
             follows.contains(user)
+        }
+    }
+
+    fun getRelayKeysBeingUsed(): Set<String> {
+        return synchronized(relaysBeingUsed) {
+            relaysBeingUsed.keys.toSet()
+        }
+    }
+
+    fun getRelayValuesBeingUsed(): List<RelayInfo> {
+        return synchronized(relaysBeingUsed) {
+            relaysBeingUsed.values.toList()
         }
     }
 

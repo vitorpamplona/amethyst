@@ -39,6 +39,7 @@ import androidx.compose.material.icons.filled.Password
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -170,7 +171,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                             0 -> TabNotes(user, accountViewModel, navController)
                             1 -> TabFollows(user, accountViewModel, navController)
                             2 -> TabFollowers(user, accountViewModel, navController)
-                            3 -> TabRelays(user, accountViewModel, navController)
+                            3 -> TabRelays(baseUser, accountViewModel, navController)
                         }
                     }
                 }
@@ -358,11 +359,8 @@ fun TabFollowers(user: User, accountViewModel: AccountViewModel, navController: 
 fun TabRelays(user: User, accountViewModel: AccountViewModel, navController: NavController) {
     val feedViewModel: RelayFeedViewModel = viewModel()
 
-    DisposableEffect(key1 = user) {
+    LaunchedEffect(key1 = user) {
         feedViewModel.subscribeTo(user)
-        onDispose {
-            feedViewModel.unsubscribeTo(user)
-        }
     }
 
     Column(Modifier.fillMaxHeight()) {

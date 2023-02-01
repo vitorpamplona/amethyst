@@ -65,7 +65,7 @@ fun RelayCompose(
                 }
 
                 Text(
-                    "${relay.counter} events received",
+                    "${relay.counter} posts received",
                     color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -73,12 +73,10 @@ fun RelayCompose(
             }
 
             Column(modifier = Modifier.padding(start = 10.dp)) {
-                if (account.activeRelays()?.filter { it.url == relay.url }?.isEmpty() == true) {
+                if (account.activeRelays()?.none { it.url == relay.url } == true) {
                     AddRelayButton { onAddRelay() }
                 } else {
-                    RemoveRelayButton {
-                        onRemoveRelay()
-                    }
+                    RemoveRelayButton { onRemoveRelay() }
                 }
             }
         }
