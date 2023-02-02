@@ -28,7 +28,6 @@ object NostrNotificationDataSource: NostrDataSource<Note>("NotificationFeed") {
     return filtered.filter {
            it.event !is ChannelCreateEvent
         && it.event !is ChannelMetadataEvent
-        && it.directlyCites(account.userProfile())
     }.sortedBy { it.event?.createdAt }.reversed()
   }
 
