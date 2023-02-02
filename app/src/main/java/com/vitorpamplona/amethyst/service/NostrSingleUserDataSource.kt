@@ -34,8 +34,11 @@ object NostrSingleUserDataSource: NostrDataSource<User>("SingleUserFeed") {
     }
   }
 
-  val userChannel = requestNewChannel()
-  val userReportChannel = requestNewChannel()
+  val userChannel = requestNewChannel(){
+    // Many relays operate with limits in the amount of filters.
+    // As information comes, the filters will be rotated to get more data.
+    invalidateFilters()
+  }
 
   override fun feed(): List<User> {
     return synchronized(usersToWatch) {
@@ -46,8 +49,7 @@ object NostrSingleUserDataSource: NostrDataSource<User>("SingleUserFeed") {
   }
 
   override fun updateChannelFilters() {
-    userChannel.filter = createUserFilter()
-    userReportChannel.filter = createUserReportFilter()
+    userChannel.filter = listOfNotNull(createUserFilter()).flatten()
   }
 
   fun add(userId: String) {

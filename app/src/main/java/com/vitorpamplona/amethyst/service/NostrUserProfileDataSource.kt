@@ -6,6 +6,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.toByteArray
 import nostr.postr.JsonFilter
+import nostr.postr.events.ContactListEvent
 import nostr.postr.events.MetadataEvent
 import nostr.postr.events.TextNoteEvent
 
@@ -34,8 +35,20 @@ object NostrUserProfileDataSource: NostrDataSource<Note>("UserProfileFeed") {
     )
   }
 
+  fun createFollowFilter(): JsonFilter {
+    return JsonFilter(
+      kinds = listOf(ContactListEvent.kind),
+      authors = listOf(user!!.pubkeyHex),
+      limit = 1
+    )
+  }
+
+  fun createFollowersFilter() = JsonFilter(
+    kinds = listOf(ContactListEvent.kind),
+    tags = mapOf("p" to listOf(user!!.pubkeyHex))
+  )
+
   val userInfoChannel = requestNewChannel()
-  val notesChannel = requestNewChannel()
 
   override fun feed(): List<Note> {
     val notes = user?.notes ?: return emptyList()
@@ -46,7 +59,11 @@ object NostrUserProfileDataSource: NostrDataSource<Note>("UserProfileFeed") {
   }
 
   override fun updateChannelFilters() {
-    userInfoChannel.filter = listOf(createUserInfoFilter()).ifEmpty { null }
-    notesChannel.filter = listOf(createUserPostsFilter()).ifEmpty { null }
+    userInfoChannel.filter = listOf(
+      createUserInfoFilter(),
+      createUserPostsFilter(),
+      createFollowFilter(),
+      createFollowersFilter()
+    ).ifEmpty { null }
   }
 }

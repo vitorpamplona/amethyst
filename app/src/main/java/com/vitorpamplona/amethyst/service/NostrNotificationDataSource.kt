@@ -12,13 +12,6 @@ import nostr.postr.JsonFilter
 object NostrNotificationDataSource: NostrDataSource<Note>("NotificationFeed") {
   lateinit var account: Account
 
-  fun createNotificationFilter() = JsonFilter(
-    tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
-    limit = 100
-  )
-
-  val notificationChannel = requestNewChannel()
-
   override fun feed(): List<Note> {
     val set = account.userProfile().taggedPosts
     val filtered = synchronized(set) {
@@ -31,7 +24,5 @@ object NostrNotificationDataSource: NostrDataSource<Note>("NotificationFeed") {
     }.sortedBy { it.event?.createdAt }.reversed()
   }
 
-  override fun updateChannelFilters() {
-    notificationChannel.filter = listOf(createNotificationFilter()).ifEmpty { null }
-  }
+  override fun updateChannelFilters() {}
 }

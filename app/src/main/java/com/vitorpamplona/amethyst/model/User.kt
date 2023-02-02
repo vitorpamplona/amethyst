@@ -43,6 +43,9 @@ class User(val pubkeyHex: String) {
     val reports = Collections.synchronizedSet(mutableSetOf<Note>())
     val relaysBeingUsed = Collections.synchronizedMap(mutableMapOf<String, RelayInfo>())
 
+    var latestMetadataRequestEOSE: Long? = null
+    var latestReportRequestEOSE: Long? = null
+
     fun toBestDisplayName(): String {
         return bestDisplayName() ?: bestUsername() ?: pubkeyDisplayHex
     }
@@ -64,8 +67,8 @@ class User(val pubkeyHex: String) {
         follows.add(user)
         user.followers.add(this)
 
-        invalidateData(liveFollows)
-        user.invalidateData(liveFollows)
+        liveFollows.invalidateData()
+        user.liveFollows.invalidateData()
 
         listeners.forEach {
             it.onFollowsChange()
@@ -75,8 +78,8 @@ class User(val pubkeyHex: String) {
         follows.remove(user)
         user.followers.remove(this)
 
-        invalidateData(liveFollows)
-        user.invalidateData(liveFollows)
+        liveFollows.invalidateData()
+        user.liveFollows.invalidateData()
 
         updateSubscribers {
             it.onFollowsChange()
@@ -91,7 +94,7 @@ class User(val pubkeyHex: String) {
     fun addReport(note: Note) {
         if (reports.add(note)) {
             updateSubscribers { it.onNewReports() }
-            invalidateData(liveReports)
+            liveReports.invalidateData()
         }
     }
 
@@ -118,7 +121,7 @@ class User(val pubkeyHex: String) {
 
     fun addMessage(user: User, msg: Note) {
         getOrCreateChannel(user).add(msg)
-        invalidateData(liveMessages)
+        liveMessages.invalidateData()
         updateSubscribers { it.onNewMessage() }
     }
 
@@ -140,7 +143,7 @@ class User(val pubkeyHex: String) {
         }
 
         updateSubscribers { it.onNewRelayInfo() }
-        invalidateData(liveRelayInfo)
+        liveRelayInfo.invalidateData()
     }
 
     fun updateFollows(newFollows: Set<User>, updateAt: Long) {
@@ -168,14 +171,14 @@ class User(val pubkeyHex: String) {
             }
         }
 
-        invalidateData(liveRelays)
+        liveRelays.invalidateData()
     }
 
     fun updateUserInfo(newUserInfo: UserMetadata, updateAt: Long) {
         info = newUserInfo
         updatedMetadataAt = updateAt
 
-        invalidateData(liveMetadata)
+        liveMetadata.invalidateData()
     }
 
     fun isFollowing(user: User): Boolean {
@@ -248,21 +251,6 @@ class User(val pubkeyHex: String) {
     val liveRelays: UserLiveData = UserLiveData(this)
     val liveRelayInfo: UserLiveData = UserLiveData(this)
     val liveMetadata: UserLiveData = UserLiveData(this)
-
-    // Refreshes observers in batches.
-    var handlerWaiting = false
-    @Synchronized
-    fun invalidateData(live: UserLiveData) {
-        if (handlerWaiting) return
-
-        handlerWaiting = true
-        val scope = CoroutineScope(Job() + Dispatchers.Main)
-        scope.launch {
-            delay(100)
-            live.refresh()
-            handlerWaiting = false
-        }
-    }
 }
 
 class UserMetadata {
@@ -291,7 +279,23 @@ class UserMetadata {
 }
 
 class UserLiveData(val user: User): LiveData<UserState>(UserState(user)) {
-    fun refresh() {
+
+    // Refreshes observers in batches.
+    var handlerWaiting = false
+    @Synchronized
+    fun invalidateData() {
+        if (handlerWaiting) return
+
+        handlerWaiting = true
+        val scope = CoroutineScope(Job() + Dispatchers.Main)
+        scope.launch {
+            delay(100)
+            refresh()
+            handlerWaiting = false
+        }
+    }
+
+    private fun refresh() {
         postValue(UserState(user))
     }
 

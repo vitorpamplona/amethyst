@@ -51,7 +51,7 @@ class Note(val idHex: String) {
         this.mentions = mentions
         this.replyTo = replyTo
 
-        invalidateData(live)
+        live.invalidateData()
     }
 
     fun formattedDateTime(timestamp: Long): String {
@@ -83,22 +83,22 @@ class Note(val idHex: String) {
 
     fun addReply(note: Note) {
         if (replies.add(note))
-            invalidateData(liveReplies)
+            liveReplies.invalidateData()
     }
 
     fun addBoost(note: Note) {
         if (boosts.add(note))
-            invalidateData(liveBoosts)
+            liveBoosts.invalidateData()
     }
 
     fun addReaction(note: Note) {
         if (reactions.add(note))
-            invalidateData(liveReactions)
+            liveReactions.invalidateData()
     }
 
     fun addReport(note: Note) {
         if (reports.add(note))
-            invalidateData(liveReports)
+            liveReports.invalidateData()
     }
 
     fun isReactedBy(user: User): Boolean {
@@ -155,24 +155,24 @@ class Note(val idHex: String) {
     val liveBoosts: NoteLiveData = NoteLiveData(this)
     val liveReplies: NoteLiveData = NoteLiveData(this)
     val liveReports: NoteLiveData = NoteLiveData(this)
+}
 
+class NoteLiveData(val note: Note): LiveData<NoteState>(NoteState(note)) {
     // Refreshes observers in batches.
     var handlerWaiting = false
     @Synchronized
-    fun invalidateData(live: NoteLiveData) {
+    fun invalidateData() {
         if (handlerWaiting) return
 
         handlerWaiting = true
         val scope = CoroutineScope(Job() + Dispatchers.Default)
         scope.launch {
             delay(100)
-            live.refresh()
+            refresh()
             handlerWaiting = false
         }
     }
-}
 
-class NoteLiveData(val note: Note): LiveData<NoteState>(NoteState(note)) {
     fun refresh() {
         postValue(NoteState(note))
     }

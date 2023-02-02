@@ -43,7 +43,6 @@ object NostrThreadDataSource: NostrDataSource<Note>("SingleThreadFeed") {
     )
   }
 
-  val repliesAndReactionsChannel = requestNewChannel()
   val loadEventsChannel = requestNewChannel()
 
   override fun feed(): List<Note> {
@@ -55,8 +54,7 @@ object NostrThreadDataSource: NostrDataSource<Note>("SingleThreadFeed") {
   }
 
   override fun updateChannelFilters() {
-    repliesAndReactionsChannel.filter = listOfNotNull(createRepliesAndReactionsFilter()).ifEmpty { null }
-    loadEventsChannel.filter = listOfNotNull(createLoadEventsIfNotLoadedFilter()).ifEmpty { null }
+    loadEventsChannel.filter = listOfNotNull(createLoadEventsIfNotLoadedFilter(), createRepliesAndReactionsFilter()).ifEmpty { null }
   }
 
   fun searchRoot(note: Note, testedNotes: MutableSet<Note> = mutableSetOf()): Note? {

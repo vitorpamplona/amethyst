@@ -143,7 +143,7 @@ class Relay(
                 val filters = Client.getSubscriptionFilters(requestId)
                 if (filters.isNotEmpty()) {
                     val request =
-                        """["REQ","$requestId",${filters.joinToString(",") { it.toJson() }}]"""
+                        """["REQ","$requestId",${filters.take(10).joinToString(",") { it.toJson() }}]"""
                     //println("FILTERSSENT ${url} " + """["REQ","$requestId",${filters.joinToString(",") { it.toJson() }}]""")
                     socket?.send(request)
                 }

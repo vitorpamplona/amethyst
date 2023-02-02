@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.service
 
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
@@ -88,7 +89,7 @@ abstract class NostrDataSource<T>(val debugName: String) {
     }
 
     override fun onError(error: Error, subscriptionId: String, relay: Relay) {
-      //Log.e("ERROR", "Relay ${relay.url}: ${error.message}")
+      Log.e("ERROR", "Relay ${relay.url}: ${error.message}")
     }
 
     override fun onRelayStateChange(type: Relay.Type, relay: Relay, channel: String?) {
@@ -145,8 +146,8 @@ abstract class NostrDataSource<T>(val debugName: String) {
     }
   }
 
-  fun requestNewChannel(): Channel {
-    val newChannel = Channel(debugName+UUID.randomUUID().toString().substring(0,4))
+  fun requestNewChannel(onEOSE: ((Long) -> Unit)? = null): Channel {
+    val newChannel = Channel(debugName+UUID.randomUUID().toString().substring(0,4), onEOSE)
     channels.add(newChannel)
     channelIds.add(newChannel.id)
     return newChannel

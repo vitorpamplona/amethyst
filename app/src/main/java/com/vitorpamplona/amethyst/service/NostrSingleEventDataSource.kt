@@ -60,8 +60,7 @@ object NostrSingleEventDataSource: NostrDataSource<Note>("SingleEventFeed") {
     )
   }
 
-  val repliesAndReactionsChannel = requestNewChannel()
-  val loadEventsChannel = requestNewChannel()
+  val singleEventChannel = requestNewChannel()
 
   override fun feed(): List<Note> {
     return synchronized(eventsToWatch) {
@@ -75,8 +74,7 @@ object NostrSingleEventDataSource: NostrDataSource<Note>("SingleEventFeed") {
     val reactions = createRepliesAndReactionsFilter()
     val missing = createLoadEventsIfNotLoadedFilter()
 
-    repliesAndReactionsChannel.filter = listOfNotNull(reactions).ifEmpty { null }
-    loadEventsChannel.filter = listOfNotNull(missing).ifEmpty { null }
+    singleEventChannel.filter = listOfNotNull(reactions, missing).ifEmpty { null }
   }
 
   fun add(eventId: String) {

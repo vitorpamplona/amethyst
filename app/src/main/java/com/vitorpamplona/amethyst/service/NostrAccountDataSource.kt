@@ -17,7 +17,7 @@ object NostrAccountDataSource: NostrDataSource<Note>("AccountData") {
     return JsonFilter(
       kinds = listOf(ContactListEvent.kind),
       authors = listOf(account.userProfile().pubkeyHex),
-      limit = 5
+      limit = 1
     )
   }
 
@@ -25,12 +25,16 @@ object NostrAccountDataSource: NostrDataSource<Note>("AccountData") {
     return JsonFilter(
       kinds = listOf(MetadataEvent.kind),
       authors = listOf(account.userProfile().pubkeyHex),
-      limit = 5
+      limit = 1
     )
   }
 
-  val accountMetadataChannel = requestNewChannel()
-  val accountContactListChannel = requestNewChannel()
+  fun createNotificationFilter() = JsonFilter(
+    tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
+    limit = 100
+  )
+
+  val accountChannel = requestNewChannel()
 
   override fun feed(): List<Note> {
     val user = account.userProfile()
@@ -49,10 +53,10 @@ object NostrAccountDataSource: NostrDataSource<Note>("AccountData") {
 
   override fun updateChannelFilters() {
     // gets everthing about the user logged in
-    val newAccountMetadataFilter = createAccountMetadataFilter()
-    accountMetadataChannel.filter = listOf(newAccountMetadataFilter).ifEmpty { null }
-
-    val newAccountContactListEvent = createAccountContactListFilter()
-    accountContactListChannel.filter = listOf(newAccountContactListEvent).ifEmpty { null }
+    accountChannel.filter = listOf(
+      createAccountMetadataFilter(),
+      createAccountContactListFilter(),
+      createNotificationFilter()
+    ).ifEmpty { null }
   }
 }

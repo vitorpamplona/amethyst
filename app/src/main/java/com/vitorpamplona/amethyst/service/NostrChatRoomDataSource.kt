@@ -28,8 +28,7 @@ object NostrChatRoomDataSource: NostrDataSource<Note>("ChatroomFeed") {
     tags = withUser?.let { mapOf("p" to listOf(it.pubkeyHex)) }
   )
 
-  val incomingChannel = requestNewChannel()
-  val outgoingChannel = requestNewChannel()
+  val inandoutChannel = requestNewChannel()
 
   // returns the last Note of each user.
   override fun feed(): List<Note> {
@@ -43,7 +42,6 @@ object NostrChatRoomDataSource: NostrDataSource<Note>("ChatroomFeed") {
   }
 
   override fun updateChannelFilters() {
-    incomingChannel.filter = listOf(createMessagesToMeFilter()).ifEmpty { null }
-    outgoingChannel.filter = listOf(createMessagesFromMeFilter()).ifEmpty { null }
+    inandoutChannel.filter = listOf(createMessagesToMeFilter(), createMessagesFromMeFilter()).ifEmpty { null }
   }
 }

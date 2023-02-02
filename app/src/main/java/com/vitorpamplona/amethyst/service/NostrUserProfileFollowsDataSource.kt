@@ -15,16 +15,6 @@ object NostrUserProfileFollowsDataSource: NostrDataSource<User>("UserProfileFoll
     resetFilters()
   }
 
-  fun createFollowFilter(): JsonFilter {
-    return JsonFilter(
-      kinds = listOf(ContactListEvent.kind),
-      authors = listOf(user!!.pubkeyHex),
-      limit = 1
-    )
-  }
-
-  val followChannel = requestNewChannel()
-
   override fun feed(): List<User> {
     val follows = user?.follows ?: emptyList()
 
@@ -33,7 +23,5 @@ object NostrUserProfileFollowsDataSource: NostrDataSource<User>("UserProfileFoll
     }
   }
 
-  override fun updateChannelFilters() {
-    followChannel.filter = listOf(createFollowFilter()).ifEmpty { null }
-  }
+  override fun updateChannelFilters() {}
 }

@@ -52,14 +52,7 @@ object NostrChatroomListDataSource: NostrDataSource<Note>("MailBoxFeed") {
     }
   }
 
-  val incomingChannel = requestNewChannel()
-  val outgoingChannel = requestNewChannel()
-
-  val myChannelsChannel = requestNewChannel()
-  val myChannelsInfoChannel = requestNewChannel()
-  val myChannelsMessagesChannel = requestNewChannel()
-
-  val myChannelsCreatedbyMeChannel = requestNewChannel()
+  val chatroomListChannel = requestNewChannel()
 
   // returns the last Note of each user.
   override fun feed(): List<Note> {
@@ -85,12 +78,16 @@ object NostrChatroomListDataSource: NostrDataSource<Note>("MailBoxFeed") {
   }
 
   override fun updateChannelFilters() {
-    incomingChannel.filter = listOf(createMessagesToMeFilter()).ifEmpty { null }
-    outgoingChannel.filter = listOf(createMessagesFromMeFilter()).ifEmpty { null }
-    myChannelsChannel.filter = listOf(createMyChannelsFilter()).ifEmpty { null }
-    myChannelsInfoChannel.filter = createLastChannelInfoFilter().ifEmpty { null }
-    myChannelsMessagesChannel.filter = createLastMessageOfEachChannelFilter().ifEmpty { null }
+    val list = listOf(
+      createMessagesToMeFilter(),
+      createMessagesFromMeFilter(),
+      createMyChannelsFilter()
+    )
 
-    //myChannelsCreatedbyMeChannel.filter = listOf(createChannelsCreatedbyMeFilter()).ifEmpty { null }
+    chatroomListChannel.filter = listOfNotNull(
+      list,
+      createLastChannelInfoFilter(),
+      createLastMessageOfEachChannelFilter()
+    ).flatten().ifEmpty { null }
   }
 }
