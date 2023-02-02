@@ -26,7 +26,7 @@ fun NoteUsernameDisplay(baseNote: Note, weight: Modifier = Modifier) {
 
 @Composable
 fun UsernameDisplay(baseUser: User, weight: Modifier = Modifier) {
-  val userState by baseUser.live.observeAsState()
+  val userState by baseUser.liveMetadata.observeAsState()
   val user = userState?.user ?: return
 
   if (user.bestUsername() != null || user.bestDisplayName() != null) {

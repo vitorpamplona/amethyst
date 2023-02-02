@@ -53,9 +53,6 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
-    val accountUserState by account.userProfile().live.observeAsState()
-    val accountUser = accountUserState?.user ?: return
-
     val notificationCacheState = NotificationCache.live.observeAsState()
     val notificationCache = notificationCacheState.value ?: return
 
@@ -64,7 +61,7 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
     if (note?.event == null) {
         BlankNote(Modifier)
     } else if (note.channel != null) {
-        val authorState by note.author!!.live.observeAsState()
+        val authorState by note.author!!.liveMetadata.observeAsState()
         val author = authorState?.user
 
         val channelState by note.channel!!.live.observeAsState()
@@ -108,25 +105,19 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
         }
 
     } else {
-        val authorState by note.author!!.live.observeAsState()
-        val author = authorState?.user
-
         val replyAuthorBase = note.mentions?.first()
 
-        var userToComposeOn = author
+        var userToComposeOn = note.author!!
 
-        if ( replyAuthorBase != null ) {
-            val replyAuthorState by replyAuthorBase.live.observeAsState()
-            val replyAuthor = replyAuthorState?.user
-
-            if (author == accountUser) {
-                userToComposeOn = replyAuthor
+        if (replyAuthorBase != null) {
+            if (note.author == account.userProfile()) {
+                userToComposeOn = replyAuthorBase
             }
         }
 
         val noteEvent = note.event
 
-        userToComposeOn?.let { user ->
+        userToComposeOn.let { user ->
             val hasNewMessages =
                 if (noteEvent != null)
                     noteEvent.createdAt > notificationCache.cache.load("Room/${userToComposeOn.pubkeyHex}", context)
@@ -134,8 +125,8 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
                     false
 
             ChannelName(
-                channelPicture = { UserPicture(user, accountUser, size = 55.dp) },
-                channelTitle = { UsernameDisplay(user, it) },
+                channelPicture = { UserPicture(userToComposeOn, account.userProfile(), size = 55.dp) },
+                channelTitle = { UsernameDisplay(userToComposeOn, it) },
                 channelLastTime = noteEvent?.createdAt,
                 channelLastContent = accountViewModel.decrypt(note),
                 hasNewMessages = hasNewMessages,

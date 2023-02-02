@@ -59,8 +59,7 @@ fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
-    val accountUserState by account.userProfile().live.observeAsState()
-    val accountUser = accountUserState?.user
+    val accountUser = account.userProfile()
 
     var popupExpanded by remember { mutableStateOf(false) }
 
@@ -69,14 +68,11 @@ fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote
     if (note?.event == null) {
         BlankNote(Modifier)
     } else {
-        val authorState by note.author!!.live.observeAsState()
-        val author = authorState?.user
-
         var backgroundBubbleColor: Color
         var alignment: Arrangement.Horizontal
         var shape: Shape
 
-        if (author == accountUser) {
+        if (note.author == accountUser) {
             backgroundBubbleColor = MaterialTheme.colors.primary.copy(alpha = 0.32f)
             alignment = Arrangement.End
             shape = ChatBubbleShapeMe
@@ -124,6 +120,9 @@ fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote
                         Column(
                             modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 5.dp),
                         ) {
+
+                            val authorState by note.author!!.liveMetadata.observeAsState()
+                            val author = authorState?.user
 
                             if (innerQuote || author != accountUser && note.event is ChannelMessageEvent) {
                                 Row(

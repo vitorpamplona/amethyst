@@ -339,10 +339,7 @@ fun UserPicture(
     pictureModifier: Modifier = Modifier,
     onClick: ((User) -> Unit)? = null
 ) {
-    val accountState by baseUserAccount.live.observeAsState()
-    val accountUser = accountState?.user ?: return
-
-    val userState by baseUser.live.observeAsState()
+    val userState by baseUser.liveMetadata.observeAsState()
     val user = userState?.user ?: return
 
     Box(
@@ -366,6 +363,9 @@ fun UserPicture(
                 }
 
         )
+
+        val accountState by baseUserAccount.liveFollows.observeAsState()
+        val accountUser = accountState?.user ?: return
 
         if (accountUser.isFollowing(user) || user == accountUser) {
             Box(

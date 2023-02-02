@@ -43,6 +43,8 @@ class Note(val idHex: String) {
 
     var channel: Channel? = null
 
+    var lastDownloadTime: Long? = null
+
     fun loadEvent(event: Event, author: User, mentions: List<User>, replyTo: MutableList<Note>) {
         this.event = event
         this.author = author
@@ -128,7 +130,7 @@ class Note(val idHex: String) {
         val returningList = mutableSetOf<User>()
         while (matcher.find()) {
             try {
-                val tag = event?.tags?.get(matcher.group(1).toInt())
+                val tag = matcher.group(1)?.let { event?.tags?.get(it.toInt()) }
                 if (tag != null && tag[0] == "p") {
                     returningList.add(LocalCache.getOrCreateUser(tag[1]))
                 }

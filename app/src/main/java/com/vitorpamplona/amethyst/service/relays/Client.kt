@@ -72,8 +72,8 @@ object Client: RelayPool.Listener {
         listeners.forEach { it.onError(error, subscriptionId, relay) }
     }
 
-    override fun onRelayStateChange(type: Relay.Type, relay: Relay) {
-        listeners.forEach { it.onRelayStateChange(type, relay) }
+    override fun onRelayStateChange(type: Relay.Type, relay: Relay, channel: String?) {
+        listeners.forEach { it.onRelayStateChange(type, relay, channel) }
     }
 
     override fun onSendResponse(eventId: String, success: Boolean, message: String, relay: Relay) {
@@ -112,7 +112,7 @@ object Client: RelayPool.Listener {
         /**
          * Connected to or disconnected from a relay
          */
-        open fun onRelayStateChange(type: Relay.Type, relay: Relay) = Unit
+        open fun onRelayStateChange(type: Relay.Type, relay: Relay, channel: String?) = Unit
 
         /**
          * When an relay saves or rejects a new event.

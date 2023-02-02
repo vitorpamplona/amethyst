@@ -72,8 +72,6 @@ object LocalCache {
     // new event
     val oldUser = getOrCreateUser(event.pubKey.toHexKey())
     if (event.createdAt > oldUser.updatedMetadataAt) {
-      //Log.d("MT", "New User ${users.size} ${event.contactMetaData.name}")
-
       val newUser = try {
         metadataParser.readValue<UserMetadata>(ByteArrayInputStream(event.content.toByteArray(Charsets.UTF_8)), UserMetadata::class.java)
       } catch (e: Exception) {
@@ -84,6 +82,8 @@ object LocalCache {
 
       oldUser.updateUserInfo(newUser, event.createdAt)
       oldUser.latestMetadata = event
+
+      //Log.d("MT", "New User Metadata ${oldUser.pubkeyDisplayHex} ${oldUser.toBestDisplayName()}")
     } else {
       //Log.d("MT","Relay sent a previous Metadata Event ${oldUser.toBestDisplayName()} ${formattedDateTime(event.createdAt)} > ${formattedDateTime(oldUser.updatedAt)}")
     }

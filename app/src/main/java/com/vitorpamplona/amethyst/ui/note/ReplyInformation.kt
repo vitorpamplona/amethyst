@@ -44,7 +44,7 @@ fun ReplyInformation(replyTo: MutableList<Note>?, mentions: List<User>?, prefix:
         val mentionSet = mentions.toSet()
 
         mentionSet.toSet().forEachIndexed { idx, user ->
-          val innerUserState by user.live.observeAsState()
+          val innerUserState by user.liveMetadata.observeAsState()
           val innerUser = innerUserState?.user
 
           innerUser?.let { myUser ->
@@ -123,7 +123,7 @@ fun ReplyInformationChannel(replyTo: MutableList<Note>?,
         val mentionSet = mentions.toSet()
 
         mentionSet.forEachIndexed { idx, user ->
-          val innerUserState by user.live.observeAsState()
+          val innerUserState by user.liveMetadata.observeAsState()
           val innerUser = innerUserState?.user
 
           innerUser?.let { myUser ->

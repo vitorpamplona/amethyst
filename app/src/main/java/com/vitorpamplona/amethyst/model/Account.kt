@@ -369,7 +369,7 @@ class Account(
     }
   }
 
-  fun isHidden(user: User) = user !in hiddenUsers()
+  fun isHidden(user: User) = user in hiddenUsers()
 
   fun isAcceptable(user: User): Boolean {
     return user !in hiddenUsers()  // if user hasn't hided this author

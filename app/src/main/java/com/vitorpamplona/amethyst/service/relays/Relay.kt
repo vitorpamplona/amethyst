@@ -2,11 +2,8 @@ package com.vitorpamplona.amethyst.service.relays
 
 import android.util.Log
 import com.google.gson.JsonElement
-import com.vitorpamplona.amethyst.model.LocalCache
 import java.util.Date
-import nostr.postr.events.ContactListEvent
 import nostr.postr.events.Event
-import nostr.postr.toNpub
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -50,7 +47,7 @@ class Relay(
                     Client.allSubscriptions().forEach {
                         sendFilter(requestId = it)
                     }
-                    listeners.forEach { it.onRelayStateChange(this@Relay, Type.CONNECT) }
+                    listeners.forEach { it.onRelayStateChange(this@Relay, Type.CONNECT, null) }
                 }
 
                 override fun onMessage(webSocket: WebSocket, text: String) {
@@ -65,7 +62,7 @@ class Relay(
                                 listeners.forEach { it.onEvent(this@Relay, channel, event) }
                             }
                             "EOSE" -> listeners.forEach {
-                                it.onRelayStateChange(this@Relay, Type.EOSE)
+                                it.onRelayStateChange(this@Relay, Type.EOSE, channel)
                             }
                             "NOTICE" -> listeners.forEach {
                                 // "channel" being the second string in the string array ...
@@ -91,13 +88,17 @@ class Relay(
                 }
 
                 override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
-                    listeners.forEach { it.onRelayStateChange(this@Relay, Type.DISCONNECTING) }
+                    listeners.forEach { it.onRelayStateChange(
+                        this@Relay,
+                        Type.DISCONNECTING,
+                        null
+                    ) }
                 }
 
                 override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
                     socket = null
                     closingTime = Date().time / 1000
-                    listeners.forEach { it.onRelayStateChange(this@Relay, Type.DISCONNECT) }
+                    listeners.forEach { it.onRelayStateChange(this@Relay, Type.DISCONNECT, null) }
                 }
 
                 override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
@@ -192,6 +193,6 @@ class Relay(
          *
          * @param type is 0 for disconnect and 1 for connect
          */
-        fun onRelayStateChange(relay: Relay, type: Type)
+        fun onRelayStateChange(relay: Relay, type: Type, channel: String?)
     }
 }

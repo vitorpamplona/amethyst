@@ -94,86 +94,92 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
-    val accountUserState by account.userProfile().live.observeAsState()
-    val accountUser = accountUserState?.user
+    if (userId == null) return
 
-    if (userId != null && accountUser != null) {
-        DisposableEffect(account) {
-            NostrUserProfileDataSource.loadUserProfile(userId)
-            NostrUserProfileFollowersDataSource.loadUserProfile(userId)
-            NostrUserProfileFollowsDataSource.loadUserProfile(userId)
+    DisposableEffect(account) {
+        NostrUserProfileDataSource.loadUserProfile(userId)
+        NostrUserProfileFollowersDataSource.loadUserProfile(userId)
+        NostrUserProfileFollowsDataSource.loadUserProfile(userId)
 
-            onDispose {
-                NostrUserProfileDataSource.stop()
-                NostrUserProfileFollowsDataSource.stop()
-                NostrUserProfileFollowersDataSource.stop()
-            }
+        onDispose {
+            NostrUserProfileDataSource.stop()
+            NostrUserProfileFollowsDataSource.stop()
+            NostrUserProfileFollowersDataSource.stop()
         }
+    }
 
-        val baseUser = NostrUserProfileDataSource.user ?: return
+    val baseUser = NostrUserProfileDataSource.user ?: return
 
-        val userState by baseUser.live.observeAsState()
-        val user = userState?.user ?: return
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colors.background
+    ) {
+        Column() {
+            ProfileHeader(baseUser, navController, account, accountViewModel)
 
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            color = MaterialTheme.colors.background
-        ) {
-            Column() {
-                ProfileHeader(user, navController, account, accountUser, accountViewModel)
+            val pagerState = rememberPagerState()
+            val coroutineScope = rememberCoroutineScope()
 
-                val pagerState = rememberPagerState()
-                val coroutineScope = rememberCoroutineScope()
-
-                Column(modifier = Modifier.padding()) {
-                    TabRow(
-                        selectedTabIndex = pagerState.currentPage,
-                        indicator = { tabPositions ->
-                            TabRowDefaults.Indicator(
-                                Modifier.pagerTabIndicatorOffset(pagerState, tabPositions),
-                                color = MaterialTheme.colors.primary
-                            )
-                        },
-                    ) {
-                        Tab(
-                            selected = pagerState.currentPage == 0,
-                            onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
-                            text = {
-                                Text(text = "Notes")
-                            }
+            Column(modifier = Modifier.padding()) {
+                TabRow(
+                    selectedTabIndex = pagerState.currentPage,
+                    indicator = { tabPositions ->
+                        TabRowDefaults.Indicator(
+                            Modifier.pagerTabIndicatorOffset(pagerState, tabPositions),
+                            color = MaterialTheme.colors.primary
                         )
-
-                        Tab(
-                            selected = pagerState.currentPage == 1,
-                            onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
-                            text = {
-                                Text(text = "${user.follows?.size ?: "--"} Follows")
-                            }
-                        )
-
-                        Tab(
-                            selected = pagerState.currentPage == 2,
-                            onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
-                            text = {
-                                Text(text = "${user.followers?.size ?: "--"} Followers")
-                            }
-                        )
-
-                        Tab(
-                            selected = pagerState.currentPage == 3,
-                            onClick = { coroutineScope.launch { pagerState.animateScrollToPage(3) } },
-                            text = {
-                                Text(text = "${user.relaysBeingUsed.size ?: "--"} / ${user.relays?.size ?: "--"} Relays")
-                            }
-                        )
-                    }
-                    HorizontalPager(count = 4, state = pagerState) {
-                        when (pagerState.currentPage) {
-                            0 -> TabNotes(user, accountViewModel, navController)
-                            1 -> TabFollows(user, accountViewModel, navController)
-                            2 -> TabFollowers(user, accountViewModel, navController)
-                            3 -> TabRelays(baseUser, accountViewModel, navController)
+                    },
+                ) {
+                    Tab(
+                        selected = pagerState.currentPage == 0,
+                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
+                        text = {
+                            Text(text = "Notes")
                         }
+                    )
+
+                    Tab(
+                        selected = pagerState.currentPage == 1,
+                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
+                        text = {
+                            val userState by baseUser.liveFollows.observeAsState()
+                            val userFollows = userState?.user?.follows?.size ?: "--"
+
+                            Text(text = "$userFollows Follows")
+                        }
+                    )
+
+                    Tab(
+                        selected = pagerState.currentPage == 2,
+                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
+                        text = {
+                            val userState by baseUser.liveFollows.observeAsState()
+                            val userFollows = userState?.user?.followers?.size ?: "--"
+
+                            Text(text = "$userFollows Followers")
+                        }
+                    )
+
+                    Tab(
+                        selected = pagerState.currentPage == 3,
+                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(3) } },
+                        text = {
+                            val userState by baseUser.liveRelays.observeAsState()
+                            val userRelaysBeingUsed = userState?.user?.relaysBeingUsed?.size ?: "--"
+
+                            val userStateRelayInfo by baseUser.liveRelayInfo.observeAsState()
+                            val userRelays = userStateRelayInfo?.user?.relays?.size ?: "--"
+
+                            Text(text = "$userRelaysBeingUsed / $userRelays Relays")
+                        }
+                    )
+                }
+                HorizontalPager(count = 4, state = pagerState) {
+                    when (pagerState.currentPage) {
+                        0 -> TabNotes(baseUser, accountViewModel, navController)
+                        1 -> TabFollows(baseUser, accountViewModel, navController)
+                        2 -> TabFollowers(baseUser, accountViewModel, navController)
+                        3 -> TabRelays(baseUser, accountViewModel, navController)
                     }
                 }
             }
@@ -183,36 +189,19 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
 
 @Composable
 private fun ProfileHeader(
-    user: User,
+    baseUser: User,
     navController: NavController,
     account: Account,
-    accountUser: User,
     accountViewModel: AccountViewModel
 ) {
     val ctx = LocalContext.current.applicationContext
     var popupExpanded by remember { mutableStateOf(false) }
 
+    val accountUserState by account.userProfile().liveFollows.observeAsState()
+    val accountUser = accountUserState?.user ?: return
+
     Box {
-        val banner = user.info.banner
-        if (banner != null && banner.isNotBlank()) {
-            AsyncImage(
-                model = banner,
-                contentDescription = "Profile Image",
-                contentScale = ContentScale.FillWidth,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(125.dp)
-            )
-        } else {
-            Image(
-                painter = painterResource(R.drawable.profile_banner),
-                contentDescription = "Profile Banner",
-                contentScale = ContentScale.FillWidth,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(125.dp)
-            )
-        }
+        DrawBanner(baseUser)
 
         Box(modifier = Modifier
             .padding(horizontal = 10.dp)
@@ -237,7 +226,7 @@ private fun ProfileHeader(
                     contentDescription = "More Options",
                 )
 
-                UserProfileDropDownMenu(user, popupExpanded, { popupExpanded = false }, accountViewModel)
+                UserProfileDropDownMenu(baseUser, popupExpanded, { popupExpanded = false }, accountViewModel)
             }
 
         }
@@ -255,7 +244,7 @@ private fun ProfileHeader(
             ) {
 
                 UserPicture(
-                    user, navController, account.userProfile(), 100.dp,
+                    baseUser, navController, account.userProfile(), 100.dp,
                     pictureModifier = Modifier.border(
                         3.dp,
                         MaterialTheme.colors.background,
@@ -268,49 +257,85 @@ private fun ProfileHeader(
                 Row(modifier = Modifier
                     .height(35.dp)
                     .padding(bottom = 3.dp)) {
-                    MessageButton(user, navController)
+                    MessageButton(baseUser, navController)
 
-                    if (accountUser == user && account.isWriteable()) {
+                    if (accountUser == baseUser && account.isWriteable()) {
                         NSecCopyButton(account)
                     }
 
-                    NPubCopyButton(user)
+                    NPubCopyButton(baseUser)
 
-                    if (accountUser == user) {
+                    if (accountUser == baseUser) {
                         EditButton(account)
                     } else {
-                        if (!account.isHidden(user)) {
+                        if (account.isHidden(baseUser)) {
                             ShowUserButton {
-                                account.showUser(user.pubkeyHex)
+                                account.showUser(baseUser.pubkeyHex)
                                 LocalPreferences(ctx).saveToEncryptedStorage(account)
                             }
-                        } else if (accountUser.isFollowing(user)) {
-                            UnfollowButton { account.unfollow(user) }
+                        } else if (accountUser.isFollowing(baseUser)) {
+                            UnfollowButton { account.unfollow(baseUser) }
                         } else {
-                            FollowButton { account.follow(user) }
+                            FollowButton { account.follow(baseUser) }
                         }
                     }
                 }
             }
 
-            Text(
-                user.bestDisplayName() ?: "",
-                modifier = Modifier.padding(top = 7.dp),
-                fontWeight = FontWeight.Bold,
-                fontSize = 25.sp
-            )
-            Text(
-                " @${user.bestUsername()}",
-                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-            )
-            Text(
-                "${user.info.about}",
-                color = MaterialTheme.colors.onSurface,
-                modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)
-            )
+            DrawAdditionalInfo(baseUser)
 
             Divider(modifier = Modifier.padding(top = 6.dp))
         }
+    }
+}
+
+@Composable
+private fun DrawAdditionalInfo(baseUser: User) {
+    val userState by baseUser.liveMetadata.observeAsState()
+    val user = userState?.user ?: return
+
+    Text(
+        user.bestDisplayName() ?: "",
+        modifier = Modifier.padding(top = 7.dp),
+        fontWeight = FontWeight.Bold,
+        fontSize = 25.sp
+    )
+    Text(
+        " @${user.bestUsername()}",
+        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+    )
+    Text(
+        "${user.info.about}",
+        color = MaterialTheme.colors.onSurface,
+        modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)
+    )
+}
+
+@Composable
+private fun DrawBanner(baseUser: User) {
+    val userState by baseUser.liveMetadata.observeAsState()
+    val user = userState?.user ?: return
+
+    val banner = user.info.banner
+
+    if (banner != null && banner.isNotBlank()) {
+        AsyncImage(
+            model = banner,
+            contentDescription = "Profile Image",
+            contentScale = ContentScale.FillWidth,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(125.dp)
+        )
+    } else {
+        Image(
+            painter = painterResource(R.drawable.profile_banner),
+            contentDescription = "Profile Banner",
+            contentScale = ContentScale.FillWidth,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(125.dp)
+        )
     }
 }
 
@@ -560,7 +585,7 @@ fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () ->
 
         if ( account.userProfile() != user) {
             Divider()
-            if (!account.isHidden(user)) {
+            if (account.isHidden(user)) {
                 DropdownMenuItem(onClick = {
                     user.let {
                         accountViewModel.show(

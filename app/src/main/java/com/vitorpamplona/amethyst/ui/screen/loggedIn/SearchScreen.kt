@@ -210,9 +210,6 @@ fun UserLine(
     account: Account,
     onClick: () -> Unit
 ) {
-    val userState by baseUser.live.observeAsState()
-    val user = userState?.user ?: return
-
     Column(modifier = Modifier
         .fillMaxWidth()
         .clickable(onClick = onClick)
@@ -226,7 +223,7 @@ fun UserLine(
                 )
         ) {
 
-            UserPicture(user, account.userProfile(), 55.dp, Modifier, null)
+            UserPicture(baseUser, account.userProfile(), 55.dp, Modifier, null)
 
             Column(
                 modifier = Modifier
@@ -236,6 +233,9 @@ fun UserLine(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     UsernameDisplay(baseUser)
                 }
+
+                val userState by baseUser.liveMetadata.observeAsState()
+                val user = userState?.user ?: return
 
                 Text(
                     user.info.about?.take(100) ?: "",

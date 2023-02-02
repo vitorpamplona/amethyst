@@ -15,7 +15,7 @@ fun ClickableUserTag(
   user: User,
   navController: NavController
 ) {
-  val innerUserState by user.live.observeAsState()
+  val innerUserState by user.liveMetadata.observeAsState()
   ClickableText(
     text = AnnotatedString("@${innerUserState?.user?.toBestDisplayName()} "),
     onClick = { navController.navigate("User/${innerUserState?.user?.pubkeyHex}") },

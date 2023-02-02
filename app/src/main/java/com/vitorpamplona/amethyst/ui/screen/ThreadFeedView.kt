@@ -172,9 +172,6 @@ fun NoteMaster(baseNote: Note, accountViewModel: AccountViewModel, navController
     } else if (!account.isAcceptable(noteForReports)) {
         HiddenNote()
     } else {
-        val authorState by note.author!!.live.observeAsState()
-        val author = authorState?.user
-
         Column(
             Modifier
                 .fillMaxWidth()
@@ -182,7 +179,7 @@ fun NoteMaster(baseNote: Note, accountViewModel: AccountViewModel, navController
             Row(modifier = Modifier
                 .padding(start = 12.dp, end = 12.dp)
                 .clickable(onClick = {
-                    author?.let {
+                    note.author?.let {
                         navController.navigate("User/${it.pubkeyHex}")
                     }
                 })

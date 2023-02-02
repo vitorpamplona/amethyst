@@ -2,7 +2,6 @@ package com.vitorpamplona.amethyst.service.relays
 
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.Constants
-import java.util.Collections
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -88,7 +87,7 @@ object RelayPool: Relay.Listener {
 
         fun onError(error: Error, subscriptionId: String, relay: Relay)
 
-        fun onRelayStateChange(type: Relay.Type, relay: Relay)
+        fun onRelayStateChange(type: Relay.Type, relay: Relay, channel: String?)
 
         fun onSendResponse(eventId: String, success: Boolean, message: String, relay: Relay)
     }
@@ -103,8 +102,8 @@ object RelayPool: Relay.Listener {
         refreshObservers()
     }
 
-    override fun onRelayStateChange(relay: Relay, type: Relay.Type) {
-        listeners.forEach { it.onRelayStateChange(type, relay) }
+    override fun onRelayStateChange(relay: Relay, type: Relay.Type, channel: String?) {
+        listeners.forEach { it.onRelayStateChange(type, relay, channel) }
         refreshObservers()
     }
 

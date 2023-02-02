@@ -41,6 +41,7 @@ import coil.compose.rememberAsyncImagePainter
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChatRoomDataSource
 import com.vitorpamplona.amethyst.ui.actions.PostButton
+import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -70,13 +71,18 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
             }
 
             Column(
-                modifier = Modifier.fillMaxHeight().padding(vertical = 0.dp).weight(1f, true)
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .padding(vertical = 0.dp)
+                    .weight(1f, true)
             ) {
                 ChatroomFeedView(feedViewModel, accountViewModel, navController, "Room/${userId}")
             }
 
             //LAST ROW
-            Row(modifier = Modifier.padding(10.dp).fillMaxWidth(),
+            Row(modifier = Modifier
+                .padding(10.dp)
+                .fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -118,22 +124,23 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
 
 @Composable
 fun ChatroomHeader(baseUser: User, accountViewModel: AccountViewModel, navController: NavController) {
-    val authorState by baseUser.live.observeAsState()
-    val author = authorState?.user
-
     Column(modifier = Modifier.clickable(
-            onClick = { navController.navigate("User/${author?.pubkeyHex}") }
+            onClick = { navController.navigate("User/${baseUser.pubkeyHex}") }
         )
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+
+                val authorState by baseUser.liveMetadata.observeAsState()
+                val author = authorState?.user
 
                 AsyncImage(
                     model = author?.profilePicture(),
                     placeholder = rememberAsyncImagePainter("https://robohash.org/${author?.pubkeyHex}.png"),
                     contentDescription = "Profile Image",
                     modifier = Modifier
-                        .width(35.dp).height(35.dp)
+                        .width(35.dp)
+                        .height(35.dp)
                         .clip(shape = CircleShape)
                 )
 

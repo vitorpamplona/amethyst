@@ -14,7 +14,7 @@ object NostrSingleUserDataSource: NostrDataSource<User>("SingleUserFeed") {
   fun createUserFilter(): List<JsonFilter>? {
     if (usersToWatch.isEmpty()) return null
 
-    return usersToWatch.map {
+    return usersToWatch.filter { LocalCache.getOrCreateUser(it).latestMetadata == null }.map {
       JsonFilter(
         kinds = listOf(MetadataEvent.kind),
         authors = listOf(it),

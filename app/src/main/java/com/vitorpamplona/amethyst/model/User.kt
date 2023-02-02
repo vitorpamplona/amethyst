@@ -64,8 +64,8 @@ class User(val pubkeyHex: String) {
         follows.add(user)
         user.followers.add(this)
 
-        invalidateData()
-        user.invalidateData()
+        invalidateData(liveFollows)
+        user.invalidateData(liveFollows)
 
         listeners.forEach {
             it.onFollowsChange()
@@ -75,8 +75,8 @@ class User(val pubkeyHex: String) {
         follows.remove(user)
         user.followers.remove(this)
 
-        invalidateData()
-        user.invalidateData()
+        invalidateData(liveFollows)
+        user.invalidateData(liveFollows)
 
         updateSubscribers {
             it.onFollowsChange()
@@ -91,7 +91,7 @@ class User(val pubkeyHex: String) {
     fun addReport(note: Note) {
         if (reports.add(note)) {
             updateSubscribers { it.onNewReports() }
-            invalidateData()
+            invalidateData(liveReports)
         }
     }
 
@@ -118,7 +118,7 @@ class User(val pubkeyHex: String) {
 
     fun addMessage(user: User, msg: Note) {
         getOrCreateChannel(user).add(msg)
-        invalidateData()
+        invalidateData(liveMessages)
         updateSubscribers { it.onNewMessage() }
     }
 
@@ -140,6 +140,7 @@ class User(val pubkeyHex: String) {
         }
 
         updateSubscribers { it.onNewRelayInfo() }
+        invalidateData(liveRelayInfo)
     }
 
     fun updateFollows(newFollows: Set<User>, updateAt: Long) {
@@ -167,15 +168,14 @@ class User(val pubkeyHex: String) {
             }
         }
 
-        invalidateData()
+        invalidateData(liveRelays)
     }
 
     fun updateUserInfo(newUserInfo: UserMetadata, updateAt: Long) {
         info = newUserInfo
         updatedMetadataAt = updateAt
 
-
-        invalidateData()
+        invalidateData(liveMetadata)
     }
 
     fun isFollowing(user: User): Boolean {
@@ -242,16 +242,21 @@ class User(val pubkeyHex: String) {
     }
 
     // UI Observers line up here.
-    val live: UserLiveData = UserLiveData(this)
+    val liveFollows: UserLiveData = UserLiveData(this)
+    val liveReports: UserLiveData = UserLiveData(this)
+    val liveMessages: UserLiveData = UserLiveData(this)
+    val liveRelays: UserLiveData = UserLiveData(this)
+    val liveRelayInfo: UserLiveData = UserLiveData(this)
+    val liveMetadata: UserLiveData = UserLiveData(this)
 
     // Refreshes observers in batches.
     var handlerWaiting = false
     @Synchronized
-    fun invalidateData() {
+    fun invalidateData(live: UserLiveData) {
         if (handlerWaiting) return
 
         handlerWaiting = true
-        val scope = CoroutineScope(Job() + Dispatchers.Default)
+        val scope = CoroutineScope(Job() + Dispatchers.Main)
         scope.launch {
             delay(100)
             live.refresh()

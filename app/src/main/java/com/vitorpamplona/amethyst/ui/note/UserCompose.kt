@@ -34,14 +34,11 @@ fun UserCompose(baseUser: User, accountViewModel: AccountViewModel, navControlle
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
-    val userState by baseUser.live.observeAsState()
-    val user = userState?.user ?: return
-
     val ctx = LocalContext.current.applicationContext
 
     Column(modifier =
         Modifier.clickable(
-            onClick = { navController.navigate("User/${user.pubkeyHex}") }
+            onClick = { navController.navigate("User/${baseUser.pubkeyHex}") }
         )
     ) {
         Row(
@@ -59,6 +56,9 @@ fun UserCompose(baseUser: User, accountViewModel: AccountViewModel, navControlle
                     UsernameDisplay(baseUser)
                 }
 
+                val userState by baseUser.liveMetadata.observeAsState()
+                val user = userState?.user ?: return
+
                 Text(
                     user.info.about ?: "",
                     color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
@@ -68,15 +68,15 @@ fun UserCompose(baseUser: User, accountViewModel: AccountViewModel, navControlle
             }
 
             Column(modifier = Modifier.padding(start = 10.dp)) {
-                if (account?.isHidden(user) == false) {
+                if (account.isHidden(baseUser)) {
                     ShowUserButton {
-                        account.showUser(user.pubkeyHex)
+                        account.showUser(baseUser.pubkeyHex)
                         LocalPreferences(ctx).saveToEncryptedStorage(account)
                     }
-                } else if (account?.userProfile()?.isFollowing(user) == true) {
-                    UnfollowButton { account.unfollow(user) }
+                } else if (account.userProfile().isFollowing(baseUser)) {
+                    UnfollowButton { account.unfollow(baseUser) }
                 } else {
-                    FollowButton { account?.follow(user) }
+                    FollowButton { account.follow(baseUser) }
                 }
             }
         }

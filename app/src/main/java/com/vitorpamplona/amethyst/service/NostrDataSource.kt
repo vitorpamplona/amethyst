@@ -16,6 +16,7 @@ import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Relay
 import java.util.Collections
+import java.util.Date
 import java.util.UUID
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTimedValue
@@ -90,7 +91,7 @@ abstract class NostrDataSource<T>(val debugName: String) {
       //Log.e("ERROR", "Relay ${relay.url}: ${error.message}")
     }
 
-    override fun onRelayStateChange(type: Relay.Type, relay: Relay) {
+    override fun onRelayStateChange(type: Relay.Type, relay: Relay, channel: String?) {
       //Log.d("RELAY", "Relay ${relay.url} ${when (type) {
       //  Relay.Type.CONNECT -> "connected."
       //  Relay.Type.DISCONNECT -> "disconnected."
@@ -98,11 +99,10 @@ abstract class NostrDataSource<T>(val debugName: String) {
       //  Relay.Type.EOSE -> "sent all events it had stored."
       //}}")
 
-      /*
-      if (type == Relay.Type.EOSE) {
-        // One everything is loaded, if new users are found, update filters
-        resetFilters()
-      }*/
+      if (type == Relay.Type.EOSE && channel != null) {
+        // updates a per subscripton since date
+        channels.filter { it.id == channel }.firstOrNull()?.updateEOSE(Date().time / 1000)
+      }
     }
 
     override fun onSendResponse(eventId: String, success: Boolean, message: String, relay: Relay) {

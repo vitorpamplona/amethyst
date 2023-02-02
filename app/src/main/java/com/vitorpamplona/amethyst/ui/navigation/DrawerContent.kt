@@ -81,52 +81,26 @@ fun DrawerContent(navController: NavHostController,
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
-    val accountUserState by account.userProfile().live.observeAsState()
-    val accountUser = accountUserState?.user ?: return
-
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = MaterialTheme.colors.background
     ) {
         Column() {
-            Box {
-                val banner = accountUser?.info?.banner
-                if (banner != null && banner.isNotBlank()) {
-                    AsyncImage(
-                        model = banner,
-                        contentDescription = "Profile Image",
-                        contentScale = ContentScale.FillWidth,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(150.dp)
-                    )
-                } else {
-                    Image(
-                        painter = painterResource(R.drawable.profile_banner),
-                        contentDescription = "Profile Banner",
-                        contentScale = ContentScale.FillWidth,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(150.dp)
-                    )
-                }
-
-                ProfileContent(
-                    accountUser,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 25.dp)
-                        .padding(top = 100.dp),
-                    scaffoldState,
-                    navController
-                )
-            }
+            ProfileContent(
+                account.userProfile(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 25.dp)
+                    .padding(top = 100.dp),
+                scaffoldState,
+                navController
+            )
             Divider(
                 thickness = 0.25.dp,
                 modifier = Modifier.padding(top = 20.dp)
             )
             ListContent(
-                accountUser,
+                account.userProfile(),
                 navController,
                 scaffoldState,
                 modifier = Modifier
@@ -135,50 +109,79 @@ fun DrawerContent(navController: NavHostController,
                 accountStateViewModel
             )
 
-            BottomContent(accountUser, scaffoldState, navController)
+            BottomContent(account.userProfile(), scaffoldState, navController)
         }
     }
 }
 
 @Composable
-fun ProfileContent(accountUser: User?, modifier: Modifier = Modifier, scaffoldState: ScaffoldState, navController: NavController) {
+fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffoldState: ScaffoldState, navController: NavController) {
     val coroutineScope = rememberCoroutineScope()
 
-    Column(modifier = modifier) {
-        AsyncImage(
-            model = accountUser?.profilePicture() ?: "https://robohash.org/ohno.png",
-            contentDescription = "Profile Image",
-            placeholder = rememberAsyncImagePainter("https://robohash.org/${accountUser?.pubkeyHex}.png"),
-            modifier = Modifier
-                .width(100.dp)
-                .height(100.dp)
-                .clip(shape = CircleShape)
-                .border(3.dp, MaterialTheme.colors.background, CircleShape)
-                .background(MaterialTheme.colors.background)
-                .clickable(onClick = {
-                    accountUser?.let {
-                        navController.navigate("User/${it.pubkeyHex}")
-                    }
-                    coroutineScope.launch {
-                        scaffoldState.drawerState.close()
-                    }
-                })
-        )
-        Text(
-            accountUser?.bestDisplayName() ?: "",
-            modifier = Modifier.padding(top = 7.dp),
-            fontWeight = FontWeight.Bold,
-            fontSize = 18.sp
-        )
-        Text(" @${accountUser?.bestUsername()}", color = Color.LightGray)
-        Row(modifier = Modifier.padding(top = 15.dp)) {
-            Row() {
-                Text("${accountUser?.follows?.size ?: "--"}", fontWeight = FontWeight.Bold)
-                Text(" Following")
-            }
-            Row(modifier = Modifier.padding(start = 10.dp)) {
-                Text("${accountUser?.followers?.size ?: "--"}", fontWeight = FontWeight.Bold)
-                Text(" Followers")
+    val accountUserState by baseAccountUser.liveMetadata.observeAsState()
+    val accountUser = accountUserState?.user ?: return
+
+    val accountUserFollowsState by baseAccountUser.liveFollows.observeAsState()
+    val accountUserFollows = accountUserFollowsState?.user ?: return
+
+    Box {
+        val banner = accountUser.info.banner
+        if (banner != null && banner.isNotBlank()) {
+            AsyncImage(
+                model = banner,
+                contentDescription = "Profile Image",
+                contentScale = ContentScale.FillWidth,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(150.dp)
+            )
+        } else {
+            Image(
+                painter = painterResource(R.drawable.profile_banner),
+                contentDescription = "Profile Banner",
+                contentScale = ContentScale.FillWidth,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(150.dp)
+            )
+        }
+
+        Column(modifier = modifier) {
+            AsyncImage(
+                model = accountUser.profilePicture(),
+                contentDescription = "Profile Image",
+                placeholder = rememberAsyncImagePainter("https://robohash.org/${accountUser.pubkeyHex}.png"),
+                modifier = Modifier
+                    .width(100.dp)
+                    .height(100.dp)
+                    .clip(shape = CircleShape)
+                    .border(3.dp, MaterialTheme.colors.background, CircleShape)
+                    .background(MaterialTheme.colors.background)
+                    .clickable(onClick = {
+                        accountUser.let {
+                            navController.navigate("User/${it.pubkeyHex}")
+                        }
+                        coroutineScope.launch {
+                            scaffoldState.drawerState.close()
+                        }
+                    })
+            )
+            Text(
+                accountUser.bestDisplayName() ?: "",
+                modifier = Modifier.padding(top = 7.dp),
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp
+            )
+            Text(" @${accountUser.bestUsername()}", color = Color.LightGray)
+            Row(modifier = Modifier.padding(top = 15.dp)) {
+                Row() {
+                    Text("${accountUserFollows.follows?.size ?: "--"}", fontWeight = FontWeight.Bold)
+                    Text(" Following")
+                }
+                Row(modifier = Modifier.padding(start = 10.dp)) {
+                    Text("${accountUserFollows.followers?.size ?: "--"}", fontWeight = FontWeight.Bold)
+                    Text(" Followers")
+                }
             }
         }
     }

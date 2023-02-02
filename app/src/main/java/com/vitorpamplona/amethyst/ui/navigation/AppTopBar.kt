@@ -77,7 +77,7 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
-    val accountUserState by account.userProfile().live.observeAsState()
+    val accountUserState by account.userProfile().liveMetadata.observeAsState()
     val accountUser = accountUserState?.user
 
     val relayViewModel: RelayPoolViewModel = viewModel { RelayPoolViewModel() }

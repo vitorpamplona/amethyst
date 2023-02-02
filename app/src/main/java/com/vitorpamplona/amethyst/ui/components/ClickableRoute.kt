@@ -24,7 +24,8 @@ fun ClickableRoute(
 ) {
   if (nip19.type == Nip19.Type.USER) {
     val userBase = LocalCache.getOrCreateUser(nip19.hex)
-    val userState by userBase.live.observeAsState()
+
+    val userState by userBase.liveMetadata.observeAsState()
     val user = userState?.user ?: return
 
     val route = "User/${nip19.hex}"
