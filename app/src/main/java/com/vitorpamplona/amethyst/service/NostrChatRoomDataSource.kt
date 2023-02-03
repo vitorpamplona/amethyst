@@ -16,17 +16,33 @@ object NostrChatRoomDataSource: NostrDataSource<Note>("ChatroomFeed") {
     withUser = LocalCache.users[userId]
   }
 
-  fun createMessagesToMeFilter() = JsonFilter(
-    kinds = listOf(PrivateDmEvent.kind),
-    authors = withUser?.let { listOf(it.pubkeyHex) },
-    tags = mapOf("p" to listOf(account.userProfile().pubkeyHex))
-  )
+  fun createMessagesToMeFilter(): JsonFilter? {
+    val myPeer = withUser
+    
+    return if (myPeer != null) {
+      JsonFilter(
+        kinds = listOf(PrivateDmEvent.kind),
+        authors = listOf(myPeer.pubkeyHex) ,
+        tags = mapOf("p" to listOf(account.userProfile().pubkeyHex))
+      )
+    } else {
+      null
+    }
+  }
 
-  fun createMessagesFromMeFilter() = JsonFilter(
-    kinds = listOf(PrivateDmEvent.kind),
-    authors = listOf(account.userProfile().pubkeyHex),
-    tags = withUser?.let { mapOf("p" to listOf(it.pubkeyHex)) }
-  )
+  fun createMessagesFromMeFilter(): JsonFilter? {
+    val myPeer = withUser
+    
+    return if (myPeer != null) {
+      JsonFilter(
+        kinds = listOf(PrivateDmEvent.kind),
+        authors = listOf(account.userProfile().pubkeyHex),
+        tags = mapOf("p" to listOf(myPeer.pubkeyHex))
+      )
+    } else {
+      null
+    }
+  }
 
   val inandoutChannel = requestNewChannel()
 
@@ -42,6 +58,6 @@ object NostrChatRoomDataSource: NostrDataSource<Note>("ChatroomFeed") {
   }
 
   override fun updateChannelFilters() {
-    inandoutChannel.filter = listOf(createMessagesToMeFilter(), createMessagesFromMeFilter()).ifEmpty { null }
+    inandoutChannel.filter = listOfNotNull(createMessagesToMeFilter(), createMessagesFromMeFilter()).ifEmpty { null }
   }
 }
