@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -32,7 +33,7 @@ fun UrlPreview(url: String, urlText: String, showUrlIfError: Boolean = true) {
     })
   }
 
-  Crossfade(targetState = urlPreviewState) { state ->
+  Crossfade(targetState = urlPreviewState, animationSpec = tween(durationMillis = 100)) { state ->
     when (state) {
       is UrlPreviewState.Loaded -> {
         UrlPreviewCard(url, state.previewInfo)

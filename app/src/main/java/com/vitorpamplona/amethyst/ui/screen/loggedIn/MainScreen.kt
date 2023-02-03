@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
@@ -61,7 +62,7 @@ fun FloatingButton(navController: NavHostController, accountViewModel: AccountSt
     val accountState by accountViewModel.accountContent.collectAsState()
 
     if (currentRoute(navController) == Route.Home.route) {
-        Crossfade(targetState = accountState) { state ->
+        Crossfade(targetState = accountState, animationSpec = tween(durationMillis = 100)) { state ->
             when (state) {
                 is AccountState.LoggedInViewOnly -> {
                     // Does nothing.
@@ -77,7 +78,7 @@ fun FloatingButton(navController: NavHostController, accountViewModel: AccountSt
     }
 
     if (currentRoute(navController) == Route.Message.route) {
-        Crossfade(targetState = accountState) { state ->
+        Crossfade(targetState = accountState, animationSpec = tween(durationMillis = 100)) { state ->
             when (state) {
                 is AccountState.LoggedInViewOnly -> {
                     // Does nothing.

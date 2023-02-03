@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -13,7 +14,7 @@ fun AccountScreen(accountStateViewModel: AccountStateViewModel, startingPage: St
   val accountState by accountStateViewModel.accountContent.collectAsState()
 
   Column() {
-    Crossfade(targetState = accountState) { state ->
+    Crossfade(targetState = accountState, animationSpec = tween(durationMillis = 100)) { state ->
       when (state) {
         is AccountState.LoggedOff -> {
           LoginPage(accountStateViewModel)

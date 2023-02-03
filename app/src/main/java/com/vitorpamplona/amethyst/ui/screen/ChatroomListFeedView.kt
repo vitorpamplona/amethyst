@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
@@ -48,7 +49,7 @@ fun ChatroomListFeedView(viewModel: FeedViewModel, accountViewModel: AccountView
         },
     ) {
         Column() {
-            Crossfade(targetState = feedState) { state ->
+            Crossfade(targetState = feedState, animationSpec = tween(durationMillis = 100)) { state ->
                 when (state) {
                     is FeedState.Empty -> {
                         FeedEmpty {

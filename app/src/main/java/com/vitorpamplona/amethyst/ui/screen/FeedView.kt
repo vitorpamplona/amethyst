@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -56,7 +57,7 @@ fun FeedView(viewModel: FeedViewModel, accountViewModel: AccountViewModel, navCo
     ) {
 
         Column() {
-            Crossfade(targetState = feedState) { state ->
+            Crossfade(targetState = feedState, animationSpec = tween(durationMillis = 100)) { state ->
                 when (state) {
                     is FeedState.Empty -> {
                         FeedEmpty {
