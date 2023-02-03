@@ -30,6 +30,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -60,6 +61,7 @@ fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel) {
   val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
 
   var popupExpanded by remember { mutableStateOf(false) }
+  val uri = LocalUriHandler.current
 
   var wantsToReplyTo by remember {
     mutableStateOf<Note?>(null)
@@ -153,7 +155,7 @@ fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel) {
 
     IconButton(
       modifier = Modifier.then(Modifier.size(24.dp)),
-      onClick = { }
+      onClick = { uri.openUri("https://counter.amethyst.social/${baseNote.idHex}/") }
     ) {
       Icon(
         imageVector = Icons.Outlined.BarChart,
