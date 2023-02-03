@@ -20,7 +20,7 @@ object NostrChannelDataSource: NostrDataSource<Note>("ChatroomFeed") {
       return JsonFilter(
         kinds = listOf(ChannelMessageEvent.kind),
         tags = mapOf("e" to listOfNotNull(channel?.idHex)),
-        since = System.currentTimeMillis() / 1000 - (60 * 60 * 24 * 1), // 24 hours
+        limit = 200
       )
     }
     return null
