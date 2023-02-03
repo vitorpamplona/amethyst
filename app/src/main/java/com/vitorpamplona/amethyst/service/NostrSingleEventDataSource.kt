@@ -18,7 +18,7 @@ object NostrSingleEventDataSource: NostrDataSource<Note>("SingleEventFeed") {
   private var eventsToWatch = setOf<String>()
 
   private fun createRepliesAndReactionsFilter(): List<JsonFilter>? {
-    val reactionsToWatch = eventsToWatch.map { it }
+    val reactionsToWatch = eventsToWatch.map { LocalCache.getOrCreateNote(it) }
 
     if (reactionsToWatch.isEmpty()) {
       return null
@@ -26,16 +26,16 @@ object NostrSingleEventDataSource: NostrDataSource<Note>("SingleEventFeed") {
 
     val now = Date().time / 1000
 
-    return eventsToWatch.filter {
-      val lastTime = LocalCache.getOrCreateNote(it).lastReactionsDownloadTime;
+    return reactionsToWatch.filter {
+      val lastTime = it.lastReactionsDownloadTime;
       lastTime == null || lastTime < (now - 10)
     }.map {
       JsonFilter(
         kinds = listOf(
           TextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind, ReportEvent.kind
         ),
-        tags = mapOf("e" to listOf(it)),
-        since = LocalCache.getOrCreateNote(it).lastReactionsDownloadTime
+        tags = mapOf("e" to listOf(it.idHex)),
+        since = it.lastReactionsDownloadTime
       )
     }
   }

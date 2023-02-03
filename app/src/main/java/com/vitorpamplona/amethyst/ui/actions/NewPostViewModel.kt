@@ -26,7 +26,7 @@ class NewPostViewModel: ViewModel() {
     private var originalNote: Note? = null
 
     var mentions by mutableStateOf<List<User>?>(null)
-    var replyTos by mutableStateOf<MutableList<Note>?>(null)
+    var replyTos by mutableStateOf<List<Note>?>(null)
 
     var message by mutableStateOf(TextFieldValue(""))
     var urlPreview by mutableStateOf<String?>(null)
@@ -37,7 +37,7 @@ class NewPostViewModel: ViewModel() {
     fun load(account: Account, replyingTo: Note?) {
         originalNote = replyingTo
         replyingTo?.let { replyNote ->
-            this.replyTos = (replyNote.replyTo ?: mutableListOf()).plus(replyNote).toMutableList()
+            this.replyTos = (replyNote.replyTo ?: emptyList()).plus(replyNote)
             replyNote.author?.let { replyUser ->
                 val currentMentions = replyNote.mentions ?: emptyList()
                 if (currentMentions.contains(replyUser)) {

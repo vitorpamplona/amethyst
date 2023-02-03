@@ -51,11 +51,11 @@ object NostrUserProfileDataSource: NostrDataSource<Note>("UserProfileFeed") {
   val userInfoChannel = requestNewChannel()
 
   override fun feed(): List<Note> {
-    val notes = user?.notes ?: return emptyList()
-    val sortedNotes = synchronized(notes) {
-      notes.filter { account.isAcceptable(it) }.sortedBy { it.event?.createdAt }
-    }
-    return sortedNotes.reversed()
+    return user?.notes
+      ?.filter { account.isAcceptable(it) }
+      ?.sortedBy { it.event?.createdAt }
+      ?.reversed()
+      ?: emptyList()
   }
 
   override fun updateChannelFilters() {

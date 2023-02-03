@@ -34,8 +34,8 @@ val DefaultChannels = setOf(
 
 class Account(
   val loggedIn: Persona,
-  val followingChannels: MutableSet<String> = DefaultChannels.toMutableSet(),
-  val hiddenUsers: MutableSet<String> = mutableSetOf()
+  var followingChannels: Set<String> = DefaultChannels.toMutableSet(),
+  var hiddenUsers: Set<String> = mutableSetOf()
 ) {
 
   fun userProfile(): User {
@@ -91,7 +91,7 @@ class Account(
   fun reactTo(note: Note) {
     if (!isWriteable()) return
 
-    if (note.reactions.firstOrNull { it.author == userProfile() && it.event?.content == "+" } != null) {
+    if (note.hasReacted(userProfile(), "+")) {
       // has already liked this note
       return
     }
@@ -106,9 +106,7 @@ class Account(
   fun report(note: Note, type: ReportEvent.ReportType) {
     if (!isWriteable()) return
 
-    if (
-      note.reactions.firstOrNull { it.author == userProfile() && it.event?.content == "⚠️"} != null
-    ) {
+    if (note.hasReacted(userProfile(), "⚠️")) {
       // has already liked this note
       return
     }
@@ -129,9 +127,7 @@ class Account(
   fun report(user: User, type: ReportEvent.ReportType) {
     if (!isWriteable()) return
 
-    if (
-      user.reports.firstOrNull { it.author == userProfile() && it.event is ReportEvent && (it.event as ReportEvent).reportType.contains(type) } != null
-    ) {
+    if (user.hasReport(userProfile(), type)) {
       // has already reported this note
       return
     }
@@ -144,11 +140,7 @@ class Account(
   fun boost(note: Note) {
     if (!isWriteable()) return
 
-    val currentTime = Date().time / 1000
-
-    if (
-      note.boosts.firstOrNull { it.author == userProfile() && (it?.event?.createdAt ?: 0) > currentTime - (60 * 5)} != null // 5 minute protection
-    ) {
+    if (note.hasBoosted(userProfile())) {
       // has already bosted in the past 5mins 
       return
     }
@@ -269,22 +261,22 @@ class Account(
   }
 
   fun joinChannel(idHex: String) {
-    followingChannels.add(idHex)
+    followingChannels = followingChannels + idHex
     invalidateData()
   }
 
   fun leaveChannel(idHex: String) {
-    followingChannels.remove(idHex)
+    followingChannels = followingChannels - idHex
     invalidateData()
   }
 
   fun hideUser(pubkeyHex: String) {
-    hiddenUsers.add(pubkeyHex)
+    hiddenUsers = hiddenUsers + pubkeyHex
     invalidateData()
   }
 
   fun showUser(pubkeyHex: String) {
-    hiddenUsers.remove(pubkeyHex)
+    hiddenUsers = hiddenUsers - pubkeyHex
     invalidateData()
   }
 
@@ -304,7 +296,7 @@ class Account(
     Client.send(event)
     LocalCache.consume(event)
 
-    followingChannels.add(event.id.toHex())
+    joinChannel(event.id.toHex())
   }
 
   fun decryptContent(note: Note): String? {

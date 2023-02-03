@@ -43,7 +43,7 @@ class Nip19 {
     return null
   }
 
-  fun parseTLV(data: ByteArray): Map<Byte, MutableList<ByteArray>> {
+  fun parseTLV(data: ByteArray): Map<Byte, List<ByteArray>> {
     var result = mutableMapOf<Byte, MutableList<ByteArray>>()
     var rest = data
     while (rest.isNotEmpty()) {

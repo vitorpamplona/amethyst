@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.service.relays
 import android.util.Log
 import com.google.gson.JsonElement
 import java.util.Date
+import java.util.concurrent.TimeUnit
 import nostr.postr.events.Event
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -15,13 +16,18 @@ class Relay(
   var read: Boolean = true,
   var write: Boolean = true
 ) {
-    private val httpClient = OkHttpClient()
+    private val httpClient = OkHttpClient.Builder()
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(10, TimeUnit.SECONDS)
+        .build();
+
     private var listeners = setOf<Listener>()
     private var socket: WebSocket? = null
 
     var eventDownloadCounter = 0
     var eventUploadCounter = 0
     var errorCounter = 0
+    var ping: Long? = null
 
     var closingTime = 0L
 
@@ -43,6 +49,8 @@ class Relay(
             val listener = object : WebSocketListener() {
 
                 override fun onOpen(webSocket: WebSocket, response: Response) {
+                    ping = response.receivedResponseAtMillis - response.sentRequestAtMillis
+
                     // Sends everything.
                     Client.allSubscriptions().forEach {
                         sendFilter(requestId = it)
@@ -109,8 +117,8 @@ class Relay(
                     socket = null
                     closingTime = Date().time / 1000
 
-                    Log.w("Relay", "Relay onFailure ${url}, ${response?.message}")
-                    //t.printStackTrace()
+                    Log.w("Relay", "Relay onFailure $url, ${response?.message}")
+                    t.printStackTrace()
                     listeners.forEach {
                         it.onError(this@Relay, "", Error("WebSocket Failure. Response: ${response}. Exception: ${t.message}", t))
                     }
@@ -120,7 +128,7 @@ class Relay(
             socket = httpClient.newWebSocket(request, listener)
         } catch (e: Exception) {
             closingTime = Date().time / 1000
-            Log.e("Relay", "Relay Invalid ${url}")
+            Log.e("Relay", "Relay Invalid $url")
             e.printStackTrace()
         }
     }

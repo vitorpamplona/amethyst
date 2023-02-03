@@ -16,11 +16,7 @@ object NostrUserProfileFollowersDataSource: NostrDataSource<User>("UserProfileFo
   }
 
   override fun feed(): List<User> {
-    val followers = user?.followers ?: emptyList()
-
-    return synchronized(followers) {
-      followers.filter { account.isAcceptable(it) }.toList()
-    }
+    return user?.followers?.filter { account.isAcceptable(it) } ?: emptyList()
   }
 
   override fun updateChannelFilters() {}

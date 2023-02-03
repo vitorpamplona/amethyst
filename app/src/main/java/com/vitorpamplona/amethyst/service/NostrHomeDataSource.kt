@@ -31,12 +31,10 @@ object NostrHomeDataSource: NostrDataSource<Note>("HomeFeed") {
   }
 
   fun createFollowAccountsFilter(): JsonFilter {
-    val follows = account.userProfile().follows ?: emptySet()
+    val follows = account.userProfile().follows
 
-    val followKeys = synchronized(follows) {
-      follows.map {
-        it.pubkey.toHex().substring(0, 6)
-      }
+    val followKeys = follows.map {
+      it.pubkey.toHex().substring(0, 6)
     }
 
     val followSet = followKeys.plus(account.userProfile().pubkeyHex.substring(0, 6))
@@ -69,15 +67,8 @@ object NostrHomeDataSource: NostrDataSource<Note>("HomeFeed") {
   override fun feed(): List<Note> {
     val user = account.userProfile()
 
-    val follows = user.follows
-    val followKeys = synchronized(follows) {
-      follows.map { it.pubkeyHex }
-    }
-
-    val allowSet = followKeys.plus(user.pubkeyHex).toSet()
-
     return LocalCache.notes.values
-      .filter { (it.event is TextNoteEvent || it.event is RepostEvent) && it.author?.pubkeyHex in allowSet }
+      .filter { (it.event is TextNoteEvent || it.event is RepostEvent) && it.author in user.follows }
       .filter { account.isAcceptable(it) }
       .sortedBy { it.event?.createdAt }
       .reversed()

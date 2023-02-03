@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
+import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
@@ -30,18 +31,27 @@ class User(val pubkeyHex: String) {
     var latestContactList: ContactListEvent? = null
     var latestMetadata: MetadataEvent? = null
 
-    val notes = Collections.synchronizedSet(mutableSetOf<Note>())
-    val follows = Collections.synchronizedSet(mutableSetOf<User>())
+    var follows = setOf<User>()
+        private set
+    var followers = setOf<User>()
+        private set
 
-    val taggedPosts = Collections.synchronizedSet(mutableSetOf<Note>())
+    var notes = setOf<Note>()
+        private set
+    var taggedPosts = setOf<Note>()
+        private set
+
+    var reports = setOf<Note>()
+        private set
 
     var relays: Map<String, ContactListEvent.ReadWrite>? = null
+        private set
 
-    val followers = Collections.synchronizedSet(mutableSetOf<User>())
-    val messages = ConcurrentHashMap<User, MutableSet<Note>>()
+    var relaysBeingUsed = mapOf<String, RelayInfo>()
+        private set
 
-    val reports = Collections.synchronizedSet(mutableSetOf<Note>())
-    val relaysBeingUsed = Collections.synchronizedMap(mutableMapOf<String, RelayInfo>())
+    var messages = mapOf<User, Set<Note>>()
+        private set
 
     var latestMetadataRequestEOSE: Long? = null
     var latestReportRequestEOSE: Long? = null
@@ -64,8 +74,8 @@ class User(val pubkeyHex: String) {
     }
 
     fun follow(user: User, followedAt: Long) {
-        follows.add(user)
-        user.followers.add(this)
+        follows = follows + user
+        user.followers = user.followers + this
 
         liveFollows.invalidateData()
         user.liveFollows.invalidateData()
@@ -75,8 +85,8 @@ class User(val pubkeyHex: String) {
         }
     }
     fun unfollow(user: User) {
-        follows.remove(user)
-        user.followers.remove(this)
+        follows = follows - user
+        user.followers = user.followers - this
 
         liveFollows.invalidateData()
         user.liveFollows.invalidateData()
@@ -87,42 +97,50 @@ class User(val pubkeyHex: String) {
     }
 
     fun addTaggedPost(note: Note) {
-        taggedPosts.add(note)
-        updateSubscribers { it.onNewPosts() }
+        if (note !in taggedPosts) {
+            taggedPosts = taggedPosts + note
+            updateSubscribers { it.onNewTaggedPosts() }
+        }
+    }
+
+    fun addNote(note: Note) {
+        if (note !in notes) {
+            notes = notes + note
+            updateSubscribers { it.onNewNotes() }
+        }
     }
 
     fun addReport(note: Note) {
-        if (reports.add(note)) {
-            updateSubscribers { it.onNewReports() }
+        if (note !in reports) {
+            reports = reports + note
             liveReports.invalidateData()
         }
     }
 
     fun reportsBy(user: User): List<Note> {
-        return synchronized(reports) {
-            reports.filter { it.author == user }
-        }
+        return reports.filter { it.author == user }
     }
 
     fun reportsBy(users: Set<User>): List<Note> {
-        return synchronized(reports) {
-            reports.filter { it.author in users }
-        }
+        return reports.filter { it.author in users }
     }
 
     @Synchronized
-    fun getOrCreateChannel(user: User): MutableSet<Note> {
+    fun getOrCreateChannel(user: User): Set<Note> {
         return messages[user] ?: run {
-            val channel = Collections.synchronizedSet(mutableSetOf<Note>())
-            messages[user] = channel
+            val channel = setOf<Note>()
+            messages = messages + Pair(user, channel)
             channel
         }
     }
 
     fun addMessage(user: User, msg: Note) {
-        getOrCreateChannel(user).add(msg)
-        liveMessages.invalidateData()
-        updateSubscribers { it.onNewMessage() }
+        val channel = getOrCreateChannel(user)
+        if (msg !in channel) {
+            messages = messages + Pair(user, channel + msg)
+            liveMessages.invalidateData()
+            updateSubscribers { it.onNewMessage() }
+        }
     }
 
     data class RelayInfo (
@@ -132,9 +150,9 @@ class User(val pubkeyHex: String) {
     )
 
     fun addRelay(relay: Relay, eventTime: Long) {
-        val here = relaysBeingUsed.get(relay.url)
+        val here = relaysBeingUsed[relay.url]
         if (here == null) {
-            relaysBeingUsed.put(relay.url, RelayInfo(relay.url, eventTime, 1) )
+            relaysBeingUsed = relaysBeingUsed + Pair(relay.url, RelayInfo(relay.url, eventTime, 1))
         } else {
             if (eventTime > here.lastEvent) {
                 here.lastEvent = eventTime
@@ -147,12 +165,9 @@ class User(val pubkeyHex: String) {
     }
 
     fun updateFollows(newFollows: Set<User>, updateAt: Long) {
-        val toBeAdded = synchronized(follows) {
-            newFollows - follows
-        }
-        val toBeRemoved = synchronized(follows) {
-            follows - newFollows
-        }
+        val toBeAdded = newFollows - follows
+        val toBeRemoved = follows - newFollows
+
         toBeAdded.forEach {
             follow(it, updateAt)
         }
@@ -182,29 +197,21 @@ class User(val pubkeyHex: String) {
     }
 
     fun isFollowing(user: User): Boolean {
-        return synchronized(follows) {
-            follows.contains(user)
-        }
-    }
-
-    fun getRelayKeysBeingUsed(): Set<String> {
-        return synchronized(relaysBeingUsed) {
-            relaysBeingUsed.keys.toSet()
-        }
-    }
-
-    fun getRelayValuesBeingUsed(): List<RelayInfo> {
-        return synchronized(relaysBeingUsed) {
-            relaysBeingUsed.values.toList()
-        }
+        return follows.contains(user)
     }
 
     fun hasSentMessagesTo(user: User?): Boolean {
         val messagesToUser = messages[user] ?: return false
 
-        return synchronized(messagesToUser) {
-            messagesToUser.firstOrNull { this == it.author } != null
-        }
+        return messagesToUser.firstOrNull { this == it.author } != null
+    }
+
+    fun hasReport(loggedIn: User, type: ReportEvent.ReportType): Boolean {
+        return reports.firstOrNull {
+            it.author == loggedIn
+              && it.event is ReportEvent
+              && (it.event as ReportEvent).reportType.contains(type)
+        } != null
     }
 
     // Model Observers
@@ -221,7 +228,8 @@ class User(val pubkeyHex: String) {
     abstract class Listener {
         open fun onRelayChange() = Unit
         open fun onFollowsChange() = Unit
-        open fun onNewPosts() = Unit
+        open fun onNewTaggedPosts() = Unit
+        open fun onNewNotes() = Unit
         open fun onNewMessage() = Unit
         open fun onNewRelayInfo() = Unit
         open fun onNewReports() = Unit

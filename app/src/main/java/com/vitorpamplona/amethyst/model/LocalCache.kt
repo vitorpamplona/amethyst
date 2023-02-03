@@ -105,15 +105,15 @@ object LocalCache {
     // Already processed this event.
     if (note.event != null) return
 
-    val mentions = Collections.synchronizedList(event.mentions.map { getOrCreateUser(it) })
-    val replyTo = Collections.synchronizedList(event.replyTos.map { getOrCreateNote(it) }.toMutableList())
+    val mentions = event.mentions.map { getOrCreateUser(it) }
+    val replyTo = event.replyTos.map { getOrCreateNote(it) }
 
     note.loadEvent(event, author, mentions, replyTo)
 
     //Log.d("TN", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${note.event?.content?.take(100)} ${formattedDateTime(event.createdAt)}")
 
     // Prepares user's profile view.
-    author.notes.add(note)
+    author.addNote(note)
 
     // Adds notifications to users.
     mentions.forEach {
@@ -183,7 +183,7 @@ object LocalCache {
 
     //Log.d("PM", "${author.toBestDisplayName()} to ${recipient?.toBestDisplayName()}")
 
-    val repliesTo = event.tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }.map { getOrCreateNote(it) }.toMutableList()
+    val repliesTo = event.tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }.map { getOrCreateNote(it) }
     val mentions = event.tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }.map { getOrCreateUser(it) }
 
     note.loadEvent(event, author, mentions, repliesTo)
@@ -209,13 +209,13 @@ object LocalCache {
     //Log.d("TN", "New Boost (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${formattedDateTime(event.createdAt)}")
 
     val author = getOrCreateUser(event.pubKey.toHexKey())
-    val mentions = event.originalAuthor.map { getOrCreateUser(it) }.toList()
-    val repliesTo = event.boostedPost.map { getOrCreateNote(it) }.toMutableList()
+    val mentions = event.originalAuthor.map { getOrCreateUser(it) }
+    val repliesTo = event.boostedPost.map { getOrCreateNote(it) }
 
     note.loadEvent(event, author, mentions, repliesTo)
 
     // Prepares user's profile view.
-    author.notes.add(note)
+    author.addNote(note)
 
     // Adds notifications to users.
     mentions.forEach {
@@ -241,7 +241,7 @@ object LocalCache {
 
     val author = getOrCreateUser(event.pubKey.toHexKey())
     val mentions = event.originalAuthor.map { getOrCreateUser(it) }
-    val repliesTo = event.originalPost.map { getOrCreateNote(it) }.toMutableList()
+    val repliesTo = event.originalPost.map { getOrCreateNote(it) }
 
     note.loadEvent(event, author, mentions, repliesTo)
 
@@ -286,7 +286,7 @@ object LocalCache {
 
     val author = getOrCreateUser(event.pubKey.toHexKey())
     val mentions = event.reportedAuthor.map { getOrCreateUser(it) }
-    val repliesTo = event.reportedPost.map { getOrCreateNote(it) }.toMutableList()
+    val repliesTo = event.reportedPost.map { getOrCreateNote(it) }
 
     note.loadEvent(event, author, mentions, repliesTo)
 
@@ -312,7 +312,7 @@ object LocalCache {
         val note = getOrCreateNote(event.id.toHex())
         oldChannel.addNote(note)
         note.channel = oldChannel
-        note.loadEvent(event, author, emptyList(), mutableListOf())
+        note.loadEvent(event, author, emptyList(), emptyList())
 
         refreshObservers()
       }
@@ -334,7 +334,7 @@ object LocalCache {
         val note = getOrCreateNote(event.id.toHex())
         oldChannel.addNote(note)
         note.channel = oldChannel
-        note.loadEvent(event, author, emptyList(), mutableListOf())
+        note.loadEvent(event, author, emptyList(), emptyList())
 
         refreshObservers()
       }
@@ -355,20 +355,10 @@ object LocalCache {
     if (note.event != null) return
 
     val author = getOrCreateUser(event.pubKey.toHexKey())
-    val mentions = Collections.synchronizedList(event.mentions.map { getOrCreateUser(it) })
-    val replyTo = Collections.synchronizedList(
-      event.replyTos
-        .mapNotNull {
-          try {
-            getOrCreateNote(it)
-          } catch (e: Exception) {
-            println("Failed to parse Key: $it")
-            null
-          }
-        }
-        .filter { it.event !is ChannelCreateEvent }
-        .toMutableList()
-    )
+    val mentions = event.mentions.map { getOrCreateUser(it) }
+    val replyTo = event.replyTos
+      .map { getOrCreateNote(it) }
+      .filter { it.event !is ChannelCreateEvent }
 
     note.channel = channel
     note.loadEvent(event, author, mentions, replyTo)

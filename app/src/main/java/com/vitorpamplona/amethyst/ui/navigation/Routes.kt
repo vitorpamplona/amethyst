@@ -115,7 +115,7 @@ private fun homeHasNewItems(cache: NotificationCache): Boolean {
     val homeFeed = NostrHomeDataSource.feed().take(100)
 
     val hasNewInFollows = homeFeed.filter {
-        it.event is RepostEvent || it.replyTo == null || it.replyTo?.size == 0
+        it.isNewThread()
     }.filter {
         (it.event?.createdAt ?: 0) > lastTimeFollows
     }.isNotEmpty()

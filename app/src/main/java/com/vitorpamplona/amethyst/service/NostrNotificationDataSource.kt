@@ -13,15 +13,15 @@ object NostrNotificationDataSource: NostrDataSource<Note>("NotificationFeed") {
   lateinit var account: Account
 
   override fun feed(): List<Note> {
-    val set = account.userProfile().taggedPosts
-    val filtered = synchronized(set) {
-      set.filter { it.event != null }.filter { account.isAcceptable(it) }
-    }
-
-    return filtered.filter {
+    return account.userProfile().taggedPosts
+      .filter { it.event != null }
+      .filter { account.isAcceptable(it) }
+      .filter {
            it.event !is ChannelCreateEvent
         && it.event !is ChannelMetadataEvent
-    }.sortedBy { it.event?.createdAt }.reversed()
+      }
+      .sortedBy { it.event?.createdAt }
+      .reversed()
   }
 
   override fun updateChannelFilters() {}

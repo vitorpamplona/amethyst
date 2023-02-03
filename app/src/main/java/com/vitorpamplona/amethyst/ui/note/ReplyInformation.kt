@@ -24,14 +24,14 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 
 @Composable
-fun ReplyInformation(replyTo: MutableList<Note>?, mentions: List<User>?, navController: NavController) {
+fun ReplyInformation(replyTo: List<Note>?, mentions: List<User>?, navController: NavController) {
   ReplyInformation(replyTo, mentions) {
     navController.navigate("User/${it.pubkeyHex}")
   }
 }
 
 @Composable
-fun ReplyInformation(replyTo: MutableList<Note>?, mentions: List<User>?, prefix: String = "", onUserTagClick: (User) -> Unit) {
+fun ReplyInformation(replyTo: List<Note>?, mentions: List<User>?, prefix: String = "", onUserTagClick: (User) -> Unit) {
   FlowRow() {
     if (mentions != null && mentions.isNotEmpty()) {
       if (replyTo != null && replyTo.isNotEmpty()) {
@@ -76,7 +76,7 @@ fun ReplyInformation(replyTo: MutableList<Note>?, mentions: List<User>?, prefix:
 
 
 @Composable
-fun ReplyInformationChannel(replyTo: MutableList<Note>?, mentions: List<User>?, channel: Channel, navController: NavController) {
+fun ReplyInformationChannel(replyTo: List<Note>?, mentions: List<User>?, channel: Channel, navController: NavController) {
   ReplyInformationChannel(replyTo, mentions, channel,
     onUserTagClick = {
       navController.navigate("User/${it.pubkeyHex}")
@@ -89,7 +89,7 @@ fun ReplyInformationChannel(replyTo: MutableList<Note>?, mentions: List<User>?, 
 
 
 @Composable
-fun ReplyInformationChannel(replyTo: MutableList<Note>?,
+fun ReplyInformationChannel(replyTo: List<Note>?,
                      mentions: List<User>?,
                      baseChannel: Channel,
                      prefix: String = "",

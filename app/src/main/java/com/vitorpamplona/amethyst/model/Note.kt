@@ -16,6 +16,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.vitorpamplona.amethyst.service.relays.Relay
+import java.util.Date
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 import nostr.postr.events.Event
@@ -33,19 +34,23 @@ class Note(val idHex: String) {
     var event: Event? = null
     var author: User? = null
     var mentions: List<User>? = null
-    var replyTo: MutableList<Note>? = null
+    var replyTo: List<Note>? = null
 
     // These fields are updated every time an event related to this note is received.
-    val replies = Collections.synchronizedSet(mutableSetOf<Note>())
-    val reactions = Collections.synchronizedSet(mutableSetOf<Note>())
-    val boosts = Collections.synchronizedSet(mutableSetOf<Note>())
-    val reports = Collections.synchronizedSet(mutableSetOf<Note>())
+    var replies = setOf<Note>()
+        private set
+    var reactions = setOf<Note>()
+        private set
+    var boosts = setOf<Note>()
+        private set
+    var reports = setOf<Note>()
+        private set
 
     var channel: Channel? = null
 
     var lastReactionsDownloadTime: Long? = null
 
-    fun loadEvent(event: Event, author: User, mentions: List<User>, replyTo: MutableList<Note>) {
+    fun loadEvent(event: Event, author: User, mentions: List<User>, replyTo: List<Note>) {
         this.event = event
         this.author = author
         this.mentions = mentions
@@ -82,47 +87,47 @@ class Note(val idHex: String) {
     }
 
     fun addReply(note: Note) {
-        if (replies.add(note))
+        if (note !in replies) {
+            replies = replies + note
             liveReplies.invalidateData()
+        }
     }
 
     fun addBoost(note: Note) {
-        if (boosts.add(note))
+        if (note !in boosts) {
+            boosts = boosts + note
             liveBoosts.invalidateData()
+        }
     }
 
     fun addReaction(note: Note) {
-        if (reactions.add(note))
+        if (note !in reactions) {
+            reactions = reactions + note
             liveReactions.invalidateData()
+        }
     }
 
     fun addReport(note: Note) {
-        if (reports.add(note))
+        if (note !in reports) {
+            reports = reports + note
             liveReports.invalidateData()
+        }
     }
 
     fun isReactedBy(user: User): Boolean {
-        return synchronized(reactions) {
-            reactions.any { it.author == user }
-        }
+        return reactions.any { it.author == user }
     }
 
     fun isBoostedBy(user: User): Boolean {
-        return synchronized(boosts) {
-            boosts.any { it.author == user }
-        }
+        return boosts.any { it.author == user }
     }
 
     fun reportsBy(user: User): List<Note> {
-        return synchronized(reports) {
-            reports.filter { it.author == user }
-        }
+        return reports.filter { it.author == user }
     }
 
     fun reportsBy(users: Set<User>): List<Note> {
-        return synchronized(reports) {
-            reports.filter { it.author in users }
-        }
+        return reports.filter { it.author in users }
     }
 
     fun directlyCiteUsers(): Set<User> {
@@ -146,6 +151,19 @@ class Note(val idHex: String) {
           || (userProfile in directlyCiteUsers())
           || (event is ReactionEvent && replyTo?.lastOrNull()?.directlyCites(userProfile) == true)
           || (event is RepostEvent && replyTo?.lastOrNull()?.directlyCites(userProfile) == true)
+    }
+
+    fun isNewThread(): Boolean {
+        return event is RepostEvent || replyTo == null || replyTo?.size == 0
+    }
+
+    fun hasReacted(loggedIn: User, content: String): Boolean {
+        return reactions.firstOrNull { it.author == loggedIn && it.event?.content == content } != null
+    }
+
+    fun hasBoosted(loggedIn: User): Boolean {
+        val currentTime = Date().time / 1000
+        return boosts.firstOrNull { it.author == loggedIn && (it.event?.createdAt ?: 0) > currentTime - (60 * 5)} != null // 5 minute protection
     }
 
     // Observers line up here.

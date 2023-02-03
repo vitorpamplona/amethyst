@@ -14,8 +14,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 object UrlCachedPreviewer {
-  val cache = ConcurrentHashMap<String, UrlInfoItem>()
-  val failures = ConcurrentHashMap<String, Throwable>()
+  var cache = mapOf<String, UrlInfoItem>()
+    private set
+  var failures = mapOf<String, Throwable>()
+    private set
 
   fun previewInfo(url: String, callback: IUrlPreviewCallback? = null) {
     cache[url]?.let {
@@ -32,12 +34,12 @@ object UrlCachedPreviewer {
     scope.launch {
       BahaUrlPreview(url, object : IUrlPreviewCallback {
         override fun onComplete(urlInfo: UrlInfoItem) {
-          cache.put(url, urlInfo)
+          cache = cache + Pair(url, urlInfo)
           callback?.onComplete(urlInfo)
         }
 
         override fun onFailed(throwable: Throwable) {
-          failures.put(url, throwable)
+          failures = failures + Pair(url, throwable)
           callback?.onFailed(throwable)
         }
       }).fetchUrlPreview()

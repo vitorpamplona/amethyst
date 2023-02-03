@@ -54,21 +54,17 @@ class NostrChatroomListNewFeedViewModel: FeedViewModel(NostrChatroomListDataSour
     }
 }
 
-fun isNewThread(note: Note): Boolean {
-    return note.event is RepostEvent || note.replyTo == null || note.replyTo?.size == 0
-}
-
 class NostrHomeFeedViewModel: FeedViewModel(NostrHomeDataSource) {
     override fun newListFromDataSource(): List<Note> {
         // Filter: no replies
-        return dataSource.feed().filter { isNewThread(it) }.take(100)
+        return dataSource.feed().filter { it.isNewThread() }.take(100)
     }
 }
 
 class NostrHomeRepliesFeedViewModel: FeedViewModel(NostrHomeDataSource) {
     override fun newListFromDataSource(): List<Note> {
         // Filter: only replies
-        return dataSource.feed().filter {!isNewThread(it) }.take(100)
+        return dataSource.feed().filter {! it.isNewThread() }.take(100)
     }
 }
 

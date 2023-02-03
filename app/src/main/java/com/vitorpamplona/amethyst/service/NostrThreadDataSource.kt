@@ -9,28 +9,23 @@ import nostr.postr.JsonFilter
 import nostr.postr.events.TextNoteEvent
 
 object NostrThreadDataSource: NostrDataSource<Note>("SingleThreadFeed") {
-  val eventsToWatch = Collections.synchronizedList(mutableListOf<String>())
+  private var eventsToWatch = setOf<String>()
 
   fun createRepliesAndReactionsFilter(): JsonFilter? {
-    val reactionsToWatch = eventsToWatch.map { it }
-
-    if (reactionsToWatch.isEmpty()) {
+    if (eventsToWatch.isEmpty()) {
       return null
     }
 
     return JsonFilter(
       kinds = listOf(TextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind),
-      tags = mapOf("e" to reactionsToWatch)
+      tags = mapOf("e" to eventsToWatch.toList())
     )
   }
 
   fun createLoadEventsIfNotLoadedFilter(): JsonFilter? {
-    val nodes = synchronized(eventsToWatch) {
-      eventsToWatch.map { LocalCache.notes[it] }
-    }
+    val nodes = eventsToWatch.map { LocalCache.getOrCreateNote(it) }
 
     val eventsToLoad = nodes
-      .filterNotNull()
       .filter { it.event == null }
       .map { it.idHex.substring(0, 8) }
 
@@ -46,11 +41,12 @@ object NostrThreadDataSource: NostrDataSource<Note>("SingleThreadFeed") {
   val loadEventsChannel = requestNewChannel()
 
   override fun feed(): List<Note> {
-    return synchronized(eventsToWatch) {
-      eventsToWatch.map {
-        LocalCache.notes[it]
-      }.filterNotNull()
-    }
+    // Currently orders by date of each event, descending, at each level of the reply stack
+    val order = compareByDescending<Note> { it.replyLevelSignature() }
+
+    return eventsToWatch.map {
+      LocalCache.getOrCreateNote(it)
+    }.sortedWith(order)
   }
 
   override fun updateChannelFilters() {
@@ -84,9 +80,9 @@ object NostrThreadDataSource: NostrDataSource<Note>("SingleThreadFeed") {
   }
 
   fun loadThread(noteId: String) {
-    val note = LocalCache.notes[noteId]
+    val note = LocalCache.getOrCreateNote(noteId)
 
-    if (note != null) {
+    if (note.event != null) {
       val thread = mutableListOf<Note>()
       val threadSet = mutableSetOf<Note>()
 
@@ -94,17 +90,12 @@ object NostrThreadDataSource: NostrDataSource<Note>("SingleThreadFeed") {
 
       loadDown(threadRoot, thread, threadSet)
 
-      // Currently orders by date of each event, descending, at each level of the reply stack
-      val order = compareByDescending<Note> { it.replyLevelSignature() }
-
-      eventsToWatch.clear()
-      eventsToWatch.addAll(thread.sortedWith(order).map { it.idHex })
+      eventsToWatch = thread.map { it.idHex }.toSet()
     } else {
-      eventsToWatch.clear()
-      eventsToWatch.add(noteId)
+      eventsToWatch = setOf(noteId)
     }
 
-    resetFilters()
+    invalidateFilters()
   }
 
   fun loadDown(note: Note, thread: MutableList<Note>, threadSet: MutableSet<Note>) {
@@ -112,9 +103,7 @@ object NostrThreadDataSource: NostrDataSource<Note>("SingleThreadFeed") {
       thread.add(note)
       threadSet.add(note)
 
-      synchronized(note.replies) {
-        note.replies.toList()
-      }.forEach {
+      note.replies.forEach {
         loadDown(it, thread, threadSet)
       }
     }

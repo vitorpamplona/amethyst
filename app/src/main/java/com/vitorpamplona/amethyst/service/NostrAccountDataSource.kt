@@ -39,14 +39,8 @@ object NostrAccountDataSource: NostrDataSource<Note>("AccountData") {
   override fun feed(): List<Note> {
     val user = account.userProfile()
 
-    val follows = user.follows
-    val followKeys = synchronized(follows) {
-      follows.map { it.pubkeyHex }
-    }
-    val allowSet = followKeys.plus(user.pubkeyHex).toSet()
-
     return LocalCache.notes.values
-      .filter { (it.event is TextNoteEvent || it.event is RepostEvent) && it.author?.pubkeyHex in allowSet }
+      .filter { (it.event is TextNoteEvent || it.event is RepostEvent) && it.author in user.follows }
       .sortedBy { it.event?.createdAt }
       .reversed()
   }

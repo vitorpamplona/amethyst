@@ -35,10 +35,8 @@ import nostr.postr.events.RecommendRelayEvent
 import nostr.postr.events.TextNoteEvent
 
 abstract class NostrDataSource<T>(val debugName: String) {
-  private val channels = Collections.synchronizedSet(mutableSetOf<Channel>())
-  private val channelIds =  Collections.synchronizedSet(mutableSetOf<String>())
-
-  private val eventCounter = mutableMapOf<String, Int>()
+  private var channels = mapOf<String, Channel>()
+  private var eventCounter = mapOf<String, Int>()
 
   fun printCounter() {
     eventCounter.forEach {
@@ -48,12 +46,13 @@ abstract class NostrDataSource<T>(val debugName: String) {
 
   private val clientListener = object : Client.Listener() {
     override fun onEvent(event: Event, subscriptionId: String, relay: Relay) {
-      if (subscriptionId in channelIds) {
+      if (subscriptionId in channels.keys) {
         val key = "${debugName} ${subscriptionId} ${event.kind}"
-        if (eventCounter.contains(key)) {
-          eventCounter.put(key, eventCounter.get(key)!! + 1)
+        val keyValue = eventCounter.get(key)
+        if (keyValue != null) {
+          eventCounter = eventCounter + Pair(key, keyValue + 1)
         } else {
-          eventCounter.put(key, 1)
+          eventCounter = eventCounter + Pair(key, 1)
         }
 
         try {
@@ -102,7 +101,7 @@ abstract class NostrDataSource<T>(val debugName: String) {
 
       if (type == Relay.Type.EOSE && channel != null) {
         // updates a per subscripton since date
-        channels.filter { it.id == channel }.firstOrNull()?.updateEOSE(Date().time / 1000)
+        channels[channel]?.updateEOSE(Date().time / 1000)
       }
     }
 
@@ -120,7 +119,7 @@ abstract class NostrDataSource<T>(val debugName: String) {
   }
 
   open fun stop() {
-    channels.forEach { channel ->
+    channels.values.forEach { channel ->
       if (channel.filter != null) // if it is active, close
         Client.close(channel.id)
     }
@@ -148,15 +147,13 @@ abstract class NostrDataSource<T>(val debugName: String) {
 
   fun requestNewChannel(onEOSE: ((Long) -> Unit)? = null): Channel {
     val newChannel = Channel(debugName+UUID.randomUUID().toString().substring(0,4), onEOSE)
-    channels.add(newChannel)
-    channelIds.add(newChannel.id)
+    channels = channels + Pair(newChannel.id, newChannel)
     return newChannel
   }
 
   fun dismissChannel(channel: Channel) {
     Client.close(channel.id)
-    channels.remove(channel)
-    channelIds.remove(channel.id)
+    channels = channels.minus(channel.id)
   }
 
   var handlerWaiting = false
@@ -182,14 +179,14 @@ abstract class NostrDataSource<T>(val debugName: String) {
 
   fun resetFiltersSuspend() {
     // saves the channels that are currently active
-    val activeChannels = channels.filter { it.filter != null }
+    val activeChannels = channels.values.filter { it.filter != null }
     // saves the current content to only update if it changes
     val currentFilter = activeChannels.associate { it.id to it.filter!!.joinToString("|") { it.toJson() }  }
 
     updateChannelFilters()
 
     // Makes sure to only send an updated filter when it actually changes.
-    channels.forEach { channel ->
+    channels.values.forEach { channel ->
       val channelsNewFilter = channel.filter
 
       if (channel in activeChannels) {
