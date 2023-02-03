@@ -138,7 +138,7 @@ private fun messagesHasNewItems(cache: NotificationCache): Boolean {
     return NostrChatroomListDataSource.feed().take(100).filter {
         // only for known sources
         val me = NostrChatroomListDataSource.account.userProfile()
-        it.channel != null || me.hasSentMessagesTo(it.author)
+        it.channel == null && me.hasSentMessagesTo(it.author) && it.author != me
     }.filter {
         val lastTime = if (it.channel != null) {
             cache.load("Channel/${it.channel!!.idHex}", context)
