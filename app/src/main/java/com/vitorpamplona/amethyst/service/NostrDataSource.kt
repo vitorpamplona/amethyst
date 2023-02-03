@@ -89,7 +89,7 @@ abstract class NostrDataSource<T>(val debugName: String) {
     }
 
     override fun onError(error: Error, subscriptionId: String, relay: Relay) {
-      Log.e("ERROR", "Relay ${relay.url}: ${error.message}")
+      //Log.e("ERROR", "Relay ${relay.url}: ${error.message}")
     }
 
     override fun onRelayStateChange(type: Relay.Type, relay: Relay, channel: String?) {
