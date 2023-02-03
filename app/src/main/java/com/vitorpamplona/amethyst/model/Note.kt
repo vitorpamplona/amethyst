@@ -43,7 +43,7 @@ class Note(val idHex: String) {
 
     var channel: Channel? = null
 
-    var lastDownloadTime: Long? = null
+    var lastReactionsDownloadTime: Long? = null
 
     fun loadEvent(event: Event, author: User, mentions: List<User>, replyTo: MutableList<Note>) {
         this.event = event

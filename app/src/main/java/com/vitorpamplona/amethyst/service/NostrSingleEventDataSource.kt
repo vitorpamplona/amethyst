@@ -9,29 +9,38 @@ import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import java.util.Collections
+import java.util.Date
 import nostr.postr.JsonFilter
+import nostr.postr.events.MetadataEvent
 import nostr.postr.events.TextNoteEvent
 
 object NostrSingleEventDataSource: NostrDataSource<Note>("SingleEventFeed") {
   private var eventsToWatch = setOf<String>()
 
-  private fun createRepliesAndReactionsFilter(): JsonFilter? {
+  private fun createRepliesAndReactionsFilter(): List<JsonFilter>? {
     val reactionsToWatch = eventsToWatch.map { it }
 
     if (reactionsToWatch.isEmpty()) {
       return null
     }
 
-    // downloads all the reactions to a given event.
-    return JsonFilter(
-      kinds = listOf(
-        TextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind, ReportEvent.kind
-      ),
-      tags = mapOf("e" to reactionsToWatch)
-    )
+    val now = Date().time / 1000
+
+    return eventsToWatch.filter {
+      val lastTime = LocalCache.getOrCreateNote(it).lastReactionsDownloadTime;
+      lastTime == null || lastTime < (now - 10)
+    }.map {
+      JsonFilter(
+        kinds = listOf(
+          TextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind, ReportEvent.kind
+        ),
+        tags = mapOf("e" to listOf(it)),
+        since = LocalCache.getOrCreateNote(it).lastReactionsDownloadTime
+      )
+    }
   }
 
-  fun createLoadEventsIfNotLoadedFilter(): JsonFilter? {
+  fun createLoadEventsIfNotLoadedFilter(): List<JsonFilter>? {
     val directEventsToLoad = eventsToWatch
       .map { LocalCache.getOrCreateNote(it) }
       .filter { it.event == null }
@@ -51,16 +60,23 @@ object NostrSingleEventDataSource: NostrDataSource<Note>("SingleEventFeed") {
     }
 
     // downloads linked events to this event.
-    return JsonFilter(
+    return listOf(JsonFilter(
       kinds = listOf(
         TextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind,
         ChannelMessageEvent.kind, ChannelCreateEvent.kind, ChannelMetadataEvent.kind
       ),
       ids = interestedEvents.toList()
-    )
+    ))
   }
 
-  val singleEventChannel = requestNewChannel()
+  val singleEventChannel = requestNewChannel() { time ->
+    eventsToWatch.forEach {
+      LocalCache.getOrCreateNote(it).lastReactionsDownloadTime = time
+    }
+    // Many relays operate with limits in the amount of filters.
+    // As information comes, the filters will be rotated to get more data.
+    invalidateFilters()
+  }
 
   override fun feed(): List<Note> {
     return synchronized(eventsToWatch) {
@@ -74,7 +90,7 @@ object NostrSingleEventDataSource: NostrDataSource<Note>("SingleEventFeed") {
     val reactions = createRepliesAndReactionsFilter()
     val missing = createLoadEventsIfNotLoadedFilter()
 
-    singleEventChannel.filter = listOfNotNull(reactions, missing).ifEmpty { null }
+    singleEventChannel.filter = listOfNotNull(reactions, missing).flatten().ifEmpty { null }
   }
 
   fun add(eventId: String) {
