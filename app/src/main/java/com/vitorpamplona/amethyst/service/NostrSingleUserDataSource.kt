@@ -49,7 +49,7 @@ object NostrSingleUserDataSource: NostrDataSource<User>("SingleUserFeed") {
   }
 
   override fun updateChannelFilters() {
-    userChannel.filter = listOfNotNull(createUserFilter()).flatten()
+    userChannel.filter = listOfNotNull(createUserFilter(), createUserReportFilter()).flatten()
   }
 
   fun add(userId: String) {
