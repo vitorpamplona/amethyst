@@ -116,9 +116,7 @@ fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, accoun
                         capitalization = KeyboardCapitalization.Sentences
                     ),
                     shape = RoundedCornerShape(25.dp),
-                    modifier = Modifier
-                        .weight(1f, true)
-                        .padding(end = 10.dp),
+                    modifier = Modifier.weight(1f, true),
                     placeholder = {
                         Text(
                             text = "reply here.. ",
