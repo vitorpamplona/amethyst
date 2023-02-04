@@ -25,7 +25,7 @@ object Client: RelayPool.Listener {
     var lenient: Boolean = false
     private var listeners = setOf<Listener>()
     private var relays = Constants.defaultRelays
-    private val subscriptions = mutableMapOf<String, List<JsonFilter>>()
+    private var subscriptions = mapOf<String, List<JsonFilter>>()
 
     fun connect(relays: Array<Relay> = Constants.defaultRelays) {
         RelayPool.register(this)
@@ -38,7 +38,7 @@ object Client: RelayPool.Listener {
         subscriptionId: String = UUID.randomUUID().toString().substring(0..10),
         filters: List<JsonFilter> = listOf(JsonFilter())
     ) {
-        subscriptions[subscriptionId] = filters
+        subscriptions = subscriptions + Pair(subscriptionId, filters)
         RelayPool.sendFilter(subscriptionId)
     }
 
@@ -46,7 +46,7 @@ object Client: RelayPool.Listener {
         subscriptionId: String = UUID.randomUUID().toString().substring(0..10),
         filters: List<JsonFilter> = listOf(JsonFilter())
     ) {
-        subscriptions[subscriptionId] = filters
+        subscriptions = subscriptions + Pair(subscriptionId, filters)
         RelayPool.sendFilterOnlyIfDisconnected()
     }
 
@@ -89,9 +89,7 @@ object Client: RelayPool.Listener {
     }
 
     fun allSubscriptions(): List<String> {
-        return synchronized(subscriptions) {
-            subscriptions.keys.toList()
-        }
+        return subscriptions.keys.toList()
     }
 
     fun getSubscriptionFilters(subId: String): List<JsonFilter> {
