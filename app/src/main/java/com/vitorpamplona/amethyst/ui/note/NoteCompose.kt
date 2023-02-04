@@ -81,6 +81,7 @@ fun NoteCompose(
     val noteForReports = noteReportsState?.note ?: return
 
     var popupExpanded by remember { mutableStateOf(false) }
+    var showHiddenNote by remember { mutableStateOf(false) }
 
     val context = LocalContext.current.applicationContext
 
@@ -89,11 +90,15 @@ fun NoteCompose(
             onClick = {  },
             onLongClick = { popupExpanded = true },
         ), isInnerNote)
-    } else if (!account.isAcceptable(noteForReports)) {
-        HiddenNote(modifier.combinedClickable(
-            onClick = {  },
-            onLongClick = { popupExpanded = true },
-        ), isInnerNote)
+    } else if (!account.isAcceptable(noteForReports) && !showHiddenNote) {
+        HiddenNote(
+            account.getRelevantReports(noteForReports),
+            account.userProfile(),
+            modifier,
+            isInnerNote,
+            navController,
+            onClick = { showHiddenNote = true }
+        )
     } else {
         val isNew = routeForLastRead?.run {
             val lastTime = NotificationCache.load(this, context)

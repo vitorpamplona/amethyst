@@ -382,6 +382,20 @@ class Account(
         ) // is not a reaction about a blocked post
   }
 
+  fun getRelevantReports(note: Note): Set<Note> {
+    val followsPlusMe = userProfile().follows + userProfile()
+
+    val innerReports = if (note.event is RepostEvent) {
+      note.replyTo?.map { getRelevantReports(it) }?.flatten() ?: emptyList()
+    } else {
+      emptyList()
+    }
+
+    return (note.reportsBy(followsPlusMe) +
+          (note.author?.reportsBy(followsPlusMe) ?: emptyList()) +
+          innerReports).toSet()
+  }
+
 }
 
 class AccountLiveData(private val account: Account): LiveData<AccountState>(AccountState(account)) {

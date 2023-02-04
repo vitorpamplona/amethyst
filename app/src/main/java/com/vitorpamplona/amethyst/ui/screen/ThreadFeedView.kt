@@ -168,10 +168,19 @@ fun NoteMaster(baseNote: Note, accountViewModel: AccountViewModel, navController
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
+    var showHiddenNote by remember { mutableStateOf(false) }
+
     if (note?.event == null) {
         BlankNote()
     } else if (!account.isAcceptable(noteForReports)) {
-        HiddenNote()
+        HiddenNote(
+            account.getRelevantReports(noteForReports),
+            account.userProfile(),
+            Modifier,
+            false,
+            navController,
+            onClick = { showHiddenNote = true }
+        )
     } else {
         Column(
             Modifier
