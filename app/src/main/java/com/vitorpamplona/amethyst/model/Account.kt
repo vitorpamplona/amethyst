@@ -378,7 +378,7 @@ class Account(
     return note.author?.let { isAcceptable(it) } ?: true // if user hasn't hided this author
         && isAcceptableDirect(note)
         && (note.event !is RepostEvent
-          || (note.event is RepostEvent && note.replyTo?.firstOrNull { isAcceptableDirect(note) } != null)
+          || (note.event is RepostEvent && note.replyTo?.firstOrNull { isAcceptableDirect(it) } != null)
         ) // is not a reaction about a blocked post
   }
 
