@@ -146,7 +146,7 @@ abstract class NostrDataSource<T>(val debugName: String) {
   }
 
   fun requestNewChannel(onEOSE: ((Long) -> Unit)? = null): Channel {
-    val newChannel = Channel(debugName+UUID.randomUUID().toString().substring(0,4), onEOSE)
+    val newChannel = Channel(UUID.randomUUID().toString().substring(0,4), onEOSE)
     channels = channels + Pair(newChannel.id, newChannel)
     return newChannel
   }
