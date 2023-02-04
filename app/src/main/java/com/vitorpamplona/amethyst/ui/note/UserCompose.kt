@@ -34,6 +34,9 @@ fun UserCompose(baseUser: User, accountViewModel: AccountViewModel, navControlle
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
+    val userState by account.userProfile().liveFollows.observeAsState()
+    val userFollows = userState?.user ?: return
+
     val ctx = LocalContext.current.applicationContext
 
     Column(modifier =
@@ -73,7 +76,7 @@ fun UserCompose(baseUser: User, accountViewModel: AccountViewModel, navControlle
                         account.showUser(baseUser.pubkeyHex)
                         LocalPreferences(ctx).saveToEncryptedStorage(account)
                     }
-                } else if (account.userProfile().isFollowing(baseUser)) {
+                } else if (userFollows.isFollowing(baseUser)) {
                     UnfollowButton { account.unfollow(baseUser) }
                 } else {
                     FollowButton { account.follow(baseUser) }
