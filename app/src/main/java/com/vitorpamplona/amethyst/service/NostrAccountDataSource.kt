@@ -31,7 +31,7 @@ object NostrAccountDataSource: NostrDataSource<Note>("AccountData") {
 
   fun createNotificationFilter() = JsonFilter(
     tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
-    limit = 100
+    limit = 200
   )
 
   val accountChannel = requestNewChannel()
