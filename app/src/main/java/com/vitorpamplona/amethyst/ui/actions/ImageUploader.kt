@@ -43,9 +43,13 @@ object ImageUploader {
     client.newCall(request).enqueue(object : Callback {
       override fun onResponse(call: Call, response: Response) {
         response.use {
-          val tree = jacksonObjectMapper().readTree(response.body!!.string())
-          val url = tree.get("data").get("link").asText()
-          onSuccess(url)
+          val body = response.body
+          if (body != null) {
+            val tree = jacksonObjectMapper().readTree(body.string())
+            val url = tree?.get("data")?.get("link")?.asText()
+            if (url != null)
+              onSuccess(url)
+          }
         }
       }
 
