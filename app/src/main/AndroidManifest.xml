@@ -17,7 +17,7 @@
         android:theme="@style/Theme.Amethyst"
         android:largeHeap="true"
         android:usesCleartextTraffic="true"
-        tools:targetApi="31">
+        tools:targetApi="33">
         <activity
             android:label="Amethyst"
             android:name=".ui.MainActivity"
