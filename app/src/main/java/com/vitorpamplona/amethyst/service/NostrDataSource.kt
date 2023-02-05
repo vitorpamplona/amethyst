@@ -1,8 +1,5 @@
 package com.vitorpamplona.amethyst.service
 
-import android.os.Handler
-import android.os.Looper
-import android.util.Log
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
@@ -16,11 +13,8 @@ import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Relay
-import java.util.Collections
 import java.util.Date
 import java.util.UUID
-import kotlin.time.ExperimentalTime
-import kotlin.time.measureTimedValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -181,7 +175,7 @@ abstract class NostrDataSource<T>(val debugName: String) {
     // saves the channels that are currently active
     val activeChannels = channels.values.filter { it.filter != null }
     // saves the current content to only update if it changes
-    val currentFilter = activeChannels.associate { it.id to it.filter!!.joinToString("|") { it.toJson() }  }
+    val currentFilter = activeChannels.associate { it.id to it.filter!!.joinToString("|") { it.filter.toJson() }  }
 
     updateChannelFilters()
 
@@ -195,7 +189,7 @@ abstract class NostrDataSource<T>(val debugName: String) {
           Client.close(channel.id)
         } else {
           // was active and is still active, check if it has changed.
-          if (channelsNewFilter.joinToString("|") { it.toJson() } != currentFilter[channel.id]) {
+          if (channelsNewFilter.joinToString("|") { it.filter.toJson() } != currentFilter[channel.id]) {
             Client.close(channel.id)
             Client.sendFilter(channel.id, channelsNewFilter)
           } else {
@@ -208,7 +202,7 @@ abstract class NostrDataSource<T>(val debugName: String) {
           // was not active and is still not active, does nothing
         } else {
           // was not active and becomes active, sends the filter.
-          if (channelsNewFilter.joinToString("|") { it.toJson() } != currentFilter[channel.id]) {
+          if (channelsNewFilter.joinToString("|") { it.filter.toJson() } != currentFilter[channel.id]) {
             Client.sendFilter(channel.id, channelsNewFilter)
           }
         }

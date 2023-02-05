@@ -6,48 +6,68 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
+import com.vitorpamplona.amethyst.service.relays.FeedType
+import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import nostr.postr.JsonFilter
 import nostr.postr.events.PrivateDmEvent
 
 object NostrChatroomListDataSource: NostrDataSource<Note>("MailBoxFeed") {
   lateinit var account: Account
 
-  fun createMessagesToMeFilter() = JsonFilter(
-    kinds = listOf(PrivateDmEvent.kind),
-    tags = mapOf("p" to listOf(account.userProfile().pubkeyHex))
+  fun createMessagesToMeFilter() = TypedFilter(
+    types = setOf(FeedType.PRIVATE_DMS),
+      filter = JsonFilter(
+      kinds = listOf(PrivateDmEvent.kind),
+      tags = mapOf("p" to listOf(account.userProfile().pubkeyHex))
+    )
   )
 
-  fun createMessagesFromMeFilter() = JsonFilter(
-    kinds = listOf(PrivateDmEvent.kind),
-    authors = listOf(account.userProfile().pubkeyHex)
+  fun createMessagesFromMeFilter() = TypedFilter(
+    types = setOf(FeedType.PRIVATE_DMS),
+      filter = JsonFilter(
+      kinds = listOf(PrivateDmEvent.kind),
+      authors = listOf(account.userProfile().pubkeyHex)
+    )
   )
 
-  fun createChannelsCreatedbyMeFilter() = JsonFilter(
-    kinds = listOf(ChannelCreateEvent.kind, ChannelMetadataEvent.kind),
-    authors = listOf(account.userProfile().pubkeyHex)
+  fun createChannelsCreatedbyMeFilter() = TypedFilter(
+    types = setOf(FeedType.PUBLIC_CHATS),
+      filter = JsonFilter(
+      kinds = listOf(ChannelCreateEvent.kind, ChannelMetadataEvent.kind),
+      authors = listOf(account.userProfile().pubkeyHex)
+    )
   )
 
-  fun createMyChannelsFilter() = JsonFilter(
-    kinds = listOf(ChannelCreateEvent.kind),
-    ids = account.followingChannels.toList()
+  fun createMyChannelsFilter() = TypedFilter(
+    types = setOf(FeedType.PUBLIC_CHATS),
+      filter = JsonFilter(
+      kinds = listOf(ChannelCreateEvent.kind),
+      ids = account.followingChannels.toList()
+    )
   )
 
-  fun createLastChannelInfoFilter(): List<JsonFilter> {
+  fun createLastChannelInfoFilter(): List<TypedFilter> {
     return account.followingChannels.map {
-      JsonFilter(
-        kinds = listOf(ChannelMetadataEvent.kind),
-        tags = mapOf("e" to listOf(it)),
-        limit = 1
+      TypedFilter(
+        types = setOf(FeedType.PUBLIC_CHATS),
+        filter = JsonFilter(
+          kinds = listOf(ChannelMetadataEvent.kind),
+          tags = mapOf("e" to listOf(it)),
+          limit = 1
+        )
       )
     }
   }
 
-  fun createLastMessageOfEachChannelFilter(): List<JsonFilter> {
+  fun createLastMessageOfEachChannelFilter(): List<TypedFilter> {
     return account.followingChannels.map {
-      JsonFilter(
-        kinds = listOf(ChannelMessageEvent.kind),
-        tags = mapOf("e" to listOf(it)),
-        limit = 1
+      TypedFilter(
+        types = setOf(FeedType.PUBLIC_CHATS),
+        filter = JsonFilter(
+          kinds = listOf(ChannelMessageEvent.kind),
+          tags = mapOf("e" to listOf(it)),
+          limit = 1
+        )
       )
     }
   }

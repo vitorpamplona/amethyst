@@ -4,6 +4,7 @@ import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.relays.Client
+import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import fr.acinq.secp256k1.Hex
@@ -177,6 +178,8 @@ class User(val pubkeyHex: String) {
 
         updatedFollowsAt = updateAt
     }
+
+    data class RelayMetadata(val read: Boolean, val write: Boolean, val activeTypes: Set<FeedType>)
 
     fun updateRelays(relayUse: Map<String, ContactListEvent.ReadWrite>) {
         if (relays != relayUse) {

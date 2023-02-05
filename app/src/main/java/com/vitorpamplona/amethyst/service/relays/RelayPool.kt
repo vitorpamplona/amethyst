@@ -1,7 +1,6 @@
 package com.vitorpamplona.amethyst.service.relays
 
 import androidx.lifecycle.LiveData
-import com.vitorpamplona.amethyst.service.Constants
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -27,11 +26,11 @@ object RelayPool: Relay.Listener {
         return relays.firstOrNull() { it.url == url }
     }
 
-    fun loadRelays(relayList: List<Relay>? = null){
+    fun loadRelays(relayList: List<Relay>){
         if (!relayList.isNullOrEmpty()){
             relayList.forEach { addRelay(it) }
         } else {
-            Constants.defaultRelays.forEach { addRelay(it) }
+            Constants.convertDefaultRelays().forEach { addRelay(it) }
         }
     }
 

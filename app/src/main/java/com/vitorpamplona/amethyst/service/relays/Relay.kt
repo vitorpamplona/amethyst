@@ -11,10 +11,15 @@ import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 
+enum class FeedType {
+    FOLLOWS, PUBLIC_CHATS, PRIVATE_DMS, GLOBAL
+}
+
 class Relay(
-  var url: String,
-  var read: Boolean = true,
-  var write: Boolean = true
+    var url: String,
+    var read: Boolean = true,
+    var write: Boolean = true,
+    var activeTypes: Set<FeedType> = FeedType.values().toSet(),
 ) {
     private val httpClient = OkHttpClient.Builder()
         .connectTimeout(100, TimeUnit.SECONDS)
@@ -161,10 +166,10 @@ class Relay(
         if (read) {
             if (isConnected()) {
                 if (isReady) {
-                    val filters = Client.getSubscriptionFilters(requestId)
+                    val filters = Client.getSubscriptionFilters(requestId).filter { activeTypes.intersect(it.types).isNotEmpty() }
                     if (filters.isNotEmpty()) {
                         val request =
-                            """["REQ","$requestId",${filters.take(10).joinToString(",") { it.toJson() }}]"""
+                            """["REQ","$requestId",${filters.take(10).joinToString(",") { it.filter.toJson() }}]"""
                         //println("FILTERSSENT ${url} " + """["REQ","$requestId",${filters.joinToString(",") { it.toJson() }}]""")
                         socket?.send(request)
                     }

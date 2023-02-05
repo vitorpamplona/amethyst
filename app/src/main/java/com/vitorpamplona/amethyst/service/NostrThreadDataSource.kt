@@ -4,6 +4,8 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
+import com.vitorpamplona.amethyst.service.relays.FeedType
+import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import java.util.Collections
 import nostr.postr.JsonFilter
 import nostr.postr.events.TextNoteEvent
@@ -11,18 +13,21 @@ import nostr.postr.events.TextNoteEvent
 object NostrThreadDataSource: NostrDataSource<Note>("SingleThreadFeed") {
   private var eventsToWatch = setOf<String>()
 
-  fun createRepliesAndReactionsFilter(): JsonFilter? {
+  fun createRepliesAndReactionsFilter(): TypedFilter? {
     if (eventsToWatch.isEmpty()) {
       return null
     }
 
-    return JsonFilter(
-      kinds = listOf(TextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind),
-      tags = mapOf("e" to eventsToWatch.toList())
+    return TypedFilter(
+      types = FeedType.values().toSet(),
+      filter = JsonFilter(
+        kinds = listOf(TextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind),
+        tags = mapOf("e" to eventsToWatch.toList())
+      )
     )
   }
 
-  fun createLoadEventsIfNotLoadedFilter(): JsonFilter? {
+  fun createLoadEventsIfNotLoadedFilter(): TypedFilter? {
     val nodes = eventsToWatch.map { LocalCache.getOrCreateNote(it) }
 
     val eventsToLoad = nodes
@@ -33,8 +38,11 @@ object NostrThreadDataSource: NostrDataSource<Note>("SingleThreadFeed") {
       return null
     }
 
-    return JsonFilter(
-      ids = eventsToLoad
+    return TypedFilter(
+      types = FeedType.values().toSet(),
+      filter = JsonFilter(
+        ids = eventsToLoad
+      )
     )
   }
 

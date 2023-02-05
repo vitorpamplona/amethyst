@@ -7,6 +7,8 @@ import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
+import com.vitorpamplona.amethyst.service.relays.FeedType
+import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import java.util.Collections
 import nostr.postr.JsonFilter
 import nostr.postr.events.TextNoteEvent
@@ -14,7 +16,7 @@ import nostr.postr.events.TextNoteEvent
 object NostrSingleChannelDataSource: NostrDataSource<Note>("SingleChannelFeed") {
   private var channelsToWatch = setOf<String>()
 
-  private fun createRepliesAndReactionsFilter(): JsonFilter? {
+  private fun createRepliesAndReactionsFilter(): TypedFilter? {
     val reactionsToWatch = channelsToWatch.map { it }
 
     if (reactionsToWatch.isEmpty()) {
@@ -22,13 +24,16 @@ object NostrSingleChannelDataSource: NostrDataSource<Note>("SingleChannelFeed") 
     }
 
     // downloads all the reactions to a given event.
-    return JsonFilter(
-      kinds = listOf(ChannelMetadataEvent.kind),
-      tags = mapOf("e" to reactionsToWatch)
+    return TypedFilter(
+      types = setOf(FeedType.PUBLIC_CHATS),
+      filter = JsonFilter(
+        kinds = listOf(ChannelMetadataEvent.kind),
+        tags = mapOf("e" to reactionsToWatch)
+      )
     )
   }
 
-  fun createLoadEventsIfNotLoadedFilter(): JsonFilter? {
+  fun createLoadEventsIfNotLoadedFilter(): TypedFilter? {
     val directEventsToLoad = channelsToWatch
       .map { LocalCache.getOrCreateChannel(it) }
       .filter { it.notes.isEmpty() }
@@ -40,9 +45,12 @@ object NostrSingleChannelDataSource: NostrDataSource<Note>("SingleChannelFeed") 
     }
 
     // downloads linked events to this event.
-    return JsonFilter(
-      kinds = listOf(ChannelCreateEvent.kind),
-      ids = interestedEvents.toList()
+    return TypedFilter(
+      types = FeedType.values().toSet(),
+      filter = JsonFilter(
+        kinds = listOf(ChannelCreateEvent.kind),
+        ids = interestedEvents.toList()
+      )
     )
   }
 

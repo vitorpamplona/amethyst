@@ -116,7 +116,7 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
                                     Client.allSubscriptions().map {
                                         "${it} ${
                                             Client.getSubscriptionFilters(it)
-                                                .joinToString { it.toJson() }
+                                                .joinToString { it.filter.toJson() }
                                         }"
                                     }.forEach {
                                         Log.d("CURRENT FILTERS", it)

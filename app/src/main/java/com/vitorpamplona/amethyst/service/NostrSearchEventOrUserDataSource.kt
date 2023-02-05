@@ -5,6 +5,8 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.decodePublicKey
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
+import com.vitorpamplona.amethyst.service.relays.FeedType
+import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import java.util.Collections
 import nostr.postr.JsonFilter
 import nostr.postr.bechToBytes
@@ -14,19 +16,23 @@ import nostr.postr.toHex
 object NostrSearchEventOrUserDataSource: NostrDataSource<Note>("SingleEventFeed") {
   private var hexToWatch: String? = null
 
-  private fun createAnythingWithIDFilter(): List<JsonFilter>? {
+  private fun createAnythingWithIDFilter(): List<TypedFilter>? {
     if (hexToWatch == null) {
       return null
     }
 
     // downloads all the reactions to a given event.
     return listOf(
-      JsonFilter(
+      TypedFilter(
+        types = FeedType.values().toSet(),
+        filter = JsonFilter(
         ids = listOfNotNull(hexToWatch)
-      ),
-      JsonFilter(
+      )),
+      TypedFilter(
+        types = FeedType.values().toSet(),
+        filter = JsonFilter(
         authors = listOfNotNull(hexToWatch)
-      )
+      ))
     )
   }
 

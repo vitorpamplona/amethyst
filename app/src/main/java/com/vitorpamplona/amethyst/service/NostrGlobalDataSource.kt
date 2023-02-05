@@ -4,14 +4,19 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
+import com.vitorpamplona.amethyst.service.relays.FeedType
+import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import nostr.postr.JsonFilter
 import nostr.postr.events.TextNoteEvent
 
 object NostrGlobalDataSource: NostrDataSource<Note>("GlobalFeed") {
   lateinit var account: Account
-  fun createGlobalFilter() = JsonFilter(
-    kinds = listOf(TextNoteEvent.kind, ChannelMessageEvent.kind),
-    limit = 200
+  fun createGlobalFilter() = TypedFilter(
+    types = setOf(FeedType.GLOBAL),
+    filter = JsonFilter(
+      kinds = listOf(TextNoteEvent.kind, ChannelMessageEvent.kind),
+      limit = 200
+    )
   )
 
   val globalFeedChannel = requestNewChannel()

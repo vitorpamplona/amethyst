@@ -6,6 +6,8 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
+import com.vitorpamplona.amethyst.service.relays.FeedType
+import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import nostr.postr.JsonFilter
 import nostr.postr.events.ContactListEvent
 import nostr.postr.events.MetadataEvent
@@ -14,32 +16,44 @@ import nostr.postr.events.TextNoteEvent
 object NostrAccountDataSource: NostrDataSource<Note>("AccountData") {
   lateinit var account: Account
 
-  fun createAccountContactListFilter(): JsonFilter {
-    return JsonFilter(
-      kinds = listOf(ContactListEvent.kind),
-      authors = listOf(account.userProfile().pubkeyHex),
-      limit = 1
+  fun createAccountContactListFilter(): TypedFilter {
+    return TypedFilter(
+      types = FeedType.values().toSet(),
+      filter = JsonFilter(
+        kinds = listOf(ContactListEvent.kind),
+        authors = listOf(account.userProfile().pubkeyHex),
+        limit = 1
+      )
     )
   }
 
-  fun createAccountMetadataFilter(): JsonFilter {
-    return JsonFilter(
-      kinds = listOf(MetadataEvent.kind),
-      authors = listOf(account.userProfile().pubkeyHex),
-      limit = 1
+  fun createAccountMetadataFilter(): TypedFilter {
+    return TypedFilter(
+      types = FeedType.values().toSet(),
+      filter = JsonFilter(
+        kinds = listOf(MetadataEvent.kind),
+        authors = listOf(account.userProfile().pubkeyHex),
+        limit = 1
+      )
     )
   }
 
-  fun createAccountReportsFilter(): JsonFilter {
-    return JsonFilter(
-      kinds = listOf(ReportEvent.kind),
-      authors = listOf(account.userProfile().pubkeyHex)
+  fun createAccountReportsFilter(): TypedFilter {
+    return TypedFilter(
+      types = FeedType.values().toSet(),
+      filter = JsonFilter(
+        kinds = listOf(ReportEvent.kind),
+        authors = listOf(account.userProfile().pubkeyHex)
+      )
     )
   }
 
-  fun createNotificationFilter() = JsonFilter(
-    tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
-    limit = 200
+  fun createNotificationFilter() = TypedFilter(
+    types = FeedType.values().toSet(),
+    filter = JsonFilter(
+      tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
+      limit = 200
+    )
   )
 
   val accountChannel = requestNewChannel()

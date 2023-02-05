@@ -1,7 +1,7 @@
 package com.vitorpamplona.amethyst.model
 
 import androidx.lifecycle.LiveData
-import com.vitorpamplona.amethyst.service.Constants
+import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
@@ -9,8 +9,10 @@ import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.relays.Client
+import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.RelayPool
+import com.vitorpamplona.amethyst.ui.actions.NewRelayListViewModel
 import java.util.Date
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -34,8 +36,9 @@ val DefaultChannels = setOf(
 
 class Account(
   val loggedIn: Persona,
-  var followingChannels: Set<String> = DefaultChannels.toMutableSet(),
-  var hiddenUsers: Set<String> = mutableSetOf()
+  var followingChannels: Set<String> = DefaultChannels,
+  var hiddenUsers: Set<String> = setOf(),
+  var localRelays: Set<NewRelayListViewModel.Relay> = Constants.defaultRelays.toSet()
 ) {
 
   fun userProfile(): User {
@@ -330,14 +333,23 @@ class Account(
   }
 
   fun activeRelays(): Array<Relay>? {
-    return userProfile().relays?.map { Relay(it.key, it.value.read, it.value.write) }?.toTypedArray()
+    return userProfile().relays?.map {
+      val localFeedTypes = localRelays.firstOrNull() { localRelay -> localRelay.url == it.key }?.feedTypes ?: FeedType.values().toSet()
+      Relay(it.key, it.value.read, it.value.write, localFeedTypes)
+    }?.toTypedArray()
+  }
+
+  fun convertLocalRelays(): Array<Relay> {
+    return localRelays.map {
+      Relay(it.url, it.read, it.write, it.feedTypes)
+    }.toTypedArray()
   }
 
   init {
     userProfile().subscribe(object: User.Listener() {
       override fun onRelayChange() {
         Client.disconnect()
-        Client.connect(activeRelays() ?: Constants.defaultRelays)
+        Client.connect(activeRelays() ?: convertLocalRelays())
         RelayPool.requestAndWatch()
       }
     })
@@ -394,6 +406,11 @@ class Account(
     return (note.reportsBy(followsPlusMe) +
           (note.author?.reportsBy(followsPlusMe) ?: emptyList()) +
           innerReports).toSet()
+  }
+
+  fun saveRelayList(value: List<NewRelayListViewModel.Relay>) {
+    localRelays = value.toSet()
+    sendNewRelayList(value.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) } )
   }
 
 }

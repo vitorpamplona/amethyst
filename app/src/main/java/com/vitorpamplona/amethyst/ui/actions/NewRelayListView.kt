@@ -33,6 +33,9 @@ import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DownloadDone
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SyncProblem
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.outlined.BarChart
@@ -48,6 +51,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -55,18 +60,21 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.relays.FeedType
 import java.lang.Math.round
 
-@OptIn(ExperimentalComposeUiApi::class)
+
 @Composable
 fun NewRelayListView(onClose: () -> Unit, account: Account, relayToAdd: String = "") {
     val postViewModel: NewRelayListViewModel = viewModel()
+    val ctx = LocalContext.current.applicationContext
 
     val feedState by postViewModel.relays.collectAsState()
 
     LaunchedEffect(Unit) {
-        postViewModel.load(account)
+        postViewModel.load(account, ctx)
     }
 
     Dialog(
@@ -82,19 +90,18 @@ fun NewRelayListView(onClose: () -> Unit, account: Account, relayToAdd: String =
                 modifier = Modifier.padding(10.dp)
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     CloseButton(onCancel = {
-                        postViewModel.clear()
+                        postViewModel.clear(ctx)
                         onClose()
                     })
 
                     PostButton(
                         onPost = {
-                            postViewModel.create()
+                            postViewModel.create(ctx)
                             onClose()
                         },
                         true
@@ -103,7 +110,7 @@ fun NewRelayListView(onClose: () -> Unit, account: Account, relayToAdd: String =
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                Row(modifier = Modifier.fillMaxWidth(1f), verticalAlignment = Alignment.CenterVertically) {
+                Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                     LazyColumn(
                         contentPadding = PaddingValues(
                             top = 10.dp,
@@ -114,15 +121,15 @@ fun NewRelayListView(onClose: () -> Unit, account: Account, relayToAdd: String =
                             if (index == 0)
                                 ServerConfigHeader()
                             ServerConfig(item,
-                                onToggleDownload = {
-                                    postViewModel.toggleDownload(it)
-                                },
-                                onToggleUpload = {
-                                    postViewModel.toggleUpload(it)
-                                },
-                                onDelete = {
-                                    postViewModel.deleteRelay(it)
-                                }
+                                onToggleDownload = { postViewModel.toggleDownload(it) },
+                                onToggleUpload = { postViewModel.toggleUpload(it)  },
+
+                                onToggleFollows = { postViewModel.toggleFollows(it) },
+                                onTogglePrivateDMs = { postViewModel.toggleMessages(it)  },
+                                onTogglePublicChats = { postViewModel.togglePublicChats(it) },
+                                onToggleGlobal = { postViewModel.toggleGlobal(it)  },
+
+                                onDelete = { postViewModel.deleteRelay(it) }
                             )
                         }
                     }
@@ -156,7 +163,7 @@ fun ServerConfigHeader() {
 
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Spacer(modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.size(25.dp))
 
                     Text(
                         text = "Posts",
@@ -186,7 +193,7 @@ fun ServerConfigHeader() {
                         color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                     )
 
-                    Spacer(modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.size(5.dp))
                 }
             }
         }
@@ -202,9 +209,32 @@ fun ServerConfig(
     item: NewRelayListViewModel.Relay,
     onToggleDownload: (NewRelayListViewModel.Relay) -> Unit,
     onToggleUpload: (NewRelayListViewModel.Relay) -> Unit,
+
+    onToggleFollows: (NewRelayListViewModel.Relay) -> Unit,
+    onTogglePrivateDMs: (NewRelayListViewModel.Relay) -> Unit,
+    onTogglePublicChats: (NewRelayListViewModel.Relay) -> Unit,
+    onToggleGlobal: (NewRelayListViewModel.Relay) -> Unit,
+
     onDelete: (NewRelayListViewModel.Relay) -> Unit) {
     Column(Modifier.fillMaxWidth()) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(vertical = 5.dp)
+        ) {
+            Column() {
+                IconButton(
+                    modifier = Modifier.size(30.dp),
+                    onClick = { onDelete(item) }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Cancel,
+                        null,
+                        modifier = Modifier.padding(end = 5.dp).size(15.dp),
+                        tint = Color.Red
+                    )
+                }
+            }
+
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -214,75 +244,126 @@ fun ServerConfig(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-            }
 
-            Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(
-                        modifier = Modifier.size(30.dp),
-                        onClick = { onToggleDownload(item) }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Download,
-                            null,
-                            modifier = Modifier.padding(horizontal = 5.dp).size(15.dp),
-                            tint = if (item.read) Color.Green else Color.Red
-                        )
+                    Column(Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(
+                                modifier = Modifier.size(30.dp),
+                                onClick = { onToggleFollows(item) }
+                            ) {
+                                Icon(
+                                    painterResource(R.drawable.ic_home),
+                                    "Home Feed",
+                                    modifier = Modifier.padding(end = 5.dp).size(15.dp),
+                                    tint = if (item.feedTypes.contains(FeedType.FOLLOWS)) Color.Green else MaterialTheme.colors.onSurface.copy(
+                                        alpha = 0.32f
+                                    )
+                                )
+                            }
+                            IconButton(
+                                modifier = Modifier.size(30.dp),
+                                onClick = { onTogglePrivateDMs(item) }
+                            ) {
+                                Icon(
+                                    painterResource(R.drawable.ic_dm),
+                                    "Private Message Feed",
+                                    modifier = Modifier.padding(horizontal = 5.dp).size(15.dp),
+                                    tint = if (item.feedTypes.contains(FeedType.PRIVATE_DMS)) Color.Green else MaterialTheme.colors.onSurface.copy(
+                                        alpha = 0.32f
+                                    )
+                                )
+                            }
+                            IconButton(
+                                modifier = Modifier.size(30.dp),
+                                onClick = { onTogglePublicChats(item) }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Groups,
+                                    "Public Chat Feed",
+                                    modifier = Modifier.padding(horizontal = 5.dp).size(15.dp),
+                                    tint = if (item.feedTypes.contains(FeedType.PUBLIC_CHATS)) Color.Green else MaterialTheme.colors.onSurface.copy(
+                                        alpha = 0.32f
+                                    )
+                                )
+                            }
+                            IconButton(
+                                modifier = Modifier.size(30.dp),
+                                onClick = { onToggleGlobal(item) }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Public,
+                                    "Global Feed",
+                                    modifier = Modifier.padding(horizontal = 5.dp).size(15.dp),
+                                    tint = if (item.feedTypes.contains(FeedType.GLOBAL)) Color.Green else MaterialTheme.colors.onSurface.copy(
+                                        alpha = 0.32f
+                                    )
+                                )
+                            }
+                        }
                     }
 
-                    Text(
-                        text = "${countToHumanReadable(item.downloadCount)}",
-                        maxLines = 1,
-                        fontSize = 14.sp,
-                        modifier = Modifier.weight(1f),
-                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-                    )
+                    Column(Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(
+                                modifier = Modifier.size(30.dp),
+                                onClick = { onToggleDownload(item) }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Download,
+                                    null,
+                                    modifier = Modifier.padding(horizontal = 5.dp).size(15.dp),
+                                    tint = if (item.read) Color.Green else MaterialTheme.colors.onSurface.copy(
+                                        alpha = 0.32f
+                                    )
+                                )
+                            }
 
-                    IconButton(
-                        modifier = Modifier.size(30.dp),
-                        onClick = { onToggleUpload(item) }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Upload,
-                            null,
-                            modifier = Modifier.padding(horizontal = 5.dp).size(15.dp),
-                            tint = if (item.write) Color.Green else Color.Red
-                        )
-                    }
+                            Text(
+                                text = "${countToHumanReadable(item.downloadCount)}",
+                                maxLines = 1,
+                                fontSize = 14.sp,
+                                modifier = Modifier.weight(1f),
+                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                            )
 
-                    Text(
-                        text = "${countToHumanReadable(item.uploadCount)}",
-                        maxLines = 1,
-                        fontSize = 14.sp,
-                        modifier = Modifier.weight(1f),
-                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-                    )
+                            IconButton(
+                                modifier = Modifier.size(30.dp),
+                                onClick = { onToggleUpload(item) }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Upload,
+                                    null,
+                                    modifier = Modifier.padding(horizontal = 5.dp).size(15.dp),
+                                    tint = if (item.write) Color.Green else MaterialTheme.colors.onSurface.copy(
+                                        alpha = 0.32f
+                                    )
+                                )
+                            }
 
-                    Icon(
-                        imageVector = Icons.Default.SyncProblem,
-                        null,
-                        modifier = Modifier.padding(horizontal = 5.dp).size(15.dp),
-                        tint = if (item.errorCount > 0) Color.Yellow else Color.Green
-                    )
+                            Text(
+                                text = "${countToHumanReadable(item.uploadCount)}",
+                                maxLines = 1,
+                                fontSize = 14.sp,
+                                modifier = Modifier.weight(1f),
+                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                            )
 
-                    Text(
-                        text = "${countToHumanReadable(item.errorCount)}",
-                        maxLines = 1,
-                        fontSize = 14.sp,
-                        modifier = Modifier.weight(1f),
-                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-                    )
+                            Icon(
+                                imageVector = Icons.Default.SyncProblem,
+                                null,
+                                modifier = Modifier.padding(horizontal = 5.dp).size(15.dp),
+                                tint = if (item.errorCount > 0) Color.Yellow else Color.Green
+                            )
 
-                    IconButton(
-                        modifier = Modifier.size(30.dp),
-                        onClick = { onDelete(item) }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Cancel,
-                            null,
-                            modifier = Modifier.padding(horizontal = 5.dp).size(15.dp),
-                            tint = Color.Red
-                        )
+                            Text(
+                                text = "${countToHumanReadable(item.errorCount)}",
+                                maxLines = 1,
+                                fontSize = 14.sp,
+                                modifier = Modifier.weight(1f),
+                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                            )
+                        }
                     }
                 }
             }
@@ -323,7 +404,7 @@ fun EditableServerConfig(relayToAdd: String, onNewRelay: (NewRelayListViewModel.
                 modifier = Modifier
                     .size(35.dp)
                     .padding(horizontal = 5.dp),
-                tint = if (read) Color.Green else Color.Red
+                tint = if (read) Color.Green else MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
             )
         }
 
@@ -334,7 +415,7 @@ fun EditableServerConfig(relayToAdd: String, onNewRelay: (NewRelayListViewModel.
                 modifier = Modifier
                     .size(35.dp)
                     .padding(horizontal = 5.dp),
-                tint = if (write) Color.Green else Color.Red
+                tint = if (write) Color.Green else MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
             )
         }
 
@@ -342,7 +423,7 @@ fun EditableServerConfig(relayToAdd: String, onNewRelay: (NewRelayListViewModel.
             onClick = {
                 if (url.isNotBlank()) {
                     val addedWSS = if (!url.startsWith("wss://")) "wss://$url" else url
-                    onNewRelay(NewRelayListViewModel.Relay(addedWSS, read, write))
+                    onNewRelay(NewRelayListViewModel.Relay(addedWSS, read, write, feedTypes = FeedType.values().toSet()))
                     url = ""
                     write = true
                     read = true
@@ -351,7 +432,7 @@ fun EditableServerConfig(relayToAdd: String, onNewRelay: (NewRelayListViewModel.
             shape = RoundedCornerShape(20.dp),
             colors = ButtonDefaults
                 .buttonColors(
-                    backgroundColor = if (url.isNotBlank()) MaterialTheme.colors.primary else Color.Gray
+                    backgroundColor = if (url.isNotBlank()) Color.Green else MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                 )
         ) {
             Text(text = "Add", color = Color.White)

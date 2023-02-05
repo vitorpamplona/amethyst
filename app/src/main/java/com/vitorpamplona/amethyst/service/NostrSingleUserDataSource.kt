@@ -4,6 +4,8 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.ReportEvent
+import com.vitorpamplona.amethyst.service.relays.FeedType
+import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import java.util.Collections
 import nostr.postr.JsonFilter
 import nostr.postr.events.MetadataEvent
@@ -11,25 +13,31 @@ import nostr.postr.events.MetadataEvent
 object NostrSingleUserDataSource: NostrDataSource<User>("SingleUserFeed") {
   var usersToWatch = setOf<String>()
 
-  fun createUserFilter(): List<JsonFilter>? {
+  fun createUserFilter(): List<TypedFilter>? {
     if (usersToWatch.isEmpty()) return null
 
     return usersToWatch.filter { LocalCache.getOrCreateUser(it).latestMetadata == null }.map {
-      JsonFilter(
-        kinds = listOf(MetadataEvent.kind),
-        authors = listOf(it),
-        limit = 1
+      TypedFilter(
+        types = FeedType.values().toSet(),
+        filter = JsonFilter(
+          kinds = listOf(MetadataEvent.kind),
+          authors = listOf(it),
+          limit = 1
+        )
       )
     }
   }
 
-  fun createUserReportFilter(): List<JsonFilter>? {
+  fun createUserReportFilter(): List<TypedFilter>? {
     if (usersToWatch.isEmpty()) return null
 
     return usersToWatch.map {
-      JsonFilter(
-        kinds = listOf(ReportEvent.kind),
-        tags = mapOf("p" to listOf(it))
+      TypedFilter(
+        types = FeedType.values().toSet(),
+        filter = JsonFilter(
+          kinds = listOf(ReportEvent.kind),
+          tags = mapOf("p" to listOf(it))
+        )
       )
     }
   }

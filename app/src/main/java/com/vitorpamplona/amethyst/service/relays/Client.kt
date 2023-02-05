@@ -1,10 +1,6 @@
 package com.vitorpamplona.amethyst.service.relays
 
-import com.vitorpamplona.amethyst.service.Constants
-import java.util.Collections
 import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
-import nostr.postr.JsonFilter
 import nostr.postr.events.Event
 
 /**
@@ -24,10 +20,10 @@ object Client: RelayPool.Listener {
      **/
     var lenient: Boolean = false
     private var listeners = setOf<Listener>()
-    private var relays = Constants.defaultRelays
-    private var subscriptions = mapOf<String, List<JsonFilter>>()
+    private var relays = Constants.convertDefaultRelays()
+    private var subscriptions = mapOf<String, List<TypedFilter>>()
 
-    fun connect(relays: Array<Relay> = Constants.defaultRelays) {
+    fun connect(relays: Array<Relay>) {
         RelayPool.register(this)
         RelayPool.unloadRelays()
         RelayPool.loadRelays(relays.toList())
@@ -36,14 +32,15 @@ object Client: RelayPool.Listener {
 
     fun sendFilter(
         subscriptionId: String = UUID.randomUUID().toString().substring(0..10),
-        filters: List<JsonFilter> = listOf(JsonFilter())
+        filters: List<TypedFilter> = listOf()
     ) {
         subscriptions = subscriptions + Pair(subscriptionId, filters)
         RelayPool.sendFilter(subscriptionId)
     }
+
     fun sendFilterOnlyIfDisconnected(
         subscriptionId: String = UUID.randomUUID().toString().substring(0..10),
-        filters: List<JsonFilter> = listOf(JsonFilter())
+        filters: List<TypedFilter> = listOf()
     ) {
         subscriptions = subscriptions + Pair(subscriptionId, filters)
         RelayPool.sendFilterOnlyIfDisconnected()
@@ -91,7 +88,7 @@ object Client: RelayPool.Listener {
         return subscriptions.keys.toList()
     }
 
-    fun getSubscriptionFilters(subId: String): List<JsonFilter> {
+    fun getSubscriptionFilters(subId: String): List<TypedFilter> {
         return subscriptions[subId] ?: emptyList()
     }
 

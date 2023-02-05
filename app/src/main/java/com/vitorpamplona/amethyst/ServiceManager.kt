@@ -1,7 +1,7 @@
 package com.vitorpamplona.amethyst
 
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.Constants
+import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
@@ -29,7 +29,7 @@ object ServiceManager {
     val myAccount = account
 
     if (myAccount != null) {
-      Client.connect(myAccount.activeRelays() ?: Constants.defaultRelays)
+      Client.connect(myAccount.convertLocalRelays())
 
       // start services
       NostrAccountDataSource.account = myAccount
@@ -55,7 +55,7 @@ object ServiceManager {
       NostrChatroomListDataSource.start()
     } else {
       // if not logged in yet, start a basic service wit default relays
-      Client.connect()
+      Client.connect(Constants.convertDefaultRelays())
     }
   }
 

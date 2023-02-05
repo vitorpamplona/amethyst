@@ -8,6 +8,8 @@ import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
+import com.vitorpamplona.amethyst.service.relays.FeedType
+import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import java.util.Collections
 import java.util.Date
 import nostr.postr.JsonFilter
@@ -17,7 +19,7 @@ import nostr.postr.events.TextNoteEvent
 object NostrSingleEventDataSource: NostrDataSource<Note>("SingleEventFeed") {
   private var eventsToWatch = setOf<String>()
 
-  private fun createRepliesAndReactionsFilter(): List<JsonFilter>? {
+  private fun createRepliesAndReactionsFilter(): List<TypedFilter>? {
     val reactionsToWatch = eventsToWatch.map { LocalCache.getOrCreateNote(it) }
 
     if (reactionsToWatch.isEmpty()) {
@@ -30,17 +32,20 @@ object NostrSingleEventDataSource: NostrDataSource<Note>("SingleEventFeed") {
       val lastTime = it.lastReactionsDownloadTime;
       lastTime == null || lastTime < (now - 10)
     }.map {
-      JsonFilter(
-        kinds = listOf(
-          TextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind, ReportEvent.kind
-        ),
-        tags = mapOf("e" to listOf(it.idHex)),
-        since = it.lastReactionsDownloadTime
+      TypedFilter(
+        types = FeedType.values().toSet(),
+        filter = JsonFilter(
+          kinds = listOf(
+            TextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind, ReportEvent.kind
+          ),
+          tags = mapOf("e" to listOf(it.idHex)),
+          since = it.lastReactionsDownloadTime
+        )
       )
     }
   }
 
-  fun createLoadEventsIfNotLoadedFilter(): List<JsonFilter>? {
+  fun createLoadEventsIfNotLoadedFilter(): List<TypedFilter>? {
     val directEventsToLoad = eventsToWatch
       .map { LocalCache.getOrCreateNote(it) }
       .filter { it.event == null }
@@ -60,13 +65,18 @@ object NostrSingleEventDataSource: NostrDataSource<Note>("SingleEventFeed") {
     }
 
     // downloads linked events to this event.
-    return listOf(JsonFilter(
-      kinds = listOf(
-        TextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind,
-        ChannelMessageEvent.kind, ChannelCreateEvent.kind, ChannelMetadataEvent.kind
-      ),
-      ids = interestedEvents.toList()
-    ))
+    return listOf(
+      TypedFilter(
+        types = FeedType.values().toSet(),
+        filter = JsonFilter(
+          kinds = listOf(
+            TextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind,
+            ChannelMessageEvent.kind, ChannelCreateEvent.kind, ChannelMetadataEvent.kind
+          ),
+          ids = interestedEvents.toList()
+        )
+      )
+    )
   }
 
   val singleEventChannel = requestNewChannel() { time ->
