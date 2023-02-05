@@ -27,6 +27,7 @@ import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.ScrollableTabRow
 import androidx.compose.material.Surface
 import androidx.compose.material.Tab
 import androidx.compose.material.TabRow
@@ -121,14 +122,15 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
             val coroutineScope = rememberCoroutineScope()
 
             Column(modifier = Modifier.padding()) {
-                TabRow(
-                    selectedTabIndex = pagerState.currentPage,
-                    indicator = { tabPositions ->
-                        TabRowDefaults.Indicator(
-                            Modifier.pagerTabIndicatorOffset(pagerState, tabPositions),
-                            color = MaterialTheme.colors.primary
-                        )
-                    },
+                ScrollableTabRow(
+                        selectedTabIndex = pagerState.currentPage,
+                        indicator = { tabPositions ->
+                            TabRowDefaults.Indicator(
+                                Modifier.pagerTabIndicatorOffset(pagerState, tabPositions),
+                                color = MaterialTheme.colors.primary
+                            )
+                        },
+                        edgePadding = 8.dp
                 ) {
                     Tab(
                         selected = pagerState.currentPage == 0,
