@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class CardFeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel() {
     private val _feedContent = MutableStateFlow<CardFeedState>(CardFeedState.Loading)
@@ -29,11 +30,8 @@ class CardFeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel() {
 
     private var lastNotes: List<Note>? = null
 
-    fun refresh() {
-        val scope = CoroutineScope(Job() + Dispatchers.Default)
-        scope.launch {
-            refreshSuspended()
-        }
+    suspend fun refresh() = withContext(Dispatchers.IO) {
+        refreshSuspended()
     }
 
     private fun refreshSuspended() {
@@ -83,19 +81,16 @@ class CardFeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel() {
         return (reactionCards + boostCards + textNoteCards).sortedBy { it.createdAt() }.reversed()
     }
 
-    fun updateFeed(notes: List<Card>) {
-        val scope = CoroutineScope(Job() + Dispatchers.Main)
-        scope.launch {
-            val currentState = feedContent.value
+    private fun updateFeed(notes: List<Card>) {
+        val currentState = feedContent.value
 
-            if (notes.isEmpty()) {
-                _feedContent.update { CardFeedState.Empty }
-            } else if (currentState is CardFeedState.Loaded) {
-                // updates the current list
-                currentState.feed.value = notes
-            } else {
-                _feedContent.update { CardFeedState.Loaded(mutableStateOf(notes)) }
-            }
+        if (notes.isEmpty()) {
+            _feedContent.update { CardFeedState.Empty }
+        } else if (currentState is CardFeedState.Loaded) {
+            // updates the current list
+            currentState.feed.value = notes
+        } else {
+            _feedContent.update { CardFeedState.Loaded(mutableStateOf(notes)) }
         }
     }
 

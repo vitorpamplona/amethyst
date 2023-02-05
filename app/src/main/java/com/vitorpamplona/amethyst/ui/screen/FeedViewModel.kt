@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import nostr.postr.events.TextNoteEvent
+import java.util.concurrent.atomic.AtomicBoolean
 
 class NostrChannelFeedViewModel: FeedViewModel(NostrChannelDataSource)
 class NostrChatRoomFeedViewModel: FeedViewModel(NostrChatRoomDataSource)
@@ -86,25 +87,21 @@ abstract class FeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel()
     }
 
     fun refresh() {
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             val notes = newListFromDataSource()
 
             val oldNotesState = feedContent.value
             if (oldNotesState is FeedState.Loaded) {
                 if (notes != oldNotesState.feed) {
-                    withContext(Dispatchers.Main) {
-                        updateFeed(notes)
-                    }
-                }
-            } else {
-                withContext(Dispatchers.Main) {
                     updateFeed(notes)
                 }
+            } else {
+                updateFeed(notes)
             }
         }
     }
 
-    fun updateFeed(notes: List<Note>) {
+    private fun updateFeed(notes: List<Note>) {
         val currentState = feedContent.value
 
         if (notes.isEmpty()) {
@@ -117,19 +114,18 @@ abstract class FeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel()
         }
     }
 
-    var handlerWaiting = false
-    fun invalidateData() {
-        synchronized(handlerWaiting) {
-            if (handlerWaiting) return
+    private var handlerWaiting = AtomicBoolean()
+    @Synchronized
+    private fun invalidateData() {
+            if (handlerWaiting.get()) return
 
-            handlerWaiting = true
+            handlerWaiting.set(true)
             val scope = CoroutineScope(Job() + Dispatchers.Default)
             scope.launch {
                 delay(100)
                 refresh()
-                handlerWaiting = false
+                handlerWaiting.set(false)
             }
-        }
     }
 
     private val cacheListener: (LocalCacheState) -> Unit = {
