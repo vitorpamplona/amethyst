@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
@@ -32,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -201,19 +203,21 @@ fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote
                                 } else {
                                     val eventContent = accountViewModel.decrypt(note)
 
-                                    if (eventContent != null)
+                                    if (eventContent != null) {
                                         RichTextViewer(
                                             eventContent,
+                                            noteForReports.hasAnyReports(),
                                             note.event?.tags,
                                             navController
                                         )
-                                    else
+                                    } else {
                                         RichTextViewer(
                                             "Could Not decrypt the message",
+                                            false,
                                             note.event?.tags,
                                             navController
                                         )
-
+                                    }
                                 }
                             }
 

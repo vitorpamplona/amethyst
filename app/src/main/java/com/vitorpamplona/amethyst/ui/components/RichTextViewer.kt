@@ -64,7 +64,7 @@ fun isValidURL(url: String?): Boolean {
 }
 
 @Composable
-fun RichTextViewer(content: String, tags: List<List<String>>?, navController: NavController) {
+fun RichTextViewer(content: String, blockPreview: Boolean, tags: List<List<String>>?, navController: NavController) {
   val translatedTextState = remember {
     mutableStateOf(ResultOrError(content, null, null, null))
   }
@@ -87,34 +87,56 @@ fun RichTextViewer(content: String, tags: List<List<String>>?, navController: Na
 
       FlowRow() {
         paragraph.split(' ').forEach { word: String ->
-          // Explicit URL
-          val lnInvoice = LnInvoiceUtil.findInvoice(word)
-          if (lnInvoice != null) {
-            InvoicePreview(lnInvoice)
-          } else if (isValidURL(word)) {
-            val removedParamsFromUrl = word.split("?")[0].toLowerCase()
-            if (imageExtension.matcher(removedParamsFromUrl).matches()) {
-              ZoomableImageView(word)
-            } else if (videoExtension.matcher(removedParamsFromUrl).matches()) {
-              VideoView(word)
+
+          if (blockPreview) {
+            if (isValidURL(word)) {
+              ClickableUrl("$word ", word)
+            } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
+              ClickableEmail(word)
+            } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
+              ClickablePhone(word)
+            } else if (noProtocolUrlValidator.matcher(word).matches()) {
+              ClickableUrl("https://$word", word)
+            } else if (tagIndex.matcher(word).matches() && tags != null) {
+              TagLink(word, tags, navController)
+            } else if (isBechLink(word)) {
+              BechLink(word, navController)
             } else {
-              UrlPreview(word, word)
+              Text(
+                text = "$word ",
+                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+              )
             }
-          } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
-            ClickableEmail(word)
-          } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
-            ClickablePhone(word)
-          } else if (noProtocolUrlValidator.matcher(word).matches()) {
-            UrlPreview("https://$word", word)
-          } else if (tagIndex.matcher(word).matches() && tags != null) {
-            TagLink(word, tags, navController)
-          } else if (isBechLink(word)) {
-            BechLink(word, navController)
           } else {
-            Text(
-              text = "$word ",
-              style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
-            )
+            // Explicit URL
+            val lnInvoice = LnInvoiceUtil.findInvoice(word)
+            if (lnInvoice != null) {
+              InvoicePreview(lnInvoice)
+            } else if (isValidURL(word)) {
+              val removedParamsFromUrl = word.split("?")[0].toLowerCase()
+              if (imageExtension.matcher(removedParamsFromUrl).matches()) {
+                ZoomableImageView(word)
+              } else if (videoExtension.matcher(removedParamsFromUrl).matches()) {
+                VideoView(word)
+              } else {
+                UrlPreview(word, word)
+              }
+            } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
+              ClickableEmail(word)
+            } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
+              ClickablePhone(word)
+            } else if (noProtocolUrlValidator.matcher(word).matches()) {
+              UrlPreview("https://$word", word)
+            } else if (tagIndex.matcher(word).matches() && tags != null) {
+              TagLink(word, tags, navController)
+            } else if (isBechLink(word)) {
+              BechLink(word, navController)
+            } else {
+              Text(
+                text = "$word ",
+                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+              )
+            }
           }
         }
       }

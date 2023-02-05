@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Divider
+import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
@@ -33,6 +34,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.text.style.TextDirection
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
@@ -218,8 +220,9 @@ fun NoteMaster(baseNote: Note, accountViewModel: AccountViewModel, navController
             Row(modifier = Modifier.padding(horizontal = 12.dp)) {
                 Column() {
                     val eventContent = note.event?.content
-                    if (eventContent != null)
-                        RichTextViewer(eventContent, note.event?.tags, navController)
+                    if (eventContent != null) {
+                        RichTextViewer(eventContent, noteForReports.hasAnyReports(), note.event?.tags, navController)
+                    }
 
                     ReactionsRow(note, accountViewModel)
 

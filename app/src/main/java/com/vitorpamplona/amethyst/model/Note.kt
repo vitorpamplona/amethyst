@@ -130,6 +130,12 @@ class Note(val idHex: String) {
         return reports.filter { it.author in users }
     }
 
+    fun hasAnyReports(): Boolean {
+        val dayAgo = Date().time / 1000 - 24*60*60
+        return author?.reports?.filter { it.event?.createdAt ?: 0 > dayAgo }?.isNotEmpty() ?: false
+            || reports.isNotEmpty()
+    }
+
     fun directlyCiteUsers(): Set<User> {
         val matcher = tagSearch.matcher(event?.content ?: "")
         val returningList = mutableSetOf<User>()

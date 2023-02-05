@@ -247,17 +247,7 @@ fun NoteCompose(
                     } else {
                         val eventContent = note.event?.content
                         if (eventContent != null) {
-                            if (note.reports.size > 0) {
-                                // Doesn't load images
-                                Row() {
-                                    Text(
-                                        text = eventContent,
-                                        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
-                                    )
-                                }
-                            } else {
-                                RichTextViewer(eventContent, note.event?.tags, navController)
-                            }
+                            RichTextViewer(eventContent, noteForReports.hasAnyReports(), note.event?.tags, navController)
                         }
 
                         ReactionsRow(note, accountViewModel)
