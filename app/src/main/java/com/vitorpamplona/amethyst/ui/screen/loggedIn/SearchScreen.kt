@@ -8,13 +8,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.Divider
@@ -34,20 +31,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import coil.compose.AsyncImage
-import coil.compose.rememberAsyncImagePainter
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Channel
@@ -55,13 +50,21 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
-import com.vitorpamplona.amethyst.service.NostrThreadDataSource
 import com.vitorpamplona.amethyst.ui.note.ChannelName
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.channels.Channel as CoroutineChannel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun SearchScreen(accountViewModel: AccountViewModel, navController: NavController) {
@@ -81,19 +84,45 @@ fun SearchScreen(accountViewModel: AccountViewModel, navController: NavControlle
     }
 }
 
+@OptIn(FlowPreview::class)
 @Composable
 private fun SearchBar(accountViewModel: AccountViewModel, navController: NavController) {
-    val searchValue = remember { mutableStateOf(TextFieldValue("")) }
+    var searchValue by remember { mutableStateOf("") }
     val searchResults = remember { mutableStateOf<List<User>>(emptyList()) }
     val searchResultsNotes = remember { mutableStateOf<List<Note>>(emptyList()) }
     val searchResultsChannels = remember { mutableStateOf<List<Channel>>(emptyList()) }
+    val scope = rememberCoroutineScope()
 
     val onlineSearch = NostrSearchEventOrUserDataSource
 
     val isTrailingIconVisible by remember {
         derivedStateOf {
-            searchValue.value.text.isNotBlank()
+            searchValue.isNotBlank()
         }
+    }
+
+    // Create a channel for processing search queries.
+    val searchTextChanges = remember {
+        CoroutineChannel<String>(CoroutineChannel.CONFLATED)
+    }
+
+    LaunchedEffect(Unit) {
+        // Wait for text changes to stop for 300 ms before firing off search.
+        withContext(Dispatchers.IO){
+            searchTextChanges.receiveAsFlow()
+                .filter { it.isNotBlank() }
+                .distinctUntilChanged()
+                .debounce(300)
+                .collect {
+                    if (it.removePrefix("npub").removePrefix("note").length >= 4)
+                        onlineSearch.search(it)
+
+                    searchResults.value = LocalCache.findUsersStartingWith(it)
+                    searchResultsNotes.value = LocalCache.findNotesStartingWith(it)
+                    searchResultsChannels.value = LocalCache.findChannelsStartingWith(it)
+                }
+        }
+
     }
 
     DisposableEffect(Unit) {
@@ -111,16 +140,12 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
         verticalAlignment = Alignment.CenterVertically
     ) {
         TextField(
-            value = searchValue.value,
+            value = searchValue,
             onValueChange = {
-                searchValue.value = it
-
-                if (it.text.removePrefix("npub").removePrefix("note").length >= 4)
-                    onlineSearch.search(it.text)
-
-                searchResults.value = LocalCache.findUsersStartingWith(it.text)
-                searchResultsNotes.value = LocalCache.findNotesStartingWith(it.text)
-                searchResultsChannels.value = LocalCache.findChannelsStartingWith(it.text)
+                searchValue = it
+                scope.launch(Dispatchers.IO) {
+                    searchTextChanges.trySend(it)
+                }
             },
             shape = RoundedCornerShape(25.dp),
             keyboardOptions = KeyboardOptions.Default.copy(
@@ -147,7 +172,7 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
                 if (isTrailingIconVisible) {
                     IconButton(
                         onClick = {
-                            searchValue.value = TextFieldValue("")
+                            searchValue = ""
                             searchResults.value = emptyList()
                             searchResultsChannels.value = emptyList()
                             searchResultsNotes.value = emptyList()
@@ -169,7 +194,8 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
         )
     }
 
-    if (searchValue.value.text.isNotBlank()) {
+
+    if (searchValue.isNotBlank()) {
         LazyColumn(
             modifier = Modifier.fillMaxHeight(),
             contentPadding = PaddingValues(
