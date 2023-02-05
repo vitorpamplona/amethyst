@@ -20,6 +20,8 @@ class Relay(
         .connectTimeout(100, TimeUnit.SECONDS)
         .readTimeout(100, TimeUnit.SECONDS)
         .callTimeout(100, TimeUnit.SECONDS)
+        .followRedirects(true)
+        .followSslRedirects(true)
         .build();
 
     private var listeners = setOf<Listener>()
