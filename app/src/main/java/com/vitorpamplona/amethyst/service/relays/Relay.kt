@@ -159,12 +159,7 @@ class Relay(
 
     fun sendFilter(requestId: String) {
         if (read) {
-            if (socket == null) {
-                // waits 10 seconds
-                if (Date().time / 1000 > closingTime + 10) {
-                    requestAndWatch()
-                }
-            } else {
+            if (isConnected()) {
                 if (isReady) {
                     val filters = Client.getSubscriptionFilters(requestId)
                     if (filters.isNotEmpty()) {
@@ -173,6 +168,12 @@ class Relay(
                         //println("FILTERSSENT ${url} " + """["REQ","$requestId",${filters.joinToString(",") { it.toJson() }}]""")
                         socket?.send(request)
                     }
+                }
+            } else {
+                // waits 10 seconds to reconnect after disconnected.
+                if (Date().time / 1000 > closingTime + 10) {
+                    // sends all filters after connection is successful.
+                    requestAndWatch()
                 }
             }
         }

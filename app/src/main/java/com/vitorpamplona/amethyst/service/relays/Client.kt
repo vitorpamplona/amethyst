@@ -41,7 +41,6 @@ object Client: RelayPool.Listener {
         subscriptions = subscriptions + Pair(subscriptionId, filters)
         RelayPool.sendFilter(subscriptionId)
     }
-
     fun sendFilterOnlyIfDisconnected(
         subscriptionId: String = UUID.randomUUID().toString().substring(0..10),
         filters: List<JsonFilter> = listOf(JsonFilter())
