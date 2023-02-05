@@ -11,6 +11,9 @@ import nostr.postr.events.Event
  * RelayPool manages the connection to multiple Relays and lets consumers deal with simple events.
  */
 object RelayPool: Relay.Listener {
+
+    val scope = CoroutineScope(Job() + Dispatchers.IO)
+
     private var relays = listOf<Relay>()
     private var listeners = setOf<Listener>()
 
@@ -114,7 +117,6 @@ object RelayPool: Relay.Listener {
     val live: RelayPoolLiveData = RelayPoolLiveData(this)
 
     private fun refreshObservers() {
-        val scope = CoroutineScope(Job() + Dispatchers.Main)
         scope.launch {
             live.refresh()
         }

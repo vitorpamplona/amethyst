@@ -22,6 +22,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicBoolean
 
 class NostrUserProfileFollowsUserFeedViewModel(): UserFeedViewModel(
     NostrUserProfileFollowsDataSource
@@ -39,12 +41,10 @@ open class UserFeedViewModel(val dataSource: NostrDataSource<User>): ViewModel()
     private val _feedContent = MutableStateFlow<UserFeedState>(UserFeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
 
-    fun refresh() {
-        val scope = CoroutineScope(Job() + Dispatchers.Default)
-        scope.launch {
-            refreshSuspended()
-        }
+    suspend fun refresh() = withContext(Dispatchers.IO) {
+        refreshSuspended()
     }
+
 
     private fun refreshSuspended() {
         val notes = dataSource.loadTop()
@@ -59,34 +59,30 @@ open class UserFeedViewModel(val dataSource: NostrDataSource<User>): ViewModel()
         }
     }
 
-    fun updateFeed(notes: List<User>) {
-        val scope = CoroutineScope(Job() + Dispatchers.Main)
-        scope.launch {
-            val currentState = feedContent.value
-
-            if (notes.isEmpty()) {
-                _feedContent.update { UserFeedState.Empty }
-            } else if (currentState is UserFeedState.Loaded) {
-                // updates the current list
-                currentState.feed.value = notes
-            } else {
-                _feedContent.update { UserFeedState.Loaded(mutableStateOf(notes)) }
-            }
+    private fun updateFeed(notes: List<User>) {
+        val currentState = feedContent.value
+        if (notes.isEmpty()) {
+            _feedContent.update { UserFeedState.Empty }
+        } else if (currentState is UserFeedState.Loaded) {
+            // updates the current list
+            currentState.feed.value = notes
+        } else {
+            _feedContent.update { UserFeedState.Loaded(mutableStateOf(notes)) }
         }
     }
 
-    var handlerWaiting = false
-    fun invalidateData() {
-        synchronized(handlerWaiting) {
-            if (handlerWaiting) return
+    var handlerWaiting = AtomicBoolean()
 
-            handlerWaiting = true
-            val scope = CoroutineScope(Job() + Dispatchers.Default)
-            scope.launch {
-                delay(100)
-                refresh()
-                handlerWaiting = false
-            }
+    @Synchronized
+    private fun invalidateData() {
+        if (handlerWaiting.get()) return
+
+        handlerWaiting.set(true)
+        val scope = CoroutineScope(Job() + Dispatchers.Default)
+        scope.launch {
+            delay(100)
+            refresh()
+            handlerWaiting.set(false)
         }
     }
 
