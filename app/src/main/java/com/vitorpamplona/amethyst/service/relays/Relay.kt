@@ -133,7 +133,7 @@ class Relay(
                     isReady = false
                     closingTime = Date().time / 1000
 
-                    Log.w("Relay", "Relay onFailure $url, ${response?.message}")
+                    Log.w("Relay", "Relay onFailure $url, ${response?.message} ${response}")
                     t.printStackTrace()
                     listeners.forEach {
                         it.onError(this@Relay, "", Error("WebSocket Failure. Response: ${response}. Exception: ${t.message}", t))
@@ -180,7 +180,7 @@ class Relay(
 
     fun sendFilterOnlyIfDisconnected() {
         if (socket == null) {
-            println("sendfilter Only if Disconnected ${url} ")
+            //println("sendfilter Only if Disconnected ${url} ")
             requestAndWatch()
         }
     }
