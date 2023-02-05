@@ -1,4 +1,4 @@
-package com.vitorpamplona.amethyst.ui.navigation
+package com.vitorpamplona.amethyst.ui.qrcode
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
