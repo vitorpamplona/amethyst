@@ -85,7 +85,7 @@ dependencies {
     implementation 'com.squareup.okhttp3:okhttp:5.0.0-alpha.11'
 
     // Json Serialization
-    implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.14.1'
+    implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.14.2'
 
     // link preview
     implementation 'tw.com.oneup.www:Baha-UrlPreview:1.0.1'
@@ -111,12 +111,21 @@ dependencies {
     implementation "com.google.accompanist:accompanist-pager-indicators:$accompanist_version"
 
     // For QR generation
-    implementation "com.google.zxing:core:3.5.0"
+    implementation 'com.google.zxing:core:3.5.1'
     implementation "androidx.camera:camera-camera2:1.2.1"
     implementation 'androidx.camera:camera-lifecycle:1.2.1'
     implementation 'androidx.camera:camera-view:1.2.1'
+
+    // For QR Scanning
     implementation 'com.google.mlkit:vision-common:17.3.0'
-    implementation 'com.google.android.gms:play-services-mlkit-barcode-scanning:18.1.0'
+    implementation 'com.google.mlkit:barcode-scanning:17.0.3'
+
+    // Use this dependency to use the dynamically downloaded model in Google Play Services
+    implementation 'com.google.android.gms:play-services-mlkit-language-id:17.0.0'
+
+    // Use this dependency to use the translate text
+    implementation 'com.google.mlkit:translate:17.0.1'
+    implementation 'com.google.mlkit:language-id-common:16.1.0'
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
