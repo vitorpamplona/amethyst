@@ -89,10 +89,14 @@ abstract class FeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel()
             val oldNotesState = feedContent.value
             if (oldNotesState is FeedState.Loaded) {
                 if (notes != oldNotesState.feed) {
-                    updateFeed(notes)
+                    withContext(Dispatchers.Main) {
+                        updateFeed(notes)
+                    }
                 }
             } else {
-                updateFeed(notes)
+                withContext(Dispatchers.Main) {
+                    updateFeed(notes)
+                }
             }
         }
     }

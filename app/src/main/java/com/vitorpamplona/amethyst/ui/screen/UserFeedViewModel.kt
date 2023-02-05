@@ -60,14 +60,17 @@ open class UserFeedViewModel(val dataSource: NostrDataSource<User>): ViewModel()
     }
 
     private fun updateFeed(notes: List<User>) {
-        val currentState = feedContent.value
-        if (notes.isEmpty()) {
-            _feedContent.update { UserFeedState.Empty }
-        } else if (currentState is UserFeedState.Loaded) {
-            // updates the current list
-            currentState.feed.value = notes
-        } else {
-            _feedContent.update { UserFeedState.Loaded(mutableStateOf(notes)) }
+        val scope = CoroutineScope(Job() + Dispatchers.Main)
+        scope.launch {
+            val currentState = feedContent.value
+            if (notes.isEmpty()) {
+                _feedContent.update { UserFeedState.Empty }
+            } else if (currentState is UserFeedState.Loaded) {
+                // updates the current list
+                currentState.feed.value = notes
+            } else {
+                _feedContent.update { UserFeedState.Loaded(mutableStateOf(notes)) }
+            }
         }
     }
 

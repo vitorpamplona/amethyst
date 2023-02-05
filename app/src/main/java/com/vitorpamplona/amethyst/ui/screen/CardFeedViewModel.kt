@@ -82,15 +82,18 @@ class CardFeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel() {
     }
 
     private fun updateFeed(notes: List<Card>) {
-        val currentState = feedContent.value
+        val scope = CoroutineScope(Job() + Dispatchers.Main)
+        scope.launch {
+            val currentState = feedContent.value
 
-        if (notes.isEmpty()) {
-            _feedContent.update { CardFeedState.Empty }
-        } else if (currentState is CardFeedState.Loaded) {
-            // updates the current list
-            currentState.feed.value = notes
-        } else {
-            _feedContent.update { CardFeedState.Loaded(mutableStateOf(notes)) }
+            if (notes.isEmpty()) {
+                _feedContent.update { CardFeedState.Empty }
+            } else if (currentState is CardFeedState.Loaded) {
+                // updates the current list
+                currentState.feed.value = notes
+            } else {
+                _feedContent.update { CardFeedState.Loaded(mutableStateOf(notes)) }
+            }
         }
     }
 
