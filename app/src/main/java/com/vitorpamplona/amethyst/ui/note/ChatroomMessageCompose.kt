@@ -203,17 +203,21 @@ fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote
                                 } else {
                                     val eventContent = accountViewModel.decrypt(note)
 
+                                    val canPreview = note.author == accountUser
+                                          || (note.author?.let { accountUser.isFollowing(it) } ?: true )
+                                          || !noteForReports.hasAnyReports()
+
                                     if (eventContent != null) {
                                         RichTextViewer(
                                             eventContent,
-                                            noteForReports.hasAnyReports(),
+                                            canPreview,
                                             note.event?.tags,
                                             navController
                                         )
                                     } else {
                                         RichTextViewer(
                                             "Could Not decrypt the message",
-                                            false,
+                                            true,
                                             note.event?.tags,
                                             navController
                                         )

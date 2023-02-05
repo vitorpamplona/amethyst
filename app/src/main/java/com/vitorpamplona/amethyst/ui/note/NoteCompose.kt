@@ -246,8 +246,12 @@ fun NoteCompose(
                         }
                     } else {
                         val eventContent = note.event?.content
+                        val canPreview = note.author == account.userProfile()
+                          || (note.author?.let { account.userProfile().isFollowing(it) } ?: true )
+                          || !noteForReports.hasAnyReports()
+
                         if (eventContent != null) {
-                            RichTextViewer(eventContent, noteForReports.hasAnyReports(), note.event?.tags, navController)
+                            RichTextViewer(eventContent, canPreview, note.event?.tags, navController)
                         }
 
                         ReactionsRow(note, accountViewModel)

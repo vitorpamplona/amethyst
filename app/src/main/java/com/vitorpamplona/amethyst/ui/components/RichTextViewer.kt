@@ -64,7 +64,7 @@ fun isValidURL(url: String?): Boolean {
 }
 
 @Composable
-fun RichTextViewer(content: String, blockPreview: Boolean, tags: List<List<String>>?, navController: NavController) {
+fun RichTextViewer(content: String, canPreview: Boolean, tags: List<List<String>>?, navController: NavController) {
   val translatedTextState = remember {
     mutableStateOf(ResultOrError(content, null, null, null))
   }
@@ -88,26 +88,7 @@ fun RichTextViewer(content: String, blockPreview: Boolean, tags: List<List<Strin
       FlowRow() {
         paragraph.split(' ').forEach { word: String ->
 
-          if (blockPreview) {
-            if (isValidURL(word)) {
-              ClickableUrl("$word ", word)
-            } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
-              ClickableEmail(word)
-            } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
-              ClickablePhone(word)
-            } else if (noProtocolUrlValidator.matcher(word).matches()) {
-              ClickableUrl("https://$word", word)
-            } else if (tagIndex.matcher(word).matches() && tags != null) {
-              TagLink(word, tags, navController)
-            } else if (isBechLink(word)) {
-              BechLink(word, navController)
-            } else {
-              Text(
-                text = "$word ",
-                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
-              )
-            }
-          } else {
+          if (canPreview) {
             // Explicit URL
             val lnInvoice = LnInvoiceUtil.findInvoice(word)
             if (lnInvoice != null) {
@@ -127,6 +108,25 @@ fun RichTextViewer(content: String, blockPreview: Boolean, tags: List<List<Strin
               ClickablePhone(word)
             } else if (noProtocolUrlValidator.matcher(word).matches()) {
               UrlPreview("https://$word", word)
+            } else if (tagIndex.matcher(word).matches() && tags != null) {
+              TagLink(word, tags, navController)
+            } else if (isBechLink(word)) {
+              BechLink(word, navController)
+            } else {
+              Text(
+                text = "$word ",
+                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+              )
+            }
+          } else {
+            if (isValidURL(word)) {
+              ClickableUrl("$word ", word)
+            } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
+              ClickableEmail(word)
+            } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
+              ClickablePhone(word)
+            } else if (noProtocolUrlValidator.matcher(word).matches()) {
+              ClickableUrl("https://$word", word)
             } else if (tagIndex.matcher(word).matches() && tags != null) {
               TagLink(word, tags, navController)
             } else if (isBechLink(word)) {
