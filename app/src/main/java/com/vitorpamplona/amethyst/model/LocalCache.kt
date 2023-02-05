@@ -162,6 +162,7 @@ object LocalCache {
               event.content,
               object : TypeToken<Map<String, ContactListEvent.ReadWrite>>() {}.type
             )
+
           user.updateRelays(relays)
         }
       } catch (e: Exception) {
@@ -292,8 +293,10 @@ object LocalCache {
 
     //Log.d("RP", "New Report ${event.content} by ${note.author?.toBestDisplayName()} ${formattedDateTime(event.createdAt)}")
     // Adds notifications to users.
-    mentions.forEach {
-      it.addReport(note)
+    if (repliesTo.isEmpty()) {
+      mentions.forEach {
+        it.addReport(note)
+      }
     }
     repliesTo.forEach {
       it.addReport(note)
