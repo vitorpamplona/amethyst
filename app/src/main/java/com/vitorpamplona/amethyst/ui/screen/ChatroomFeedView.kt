@@ -50,6 +50,11 @@ fun ChatroomFeedView(viewModel: FeedViewModel, accountViewModel: AccountViewMode
                     }
                 }
                 is FeedState.Loaded -> {
+                    LaunchedEffect(state.feed.value.firstOrNull()) {
+                        if (listState.firstVisibleItemIndex <= 1)
+                            listState.animateScrollToItem(0)
+                    }
+
                     LazyColumn(
                         contentPadding = PaddingValues(
                             top = 10.dp,
@@ -59,7 +64,7 @@ fun ChatroomFeedView(viewModel: FeedViewModel, accountViewModel: AccountViewMode
                         state = listState
                     ) {
                         var previousDate: String = ""
-                        itemsIndexed(state.feed.value, key = { index, item -> if (index == 0) index else item.idHex }) { index, item ->
+                        itemsIndexed(state.feed.value, key = { index, item -> item.idHex }) { index, item ->
                             ChatroomMessageCompose(item, routeForLastRead, accountViewModel = accountViewModel, navController = navController)
                         }
                     }
