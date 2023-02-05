@@ -432,7 +432,7 @@ fun EditableServerConfig(relayToAdd: String, onNewRelay: (NewRelayListViewModel.
             shape = RoundedCornerShape(20.dp),
             colors = ButtonDefaults
                 .buttonColors(
-                    backgroundColor = if (url.isNotBlank()) Color.Green else MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    backgroundColor = if (url.isNotBlank()) MaterialTheme.colors.primary else MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                 )
         ) {
             Text(text = "Add", color = Color.White)
