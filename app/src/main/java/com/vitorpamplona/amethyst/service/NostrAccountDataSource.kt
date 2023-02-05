@@ -4,6 +4,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.UserState
+import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import nostr.postr.JsonFilter
 import nostr.postr.events.ContactListEvent
@@ -29,6 +30,13 @@ object NostrAccountDataSource: NostrDataSource<Note>("AccountData") {
     )
   }
 
+  fun createAccountReportsFilter(): JsonFilter {
+    return JsonFilter(
+      kinds = listOf(ReportEvent.kind),
+      authors = listOf(account.userProfile().pubkeyHex)
+    )
+  }
+
   fun createNotificationFilter() = JsonFilter(
     tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
     limit = 200
@@ -50,7 +58,8 @@ object NostrAccountDataSource: NostrDataSource<Note>("AccountData") {
     accountChannel.filter = listOf(
       createAccountMetadataFilter(),
       createAccountContactListFilter(),
-      createNotificationFilter()
+      createNotificationFilter(),
+      createAccountReportsFilter()
     ).ifEmpty { null }
   }
 }
