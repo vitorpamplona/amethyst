@@ -118,14 +118,13 @@ dependencies {
 
     // For QR Scanning
     implementation 'com.google.mlkit:vision-common:17.3.0'
-    implementation 'com.google.mlkit:barcode-scanning:17.0.3'
 
-    // Use this dependency to use the dynamically downloaded model in Google Play Services
-    implementation 'com.google.android.gms:play-services-mlkit-language-id:17.0.0'
+    // Local Barcode Scanning model
+    implementation 'com.google.mlkit:barcode-scanning:17.0.3'
 
     // Use this dependency to use the translate text
     implementation 'com.google.mlkit:translate:17.0.1'
-    implementation 'com.google.mlkit:language-id-common:16.1.0'
+    implementation 'com.google.mlkit:language-id:17.0.4'
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
