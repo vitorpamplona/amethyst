@@ -99,8 +99,10 @@ object LocalCache {
 
     val author = getOrCreateUser(event.pubKey.toHexKey())
 
-    if (relay != null)
+    if (relay != null) {
       author.addRelay(relay, event.createdAt)
+      note.addRelay(relay)
+    }
 
     // Already processed this event.
     if (note.event != null) return

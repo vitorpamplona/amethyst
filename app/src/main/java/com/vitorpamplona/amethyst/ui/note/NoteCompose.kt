@@ -5,11 +5,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -19,10 +21,14 @@ import androidx.compose.material.Divider
 import androidx.compose.material.DropdownMenu
 import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
 import androidx.compose.material.LocalContentColor
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -33,9 +39,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -45,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
+import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
@@ -142,57 +152,67 @@ fun NoteCompose(
                         top = 10.dp)
             ) {
 
-                // Draws the boosted picture outside the boosted card.
                 if (!isInnerNote) {
-                    Box(modifier = Modifier
-                        .width(55.dp)
-                        .padding(0.dp)) {
+                    Column(Modifier.width(55.dp)) {
+                    // Draws the boosted picture outside the boosted card.
+                        Box(modifier = Modifier
+                            .width(55.dp)
+                            .padding(0.dp)) {
 
-                        NoteAuthorPicture(note, navController, account.userProfile(), 55.dp)
+                            NoteAuthorPicture(note, navController, account.userProfile(), 55.dp)
 
-                        if (note.event is RepostEvent) {
-                            note.replyTo?.lastOrNull()?.let {
-                                Box(
-                                    Modifier
-                                        .width(30.dp)
-                                        .height(30.dp)
-                                        .align(Alignment.BottomEnd)) {
-                                    NoteAuthorPicture(it, navController, account.userProfile(), 35.dp,
-                                        pictureModifier = Modifier.border(2.dp, MaterialTheme.colors.background, CircleShape)
-                                    )
+                            if (note.event is RepostEvent) {
+                                note.replyTo?.lastOrNull()?.let {
+                                    Box(
+                                        Modifier
+                                            .width(30.dp)
+                                            .height(30.dp)
+                                            .align(Alignment.BottomEnd)) {
+                                        NoteAuthorPicture(it, navController, account.userProfile(), 35.dp,
+                                            pictureModifier = Modifier.border(2.dp, MaterialTheme.colors.background, CircleShape)
+                                        )
+                                    }
+                                }
+                            }
+
+                            // boosted picture
+                            val baseChannel = note.channel
+                            if (note.event is ChannelMessageEvent && baseChannel != null) {
+                                val channelState by baseChannel.live.observeAsState()
+                                val channel = channelState?.channel
+
+                                if (channel != null) {
+                                    Box(
+                                        Modifier
+                                            .width(30.dp)
+                                            .height(30.dp)
+                                            .align(Alignment.BottomEnd)) {
+                                        AsyncImage(
+                                            model = channel.profilePicture(),
+                                            placeholder = null,
+                                            contentDescription = "Group Picture",
+                                            modifier = Modifier
+                                                .width(30.dp)
+                                                .height(30.dp)
+                                                .clip(shape = CircleShape)
+                                                .background(MaterialTheme.colors.background)
+                                                .border(
+                                                    2.dp,
+                                                    MaterialTheme.colors.background,
+                                                    CircleShape
+                                                )
+                                        )
+                                    }
                                 }
                             }
                         }
 
-                        // boosted picture
-                        val baseChannel = note.channel
-                        if (note.event is ChannelMessageEvent && baseChannel != null) {
-                            val channelState by baseChannel.live.observeAsState()
-                            val channel = channelState?.channel
-
-                            if (channel != null) {
-                                Box(
-                                    Modifier
-                                        .width(30.dp)
-                                        .height(30.dp)
-                                        .align(Alignment.BottomEnd)) {
-                                    AsyncImage(
-                                        model = channel.profilePicture(),
-                                        placeholder = null,
-                                        contentDescription = "Group Picture",
-                                        modifier = Modifier
-                                            .width(30.dp)
-                                            .height(30.dp)
-                                            .clip(shape = CircleShape)
-                                            .background(MaterialTheme.colors.background)
-                                            .border(
-                                                2.dp,
-                                                MaterialTheme.colors.background,
-                                                CircleShape
-                                            )
-                                    )
-                                }
+                        if (note.event is RepostEvent) {
+                            note.replyTo?.lastOrNull()?.let {
+                                RelayBadges(it)
                             }
+                        } else {
+                            RelayBadges(baseNote)
                         }
                     }
                 }
@@ -264,6 +284,55 @@ fun NoteCompose(
 
                     NoteDropDownMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RelayBadges(baseNote: Note) {
+    val noteRelaysState by baseNote.liveRelays.observeAsState()
+    val noteRelays = noteRelaysState?.note?.relays ?: emptySet()
+
+    var expanded by remember { mutableStateOf(false) }
+
+    val relaysToDisplay = if (expanded) noteRelays else noteRelays.take(3)
+
+    val uri = LocalUriHandler.current
+
+    FlowRow(Modifier.padding(top = 10.dp, start = 5.dp, end = 4.dp)) {
+        relaysToDisplay.forEach {
+            val url = it.removePrefix("wss://")
+            Box(Modifier.size(15.dp).padding(1.dp)) {
+                AsyncImage(
+                    model = "https://${url}/favicon.ico",
+                    placeholder = rememberAsyncImagePainter("https://robohash.org/$url.png"),
+                    fallback = rememberAsyncImagePainter("https://robohash.org/$url.png"),
+                    error = rememberAsyncImagePainter("https://robohash.org/$url.png"),
+                    contentDescription = "Relay Icon",
+                    colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }),
+                    modifier = Modifier
+                        .fillMaxSize(1f)
+                        .clip(shape = CircleShape)
+                        .background(MaterialTheme.colors.background)
+                        .clickable(onClick = { uri.openUri("https://" + url) } )
+                )
+            }
+        }
+    }
+
+    if (noteRelays.size > 3 && !expanded) {
+        Row(Modifier.fillMaxWidth().height(25.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.Top) {
+            IconButton(
+                modifier = Modifier.then(Modifier.size(24.dp)),
+                onClick = { expanded = true }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ExpandMore,
+                    null,
+                    modifier = Modifier.size(15.dp),
+                    tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                )
             }
         }
     }
@@ -350,6 +419,8 @@ fun UserPicture(
             model = user.profilePicture(),
             contentDescription = "Profile Image",
             placeholder = rememberAsyncImagePainter("https://robohash.org/${user.pubkeyHex}.png"),
+            fallback = rememberAsyncImagePainter("https://robohash.org/${user.pubkeyHex}.png"),
+            error = rememberAsyncImagePainter("https://robohash.org/${user.pubkeyHex}.png"),
             modifier = pictureModifier
                 .fillMaxSize(1f)
                 .clip(shape = CircleShape)

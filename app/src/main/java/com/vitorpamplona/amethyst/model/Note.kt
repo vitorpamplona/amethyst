@@ -46,6 +46,9 @@ class Note(val idHex: String) {
     var reports = setOf<Note>()
         private set
 
+    var relays = setOf<String>()
+        private set
+
     var channel: Channel? = null
 
     var lastReactionsDownloadTime: Long? = null
@@ -114,6 +117,13 @@ class Note(val idHex: String) {
         }
     }
 
+    fun addRelay(relay: Relay) {
+        if (relay.url !in relays) {
+            relays = relays + relay.url
+            liveRelays.invalidateData()
+        }
+    }
+
     fun isReactedBy(user: User): Boolean {
         return reactions.any { it.author == user }
     }
@@ -179,6 +189,7 @@ class Note(val idHex: String) {
     val liveBoosts: NoteLiveData = NoteLiveData(this)
     val liveReplies: NoteLiveData = NoteLiveData(this)
     val liveReports: NoteLiveData = NoteLiveData(this)
+    val liveRelays: NoteLiveData = NoteLiveData(this)
 }
 
 class NoteLiveData(val note: Note): LiveData<NoteState>(NoteState(note)) {
