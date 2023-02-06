@@ -348,13 +348,18 @@ object LocalCache {
     }
   }
 
-  fun consume(event: ChannelMessageEvent) {
+  fun consume(event: ChannelMessageEvent, relay: Relay?) {
     if (event.channel.isNullOrBlank()) return
 
     val channel = getOrCreateChannel(event.channel)
 
     val note = getOrCreateNote(event.id.toHex())
     channel.addNote(note)
+
+    if (relay != null) {
+      note.author?.addRelay(relay, event.createdAt)
+      note.addRelay(relay)
+    }
 
     // Already processed this event.
     if (note.event != null) return

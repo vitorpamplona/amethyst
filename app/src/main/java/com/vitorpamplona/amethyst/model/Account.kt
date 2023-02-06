@@ -227,7 +227,7 @@ class Account(
       privateKey = loggedIn.privKey!!
     )
     Client.send(signedEvent)
-    LocalCache.consume(signedEvent)
+    LocalCache.consume(signedEvent, null)
   }
 
   fun sendPrivateMeesage(message: String, toUser: String, replyingTo: Note? = null) {

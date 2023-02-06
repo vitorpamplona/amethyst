@@ -1,25 +1,34 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -30,8 +39,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
@@ -39,6 +51,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
+import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
@@ -235,6 +248,8 @@ fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote
                                     color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                                     fontSize = 12.sp
                                 )
+
+                                RelayBadges(note)
                             }
                         }
                     }
@@ -247,3 +262,51 @@ fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote
     }
 }
 
+
+
+@Composable
+private fun RelayBadges(baseNote: Note) {
+    val noteRelaysState by baseNote.liveRelays.observeAsState()
+    val noteRelays = noteRelaysState?.note?.relays ?: emptySet()
+
+    var expanded by remember { mutableStateOf(false) }
+
+    val relaysToDisplay = if (expanded) noteRelays else noteRelays.take(3)
+
+    val uri = LocalUriHandler.current
+
+    FlowRow(Modifier.padding(start = 10.dp)) {
+        relaysToDisplay.forEach {
+            val url = it.removePrefix("wss://")
+            Box(Modifier.size(15.dp).padding(1.dp)) {
+                AsyncImage(
+                    model = "https://${url}/favicon.ico",
+                    placeholder = rememberAsyncImagePainter("https://robohash.org/$url.png"),
+                    fallback = rememberAsyncImagePainter("https://robohash.org/$url.png"),
+                    error = rememberAsyncImagePainter("https://robohash.org/$url.png"),
+                    contentDescription = "Relay Icon",
+                    colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }),
+                    modifier = Modifier
+                        .fillMaxSize(1f)
+                        .clip(shape = CircleShape)
+                        .background(MaterialTheme.colors.background)
+                        .clickable(onClick = { uri.openUri("https://" + url) } )
+                )
+            }
+        }
+
+        if (noteRelays.size > 3 && !expanded) {
+            IconButton(
+                modifier = Modifier.then(Modifier.size(15.dp)),
+                onClick = { expanded = true }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    null,
+                    modifier = Modifier.size(15.dp),
+                    tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                )
+            }
+        }
+    }
+}

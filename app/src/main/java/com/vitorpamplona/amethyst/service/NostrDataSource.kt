@@ -70,7 +70,7 @@ abstract class NostrDataSource<T>(val debugName: String) {
 
               ChannelCreateEvent.kind -> LocalCache.consume(ChannelCreateEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
               ChannelMetadataEvent.kind -> LocalCache.consume(ChannelMetadataEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
-              ChannelMessageEvent.kind -> LocalCache.consume(ChannelMessageEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
+              ChannelMessageEvent.kind -> LocalCache.consume(ChannelMessageEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig), relay)
               ChannelHideMessageEvent.kind -> LocalCache.consume(ChannelHideMessageEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
               ChannelMuteUserEvent.kind -> LocalCache.consume(ChannelMuteUserEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
             }
