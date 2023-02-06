@@ -64,6 +64,6 @@ object NostrHomeDataSource: NostrDataSource<Note>("HomeFeed") {
   }
 
   override fun updateChannelFilters() {
-    followAccountChannel.filter = listOf(createFollowAccountsFilter()).ifEmpty { null }
+    followAccountChannel.typedFilters = listOf(createFollowAccountsFilter()).ifEmpty { null }
   }
 }

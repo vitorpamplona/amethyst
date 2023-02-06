@@ -10,10 +10,8 @@ import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
-import java.util.Collections
 import java.util.Date
 import nostr.postr.JsonFilter
-import nostr.postr.events.MetadataEvent
 import nostr.postr.events.TextNoteEvent
 
 object NostrSingleEventDataSource: NostrDataSource<Note>("SingleEventFeed") {
@@ -100,7 +98,7 @@ object NostrSingleEventDataSource: NostrDataSource<Note>("SingleEventFeed") {
     val reactions = createRepliesAndReactionsFilter()
     val missing = createLoadEventsIfNotLoadedFilter()
 
-    singleEventChannel.filter = listOfNotNull(reactions, missing).flatten().ifEmpty { null }
+    singleEventChannel.typedFilters = listOfNotNull(reactions, missing).flatten().ifEmpty { null }
   }
 
   fun add(eventId: String) {

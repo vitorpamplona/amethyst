@@ -6,7 +6,6 @@ import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
-import java.util.Collections
 import nostr.postr.JsonFilter
 import nostr.postr.events.TextNoteEvent
 
@@ -58,7 +57,7 @@ object NostrThreadDataSource: NostrDataSource<Note>("SingleThreadFeed") {
   }
 
   override fun updateChannelFilters() {
-    loadEventsChannel.filter = listOfNotNull(createLoadEventsIfNotLoadedFilter(), createRepliesAndReactionsFilter()).ifEmpty { null }
+    loadEventsChannel.typedFilters = listOfNotNull(createLoadEventsIfNotLoadedFilter(), createRepliesAndReactionsFilter()).ifEmpty { null }
   }
 
   fun searchRoot(note: Note, testedNotes: MutableSet<Note> = mutableSetOf()): Note? {

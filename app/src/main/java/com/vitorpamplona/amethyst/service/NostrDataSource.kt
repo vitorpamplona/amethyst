@@ -13,6 +13,7 @@ import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Relay
+import com.vitorpamplona.amethyst.service.relays.Subscription
 import java.util.Date
 import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
@@ -29,7 +30,7 @@ import nostr.postr.events.RecommendRelayEvent
 import nostr.postr.events.TextNoteEvent
 
 abstract class NostrDataSource<T>(val debugName: String) {
-  private var channels = mapOf<String, Channel>()
+  private var subscriptions = mapOf<String, Subscription>()
   private var eventCounter = mapOf<String, Int>()
 
   fun printCounter() {
@@ -40,7 +41,7 @@ abstract class NostrDataSource<T>(val debugName: String) {
 
   private val clientListener = object : Client.Listener() {
     override fun onEvent(event: Event, subscriptionId: String, relay: Relay) {
-      if (subscriptionId in channels.keys) {
+      if (subscriptionId in subscriptions.keys) {
         val key = "${debugName} ${subscriptionId} ${event.kind}"
         val keyValue = eventCounter.get(key)
         if (keyValue != null) {
@@ -95,7 +96,7 @@ abstract class NostrDataSource<T>(val debugName: String) {
 
       if (type == Relay.Type.EOSE && channel != null) {
         // updates a per subscripton since date
-        channels[channel]?.updateEOSE(Date().time / 1000)
+        subscriptions[channel]?.updateEOSE(Date().time / 1000)
       }
     }
 
@@ -113,8 +114,8 @@ abstract class NostrDataSource<T>(val debugName: String) {
   }
 
   open fun stop() {
-    channels.values.forEach { channel ->
-      if (channel.filter != null) // if it is active, close
+    subscriptions.values.forEach { channel ->
+      if (channel.typedFilters != null) // if it is active, close
         Client.close(channel.id)
     }
   }
@@ -139,15 +140,15 @@ abstract class NostrDataSource<T>(val debugName: String) {
     }
   }
 
-  fun requestNewChannel(onEOSE: ((Long) -> Unit)? = null): Channel {
-    val newChannel = Channel(UUID.randomUUID().toString().substring(0,4), onEOSE)
-    channels = channels + Pair(newChannel.id, newChannel)
-    return newChannel
+  fun requestNewChannel(onEOSE: ((Long) -> Unit)? = null): Subscription {
+    val newSubscription = Subscription(UUID.randomUUID().toString().substring(0,4), onEOSE)
+    subscriptions = subscriptions + Pair(newSubscription.id, newSubscription)
+    return newSubscription
   }
 
-  fun dismissChannel(channel: Channel) {
-    Client.close(channel.id)
-    channels = channels.minus(channel.id)
+  fun dismissChannel(subscription: Subscription) {
+    Client.close(subscription.id)
+    subscriptions = subscriptions.minus(subscription.id)
   }
 
   var handlerWaiting = false
@@ -173,37 +174,37 @@ abstract class NostrDataSource<T>(val debugName: String) {
 
   fun resetFiltersSuspend() {
     // saves the channels that are currently active
-    val activeChannels = channels.values.filter { it.filter != null }
+    val activeSubscriptions = subscriptions.values.filter { it.typedFilters != null }
     // saves the current content to only update if it changes
-    val currentFilter = activeChannels.associate { it.id to it.filter!!.joinToString("|") { it.filter.toJson() }  }
+    val currentFilters = activeSubscriptions.associate { it.id to it.toJson()  }
 
     updateChannelFilters()
 
     // Makes sure to only send an updated filter when it actually changes.
-    channels.values.forEach { channel ->
-      val channelsNewFilter = channel.filter
+    subscriptions.values.forEach { updatedSubscription ->
+      val updatedSubscriotionNewFilters = updatedSubscription.typedFilters
 
-      if (channel in activeChannels) {
-        if (channelsNewFilter == null) {
+      if (updatedSubscription.id in currentFilters.keys) {
+        if (updatedSubscriotionNewFilters == null) {
           // was active and is not active anymore, just close.
-          Client.close(channel.id)
+          Client.close(updatedSubscription.id)
         } else {
           // was active and is still active, check if it has changed.
-          if (channelsNewFilter.joinToString("|") { it.filter.toJson() } != currentFilter[channel.id]) {
-            Client.close(channel.id)
-            Client.sendFilter(channel.id, channelsNewFilter)
+          if (updatedSubscription.toJson() != currentFilters[updatedSubscription.id]) {
+            Client.close(updatedSubscription.id)
+            Client.sendFilter(updatedSubscription.id, updatedSubscriotionNewFilters)
           } else {
             // hasn't changed, does nothing.
-            Client.sendFilterOnlyIfDisconnected(channel.id, channelsNewFilter)
+            Client.sendFilterOnlyIfDisconnected(updatedSubscription.id, updatedSubscriotionNewFilters)
           }
         }
       } else {
-        if (channelsNewFilter == null) {
+        if (updatedSubscriotionNewFilters == null) {
           // was not active and is still not active, does nothing
         } else {
           // was not active and becomes active, sends the filter.
-          if (channelsNewFilter.joinToString("|") { it.filter.toJson() } != currentFilter[channel.id]) {
-            Client.sendFilter(channel.id, channelsNewFilter)
+          if (updatedSubscription.toJson() != currentFilters[updatedSubscription.id]) {
+            Client.sendFilter(updatedSubscription.id, updatedSubscriotionNewFilters)
           }
         }
       }

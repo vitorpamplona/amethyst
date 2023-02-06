@@ -3,15 +3,10 @@ package com.vitorpamplona.amethyst.service
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
-import com.vitorpamplona.amethyst.service.model.ReactionEvent
-import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
-import java.util.Collections
 import nostr.postr.JsonFilter
-import nostr.postr.events.TextNoteEvent
 
 object NostrSingleChannelDataSource: NostrDataSource<Note>("SingleChannelFeed") {
   private var channelsToWatch = setOf<String>()
@@ -64,7 +59,7 @@ object NostrSingleChannelDataSource: NostrDataSource<Note>("SingleChannelFeed") 
     val reactions = createRepliesAndReactionsFilter()
     val missing = createLoadEventsIfNotLoadedFilter()
 
-    singleChannelChannel.filter = listOfNotNull(reactions, missing).ifEmpty { null }
+    singleChannelChannel.typedFilters = listOfNotNull(reactions, missing).ifEmpty { null }
   }
 
   fun add(eventId: String) {

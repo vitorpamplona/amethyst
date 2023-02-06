@@ -4,7 +4,6 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.toByteArray
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import nostr.postr.JsonFilter
@@ -73,7 +72,7 @@ object NostrUserProfileDataSource: NostrDataSource<Note>("UserProfileFeed") {
   }
 
   override fun updateChannelFilters() {
-    userInfoChannel.filter = listOf(
+    userInfoChannel.typedFilters = listOf(
       createUserInfoFilter(),
       createUserPostsFilter(),
       createFollowFilter(),

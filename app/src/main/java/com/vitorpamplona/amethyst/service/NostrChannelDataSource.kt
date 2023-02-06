@@ -39,6 +39,6 @@ object NostrChannelDataSource: NostrDataSource<Note>("ChatroomFeed") {
   }
 
   override fun updateChannelFilters() {
-    messagesChannel.filter = listOfNotNull(createMessagesToChannelFilter()).ifEmpty { null }
+    messagesChannel.typedFilters = listOfNotNull(createMessagesToChannelFilter()).ifEmpty { null }
   }
 }

@@ -1,12 +1,10 @@
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
-import java.util.Collections
 import nostr.postr.JsonFilter
 import nostr.postr.events.MetadataEvent
 
@@ -57,7 +55,7 @@ object NostrSingleUserDataSource: NostrDataSource<User>("SingleUserFeed") {
   }
 
   override fun updateChannelFilters() {
-    userChannel.filter = listOfNotNull(createUserFilter(), createUserReportFilter()).flatten()
+    userChannel.typedFilters = listOfNotNull(createUserFilter(), createUserReportFilter()).flatten()
   }
 
   fun add(userId: String) {

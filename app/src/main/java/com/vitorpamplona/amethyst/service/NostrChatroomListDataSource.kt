@@ -1,7 +1,6 @@
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
@@ -97,7 +96,7 @@ object NostrChatroomListDataSource: NostrDataSource<Note>("MailBoxFeed") {
       createMyChannelsFilter()
     )
 
-    chatroomListChannel.filter = listOfNotNull(
+    chatroomListChannel.typedFilters = listOfNotNull(
       list,
       createLastChannelInfoFilter(),
       createLastMessageOfEachChannelFilter()

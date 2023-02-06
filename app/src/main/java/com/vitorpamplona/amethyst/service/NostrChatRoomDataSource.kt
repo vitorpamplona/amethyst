@@ -62,6 +62,6 @@ object NostrChatRoomDataSource: NostrDataSource<Note>("ChatroomFeed") {
   }
 
   override fun updateChannelFilters() {
-    inandoutChannel.filter = listOfNotNull(createMessagesToMeFilter(), createMessagesFromMeFilter()).ifEmpty { null }
+    inandoutChannel.typedFilters = listOfNotNull(createMessagesToMeFilter(), createMessagesFromMeFilter()).ifEmpty { null }
   }
 }

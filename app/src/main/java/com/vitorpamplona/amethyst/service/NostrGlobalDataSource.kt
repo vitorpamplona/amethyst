@@ -31,6 +31,6 @@ object NostrGlobalDataSource: NostrDataSource<Note>("GlobalFeed") {
     .reversed()
 
   override fun updateChannelFilters() {
-    globalFeedChannel.filter = listOf(createGlobalFilter()).ifEmpty { null }
+    globalFeedChannel.typedFilters = listOf(createGlobalFilter()).ifEmpty { null }
   }
 }

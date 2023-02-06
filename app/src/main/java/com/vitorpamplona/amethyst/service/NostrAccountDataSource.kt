@@ -3,7 +3,6 @@ package com.vitorpamplona.amethyst.service
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.relays.FeedType
@@ -69,7 +68,7 @@ object NostrAccountDataSource: NostrDataSource<Note>("AccountData") {
 
   override fun updateChannelFilters() {
     // gets everthing about the user logged in
-    accountChannel.filter = listOf(
+    accountChannel.typedFilters = listOf(
       createAccountMetadataFilter(),
       createAccountContactListFilter(),
       createNotificationFilter(),
