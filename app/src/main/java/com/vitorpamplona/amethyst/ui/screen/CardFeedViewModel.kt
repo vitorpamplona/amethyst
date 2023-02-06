@@ -13,6 +13,7 @@ import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -99,19 +100,18 @@ class CardFeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel() {
         }
     }
 
+    var handlerWaiting = AtomicBoolean()
 
-    var handlerWaiting = false
-    fun invalidateData() {
-        synchronized(handlerWaiting) {
-            if (handlerWaiting) return
+    @Synchronized
+    private fun invalidateData() {
+        if (handlerWaiting.getAndSet(true)) return
 
-            handlerWaiting = true
-            val scope = CoroutineScope(Job() + Dispatchers.Default)
-            scope.launch {
-                delay(100)
-                refresh()
-                handlerWaiting = false
-            }
+        handlerWaiting.set(true)
+        val scope = CoroutineScope(Job() + Dispatchers.Default)
+        scope.launch {
+            delay(100)
+            refresh()
+            handlerWaiting.set(false)
         }
     }
 

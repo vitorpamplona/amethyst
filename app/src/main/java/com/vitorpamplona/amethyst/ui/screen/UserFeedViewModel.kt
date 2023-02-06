@@ -81,7 +81,7 @@ open class UserFeedViewModel(val dataSource: NostrDataSource<User>): ViewModel()
 
     @Synchronized
     private fun invalidateData() {
-        if (handlerWaiting.get()) return
+        if (handlerWaiting.getAndSet(true)) return
 
         handlerWaiting.set(true)
         val scope = CoroutineScope(Job() + Dispatchers.Default)

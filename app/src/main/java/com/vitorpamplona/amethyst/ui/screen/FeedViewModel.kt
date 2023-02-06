@@ -117,15 +117,15 @@ abstract class FeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel()
     private var handlerWaiting = AtomicBoolean()
     @Synchronized
     private fun invalidateData() {
-            if (handlerWaiting.get()) return
+        if (handlerWaiting.getAndSet(true)) return
 
-            handlerWaiting.set(true)
-            val scope = CoroutineScope(Job() + Dispatchers.Default)
-            scope.launch {
-                delay(100)
-                refresh()
-                handlerWaiting.set(false)
-            }
+        handlerWaiting.set(true)
+        val scope = CoroutineScope(Job() + Dispatchers.Default)
+        scope.launch {
+            delay(100)
+            refresh()
+            handlerWaiting.set(false)
+        }
     }
 
     private val cacheListener: (LocalCacheState) -> Unit = {
