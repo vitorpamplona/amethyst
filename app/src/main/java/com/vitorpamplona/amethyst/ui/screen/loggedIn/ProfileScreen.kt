@@ -1,71 +1,40 @@
 package com.vitorpamplona.amethyst.ui.screen
 
-import android.content.Context
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.*
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Divider
-import androidx.compose.material.DropdownMenu
-import androidx.compose.material.DropdownMenuItem
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.ScrollableTabRow
-import androidx.compose.material.Surface
-import androidx.compose.material.Tab
-import androidx.compose.material.TabRow
-import androidx.compose.material.TabRowDefaults
-import androidx.compose.material.Text
+import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Password
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.ClipboardManager
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import coil.compose.rememberAsyncImagePainter
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.pagerTabIndicatorOffset
@@ -73,15 +42,11 @@ import com.google.accompanist.pager.rememberPagerState
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.toNote
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileFollowersDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileFollowsDataSource
 import com.vitorpamplona.amethyst.service.model.ReportEvent
-import com.vitorpamplona.amethyst.ui.actions.NewChannelView
-import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -111,18 +76,47 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
 
     val baseUser = NostrUserProfileDataSource.user ?: return
 
+    var columnSize by remember { mutableStateOf(IntSize.Zero) }
+    var tabsSize by remember { mutableStateOf(IntSize.Zero) }
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = MaterialTheme.colors.background
     ) {
-        Column() {
-            ProfileHeader(baseUser, navController, account, accountViewModel)
+        val pagerState = rememberPagerState()
+        val coroutineScope = rememberCoroutineScope()
+        val scrollState = rememberScrollState()
 
-            val pagerState = rememberPagerState()
-            val coroutineScope = rememberCoroutineScope()
-
-            Column(modifier = Modifier.padding()) {
-                ScrollableTabRow(
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .onSizeChanged {
+                columnSize = it
+            }
+        ) {
+            Box(
+                modifier = Modifier
+                    .verticalScroll(scrollState)
+                    .nestedScroll(object : NestedScrollConnection {
+                        override fun onPreScroll(
+                            available: Offset,
+                            source: NestedScrollSource
+                        ): Offset {
+                            // When scrolling vertically, scroll the container first.
+                            return if (available.y < 0 && scrollState.canScrollForward) {
+                                coroutineScope.launch {
+                                    scrollState.scrollBy(-available.y)
+                                }
+                                Offset(0f, available.y)
+                            } else {
+                                Offset.Zero
+                            }
+                        }
+                    })
+                    .fillMaxHeight()
+            ) {
+                Column(modifier = Modifier.padding()) {
+                    ProfileHeader(baseUser, navController, account, accountViewModel)
+                    ScrollableTabRow(
                         selectedTabIndex = pagerState.currentPage,
                         indicator = { tabPositions ->
                             TabRowDefaults.Indicator(
@@ -130,58 +124,72 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                                 color = MaterialTheme.colors.primary
                             )
                         },
-                        edgePadding = 8.dp
-                ) {
-                    Tab(
-                        selected = pagerState.currentPage == 0,
-                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
-                        text = {
-                            Text(text = "Notes")
+                        edgePadding = 8.dp,
+                        modifier = Modifier.onSizeChanged {
+                            tabsSize = it
                         }
-                    )
+                    ) {
+                        Tab(
+                            selected = pagerState.currentPage == 0,
+                            onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
+                            text = {
+                                Text(text = "Notes")
+                            }
+                        )
 
-                    Tab(
-                        selected = pagerState.currentPage == 1,
-                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
-                        text = {
-                            val userState by baseUser.liveFollows.observeAsState()
-                            val userFollows = userState?.user?.follows?.size ?: "--"
+                        Tab(
+                            selected = pagerState.currentPage == 1,
+                            onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
+                            text = {
+                                val userState by baseUser.liveFollows.observeAsState()
+                                val userFollows = userState?.user?.follows?.size ?: "--"
 
-                            Text(text = "$userFollows Follows")
+                                Text(text = "$userFollows Follows")
+                            }
+                        )
+
+                        Tab(
+                            selected = pagerState.currentPage == 2,
+                            onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
+                            text = {
+                                val userState by baseUser.liveFollows.observeAsState()
+                                val userFollows = userState?.user?.followers?.size ?: "--"
+
+                                Text(text = "$userFollows Followers")
+                            }
+                        )
+
+                        Tab(
+                            selected = pagerState.currentPage == 3,
+                            onClick = { coroutineScope.launch { pagerState.animateScrollToPage(3) } },
+                            text = {
+                                val userState by baseUser.liveRelays.observeAsState()
+                                val userRelaysBeingUsed =
+                                    userState?.user?.relaysBeingUsed?.size ?: "--"
+
+                                val userStateRelayInfo by baseUser.liveRelayInfo.observeAsState()
+                                val userRelays = userStateRelayInfo?.user?.relays?.size ?: "--"
+
+                                Text(text = "$userRelaysBeingUsed / $userRelays Relays")
+                            }
+                        )
+                    }
+                    HorizontalPager(
+                        count = 4,
+                        state = pagerState,
+                        modifier = Modifier.then(with(LocalDensity.current) {
+                            Modifier.size(
+                                width = columnSize.width.toDp(),
+                                height = (columnSize.height - tabsSize.height).toDp(),
+                            )
+                        })
+                    ) {
+                        when (pagerState.currentPage) {
+                            0 -> TabNotes(baseUser, accountViewModel, navController)
+                            1 -> TabFollows(baseUser, accountViewModel, navController)
+                            2 -> TabFollowers(baseUser, accountViewModel, navController)
+                            3 -> TabRelays(baseUser, accountViewModel, navController)
                         }
-                    )
-
-                    Tab(
-                        selected = pagerState.currentPage == 2,
-                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
-                        text = {
-                            val userState by baseUser.liveFollows.observeAsState()
-                            val userFollows = userState?.user?.followers?.size ?: "--"
-
-                            Text(text = "$userFollows Followers")
-                        }
-                    )
-
-                    Tab(
-                        selected = pagerState.currentPage == 3,
-                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(3) } },
-                        text = {
-                            val userState by baseUser.liveRelays.observeAsState()
-                            val userRelaysBeingUsed = userState?.user?.relaysBeingUsed?.size ?: "--"
-
-                            val userStateRelayInfo by baseUser.liveRelayInfo.observeAsState()
-                            val userRelays = userStateRelayInfo?.user?.relays?.size ?: "--"
-
-                            Text(text = "$userRelaysBeingUsed / $userRelays Relays")
-                        }
-                    )
-                }
-                HorizontalPager(count = 4, state = pagerState) {
-                    when (pagerState.currentPage) {
-                        0 -> TabNotes(baseUser, accountViewModel, navController)
-                        1 -> TabFollows(baseUser, accountViewModel, navController)
-                        2 -> TabFollowers(baseUser, accountViewModel, navController)
-                        3 -> TabRelays(baseUser, accountViewModel, navController)
                     }
                 }
             }
