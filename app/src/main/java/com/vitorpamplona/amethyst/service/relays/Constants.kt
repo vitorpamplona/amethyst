@@ -41,7 +41,7 @@ object Constants {
     NewRelayListViewModel.Relay("wss://puravida.nostr.land", read = true, write = false, feedTypes = activeTypesGlobal),
     NewRelayListViewModel.Relay("wss://nostr.wine", read = true, write = false, feedTypes = activeTypesGlobal),
     NewRelayListViewModel.Relay("wss://nostr.inosta.cc", read = true, write = false, feedTypes = activeTypesGlobal),
-    NewRelayListViewModel.Relay("wss://nostr-pub.semisol.dev", read = true, write = false, feedTypes = activeTypesGlobal),
+    NewRelayListViewModel.Relay("wss://atlas.nostr.land", read = true, write = false, feedTypes = activeTypesGlobal),
     NewRelayListViewModel.Relay("wss://relay.orangepill.dev", read = true, write = false, feedTypes = activeTypesGlobal),
     NewRelayListViewModel.Relay("wss://relay.nostrati.com", read = true, write = false, feedTypes = activeTypesGlobal),
   )
