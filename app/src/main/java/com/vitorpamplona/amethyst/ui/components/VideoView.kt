@@ -24,7 +24,6 @@ fun VideoView(videoUri: String) {
     ExoPlayer.Builder(context).build().apply {
       repeatMode = Player.REPEAT_MODE_ALL
       videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
-      this.
     }
   }
 
