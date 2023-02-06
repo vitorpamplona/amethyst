@@ -126,7 +126,7 @@ fun RichTextViewer(content: String, canPreview: Boolean, tags: List<List<String>
             } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
               ClickablePhone(word)
             } else if (noProtocolUrlValidator.matcher(word).matches()) {
-              ClickableUrl("https://$word", word)
+              ClickableUrl(word, "https://$word")
             } else if (tagIndex.matcher(word).matches() && tags != null) {
               TagLink(word, tags, navController)
             } else if (isBechLink(word)) {
