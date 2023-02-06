@@ -228,7 +228,7 @@ private fun ProfileHeader(
                 contentPadding = PaddingValues(0.dp)
             ) {
                 Icon(
-                    tint = Color.White,
+                    tint = if (isSystemInDarkTheme()) Color.White else Color.Black,
                     imageVector = Icons.Default.MoreVert,
                     contentDescription = "More Options",
                 )
