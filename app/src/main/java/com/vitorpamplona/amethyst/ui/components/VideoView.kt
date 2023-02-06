@@ -5,6 +5,7 @@ import android.widget.FrameLayout
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
@@ -19,14 +20,18 @@ import com.google.android.exoplayer2.ui.StyledPlayerView
 fun VideoView(videoUri: String) {
   val context = LocalContext.current
 
-  val exoPlayer = ExoPlayer.Builder(LocalContext.current).build().apply {
-    repeatMode = Player.REPEAT_MODE_ALL
-    videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
-    setMediaItem(MediaItem.fromUri(videoUri))
-    prepare()
+  val exoPlayer = remember {
+    ExoPlayer.Builder(context).build().apply {
+      repeatMode = Player.REPEAT_MODE_ALL
+      videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+      this.
+    }
   }
 
   DisposableEffect(exoPlayer) {
+    exoPlayer.setMediaItem(MediaItem.fromUri(videoUri))
+    exoPlayer.prepare()
+
     onDispose {
       exoPlayer.release()
     }
