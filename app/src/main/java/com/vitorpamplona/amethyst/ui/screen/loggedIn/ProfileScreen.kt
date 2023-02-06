@@ -586,7 +586,7 @@ fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () ->
         expanded = popupExpanded,
         onDismissRequest = onDismiss
     ) {
-        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(user.pubkey.toNpub() ?: "")); onDismiss() }) {
+        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(user.pubkey.toNpub())); onDismiss() }) {
             Text("Copy User ID")
         }
 
