@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name_release">Amethyst</string>
+    <string name="app_name_debug">Amethyst Debug</string>
+</resources>

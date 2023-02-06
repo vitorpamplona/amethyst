@@ -23,7 +23,7 @@ class EUrlUserTagTransformationTest {
   fun useAppContext() {
     // Context of the app under test.
     val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-    assertEquals("com.vitorpamplona.amethyst", appContext.packageName)
+    assertEquals("com.vitorpamplona.amethyst", appContext.packageName.removeSuffix(".debug"))
   }
 
   @Test
