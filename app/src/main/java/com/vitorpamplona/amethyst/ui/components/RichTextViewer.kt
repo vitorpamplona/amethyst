@@ -3,10 +3,19 @@ package com.vitorpamplona.amethyst.ui.components
 import android.content.res.Resources
 import android.util.LruCache
 import android.util.Patterns
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
+import androidx.compose.material.Button
+import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
@@ -16,7 +25,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
@@ -70,6 +82,7 @@ fun RichTextViewer(content: String, canPreview: Boolean, tags: List<List<String>
   }
 
   var showOriginal by remember { mutableStateOf(false) }
+  var showFullText by remember { mutableStateOf(false) }
 
   LaunchedEffect(Unit) {
     LanguageTranslatorService.autoTranslate(content).addOnCompleteListener { task ->
@@ -79,64 +92,99 @@ fun RichTextViewer(content: String, canPreview: Boolean, tags: List<List<String>
     }
   }
 
-  val text = if (showOriginal) content else translatedTextState.value.result
+  val toBeViewed = if (showOriginal) content else translatedTextState.value.result ?: content
+  val text = if (showFullText) toBeViewed else toBeViewed.take(350)
 
   Column(modifier = Modifier.padding(top = 5.dp)) {
-    // FlowRow doesn't work well with paragraphs. So we need to split them
-    text?.split('\n')?.forEach { paragraph ->
 
-      FlowRow() {
-        paragraph.split(' ').forEach { word: String ->
+    Box(contentAlignment = Alignment.BottomCenter) {
 
-          if (canPreview) {
-            // Explicit URL
-            val lnInvoice = LnInvoiceUtil.findInvoice(word)
-            if (lnInvoice != null) {
-              InvoicePreview(lnInvoice)
-            } else if (isValidURL(word)) {
-              val removedParamsFromUrl = word.split("?")[0].toLowerCase()
-              if (imageExtension.matcher(removedParamsFromUrl).matches()) {
-                ZoomableImageView(word)
-              } else if (videoExtension.matcher(removedParamsFromUrl).matches()) {
-                VideoView(word)
+      Column(Modifier.fillMaxWidth().animateContentSize()) {
+        // FlowRow doesn't work well with paragraphs. So we need to split them
+        text.split('\n').forEach { paragraph ->
+
+          FlowRow() {
+            paragraph.split(' ').forEach { word: String ->
+
+              if (canPreview) {
+                // Explicit URL
+                val lnInvoice = LnInvoiceUtil.findInvoice(word)
+                if (lnInvoice != null) {
+                  InvoicePreview(lnInvoice)
+                } else if (isValidURL(word)) {
+                  val removedParamsFromUrl = word.split("?")[0].toLowerCase()
+                  if (imageExtension.matcher(removedParamsFromUrl).matches()) {
+                    ZoomableImageView(word)
+                  } else if (videoExtension.matcher(removedParamsFromUrl).matches()) {
+                    VideoView(word)
+                  } else {
+                    UrlPreview(word, word)
+                  }
+                } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
+                  ClickableEmail(word)
+                } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
+                  ClickablePhone(word)
+                } else if (noProtocolUrlValidator.matcher(word).matches()) {
+                  UrlPreview("https://$word", word)
+                } else if (tagIndex.matcher(word).matches() && tags != null) {
+                  TagLink(word, tags, navController)
+                } else if (isBechLink(word)) {
+                  BechLink(word, navController)
+                } else {
+                  Text(
+                    text = "$word ",
+                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+                  )
+                }
               } else {
-                UrlPreview(word, word)
+                if (isValidURL(word)) {
+                  ClickableUrl("$word ", word)
+                } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
+                  ClickableEmail(word)
+                } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
+                  ClickablePhone(word)
+                } else if (noProtocolUrlValidator.matcher(word).matches()) {
+                  ClickableUrl(word, "https://$word")
+                } else if (tagIndex.matcher(word).matches() && tags != null) {
+                  TagLink(word, tags, navController)
+                } else if (isBechLink(word)) {
+                  BechLink(word, navController)
+                } else {
+                  Text(
+                    text = "$word ",
+                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+                  )
+                }
               }
-            } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
-              ClickableEmail(word)
-            } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
-              ClickablePhone(word)
-            } else if (noProtocolUrlValidator.matcher(word).matches()) {
-              UrlPreview("https://$word", word)
-            } else if (tagIndex.matcher(word).matches() && tags != null) {
-              TagLink(word, tags, navController)
-            } else if (isBechLink(word)) {
-              BechLink(word, navController)
-            } else {
-              Text(
-                text = "$word ",
-                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
-              )
             }
-          } else {
-            if (isValidURL(word)) {
-              ClickableUrl("$word ", word)
-            } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
-              ClickableEmail(word)
-            } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
-              ClickablePhone(word)
-            } else if (noProtocolUrlValidator.matcher(word).matches()) {
-              ClickableUrl(word, "https://$word")
-            } else if (tagIndex.matcher(word).matches() && tags != null) {
-              TagLink(word, tags, navController)
-            } else if (isBechLink(word)) {
-              BechLink(word, navController)
-            } else {
-              Text(
-                text = "$word ",
-                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+          }
+        }
+      }
+
+      if (toBeViewed.length > 350 && !showFullText) {
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.Center,
+          modifier = Modifier.fillMaxWidth().background(
+            brush = Brush.verticalGradient(
+              colors = listOf(
+                MaterialTheme.colors.background.copy(alpha = 0f),
+                MaterialTheme.colors.background
               )
-            }
+            )
+          )
+        ) {
+          Button(
+            modifier = Modifier.padding(top = 10.dp),
+            onClick = { showFullText = !showFullText },
+            shape = RoundedCornerShape(20.dp),
+            colors = ButtonDefaults
+              .buttonColors(
+                backgroundColor = MaterialTheme.colors.primary
+              ),
+            contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
+          ) {
+            Text(text = "Show More", color = Color.White)
           }
         }
       }
@@ -147,13 +195,13 @@ fun RichTextViewer(content: String, canPreview: Boolean, tags: List<List<String>
 
     if (source != null && target != null) {
       if (source != target) {
-        Row() {
+        FlowRow() {
           Text(
             text = "Auto-translated from ",
             color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
           )
           ClickableText(
-            text = AnnotatedString("${Locale(source).displayName}"),
+            text = AnnotatedString(Locale(source).displayName),
             onClick = { showOriginal = true },
             style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(alpha = 0.52f))
           )
@@ -162,7 +210,7 @@ fun RichTextViewer(content: String, canPreview: Boolean, tags: List<List<String>
             color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
           )
           ClickableText(
-            text = AnnotatedString("${Locale(target).displayName}"),
+            text = AnnotatedString(Locale(target).displayName),
             onClick = { showOriginal = false },
             style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(alpha = 0.52f))
           )
