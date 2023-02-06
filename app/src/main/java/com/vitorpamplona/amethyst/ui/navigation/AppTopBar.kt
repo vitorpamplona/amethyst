@@ -203,7 +203,7 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
             },
             actions = {
                 IconButton(
-                    onClick = {}, modifier = Modifier
+                    onClick = { wantsToEditRelays = true }, modifier = Modifier
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.ic_trends),
