@@ -83,7 +83,7 @@ abstract class FeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel()
     }
 
     fun refresh() {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.Default) {
             val notes = newListFromDataSource()
 
             val oldNotesState = feedContent.value

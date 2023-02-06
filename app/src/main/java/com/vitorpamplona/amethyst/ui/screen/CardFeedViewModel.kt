@@ -30,10 +30,12 @@ class CardFeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel() {
 
     private var lastNotes: List<Note>? = null
 
-    suspend fun refresh() = withContext(Dispatchers.IO) {
-        refreshSuspended()
+    fun refresh() {
+        val scope = CoroutineScope(Job() + Dispatchers.Default)
+        scope.launch {
+            refreshSuspended()
+        }
     }
-
     private fun refreshSuspended() {
         val notes = dataSource.loadTop()
 

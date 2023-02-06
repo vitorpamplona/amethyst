@@ -41,8 +41,11 @@ open class UserFeedViewModel(val dataSource: NostrDataSource<User>): ViewModel()
     private val _feedContent = MutableStateFlow<UserFeedState>(UserFeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
 
-    suspend fun refresh() = withContext(Dispatchers.IO) {
-        refreshSuspended()
+    fun refresh() {
+        val scope = CoroutineScope(Job() + Dispatchers.Default)
+        scope.launch {
+            refreshSuspended()
+        }
     }
 
 
