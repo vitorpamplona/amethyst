@@ -175,13 +175,18 @@ object LocalCache {
     }
   }
 
-  fun consume(event: PrivateDmEvent) {
+  fun consume(event: PrivateDmEvent, relay: Relay?) {
     val note = getOrCreateNote(event.id.toHex())
+    val author = getOrCreateUser(event.pubKey.toHexKey())
+
+    if (relay != null) {
+      author.addRelay(relay, event.createdAt)
+      note.addRelay(relay)
+    }
 
     // Already processed this event.
     if (note.event != null) return
 
-    val author = getOrCreateUser(event.pubKey.toHexKey())
     val recipient = event.recipientPubKey?.let { getOrCreateUser(it.toHexKey()) }
 
     //Log.d("PM", "${author.toBestDisplayName()} to ${recipient?.toBestDisplayName()}")
@@ -356,15 +361,16 @@ object LocalCache {
     val note = getOrCreateNote(event.id.toHex())
     channel.addNote(note)
 
+    val author = getOrCreateUser(event.pubKey.toHexKey())
+
     if (relay != null) {
-      note.author?.addRelay(relay, event.createdAt)
+      author.addRelay(relay, event.createdAt)
       note.addRelay(relay)
     }
 
     // Already processed this event.
     if (note.event != null) return
 
-    val author = getOrCreateUser(event.pubKey.toHexKey())
     val mentions = event.mentions.map { getOrCreateUser(it) }
     val replyTo = event.replyTos
       .map { getOrCreateNote(it) }

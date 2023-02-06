@@ -242,7 +242,7 @@ class Account(
       advertiseNip18 = false
     )
     Client.send(signedEvent)
-    LocalCache.consume(signedEvent)
+    LocalCache.consume(signedEvent, null)
   }
 
   fun sendCreateNewChannel(name: String, about: String, picture: String) {

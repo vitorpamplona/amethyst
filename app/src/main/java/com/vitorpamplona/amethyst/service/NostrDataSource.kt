@@ -56,7 +56,7 @@ abstract class NostrDataSource<T>(val debugName: String) {
             is TextNoteEvent -> LocalCache.consume(event, relay)
             is RecommendRelayEvent -> LocalCache.consume(event)
             is ContactListEvent -> LocalCache.consume(event)
-            is PrivateDmEvent -> LocalCache.consume(event)
+            is PrivateDmEvent -> LocalCache.consume(event, relay)
             is DeletionEvent -> LocalCache.consume(event)
             else -> when (event.kind) {
               RepostEvent.kind -> {
