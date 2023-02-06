@@ -3,7 +3,7 @@ package com.vitorpamplona.amethyst.service.relays
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListViewModel
 
 object Constants {
-  val activeTypes = setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.PRIVATE_DMS)
+  val activeTypes = setOf(FeedType.FOLLOWS, FeedType.PRIVATE_DMS)
   val activeTypesGlobal = setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.PRIVATE_DMS, FeedType.GLOBAL)
 
   fun convertDefaultRelays(): Array<Relay> {
