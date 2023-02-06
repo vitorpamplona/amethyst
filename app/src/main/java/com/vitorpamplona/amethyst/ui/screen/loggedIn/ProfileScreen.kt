@@ -177,12 +177,9 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                     HorizontalPager(
                         count = 4,
                         state = pagerState,
-                        modifier = Modifier.then(with(LocalDensity.current) {
-                            Modifier.size(
-                                width = columnSize.width.toDp(),
-                                height = (columnSize.height - tabsSize.height).toDp(),
-                            )
-                        })
+                        modifier = with(LocalDensity.current) {
+                            Modifier.height((columnSize.height - tabsSize.height).toDp())
+                        }
                     ) {
                         when (pagerState.currentPage) {
                             0 -> TabNotes(baseUser, accountViewModel, navController)
