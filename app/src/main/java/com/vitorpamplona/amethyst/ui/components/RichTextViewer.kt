@@ -5,32 +5,20 @@ import android.util.LruCache
 import android.util.Patterns
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.LocalTextStyle
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.core.os.ConfigurationCompat
 import androidx.navigation.NavController
@@ -48,12 +36,12 @@ import com.vitorpamplona.amethyst.model.toByteArray
 import com.vitorpamplona.amethyst.model.toNote
 import com.vitorpamplona.amethyst.service.Nip19
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
+import nostr.postr.toNpub
 import java.net.MalformedURLException
 import java.net.URISyntaxException
 import java.net.URL
-import java.util.Locale
+import java.util.*
 import java.util.regex.Pattern
-import nostr.postr.toNpub
 
 val imageExtension = Pattern.compile("(.*/)*.+\\.(png|jpg|gif|bmp|jpeg|webp|svg)$")
 val videoExtension = Pattern.compile("(.*/)*.+\\.(mp4|avi|wmv|mpg|amv|webm)$")
@@ -195,25 +183,35 @@ fun RichTextViewer(content: String, canPreview: Boolean, tags: List<List<String>
 
     if (source != null && target != null) {
       if (source != target) {
-        FlowRow() {
-          Text(
-            text = "Auto-translated from ",
-            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-          )
-          ClickableText(
-            text = AnnotatedString(Locale(source).displayName),
-            onClick = { showOriginal = true },
-            style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(alpha = 0.52f))
-          )
-          Text(
-            text = " to ",
-            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-          )
-          ClickableText(
-            text = AnnotatedString(Locale(target).displayName),
-            onClick = { showOriginal = false },
-            style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(alpha = 0.52f))
-          )
+        val clickableTextStyle = SpanStyle(color = MaterialTheme.colors.primary.copy(alpha = 0.52f))
+
+        val annotatedTranslationString= buildAnnotatedString {
+          append("Auto-translated from ")
+
+          withStyle(clickableTextStyle) {
+            pushStringAnnotation("showOriginal", true.toString())
+            append(Locale(source).displayName)
+          }
+
+          append(" to ")
+
+          withStyle(clickableTextStyle) {
+            pushStringAnnotation("showOriginal", false.toString())
+            append(Locale(target).displayName)
+          }
+        }
+
+        ClickableText(
+          text = annotatedTranslationString,
+          style = LocalTextStyle.current.copy(color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)),
+          overflow = TextOverflow.Visible,
+          maxLines = 3
+        ) { spanOffset ->
+          annotatedTranslationString.getStringAnnotations(spanOffset, spanOffset)
+            .firstOrNull()
+            ?.also { span ->
+              showOriginal = span.item.toBoolean()
+            }
         }
       }
     }
