@@ -14,7 +14,6 @@ import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Divider
 import androidx.compose.material.Icon
-import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
@@ -32,23 +31,14 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat.startActivity
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.lnurl.LnInvoiceUtil
-import java.text.NumberFormat
+import com.vitorpamplona.amethyst.lnurl.LightningAddressResolver
 
 @Composable
-fun InvoicePreview(lnInvoice: String) {
-  val amount = try {
-    LnInvoiceUtil.getAmountInSats(lnInvoice)
-  } catch (e: Exception) {
-    e.printStackTrace()
-    null
-  }
-
+fun InvoiceRequest(lud16: String, onClose: () -> Unit ) {
   val context = LocalContext.current
 
   Column(modifier = Modifier
@@ -87,24 +77,52 @@ fun InvoicePreview(lnInvoice: String) {
 
       Divider()
 
-      amount?.let {
-        Text(
-          text = "${NumberFormat.getInstance().format(amount)} sats",
-          fontSize = 25.sp,
-          fontWeight = FontWeight.W500,
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 10.dp),
-        )
-      }
+      var message by remember { mutableStateOf("") }
+      var amount by remember { mutableStateOf(1000L) }
 
+      OutlinedTextField(
+        label = { Text(text = "Note to Receiver") },
+        modifier = Modifier.fillMaxWidth(),
+        value = message,
+        onValueChange = { message = it },
+        placeholder = {
+          Text(
+            text = "Thank you so much!",
+            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+          )
+        },
+        keyboardOptions = KeyboardOptions.Default.copy(
+          capitalization = KeyboardCapitalization.Sentences
+        ),
+        singleLine = true
+      )
+
+      OutlinedTextField(
+        label = { Text(text = "Amount in Sats") },
+        modifier = Modifier.fillMaxWidth(),
+        value = amount.toString(),
+        onValueChange = { amount = it.toLong() },
+        placeholder = {
+          Text(
+            text = "1000",
+            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+          )
+        },
+        keyboardOptions = KeyboardOptions.Default.copy(
+          keyboardType = KeyboardType.Number
+        ),
+        singleLine = true
+      )
 
       Button(
         modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
         onClick = {
-          runCatching {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("lightning:$lnInvoice"))
-            startActivity(context, intent, null)
+          LightningAddressResolver().lnAddressInvoice(lud16, amount * 1000, message) {
+            runCatching {
+              val intent = Intent(Intent.ACTION_VIEW, Uri.parse("lightning:$it"))
+              startActivity(context, intent, null)
+            }
+            onClose()
           }
         },
         shape = RoundedCornerShape(15.dp),
@@ -112,7 +130,7 @@ fun InvoicePreview(lnInvoice: String) {
           backgroundColor = MaterialTheme.colors.primary
         )
       ) {
-        Text(text = "Pay", color = Color.White, fontSize = 20.sp)
+        Text(text = "Send", color = Color.White, fontSize = 20.sp)
       }
     }
   }

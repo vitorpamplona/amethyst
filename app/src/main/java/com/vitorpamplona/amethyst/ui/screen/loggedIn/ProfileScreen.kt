@@ -1,14 +1,20 @@
 package com.vitorpamplona.amethyst.ui.screen
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.runtime.*
@@ -25,6 +31,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -32,6 +39,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
@@ -41,6 +49,7 @@ import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.google.accompanist.pager.rememberPagerState
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
@@ -48,8 +57,10 @@ import com.vitorpamplona.amethyst.service.NostrUserProfileFollowersDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileFollowsDataSource
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
+import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import kotlinx.coroutines.launch
 import nostr.postr.toNpub
 import nostr.postr.toNsec
@@ -301,6 +312,9 @@ private fun DrawAdditionalInfo(baseUser: User) {
     val userState by baseUser.liveMetadata.observeAsState()
     val user = userState?.user ?: return
 
+    val uri = LocalUriHandler.current
+    val context = LocalContext.current
+
     Text(
         user.bestDisplayName() ?: "",
         modifier = Modifier.padding(top = 7.dp),
@@ -308,9 +322,60 @@ private fun DrawAdditionalInfo(baseUser: User) {
         fontSize = 25.sp
     )
     Text(
-        " @${user.bestUsername()}",
-        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+        "@${user.bestUsername()}",
+        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+        modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp)
     )
+
+    val website = user.info.website
+    if (!website.isNullOrEmpty()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                imageVector = Icons.Default.Link,
+                contentDescription = "Website",
+                modifier = Modifier.size(16.dp)
+            )
+
+            ClickableText(
+                text = AnnotatedString(website.removePrefix("https://")),
+                onClick = { user.info.website?.let { uri.openUri(it) } },
+                style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary),
+                modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp)
+            )
+        }
+    }
+
+    var ZapExpanded by remember { mutableStateOf(false) }
+
+    val lud16 = user.info.lud16
+
+    if (!lud16.isNullOrEmpty()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                tint = BitcoinOrange,
+                imageVector = Icons.Default.Bolt,
+                contentDescription = "Lightning Address",
+                modifier = Modifier.size(16.dp)
+            )
+
+            ClickableText(
+                text = AnnotatedString(lud16),
+                onClick = { ZapExpanded = !ZapExpanded },
+                style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary),
+                modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp).weight(1f)
+            )
+        }
+
+        if (ZapExpanded) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 5.dp)) {
+                InvoiceRequest(lud16) {
+                    ZapExpanded = false
+                }
+            }
+        }
+    }
+
     Text(
         "${user.info.about}",
         color = MaterialTheme.colors.onSurface,
