@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.ui.components.RichTextViewer
+import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 val ChatBubbleShapeMe = RoundedCornerShape(15.dp, 15.dp, 3.dp, 15.dp)
@@ -221,17 +222,19 @@ fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote
                                           || !noteForReports.hasAnyReports()
 
                                     if (eventContent != null) {
-                                        RichTextViewer(
+                                        TranslateableRichTextViewer(
                                             eventContent,
                                             canPreview,
                                             note.event?.tags,
+                                            accountViewModel,
                                             navController
                                         )
                                     } else {
-                                        RichTextViewer(
+                                        TranslateableRichTextViewer(
                                             "Could Not decrypt the message",
                                             true,
                                             note.event?.tags,
+                                            accountViewModel,
                                             navController
                                         )
                                     }

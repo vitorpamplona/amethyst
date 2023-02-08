@@ -10,6 +10,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.toByteArray
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListViewModel
 import com.vitorpamplona.amethyst.ui.navigation.Route
+import java.util.Locale
 import nostr.postr.Persona
 import nostr.postr.events.ContactListEvent
 import nostr.postr.events.Event
@@ -26,6 +27,8 @@ class LocalPreferences(context: Context) {
       remove("following_channels")
       remove("hidden_users")
       remove("relays")
+      remove("dontTranslateFrom")
+      remove("translateTo")
     }.apply()
   }
 
@@ -36,6 +39,8 @@ class LocalPreferences(context: Context) {
       account.followingChannels.let { putStringSet("following_channels", it) }
       account.hiddenUsers.let { putStringSet("hidden_users", it) }
       account.localRelays.let { putString("relays", gson.toJson(it)) }
+      account.dontTranslateFrom.let { putStringSet("dontTranslateFrom", it) }
+      account.translateTo.let { putString("translateTo", it) }
     }.apply()
   }
 
@@ -43,19 +48,24 @@ class LocalPreferences(context: Context) {
     encryptedPreferences.apply {
       val privKey = getString("nostr_privkey", null)
       val pubKey = getString("nostr_pubkey", null)
-      val followingChannels = getStringSet("following_channels", null)?.toMutableSet() ?: mutableSetOf()
-      val hiddenUsers = getStringSet("hidden_users", emptySet())?.toMutableSet() ?: mutableSetOf()
+      val followingChannels = getStringSet("following_channels", null) ?: setOf()
+      val hiddenUsers = getStringSet("hidden_users", emptySet()) ?: setOf()
       val localRelays = gson.fromJson(
         getString("relays", "[]"),
         object : TypeToken<Set<NewRelayListViewModel.Relay>>() {}.type
       ) ?: setOf<NewRelayListViewModel.Relay>()
+
+      val dontTranslateFrom = getStringSet("dontTranslateFrom", null) ?: setOf()
+      val translateTo = getString("translateTo", null) ?: Locale.getDefault().language
 
       if (pubKey != null) {
         return Account(
           Persona(privKey = privKey?.toByteArray(), pubKey = pubKey.toByteArray()),
           followingChannels,
           hiddenUsers,
-          localRelays
+          localRelays,
+          dontTranslateFrom,
+          translateTo
         )
       } else {
         return null

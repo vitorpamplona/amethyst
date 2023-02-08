@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.ui.components.RichTextViewer
+import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Following
 import nostr.postr.events.TextNoteEvent
@@ -271,7 +272,13 @@ fun NoteCompose(
                           || !noteForReports.hasAnyReports()
 
                         if (eventContent != null) {
-                            RichTextViewer(eventContent, canPreview, note.event?.tags, navController)
+                            TranslateableRichTextViewer(
+                                eventContent,
+                                canPreview,
+                                note.event?.tags,
+                                accountViewModel,
+                                navController
+                            )
                         }
 
                         ReactionsRow(note, accountViewModel)

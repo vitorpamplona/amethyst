@@ -1,5 +1,9 @@
 package com.vitorpamplona.amethyst.model
 
+import android.content.res.Resources
+import androidx.compose.material.DropdownMenuItem
+import androidx.compose.material.Text
+import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
@@ -14,6 +18,8 @@ import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListViewModel
 import java.util.Date
+import java.util.Locale
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -34,13 +40,23 @@ val DefaultChannels = setOf(
   "42224859763652914db53052103f0b744df79dfc4efef7e950fc0802fc3df3c5"  // -> Amethyst's Group
 )
 
+fun getLanguagesSpokenByUser(): Set<String> {
+  val languageList = ConfigurationCompat.getLocales(Resources.getSystem().getConfiguration())
+  val codedList = mutableSetOf<String>()
+  for (i in 0 until languageList.size()) {
+    languageList.get(i)?.let { codedList.add(it.language) }
+  }
+  return codedList
+}
+
 class Account(
   val loggedIn: Persona,
   var followingChannels: Set<String> = DefaultChannels,
   var hiddenUsers: Set<String> = setOf(),
-  var localRelays: Set<NewRelayListViewModel.Relay> = Constants.defaultRelays.toSet()
+  var localRelays: Set<NewRelayListViewModel.Relay> = Constants.defaultRelays.toSet(),
+  var dontTranslateFrom: Set<String> = getLanguagesSpokenByUser(),
+  var translateTo: String = Locale.getDefault().language
 ) {
-
   fun userProfile(): User {
     return LocalCache.getOrCreateUser(loggedIn.pubKey.toHexKey())
   }
@@ -265,22 +281,22 @@ class Account(
 
   fun joinChannel(idHex: String) {
     followingChannels = followingChannels + idHex
-    invalidateData()
+    invalidateData(live)
   }
 
   fun leaveChannel(idHex: String) {
     followingChannels = followingChannels - idHex
-    invalidateData()
+    invalidateData(live)
   }
 
   fun hideUser(pubkeyHex: String) {
     hiddenUsers = hiddenUsers + pubkeyHex
-    invalidateData()
+    invalidateData(live)
   }
 
   fun showUser(pubkeyHex: String) {
     hiddenUsers = hiddenUsers - pubkeyHex
-    invalidateData()
+    invalidateData(live)
   }
 
   fun sendChangeChannel(name: String, about: String, picture: String, channel: Channel) {
@@ -332,6 +348,16 @@ class Account(
     }
   }
 
+  fun addDontTranslateFrom(languageCode: String) {
+    dontTranslateFrom = dontTranslateFrom.plus(languageCode)
+    invalidateData(liveLanguages)
+  }
+
+  fun updateTranslateTo(languageCode: String) {
+    translateTo = languageCode
+    invalidateData(liveLanguages)
+  }
+
   fun activeRelays(): Array<Relay>? {
     return userProfile().relays?.map {
       val localFeedTypes = localRelays.firstOrNull() { localRelay -> localRelay.url == it.key }?.feedTypes ?: FeedType.values().toSet()
@@ -357,19 +383,20 @@ class Account(
 
   // Observers line up here.
   val live: AccountLiveData = AccountLiveData(this)
+  val liveLanguages: AccountLiveData = AccountLiveData(this)
 
-  // Refreshes observers in batches.
-  var handlerWaiting = false
+  var handlerWaiting = AtomicBoolean()
+
   @Synchronized
-  fun invalidateData() {
-    if (handlerWaiting) return
+  private fun invalidateData(live: AccountLiveData) {
+    if (handlerWaiting.getAndSet(true)) return
 
-    handlerWaiting = true
+    handlerWaiting.set(true)
     val scope = CoroutineScope(Job() + Dispatchers.Default)
     scope.launch {
       delay(100)
       live.refresh()
-      handlerWaiting = false
+      handlerWaiting.set(false)
     }
   }
 
@@ -412,7 +439,6 @@ class Account(
     localRelays = value.toSet()
     sendNewRelayList(value.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) } )
   }
-
 }
 
 class AccountLiveData(private val account: Account): LiveData<AccountState>(AccountState(account)) {

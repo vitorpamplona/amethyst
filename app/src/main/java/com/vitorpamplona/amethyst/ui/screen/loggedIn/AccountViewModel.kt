@@ -10,9 +10,11 @@ import com.vitorpamplona.amethyst.model.AccountState
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.ReportEvent
+import java.util.Locale
 
 class AccountViewModel(private val account: Account): ViewModel() {
   val accountLiveData: LiveData<AccountState> = account.live.map { it }
+  val accountLanguagesLiveData: LiveData<AccountState> = account.liveLanguages.map { it }
 
   fun reactTo(note: Note) {
     account.reactTo(note)
@@ -45,6 +47,16 @@ class AccountViewModel(private val account: Account): ViewModel() {
 
   fun show(user: User, ctx: Context) {
     account.showUser(user.pubkeyHex)
+    LocalPreferences(ctx).saveToEncryptedStorage(account)
+  }
+
+  fun translateTo(lang: Locale, ctx: Context) {
+    account.updateTranslateTo(lang.language)
+    LocalPreferences(ctx).saveToEncryptedStorage(account)
+  }
+
+  fun dontTranslateFrom(lang: String, ctx: Context) {
+    account.addDontTranslateFrom(lang)
     LocalPreferences(ctx).saveToEncryptedStorage(account)
   }
 }

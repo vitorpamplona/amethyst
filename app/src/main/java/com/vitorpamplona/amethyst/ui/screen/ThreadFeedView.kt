@@ -42,6 +42,7 @@ import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.RichTextViewer
+import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
 import com.vitorpamplona.amethyst.ui.note.BlankNote
 import com.vitorpamplona.amethyst.ui.note.HiddenNote
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
@@ -226,7 +227,13 @@ fun NoteMaster(baseNote: Note, accountViewModel: AccountViewModel, navController
                       || !noteForReports.hasAnyReports()
 
                     if (eventContent != null) {
-                        RichTextViewer(eventContent, canPreview, note.event?.tags, navController)
+                        TranslateableRichTextViewer(
+                            eventContent,
+                            canPreview,
+                            note.event?.tags,
+                            accountViewModel,
+                            navController
+                        )
                     }
 
                     ReactionsRow(note, accountViewModel)
