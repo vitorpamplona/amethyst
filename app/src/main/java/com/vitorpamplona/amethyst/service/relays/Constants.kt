@@ -14,7 +14,7 @@ object Constants {
 
   val defaultRelays = arrayOf(
     // Free relays
-    NewRelayListViewModel.Relay("wss://nostr.bitcoiner.social", read = true, write = true, feedTypes = activeTypes),
+    NewRelayListViewModel.Relay("wss://offchain.pub", read = true, write = true, feedTypes = activeTypes),
     NewRelayListViewModel.Relay("wss://relay.nostr.bg", read = true, write = true, feedTypes = activeTypes),
     NewRelayListViewModel.Relay("wss://relay.snort.social", read = true, write = true, feedTypes = activeTypes),
     NewRelayListViewModel.Relay("wss://relay.damus.io", read = true, write = true, feedTypes = activeTypes),
