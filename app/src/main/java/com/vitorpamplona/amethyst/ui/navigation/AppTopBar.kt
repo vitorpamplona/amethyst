@@ -1,7 +1,9 @@
 package com.vitorpamplona.amethyst.ui.navigation
 
 import android.util.Log
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -36,6 +38,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -72,6 +75,7 @@ fun AppTopBar(navController: NavHostController, scaffoldState: ScaffoldState, ac
     }
 }
 
+
 @Composable
 fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
@@ -104,12 +108,13 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Box() {
+                    Box(Modifier) {
                         Column(
                             modifier = Modifier
-                                .fillMaxWidth()
+                                .fillMaxWidth().fillMaxHeight()
                                 .padding(start = 0.dp, end = 20.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
                         ) {
                             IconButton(
                                 onClick = {
