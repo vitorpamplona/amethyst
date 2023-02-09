@@ -21,6 +21,7 @@ class NewUserMetadataViewModel: ViewModel() {
     val website = mutableStateOf("")
     val nip05 = mutableStateOf("")
     val lnAddress = mutableStateOf("")
+    val lnURL = mutableStateOf("")
 
     fun load(account: Account) {
         this.account = account
@@ -34,6 +35,7 @@ class NewUserMetadataViewModel: ViewModel() {
             website.value = it.info.website ?: ""
             nip05.value = it.info.nip05 ?: ""
             lnAddress.value = it.info.lud16 ?: ""
+            lnURL.value = it.info.lud06 ?: ""
         }
     }
 
@@ -57,6 +59,7 @@ class NewUserMetadataViewModel: ViewModel() {
         currentJson.put("about", about.value)
         currentJson.put("nip05", nip05.value)
         currentJson.put("lud16", lnAddress.value)
+        currentJson.put("lud06", lnURL.value)
 
         val writer = StringWriter()
         ObjectMapper().writeValue(writer, currentJson)
@@ -75,5 +78,6 @@ class NewUserMetadataViewModel: ViewModel() {
         website.value = ""
         nip05.value = ""
         lnAddress.value = ""
+        lnURL.value = ""
     }
 }

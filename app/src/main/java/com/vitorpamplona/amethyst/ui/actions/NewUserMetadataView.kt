@@ -205,6 +205,22 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                     singleLine = true
                 )
 
+                Spacer(modifier = Modifier.height(10.dp))
+
+                OutlinedTextField(
+                    label = { Text(text = "LN URL (outdated)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    value = postViewModel.lnURL.value,
+                    onValueChange = { postViewModel.lnURL.value = it },
+                    placeholder = {
+                        Text(
+                            text = "LNURL...",
+                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                        )
+                    },
+                    singleLine = true
+                )
+
             }
         }
     }
