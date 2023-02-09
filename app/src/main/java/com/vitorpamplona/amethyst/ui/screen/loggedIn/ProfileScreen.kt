@@ -313,7 +313,6 @@ private fun DrawAdditionalInfo(baseUser: User) {
     val user = userState?.user ?: return
 
     val uri = LocalUriHandler.current
-    val context = LocalContext.current
 
     Text(
         user.bestDisplayName() ?: "",

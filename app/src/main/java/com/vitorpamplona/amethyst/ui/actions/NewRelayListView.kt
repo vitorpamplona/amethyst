@@ -409,7 +409,7 @@ fun EditableServerConfig(relayToAdd: String, onNewRelay: (RelaySetupInfo) -> Uni
         Button(
             onClick = {
                 if (url.isNotBlank() && url != "/") {
-                    var addedWSS = if (!url.startsWith("wss://")) "wss://$url" else url
+                    var addedWSS = if (!url.startsWith("wss://") && !url.startsWith("ws://")) "wss://$url" else url
                     if (url.endsWith("/")) addedWSS = addedWSS.dropLast(1)
                     onNewRelay(RelaySetupInfo(addedWSS, read, write, feedTypes = FeedType.values().toSet()))
                     url = ""
