@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.navigation
 
 import android.net.Uri
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
@@ -24,9 +25,14 @@ import com.google.accompanist.permissions.rememberPermissionState
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun UploadFromGallery(onImageChosen: (Uri) -> Unit) {
-    val cameraPermissionState = rememberPermissionState(
-        android.Manifest.permission.READ_MEDIA_IMAGES
-    )
+    val cameraPermissionState =
+        rememberPermissionState(
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                android.Manifest.permission.READ_MEDIA_IMAGES
+            } else {
+                android.Manifest.permission.READ_EXTERNAL_STORAGE
+            }
+        )
 
     if (cameraPermissionState.status.isGranted) {
         var showGallerySelect by remember { mutableStateOf(false) }
