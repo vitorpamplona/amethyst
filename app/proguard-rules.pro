@@ -26,6 +26,10 @@
 # For the NostrPostr library
 -keep class nostr.postr.** { *; }
 -keep class nostr.postr.events.** { *; }
+# Json parsing
 -keep class com.google.gson.reflect.** { *; }
+-keep class * extends com.google.gson.reflect.TypeToken
+-keep public class * implements java.lang.reflect.Type
+
 -keep class com.vitorpamplona.amethyst.model.** { *; }
 -keep class com.vitorpamplona.amethyst.service.** { *; }
