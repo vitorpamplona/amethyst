@@ -62,46 +62,55 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
         }
 
         Column(
-          modifier = Modifier.fillMaxSize().padding(10.dp),
-          verticalArrangement = Arrangement.Center
+          modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp),
+          verticalArrangement = Arrangement.SpaceBetween
         ) {
           if (presenting) {
-
-            Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-              AsyncImage(
-                model = user.profilePicture() ?: "https://robohash.org/ohno.png",
-                contentDescription = "Profile Image",
-                placeholder = rememberAsyncImagePainter("https://robohash.org/${user.pubkeyHex}.png"),
-                modifier = Modifier
-                  .width(120.dp)
-                  .height(120.dp)
-                  .clip(shape = CircleShape)
-                  .border(3.dp, MaterialTheme.colors.background, CircleShape)
-                  .background(MaterialTheme.colors.background)
-              )
-            }
-            Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-              Text(
-                user.bestDisplayName() ?: "",
-                modifier = Modifier.padding(top = 7.dp),
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp
-              )
-            }
-            Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-              Text(" @${user.bestUsername()}", color = Color.LightGray)
-            }
-
             Row(
               horizontalArrangement = Arrangement.Center,
-              modifier = Modifier.fillMaxWidth().padding(30.dp)
+              modifier = Modifier.fillMaxWidth().padding(horizontal = 30.dp, vertical = 10.dp)
             ) {
-              QrCodeDrawer("nostr:${user.pubkey.toNpub()}")
+
+            }
+
+            Column(modifier = Modifier.fillMaxWidth()) {
+              Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
+                AsyncImage(
+                  model = user.profilePicture() ?: "https://robohash.org/ohno.png",
+                  contentDescription = "Profile Image",
+                  placeholder = rememberAsyncImagePainter("https://robohash.org/${user.pubkeyHex}.png"),
+                  modifier = Modifier
+                    .width(100.dp)
+                    .height(100.dp)
+                    .clip(shape = CircleShape)
+                    .border(3.dp, MaterialTheme.colors.background, CircleShape)
+                    .background(MaterialTheme.colors.background)
+                )
+              }
+              Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
+                Text(
+                  user.bestDisplayName() ?: "",
+                  modifier = Modifier.padding(top = 7.dp),
+                  fontWeight = FontWeight.Bold,
+                  fontSize = 18.sp
+                )
+              }
+              Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
+                Text(" @${user.bestUsername()}", color = Color.LightGray)
+              }
+
+              Row(
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 35.dp, vertical = 10.dp)
+              ) {
+                QrCodeDrawer("nostr:${user.pubkey.toNpub()}")
+              }
+
             }
 
             Row(
               horizontalArrangement = Arrangement.Center,
-              modifier = Modifier.fillMaxWidth().padding(30.dp)
+              modifier = Modifier.fillMaxWidth().padding(horizontal = 30.dp, vertical = 10.dp)
             ) {
 
               Button(
@@ -121,6 +130,15 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
 
           } else {
 
+            Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
+              Text(
+                "Point to the QR Code",
+                modifier = Modifier.padding(top = 7.dp),
+                fontWeight = FontWeight.Bold,
+                fontSize = 25.sp
+              )
+            }
+
             Row(
               horizontalArrangement = Arrangement.Center,
               modifier = Modifier.fillMaxWidth().padding(30.dp)
@@ -128,18 +146,24 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
               QrCodeScanner(onScan)
             }
 
-            Button(
-              onClick = { presenting = true },
-              shape = RoundedCornerShape(35.dp),
-              modifier = Modifier
-                .fillMaxWidth().padding(30.dp)
-                .height(50.dp),
-              colors = ButtonDefaults
-                .buttonColors(
-                  backgroundColor = MaterialTheme.colors.primary
-                )
+            Row(
+              horizontalArrangement = Arrangement.Center,
+              modifier = Modifier.fillMaxWidth().padding(horizontal = 30.dp, vertical = 10.dp)
             ) {
-              Text(text = "Show QR")
+
+              Button(
+                onClick = { presenting = true },
+                shape = RoundedCornerShape(35.dp),
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .height(50.dp),
+                colors = ButtonDefaults
+                  .buttonColors(
+                    backgroundColor = MaterialTheme.colors.primary
+                  )
+              ) {
+                Text(text = "Show QR")
+              }
             }
 
           }
