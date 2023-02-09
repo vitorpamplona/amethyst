@@ -4,16 +4,10 @@ import android.content.Context
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.Channel
-import com.vitorpamplona.amethyst.model.DefaultChannels
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.toByteArray
-import com.vitorpamplona.amethyst.ui.actions.NewRelayListViewModel
-import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import java.util.Locale
 import nostr.postr.Persona
-import nostr.postr.events.ContactListEvent
-import nostr.postr.events.Event
 import nostr.postr.toHex
 
 class LocalPreferences(context: Context) {
@@ -52,8 +46,8 @@ class LocalPreferences(context: Context) {
       val hiddenUsers = getStringSet("hidden_users", emptySet()) ?: setOf()
       val localRelays = gson.fromJson(
         getString("relays", "[]"),
-        object : TypeToken<Set<NewRelayListViewModel.Relay>>() {}.type
-      ) ?: setOf<NewRelayListViewModel.Relay>()
+        object : TypeToken<Set<RelaySetupInfo>>() {}.type
+      ) ?: setOf<RelaySetupInfo>()
 
       val dontTranslateFrom = getStringSet("dontTranslateFrom", null) ?: setOf()
       val translateTo = getString("translateTo", null) ?: Locale.getDefault().language

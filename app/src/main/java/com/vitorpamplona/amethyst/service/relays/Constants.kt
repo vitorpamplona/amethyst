@@ -1,6 +1,6 @@
 package com.vitorpamplona.amethyst.service.relays
 
-import com.vitorpamplona.amethyst.ui.actions.NewRelayListViewModel
+import com.vitorpamplona.amethyst.model.RelaySetupInfo
 
 object Constants {
   val activeTypes = setOf(FeedType.FOLLOWS, FeedType.PRIVATE_DMS)
@@ -14,15 +14,15 @@ object Constants {
 
   val defaultRelays = arrayOf(
     // Free relays
-    NewRelayListViewModel.Relay("wss://offchain.pub", read = true, write = true, feedTypes = activeTypes),
-    NewRelayListViewModel.Relay("wss://relay.nostr.bg", read = true, write = true, feedTypes = activeTypes),
-    NewRelayListViewModel.Relay("wss://relay.snort.social", read = true, write = true, feedTypes = activeTypes),
-    NewRelayListViewModel.Relay("wss://relay.damus.io", read = true, write = true, feedTypes = activeTypes),
-    NewRelayListViewModel.Relay("wss://nostr.oxtr.dev", read = true, write = true, feedTypes = activeTypes),
-    NewRelayListViewModel.Relay("wss://nostr-pub.wellorder.net", read = true, write = true, feedTypes = activeTypes),
-    NewRelayListViewModel.Relay("wss://nostr.mom", read = true, write = true, feedTypes = activeTypes),
-    NewRelayListViewModel.Relay("wss://no.str.cr", read = true, write = true, feedTypes = activeTypes),
-    NewRelayListViewModel.Relay("wss://nos.lol", read = true, write = true, feedTypes = activeTypes),
+    RelaySetupInfo("wss://nostr.bitcoiner.social", read = true, write = true, feedTypes = activeTypes),
+    RelaySetupInfo("wss://relay.nostr.bg", read = true, write = true, feedTypes = activeTypes),
+    RelaySetupInfo("wss://relay.snort.social", read = true, write = true, feedTypes = activeTypes),
+    RelaySetupInfo("wss://relay.damus.io", read = true, write = true, feedTypes = activeTypes),
+    RelaySetupInfo("wss://nostr.oxtr.dev", read = true, write = true, feedTypes = activeTypes),
+    RelaySetupInfo("wss://nostr-pub.wellorder.net", read = true, write = true, feedTypes = activeTypes),
+    RelaySetupInfo("wss://nostr.mom", read = true, write = true, feedTypes = activeTypes),
+    RelaySetupInfo("wss://no.str.cr", read = true, write = true, feedTypes = activeTypes),
+    RelaySetupInfo("wss://nos.lol", read = true, write = true, feedTypes = activeTypes),
 
     // Less Reliable
     //NewRelayListViewModel.Relay("wss://nostr.orangepill.dev", read = true, write = true, feedTypes = activeTypes),
@@ -35,14 +35,14 @@ object Constants {
     //NewRelayListViewModel.Relay("wss://brb.io", read = true, write = true, feedTypes = activeTypes),
 
     // Paid relays
-    NewRelayListViewModel.Relay("wss://relay.nostr.com.au", read = true, write = false, feedTypes = activeTypesGlobalChats),
-    NewRelayListViewModel.Relay("wss://eden.nostr.land", read = true, write = false, feedTypes = activeTypesGlobalChats),
-    NewRelayListViewModel.Relay("wss://nostr.milou.lol", read = true, write = false, feedTypes = activeTypesGlobalChats),
-    NewRelayListViewModel.Relay("wss://puravida.nostr.land", read = true, write = false, feedTypes = activeTypesGlobalChats),
-    NewRelayListViewModel.Relay("wss://nostr.wine", read = true, write = false, feedTypes = activeTypesGlobalChats),
-    NewRelayListViewModel.Relay("wss://nostr.inosta.cc", read = true, write = false, feedTypes = activeTypesGlobalChats),
-    NewRelayListViewModel.Relay("wss://atlas.nostr.land", read = true, write = false, feedTypes = activeTypesGlobalChats),
-    NewRelayListViewModel.Relay("wss://relay.orangepill.dev", read = true, write = false, feedTypes = activeTypesGlobalChats),
-    NewRelayListViewModel.Relay("wss://relay.nostrati.com", read = true, write = false, feedTypes = activeTypesGlobalChats),
+    RelaySetupInfo("wss://relay.nostr.com.au", read = true, write = false, feedTypes = activeTypesGlobalChats),
+    RelaySetupInfo("wss://eden.nostr.land", read = true, write = false, feedTypes = activeTypesGlobalChats),
+    RelaySetupInfo("wss://nostr.milou.lol", read = true, write = false, feedTypes = activeTypesGlobalChats),
+    RelaySetupInfo("wss://puravida.nostr.land", read = true, write = false, feedTypes = activeTypesGlobalChats),
+    RelaySetupInfo("wss://nostr.wine", read = true, write = false, feedTypes = activeTypesGlobalChats),
+    RelaySetupInfo("wss://nostr.inosta.cc", read = true, write = false, feedTypes = activeTypesGlobalChats),
+    RelaySetupInfo("wss://atlas.nostr.land", read = true, write = false, feedTypes = activeTypesGlobalChats),
+    RelaySetupInfo("wss://relay.orangepill.dev", read = true, write = false, feedTypes = activeTypesGlobalChats),
+    RelaySetupInfo("wss://relay.nostrati.com", read = true, write = false, feedTypes = activeTypesGlobalChats),
   )
 }

@@ -1,32 +1,20 @@
 package com.vitorpamplona.amethyst.ui.actions
 
 import android.content.Context
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.relays.Constants
+import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import nostr.postr.events.ContactListEvent
 
 class NewRelayListViewModel: ViewModel() {
     private lateinit var account: Account
 
-    data class Relay(
-        val url: String,
-        val read: Boolean,
-        val write: Boolean,
-        val errorCount: Int = 0,
-        val downloadCount: Int = 0,
-        val uploadCount: Int = 0,
-        val feedTypes: Set<FeedType>
-    )
-
-    private val _relays = MutableStateFlow<List<Relay>>(emptyList())
+    private val _relays = MutableStateFlow<List<RelaySetupInfo>>(emptyList())
     val relays = _relays.asStateFlow()
 
     fun load(account: Account, ctx: Context) {
@@ -56,7 +44,7 @@ class NewRelayListViewModel: ViewModel() {
                     val eventDownloadCounter = liveRelay?.eventDownloadCounter ?: 0
                     val eventUploadCounter = liveRelay?.eventUploadCounter ?: 0
 
-                    Relay(it.key, it.value.read, it.value.write, errorCounter, eventDownloadCounter, eventUploadCounter, localInfoFeedTypes)
+                    RelaySetupInfo(it.key, it.value.read, it.value.write, errorCounter, eventDownloadCounter, eventUploadCounter, localInfoFeedTypes)
                 }.sortedBy { it.downloadCount }.reversed()
             else
                 account.localRelays.map {
@@ -66,12 +54,12 @@ class NewRelayListViewModel: ViewModel() {
                     val eventDownloadCounter = liveRelay?.eventDownloadCounter ?: 0
                     val eventUploadCounter = liveRelay?.eventUploadCounter ?: 0
 
-                    Relay(it.url, it.read, it.write, errorCounter, eventDownloadCounter, eventUploadCounter, it.feedTypes)
+                    RelaySetupInfo(it.url, it.read, it.write, errorCounter, eventDownloadCounter, eventUploadCounter, it.feedTypes)
                 }.sortedBy { it.downloadCount }.reversed()
         }
     }
 
-    fun addRelay(relay: Relay) {
+    fun addRelay(relay: RelaySetupInfo) {
         if (relays.value.any { it.url == relay.url }) return
 
         _relays.update {
@@ -79,46 +67,46 @@ class NewRelayListViewModel: ViewModel() {
         }
     }
 
-    fun deleteRelay(relay: Relay) {
+    fun deleteRelay(relay: RelaySetupInfo) {
         _relays.update {
             it.minus(relay)
         }
     }
 
-    fun toggleDownload(relay: Relay) {
+    fun toggleDownload(relay: RelaySetupInfo) {
         _relays.update {
             it.updated(relay, relay.copy(read = !relay.read))
         }
     }
 
-    fun toggleUpload(relay: Relay) {
+    fun toggleUpload(relay: RelaySetupInfo) {
         _relays.update {
             it.updated(relay, relay.copy(write = !relay.write))
         }
     }
 
-    fun toggleFollows(relay: Relay) {
+    fun toggleFollows(relay: RelaySetupInfo) {
         val newTypes = togglePresenceInSet(relay.feedTypes, FeedType.FOLLOWS)
         _relays.update {
             it.updated(relay, relay.copy(feedTypes = newTypes))
         }
     }
 
-    fun toggleMessages(relay: Relay) {
+    fun toggleMessages(relay: RelaySetupInfo) {
         val newTypes = togglePresenceInSet(relay.feedTypes, FeedType.PRIVATE_DMS)
         _relays.update {
             it.updated(relay, relay.copy(feedTypes = newTypes))
         }
     }
 
-    fun togglePublicChats(relay: Relay) {
+    fun togglePublicChats(relay: RelaySetupInfo) {
         val newTypes = togglePresenceInSet(relay.feedTypes, FeedType.PUBLIC_CHATS)
         _relays.update {
             it.updated(relay, relay.copy(feedTypes = newTypes))
         }
     }
 
-    fun toggleGlobal(relay: Relay) {
+    fun toggleGlobal(relay: RelaySetupInfo) {
         val newTypes = togglePresenceInSet(relay.feedTypes, FeedType.GLOBAL)
         _relays.update {
             it.updated(relay, relay.copy( feedTypes = newTypes ))

@@ -1,8 +1,6 @@
 package com.vitorpamplona.amethyst.model
 
 import android.content.res.Resources
-import androidx.compose.material.DropdownMenuItem
-import androidx.compose.material.Text
 import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.relays.Constants
@@ -16,7 +14,6 @@ import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.RelayPool
-import com.vitorpamplona.amethyst.ui.actions.NewRelayListViewModel
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
@@ -53,7 +50,7 @@ class Account(
   val loggedIn: Persona,
   var followingChannels: Set<String> = DefaultChannels,
   var hiddenUsers: Set<String> = setOf(),
-  var localRelays: Set<NewRelayListViewModel.Relay> = Constants.defaultRelays.toSet(),
+  var localRelays: Set<RelaySetupInfo> = Constants.defaultRelays.toSet(),
   var dontTranslateFrom: Set<String> = getLanguagesSpokenByUser(),
   var translateTo: String = Locale.getDefault().language
 ) {
@@ -435,7 +432,7 @@ class Account(
           innerReports).toSet()
   }
 
-  fun saveRelayList(value: List<NewRelayListViewModel.Relay>) {
+  fun saveRelayList(value: List<RelaySetupInfo>) {
     localRelays = value.toSet()
     sendNewRelayList(value.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) } )
   }
