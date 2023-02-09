@@ -68,7 +68,7 @@ fun InvoiceRequest(lud16: String, onClose: () -> Unit ) {
         )
 
         Text(
-          text = "Lightning Invoice",
+          text = "Lightning Tips",
           fontSize = 20.sp,
           fontWeight = FontWeight.W500,
           modifier = Modifier.padding(start = 10.dp)
@@ -101,7 +101,14 @@ fun InvoiceRequest(lud16: String, onClose: () -> Unit ) {
         label = { Text(text = "Amount in Sats") },
         modifier = Modifier.fillMaxWidth(),
         value = amount.toString(),
-        onValueChange = { amount = it.toLong() },
+        onValueChange = {
+          runCatching {
+            if (it.isEmpty())
+              amount = 0
+            else
+              amount = it.toLong()
+          }
+        },
         placeholder = {
           Text(
             text = "1000",
@@ -130,7 +137,7 @@ fun InvoiceRequest(lud16: String, onClose: () -> Unit ) {
           backgroundColor = MaterialTheme.colors.primary
         )
       ) {
-        Text(text = "Send", color = Color.White, fontSize = 20.sp)
+        Text(text = "Send Sats", color = Color.White, fontSize = 20.sp)
       }
     }
   }
