@@ -10,6 +10,9 @@ import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import fr.acinq.secp256k1.Hex
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.time.ExperimentalTime
+import kotlin.time.measureTimedValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -81,7 +84,11 @@ class User(val pubkeyHex: String) {
         liveFollows.invalidateData()
         user.liveFollows.invalidateData()
 
-        listeners.forEach {
+        updateSubscribers {
+            it.onFollowsChange()
+        }
+
+        user.updateSubscribers {
             it.onFollowsChange()
         }
     }
@@ -92,6 +99,40 @@ class User(val pubkeyHex: String) {
         liveFollows.invalidateData()
         user.liveFollows.invalidateData()
 
+        updateSubscribers {
+            it.onFollowsChange()
+        }
+
+        user.updateSubscribers {
+            it.onFollowsChange()
+        }
+    }
+
+    fun follow(users: Set<User>, followedAt: Long) {
+        follows = follows + users
+        users.forEach {
+            it.followers = it.followers + this
+            it.liveFollows.invalidateData()
+            it.updateSubscribers {
+                it.onFollowsChange()
+            }
+        }
+
+        liveFollows.invalidateData()
+        updateSubscribers {
+            it.onFollowsChange()
+        }
+    }
+    fun unfollow(users: Set<User>) {
+        follows = follows - users
+        users.forEach {
+            it.followers = it.followers - this
+            it.liveFollows.invalidateData()
+            it.updateSubscribers {
+                it.onFollowsChange()
+            }
+        }
+        liveFollows.invalidateData()
         updateSubscribers {
             it.onFollowsChange()
         }
@@ -164,17 +205,13 @@ class User(val pubkeyHex: String) {
         updateSubscribers { it.onNewRelayInfo() }
         liveRelayInfo.invalidateData()
     }
-
+    
     fun updateFollows(newFollows: Set<User>, updateAt: Long) {
         val toBeAdded = newFollows - follows
         val toBeRemoved = follows - newFollows
 
-        toBeAdded.forEach {
-            follow(it, updateAt)
-        }
-        toBeRemoved.forEach {
-            unfollow(it)
-        }
+        follow(toBeAdded, updateAt)
+        unfollow(toBeRemoved)
 
         updatedFollowsAt = updateAt
     }
@@ -239,19 +276,20 @@ class User(val pubkeyHex: String) {
     }
 
     // Refreshes observers in batches.
-    var modelHandlerWaiting = false
+    var modelHandlerWaiting = AtomicBoolean()
+
     @Synchronized
     fun updateSubscribers(on: (Listener) -> Unit) {
-        if (modelHandlerWaiting) return
+        if (modelHandlerWaiting.getAndSet(true)) return
 
-        modelHandlerWaiting = true
+        modelHandlerWaiting.set(true)
         val scope = CoroutineScope(Job() + Dispatchers.Default)
         scope.launch {
             delay(100)
             listeners.forEach {
                 on(it)
             }
-            modelHandlerWaiting = false
+            modelHandlerWaiting.set(false)
         }
     }
 
@@ -292,17 +330,19 @@ class UserMetadata {
 class UserLiveData(val user: User): LiveData<UserState>(UserState(user)) {
 
     // Refreshes observers in batches.
-    var handlerWaiting = false
+    var handlerWaiting = AtomicBoolean()
+
     @Synchronized
     fun invalidateData() {
-        if (handlerWaiting) return
+        if (!hasActiveObservers()) return
+        if (handlerWaiting.getAndSet(true)) return
 
-        handlerWaiting = true
+        handlerWaiting.set(true)
         val scope = CoroutineScope(Job() + Dispatchers.Main)
         scope.launch {
             delay(100)
             refresh()
-            handlerWaiting = false
+            handlerWaiting.set(false)
         }
     }
 

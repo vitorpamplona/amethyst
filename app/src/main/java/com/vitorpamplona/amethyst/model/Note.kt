@@ -17,6 +17,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.vitorpamplona.amethyst.service.relays.Relay
 import java.util.Date
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 import nostr.postr.events.Event
@@ -194,17 +195,19 @@ class Note(val idHex: String) {
 
 class NoteLiveData(val note: Note): LiveData<NoteState>(NoteState(note)) {
     // Refreshes observers in batches.
-    var handlerWaiting = false
+    var handlerWaiting = AtomicBoolean()
+
     @Synchronized
     fun invalidateData() {
-        if (handlerWaiting) return
+        if (!hasActiveObservers()) return
+        if (handlerWaiting.getAndSet(true)) return
 
-        handlerWaiting = true
-        val scope = CoroutineScope(Job() + Dispatchers.Default)
+        handlerWaiting.set(true)
+        val scope = CoroutineScope(Job() + Dispatchers.Main)
         scope.launch {
             delay(100)
             refresh()
-            handlerWaiting = false
+            handlerWaiting.set(false)
         }
     }
 
