@@ -339,7 +339,7 @@ private fun DrawAdditionalInfo(baseUser: User) {
 
             ClickableText(
                 text = AnnotatedString(website.removePrefix("https://")),
-                onClick = { user.info.website?.let { uri.openUri(it) } },
+                onClick = { user.info.website?.let { runCatching { uri.openUri(it) } } },
                 style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary),
                 modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp)
             )
