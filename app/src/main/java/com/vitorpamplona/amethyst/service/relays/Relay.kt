@@ -175,8 +175,8 @@ class Relay(
                     }
                 }
             } else {
-                // waits 10 seconds to reconnect after disconnected.
-                if (Date().time / 1000 > closingTime + 10) {
+                // waits 60 seconds to reconnect after disconnected.
+                if (Date().time / 1000 > closingTime + 60) {
                     // sends all filters after connection is successful.
                     requestAndWatch()
                 }
@@ -186,8 +186,11 @@ class Relay(
 
     fun sendFilterOnlyIfDisconnected() {
         if (socket == null) {
-            //println("sendfilter Only if Disconnected ${url} ")
-            requestAndWatch()
+            // waits 60 seconds to reconnect after disconnected.
+            if (Date().time / 1000 > closingTime + 60) {
+                //println("sendfilter Only if Disconnected ${url} ")
+                requestAndWatch()
+            }
         }
     }
 
