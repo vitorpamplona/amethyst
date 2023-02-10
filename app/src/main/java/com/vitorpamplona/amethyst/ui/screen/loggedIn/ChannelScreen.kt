@@ -190,12 +190,12 @@ fun ChannelHeader(baseChannel: Channel, account: Account, accountStateViewModel:
                     channel?.let {
                         if (channel.creator == account.userProfile()) {
                             EditButton(account, it)
+                        }
+
+                        if (account.followingChannels.contains(channel.idHex)) {
+                            LeaveButton(account, channel, navController)
                         } else {
-                            if (account.followingChannels.contains(channel.idHex)) {
-                                LeaveButton(account, channel, navController)
-                            } else {
-                                JoinButton(account, channel, navController)
-                            }
+                            JoinButton(account, channel, navController)
                         }
                     }
                 }
