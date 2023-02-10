@@ -36,7 +36,7 @@ fun UrlPreviewCard(
     Column {
       AsyncImage(
         model = previewInfo.image,
-        contentDescription = "Profile Image",
+        contentDescription = "Preview Card Image for ${url}",
         contentScale = ContentScale.FillWidth,
         modifier = Modifier.fillMaxWidth()
       )
