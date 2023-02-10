@@ -72,9 +72,9 @@ class User(val pubkeyHex: String) {
         return info.displayName?.ifBlank { null } ?: info.display_name?.ifBlank { null }
     }
 
-    fun profilePicture(): String {
+    fun profilePicture(): String? {
         if (info.picture.isNullOrBlank()) info.picture = null
-        return info.picture ?: "https://robohash.org/${pubkeyHex}.png"
+        return info.picture
     }
 
     fun follow(user: User, followedAt: Long) {
