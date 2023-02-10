@@ -191,7 +191,9 @@ fun NoteCompose(
                                             .align(Alignment.BottomEnd)) {
                                         AsyncImage(
                                             model = channel.profilePicture(),
-                                            placeholder = null,
+                                            placeholder = rememberAsyncImagePainter(RoboHashCache.get(context, channel.idHex)),
+                                            fallback = rememberAsyncImagePainter(RoboHashCache.get(context, channel.idHex)),
+                                            error = rememberAsyncImagePainter(RoboHashCache.get(context, channel.idHex)),
                                             contentDescription = "Group Picture",
                                             modifier = Modifier
                                                 .width(30.dp)

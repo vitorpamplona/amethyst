@@ -36,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -43,7 +44,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil.compose.rememberAsyncImagePainter
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -94,6 +97,8 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
     val scope = rememberCoroutineScope()
 
     val onlineSearch = NostrSearchEventOrUserDataSource
+
+    val ctx = LocalContext.current.applicationContext
 
     val isTrailingIconVisible by remember {
         derivedStateOf {
@@ -210,7 +215,7 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
             itemsIndexed(searchResultsChannels.value, key = { _, item -> "c"+item.idHex }) { index, item ->
                 ChannelName(
                     channelPicture = item.profilePicture(),
-                    channelPicturePlaceholder = null,
+                    channelPicturePlaceholder = rememberAsyncImagePainter(RoboHashCache.get(ctx, item.idHex)),
                     channelTitle = {
                         Text(
                             "${item.info.name}",

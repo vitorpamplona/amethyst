@@ -55,6 +55,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.Note
@@ -147,15 +148,19 @@ fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, accoun
 @Composable
 fun ChannelHeader(baseChannel: Channel, account: Account, accountStateViewModel: AccountStateViewModel, navController: NavController) {
     val channelState by baseChannel.live.observeAsState()
-    val channel = channelState?.channel
+    val channel = channelState?.channel ?: return
+
+    val context = LocalContext.current.applicationContext
 
     Column() {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
 
                 AsyncImage(
-                    model = channel?.profilePicture(),
-                    placeholder = null,
+                    model = channel.profilePicture(),
+                    placeholder = rememberAsyncImagePainter(RoboHashCache.get(context, channel.idHex)),
+                    fallback = rememberAsyncImagePainter(RoboHashCache.get(context, channel.idHex)),
+                    error = rememberAsyncImagePainter(RoboHashCache.get(context, channel.idHex)),
                     contentDescription = "Profile Image",
                     modifier = Modifier
                         .width(35.dp)
@@ -168,14 +173,14 @@ fun ChannelHeader(baseChannel: Channel, account: Account, accountStateViewModel:
                     .weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            "${channel?.info?.name}",
+                            "${channel.info.name}",
                             fontWeight = FontWeight.Bold,
                         )
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            "${channel?.info?.about}",
+                            "${channel.info.about}",
                             color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
@@ -185,19 +190,18 @@ fun ChannelHeader(baseChannel: Channel, account: Account, accountStateViewModel:
                 }
 
                 Row(modifier = Modifier.height(35.dp).padding(bottom = 3.dp)) {
-                    channel?.let { NoteCopyButton(it) }
+                    NoteCopyButton(channel)
 
-                    channel?.let {
-                        if (channel.creator == account.userProfile()) {
-                            EditButton(account, it)
-                        }
-
-                        if (account.followingChannels.contains(channel.idHex)) {
-                            LeaveButton(account, channel, navController)
-                        } else {
-                            JoinButton(account, channel, navController)
-                        }
+                    if (channel.creator == account.userProfile()) {
+                        EditButton(account, channel)
                     }
+
+                    if (account.followingChannels.contains(channel.idHex)) {
+                        LeaveButton(account, channel, navController)
+                    } else {
+                        JoinButton(account, channel, navController)
+                    }
+
                 }
             }
         }

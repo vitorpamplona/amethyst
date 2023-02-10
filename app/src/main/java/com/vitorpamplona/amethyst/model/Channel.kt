@@ -34,9 +34,9 @@ class Channel(val id: ByteArray) {
         live.refresh()
     }
 
-    fun profilePicture(): String {
+    fun profilePicture(): String? {
         if (info.picture.isNullOrBlank()) info.picture = null
-        return info.picture ?: "https://robohash.org/${idHex}.png"
+        return info.picture
     }
 
     fun anyNameStartsWith(prefix: String): Boolean {

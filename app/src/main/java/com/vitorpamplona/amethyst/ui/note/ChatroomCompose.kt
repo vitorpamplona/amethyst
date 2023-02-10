@@ -40,6 +40,7 @@ import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.NotificationCache
+import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
@@ -85,7 +86,7 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
 
             ChannelName(
                 channelPicture = channel.profilePicture(),
-                channelPicturePlaceholder = null,
+                channelPicturePlaceholder = rememberAsyncImagePainter(RoboHashCache.get(context, channel.idHex)),
                 channelTitle = {
                     Text(
                         "${channel.info.name}",
@@ -138,7 +139,7 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
 
 @Composable
 fun ChannelName(
-    channelPicture: String,
+    channelPicture: String?,
     channelPicturePlaceholder: Painter?,
     channelTitle: @Composable (Modifier) -> Unit,
     channelLastTime: Long?,
@@ -151,6 +152,8 @@ fun ChannelName(
             AsyncImage(
                 model = channelPicture,
                 placeholder = channelPicturePlaceholder,
+                fallback = channelPicturePlaceholder,
+                error = channelPicturePlaceholder,
                 contentDescription = "Channel Image",
                 modifier = Modifier
                     .width(55.dp)
