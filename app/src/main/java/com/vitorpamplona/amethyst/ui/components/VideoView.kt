@@ -13,8 +13,12 @@ import com.google.android.exoplayer2.C
 import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.Player
+import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
 import com.google.android.exoplayer2.ui.StyledPlayerView
+import com.google.android.exoplayer2.upstream.DefaultHttpDataSource
+import com.google.android.exoplayer2.upstream.cache.CacheDataSource
+import com.vitorpamplona.amethyst.VideoCache
 
 @Composable
 fun VideoView(videoUri: String) {
@@ -28,17 +32,17 @@ fun VideoView(videoUri: String) {
   }
 
   DisposableEffect(exoPlayer) {
-    exoPlayer.setMediaItem(MediaItem.fromUri(videoUri))
+    exoPlayer.setMediaSource(
+      ProgressiveMediaSource.Factory(VideoCache.get(context.applicationContext)).createMediaSource(MediaItem.fromUri(videoUri))
+    )
     exoPlayer.prepare()
-
     onDispose {
       exoPlayer.release()
     }
   }
 
   AndroidView(
-    modifier = Modifier
-      .fillMaxWidth(),
+    modifier = Modifier.fillMaxWidth(),
     factory = {
       StyledPlayerView(context).apply {
         player = exoPlayer
