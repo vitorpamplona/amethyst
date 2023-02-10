@@ -93,6 +93,9 @@ dependencies {
     // Json Serialization
     implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.14.2'
 
+    // Robohash for Avatars
+    implementation group: 'com.github.vitorpamplona', name: 'android-robohash', version: 'master-SNAPSHOT', ext: 'aar'
+
     // link preview
     implementation 'tw.com.oneup.www:Baha-UrlPreview:1.0.1'
     implementation 'androidx.security:security-crypto-ktx:1.1.0-alpha04'

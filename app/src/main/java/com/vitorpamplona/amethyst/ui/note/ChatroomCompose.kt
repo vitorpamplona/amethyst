@@ -151,7 +151,7 @@ fun ChannelName(
             AsyncImage(
                 model = channelPicture,
                 placeholder = channelPicturePlaceholder,
-                contentDescription = "Profile Image",
+                contentDescription = "Channel Image",
                 modifier = Modifier
                     .width(55.dp)
                     .height(55.dp)

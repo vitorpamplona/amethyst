@@ -71,6 +71,8 @@ import com.google.zxing.qrcode.encoder.ByteMatrix
 
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
+import androidx.compose.ui.platform.LocalContext
+import com.vitorpamplona.amethyst.RoboHashCache
 
 @Composable
 fun DrawerContent(navController: NavHostController,
@@ -124,6 +126,8 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
     val accountUserFollowsState by baseAccountUser.liveFollows.observeAsState()
     val accountUserFollows = accountUserFollowsState?.user ?: return
 
+    val ctx = LocalContext.current.applicationContext
+
     Box {
         val banner = accountUser.info.banner
         if (banner != null && banner.isNotBlank()) {
@@ -150,7 +154,9 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
             AsyncImage(
                 model = accountUser.profilePicture(),
                 contentDescription = "Profile Image",
-                placeholder = rememberAsyncImagePainter("https://robohash.org/${accountUser.pubkeyHex}.png"),
+                placeholder = rememberAsyncImagePainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
+                fallback = rememberAsyncImagePainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
+                error = rememberAsyncImagePainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
                 modifier = Modifier
                     .width(100.dp)
                     .height(100.dp)

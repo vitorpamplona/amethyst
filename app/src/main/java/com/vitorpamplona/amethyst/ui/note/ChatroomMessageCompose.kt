@@ -53,6 +53,7 @@ import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
+import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
@@ -151,7 +152,7 @@ fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote
                         ) {
 
                             val authorState by note.author!!.liveMetadata.observeAsState()
-                            val author = authorState?.user
+                            val author = authorState?.user!!
 
                             if (innerQuote || author != accountUser && note.event is ChannelMessageEvent) {
                                 Row(
@@ -160,8 +161,10 @@ fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote
                                     modifier = Modifier.padding(top = 5.dp)
                                 ) {
                                     AsyncImage(
-                                        model = author?.profilePicture(),
-                                        placeholder = rememberAsyncImagePainter("https://robohash.org/${author?.pubkeyHex}.png"),
+                                        model = author.profilePicture(),
+                                        placeholder = rememberAsyncImagePainter(RoboHashCache.get(context, author.pubkeyHex)),
+                                        fallback = rememberAsyncImagePainter(RoboHashCache.get(context, author.pubkeyHex)),
+                                        error = rememberAsyncImagePainter(RoboHashCache.get(context, author.pubkeyHex)),
                                         contentDescription = "Profile Image",
                                         modifier = Modifier
                                             .width(25.dp)
@@ -277,6 +280,7 @@ private fun RelayBadges(baseNote: Note) {
     val relaysToDisplay = if (expanded) noteRelays else noteRelays.take(3)
 
     val uri = LocalUriHandler.current
+    val ctx = LocalContext.current.applicationContext
 
     FlowRow(Modifier.padding(start = 10.dp)) {
         relaysToDisplay.forEach {
@@ -284,9 +288,9 @@ private fun RelayBadges(baseNote: Note) {
             Box(Modifier.size(15.dp).padding(1.dp)) {
                 AsyncImage(
                     model = "https://${url}/favicon.ico",
-                    placeholder = rememberAsyncImagePainter("https://robohash.org/$url.png"),
-                    fallback = rememberAsyncImagePainter("https://robohash.org/$url.png"),
-                    error = rememberAsyncImagePainter("https://robohash.org/$url.png"),
+                    placeholder = rememberAsyncImagePainter(RoboHashCache.get(ctx, url)),
+                    fallback = rememberAsyncImagePainter(RoboHashCache.get(ctx, url)),
+                    error = rememberAsyncImagePainter(RoboHashCache.get(ctx, url)),
                     contentDescription = "Relay Icon",
                     colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }),
                     modifier = Modifier

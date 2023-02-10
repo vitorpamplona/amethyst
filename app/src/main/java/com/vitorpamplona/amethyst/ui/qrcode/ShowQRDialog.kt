@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -34,6 +35,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
+import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.qrcode.QrCodeScanner
@@ -42,6 +44,8 @@ import nostr.postr.toNpub
 @Composable
 fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
   var presenting by remember { mutableStateOf(true) }
+
+  val ctx = LocalContext.current.applicationContext
 
   Dialog(
     onDismissRequest = onClose,
@@ -76,9 +80,11 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
             Column(modifier = Modifier.fillMaxWidth()) {
               Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
                 AsyncImage(
-                  model = user.profilePicture() ?: "https://robohash.org/ohno.png",
+                  model = user.profilePicture(),
+                  placeholder = rememberAsyncImagePainter(RoboHashCache.get(ctx, user.pubkeyHex)),
+                  fallback = rememberAsyncImagePainter(RoboHashCache.get(ctx, user.pubkeyHex)),
+                  error = rememberAsyncImagePainter(RoboHashCache.get(ctx, user.pubkeyHex)),
                   contentDescription = "Profile Image",
-                  placeholder = rememberAsyncImagePainter("https://robohash.org/${user.pubkeyHex}.png"),
                   modifier = Modifier
                     .width(100.dp)
                     .height(100.dp)

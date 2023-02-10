@@ -46,6 +46,7 @@ import coil.Coil
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrChatRoomDataSource
@@ -82,7 +83,7 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
     val account = accountState?.account ?: return
 
     val accountUserState by account.userProfile().liveMetadata.observeAsState()
-    val accountUser = accountUserState?.user
+    val accountUser = accountUserState?.user ?: return
 
     val relayViewModel: RelayPoolViewModel = viewModel { RelayPoolViewModel() }
     val connectedRelaysLiveData by relayViewModel.connectedRelaysLiveData.observeAsState()
@@ -91,6 +92,7 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
     val coroutineScope = rememberCoroutineScope()
 
     val context = LocalContext.current
+    val ctx = LocalContext.current.applicationContext
 
     var wantsToEditRelays by remember {
         mutableStateOf(false)
@@ -196,8 +198,10 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
                     modifier = Modifier
                 ) {
                     AsyncImage(
-                        model = accountUser?.profilePicture() ?: "https://robohash.org/ohno.png",
-                        placeholder = rememberAsyncImagePainter("https://robohash.org/${accountUser?.pubkeyHex}.png"),
+                        model = accountUser.profilePicture(),
+                        placeholder = rememberAsyncImagePainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
+                        fallback = rememberAsyncImagePainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
+                        error = rememberAsyncImagePainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
                         contentDescription = "Profile Image",
                         modifier = Modifier
                             .width(34.dp)

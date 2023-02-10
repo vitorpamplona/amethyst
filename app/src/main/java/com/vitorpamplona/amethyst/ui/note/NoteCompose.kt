@@ -57,6 +57,7 @@ import coil.compose.rememberAsyncImagePainter
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -306,6 +307,7 @@ private fun RelayBadges(baseNote: Note) {
     val relaysToDisplay = if (expanded) noteRelays else noteRelays.take(3)
 
     val uri = LocalUriHandler.current
+    val ctx = LocalContext.current.applicationContext
 
     FlowRow(Modifier.padding(top = 10.dp, start = 5.dp, end = 4.dp)) {
         relaysToDisplay.forEach {
@@ -313,9 +315,9 @@ private fun RelayBadges(baseNote: Note) {
             Box(Modifier.size(15.dp).padding(1.dp)) {
                 AsyncImage(
                     model = "https://${url}/favicon.ico",
-                    placeholder = rememberAsyncImagePainter("https://robohash.org/$url.png"),
-                    fallback = rememberAsyncImagePainter("https://robohash.org/$url.png"),
-                    error = rememberAsyncImagePainter("https://robohash.org/$url.png"),
+                    placeholder = rememberAsyncImagePainter(RoboHashCache.get(ctx, url)),
+                    fallback = rememberAsyncImagePainter(RoboHashCache.get(ctx, url)),
+                    error = rememberAsyncImagePainter(RoboHashCache.get(ctx, url)),
                     contentDescription = "Relay Icon",
                     colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }),
                     modifier = Modifier
@@ -373,15 +375,16 @@ fun NoteAuthorPicture(
 
     val author = note.author
 
+    val ctx = LocalContext.current.applicationContext
+
     Box(
         Modifier
             .width(size)
             .height(size)) {
         if (author == null) {
             AsyncImage(
-                model = "https://robohash.org/ohno.png",
+                model = rememberAsyncImagePainter(RoboHashCache.get(ctx, "ohno")),
                 contentDescription = "Unknown Author",
-                placeholder = rememberAsyncImagePainter("https://robohash.org/ohno.png"),
                 modifier = pictureModifier
                     .fillMaxSize(1f)
                     .clip(shape = CircleShape)
@@ -417,6 +420,8 @@ fun UserPicture(
     val userState by baseUser.liveMetadata.observeAsState()
     val user = userState?.user ?: return
 
+    val ctx = LocalContext.current.applicationContext
+
     Box(
         Modifier
             .width(size)
@@ -425,9 +430,9 @@ fun UserPicture(
         AsyncImage(
             model = user.profilePicture(),
             contentDescription = "Profile Image",
-            placeholder = rememberAsyncImagePainter("https://robohash.org/${user.pubkeyHex}.png"),
-            fallback = rememberAsyncImagePainter("https://robohash.org/${user.pubkeyHex}.png"),
-            error = rememberAsyncImagePainter("https://robohash.org/${user.pubkeyHex}.png"),
+            placeholder = rememberAsyncImagePainter(RoboHashCache.get(ctx, user.pubkeyHex)),
+            fallback = rememberAsyncImagePainter(RoboHashCache.get(ctx, user.pubkeyHex)),
+            error = rememberAsyncImagePainter(RoboHashCache.get(ctx, user.pubkeyHex)),
             modifier = pictureModifier
                 .fillMaxSize(1f)
                 .clip(shape = CircleShape)

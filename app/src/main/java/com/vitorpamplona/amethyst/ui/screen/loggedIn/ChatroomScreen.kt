@@ -124,6 +124,8 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
 
 @Composable
 fun ChatroomHeader(baseUser: User, accountViewModel: AccountViewModel, navController: NavController) {
+    val ctx = LocalContext.current.applicationContext
+
     Column(modifier = Modifier.clickable(
             onClick = { navController.navigate("User/${baseUser.pubkeyHex}") }
         )
@@ -132,11 +134,13 @@ fun ChatroomHeader(baseUser: User, accountViewModel: AccountViewModel, navContro
             Row(verticalAlignment = Alignment.CenterVertically) {
 
                 val authorState by baseUser.liveMetadata.observeAsState()
-                val author = authorState?.user
+                val author = authorState?.user!!
 
                 AsyncImage(
-                    model = author?.profilePicture(),
-                    placeholder = rememberAsyncImagePainter("https://robohash.org/${author?.pubkeyHex}.png"),
+                    model = author.profilePicture(),
+                    placeholder = rememberAsyncImagePainter(RoboHashCache.get(ctx, author.pubkeyHex)),
+                    fallback = rememberAsyncImagePainter(RoboHashCache.get(ctx, author.pubkeyHex)),
+                    error = rememberAsyncImagePainter(RoboHashCache.get(ctx, author.pubkeyHex)),
                     contentDescription = "Profile Image",
                     modifier = Modifier
                         .width(35.dp)
