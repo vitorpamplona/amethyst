@@ -13,7 +13,7 @@ object RoboHashCache {
   fun get(context: Context, hash: String): Bitmap {
     if (!this::robots.isInitialized) {
       robots = RoboHash(context)
-      robots.useCache(LruCache(100));
+      robots.useCache(LruCache(1000));
     }
 
     return robots.imageForHandle(robots.calculateHandleFromUUID(UUID.nameUUIDFromBytes(hash.toByteArray())))

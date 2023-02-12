@@ -55,10 +55,12 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileFollowersDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileFollowsDataSource
+import com.vitorpamplona.amethyst.service.NostrUserProfileZapsDataSource
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
 import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.note.UserPicture
+import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import kotlinx.coroutines.launch
@@ -77,11 +79,13 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
         NostrUserProfileDataSource.loadUserProfile(userId)
         NostrUserProfileFollowersDataSource.loadUserProfile(userId)
         NostrUserProfileFollowsDataSource.loadUserProfile(userId)
+        NostrUserProfileZapsDataSource.loadUserProfile(userId)
 
         onDispose {
             NostrUserProfileDataSource.stop()
             NostrUserProfileFollowsDataSource.stop()
             NostrUserProfileFollowersDataSource.stop()
+            NostrUserProfileZapsDataSource.stop()
         }
     }
 
@@ -174,6 +178,17 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                             selected = pagerState.currentPage == 3,
                             onClick = { coroutineScope.launch { pagerState.animateScrollToPage(3) } },
                             text = {
+                                val userState by baseUser.liveZaps.observeAsState()
+                                val userZaps = userState?.user?.zappedAmount()
+
+                                Text(text = "${showAmount(userZaps)} Zaps")
+                            }
+                        )
+
+                        Tab(
+                            selected = pagerState.currentPage == 4,
+                            onClick = { coroutineScope.launch { pagerState.animateScrollToPage(4) } },
+                            text = {
                                 val userState by baseUser.liveRelays.observeAsState()
                                 val userRelaysBeingUsed =
                                     userState?.user?.relaysBeingUsed?.size ?: "--"
@@ -186,7 +201,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                         )
                     }
                     HorizontalPager(
-                        count = 4,
+                        count = 5,
                         state = pagerState,
                         modifier = with(LocalDensity.current) {
                             Modifier.height((columnSize.height - tabsSize.height).toDp())
@@ -196,7 +211,8 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                             0 -> TabNotes(baseUser, accountViewModel, navController)
                             1 -> TabFollows(baseUser, accountViewModel, navController)
                             2 -> TabFollowers(baseUser, accountViewModel, navController)
-                            3 -> TabRelays(baseUser, accountViewModel, navController)
+                            3 -> TabReceivedZaps(baseUser, accountViewModel, navController)
+                            4 -> TabRelays(baseUser, accountViewModel, navController)
                         }
                     }
                 }
@@ -448,6 +464,22 @@ fun TabFollowers(user: User, accountViewModel: AccountViewModel, navController: 
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
             UserFeedView(feedViewModel, accountViewModel, navController)
+        }
+    }
+}
+
+@Composable
+fun TabReceivedZaps(user: User, accountViewModel: AccountViewModel, navController: NavController) {
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    if (accountState != null) {
+        val feedViewModel: NostrUserProfileZapsFeedViewModel = viewModel()
+
+        Column(Modifier.fillMaxHeight()) {
+            Column(
+                modifier = Modifier.padding(vertical = 0.dp)
+            ) {
+                LnZapFeedView(feedViewModel, accountViewModel, navController)
+            }
         }
     }
 }

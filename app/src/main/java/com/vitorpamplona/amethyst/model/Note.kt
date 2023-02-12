@@ -1,7 +1,9 @@
 package com.vitorpamplona.amethyst.model
 
 import androidx.lifecycle.LiveData
+import com.vitorpamplona.amethyst.lnurl.LnInvoiceUtil
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
+import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
@@ -16,6 +18,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.vitorpamplona.amethyst.service.relays.Relay
+import java.math.BigDecimal
 import java.util.Date
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.regex.Matcher
@@ -45,6 +48,8 @@ class Note(val idHex: String) {
     var boosts = setOf<Note>()
         private set
     var reports = setOf<Note>()
+        private set
+    var zaps = mapOf<Note, Note?>()
         private set
 
     var relays = setOf<String>()
@@ -104,6 +109,16 @@ class Note(val idHex: String) {
         }
     }
 
+    fun addZap(zapRequest: Note, zap: Note?) {
+        if (zapRequest !in zaps.keys) {
+            zaps = zaps + Pair(zapRequest, zap)
+            liveZaps.invalidateData()
+        } else if (zapRequest in zaps.keys && zaps[zapRequest] == null) {
+            zaps = zaps + Pair(zapRequest, zap)
+            liveZaps.invalidateData()
+        }
+    }
+
     fun addReaction(note: Note) {
         if (note !in reactions) {
             reactions = reactions + note
@@ -125,6 +140,11 @@ class Note(val idHex: String) {
         }
     }
 
+    fun isZappedBy(user: User): Boolean {
+        // Zaps who the requester was the user
+        return zaps.any { println(it.key.author?.toBestDisplayName()); it.key.author == user }
+    }
+
     fun isReactedBy(user: User): Boolean {
         return reactions.any { it.author == user }
     }
@@ -139,6 +159,14 @@ class Note(val idHex: String) {
 
     fun reportsBy(users: Set<User>): List<Note> {
         return reports.filter { it.author in users }
+    }
+
+    fun zappedAmount(): BigDecimal {
+        return zaps.mapNotNull { it.value?.event }
+            .filterIsInstance<LnZapEvent>()
+            .mapNotNull {
+                it.amount
+            }.sumOf { it }
     }
 
     fun hasAnyReports(): Boolean {
@@ -174,6 +202,10 @@ class Note(val idHex: String) {
         return event is RepostEvent || replyTo == null || replyTo?.size == 0
     }
 
+    fun hasZapped(loggedIn: User): Boolean {
+        return zaps.any { it.key.author == loggedIn }
+    }
+
     fun hasReacted(loggedIn: User, content: String): Boolean {
         return reactions.firstOrNull { it.author == loggedIn && it.event?.content == content } != null
     }
@@ -191,6 +223,7 @@ class Note(val idHex: String) {
     val liveReplies: NoteLiveData = NoteLiveData(this)
     val liveReports: NoteLiveData = NoteLiveData(this)
     val liveRelays: NoteLiveData = NoteLiveData(this)
+    val liveZaps: NoteLiveData = NoteLiveData(this)
 }
 
 class NoteLiveData(val note: Note): LiveData<NoteState>(NoteState(note)) {

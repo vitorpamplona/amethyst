@@ -7,6 +7,7 @@ import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
+import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
@@ -117,6 +118,27 @@ class Account(
       Client.send(event)
       LocalCache.consume(event)
     }
+  }
+
+  fun createZapRequestFor(note: Note): LnZapRequestEvent? {
+    if (!isWriteable()) return null
+
+    if (note.hasZapped(userProfile())) {
+      // has already liked this note
+      return null
+    }
+
+    note.event?.let {
+      return LnZapRequestEvent.create(it, userProfile().relays?.keys ?: localRelays.map { it.url }.toSet(), loggedIn.privKey!!)
+    }
+
+    return null
+  }
+
+  fun createZapRequestFor(user: User): LnZapRequestEvent? {
+    if (!isWriteable()) return null
+
+    return LnZapRequestEvent.create(user.pubkeyHex, userProfile().relays?.keys ?: localRelays.map { it.url }.toSet(), loggedIn.privKey!!)
   }
 
   fun report(note: Note, type: ReportEvent.ReportType) {

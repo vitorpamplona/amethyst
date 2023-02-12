@@ -8,6 +8,8 @@ import com.vitorpamplona.amethyst.service.model.ChannelHideMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMuteUserEvent
+import com.vitorpamplona.amethyst.service.model.LnZapEvent
+import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
@@ -67,6 +69,14 @@ abstract class NostrDataSource<T>(val debugName: String) {
               }
               ReactionEvent.kind -> LocalCache.consume(ReactionEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
               ReportEvent.kind -> LocalCache.consume(ReportEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
+
+              LnZapEvent.kind -> {
+                val zapEvent = LnZapEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig)
+
+                zapEvent.containedPost?.let { onEvent(it, subscriptionId, relay) }
+                LocalCache.consume(zapEvent)
+              }
+              LnZapRequestEvent.kind -> LocalCache.consume(LnZapRequestEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
 
               ChannelCreateEvent.kind -> LocalCache.consume(ChannelCreateEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
               ChannelMetadataEvent.kind -> LocalCache.consume(ChannelMetadataEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))

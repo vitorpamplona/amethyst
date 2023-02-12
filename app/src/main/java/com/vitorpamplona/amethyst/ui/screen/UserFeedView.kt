@@ -59,7 +59,7 @@ fun UserFeedView(viewModel: UserFeedViewModel, accountViewModel: AccountViewMode
                     is UserFeedState.Loaded -> {
                         FeedLoaded(state, accountViewModel, navController)
                     }
-                    UserFeedState.Loading -> {
+                    is UserFeedState.Loading -> {
                         LoadingFeed()
                     }
                 }

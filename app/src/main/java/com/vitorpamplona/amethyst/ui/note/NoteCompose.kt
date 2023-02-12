@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.toNote
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
+import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
@@ -96,6 +97,9 @@ fun NoteCompose(
     var showHiddenNote by remember { mutableStateOf(false) }
 
     val context = LocalContext.current.applicationContext
+
+    var moreActionsExpanded by remember { mutableStateOf(false) }
+
 
     if (note?.event == null) {
         BlankNote(modifier.combinedClickable(
@@ -231,6 +235,20 @@ fun NoteCompose(
                                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                                 maxLines = 1
                             )
+
+                            IconButton(
+                                modifier = Modifier.then(Modifier.size(24.dp)),
+                                onClick = { moreActionsExpanded = true }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.MoreVert,
+                                    null,
+                                    modifier = Modifier.size(15.dp),
+                                    tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                                )
+
+                                NoteDropDownMenu(baseNote, moreActionsExpanded, { moreActionsExpanded = false }, accountViewModel)
+                            }
                         } else {
                             Text(
                                 "  boosted",
@@ -314,7 +332,10 @@ private fun RelayBadges(baseNote: Note) {
     FlowRow(Modifier.padding(top = 10.dp, start = 5.dp, end = 4.dp)) {
         relaysToDisplay.forEach {
             val url = it.removePrefix("wss://")
-            Box(Modifier.size(15.dp).padding(1.dp)) {
+            Box(
+                Modifier
+                    .size(15.dp)
+                    .padding(1.dp)) {
                 AsyncImage(
                     model = "https://${url}/favicon.ico",
                     placeholder = rememberAsyncImagePainter(RoboHashCache.get(ctx, url)),
@@ -326,14 +347,17 @@ private fun RelayBadges(baseNote: Note) {
                         .fillMaxSize(1f)
                         .clip(shape = CircleShape)
                         .background(MaterialTheme.colors.background)
-                        .clickable(onClick = { uri.openUri("https://" + url) } )
+                        .clickable(onClick = { uri.openUri("https://" + url) })
                 )
             }
         }
     }
 
     if (noteRelays.size > 3 && !expanded) {
-        Row(Modifier.fillMaxWidth().height(25.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.Top) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .height(25.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.Top) {
             IconButton(
                 modifier = Modifier.then(Modifier.size(24.dp)),
                 onClick = { expanded = true }

@@ -20,14 +20,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
-import com.vitorpamplona.amethyst.ui.note.BoostSetCompose
-import com.vitorpamplona.amethyst.ui.note.LikeSetCompose
-import com.vitorpamplona.amethyst.ui.note.NoteCompose
-import com.vitorpamplona.amethyst.ui.note.ZapSetCompose
+import com.vitorpamplona.amethyst.ui.note.UserCompose
+import com.vitorpamplona.amethyst.ui.note.ZapNoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun CardFeedView(viewModel: CardFeedViewModel, accountViewModel: AccountViewModel, navController: NavController, routeForLastRead: String) {
+fun LnZapFeedView(viewModel: LnZapFeedViewModel, accountViewModel: AccountViewModel, navController: NavController) {
     val feedState by viewModel.feedContent.collectAsState()
 
     var isRefreshing by remember { mutableStateOf(false) }
@@ -49,25 +47,20 @@ fun CardFeedView(viewModel: CardFeedViewModel, accountViewModel: AccountViewMode
         Column() {
             Crossfade(targetState = feedState, animationSpec = tween(durationMillis = 100)) { state ->
                 when (state) {
-                    is CardFeedState.Empty -> {
+                    is LnZapFeedState.Empty -> {
                         FeedEmpty {
                             isRefreshing = true
                         }
                     }
-                    is CardFeedState.FeedError -> {
+                    is LnZapFeedState.FeedError -> {
                         FeedError(state.errorMessage) {
                             isRefreshing = true
                         }
                     }
-                    is CardFeedState.Loaded -> {
-                        FeedLoaded(
-                            state,
-                            accountViewModel,
-                            navController,
-                            routeForLastRead
-                        )
+                    is LnZapFeedState.Loaded -> {
+                        LnZapFeedLoaded(state, accountViewModel, navController)
                     }
-                    CardFeedState.Loading -> {
+                    is LnZapFeedState.Loading -> {
                         LoadingFeed()
                     }
                 }
@@ -77,11 +70,10 @@ fun CardFeedView(viewModel: CardFeedViewModel, accountViewModel: AccountViewMode
 }
 
 @Composable
-private fun FeedLoaded(
-    state: CardFeedState.Loaded,
+private fun LnZapFeedLoaded(
+    state: LnZapFeedState.Loaded,
     accountViewModel: AccountViewModel,
-    navController: NavController,
-    routeForLastRead: String
+    navController: NavController
 ) {
     val listState = rememberLazyListState()
 
@@ -92,37 +84,8 @@ private fun FeedLoaded(
         ),
         state = listState
     ) {
-        itemsIndexed(state.feed.value, key = { _, item -> item.id() }) { index, item ->
-            when (item) {
-                is NoteCard -> NoteCompose(
-                    item.note,
-                    isInnerNote = false,
-                    accountViewModel = accountViewModel,
-                    navController = navController,
-                    routeForLastRead = routeForLastRead
-                )
-                is ZapSetCard -> ZapSetCompose(
-                    item,
-                    isInnerNote = false,
-                    accountViewModel = accountViewModel,
-                    navController = navController,
-                    routeForLastRead = routeForLastRead
-                )
-                is LikeSetCard -> LikeSetCompose(
-                    item,
-                    isInnerNote = false,
-                    accountViewModel = accountViewModel,
-                    navController = navController,
-                    routeForLastRead = routeForLastRead
-                )
-                is BoostSetCard -> BoostSetCompose(
-                    item,
-                    isInnerNote = false,
-                    accountViewModel = accountViewModel,
-                    navController = navController,
-                    routeForLastRead = routeForLastRead
-                )
-            }
+        itemsIndexed(state.feed.value, key = { _, item -> item.second.idHex }) { index, item ->
+            ZapNoteCompose(item, accountViewModel = accountViewModel, navController = navController)
         }
     }
 }

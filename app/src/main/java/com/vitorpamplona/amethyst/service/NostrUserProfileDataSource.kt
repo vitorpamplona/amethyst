@@ -4,6 +4,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import nostr.postr.JsonFilter
@@ -37,6 +38,17 @@ object NostrUserProfileDataSource: NostrDataSource<Note>("UserProfileFeed") {
       filter = JsonFilter(
         kinds = listOf(TextNoteEvent.kind),
         authors = listOf(user!!.pubkeyHex),
+        limit = 100
+      )
+    )
+  }
+
+  fun createUserReceivedZapsFilter(): TypedFilter {
+    return TypedFilter(
+      types = FeedType.values().toSet(),
+      filter = JsonFilter(
+        kinds = listOf(LnZapEvent.kind),
+        tags = mapOf("e" to listOf(user!!.pubkeyHex)),
         limit = 100
       )
     )
@@ -76,7 +88,8 @@ object NostrUserProfileDataSource: NostrDataSource<Note>("UserProfileFeed") {
       createUserInfoFilter(),
       createUserPostsFilter(),
       createFollowFilter(),
-      createFollowersFilter()
+      createFollowersFilter(),
+      createUserReceivedZapsFilter()
     ).ifEmpty { null }
   }
 }

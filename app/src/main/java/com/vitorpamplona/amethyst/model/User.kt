@@ -1,13 +1,16 @@
 package com.vitorpamplona.amethyst.model
 
 import androidx.lifecycle.LiveData
+import com.vitorpamplona.amethyst.lnurl.LnInvoiceUtil
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
+import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import fr.acinq.secp256k1.Hex
+import java.math.BigDecimal
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
@@ -46,6 +49,9 @@ class User(val pubkeyHex: String) {
         private set
 
     var reports = setOf<Note>()
+        private set
+
+    var zaps = mapOf<Note, Note?>()
         private set
 
     var relays: Map<String, ContactListEvent.ReadWrite>? = null
@@ -157,6 +163,24 @@ class User(val pubkeyHex: String) {
             reports = reports + note
             liveReports.invalidateData()
         }
+    }
+
+    fun addZap(zapRequest: Note, zap: Note?) {
+        if (zapRequest !in zaps.keys) {
+            zaps = zaps + Pair(zapRequest, zap)
+            liveZaps.invalidateData()
+        } else if (zapRequest in zaps.keys && zaps[zapRequest] == null) {
+            zaps = zaps + Pair(zapRequest, zap)
+            liveZaps.invalidateData()
+        }
+    }
+
+    fun zappedAmount(): BigDecimal {
+        return zaps.mapNotNull { it.value?.event }
+            .filterIsInstance<LnZapEvent>()
+            .mapNotNull {
+                it.amount
+            }.sumOf { it }
     }
 
     fun reportsBy(user: User): List<Note> {
@@ -300,6 +324,7 @@ class User(val pubkeyHex: String) {
     val liveRelays: UserLiveData = UserLiveData(this)
     val liveRelayInfo: UserLiveData = UserLiveData(this)
     val liveMetadata: UserLiveData = UserLiveData(this)
+    val liveZaps: UserLiveData = UserLiveData(this)
 }
 
 class UserMetadata {

@@ -49,7 +49,8 @@ fun UserCompose(baseUser: User, accountViewModel: AccountViewModel, navControlle
                 .padding(
                     start = 12.dp,
                     end = 12.dp,
-                    top = 10.dp)
+                    top = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
 
             UserPicture(baseUser, navController, account.userProfile(), 55.dp)

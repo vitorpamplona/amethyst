@@ -6,6 +6,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
+import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import nostr.postr.JsonFilter
 
@@ -19,6 +20,7 @@ object NostrNotificationDataSource: NostrDataSource<Note>("NotificationFeed") {
       .filter {
            it.event !is ChannelCreateEvent
         && it.event !is ChannelMetadataEvent
+        && it.event !is LnZapRequestEvent
       }
       .sortedBy { it.event?.createdAt }
       .reversed()

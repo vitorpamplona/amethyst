@@ -10,6 +10,8 @@ import com.vitorpamplona.amethyst.service.model.ChannelHideMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMuteUserEvent
+import com.vitorpamplona.amethyst.service.model.LnZapEvent
+import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
@@ -403,6 +405,72 @@ object LocalCache {
 
   fun consume(event: ChannelMuteUserEvent) {
 
+  }
+
+  fun consume(event: LnZapEvent) {
+    val note = getOrCreateNote(event.id.toHexKey())
+
+    // Already processed this event.
+    if (note.event != null) return
+
+    val author = getOrCreateUser(event.pubKey.toHexKey())
+    val mentions = event.zappedAuthor.map { getOrCreateUser(it) }
+    val repliesTo = event.zappedPost.map { getOrCreateNote(it) }
+
+    note.loadEvent(event, author, mentions, repliesTo)
+
+    val zapRequest = event.containedPost?.id?.toHexKey()?.let { getOrCreateNote(it) }
+    if (zapRequest == null) {
+      Log.e("ZP","Zap Request not found. Unable to process Zap {${event.toJson()}}")
+      return
+    }
+
+    Log.d("ZP", "New ZapEvent ${event.content} (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${formattedDateTime(event.createdAt)}")
+
+    // Adds notifications to users.
+    mentions.forEach {
+      it.addTaggedPost(note)
+    }
+    repliesTo.forEach {
+      it.author?.addTaggedPost(note)
+    }
+
+    repliesTo.forEach {
+      it.addZap(zapRequest, note)
+    }
+    mentions.forEach {
+      it.addZap(zapRequest, note)
+    }
+  }
+
+  fun consume(event: LnZapRequestEvent) {
+    val note = getOrCreateNote(event.id.toHexKey())
+
+    // Already processed this event.
+    if (note.event != null) return
+
+    val author = getOrCreateUser(event.pubKey.toHexKey())
+    val mentions = event.zappedAuthor.map { getOrCreateUser(it) }
+    val repliesTo = event.zappedPost.map { getOrCreateNote(it) }
+
+    note.loadEvent(event, author, mentions, repliesTo)
+
+    Log.d("ZP", "New Zap Request ${event.content} (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${formattedDateTime(event.createdAt)}")
+
+    // Adds notifications to users.
+    mentions.forEach {
+      it.addTaggedPost(note)
+    }
+    repliesTo.forEach {
+      it.author?.addTaggedPost(note)
+    }
+
+    repliesTo.forEach {
+      it.addZap(note, null)
+    }
+    mentions.forEach {
+      it.addZap(note, null)
+    }
   }
 
   fun findUsersStartingWith(username: String): List<User> {

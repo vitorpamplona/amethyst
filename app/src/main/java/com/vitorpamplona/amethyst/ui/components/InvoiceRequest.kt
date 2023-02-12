@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.components
 
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,10 +38,12 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat.startActivity
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.lnurl.LightningAddressResolver
+import kotlinx.coroutines.launch
 
 @Composable
 fun InvoiceRequest(lud16: String, onClose: () -> Unit ) {
   val context = LocalContext.current
+  val scope = rememberCoroutineScope()
 
   Column(modifier = Modifier
     .fillMaxWidth()
@@ -124,13 +128,21 @@ fun InvoiceRequest(lud16: String, onClose: () -> Unit ) {
       Button(
         modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
         onClick = {
-          LightningAddressResolver().lnAddressInvoice(lud16, amount * 1000, message) {
-            runCatching {
-              val intent = Intent(Intent.ACTION_VIEW, Uri.parse("lightning:$it"))
-              startActivity(context, intent, null)
+          LightningAddressResolver().lnAddressInvoice(lud16, amount * 1000, message,
+            onSuccess = {
+              runCatching {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("lightning:$it"))
+                startActivity(context, intent, null)
+              }
+              onClose()
+            },
+            onError = {
+              scope.launch {
+                Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+                onClose()
+              }
             }
-            onClose()
-          }
+          )
         },
         shape = RoundedCornerShape(15.dp),
         colors = ButtonDefaults.buttonColors(

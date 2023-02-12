@@ -77,7 +77,7 @@ fun FeedView(viewModel: FeedViewModel, accountViewModel: AccountViewModel, navCo
                             navController
                         )
                     }
-                    FeedState.Loading -> {
+                    is FeedState.Loading -> {
                         LoadingFeed()
                     }
                 }

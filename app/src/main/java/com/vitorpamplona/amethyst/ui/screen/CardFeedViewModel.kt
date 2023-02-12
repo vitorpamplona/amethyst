@@ -11,6 +11,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.NostrDataSource
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
+import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import java.util.concurrent.atomic.AtomicBoolean
@@ -68,6 +69,21 @@ class CardFeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel() {
 
         val reactionCards = reactionsPerEvent.map { LikeSetCard(it.key, it.value) }
 
+        val zapsPerEvent = mutableMapOf<Note, MutableList<Note>>()
+        notes
+            .filter { it.event is LnZapEvent}
+            .forEach { zapEvent ->
+                val zappedPost = zapEvent.replyTo?.lastOrNull() { it.event !is ChannelMetadataEvent && it.event !is ChannelCreateEvent }
+                if (zappedPost != null) {
+                    val key = zappedPost.zaps.filter { it.value == zapEvent }.keys.firstOrNull()
+                    if (key != null) {
+                        zapsPerEvent.getOrPut(zappedPost, { mutableListOf() }).add(key)
+                    }
+                }
+            }
+
+        val zapCards = zapsPerEvent.map { ZapSetCard(it.key, it.value) }
+
         val boostsPerEvent = mutableMapOf<Note, MutableList<Note>>()
         notes
             .filter { it.event is RepostEvent }
@@ -81,7 +97,7 @@ class CardFeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel() {
 
         val textNoteCards = notes.filter { it.event !is ReactionEvent && it.event !is RepostEvent }.map { NoteCard(it) }
 
-        return (reactionCards + boostCards + textNoteCards).sortedBy { it.createdAt() }.reversed()
+        return (reactionCards + boostCards + zapCards + textNoteCards).sortedBy { it.createdAt() }.reversed()
     }
 
     private fun updateFeed(notes: List<Card>) {
