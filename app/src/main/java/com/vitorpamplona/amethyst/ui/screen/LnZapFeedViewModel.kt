@@ -87,9 +87,6 @@ open class LnZapFeedViewModel(val dataSource: NostrDataSource<Pair<Note, Note>>)
 
     override fun onCleared() {
         LocalCache.live.removeObserver(cacheListener)
-
-        dataSource.stop()
-        viewModelScope.cancel()
         super.onCleared()
     }
 }

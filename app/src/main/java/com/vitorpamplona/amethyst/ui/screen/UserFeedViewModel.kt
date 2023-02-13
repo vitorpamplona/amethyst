@@ -102,9 +102,6 @@ open class UserFeedViewModel(val dataSource: NostrDataSource<User>): ViewModel()
 
     override fun onCleared() {
         LocalCache.live.removeObserver(cacheListener)
-
-        dataSource.stop()
-        viewModelScope.cancel()
         super.onCleared()
     }
 }

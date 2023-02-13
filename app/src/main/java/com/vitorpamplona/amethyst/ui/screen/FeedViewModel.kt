@@ -1,8 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen
 
-import android.util.Log
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -16,20 +14,16 @@ import com.vitorpamplona.amethyst.service.NostrGlobalDataSource
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
 import com.vitorpamplona.amethyst.service.NostrThreadDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
-import com.vitorpamplona.amethyst.service.NostrUserProfileZapsDataSource
-import com.vitorpamplona.amethyst.service.model.RepostEvent
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import nostr.postr.events.TextNoteEvent
-import java.util.concurrent.atomic.AtomicBoolean
 
 class NostrChannelFeedViewModel: FeedViewModel(NostrChannelDataSource)
 class NostrChatRoomFeedViewModel: FeedViewModel(NostrChatRoomDataSource)
@@ -139,9 +133,6 @@ abstract class FeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel()
 
     override fun onCleared() {
         LocalCache.live.removeObserver(cacheListener)
-
-        dataSource.stop()
-        viewModelScope.cancel()
         super.onCleared()
     }
 }
