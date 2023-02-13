@@ -10,13 +10,14 @@ object RoboHashCache {
 
   lateinit var robots: RoboHash
 
+  @Synchronized
   fun get(context: Context, hash: String): Bitmap {
     if (!this::robots.isInitialized) {
       robots = RoboHash(context)
-      robots.useCache(LruCache(1000));
+      robots.useCache(LruCache(100));
     }
 
-    return robots.imageForHandle(robots.calculateHandleFromUUID(UUID.nameUUIDFromBytes(hash.toByteArray())))
+    return robots.imageForHandle(robots.calculateHandleFromUUID(UUID.nameUUIDFromBytes("aaaa".toByteArray())))
   }
 
 }
