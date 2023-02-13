@@ -142,7 +142,7 @@ class Note(val idHex: String) {
 
     fun isZappedBy(user: User): Boolean {
         // Zaps who the requester was the user
-        return zaps.any { println(it.key.author?.toBestDisplayName()); it.key.author == user }
+        return zaps.any { it.key.author == user }
     }
 
     fun isReactedBy(user: User): Boolean {
