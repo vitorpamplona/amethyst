@@ -76,8 +76,8 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, account: Account
         )
     ) {
         Surface(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
-            Column(modifier = Modifier.fillMaxWidth().fillMaxHeight().border(1.dp, Color.Red)) {
-                Column(modifier = Modifier.padding(10.dp).imePadding().weight(1f).border(1.dp, Color.Yellow)) {
+            Column(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
+                Column(modifier = Modifier.padding(10.dp).imePadding().weight(1f)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
