@@ -15,12 +15,13 @@ object ImageUploader {
     uri: Uri,
     contentResolver: ContentResolver,
     onSuccess: (String) -> Unit,
-  ) {
+    onError: (Throwable) -> Unit,
+) {
     val contentType = contentResolver.getType(uri)
 
     val client = OkHttpClient.Builder().build()
 
-    val body: RequestBody = MultipartBody.Builder()
+    val requestBody: RequestBody = MultipartBody.Builder()
       .setType(MultipartBody.FORM)
       .addFormDataPart(
         "image",
@@ -30,9 +31,12 @@ object ImageUploader {
             contentType?.toMediaType()
 
           override fun writeTo(sink: BufferedSink) {
-            contentResolver.openInputStream(uri)!!.use { inputStream ->
-              sink.writeAll(inputStream.source())
+            val imageInputStream = contentResolver.openInputStream(uri)
+            checkNotNull(imageInputStream) {
+              "Can't open the image input stream"
             }
+
+            imageInputStream.source().use(sink::writeAll)
           }
         }
       )
@@ -41,24 +45,31 @@ object ImageUploader {
     val request: Request = Request.Builder()
       .url("https://api.imgur.com/3/image")
       .header("Authorization", "Client-ID e6aea87296f3f96")
-      .post(body)
+      .post(requestBody)
       .build()
 
     client.newCall(request).enqueue(object : Callback {
       override fun onResponse(call: Call, response: Response) {
-        response.use {
-          val body = response.body
-          if (body != null) {
+        try {
+          check(response.isSuccessful)
+          response.body.use { body ->
             val tree = jacksonObjectMapper().readTree(body.string())
             val url = tree?.get("data")?.get("link")?.asText()
-            if (url != null)
-              onSuccess(url)
+            checkNotNull(url) {
+              "There must be an uploaded image URL in the response"
+            }
+
+            onSuccess(url)
           }
+        } catch (e: Exception) {
+          e.printStackTrace()
+          onError(e)
         }
       }
 
       override fun onFailure(call: Call, e: IOException) {
         e.printStackTrace()
+        onError(e)
       }
     })
   }

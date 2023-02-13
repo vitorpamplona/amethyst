@@ -9,12 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Button
 import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -24,7 +19,10 @@ import com.google.accompanist.permissions.rememberPermissionState
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun UploadFromGallery(onImageChosen: (Uri) -> Unit) {
+fun UploadFromGallery(
+    isUploading: Boolean,
+    onImageChosen: (Uri) -> Unit,
+) {
     val cameraPermissionState =
         rememberPermissionState(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -50,18 +48,30 @@ fun UploadFromGallery(onImageChosen: (Uri) -> Unit) {
                     modifier = Modifier
                         .align(Alignment.TopCenter)
                         .padding(4.dp),
+                    enabled = !isUploading,
                     onClick = {
                         showGallerySelect = true
                     }
                 ) {
-                    Text("Upload Image")
+                    if (!isUploading) {
+                        Text("Upload Image")
+                    } else {
+                        Text("Uploading…")
+                    }
                 }
             }
         }
     } else {
         Column {
-            Button(onClick = { cameraPermissionState.launchPermissionRequest() }) {
-                Text("Upload Image")
+            Button(
+                onClick = { cameraPermissionState.launchPermissionRequest() },
+                enabled = !isUploading,
+            ) {
+                if (!isUploading) {
+                    Text("Upload Image")
+                } else {
+                    Text("Uploading…")
+                }
             }
         }
     }
