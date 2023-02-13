@@ -67,13 +67,13 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, account: Account
         onDismissRequest = { onClose() },
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
-            dismissOnClickOutside = false
+            dismissOnClickOutside = false,
+            decorFitsSystemWindows = false
         )
     ) {
         Surface(
             modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight()
+                .fillMaxWidth().fillMaxHeight()
         ) {
             Column(
                 modifier = Modifier.padding(10.dp)
@@ -131,7 +131,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, account: Account
                             if (it.isFocused) {
                                 keyboardController?.show()
                             }
-                        },
+                        }.imePadding(),
                     placeholder = {
                         Text(
                             text = "What's on your mind?",
