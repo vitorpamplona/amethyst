@@ -31,6 +31,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
@@ -40,6 +41,8 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
@@ -52,6 +55,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.NostrGlobalDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileFollowersDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileFollowsDataSource
@@ -75,17 +79,29 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
 
     if (userId == null) return
 
-    DisposableEffect(account) {
-        NostrUserProfileDataSource.loadUserProfile(userId)
-        NostrUserProfileFollowersDataSource.loadUserProfile(userId)
-        NostrUserProfileFollowsDataSource.loadUserProfile(userId)
-        NostrUserProfileZapsDataSource.loadUserProfile(userId)
+    val lifeCycleOwner = LocalLifecycleOwner.current
 
+    DisposableEffect(accountViewModel) {
+        val observer = LifecycleEventObserver { source, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                println("Profile Start")
+                NostrUserProfileDataSource.loadUserProfile(userId)
+                NostrUserProfileFollowersDataSource.loadUserProfile(userId)
+                NostrUserProfileFollowsDataSource.loadUserProfile(userId)
+                NostrUserProfileZapsDataSource.loadUserProfile(userId)
+            }
+            if (event == Lifecycle.Event.ON_PAUSE) {
+                println("Profile Stop")
+                NostrUserProfileDataSource.stop()
+                NostrUserProfileFollowsDataSource.stop()
+                NostrUserProfileFollowersDataSource.stop()
+                NostrUserProfileZapsDataSource.stop()
+            }
+        }
+
+        lifeCycleOwner.lifecycle.addObserver(observer)
         onDispose {
-            NostrUserProfileDataSource.stop()
-            NostrUserProfileFollowsDataSource.stop()
-            NostrUserProfileFollowersDataSource.stop()
-            NostrUserProfileZapsDataSource.stop()
+            lifeCycleOwner.lifecycle.removeObserver(observer)
         }
     }
 

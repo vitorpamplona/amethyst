@@ -37,11 +37,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
@@ -52,6 +55,7 @@ import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.NostrGlobalDataSource
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.ui.note.ChannelName
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
@@ -72,9 +76,24 @@ import kotlinx.coroutines.withContext
 @Composable
 fun SearchScreen(accountViewModel: AccountViewModel, navController: NavController) {
     val feedViewModel: NostrGlobalFeedViewModel = viewModel()
+    val lifeCycleOwner = LocalLifecycleOwner.current
 
-    LaunchedEffect(Unit) {
-        feedViewModel.refresh()
+    DisposableEffect(accountViewModel) {
+        val observer = LifecycleEventObserver { source, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                println("Global Start")
+                NostrGlobalDataSource.start()
+            }
+            if (event == Lifecycle.Event.ON_PAUSE) {
+                println("Global Stop")
+                NostrGlobalDataSource.stop()
+            }
+        }
+
+        lifeCycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifeCycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     Column(Modifier.fillMaxHeight()) {
