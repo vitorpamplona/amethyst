@@ -3,6 +3,9 @@ package com.vitorpamplona.amethyst.service
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
+import com.vitorpamplona.amethyst.service.model.LnZapEvent
+import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.relays.FeedType
@@ -50,6 +53,9 @@ object NostrAccountDataSource: NostrDataSource<Note>("AccountData") {
   fun createNotificationFilter() = TypedFilter(
     types = FeedType.values().toSet(),
     filter = JsonFilter(
+      kinds = listOf(
+        TextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind, ReportEvent.kind, LnZapEvent.kind, ChannelMessageEvent.kind
+      ),
       tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
       limit = 200
     )
