@@ -95,7 +95,7 @@ class CardFeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel() {
 
         val boostCards = boostsPerEvent.map { BoostSetCard(it.key, it.value) }
 
-        val textNoteCards = notes.filter { it.event !is ReactionEvent && it.event !is RepostEvent }.map { NoteCard(it) }
+        val textNoteCards = notes.filter { it.event !is ReactionEvent && it.event !is RepostEvent  && it.event !is LnZapEvent }.map { NoteCard(it) }
 
         return (reactionCards + boostCards + zapCards + textNoteCards).sortedBy { it.createdAt() }.reversed()
     }
