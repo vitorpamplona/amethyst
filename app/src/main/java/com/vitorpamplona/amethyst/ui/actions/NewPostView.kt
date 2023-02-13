@@ -71,16 +71,10 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, account: Account
             decorFitsSystemWindows = false
         )
     ) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth().fillMaxHeight()
-        ) {
-            Column(
-                modifier = Modifier.padding(10.dp)
-            ) {
+        Surface(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
+            Column(modifier = Modifier.padding(10.dp).imePadding()) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -120,7 +114,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, account: Account
                         capitalization = KeyboardCapitalization.Sentences
                     ),
                     modifier = Modifier
-                        .fillMaxWidth()
+                        .fillMaxWidth().weight(1f)
                         .border(
                             width = 1.dp,
                             color = MaterialTheme.colors.surface,
@@ -131,7 +125,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, account: Account
                             if (it.isFocused) {
                                 keyboardController?.show()
                             }
-                        }.imePadding(),
+                        },
                     placeholder = {
                         Text(
                             text = "What's on your mind?",
@@ -165,7 +159,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, account: Account
 
                 val myUrlPreview = postViewModel.urlPreview
                 if (myUrlPreview != null) {
-                    Column(modifier = Modifier.padding(top = 5.dp)) {
+                    Row(modifier = Modifier.padding(top = 5.dp).heightIn(0.dp, 200.dp)) {
                         if (isValidURL(myUrlPreview)) {
                             val removedParamsFromUrl = myUrlPreview.split("?")[0].toLowerCase()
                             if (imageExtension.matcher(removedParamsFromUrl).matches()) {
