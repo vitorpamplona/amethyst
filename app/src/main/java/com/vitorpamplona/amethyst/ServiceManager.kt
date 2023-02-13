@@ -51,7 +51,7 @@ object ServiceManager {
       NostrSingleEventDataSource.start()
       NostrSingleChannelDataSource.start()
       NostrSingleUserDataSource.start()
-      NostrThreadDataSource.start()
+      //NostrThreadDataSource.start()
       NostrChatroomListDataSource.start()
     } else {
       // if not logged in yet, start a basic service wit default relays
