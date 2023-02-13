@@ -76,119 +76,132 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, account: Account
         )
     ) {
         Surface(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
-            Column(modifier = Modifier.padding(10.dp).imePadding().verticalScroll(scroolState)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    CloseButton(onCancel = {
-                        postViewModel.cancel()
-                        onClose()
-                    })
-
-                    UploadFromGallery(
-                        isUploading = postViewModel.isUploadingImage,
+            Column(modifier = Modifier.fillMaxWidth().fillMaxHeight().border(1.dp, Color.Red)) {
+                Column(modifier = Modifier.padding(10.dp).imePadding().weight(1f).border(1.dp, Color.Yellow)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        postViewModel.upload(it, context)
-                    }
-
-                    PostButton(
-                        onPost = {
-                            postViewModel.sendPost()
+                        CloseButton(onCancel = {
+                            postViewModel.cancel()
                             onClose()
-                        },
-                        isActive = postViewModel.message.text.isNotBlank()
-                                && !postViewModel.isUploadingImage
-                    )
-                }
+                        })
 
-                if (postViewModel.replyTos != null && baseReplyTo?.event is TextNoteEvent) {
-                    ReplyInformation(postViewModel.replyTos, postViewModel.mentions, "✖ ") {
-                        postViewModel.removeFromReplyList(it)
+                        UploadFromGallery(
+                            isUploading = postViewModel.isUploadingImage,
+                        ) {
+                            postViewModel.upload(it, context)
+                        }
+
+                        PostButton(
+                            onPost = {
+                                postViewModel.sendPost()
+                                onClose()
+                            },
+                            isActive = postViewModel.message.text.isNotBlank()
+                              && !postViewModel.isUploadingImage
+                        )
                     }
-                }
 
-                OutlinedTextField(
-                    value = postViewModel.message,
-                    onValueChange = {
-                        postViewModel.updateMessage(it)
-                    },
-                    keyboardOptions = KeyboardOptions.Default.copy(
-                        capitalization = KeyboardCapitalization.Sentences
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth().imePadding().heightIn(300.dp, 500.dp)
-                        .border(
-                            width = 1.dp,
-                            color = MaterialTheme.colors.surface,
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        .focusRequester(focusRequester)
-                        .onFocusChanged {
-                            if (it.isFocused) {
-                                keyboardController?.show()
-                            }
-                        },
-                    placeholder = {
-                        Text(
-                            text = "What's on your mind?",
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                        )
-                    },
-                    colors = TextFieldDefaults
-                        .outlinedTextFieldColors(
-                            unfocusedBorderColor = Color.Transparent,
-                            focusedBorderColor = Color.Transparent
-                        ),
-                    visualTransformation = UrlUserTagTransformation(MaterialTheme.colors.primary),
-                    textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-                )
-
-                val userSuggestions = postViewModel.userSuggestions
-                if (userSuggestions.isNotEmpty()) {
-                    LazyColumn(
-                        contentPadding = PaddingValues(
-                            top = 10.dp,
-                            bottom = 10.dp
-                        ),
-                        modifier = Modifier.heightIn(0.dp, 300.dp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth().weight(1f)
                     ) {
-                        itemsIndexed(userSuggestions, key = { _, item -> item.pubkeyHex }) { index, item ->
-                            UserLine(item, account) {
-                                postViewModel.autocompleteWithUser(item)
+                        Column(modifier = Modifier.fillMaxWidth().verticalScroll(scroolState)) {
+                            if (postViewModel.replyTos != null && baseReplyTo?.event is TextNoteEvent) {
+                                ReplyInformation(postViewModel.replyTos, postViewModel.mentions, "✖ ") {
+                                    postViewModel.removeFromReplyList(it)
+                                }
+                            }
+
+                            OutlinedTextField(
+                                value = postViewModel.message,
+                                onValueChange = {
+                                    postViewModel.updateMessage(it)
+                                },
+                                keyboardOptions = KeyboardOptions.Default.copy(
+                                    capitalization = KeyboardCapitalization.Sentences
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .border(
+                                        width = 1.dp,
+                                        color = MaterialTheme.colors.surface,
+                                        shape = RoundedCornerShape(8.dp)
+                                    )
+                                    .focusRequester(focusRequester)
+                                    .onFocusChanged {
+                                        if (it.isFocused) {
+                                            keyboardController?.show()
+                                        }
+                                    },
+                                placeholder = {
+                                    Text(
+                                        text = "What's on your mind?",
+                                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                    )
+                                },
+                                colors = TextFieldDefaults
+                                    .outlinedTextFieldColors(
+                                        unfocusedBorderColor = Color.Transparent,
+                                        focusedBorderColor = Color.Transparent
+                                    ),
+                                visualTransformation = UrlUserTagTransformation(MaterialTheme.colors.primary),
+                                textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+                            )
+
+                            val myUrlPreview = postViewModel.urlPreview
+                            if (myUrlPreview != null) {
+                                Row(modifier = Modifier.padding(top = 5.dp)) {
+                                    if (isValidURL(myUrlPreview)) {
+                                        val removedParamsFromUrl =
+                                            myUrlPreview.split("?")[0].toLowerCase()
+                                        if (imageExtension.matcher(removedParamsFromUrl).matches()) {
+                                            AsyncImage(
+                                                model = myUrlPreview,
+                                                contentDescription = myUrlPreview,
+                                                contentScale = ContentScale.FillWidth,
+                                                modifier = Modifier
+                                                    .padding(top = 4.dp)
+                                                    .fillMaxWidth()
+                                                    .clip(shape = RoundedCornerShape(15.dp))
+                                                    .border(
+                                                        1.dp,
+                                                        MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
+                                                        RoundedCornerShape(15.dp)
+                                                    )
+                                            )
+                                        } else if (videoExtension.matcher(removedParamsFromUrl)
+                                                .matches()
+                                        ) {
+                                            VideoView(myUrlPreview)
+                                        } else {
+                                            UrlPreview(myUrlPreview, myUrlPreview)
+                                        }
+                                    } else if (noProtocolUrlValidator.matcher(myUrlPreview).matches()) {
+                                        UrlPreview("https://$myUrlPreview", myUrlPreview)
+                                    }
+                                }
                             }
                         }
-                    }
-                }
 
-                val myUrlPreview = postViewModel.urlPreview
-                if (myUrlPreview != null) {
-                    Row(modifier = Modifier.padding(top = 5.dp)) {
-                        if (isValidURL(myUrlPreview)) {
-                            val removedParamsFromUrl = myUrlPreview.split("?")[0].toLowerCase()
-                            if (imageExtension.matcher(removedParamsFromUrl).matches()) {
-                                AsyncImage(
-                                    model = myUrlPreview,
-                                    contentDescription = myUrlPreview,
-                                    contentScale = ContentScale.FillWidth,
-                                    modifier = Modifier
-                                        .padding(top = 4.dp)
-                                        .fillMaxWidth()
-                                        .clip(shape = RoundedCornerShape(15.dp))
-                                        .border(
-                                            1.dp,
-                                            MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
-                                            RoundedCornerShape(15.dp)
-                                        )
-                                )
-                            } else if (videoExtension.matcher(removedParamsFromUrl).matches()) {
-                                VideoView(myUrlPreview)
-                            } else {
-                                UrlPreview(myUrlPreview, myUrlPreview)
+                    }
+
+                    val userSuggestions = postViewModel.userSuggestions
+                    if (userSuggestions.isNotEmpty()) {
+                        LazyColumn(
+                            contentPadding = PaddingValues(
+                                top = 10.dp
+                            ),
+                            modifier = Modifier.heightIn(0.dp, 300.dp)
+                        ) {
+                            itemsIndexed(
+                                userSuggestions,
+                                key = { _, item -> item.pubkeyHex }) { index, item ->
+                                UserLine(item, account) {
+                                    postViewModel.autocompleteWithUser(item)
+                                }
                             }
-                        } else if (noProtocolUrlValidator.matcher(myUrlPreview).matches()) {
-                            UrlPreview("https://$myUrlPreview", myUrlPreview)
                         }
                     }
                 }
