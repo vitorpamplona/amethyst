@@ -45,7 +45,7 @@ object ServiceManager {
       NostrUserProfileFollowersDataSource.account = myAccount
 
       NostrAccountDataSource.start()
-      NostrGlobalDataSource.start()
+      //NostrGlobalDataSource.start()
       NostrHomeDataSource.start()
       NostrNotificationDataSource.start()
       NostrSingleEventDataSource.start()
