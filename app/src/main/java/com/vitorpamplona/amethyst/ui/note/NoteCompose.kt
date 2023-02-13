@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -408,8 +409,8 @@ fun NoteAuthorPicture(
             .width(size)
             .height(size)) {
         if (author == null) {
-            AsyncImage(
-                model = rememberAsyncImagePainter(RoboHashCache.get(ctx, "ohno")),
+            Image(
+                painter = rememberAsyncImagePainter(RoboHashCache.get(ctx, "ohnothisauthorisnotfound")),
                 contentDescription = "Unknown Author",
                 modifier = pictureModifier
                     .fillMaxSize(1f)
