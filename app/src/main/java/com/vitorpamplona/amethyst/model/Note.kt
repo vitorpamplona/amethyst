@@ -47,7 +47,7 @@ class Note(val idHex: String) {
         private set
     var boosts = setOf<Note>()
         private set
-    var reports = setOf<Note>()
+    var reports = mapOf<User, Set<Note>>()
         private set
     var zaps = mapOf<Note, Note?>()
         private set
@@ -127,8 +127,13 @@ class Note(val idHex: String) {
     }
 
     fun addReport(note: Note) {
-        if (note !in reports) {
-            reports = reports + note
+        val author = note.author ?: return
+
+        if (author !in reports.keys) {
+            reports = reports + Pair(author, setOf(note))
+            liveReports.invalidateData()
+        } else {
+            reports = reports + Pair(author, (reports[author] ?: emptySet()) + note)
             liveReports.invalidateData()
         }
     }
@@ -153,12 +158,18 @@ class Note(val idHex: String) {
         return boosts.any { it.author == user }
     }
 
-    fun reportsBy(user: User): List<Note> {
-        return reports.filter { it.author == user }
+    fun reportsBy(user: User): Set<Note> {
+        return reports[user] ?: emptySet()
+    }
+
+    fun reportAuthorsBy(users: Set<User>): List<User> {
+        return reports.keys.filter { it in users }
     }
 
     fun reportsBy(users: Set<User>): List<Note> {
-        return reports.filter { it.author in users }
+        return reportAuthorsBy(users).mapNotNull {
+            reports[it]
+        }.flatten()
     }
 
     fun zappedAmount(): BigDecimal {
@@ -171,8 +182,10 @@ class Note(val idHex: String) {
 
     fun hasAnyReports(): Boolean {
         val dayAgo = Date().time / 1000 - 24*60*60
-        return author?.reports?.filter { it.event?.createdAt ?: 0 > dayAgo }?.isNotEmpty() ?: false
-            || reports.isNotEmpty()
+        return reports.isNotEmpty() ||
+          (author?.reports?.values?.filter {
+              it.firstOrNull { it.event?.createdAt ?: 0 > dayAgo } != null
+          }?.isNotEmpty() ?: false)
     }
 
     fun directlyCiteUsers(): Set<User> {

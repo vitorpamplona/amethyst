@@ -424,12 +424,12 @@ class Account(
   fun isAcceptable(user: User): Boolean {
     return user !in hiddenUsers()  // if user hasn't hided this author
         && user.reportsBy( userProfile() ).isEmpty() // if user has not reported this post
-        && user.reportsBy( userProfile().follows ).size < 5
+        && user.reportAuthorsBy( userProfile().follows ).size < 5
   }
 
   fun isAcceptableDirect(note: Note): Boolean {
     return note.reportsBy( userProfile() ).isEmpty()  // if user has not reported this post
-        && note.reportsBy( userProfile().follows ).size < 5 // if it has 5 reports by reliable users
+        && note.reportAuthorsBy( userProfile().follows ).size < 5 // if it has 5 reports by reliable users
   }
 
   fun isAcceptable(note: Note): Boolean {

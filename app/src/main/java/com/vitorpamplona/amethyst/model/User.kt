@@ -48,7 +48,7 @@ class User(val pubkeyHex: String) {
     var taggedPosts = setOf<Note>()
         private set
 
-    var reports = setOf<Note>()
+    var reports = mapOf<User, Set<Note>>()
         private set
 
     var zaps = mapOf<Note, Note?>()
@@ -159,8 +159,13 @@ class User(val pubkeyHex: String) {
     }
 
     fun addReport(note: Note) {
-        if (note !in reports) {
-            reports = reports + note
+        val author = note.author ?: return
+
+        if (author !in reports.keys) {
+            reports = reports + Pair(author, setOf(note))
+            liveReports.invalidateData()
+        } else {
+            reports = reports + Pair(author, (reports[author] ?: emptySet()) + note)
             liveReports.invalidateData()
         }
     }
@@ -183,12 +188,18 @@ class User(val pubkeyHex: String) {
             }.sumOf { it }
     }
 
-    fun reportsBy(user: User): List<Note> {
-        return reports.filter { it.author == user }
+    fun reportsBy(user: User): Set<Note> {
+        return reports[user] ?: emptySet()
+    }
+
+    fun reportAuthorsBy(users: Set<User>): List<User> {
+        return reports.keys.filter { it in users }
     }
 
     fun reportsBy(users: Set<User>): List<Note> {
-        return reports.filter { it.author in users }
+        return reportAuthorsBy(users).mapNotNull {
+            reports[it]
+        }.flatten()
     }
 
     @Synchronized
@@ -271,10 +282,8 @@ class User(val pubkeyHex: String) {
     }
 
     fun hasReport(loggedIn: User, type: ReportEvent.ReportType): Boolean {
-        return reports.firstOrNull {
-            it.author == loggedIn
-              && it.event is ReportEvent
-              && (it.event as ReportEvent).reportType.contains(type)
+        return reports[loggedIn]?.firstOrNull() {
+              it.event is ReportEvent && (it.event as ReportEvent).reportType.contains(type)
         } != null
     }
 
