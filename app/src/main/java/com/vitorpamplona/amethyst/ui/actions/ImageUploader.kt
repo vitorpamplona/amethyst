@@ -1,36 +1,40 @@
 package com.vitorpamplona.amethyst.ui.actions
 
-import android.graphics.Bitmap
+import android.content.ContentResolver
+import android.net.Uri
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import java.io.ByteArrayOutputStream
-import java.io.IOException
-import java.util.UUID
-import okhttp3.Call
-import okhttp3.Callback
+import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.MultipartBody
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody
-import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.Response
+import okio.BufferedSink
+import okio.source
+import java.io.IOException
+import java.util.*
 
 object ImageUploader {
-  private fun encodeImage(bitmap: Bitmap): ByteArray {
-    val byteArrayOutPutStream = ByteArrayOutputStream()
-    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutPutStream)
-    return byteArrayOutPutStream.toByteArray()
-  }
+  fun uploadImage(
+    uri: Uri,
+    contentResolver: ContentResolver,
+    onSuccess: (String) -> Unit,
+  ) {
+    val contentType = contentResolver.getType(uri)
 
-  fun uploadImage(bitmap: Bitmap, onSuccess: (String) -> Unit) {
     val client = OkHttpClient.Builder().build()
 
     val body: RequestBody = MultipartBody.Builder()
       .setType(MultipartBody.FORM)
       .addFormDataPart(
         "image",
-        "${UUID.randomUUID()}.png",
-        encodeImage(bitmap).toRequestBody("image/png".toMediaType())
+        "${UUID.randomUUID()}",
+        object : RequestBody() {
+          override fun contentType(): MediaType? =
+            contentType?.toMediaType()
+
+          override fun writeTo(sink: BufferedSink) {
+            contentResolver.openInputStream(uri)!!.use { inputStream ->
+              sink.writeAll(inputStream.source())
+            }
+          }
+        }
       )
       .build()
 
