@@ -1,27 +1,13 @@
 package com.vitorpamplona.amethyst.ui.actions
 
+import android.widget.Toast
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Icon
-import androidx.compose.material.LocalTextStyle
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedTextField
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
-import androidx.compose.material.TextFieldDefaults
+import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -37,11 +23,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -49,12 +33,7 @@ import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.components.UrlPreview
-import com.vitorpamplona.amethyst.ui.components.VideoView
-import com.vitorpamplona.amethyst.ui.components.imageExtension
-import com.vitorpamplona.amethyst.ui.components.isValidURL
-import com.vitorpamplona.amethyst.ui.components.noProtocolUrlValidator
-import com.vitorpamplona.amethyst.ui.components.videoExtension
+import com.vitorpamplona.amethyst.ui.components.*
 import com.vitorpamplona.amethyst.ui.navigation.UploadFromGallery
 import com.vitorpamplona.amethyst.ui.note.ReplyInformation
 import com.vitorpamplona.amethyst.ui.screen.UserLine
@@ -78,6 +57,10 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, account: Account
     LaunchedEffect(Unit) {
         delay(100)
         focusRequester.requestFocus()
+
+        postViewModel.imageUploadingError.collect { error ->
+            Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+        }
     }
 
     Dialog(
@@ -106,7 +89,9 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, account: Account
                         onClose()
                     })
 
-                    UploadFromGallery {
+                    UploadFromGallery(
+                        isUploading = postViewModel.isUploadingImage,
+                    ) {
                         postViewModel.upload(it, context)
                     }
 
@@ -115,7 +100,8 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, account: Account
                             postViewModel.sendPost()
                             onClose()
                         },
-                        postViewModel.message.text.isNotBlank()
+                        isActive = postViewModel.message.text.isNotBlank()
+                                && !postViewModel.isUploadingImage
                     )
                 }
 

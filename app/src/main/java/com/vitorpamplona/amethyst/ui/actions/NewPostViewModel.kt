@@ -1,24 +1,19 @@
 package com.vitorpamplona.amethyst.ui.actions
 
 import android.content.Context
-import android.graphics.ImageDecoder
 import android.net.Uri
-import android.os.Build
-import android.provider.MediaStore
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.decodePublicKey
-import com.vitorpamplona.amethyst.model.toHexKey
+import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.model.*
 import com.vitorpamplona.amethyst.ui.components.isValidURL
 import com.vitorpamplona.amethyst.ui.components.noProtocolUrlValidator
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.launch
 import nostr.postr.toNpub
 
 class NewPostViewModel: ViewModel() {
@@ -30,6 +25,8 @@ class NewPostViewModel: ViewModel() {
 
     var message by mutableStateOf(TextFieldValue(""))
     var urlPreview by mutableStateOf<String?>(null)
+    var isUploadingImage by mutableStateOf(false)
+    val imageUploadingError = MutableSharedFlow<String?>()
 
     var userSuggestions by mutableStateOf<List<User>>(emptyList())
     var userSuggestionAnchor: TextRange? = null
@@ -104,26 +101,33 @@ class NewPostViewModel: ViewModel() {
 
         message = TextFieldValue("")
         urlPreview = null
+        isUploadingImage = false
     }
 
     fun upload(it: Uri, context: Context) {
-        val img = if (Build.VERSION.SDK_INT < 28) {
-            MediaStore.Images.Media.getBitmap(context.contentResolver, it)
-        } else {
-            ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, it))
-        }
+        isUploadingImage = true
 
-        img?.let {
-            ImageUploader.uploadImage(img) {
-                message = TextFieldValue(message.text + "\n\n" + it)
+        ImageUploader.uploadImage(
+            uri = it,
+            contentResolver = context.contentResolver,
+            onSuccess = { imageUrl ->
+                isUploadingImage = false
+                message = TextFieldValue(message.text + "\n\n" + imageUrl)
                 urlPreview = findUrlInMessage()
+            },
+            onError = {
+                isUploadingImage = false
+                viewModelScope.launch {
+                    imageUploadingError.emit("Failed to upload the image")
+                }
             }
-        }
+        )
     }
 
     fun cancel() {
         message = TextFieldValue("")
         urlPreview = null
+        isUploadingImage = false
     }
 
     fun findUrlInMessage(): String? {
