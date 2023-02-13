@@ -5,8 +5,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -54,6 +56,8 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, account: Account
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
 
+    val scroolState = rememberScrollState()
+
     LaunchedEffect(Unit) {
         delay(100)
         focusRequester.requestFocus()
@@ -72,7 +76,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, account: Account
         )
     ) {
         Surface(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
-            Column(modifier = Modifier.padding(10.dp).imePadding()) {
+            Column(modifier = Modifier.padding(10.dp).imePadding().verticalScroll(scroolState)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -114,7 +118,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, account: Account
                         capitalization = KeyboardCapitalization.Sentences
                     ),
                     modifier = Modifier
-                        .fillMaxWidth().weight(1f)
+                        .fillMaxWidth().imePadding().heightIn(300.dp, 500.dp)
                         .border(
                             width = 1.dp,
                             color = MaterialTheme.colors.surface,
@@ -147,7 +151,8 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, account: Account
                         contentPadding = PaddingValues(
                             top = 10.dp,
                             bottom = 10.dp
-                        )
+                        ),
+                        modifier = Modifier.heightIn(0.dp, 300.dp)
                     ) {
                         itemsIndexed(userSuggestions, key = { _, item -> item.pubkeyHex }) { index, item ->
                             UserLine(item, account) {
@@ -159,7 +164,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, account: Account
 
                 val myUrlPreview = postViewModel.urlPreview
                 if (myUrlPreview != null) {
-                    Row(modifier = Modifier.padding(top = 5.dp).heightIn(0.dp, 200.dp)) {
+                    Row(modifier = Modifier.padding(top = 5.dp)) {
                         if (isValidURL(myUrlPreview)) {
                             val removedParamsFromUrl = myUrlPreview.split("?")[0].toLowerCase()
                             if (imageExtension.matcher(removedParamsFromUrl).matches()) {
