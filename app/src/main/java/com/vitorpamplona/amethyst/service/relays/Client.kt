@@ -1,6 +1,8 @@
 package com.vitorpamplona.amethyst.service.relays
 
 import java.util.UUID
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import nostr.postr.events.Event
 
 /**
@@ -50,7 +52,7 @@ object Client: RelayPool.Listener {
         RelayPool.send(signedEvent)
     }
 
-    fun close(subscriptionId: String){
+    fun close(subscriptionId: String) {
         RelayPool.close(subscriptionId)
     }
 
@@ -61,19 +63,35 @@ object Client: RelayPool.Listener {
     }
 
     override fun onEvent(event: Event, subscriptionId: String, relay: Relay) {
-        listeners.forEach { it.onEvent(event, subscriptionId, relay) }
+        // Releases the Web thread for the new payload.
+        // May need to add a processing queue if processing new events become too costly.
+        GlobalScope.launch {
+            listeners.forEach { it.onEvent(event, subscriptionId, relay) }
+        }
     }
 
     override fun onError(error: Error, subscriptionId: String, relay: Relay) {
-        listeners.forEach { it.onError(error, subscriptionId, relay) }
+        // Releases the Web thread for the new payload.
+        // May need to add a processing queue if processing new events become too costly.
+        GlobalScope.launch {
+            listeners.forEach { it.onError(error, subscriptionId, relay) }
+        }
     }
 
     override fun onRelayStateChange(type: Relay.Type, relay: Relay, channel: String?) {
-        listeners.forEach { it.onRelayStateChange(type, relay, channel) }
+        // Releases the Web thread for the new payload.
+        // May need to add a processing queue if processing new events become too costly.
+        GlobalScope.launch {
+            listeners.forEach { it.onRelayStateChange(type, relay, channel) }
+        }
     }
 
     override fun onSendResponse(eventId: String, success: Boolean, message: String, relay: Relay) {
-        listeners.forEach { it.onSendResponse(eventId, success, message, relay) }
+        // Releases the Web thread for the new payload.
+        // May need to add a processing queue if processing new events become too costly.
+        GlobalScope.launch {
+            listeners.forEach { it.onSendResponse(eventId, success, message, relay) }
+        }
     }
 
     fun subscribe(listener: Listener) {

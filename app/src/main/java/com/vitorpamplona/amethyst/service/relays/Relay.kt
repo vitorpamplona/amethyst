@@ -22,9 +22,6 @@ class Relay(
     var activeTypes: Set<FeedType> = FeedType.values().toSet(),
 ) {
     private val httpClient = OkHttpClient.Builder()
-        .connectTimeout(100, TimeUnit.SECONDS)
-        .readTimeout(100, TimeUnit.SECONDS)
-        .callTimeout(100, TimeUnit.SECONDS)
         .followRedirects(true)
         .followSslRedirects(true)
         .build();
