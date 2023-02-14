@@ -133,7 +133,7 @@ abstract class NostrDataSource<T>(val debugName: String) {
   }
 
   fun loadTop(): List<T> {
-    val returningList = feed().take(100)
+    val returningList = feed().take(1000)
 
     // prepare previews
     val scope = CoroutineScope(Job() + Dispatchers.IO)

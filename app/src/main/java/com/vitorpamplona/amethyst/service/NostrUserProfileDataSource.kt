@@ -48,8 +48,7 @@ object NostrUserProfileDataSource: NostrDataSource<Note>("UserProfileFeed") {
       types = FeedType.values().toSet(),
       filter = JsonFilter(
         kinds = listOf(LnZapEvent.kind),
-        tags = mapOf("e" to listOf(user!!.pubkeyHex)),
-        limit = 100
+        tags = mapOf("p" to listOf(user!!.pubkeyHex))
       )
     )
   }
