@@ -332,7 +332,7 @@ private fun ProfileHeader(
                 }
             }
 
-            DrawAdditionalInfo(baseUser)
+            DrawAdditionalInfo(baseUser, account)
 
             Divider(modifier = Modifier.padding(top = 6.dp))
         }
@@ -340,7 +340,7 @@ private fun ProfileHeader(
 }
 
 @Composable
-private fun DrawAdditionalInfo(baseUser: User) {
+private fun DrawAdditionalInfo(baseUser: User, account: Account) {
     val userState by baseUser.liveMetadata.observeAsState()
     val user = userState?.user ?: return
 
@@ -400,7 +400,7 @@ private fun DrawAdditionalInfo(baseUser: User) {
 
         if (ZapExpanded) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 5.dp)) {
-                InvoiceRequest(lud16) {
+                InvoiceRequest(lud16, baseUser.pubkeyHex, account) {
                     ZapExpanded = false
                 }
             }

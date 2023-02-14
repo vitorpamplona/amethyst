@@ -137,9 +137,12 @@ class Account(
   }
 
   fun createZapRequestFor(user: User): LnZapRequestEvent? {
+    return createZapRequestFor(user.pubkeyHex)
+  }
+  fun createZapRequestFor(userPubKeyHex: String): LnZapRequestEvent? {
     if (!isWriteable()) return null
 
-    return LnZapRequestEvent.create(user.pubkeyHex, userProfile().relays?.keys ?: localRelays.map { it.url }.toSet(), loggedIn.privKey!!)
+    return LnZapRequestEvent.create(userPubKeyHex, userProfile().relays?.keys ?: localRelays.map { it.url }.toSet(), loggedIn.privKey!!)
   }
 
   fun report(note: Note, type: ReportEvent.ReportType) {

@@ -38,10 +38,11 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat.startActivity
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.model.Account
 import kotlinx.coroutines.launch
 
 @Composable
-fun InvoiceRequest(lud16: String, onClose: () -> Unit ) {
+fun InvoiceRequest(lud16: String, toUserPubKeyHex: String, account: Account, onClose: () -> Unit ) {
   val context = LocalContext.current
   val scope = rememberCoroutineScope()
 
@@ -128,7 +129,9 @@ fun InvoiceRequest(lud16: String, onClose: () -> Unit ) {
       Button(
         modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
         onClick = {
-          LightningAddressResolver().lnAddressInvoice(lud16, amount * 1000, message,
+          val zapRequest = account.createZapRequestFor(toUserPubKeyHex)
+
+          LightningAddressResolver().lnAddressInvoice(lud16, amount * 1000, message, zapRequest?.toJson(),
             onSuccess = {
               runCatching {
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse("lightning:$it"))
