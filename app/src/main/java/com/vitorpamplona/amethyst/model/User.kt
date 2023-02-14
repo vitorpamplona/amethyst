@@ -1,29 +1,20 @@
 package com.vitorpamplona.amethyst.model
 
 import androidx.lifecycle.LiveData
-import com.vitorpamplona.amethyst.lnurl.LnInvoiceUtil
-import com.vitorpamplona.amethyst.service.NostrHomeDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
-import com.vitorpamplona.amethyst.service.relays.Client
-import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import fr.acinq.secp256k1.Hex
 import java.math.BigDecimal
-import java.util.Collections
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.time.ExperimentalTime
-import kotlin.time.measureTimedValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import nostr.postr.events.ContactListEvent
-import nostr.postr.events.Event
 import nostr.postr.events.MetadataEvent
 import nostr.postr.toNpub
 
@@ -61,10 +52,11 @@ class User(val pubkeyHex: String) {
     var relaysBeingUsed = mapOf<String, RelayInfo>()
         private set
 
-    var messages = mapOf<User, Set<Note>>()
+    data class Chatroom(var roomMessages: Set<Note>)
+
+    var privateChatrooms = mapOf<User, Chatroom>()
         private set
 
-    var latestMetadataRequestEOSE: Long? = null
     var latestReportRequestEOSE: Long? = null
 
     fun toBestDisplayName(): String {
@@ -103,8 +95,10 @@ class User(val pubkeyHex: String) {
     fun follow(users: Set<User>, followedAt: Long) {
         follows = follows + users
         users.forEach {
-            it.followers = it.followers + this
-            it.liveFollows.invalidateData()
+            if (this !in followers) {
+                it.followers = it.followers + this
+                it.liveFollows.invalidateData()
+            }
         }
 
         liveFollows.invalidateData()
@@ -113,8 +107,10 @@ class User(val pubkeyHex: String) {
     fun unfollow(users: Set<User>) {
         follows = follows - users
         users.forEach {
-            it.followers = it.followers - this
-            it.liveFollows.invalidateData()
+            if (this in followers) {
+                it.followers = it.followers - this
+                it.liveFollows.invalidateData()
+            }
         }
         liveFollows.invalidateData()
     }
@@ -178,18 +174,18 @@ class User(val pubkeyHex: String) {
     }
 
     @Synchronized
-    fun getOrCreateChannel(user: User): Set<Note> {
-        return messages[user] ?: run {
-            val channel = setOf<Note>()
-            messages = messages + Pair(user, channel)
-            channel
+    fun getOrCreatePrivateChatroom(user: User): Chatroom {
+        return privateChatrooms[user] ?: run {
+            val privateChatroom = Chatroom(setOf<Note>())
+            privateChatrooms = privateChatrooms + Pair(user, privateChatroom)
+            privateChatroom
         }
     }
 
     fun addMessage(user: User, msg: Note) {
-        val channel = getOrCreateChannel(user)
-        if (msg !in channel) {
-            messages = messages + Pair(user, channel + msg)
+        val privateChatroom = getOrCreatePrivateChatroom(user)
+        if (msg !in privateChatroom.roomMessages) {
+            privateChatroom.roomMessages = privateChatroom.roomMessages + msg
             liveMessages.invalidateData()
         }
     }
@@ -243,9 +239,9 @@ class User(val pubkeyHex: String) {
     }
 
     fun hasSentMessagesTo(user: User?): Boolean {
-        val messagesToUser = messages[user] ?: return false
+        val messagesToUser = privateChatrooms[user] ?: return false
 
-        return messagesToUser.firstOrNull { this == it.author } != null
+        return messagesToUser.roomMessages.any { this == it.author }
     }
 
     fun hasReport(loggedIn: User, type: ReportEvent.ReportType): Boolean {

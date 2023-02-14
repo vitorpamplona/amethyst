@@ -75,11 +75,11 @@ object NostrChatroomListDataSource: NostrDataSource<Note>("MailBoxFeed") {
 
   // returns the last Note of each user.
   override fun feed(): List<Note> {
-    val messages = account.userProfile().messages
-    val messagingWith = messages.keys.filter { account.isAcceptable(it) }
+    val privateChatrooms = account.userProfile().privateChatrooms
+    val messagingWith = privateChatrooms.keys.filter { account.isAcceptable(it) }
 
     val privateMessages = messagingWith.mapNotNull {
-      messages[it]?.sortedBy { it.event?.createdAt }?.lastOrNull { it.event != null }
+      privateChatrooms[it]?.roomMessages?.sortedBy { it.event?.createdAt }?.lastOrNull { it.event != null }
     }
 
     val publicChannels = account.followingChannels().map {

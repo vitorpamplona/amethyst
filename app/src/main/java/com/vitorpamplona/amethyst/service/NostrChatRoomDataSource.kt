@@ -56,9 +56,9 @@ object NostrChatRoomDataSource: NostrDataSource<Note>("ChatroomFeed") {
 
   // returns the last Note of each user.
   override fun feed(): List<Note> {
-    val messages = account.userProfile().messages[withUser] ?: return emptyList()
+    val messages = account.userProfile().privateChatrooms[withUser] ?: return emptyList()
 
-    return messages.filter { account.isAcceptable(it) }.sortedBy { it.event?.createdAt }.reversed()
+    return messages.roomMessages.filter { account.isAcceptable(it) }.sortedBy { it.event?.createdAt }.reversed()
   }
 
   override fun updateChannelFilters() {

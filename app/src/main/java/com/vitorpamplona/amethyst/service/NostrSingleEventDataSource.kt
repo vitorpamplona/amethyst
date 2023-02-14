@@ -28,7 +28,7 @@ object NostrSingleEventDataSource: NostrDataSource<Note>("SingleEventFeed") {
     val now = Date().time / 1000
 
     return reactionsToWatch.filter {
-      val lastTime = it.lastReactionsDownloadTime;
+      val lastTime = it.lastReactionsDownloadTime
       lastTime == null || lastTime < (now - 10)
     }.map {
       TypedFilter(
@@ -78,7 +78,7 @@ object NostrSingleEventDataSource: NostrDataSource<Note>("SingleEventFeed") {
     )
   }
 
-  val singleEventChannel = requestNewChannel() { time ->
+  val singleEventChannel = requestNewChannel { time ->
     eventsToWatch.forEach {
       LocalCache.getOrCreateNote(it).lastReactionsDownloadTime = time
     }

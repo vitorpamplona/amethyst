@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.service
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
+import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelHideMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
@@ -33,11 +34,14 @@ import nostr.postr.events.TextNoteEvent
 
 abstract class NostrDataSource<T>(val debugName: String) {
   private var subscriptions = mapOf<String, Subscription>()
-  private var eventCounter = mapOf<String, Int>()
+
+  data class Counter(var counter:Int)
+
+  private var eventCounter = mapOf<String, Counter>()
 
   fun printCounter() {
     eventCounter.forEach {
-      println("AAA Count ${it.key}: ${it.value}")
+      println("AAA Count ${it.key}: ${it.value.counter}")
     }
   }
 
@@ -47,9 +51,9 @@ abstract class NostrDataSource<T>(val debugName: String) {
         val key = "${debugName} ${subscriptionId} ${event.kind}"
         val keyValue = eventCounter.get(key)
         if (keyValue != null) {
-          eventCounter = eventCounter + Pair(key, keyValue + 1)
+          keyValue.counter++
         } else {
-          eventCounter = eventCounter + Pair(key, 1)
+          eventCounter = eventCounter + Pair(key, Counter(1))
         }
 
         try {
