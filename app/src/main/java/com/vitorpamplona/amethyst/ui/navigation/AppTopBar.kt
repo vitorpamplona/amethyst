@@ -47,6 +47,7 @@ import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.RoboHashCache
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrChatRoomDataSource
@@ -54,12 +55,15 @@ import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
 import com.vitorpamplona.amethyst.service.NostrGlobalDataSource
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
 import com.vitorpamplona.amethyst.service.NostrNotificationDataSource
+import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
+import com.vitorpamplona.amethyst.service.NostrSingleChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.NostrThreadDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileFollowersDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileFollowsDataSource
+import com.vitorpamplona.amethyst.service.NostrUserProfileZapsDataSource
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
@@ -139,18 +143,24 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
                                     NostrNotificationDataSource.printCounter()
 
                                     NostrSingleEventDataSource.printCounter()
+                                    NostrSearchEventOrUserDataSource.printCounter()
+                                    NostrSingleChannelDataSource.printCounter()
                                     NostrSingleUserDataSource.printCounter()
                                     NostrThreadDataSource.printCounter()
 
                                     NostrUserProfileDataSource.printCounter()
                                     NostrUserProfileFollowersDataSource.printCounter()
                                     NostrUserProfileFollowsDataSource.printCounter()
+                                    NostrUserProfileZapsDataSource.printCounter()
 
-                                    println("AAA: " + RelayPool.connectedRelays())
+                                    println("Connected Relays: " + RelayPool.connectedRelays())
 
                                     val imageLoader = Coil.imageLoader(context)
-                                    println("${imageLoader.diskCache?.size}/${imageLoader.diskCache?.maxSize}")
-                                    println("${imageLoader.memoryCache?.size}/${imageLoader.memoryCache?.maxSize}")
+                                    println("Image Disk Cache ${(imageLoader.diskCache?.size ?: 0)/(1024*1024)}/${(imageLoader.diskCache?.maxSize ?: 0)/(1024*1024)} MB")
+                                    println("Image Memory Cache ${(imageLoader.memoryCache?.size ?: 0)/(1024*1024)}/${(imageLoader.memoryCache?.maxSize ?: 0)/(1024*1024)} MB")
+
+                                    println("Notes: " + LocalCache.notes.size)
+                                    println("Users: " + LocalCache.users.size)
                                 }
                             ) {
                                 Icon(
