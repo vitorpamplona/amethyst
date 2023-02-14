@@ -87,7 +87,8 @@ open class UserFeedViewModel(val dataSource: NostrDataSource<User>): ViewModel()
         handlerWaiting.set(true)
         val scope = CoroutineScope(Job() + Dispatchers.Default)
         scope.launch {
-            delay(5000)
+            if (feedContent.value is UserFeedState.Loaded)
+                delay(5000)
             refresh()
             handlerWaiting.set(false)
         }

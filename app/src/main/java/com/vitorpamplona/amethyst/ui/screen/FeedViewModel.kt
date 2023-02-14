@@ -122,7 +122,8 @@ abstract class FeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel()
         handlerWaiting.set(true)
         val scope = CoroutineScope(Job() + Dispatchers.Default)
         scope.launch {
-            delay(5000)
+            if (feedContent.value is FeedState.Loaded)
+                delay(5000)
             refresh()
             handlerWaiting.set(false)
         }
