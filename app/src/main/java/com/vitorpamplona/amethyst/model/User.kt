@@ -139,7 +139,7 @@ class User(val pubkeyHex: String) {
         if (author !in reports.keys) {
             reports = reports + Pair(author, setOf(note))
             liveReports.invalidateData()
-        } else {
+        } else if (reports[author]?.contains(note) == false) {
             reports = reports + Pair(author, (reports[author] ?: emptySet()) + note)
             liveReports.invalidateData()
         }
