@@ -53,14 +53,14 @@ class NostrChatroomListNewFeedViewModel: FeedViewModel(NostrChatroomListDataSour
 class NostrHomeFeedViewModel: FeedViewModel(NostrHomeDataSource) {
     override fun newListFromDataSource(): List<Note> {
         // Filter: no replies
-        return dataSource.feed().filter { it.isNewThread() }.take(100)
+        return dataSource.feed().filter { it.isNewThread() }.take(1000)
     }
 }
 
 class NostrHomeRepliesFeedViewModel: FeedViewModel(NostrHomeDataSource) {
     override fun newListFromDataSource(): List<Note> {
         // Filter: only replies
-        return dataSource.feed().filter {! it.isNewThread() }.take(100)
+        return dataSource.feed().filter {! it.isNewThread() }.take(1000)
     }
 }
 
@@ -89,7 +89,8 @@ abstract class FeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel()
 
         val oldNotesState = feedContent.value
         if (oldNotesState is FeedState.Loaded) {
-            if (notes != oldNotesState.feed) {
+            // Using size as a proxy for has changed.
+            if (notes.size != oldNotesState.feed.value.size && notes.firstOrNull() != oldNotesState.feed.value.firstOrNull()) {
                 updateFeed(notes)
             }
         } else {
