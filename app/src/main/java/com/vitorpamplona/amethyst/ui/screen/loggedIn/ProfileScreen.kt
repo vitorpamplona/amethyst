@@ -448,6 +448,10 @@ fun TabNotes(user: User, accountViewModel: AccountViewModel, navController: NavC
     if (accountState != null) {
         val feedViewModel: NostrUserProfileFeedViewModel = viewModel()
 
+        LaunchedEffect(Unit) {
+            feedViewModel.refresh()
+        }
+
         Column(Modifier.fillMaxHeight()) {
             Column(
                 modifier = Modifier.padding(vertical = 0.dp)
@@ -462,6 +466,10 @@ fun TabNotes(user: User, accountViewModel: AccountViewModel, navController: NavC
 fun TabFollows(user: User, accountViewModel: AccountViewModel, navController: NavController) {
     val feedViewModel: NostrUserProfileFollowsUserFeedViewModel = viewModel()
 
+    LaunchedEffect(Unit) {
+        feedViewModel.refresh()
+    }
+
     Column(Modifier.fillMaxHeight()) {
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
@@ -474,6 +482,10 @@ fun TabFollows(user: User, accountViewModel: AccountViewModel, navController: Na
 @Composable
 fun TabFollowers(user: User, accountViewModel: AccountViewModel, navController: NavController) {
     val feedViewModel: NostrUserProfileFollowersUserFeedViewModel = viewModel()
+
+    LaunchedEffect(Unit) {
+        feedViewModel.refresh()
+    }
 
     Column(Modifier.fillMaxHeight()) {
         Column(
@@ -489,6 +501,10 @@ fun TabReceivedZaps(user: User, accountViewModel: AccountViewModel, navControlle
     val accountState by accountViewModel.accountLiveData.observeAsState()
     if (accountState != null) {
         val feedViewModel: NostrUserProfileZapsFeedViewModel = viewModel()
+
+        LaunchedEffect(Unit) {
+            feedViewModel.refresh()
+        }
 
         Column(Modifier.fillMaxHeight()) {
             Column(

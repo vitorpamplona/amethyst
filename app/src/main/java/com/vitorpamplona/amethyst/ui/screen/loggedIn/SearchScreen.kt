@@ -78,6 +78,10 @@ fun SearchScreen(accountViewModel: AccountViewModel, navController: NavControlle
     val feedViewModel: NostrGlobalFeedViewModel = viewModel()
     val lifeCycleOwner = LocalLifecycleOwner.current
 
+    LaunchedEffect(Unit) {
+        feedViewModel.refresh()
+    }
+
     DisposableEffect(accountViewModel) {
         val observer = LifecycleEventObserver { source, event ->
             if (event == Lifecycle.Event.ON_RESUME) {

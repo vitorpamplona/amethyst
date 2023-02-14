@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
@@ -49,6 +50,10 @@ fun ThreadScreen(noteId: String?, accountViewModel: AccountViewModel, navControl
         NostrThreadDataSource.loadThread(noteId)
 
         val feedViewModel: NostrThreadFeedViewModel = viewModel()
+
+        LaunchedEffect(Unit) {
+            feedViewModel.refresh()
+        }
 
         Column(Modifier.fillMaxHeight()) {
             Column(

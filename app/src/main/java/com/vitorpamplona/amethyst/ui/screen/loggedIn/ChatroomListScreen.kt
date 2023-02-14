@@ -74,6 +74,9 @@ fun ChatroomListScreen(accountViewModel: AccountViewModel, navController: NavCon
 fun TabKnown(accountViewModel: AccountViewModel, navController: NavController) {
     val feedViewModel: NostrChatroomListKnownFeedViewModel = viewModel()
 
+    LaunchedEffect(Unit) {
+        feedViewModel.refresh()
+    }
 
     Column(Modifier.fillMaxHeight()) {
         Column(
@@ -87,6 +90,10 @@ fun TabKnown(accountViewModel: AccountViewModel, navController: NavController) {
 @Composable
 fun TabNew(accountViewModel: AccountViewModel, navController: NavController) {
     val feedViewModel: NostrChatroomListNewFeedViewModel = viewModel()
+
+    LaunchedEffect(Unit) {
+        feedViewModel.refresh()
+    }
 
     Column(Modifier.fillMaxHeight()) {
         Column(
