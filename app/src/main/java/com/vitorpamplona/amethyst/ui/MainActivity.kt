@@ -15,6 +15,7 @@ import coil.ImageLoader
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.decode.SvgDecoder
+import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import coil.request.CachePolicy
 import com.vitorpamplona.amethyst.EncryptedStorage
@@ -50,6 +51,11 @@ class MainActivity : ComponentActivity() {
           add(GifDecoder.Factory())
         }
         add(SvgDecoder.Factory())
+      }.diskCache {
+        DiskCache.Builder()
+          .directory(this.cacheDir.resolve("image_cache"))
+          .maxSizeBytes(1*1024*1024*1024)
+          .build()
       }
         .respectCacheHeaders(false)
         .build()
