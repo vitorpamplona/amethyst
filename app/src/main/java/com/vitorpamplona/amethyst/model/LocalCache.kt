@@ -22,6 +22,12 @@ import java.time.format.DateTimeFormatter
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import com.vitorpamplona.amethyst.service.relays.Relay
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import nostr.postr.events.ContactListEvent
 import nostr.postr.events.DeletionEvent
 import nostr.postr.events.Event
@@ -502,12 +508,30 @@ object LocalCache {
   val live: LocalCacheLiveData = LocalCacheLiveData(this)
 
   private fun refreshObservers() {
-    live.refresh()
+    live.invalidateData()
   }
 }
 
 class LocalCacheLiveData(val cache: LocalCache): LiveData<LocalCacheState>(LocalCacheState(cache)) {
-  fun refresh() {
+
+  // Refreshes observers in batches.
+  var handlerWaiting = AtomicBoolean()
+
+  @Synchronized
+  fun invalidateData() {
+    if (!hasActiveObservers()) return
+    if (handlerWaiting.getAndSet(true)) return
+
+    handlerWaiting.set(true)
+    val scope = CoroutineScope(Job() + Dispatchers.Main)
+    scope.launch {
+      delay(100)
+      refresh()
+      handlerWaiting.set(false)
+    }
+  }
+
+  private fun refresh() {
     postValue(LocalCacheState(cache))
   }
 }
