@@ -34,6 +34,7 @@ fun HomeScreen(accountViewModel: AccountViewModel, navController: NavController)
 
     LaunchedEffect(Unit) {
         feedViewModel.refresh()
+        feedViewModelReplies.refresh()
     }
 
     Column(Modifier.fillMaxHeight()) {

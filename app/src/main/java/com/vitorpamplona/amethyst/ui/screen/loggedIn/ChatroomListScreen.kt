@@ -75,7 +75,8 @@ fun TabKnown(accountViewModel: AccountViewModel, navController: NavController) {
     val feedViewModel: NostrChatroomListKnownFeedViewModel = viewModel()
 
     LaunchedEffect(Unit) {
-        feedViewModel.refresh()
+        feedViewModel.hardRefresh() // refresh filters
+        feedViewModel.refresh() // refresh view
     }
 
     Column(Modifier.fillMaxHeight()) {
@@ -92,7 +93,8 @@ fun TabNew(accountViewModel: AccountViewModel, navController: NavController) {
     val feedViewModel: NostrChatroomListNewFeedViewModel = viewModel()
 
     LaunchedEffect(Unit) {
-        feedViewModel.refresh()
+        feedViewModel.hardRefresh() // refresh filters
+        feedViewModel.refresh() // refresh view
     }
 
     Column(Modifier.fillMaxHeight()) {

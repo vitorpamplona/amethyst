@@ -110,6 +110,7 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
                             onPost = {
                                 account.sendPrivateMeesage(newPost.value.text, userId)
                                 newPost.value = TextFieldValue("")
+                                feedViewModel.refresh() // Don't wait a full second before updating
                             },
                             newPost.value.text.isNotBlank(),
                             modifier = Modifier.padding(end = 10.dp)

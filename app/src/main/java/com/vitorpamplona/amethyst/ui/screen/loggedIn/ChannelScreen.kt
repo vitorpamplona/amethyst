@@ -131,6 +131,7 @@ fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, accoun
                             onPost = {
                                 account.sendChannelMeesage(newPost.value.text, channel.idHex, null, null)
                                 newPost.value = TextFieldValue("")
+                                feedViewModel.refresh() // Don't wait a full second before updating
                             },
                             newPost.value.text.isNotBlank(),
                             modifier = Modifier.padding(end = 10.dp)
