@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
@@ -196,9 +197,9 @@ fun NoteCompose(
                                             .align(Alignment.BottomEnd)) {
                                         AsyncImage(
                                             model = channel.profilePicture(),
-                                            placeholder = rememberAsyncImagePainter(RoboHashCache.get(context, channel.idHex)),
-                                            fallback = rememberAsyncImagePainter(RoboHashCache.get(context, channel.idHex)),
-                                            error = rememberAsyncImagePainter(RoboHashCache.get(context, channel.idHex)),
+                                            placeholder = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
+                                            fallback = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
+                                            error = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
                                             contentDescription = "Group Picture",
                                             modifier = Modifier
                                                 .width(30.dp)
@@ -339,9 +340,9 @@ private fun RelayBadges(baseNote: Note) {
                     .padding(1.dp)) {
                 AsyncImage(
                     model = "https://${url}/favicon.ico",
-                    placeholder = rememberAsyncImagePainter(RoboHashCache.get(ctx, url)),
-                    fallback = rememberAsyncImagePainter(RoboHashCache.get(ctx, url)),
-                    error = rememberAsyncImagePainter(RoboHashCache.get(ctx, url)),
+                    placeholder = BitmapPainter(RoboHashCache.get(ctx, url)),
+                    fallback = BitmapPainter(RoboHashCache.get(ctx, url)),
+                    error = BitmapPainter(RoboHashCache.get(ctx, url)),
                     contentDescription = "Relay Icon",
                     colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }),
                     modifier = Modifier
@@ -410,7 +411,7 @@ fun NoteAuthorPicture(
             .height(size)) {
         if (author == null) {
             Image(
-                painter = rememberAsyncImagePainter(RoboHashCache.get(ctx, "ohnothisauthorisnotfound")),
+                painter = BitmapPainter(RoboHashCache.get(ctx, "ohnothisauthorisnotfound")),
                 contentDescription = "Unknown Author",
                 modifier = pictureModifier
                     .fillMaxSize(1f)
@@ -457,9 +458,9 @@ fun UserPicture(
         AsyncImage(
             model = user.profilePicture(),
             contentDescription = "Profile Image",
-            placeholder = rememberAsyncImagePainter(RoboHashCache.get(ctx, user.pubkeyHex)),
-            fallback = rememberAsyncImagePainter(RoboHashCache.get(ctx, user.pubkeyHex)),
-            error = rememberAsyncImagePainter(RoboHashCache.get(ctx, user.pubkeyHex)),
+            placeholder = BitmapPainter(RoboHashCache.get(ctx, user.pubkeyHex)),
+            fallback = BitmapPainter(RoboHashCache.get(ctx, user.pubkeyHex)),
+            error = BitmapPainter(RoboHashCache.get(ctx, user.pubkeyHex)),
             modifier = pictureModifier
                 .fillMaxSize(1f)
                 .clip(shape = CircleShape)

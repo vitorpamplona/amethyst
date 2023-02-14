@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
@@ -86,7 +87,7 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
 
             ChannelName(
                 channelPicture = channel.profilePicture(),
-                channelPicturePlaceholder = rememberAsyncImagePainter(RoboHashCache.get(context, channel.idHex)),
+                channelPicturePlaceholder = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
                 channelTitle = {
                     Text(
                         "${channel.info.name}",

@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -81,9 +82,9 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
               Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
                 AsyncImage(
                   model = user.profilePicture(),
-                  placeholder = rememberAsyncImagePainter(RoboHashCache.get(ctx, user.pubkeyHex)),
-                  fallback = rememberAsyncImagePainter(RoboHashCache.get(ctx, user.pubkeyHex)),
-                  error = rememberAsyncImagePainter(RoboHashCache.get(ctx, user.pubkeyHex)),
+                  placeholder = BitmapPainter(RoboHashCache.get(ctx, user.pubkeyHex)),
+                  fallback = BitmapPainter(RoboHashCache.get(ctx, user.pubkeyHex)),
+                  error = BitmapPainter(RoboHashCache.get(ctx, user.pubkeyHex)),
                   contentDescription = "Profile Image",
                   modifier = Modifier
                     .width(100.dp)

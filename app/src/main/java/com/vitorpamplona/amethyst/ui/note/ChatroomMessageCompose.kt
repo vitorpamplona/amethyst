@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
@@ -162,9 +163,9 @@ fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote
                                 ) {
                                     AsyncImage(
                                         model = author.profilePicture(),
-                                        placeholder = rememberAsyncImagePainter(RoboHashCache.get(context, author.pubkeyHex)),
-                                        fallback = rememberAsyncImagePainter(RoboHashCache.get(context, author.pubkeyHex)),
-                                        error = rememberAsyncImagePainter(RoboHashCache.get(context, author.pubkeyHex)),
+                                        placeholder = BitmapPainter(RoboHashCache.get(context, author.pubkeyHex)),
+                                        fallback = BitmapPainter(RoboHashCache.get(context, author.pubkeyHex)),
+                                        error = BitmapPainter(RoboHashCache.get(context, author.pubkeyHex)),
                                         contentDescription = "Profile Image",
                                         modifier = Modifier
                                             .width(25.dp)
@@ -288,9 +289,9 @@ private fun RelayBadges(baseNote: Note) {
             Box(Modifier.size(15.dp).padding(1.dp)) {
                 AsyncImage(
                     model = "https://${url}/favicon.ico",
-                    placeholder = rememberAsyncImagePainter(RoboHashCache.get(ctx, url)),
-                    fallback = rememberAsyncImagePainter(RoboHashCache.get(ctx, url)),
-                    error = rememberAsyncImagePainter(RoboHashCache.get(ctx, url)),
+                    placeholder = BitmapPainter(RoboHashCache.get(ctx, url)),
+                    fallback = BitmapPainter(RoboHashCache.get(ctx, url)),
+                    error = BitmapPainter(RoboHashCache.get(ctx, url)),
                     contentDescription = "Relay Icon",
                     colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }),
                     modifier = Modifier

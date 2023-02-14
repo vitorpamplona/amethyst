@@ -36,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
@@ -238,7 +239,7 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
             itemsIndexed(searchResultsChannels.value, key = { _, item -> "c"+item.idHex }) { index, item ->
                 ChannelName(
                     channelPicture = item.profilePicture(),
-                    channelPicturePlaceholder = rememberAsyncImagePainter(RoboHashCache.get(ctx, item.idHex)),
+                    channelPicturePlaceholder = BitmapPainter(RoboHashCache.get(ctx, item.idHex)),
                     channelTitle = {
                         Text(
                             "${item.info.name}",

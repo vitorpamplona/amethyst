@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
@@ -117,7 +118,8 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
                     Box(Modifier) {
                         Column(
                             modifier = Modifier
-                                .fillMaxWidth().fillMaxHeight()
+                                .fillMaxWidth()
+                                .fillMaxHeight()
                                 .padding(start = 0.dp, end = 20.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
@@ -209,9 +211,9 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
                 ) {
                     AsyncImage(
                         model = accountUser.profilePicture(),
-                        placeholder = rememberAsyncImagePainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
-                        fallback = rememberAsyncImagePainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
-                        error = rememberAsyncImagePainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
+                        placeholder = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
+                        fallback = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
+                        error = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
                         contentDescription = "Profile Image",
                         modifier = Modifier
                             .width(34.dp)

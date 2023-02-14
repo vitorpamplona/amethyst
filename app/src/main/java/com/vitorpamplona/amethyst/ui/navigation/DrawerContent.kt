@@ -71,6 +71,7 @@ import com.google.zxing.qrcode.encoder.ByteMatrix
 
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
+import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.RoboHashCache
 
@@ -154,9 +155,9 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
             AsyncImage(
                 model = accountUser.profilePicture(),
                 contentDescription = "Profile Image",
-                placeholder = rememberAsyncImagePainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
-                fallback = rememberAsyncImagePainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
-                error = rememberAsyncImagePainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
+                placeholder = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
+                fallback = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
+                error = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
                 modifier = Modifier
                     .width(100.dp)
                     .height(100.dp)

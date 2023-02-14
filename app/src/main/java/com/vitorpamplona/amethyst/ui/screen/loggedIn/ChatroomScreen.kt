@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -141,9 +142,9 @@ fun ChatroomHeader(baseUser: User, accountViewModel: AccountViewModel, navContro
 
                 AsyncImage(
                     model = author.profilePicture(),
-                    placeholder = rememberAsyncImagePainter(RoboHashCache.get(ctx, author.pubkeyHex)),
-                    fallback = rememberAsyncImagePainter(RoboHashCache.get(ctx, author.pubkeyHex)),
-                    error = rememberAsyncImagePainter(RoboHashCache.get(ctx, author.pubkeyHex)),
+                    placeholder = BitmapPainter(RoboHashCache.get(ctx, author.pubkeyHex)),
+                    fallback = BitmapPainter(RoboHashCache.get(ctx, author.pubkeyHex)),
+                    error = BitmapPainter(RoboHashCache.get(ctx, author.pubkeyHex)),
                     contentDescription = "Profile Image",
                     modifier = Modifier
                         .width(35.dp)

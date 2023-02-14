@@ -38,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -158,9 +159,9 @@ fun ChannelHeader(baseChannel: Channel, account: Account, accountStateViewModel:
 
                 AsyncImage(
                     model = channel.profilePicture(),
-                    placeholder = rememberAsyncImagePainter(RoboHashCache.get(context, channel.idHex)),
-                    fallback = rememberAsyncImagePainter(RoboHashCache.get(context, channel.idHex)),
-                    error = rememberAsyncImagePainter(RoboHashCache.get(context, channel.idHex)),
+                    placeholder = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
+                    fallback = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
+                    error = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
                     contentDescription = "Profile Image",
                     modifier = Modifier
                         .width(35.dp)
