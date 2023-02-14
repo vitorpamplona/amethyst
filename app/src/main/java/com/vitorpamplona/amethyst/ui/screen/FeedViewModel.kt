@@ -78,6 +78,7 @@ abstract class FeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel()
     }
 
     fun refresh() {
+        println("AAA Refresh")
         val scope = CoroutineScope(Job() + Dispatchers.Default)
         scope.launch {
             refreshSuspended()
@@ -122,7 +123,7 @@ abstract class FeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel()
         handlerWaiting.set(true)
         val scope = CoroutineScope(Job() + Dispatchers.Default)
         scope.launch {
-            delay(100)
+            delay(1000)
             refresh()
             handlerWaiting.set(false)
         }

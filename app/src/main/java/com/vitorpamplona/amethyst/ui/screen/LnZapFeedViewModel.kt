@@ -72,7 +72,7 @@ open class LnZapFeedViewModel(val dataSource: NostrDataSource<Pair<Note, Note>>)
         handlerWaiting.set(true)
         val scope = CoroutineScope(Job() + Dispatchers.Default)
         scope.launch {
-            delay(100)
+            delay(1000)
             refresh()
             handlerWaiting.set(false)
         }

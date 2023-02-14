@@ -20,7 +20,7 @@ object NostrHomeDataSource: NostrDataSource<Note>("HomeFeed") {
   lateinit var account: Account
 
   private val cacheListener: (UserState) -> Unit = {
-    resetFilters()
+    invalidateFilters()
   }
 
   override fun start() {
