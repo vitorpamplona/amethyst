@@ -26,7 +26,7 @@ Amethyst brings the best social network to your Android phone. Just insert your 
 - [ ] Zaps 
 - [ ] Infinity Scroll 
 - [ ] Identity Verification (NIP-05)
-- [ ] Event Delegation (NIP-09)
+- [ ] Event Deletion (NIP-09)
 - [ ] Account Creation / Backup Guidance
 - [ ] Message Sent feedback
 
