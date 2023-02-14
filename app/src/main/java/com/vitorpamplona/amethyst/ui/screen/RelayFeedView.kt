@@ -20,6 +20,8 @@ import androidx.navigation.NavController
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.UserState
+import com.vitorpamplona.amethyst.service.NostrHomeDataSource
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
 import com.vitorpamplona.amethyst.ui.note.RelayCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -59,21 +61,20 @@ class RelayFeedViewModel: ViewModel() {
         }
     }
 
-    inner class CacheListener: User.Listener() {
-        override fun onNewRelayInfo() { invalidateData() }
-        override fun onRelayChange() { invalidateData() }
+    val listener: (UserState) -> Unit = {
+        invalidateData()
     }
-
-    val listener = CacheListener()
 
     fun subscribeTo(user: User) {
         currentUser = user
-        user.subscribe(listener)
+        user.liveRelays.observeForever(listener)
+        user.liveRelayInfo.observeForever(listener)
         invalidateData()
     }
 
     fun unsubscribeTo(user: User) {
-        user.unsubscribe(listener)
+        user.liveRelays.removeObserver(listener)
+        user.liveRelayInfo.removeObserver(listener)
         currentUser = null
     }
 

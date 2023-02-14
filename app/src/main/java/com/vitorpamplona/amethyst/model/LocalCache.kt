@@ -431,7 +431,7 @@ object LocalCache {
       return
     }
 
-    Log.d("ZP", "New ZapEvent ${event.content} (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${formattedDateTime(event.createdAt)}")
+    //Log.d("ZP", "New ZapEvent ${event.content} (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${formattedDateTime(event.createdAt)}")
 
     // Adds notifications to users.
     mentions.forEach {
@@ -461,7 +461,7 @@ object LocalCache {
 
     note.loadEvent(event, author, mentions, repliesTo)
 
-    Log.d("ZP", "New Zap Request ${event.content} (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${formattedDateTime(event.createdAt)}")
+    //Log.d("ZP", "New Zap Request ${event.content} (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${formattedDateTime(event.createdAt)}")
 
     // Adds notifications to users.
     mentions.forEach {

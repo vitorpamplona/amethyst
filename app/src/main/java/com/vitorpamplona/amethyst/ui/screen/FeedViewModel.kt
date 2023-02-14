@@ -78,34 +78,38 @@ abstract class FeedViewModel(val dataSource: NostrDataSource<Note>): ViewModel()
     }
 
     fun refresh() {
-        viewModelScope.launch(Dispatchers.Default) {
-            val notes = newListFromDataSource()
+        val scope = CoroutineScope(Job() + Dispatchers.Default)
+        scope.launch {
+            refreshSuspended()
+        }
+    }
 
-            val oldNotesState = feedContent.value
-            if (oldNotesState is FeedState.Loaded) {
-                if (notes != oldNotesState.feed) {
-                    withContext(Dispatchers.Main) {
-                        updateFeed(notes)
-                    }
-                }
-            } else {
-                withContext(Dispatchers.Main) {
-                    updateFeed(notes)
-                }
+    fun refreshSuspended() {
+        val notes = newListFromDataSource()
+
+        val oldNotesState = feedContent.value
+        if (oldNotesState is FeedState.Loaded) {
+            if (notes != oldNotesState.feed) {
+                updateFeed(notes)
             }
+        } else {
+            updateFeed(notes)
         }
     }
 
     private fun updateFeed(notes: List<Note>) {
-        val currentState = feedContent.value
+        val scope = CoroutineScope(Job() + Dispatchers.Main)
+        scope.launch {
+            val currentState = feedContent.value
 
-        if (notes.isEmpty()) {
-            _feedContent.update { FeedState.Empty }
-        } else if (currentState is FeedState.Loaded) {
-            // updates the current list
-            currentState.feed.value = notes
-        } else {
-            _feedContent.update { FeedState.Loaded(mutableStateOf(notes)) }
+            if (notes.isEmpty()) {
+                _feedContent.update { FeedState.Empty }
+            } else if (currentState is FeedState.Loaded) {
+                // updates the current list
+                currentState.feed.value = notes
+            } else {
+                _feedContent.update { FeedState.Loaded(mutableStateOf(notes)) }
+            }
         }
     }
 

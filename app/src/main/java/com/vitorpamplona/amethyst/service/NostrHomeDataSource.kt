@@ -2,11 +2,16 @@ package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.LocalCacheState
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import nostr.postr.JsonFilter
 import nostr.postr.events.TextNoteEvent
 import nostr.postr.toHex
@@ -14,22 +19,26 @@ import nostr.postr.toHex
 object NostrHomeDataSource: NostrDataSource<Note>("HomeFeed") {
   lateinit var account: Account
 
-  object cacheListener: User.Listener() {
-    override fun onFollowsChange() {
-      resetFilters()
-    }
+  private val cacheListener: (UserState) -> Unit = {
+    resetFilters()
   }
 
   override fun start() {
-    if (this::account.isInitialized)
-      account.userProfile().subscribe(cacheListener)
+    if (this::account.isInitialized) {
+      GlobalScope.launch(Dispatchers.Main) {
+        account.userProfile().liveFollows.observeForever(cacheListener)
+      }
+    }
     super.start()
   }
 
   override fun stop() {
     super.stop()
-    if (this::account.isInitialized)
-      account.userProfile().unsubscribe(cacheListener)
+    if (this::account.isInitialized) {
+      GlobalScope.launch(Dispatchers.Main) {
+        account.userProfile().liveFollows.removeObserver(cacheListener)
+      }
+    }
   }
 
   fun createFollowAccountsFilter(): TypedFilter {

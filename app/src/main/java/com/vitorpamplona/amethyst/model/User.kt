@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.lnurl.LnInvoiceUtil
+import com.vitorpamplona.amethyst.service.NostrHomeDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
@@ -89,29 +90,14 @@ class User(val pubkeyHex: String) {
 
         liveFollows.invalidateData()
         user.liveFollows.invalidateData()
-
-        updateSubscribers {
-            it.onFollowsChange()
-        }
-
-        user.updateSubscribers {
-            it.onFollowsChange()
-        }
     }
+
     fun unfollow(user: User) {
         follows = follows - user
         user.followers = user.followers - this
 
         liveFollows.invalidateData()
         user.liveFollows.invalidateData()
-
-        updateSubscribers {
-            it.onFollowsChange()
-        }
-
-        user.updateSubscribers {
-            it.onFollowsChange()
-        }
     }
 
     fun follow(users: Set<User>, followedAt: Long) {
@@ -119,42 +105,31 @@ class User(val pubkeyHex: String) {
         users.forEach {
             it.followers = it.followers + this
             it.liveFollows.invalidateData()
-            it.updateSubscribers {
-                it.onFollowsChange()
-            }
         }
 
         liveFollows.invalidateData()
-        updateSubscribers {
-            it.onFollowsChange()
-        }
     }
+
     fun unfollow(users: Set<User>) {
         follows = follows - users
         users.forEach {
             it.followers = it.followers - this
             it.liveFollows.invalidateData()
-            it.updateSubscribers {
-                it.onFollowsChange()
-            }
         }
         liveFollows.invalidateData()
-        updateSubscribers {
-            it.onFollowsChange()
-        }
     }
 
     fun addTaggedPost(note: Note) {
         if (note !in taggedPosts) {
             taggedPosts = taggedPosts + note
-            updateSubscribers { it.onNewTaggedPosts() }
+            // No need for Listener yet
         }
     }
 
     fun addNote(note: Note) {
         if (note !in notes) {
             notes = notes + note
-            updateSubscribers { it.onNewNotes() }
+            // No need for Listener yet
         }
     }
 
@@ -216,7 +191,6 @@ class User(val pubkeyHex: String) {
         if (msg !in channel) {
             messages = messages + Pair(user, channel + msg)
             liveMessages.invalidateData()
-            updateSubscribers { it.onNewMessage() }
         }
     }
 
@@ -237,7 +211,6 @@ class User(val pubkeyHex: String) {
             here.counter++
         }
 
-        updateSubscribers { it.onNewRelayInfo() }
         liveRelayInfo.invalidateData()
     }
     
@@ -251,17 +224,11 @@ class User(val pubkeyHex: String) {
         updatedFollowsAt = updateAt
     }
 
-    data class RelayMetadata(val read: Boolean, val write: Boolean, val activeTypes: Set<FeedType>)
-
     fun updateRelays(relayUse: Map<String, ContactListEvent.ReadWrite>) {
         if (relays != relayUse) {
             relays = relayUse
-            listeners.forEach {
-                it.onRelayChange()
-            }
+            liveRelays.invalidateData()
         }
-
-        liveRelays.invalidateData()
     }
 
     fun updateUserInfo(newUserInfo: UserMetadata, updateAt: Long) {
@@ -285,45 +252,6 @@ class User(val pubkeyHex: String) {
         return reports[loggedIn]?.firstOrNull() {
               it.event is ReportEvent && (it.event as ReportEvent).reportType.contains(type)
         } != null
-    }
-
-    // Model Observers
-    private var listeners = setOf<Listener>()
-
-    fun subscribe(listener: Listener) {
-        listeners = listeners.plus(listener)
-    }
-
-    fun unsubscribe(listener: Listener) {
-        listeners = listeners.minus(listener)
-    }
-
-    abstract class Listener {
-        open fun onRelayChange() = Unit
-        open fun onFollowsChange() = Unit
-        open fun onNewTaggedPosts() = Unit
-        open fun onNewNotes() = Unit
-        open fun onNewMessage() = Unit
-        open fun onNewRelayInfo() = Unit
-        open fun onNewReports() = Unit
-    }
-
-    // Refreshes observers in batches.
-    var modelHandlerWaiting = AtomicBoolean()
-
-    @Synchronized
-    fun updateSubscribers(on: (Listener) -> Unit) {
-        if (modelHandlerWaiting.getAndSet(true)) return
-
-        modelHandlerWaiting.set(true)
-        val scope = CoroutineScope(Job() + Dispatchers.Default)
-        scope.launch {
-            delay(100)
-            listeners.forEach {
-                on(it)
-            }
-            modelHandlerWaiting.set(false)
-        }
     }
 
     // UI Observers line up here.

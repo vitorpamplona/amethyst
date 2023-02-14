@@ -20,6 +20,7 @@ import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -391,13 +392,13 @@ class Account(
   }
 
   init {
-    userProfile().subscribe(object: User.Listener() {
-      override fun onRelayChange() {
+    userProfile().liveRelays.observeForever {
+      GlobalScope.launch(Dispatchers.IO) {
         Client.disconnect()
         Client.connect(activeRelays() ?: convertLocalRelays())
         RelayPool.requestAndWatch()
       }
-    })
+    }
   }
 
   // Observers line up here.
