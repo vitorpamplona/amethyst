@@ -50,7 +50,6 @@ fun RichTextViewer(
 ) {
   Column(
     Modifier
-      .fillMaxWidth()
       .animateContentSize()) {
     // FlowRow doesn't work well with paragraphs. So we need to split them
     content.split('\n').forEach { paragraph ->
