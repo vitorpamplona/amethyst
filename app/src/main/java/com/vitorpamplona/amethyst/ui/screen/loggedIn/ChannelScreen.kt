@@ -62,6 +62,8 @@ import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.toNote
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
+import com.vitorpamplona.amethyst.ui.AsyncImageProxy
+import com.vitorpamplona.amethyst.ui.ResizeImage
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.actions.PostButton
@@ -158,8 +160,8 @@ fun ChannelHeader(baseChannel: Channel, account: Account, accountStateViewModel:
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
 
-                AsyncImage(
-                    model = channel.profilePicture(),
+                AsyncImageProxy(
+                    model = ResizeImage(channel.profilePicture(), 35.dp),
                     placeholder = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
                     fallback = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
                     error = BitmapPainter(RoboHashCache.get(context, channel.idHex)),

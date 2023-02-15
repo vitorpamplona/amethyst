@@ -61,6 +61,8 @@ import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
+import com.vitorpamplona.amethyst.ui.AsyncImageProxy
+import com.vitorpamplona.amethyst.ui.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RichTextViewer
 import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -161,8 +163,8 @@ fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote
                                     horizontalArrangement = alignment,
                                     modifier = Modifier.padding(top = 5.dp)
                                 ) {
-                                    AsyncImage(
-                                        model = author.profilePicture(),
+                                    AsyncImageProxy(
+                                        model = ResizeImage(author.profilePicture(), 25.dp),
                                         placeholder = BitmapPainter(RoboHashCache.get(context, author.pubkeyHex)),
                                         fallback = BitmapPainter(RoboHashCache.get(context, author.pubkeyHex)),
                                         error = BitmapPainter(RoboHashCache.get(context, author.pubkeyHex)),
@@ -287,8 +289,8 @@ private fun RelayBadges(baseNote: Note) {
         relaysToDisplay.forEach {
             val url = it.removePrefix("wss://")
             Box(Modifier.size(15.dp).padding(1.dp)) {
-                AsyncImage(
-                    model = "https://${url}/favicon.ico",
+                AsyncImageProxy(
+                    model = ResizeImage("https://${url}/favicon.ico", 15.dp),
                     placeholder = BitmapPainter(RoboHashCache.get(ctx, url)),
                     fallback = BitmapPainter(RoboHashCache.get(ctx, url)),
                     error = BitmapPainter(RoboHashCache.get(ctx, url)),

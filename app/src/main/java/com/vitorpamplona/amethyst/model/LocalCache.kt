@@ -149,7 +149,7 @@ object LocalCache {
     val user = getOrCreateUser(event.pubKey.toHexKey())
 
     if (event.createdAt > user.updatedFollowsAt) {
-      //Log.d("CL", "AAA ${user.toBestDisplayName()} ${event.follows.size}")
+      Log.d("CL", "AAA ${user.toBestDisplayName()} ${event.follows.size}")
       user.updateFollows(
         event.follows.map {
           try {

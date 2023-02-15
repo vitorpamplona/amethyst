@@ -74,6 +74,8 @@ import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.RoboHashCache
+import com.vitorpamplona.amethyst.ui.AsyncImageProxy
+import com.vitorpamplona.amethyst.ui.ResizeImage
 
 @Composable
 fun DrawerContent(navController: NavHostController,
@@ -132,8 +134,8 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
     Box {
         val banner = accountUser.info.banner
         if (banner != null && banner.isNotBlank()) {
-            AsyncImage(
-                model = banner,
+            AsyncImageProxy(
+                model = ResizeImage(banner, 150.dp),
                 contentDescription = "Profile Image",
                 contentScale = ContentScale.FillWidth,
                 modifier = Modifier
@@ -152,8 +154,8 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
         }
 
         Column(modifier = modifier) {
-            AsyncImage(
-                model = accountUser.profilePicture(),
+            AsyncImageProxy(
+                model = ResizeImage(accountUser.profilePicture(), 100.dp),
                 contentDescription = "Profile Image",
                 placeholder = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
                 fallback = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),

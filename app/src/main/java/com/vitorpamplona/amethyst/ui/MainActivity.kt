@@ -51,11 +51,6 @@ class MainActivity : ComponentActivity() {
           add(GifDecoder.Factory())
         }
         add(SvgDecoder.Factory())
-      }.diskCache {
-        DiskCache.Builder()
-          .directory(this.cacheDir.resolve("image_cache"))
-          .maxSizeBytes(1*1024*1024*1024)
-          .build()
       }
         .respectCacheHeaders(false)
         .build()

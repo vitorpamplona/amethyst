@@ -36,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -67,10 +68,13 @@ import com.vitorpamplona.amethyst.service.NostrUserProfileFollowsDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileZapsDataSource
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.RelayPool
+import com.vitorpamplona.amethyst.ui.AsyncImageProxy
+import com.vitorpamplona.amethyst.ui.ResizeImage
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
 import com.vitorpamplona.amethyst.ui.screen.RelayPoolViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import java.net.URLEncoder
 import kotlinx.coroutines.launch
 
 @Composable
@@ -209,8 +213,8 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
                     },
                     modifier = Modifier
                 ) {
-                    AsyncImage(
-                        model = accountUser.profilePicture(),
+                    AsyncImageProxy(
+                        model = ResizeImage(accountUser.profilePicture(), 34.dp),
                         placeholder = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
                         fallback = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
                         error = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),

@@ -44,6 +44,8 @@ import coil.compose.rememberAsyncImagePainter
 import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChatRoomDataSource
+import com.vitorpamplona.amethyst.ui.AsyncImageProxy
+import com.vitorpamplona.amethyst.ui.ResizeImage
 import com.vitorpamplona.amethyst.ui.actions.PostButton
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -141,8 +143,8 @@ fun ChatroomHeader(baseUser: User, accountViewModel: AccountViewModel, navContro
                 val authorState by baseUser.liveMetadata.observeAsState()
                 val author = authorState?.user!!
 
-                AsyncImage(
-                    model = author.profilePicture(),
+                AsyncImageProxy(
+                    model = ResizeImage(author.profilePicture(), 35.dp),
                     placeholder = BitmapPainter(RoboHashCache.get(ctx, author.pubkeyHex)),
                     fallback = BitmapPainter(RoboHashCache.get(ctx, author.pubkeyHex)),
                     error = BitmapPainter(RoboHashCache.get(ctx, author.pubkeyHex)),

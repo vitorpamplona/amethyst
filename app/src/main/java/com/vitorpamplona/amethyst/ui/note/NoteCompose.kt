@@ -69,6 +69,8 @@ import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
+import com.vitorpamplona.amethyst.ui.AsyncImageProxy
+import com.vitorpamplona.amethyst.ui.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RichTextViewer
 import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -195,8 +197,8 @@ fun NoteCompose(
                                             .width(30.dp)
                                             .height(30.dp)
                                             .align(Alignment.BottomEnd)) {
-                                        AsyncImage(
-                                            model = channel.profilePicture(),
+                                        AsyncImageProxy(
+                                            model = ResizeImage(channel.profilePicture(), 30.dp),
                                             placeholder = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
                                             fallback = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
                                             error = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
@@ -338,8 +340,8 @@ private fun RelayBadges(baseNote: Note) {
                 Modifier
                     .size(15.dp)
                     .padding(1.dp)) {
-                AsyncImage(
-                    model = "https://${url}/favicon.ico",
+                AsyncImageProxy(
+                    model = ResizeImage("https://${url}/favicon.ico", 15.dp),
                     placeholder = BitmapPainter(RoboHashCache.get(ctx, url)),
                     fallback = BitmapPainter(RoboHashCache.get(ctx, url)),
                     error = BitmapPainter(RoboHashCache.get(ctx, url)),
@@ -455,8 +457,8 @@ fun UserPicture(
             .width(size)
             .height(size)) {
 
-        AsyncImage(
-            model = user.profilePicture(),
+        AsyncImageProxy(
+            model = ResizeImage(user.profilePicture(), size),
             contentDescription = "Profile Image",
             placeholder = BitmapPainter(RoboHashCache.get(ctx, user.pubkeyHex)),
             fallback = BitmapPainter(RoboHashCache.get(ctx, user.pubkeyHex)),

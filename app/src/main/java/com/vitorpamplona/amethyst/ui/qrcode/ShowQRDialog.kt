@@ -38,6 +38,8 @@ import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.AsyncImageProxy
+import com.vitorpamplona.amethyst.ui.ResizeImage
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.qrcode.QrCodeScanner
 import nostr.postr.toNpub
@@ -80,8 +82,8 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
 
             Column(modifier = Modifier.fillMaxWidth()) {
               Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-                AsyncImage(
-                  model = user.profilePicture(),
+                AsyncImageProxy(
+                  model = ResizeImage(user.profilePicture(), 100.dp),
                   placeholder = BitmapPainter(RoboHashCache.get(ctx, user.pubkeyHex)),
                   fallback = BitmapPainter(RoboHashCache.get(ctx, user.pubkeyHex)),
                   error = BitmapPainter(RoboHashCache.get(ctx, user.pubkeyHex)),

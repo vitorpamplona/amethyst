@@ -61,6 +61,8 @@ import com.vitorpamplona.amethyst.service.NostrUserProfileFollowersDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileFollowsDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileZapsDataSource
 import com.vitorpamplona.amethyst.service.model.ReportEvent
+import com.vitorpamplona.amethyst.ui.AsyncImageProxy
+import com.vitorpamplona.amethyst.ui.ResizeImage
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
 import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.note.UserPicture
@@ -427,8 +429,8 @@ private fun DrawBanner(baseUser: User) {
     val banner = user.info.banner
 
     if (banner != null && banner.isNotBlank()) {
-        AsyncImage(
-            model = banner,
+        AsyncImageProxy(
+            model = ResizeImage(banner, 125.dp),
             contentDescription = "Profile Image",
             contentScale = ContentScale.FillWidth,
             modifier = Modifier
