@@ -61,8 +61,6 @@ fun AsyncImageProxy(
     val base64 = Base64.getUrlEncoder().encodeToString(model.url.toByteArray())
     val extension = model.url.split(".").lastOrNull()
 
-    println("https://d12fidohs5rlxk.cloudfront.net/preset:sharp/rs:fit:$imgPx:$imgPx:0/gravity:sm/$base64")
-
     AsyncImage(
       model = "https://d12fidohs5rlxk.cloudfront.net/preset:sharp/rs:fit:$imgPx:$imgPx:0/gravity:sm/$base64",
       contentDescription = contentDescription,
