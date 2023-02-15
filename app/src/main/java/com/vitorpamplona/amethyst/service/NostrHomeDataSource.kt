@@ -53,7 +53,7 @@ object NostrHomeDataSource: NostrDataSource<Note>("HomeFeed") {
     return TypedFilter(
       types = setOf(FeedType.FOLLOWS),
       filter = JsonFilter(
-        kinds = listOf(TextNoteEvent.kind, RepostEvent.kind),
+        kinds = listOf(TextNoteEvent.kind),
         authors = followSet,
         limit = 400
       )
