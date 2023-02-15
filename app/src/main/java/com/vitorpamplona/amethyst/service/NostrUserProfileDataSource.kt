@@ -18,7 +18,6 @@ object NostrUserProfileDataSource: NostrDataSource<Note>("UserProfileFeed") {
 
   fun loadUserProfile(userId: String) {
     user = LocalCache.getOrCreateUser(userId)
-    resetFilters()
   }
 
   fun createUserInfoFilter(): TypedFilter {

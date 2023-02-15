@@ -79,16 +79,21 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
 
     if (userId == null) return
 
+    NostrUserProfileDataSource.loadUserProfile(userId)
+    NostrUserProfileFollowersDataSource.loadUserProfile(userId)
+    NostrUserProfileFollowsDataSource.loadUserProfile(userId)
+    NostrUserProfileZapsDataSource.loadUserProfile(userId)
+
     val lifeCycleOwner = LocalLifecycleOwner.current
 
     DisposableEffect(accountViewModel) {
         val observer = LifecycleEventObserver { source, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Profile Start")
-                NostrUserProfileDataSource.loadUserProfile(userId)
-                NostrUserProfileFollowersDataSource.loadUserProfile(userId)
-                NostrUserProfileFollowsDataSource.loadUserProfile(userId)
-                NostrUserProfileZapsDataSource.loadUserProfile(userId)
+                NostrUserProfileDataSource.start()
+                NostrUserProfileFollowersDataSource.start()
+                NostrUserProfileFollowsDataSource.start()
+                NostrUserProfileZapsDataSource.start()
             }
             if (event == Lifecycle.Event.ON_PAUSE) {
                 println("Profile Stop")
