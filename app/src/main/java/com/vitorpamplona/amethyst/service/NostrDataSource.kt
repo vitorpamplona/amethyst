@@ -17,6 +17,7 @@ import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.Subscription
+import com.vitorpamplona.amethyst.service.relays.hasValidSignature
 import java.util.Date
 import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
@@ -48,6 +49,8 @@ abstract class NostrDataSource<T>(val debugName: String) {
   private val clientListener = object : Client.Listener() {
     override fun onEvent(event: Event, subscriptionId: String, relay: Relay) {
       if (subscriptionId in subscriptions.keys) {
+        if (!event.hasValidSignature()) return
+
         val key = "${debugName} ${subscriptionId} ${event.kind}"
         val keyValue = eventCounter.get(key)
         if (keyValue != null) {
