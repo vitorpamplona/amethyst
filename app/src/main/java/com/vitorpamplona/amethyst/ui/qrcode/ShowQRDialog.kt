@@ -38,8 +38,8 @@ import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.AsyncImageProxy
-import com.vitorpamplona.amethyst.ui.ResizeImage
+import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
+import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.qrcode.QrCodeScanner
 import nostr.postr.toNpub

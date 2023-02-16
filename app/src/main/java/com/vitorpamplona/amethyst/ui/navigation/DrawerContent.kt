@@ -74,8 +74,8 @@ import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.RoboHashCache
-import com.vitorpamplona.amethyst.ui.AsyncImageProxy
-import com.vitorpamplona.amethyst.ui.ResizeImage
+import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
+import com.vitorpamplona.amethyst.ui.components.ResizeImage
 
 @Composable
 fun DrawerContent(navController: NavHostController,

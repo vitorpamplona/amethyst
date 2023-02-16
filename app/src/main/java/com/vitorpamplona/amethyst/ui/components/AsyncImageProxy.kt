@@ -1,4 +1,4 @@
-package com.vitorpamplona.amethyst.ui
+package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment

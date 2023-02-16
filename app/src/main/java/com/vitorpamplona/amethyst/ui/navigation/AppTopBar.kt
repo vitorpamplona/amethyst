@@ -68,8 +68,8 @@ import com.vitorpamplona.amethyst.service.NostrUserProfileFollowsDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileZapsDataSource
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.RelayPool
-import com.vitorpamplona.amethyst.ui.AsyncImageProxy
-import com.vitorpamplona.amethyst.ui.ResizeImage
+import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
+import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
 import com.vitorpamplona.amethyst.ui.screen.RelayPoolViewModel

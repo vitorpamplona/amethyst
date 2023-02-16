@@ -45,8 +45,8 @@ import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
-import com.vitorpamplona.amethyst.ui.AsyncImageProxy
-import com.vitorpamplona.amethyst.ui.ResizeImage
+import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
+import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
