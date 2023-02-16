@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.service.model
 
+import android.util.Log
 import java.util.Date
 import nostr.postr.Utils
 import nostr.postr.events.Event
@@ -16,10 +17,11 @@ class ChannelCreateEvent (
   @Transient val channelInfo: ChannelData
 
   init {
-    try {
-      channelInfo = MetadataEvent.gson.fromJson(content, ChannelData::class.java)
+    channelInfo = try {
+      MetadataEvent.gson.fromJson(content, ChannelData::class.java)
     } catch (e: Exception) {
-      throw Error("can't parse $content", e)
+      Log.e("ChannelMetadataEvent", "Can't parse channel info $content", e)
+      ChannelData(null, null, null)
     }
   }
 
@@ -27,10 +29,15 @@ class ChannelCreateEvent (
     const val kind = 40
 
     fun create(channelInfo: ChannelData?, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ChannelCreateEvent {
-      val content = if (channelInfo != null)
-        gson.toJson(channelInfo)
-      else
+      val content = try {
+        if (channelInfo != null)
+          gson.toJson(channelInfo)
+        else
+          ""
+      } catch (t: Throwable) {
+        Log.e("ChannelCreateEvent", "Couldn't parse channel information", t)
         ""
+      }
 
       val pubKey = Utils.pubkeyCreate(privateKey)
       val tags = emptyList<List<String>>()

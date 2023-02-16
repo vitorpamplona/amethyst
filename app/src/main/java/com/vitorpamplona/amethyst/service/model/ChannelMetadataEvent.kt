@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.service.model
 
+import android.util.Log
 import java.util.Date
 import nostr.postr.ContactMetaData
 import nostr.postr.Utils
@@ -20,21 +21,24 @@ class ChannelMetadataEvent (
 
   init {
     channel = tags.firstOrNull { it.firstOrNull() == "e" }?.getOrNull(1)
-    try {
-      channelInfo = MetadataEvent.gson.fromJson(content, ChannelCreateEvent.ChannelData::class.java)
-    } catch (e: Exception) {
-      throw Error("can't parse $content", e)
-    }
+    channelInfo =
+      try {
+        MetadataEvent.gson.fromJson(content, ChannelCreateEvent.ChannelData::class.java)
+      } catch (e: Exception) {
+        Log.e("ChannelMetadataEvent", "Can't parse channel info $content", e)
+        ChannelCreateEvent.ChannelData(null, null, null)
+      }
   }
 
   companion object {
     const val kind = 41
 
     fun create(newChannelInfo: ChannelCreateEvent.ChannelData?, originalChannelIdHex: String, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ChannelMetadataEvent {
-      val content = if (newChannelInfo != null)
-        gson.toJson(newChannelInfo)
-      else
-        ""
+      val content =
+        if (newChannelInfo != null)
+          gson.toJson(newChannelInfo)
+        else
+          ""
 
       val pubKey = Utils.pubkeyCreate(privateKey)
       val tags = listOf( listOf("e", originalChannelIdHex, "", "root") )
