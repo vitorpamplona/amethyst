@@ -145,6 +145,8 @@ class Relay(
 
             socket = httpClient.newWebSocket(request, listener)
         } catch (e: Exception) {
+            errorCounter++
+            isReady = false
             closingTime = Date().time / 1000
             Log.e("Relay", "Relay Invalid $url")
             e.printStackTrace()
