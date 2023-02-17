@@ -29,7 +29,7 @@ object ServiceManager {
     val myAccount = account
 
     if (myAccount != null) {
-      Client.connect(myAccount.convertLocalRelays())
+      Client.connect(myAccount.activeRelays() ?: myAccount.convertLocalRelays())
 
       // start services
       NostrAccountDataSource.account = myAccount
