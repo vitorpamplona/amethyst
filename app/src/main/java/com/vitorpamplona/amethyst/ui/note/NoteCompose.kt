@@ -340,8 +340,8 @@ private fun RelayBadges(baseNote: Note) {
                 Modifier
                     .size(15.dp)
                     .padding(1.dp)) {
-                AsyncImageProxy(
-                    model = ResizeImage("https://${url}/favicon.ico", 15.dp),
+                AsyncImage(
+                    model = "https://${url}/favicon.ico",
                     placeholder = BitmapPainter(RoboHashCache.get(ctx, url)),
                     fallback = BitmapPainter(RoboHashCache.get(ctx, url)),
                     error = BitmapPainter(RoboHashCache.get(ctx, url)),
