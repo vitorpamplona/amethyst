@@ -32,6 +32,20 @@ object Client: RelayPool.Listener {
         this.relays = relays
     }
 
+    fun isSameRelaySetConfig(newRelayConfig: Array<Relay>): Boolean {
+        if (relays.size != newRelayConfig.size) return false
+
+        relays.forEach { oldRelayInfo ->
+            val newRelayInfo = newRelayConfig.find { it.url == oldRelayInfo.url }
+
+            if (newRelayInfo == null) return false
+
+            if (!oldRelayInfo.isSameRelayConfig(newRelayInfo)) return false
+        }
+
+        return true
+    }
+
     fun sendFilter(
         subscriptionId: String = UUID.randomUUID().toString().substring(0..10),
         filters: List<TypedFilter> = listOf()

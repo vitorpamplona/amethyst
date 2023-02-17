@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.model
 
+import android.util.Log
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
@@ -221,10 +222,9 @@ class User(val pubkeyHex: String) {
     }
 
     fun updateRelays(relayUse: Map<String, ContactListEvent.ReadWrite>) {
-        if (relays != relayUse) {
-            relays = relayUse
-            liveRelays.invalidateData()
-        }
+        // no need to test if relays are different. The Account will check for us.
+        relays = relayUse
+        liveRelays.invalidateData()
     }
 
     fun updateUserInfo(newUserInfo: UserMetadata, updateAt: Long) {

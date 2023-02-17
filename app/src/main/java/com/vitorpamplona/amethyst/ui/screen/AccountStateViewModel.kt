@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen
 
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.LocalPreferences
@@ -21,8 +22,10 @@ class AccountStateViewModel(private val localPreferences: LocalPreferences): Vie
 
   init {
     // pulls account from storage.
-    localPreferences.loadFromEncryptedStorage()?.let {
-      login(it)
+    viewModelScope.launch(Dispatchers.IO) {
+      localPreferences.loadFromEncryptedStorage()?.let {
+        login(it)
+      }
     }
   }
 

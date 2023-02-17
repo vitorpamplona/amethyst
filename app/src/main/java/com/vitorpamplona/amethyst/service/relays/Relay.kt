@@ -204,6 +204,13 @@ class Relay(
         socket?.send("""["CLOSE","$subscriptionId"]""")
     }
 
+    fun isSameRelayConfig(other: Relay): Boolean {
+        return url == other.url
+            && write == other.write
+            && read == other.read
+            && activeTypes == other.activeTypes
+    }
+
     enum class Type {
         // Websocket connected
         CONNECT,

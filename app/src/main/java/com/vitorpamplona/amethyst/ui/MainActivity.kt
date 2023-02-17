@@ -75,8 +75,8 @@ class MainActivity : ComponentActivity() {
 
   override fun onResume() {
     super.onResume()
-
-    ServiceManager.start()
+    // Only starts after login
+    //ServiceManager.start()
   }
 
   override fun onPause() {

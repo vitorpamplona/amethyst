@@ -1,8 +1,10 @@
 package com.vitorpamplona.amethyst.model
 
 import android.content.res.Resources
+import android.util.Log
 import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
+import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
@@ -394,12 +396,21 @@ class Account(
     }.toTypedArray()
   }
 
+  fun reconnectIfRelaysHaveChanged() {
+    val newRelaySet = activeRelays() ?: convertLocalRelays()
+    if (!Client.isSameRelaySetConfig(newRelaySet)) {
+      Client.disconnect()
+      Client.connect(newRelaySet)
+      RelayPool.requestAndWatch()
+    }
+  }
+
   init {
-    userProfile().liveRelays.observeForever {
-      GlobalScope.launch(Dispatchers.IO) {
-        Client.disconnect()
-        Client.connect(activeRelays() ?: convertLocalRelays())
-        RelayPool.requestAndWatch()
+    GlobalScope.launch(Dispatchers.Main) {
+      userProfile().liveRelays.observeForever {
+        GlobalScope.launch(Dispatchers.IO) {
+          reconnectIfRelaysHaveChanged()
+        }
       }
     }
   }
