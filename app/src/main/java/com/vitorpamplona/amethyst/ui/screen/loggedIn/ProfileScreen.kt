@@ -378,7 +378,7 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account) {
 
     var ZapExpanded by remember { mutableStateOf(false) }
 
-    val lud16 = user.info.lud16
+    val lud16 = user.info.lud16?.trim()
 
     if (!lud16.isNullOrEmpty()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
