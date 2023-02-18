@@ -9,13 +9,14 @@ import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import nostr.postr.JsonFilter
 import nostr.postr.events.PrivateDmEvent
 
-object NostrChatRoomDataSource: NostrDataSource<Note>("ChatroomFeed") {
+object NostrChatroomDataSource: NostrDataSource("ChatroomFeed") {
   lateinit var account: Account
   var withUser: User? = null
 
   fun loadMessagesBetween(accountIn: Account, userId: String) {
     account = accountIn
     withUser = LocalCache.users[userId]
+    resetFilters()
   }
 
   fun createMessagesToMeFilter(): TypedFilter? {
@@ -40,7 +41,7 @@ object NostrChatRoomDataSource: NostrDataSource<Note>("ChatroomFeed") {
     
     return if (myPeer != null) {
       TypedFilter(
-        types = setOf(FeedType.PUBLIC_CHATS),
+        types = setOf(FeedType.PRIVATE_DMS),
         filter = JsonFilter(
           kinds = listOf(PrivateDmEvent.kind),
           authors = listOf(account.userProfile().pubkeyHex),
@@ -53,13 +54,6 @@ object NostrChatRoomDataSource: NostrDataSource<Note>("ChatroomFeed") {
   }
 
   val inandoutChannel = requestNewChannel()
-
-  // returns the last Note of each user.
-  override fun feed(): List<Note> {
-    val messages = account.userProfile().privateChatrooms[withUser] ?: return emptyList()
-
-    return messages.roomMessages.filter { account.isAcceptable(it) }.sortedBy { it.event?.createdAt }.reversed()
-  }
 
   override fun updateChannelFilters() {
     inandoutChannel.typedFilters = listOfNotNull(createMessagesToMeFilter(), createMessagesFromMeFilter()).ifEmpty { null }

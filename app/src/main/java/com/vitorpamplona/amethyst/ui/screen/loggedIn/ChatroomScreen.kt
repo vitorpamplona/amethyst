@@ -19,35 +19,36 @@ import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.material.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import coil.compose.AsyncImage
-import coil.compose.rememberAsyncImagePainter
 import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.NostrChatRoomDataSource
+import com.vitorpamplona.amethyst.service.NostrChannelDataSource
+import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
+import com.vitorpamplona.amethyst.service.NostrGlobalDataSource
 import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.actions.PostButton
-import com.vitorpamplona.amethyst.ui.note.UserPicture
+import com.vitorpamplona.amethyst.ui.dal.ChatroomFeedFilter
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -59,16 +60,37 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
     if (account != null && userId != null) {
         val newPost = remember { mutableStateOf(TextFieldValue("")) }
 
-        NostrChatRoomDataSource.loadMessagesBetween(account, userId)
+        ChatroomFeedFilter.loadMessagesBetween(account, userId)
+        NostrChatroomDataSource.loadMessagesBetween(account, userId)
 
         val feedViewModel: NostrChatRoomFeedViewModel = viewModel()
+        val lifeCycleOwner = LocalLifecycleOwner.current
 
         LaunchedEffect(Unit) {
-            feedViewModel.refresh()
+            feedViewModel.invalidateData()
+        }
+
+        DisposableEffect(userId) {
+            val observer = LifecycleEventObserver { source, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    println("Private Message Start")
+                    NostrChatroomDataSource.start()
+                    feedViewModel.invalidateData()
+                }
+                if (event == Lifecycle.Event.ON_PAUSE) {
+                    println("Private Message Stop")
+                    NostrChatroomDataSource.stop()
+                }
+            }
+
+            lifeCycleOwner.lifecycle.addObserver(observer)
+            onDispose {
+                lifeCycleOwner.lifecycle.removeObserver(observer)
+            }
         }
 
         Column(Modifier.fillMaxHeight()) {
-            NostrChatRoomDataSource.withUser?.let {
+            NostrChatroomDataSource.withUser?.let {
                 ChatroomHeader(
                     it,
                     accountViewModel = accountViewModel,

@@ -1,4 +1,4 @@
-package com.vitorpamplona.amethyst.service
+package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -7,10 +7,8 @@ import com.vitorpamplona.amethyst.model.User
 import nostr.postr.JsonFilter
 import nostr.postr.events.TextNoteEvent
 
-object NostrHiddenAccountsDataSource: NostrDataSource<User>("HiddenAccounts") {
+object HiddenAccountsFeedFilter: FeedFilter<User>() {
   lateinit var account: Account
 
   override fun feed() = account.hiddenUsers()
-
-  override fun updateChannelFilters() {}
 }

@@ -16,7 +16,7 @@ import nostr.postr.JsonFilter
 import nostr.postr.events.TextNoteEvent
 import nostr.postr.toHex
 
-object NostrHomeDataSource: NostrDataSource<Note>("HomeFeed") {
+object NostrHomeDataSource: NostrDataSource("HomeFeed") {
   lateinit var account: Account
 
   private val cacheListener: (UserState) -> Unit = {
@@ -61,16 +61,6 @@ object NostrHomeDataSource: NostrDataSource<Note>("HomeFeed") {
   }
 
   val followAccountChannel = requestNewChannel()
-
-  override fun feed(): List<Note> {
-    val user = account.userProfile()
-
-    return LocalCache.notes.values
-      .filter { (it.event is TextNoteEvent || it.event is RepostEvent) && it.author in user.follows }
-      .filter { account.isAcceptable(it) }
-      .sortedBy { it.event?.createdAt }
-      .reversed()
-  }
 
   override fun updateChannelFilters() {
     followAccountChannel.typedFilters = listOf(createFollowAccountsFilter()).ifEmpty { null }

@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -42,6 +43,7 @@ import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -51,6 +53,8 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
@@ -62,11 +66,13 @@ import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.toNote
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
+import com.vitorpamplona.amethyst.service.NostrGlobalDataSource
 import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.actions.PostButton
+import com.vitorpamplona.amethyst.ui.dal.ChannelFeedFilter
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import nostr.postr.toNpub
@@ -79,15 +85,36 @@ fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, accoun
     if (account != null && channelId != null) {
         val newPost = remember { mutableStateOf(TextFieldValue("")) }
 
+        ChannelFeedFilter.loadMessagesBetween(account, channelId)
         NostrChannelDataSource.loadMessagesBetween(channelId)
 
         val channelState by NostrChannelDataSource.channel!!.live.observeAsState()
         val channel = channelState?.channel ?: return
 
         val feedViewModel: NostrChannelFeedViewModel = viewModel()
+        val lifeCycleOwner = LocalLifecycleOwner.current
 
         LaunchedEffect(Unit) {
-            feedViewModel.refresh()
+            feedViewModel.invalidateData()
+        }
+
+        DisposableEffect(channelId) {
+            val observer = LifecycleEventObserver { source, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    println("Channel Start")
+                    NostrChannelDataSource.start()
+                    feedViewModel.invalidateData()
+                }
+                if (event == Lifecycle.Event.ON_PAUSE) {
+                    println("Channel Stop")
+                    NostrChannelDataSource.stop()
+                }
+            }
+
+            lifeCycleOwner.lifecycle.addObserver(observer)
+            onDispose {
+                lifeCycleOwner.lifecycle.removeObserver(observer)
+            }
         }
 
         Column(Modifier.fillMaxHeight()) {

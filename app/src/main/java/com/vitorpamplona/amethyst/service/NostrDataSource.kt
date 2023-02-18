@@ -33,9 +33,8 @@ import nostr.postr.events.PrivateDmEvent
 import nostr.postr.events.RecommendRelayEvent
 import nostr.postr.events.TextNoteEvent
 
-abstract class NostrDataSource<T>(val debugName: String) {
+abstract class NostrDataSource(val debugName: String) {
   private var subscriptions = mapOf<String, Subscription>()
-
   data class Counter(var counter:Int)
 
   private var eventCounter = mapOf<String, Counter>()
@@ -139,26 +138,6 @@ abstract class NostrDataSource<T>(val debugName: String) {
     }
   }
 
-  fun loadTop(): List<T> {
-    val returningList = feed().take(1000)
-
-    // prepare previews
-    val scope = CoroutineScope(Job() + Dispatchers.IO)
-    scope.launch {
-      loadPreviews(returningList)
-    }
-
-    return returningList
-  }
-
-  fun loadPreviews(list: List<T>) {
-    list.forEach {
-      if (it is Note) {
-        UrlCachedPreviewer.preloadPreviewsFor(it)
-      }
-    }
-  }
-
   fun requestNewChannel(onEOSE: ((Long) -> Unit)? = null): Subscription {
     val newSubscription = Subscription(UUID.randomUUID().toString().substring(0,4), onEOSE)
     subscriptions = subscriptions + Pair(newSubscription.id, newSubscription)
@@ -231,5 +210,4 @@ abstract class NostrDataSource<T>(val debugName: String) {
   }
 
   abstract fun updateChannelFilters()
-  abstract fun feed(): List<T>
 }

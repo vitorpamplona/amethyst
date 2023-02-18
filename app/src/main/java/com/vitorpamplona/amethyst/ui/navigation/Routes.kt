@@ -1,7 +1,9 @@
 package com.vitorpamplona.amethyst.ui.navigation
 
+import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NamedNavArgument
 import androidx.navigation.NavBackStackEntry
@@ -12,21 +14,16 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
-import com.vitorpamplona.amethyst.service.NostrDataSource
-import com.vitorpamplona.amethyst.service.NostrHomeDataSource
-import com.vitorpamplona.amethyst.service.NostrNotificationDataSource
-import com.vitorpamplona.amethyst.service.model.RepostEvent
+import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.ui.dal.ChatroomListKnownFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.HomeNewThreadFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.ChannelScreen
 import com.vitorpamplona.amethyst.ui.screen.ChatroomListScreen
 import com.vitorpamplona.amethyst.ui.screen.ChatroomScreen
 import com.vitorpamplona.amethyst.ui.screen.FiltersScreen
 import com.vitorpamplona.amethyst.ui.screen.HomeScreen
-import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListKnownFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NotificationScreen
 import com.vitorpamplona.amethyst.ui.screen.ProfileScreen
 import com.vitorpamplona.amethyst.ui.screen.SearchScreen
@@ -37,24 +34,24 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 sealed class Route(
     val route: String,
     val icon: Int,
-    val hasNewItems: @Composable (LocalCache, NotificationCache) -> Boolean = @Composable { _,_ -> false },
+    val hasNewItems: (Account, NotificationCache, Context) -> Boolean = { _,_,_ -> false },
     val arguments: List<NamedNavArgument> = emptyList(),
     val buildScreen: (AccountViewModel, AccountStateViewModel, NavController) -> @Composable (NavBackStackEntry) -> Unit
 ) {
     object Home : Route("Home", R.drawable.ic_home,
-        hasNewItems = { _, cache -> homeHasNewItems(cache) },
+        hasNewItems = { acc, cache, ctx -> homeHasNewItems(acc, cache, ctx) },
         buildScreen = { acc, accSt, nav -> { _ -> HomeScreen(acc, nav) } }
     )
     object Search : Route("Search", R.drawable.ic_search,
         buildScreen = { acc, accSt, nav -> { _ -> SearchScreen(acc, nav) }}
     )
     object Notification : Route("Notification", R.drawable.ic_notifications,
-        hasNewItems = { _, cache -> notificationHasNewItems(cache) },
+        hasNewItems = { acc, cache, ctx -> notificationHasNewItems(acc, cache, ctx) },
         buildScreen = { acc, accSt, nav -> { _ -> NotificationScreen(acc, nav) }}
     )
 
     object Message : Route("Message", R.drawable.ic_dm,
-        hasNewItems = { _, cache -> messagesHasNewItems(cache) },
+        hasNewItems = { acc, cache, ctx -> messagesHasNewItems(acc, cache, ctx) },
         buildScreen = { acc, accSt, nav -> { _ -> ChatroomListScreen(acc, nav) }}
     )
 
@@ -107,45 +104,32 @@ public fun currentRoute(navController: NavHostController): String? {
     return navBackStackEntry?.destination?.route
 }
 
-@Composable
-private fun homeHasNewItems(cache: NotificationCache): Boolean {
-    val context = LocalContext.current.applicationContext
-    val lastTimeFollows = cache.load("HomeFollows", context)
+private fun homeHasNewItems(account: Account, cache: NotificationCache, context: Context): Boolean {
+    val lastTime = cache.load("HomeFollows", context)
 
-    val homeFeed = NostrHomeDataSource.feed().take(100)
+    HomeNewThreadFeedFilter.account = account
 
-    val hasNewInFollows = homeFeed.filter {
-        it.isNewThread()
-    }.filter {
-        (it.event?.createdAt ?: 0) > lastTimeFollows
-    }.isNotEmpty()
-
-    return hasNewInFollows
+    return HomeNewThreadFeedFilter.feed().any {(it.event?.createdAt ?: 0) > lastTime }
 }
 
-@Composable
-private fun notificationHasNewItems(cache: NotificationCache): Boolean {
-    val context = LocalContext.current.applicationContext
+private fun notificationHasNewItems(account: Account, cache: NotificationCache, context: Context): Boolean {
     val lastTime = cache.load("Notification", context)
-    return NostrNotificationDataSource.loadTop()
-        .filter { it.event != null && it.event!!.createdAt > lastTime }
-        .isNotEmpty()
+
+    NotificationFeedFilter.account = account
+
+    return NotificationFeedFilter.feed().any {(it.event?.createdAt ?: 0) > lastTime }
 }
 
-@Composable
-private fun messagesHasNewItems(cache: NotificationCache): Boolean {
-    val context = LocalContext.current.applicationContext
-    return NostrChatroomListDataSource.feed().take(100).filter {
-        // only for known sources
-        val me = NostrChatroomListDataSource.account.userProfile()
-        it.channel == null && me.hasSentMessagesTo(it.author) && it.author != me
-    }.filter {
-        val lastTime = if (it.channel != null) {
-            cache.load("Channel/${it.channel!!.idHex}", context)
-        } else {
-            cache.load("Room/${it.author?.pubkeyHex}", context)
-        }
+private fun messagesHasNewItems(account: Account, cache: NotificationCache, context: Context): Boolean {
+    ChatroomListKnownFeedFilter.account = account
 
-        NostrChatroomListDataSource.account.isAcceptable(it) && it.event != null && it.event!!.createdAt > lastTime
-    }.isNotEmpty()
+    return ChatroomListKnownFeedFilter.feed().any {
+        if (it.channel == null) {
+            val lastTime = cache.load("Room/${it.author?.pubkeyHex}", context)
+
+            (it.event?.createdAt ?: 0) > lastTime
+        } else {
+            false
+        }
+    }
 }

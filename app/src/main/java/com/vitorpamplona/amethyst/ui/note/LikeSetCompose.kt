@@ -13,8 +13,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,8 +48,15 @@ fun LikeSetCompose(likeSetCard: LikeSetCard, modifier: Modifier = Modifier, isIn
     if (note == null) {
         BlankNote(Modifier, isInnerNote)
     } else {
-        val isNew = likeSetCard.createdAt > NotificationCache.load(routeForLastRead, context)
-        NotificationCache.markAsRead(routeForLastRead, likeSetCard.createdAt, context)
+        var isNew by remember { mutableStateOf<Boolean>(false) }
+
+        LaunchedEffect(key1 = routeForLastRead) {
+            isNew = likeSetCard.createdAt > NotificationCache.load(routeForLastRead, context)
+
+            val createdAt = note.event?.createdAt
+            if (createdAt != null)
+                NotificationCache.markAsRead(routeForLastRead, likeSetCard.createdAt, context)
+        }
 
         Column(
             modifier = Modifier.background(

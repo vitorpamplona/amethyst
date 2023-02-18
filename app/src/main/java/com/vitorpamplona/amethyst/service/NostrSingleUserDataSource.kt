@@ -8,7 +8,7 @@ import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import nostr.postr.JsonFilter
 import nostr.postr.events.MetadataEvent
 
-object NostrSingleUserDataSource: NostrDataSource<User>("SingleUserFeed") {
+object NostrSingleUserDataSource: NostrDataSource("SingleUserFeed") {
   var usersToWatch = setOf<String>()
 
   fun createUserFilter(): List<TypedFilter>? {
@@ -44,14 +44,6 @@ object NostrSingleUserDataSource: NostrDataSource<User>("SingleUserFeed") {
     // Many relays operate with limits in the amount of filters.
     // As information comes, the filters will be rotated to get more data.
     invalidateFilters()
-  }
-
-  override fun feed(): List<User> {
-    return synchronized(usersToWatch) {
-      usersToWatch.map {
-        LocalCache.users[it]
-      }.filterNotNull()
-    }
   }
 
   override fun updateChannelFilters() {

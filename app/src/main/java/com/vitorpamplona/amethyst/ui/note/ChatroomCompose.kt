@@ -20,8 +20,12 @@ import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -81,11 +85,13 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
             noteEvent?.content
         }
         channel?.let { channel ->
-            val hasNewMessages =
-                if (noteEvent != null)
-                    noteEvent.createdAt > notificationCache.cache.load("Channel/${channel.idHex}", context)
-                else
-                    false
+            var hasNewMessages by remember { mutableStateOf<Boolean>(false) }
+
+            LaunchedEffect(key1 = notificationCache) {
+                noteEvent?.let {
+                    hasNewMessages = it.createdAt > notificationCache.cache.load("Channel/${channel.idHex}", context)
+                }
+            }
 
             ChannelName(
                 channelPicture = channel.profilePicture(),
@@ -122,11 +128,13 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
         val noteEvent = note.event
 
         userToComposeOn.let { user ->
-            val hasNewMessages =
-                if (noteEvent != null)
-                    noteEvent.createdAt > notificationCache.cache.load("Room/${userToComposeOn.pubkeyHex}", context)
-                else
-                    false
+            var hasNewMessages by remember { mutableStateOf<Boolean>(false) }
+
+            LaunchedEffect(key1 = notificationCache) {
+                noteEvent?.let {
+                    hasNewMessages = it.createdAt > notificationCache.cache.load("Room/${userToComposeOn.pubkeyHex}", context)
+                }
+            }
 
             ChannelName(
                 channelPicture = { UserPicture(userToComposeOn, account.userProfile(), size = 55.dp) },

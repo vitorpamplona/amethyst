@@ -8,7 +8,7 @@ import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import nostr.postr.JsonFilter
 
-object NostrSingleChannelDataSource: NostrDataSource<Note>("SingleChannelFeed") {
+object NostrSingleChannelDataSource: NostrDataSource("SingleChannelFeed") {
   private var channelsToWatch = setOf<String>()
 
   private fun createRepliesAndReactionsFilter(): TypedFilter? {
@@ -50,10 +50,6 @@ object NostrSingleChannelDataSource: NostrDataSource<Note>("SingleChannelFeed") 
   }
 
   val singleChannelChannel = requestNewChannel()
-
-  override fun feed(): List<Note> {
-    return emptyList()
-  }
 
   override fun updateChannelFilters() {
     val reactions = createRepliesAndReactionsFilter()

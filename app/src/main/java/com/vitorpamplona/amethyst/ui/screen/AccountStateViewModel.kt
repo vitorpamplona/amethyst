@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen
 
+import android.util.Log
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -8,7 +9,9 @@ import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
 import fr.acinq.secp256k1.Hex
 import java.util.regex.Pattern
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -22,11 +25,13 @@ class AccountStateViewModel(private val localPreferences: LocalPreferences): Vie
 
   init {
     // pulls account from storage.
-    viewModelScope.launch(Dispatchers.IO) {
-      localPreferences.loadFromEncryptedStorage()?.let {
-        login(it)
-      }
+
+    // Keeps it in the the UI thread to void blinking the login page.
+    //viewModelScope.launch(Dispatchers.IO) {
+    localPreferences.loadFromEncryptedStorage()?.let {
+      login(it)
     }
+    //}
   }
 
   fun login(key: String) {
@@ -61,7 +66,8 @@ class AccountStateViewModel(private val localPreferences: LocalPreferences): Vie
     else
       _accountContent.update { AccountState.LoggedInViewOnly ( account ) }
 
-    viewModelScope.launch(Dispatchers.IO) {
+    val scope = CoroutineScope(Job() + Dispatchers.IO)
+    scope.launch {
       ServiceManager.start(account)
     }
   }

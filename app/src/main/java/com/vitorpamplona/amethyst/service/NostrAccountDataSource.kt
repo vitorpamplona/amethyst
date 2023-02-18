@@ -15,7 +15,7 @@ import nostr.postr.events.ContactListEvent
 import nostr.postr.events.MetadataEvent
 import nostr.postr.events.TextNoteEvent
 
-object NostrAccountDataSource: NostrDataSource<Note>("AccountData") {
+object NostrAccountDataSource: NostrDataSource("AccountData") {
   lateinit var account: Account
 
   fun createAccountContactListFilter(): TypedFilter {
@@ -62,15 +62,6 @@ object NostrAccountDataSource: NostrDataSource<Note>("AccountData") {
   )
 
   val accountChannel = requestNewChannel()
-
-  override fun feed(): List<Note> {
-    val user = account.userProfile()
-
-    return LocalCache.notes.values
-      .filter { (it.event is TextNoteEvent || it.event is RepostEvent) && it.author in user.follows }
-      .sortedBy { it.event?.createdAt }
-      .reversed()
-  }
 
   override fun updateChannelFilters() {
     // gets everthing about the user logged in

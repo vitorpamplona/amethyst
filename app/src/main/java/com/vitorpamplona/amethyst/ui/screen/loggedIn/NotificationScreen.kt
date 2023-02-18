@@ -11,13 +11,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.vitorpamplona.amethyst.service.NostrNotificationDataSource
+import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
 fun NotificationScreen(accountViewModel: AccountViewModel, navController: NavController) {
-    val feedViewModel: CardFeedViewModel = viewModel { CardFeedViewModel( NostrNotificationDataSource ) }
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val account = accountState?.account ?: return
+
+    NotificationFeedFilter.account = account
+    val feedViewModel: NotificationViewModel = viewModel()
 
     LaunchedEffect(Unit) {
         feedViewModel.refresh()

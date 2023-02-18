@@ -11,7 +11,7 @@ import nostr.postr.events.MetadataEvent
 import nostr.postr.events.TextNoteEvent
 import nostr.postr.toHex
 
-object NostrSearchEventOrUserDataSource: NostrDataSource<Note>("SingleEventFeed") {
+object NostrSearchEventOrUserDataSource: NostrDataSource("SingleEventFeed") {
   private var hexToWatch: String? = null
 
   private fun createAnythingWithIDFilter(): List<TypedFilter>? {
@@ -38,10 +38,6 @@ object NostrSearchEventOrUserDataSource: NostrDataSource<Note>("SingleEventFeed"
   }
 
   val searchChannel = requestNewChannel()
-
-  override fun feed(): List<Note> {
-    return emptyList<Note>()
-  }
 
   override fun updateChannelFilters() {
     searchChannel.typedFilters = createAnythingWithIDFilter()

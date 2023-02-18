@@ -15,7 +15,7 @@ import java.util.Date
 import nostr.postr.JsonFilter
 import nostr.postr.events.TextNoteEvent
 
-object NostrSingleEventDataSource: NostrDataSource<Note>("SingleEventFeed") {
+object NostrSingleEventDataSource: NostrDataSource("SingleEventFeed") {
   private var eventsToWatch = setOf<String>()
 
   private fun createRepliesAndReactionsFilter(): List<TypedFilter>? {
@@ -85,14 +85,6 @@ object NostrSingleEventDataSource: NostrDataSource<Note>("SingleEventFeed") {
     // Many relays operate with limits in the amount of filters.
     // As information comes, the filters will be rotated to get more data.
     invalidateFilters()
-  }
-
-  override fun feed(): List<Note> {
-    return synchronized(eventsToWatch) {
-      eventsToWatch.map {
-        LocalCache.notes[it]
-      }.filterNotNull()
-    }
   }
 
   override fun updateChannelFilters() {

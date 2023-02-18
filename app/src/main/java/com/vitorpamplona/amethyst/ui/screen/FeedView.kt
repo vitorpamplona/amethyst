@@ -36,7 +36,12 @@ import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun FeedView(viewModel: FeedViewModel, accountViewModel: AccountViewModel, navController: NavController, routeForLastRead: String?) {
+fun FeedView(
+    viewModel: FeedViewModel,
+    accountViewModel: AccountViewModel,
+    navController: NavController,
+    routeForLastRead: String?
+) {
     val feedState by viewModel.feedContent.collectAsState()
 
     var isRefreshing by remember { mutableStateOf(false) }
@@ -44,7 +49,7 @@ fun FeedView(viewModel: FeedViewModel, accountViewModel: AccountViewModel, navCo
 
     LaunchedEffect(isRefreshing) {
         if (isRefreshing) {
-            viewModel.hardRefresh()
+            viewModel.refresh()
             isRefreshing = false
         }
     }

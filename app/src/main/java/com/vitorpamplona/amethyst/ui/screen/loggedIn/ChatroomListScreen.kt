@@ -9,12 +9,16 @@ import androidx.compose.material.TabRow
 import androidx.compose.material.TabRowDefaults
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.google.accompanist.pager.ExperimentalPagerApi
@@ -22,6 +26,10 @@ import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.google.accompanist.pager.rememberPagerState
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
+import com.vitorpamplona.amethyst.service.NostrHomeDataSource
+import com.vitorpamplona.amethyst.ui.dal.ChatroomListKnownFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.ChatroomListNewFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.launch
 
@@ -72,11 +80,35 @@ fun ChatroomListScreen(accountViewModel: AccountViewModel, navController: NavCon
 
 @Composable
 fun TabKnown(accountViewModel: AccountViewModel, navController: NavController) {
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val account = accountState?.account ?: return
+
+    ChatroomListKnownFeedFilter.account = account
     val feedViewModel: NostrChatroomListKnownFeedViewModel = viewModel()
 
     LaunchedEffect(Unit) {
-        feedViewModel.hardRefresh() // refresh filters
-        feedViewModel.refresh() // refresh view
+        NostrChatroomListDataSource.resetFilters()
+        feedViewModel.invalidateData()
+    }
+
+    val lifeCycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(accountViewModel) {
+        val observer = LifecycleEventObserver { source, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                println("Global Start")
+                NostrChatroomListDataSource.start()
+                feedViewModel.invalidateData()
+            }
+            if (event == Lifecycle.Event.ON_PAUSE) {
+                println("Global Stop")
+                NostrChatroomListDataSource.stop()
+            }
+        }
+
+        lifeCycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifeCycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     Column(Modifier.fillMaxHeight()) {
@@ -90,11 +122,35 @@ fun TabKnown(accountViewModel: AccountViewModel, navController: NavController) {
 
 @Composable
 fun TabNew(accountViewModel: AccountViewModel, navController: NavController) {
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val account = accountState?.account ?: return
+
+    ChatroomListNewFeedFilter.account = account
     val feedViewModel: NostrChatroomListNewFeedViewModel = viewModel()
 
     LaunchedEffect(Unit) {
-        feedViewModel.hardRefresh() // refresh filters
+        NostrChatroomListDataSource.resetFilters()
         feedViewModel.refresh() // refresh view
+    }
+
+    val lifeCycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(accountViewModel) {
+        val observer = LifecycleEventObserver { source, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                println("Global Start")
+                NostrChatroomListDataSource.start()
+                feedViewModel.invalidateData()
+            }
+            if (event == Lifecycle.Event.ON_PAUSE) {
+                println("Global Stop")
+                NostrChatroomListDataSource.stop()
+            }
+        }
+
+        lifeCycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifeCycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     Column(Modifier.fillMaxHeight()) {

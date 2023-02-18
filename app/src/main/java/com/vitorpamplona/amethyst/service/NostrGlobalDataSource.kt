@@ -9,7 +9,7 @@ import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import nostr.postr.JsonFilter
 import nostr.postr.events.TextNoteEvent
 
-object NostrGlobalDataSource: NostrDataSource<Note>("GlobalFeed") {
+object NostrGlobalDataSource: NostrDataSource("GlobalFeed") {
   lateinit var account: Account
   fun createGlobalFilter() = TypedFilter(
     types = setOf(FeedType.GLOBAL),
@@ -20,15 +20,6 @@ object NostrGlobalDataSource: NostrDataSource<Note>("GlobalFeed") {
   )
 
   val globalFeedChannel = requestNewChannel()
-
-  override fun feed() = LocalCache.notes.values
-    .filter { account.isAcceptable(it) }
-    .filter {
-      (it.event is TextNoteEvent && (it.event as TextNoteEvent).replyTos.isEmpty()) ||
-      (it.event is ChannelMessageEvent && (it.event as ChannelMessageEvent).replyTos.isEmpty())
-    }
-    .sortedBy { it.event?.createdAt }
-    .reversed()
 
   override fun updateChannelFilters() {
     globalFeedChannel.typedFilters = listOf(createGlobalFilter()).ifEmpty { null }

@@ -9,7 +9,6 @@ import androidx.compose.material.TabRow
 import androidx.compose.material.TabRowDefaults
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.rememberCoroutineScope
@@ -21,8 +20,7 @@ import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.google.accompanist.pager.rememberPagerState
-import com.vitorpamplona.amethyst.service.NostrHiddenAccountsDataSource
-import com.vitorpamplona.amethyst.service.NostrThreadDataSource
+import com.vitorpamplona.amethyst.ui.dal.HiddenAccountsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.launch
 
@@ -33,7 +31,7 @@ fun FiltersScreen(accountViewModel: AccountViewModel, navController: NavControll
     val account = accountState?.account
 
     if (account != null) {
-        NostrHiddenAccountsDataSource.account = account
+        HiddenAccountsFeedFilter.account = account
 
         val feedViewModel: NostrHiddenAccountsFeedViewModel = viewModel()
 

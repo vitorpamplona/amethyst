@@ -47,7 +47,6 @@ object LocalCache {
   val users = ConcurrentHashMap<HexKey, User>()
   val notes = ConcurrentHashMap<HexKey, Note>()
   val channels = ConcurrentHashMap<HexKey, Channel>()
-
   @Synchronized
   fun getOrCreateUser(key: HexKey): User {
     return users[key] ?: run {

@@ -7,14 +7,11 @@ import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
 import com.vitorpamplona.amethyst.service.NostrGlobalDataSource
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
-import com.vitorpamplona.amethyst.service.NostrNotificationDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.NostrThreadDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
-import com.vitorpamplona.amethyst.service.NostrUserProfileFollowersDataSource
-import com.vitorpamplona.amethyst.service.NostrUserProfileFollowsDataSource
 import com.vitorpamplona.amethyst.service.relays.Client
 
 object ServiceManager {
@@ -34,25 +31,18 @@ object ServiceManager {
       // start services
       NostrAccountDataSource.account = myAccount
       NostrHomeDataSource.account = myAccount
-      NostrNotificationDataSource.account = myAccount
       NostrChatroomListDataSource.account = myAccount
-
       NostrGlobalDataSource.account = myAccount
-      NostrChannelDataSource.account = myAccount
 
-      NostrUserProfileDataSource.account = myAccount
-      NostrUserProfileFollowsDataSource.account = myAccount
-      NostrUserProfileFollowersDataSource.account = myAccount
-
+      // Notification Elements
       NostrAccountDataSource.start()
-      //NostrGlobalDataSource.start()
       NostrHomeDataSource.start()
-      NostrNotificationDataSource.start()
+      NostrChatroomListDataSource.start()
+
+      // More Info Data Sources
       NostrSingleEventDataSource.start()
       NostrSingleChannelDataSource.start()
       NostrSingleUserDataSource.start()
-      //NostrThreadDataSource.start()
-      NostrChatroomListDataSource.start()
     } else {
       // if not logged in yet, start a basic service wit default relays
       Client.connect(Constants.convertDefaultRelays())
@@ -65,11 +55,8 @@ object ServiceManager {
     NostrChannelDataSource.stop()
     NostrChatroomListDataSource.stop()
     NostrUserProfileDataSource.stop()
-    NostrUserProfileFollowersDataSource.stop()
-    NostrUserProfileFollowsDataSource.stop()
 
     NostrGlobalDataSource.stop()
-    NostrNotificationDataSource.stop()
     NostrSingleChannelDataSource.stop()
     NostrSingleEventDataSource.stop()
     NostrSingleUserDataSource.stop()

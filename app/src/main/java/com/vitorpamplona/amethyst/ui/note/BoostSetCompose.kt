@@ -1,30 +1,28 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import coil.compose.AsyncImage
-import coil.compose.rememberAsyncImagePainter
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
@@ -32,8 +30,8 @@ import com.vitorpamplona.amethyst.ui.screen.BoostSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun BoostSetCompose(likeSetCard: BoostSetCard, isInnerNote: Boolean = false, routeForLastRead: String, accountViewModel: AccountViewModel, navController: NavController) {
-    val noteState by likeSetCard.note.live.observeAsState()
+fun BoostSetCompose(boostSetCard: BoostSetCard, isInnerNote: Boolean = false, routeForLastRead: String, accountViewModel: AccountViewModel, navController: NavController) {
+    val noteState by boostSetCard.note.live.observeAsState()
     val note = noteState?.note
 
     val accountState by accountViewModel.accountLiveData.observeAsState()
@@ -44,8 +42,15 @@ fun BoostSetCompose(likeSetCard: BoostSetCard, isInnerNote: Boolean = false, rou
     if (note?.event == null) {
         BlankNote(Modifier, isInnerNote)
     } else {
-        val isNew = likeSetCard.createdAt > NotificationCache.load(routeForLastRead, context)
-        NotificationCache.markAsRead(routeForLastRead, likeSetCard.createdAt, context)
+        var isNew by remember { mutableStateOf<Boolean>(false) }
+
+        LaunchedEffect(key1 = routeForLastRead) {
+            isNew = boostSetCard.createdAt > NotificationCache.load(routeForLastRead, context)
+
+            val createdAt = note.event?.createdAt
+            if (createdAt != null)
+                NotificationCache.markAsRead(routeForLastRead, boostSetCard.createdAt, context)
+        }
 
         Column(
             modifier = Modifier.background(
@@ -75,7 +80,7 @@ fun BoostSetCompose(likeSetCard: BoostSetCard, isInnerNote: Boolean = false, rou
 
                 Column(modifier = Modifier.padding(start = if (!isInnerNote) 10.dp else 0.dp)) {
                     FlowRow() {
-                        likeSetCard.boostEvents.forEach {
+                        boostSetCard.boostEvents.forEach {
                             NoteAuthorPicture(
                                 note = it,
                                 navController = navController,

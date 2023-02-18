@@ -30,6 +30,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -115,15 +116,18 @@ fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote
             shape = ChatBubbleShapeThem
         }
 
-        // Mark read
-        val isNew = routeForLastRead?.run {
-            val isNew = NotificationCache.load(this, context)
+        var isNew by remember { mutableStateOf<Boolean>(false) }
 
-            val createdAt = note.event?.createdAt
-            if (createdAt != null)
-                NotificationCache.markAsRead(this, createdAt, context)
+        LaunchedEffect(key1 = routeForLastRead) {
+            routeForLastRead?.let {
+                val lastTime = NotificationCache.load(it, context)
 
-            isNew
+                val createdAt = note.event?.createdAt
+                if (createdAt != null) {
+                    NotificationCache.markAsRead(it, createdAt, context)
+                    isNew = createdAt > lastTime
+                }
+            }
         }
 
         Column() {

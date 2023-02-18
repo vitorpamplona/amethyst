@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrGlobalDataSource
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
+import com.vitorpamplona.amethyst.ui.dal.GlobalFeedFilter
 import com.vitorpamplona.amethyst.ui.note.ChannelName
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.UserCompose
@@ -76,11 +77,16 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun SearchScreen(accountViewModel: AccountViewModel, navController: NavController) {
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val account = accountState?.account ?: return
+
+    GlobalFeedFilter.account = account
+    NostrGlobalDataSource.account = account
     val feedViewModel: NostrGlobalFeedViewModel = viewModel()
     val lifeCycleOwner = LocalLifecycleOwner.current
 
     LaunchedEffect(Unit) {
-        feedViewModel.refresh()
+        feedViewModel.invalidateData()
     }
 
     DisposableEffect(accountViewModel) {
@@ -88,6 +94,7 @@ fun SearchScreen(accountViewModel: AccountViewModel, navController: NavControlle
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Global Start")
                 NostrGlobalDataSource.start()
+                feedViewModel.invalidateData()
             }
             if (event == Lifecycle.Event.ON_PAUSE) {
                 println("Global Stop")

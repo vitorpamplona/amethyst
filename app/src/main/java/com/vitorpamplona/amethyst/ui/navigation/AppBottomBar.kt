@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -16,12 +15,18 @@ import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -29,7 +34,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.ui.note.NewItemsBubble
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.launch
 
 val bottomNavigationItems = listOf(
@@ -40,7 +45,7 @@ val bottomNavigationItems = listOf(
 )
 
 @Composable
-fun AppBottomBar(navController: NavHostController) {
+fun AppBottomBar(navController: NavHostController, accountViewModel: AccountViewModel) {
     val currentRoute = currentRoute(navController)
     val coroutineScope = rememberCoroutineScope()
 
@@ -55,7 +60,7 @@ fun AppBottomBar(navController: NavHostController) {
         ) {
             bottomNavigationItems.forEach { item ->
                 BottomNavigationItem(
-                    icon = { NotifiableIcon(item, currentRoute) },
+                    icon = { NotifiableIcon(item, currentRoute, accountViewModel) },
                     selected = currentRoute == item.route,
                     onClick = {
                         coroutineScope.launch {
@@ -89,7 +94,7 @@ fun AppBottomBar(navController: NavHostController) {
 }
 
 @Composable
-private fun NotifiableIcon(item: Route, currentRoute: String?) {
+private fun NotifiableIcon(item: Route, currentRoute: String?, accountViewModel: AccountViewModel) {
     Box(Modifier.size(if ("Home" == item.route) 25.dp else 23.dp)) {
         Icon(
             painter = painterResource(id = item.icon),
@@ -98,39 +103,48 @@ private fun NotifiableIcon(item: Route, currentRoute: String?) {
             tint = if (currentRoute == item.route) MaterialTheme.colors.primary else Color.Unspecified
         )
 
+        val accountState by accountViewModel.accountLiveData.observeAsState()
+        val account = accountState?.account ?: return
+
         // Notification
         val dbState = LocalCache.live.observeAsState()
+        val db = dbState.value ?: return
+
         val notifState = NotificationCache.live.observeAsState()
+        val notif = notifState.value ?: return
 
-        val db = dbState.value
-        val notif = notifState.value
+        var hasNewItems by remember { mutableStateOf<Boolean>(false) }
 
-        if (db != null && notif != null) {
-            if (item.hasNewItems(db.cache, notif.cache)) {
+        val context = LocalContext.current.applicationContext
+
+        LaunchedEffect(key1 = notif) {
+            hasNewItems = item.hasNewItems(account, notif.cache, context)
+        }
+
+        if (hasNewItems) {
+            Box(
+                Modifier
+                    .width(10.dp)
+                    .height(10.dp)
+                    .align(Alignment.TopEnd)
+            ) {
                 Box(
-                    Modifier
+                    modifier = Modifier
                         .width(10.dp)
                         .height(10.dp)
-                        .align(Alignment.TopEnd)
+                        .clip(shape = CircleShape)
+                        .background(MaterialTheme.colors.primary),
+                    contentAlignment = Alignment.TopEnd
                 ) {
-                    Box(
+                    Text(
+                        "",
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                        fontSize = 12.sp,
                         modifier = Modifier
-                            .width(10.dp)
-                            .height(10.dp)
-                            .clip(shape = CircleShape)
-                            .background(MaterialTheme.colors.primary),
-                        contentAlignment = Alignment.TopEnd
-                    ) {
-                        Text(
-                            "",
-                            color = Color.White,
-                            textAlign = TextAlign.Center,
-                            fontSize = 12.sp,
-                            modifier = Modifier
-                                .wrapContentHeight()
-                                .align(Alignment.TopEnd)
-                        )
-                    }
+                            .wrapContentHeight()
+                            .align(Alignment.TopEnd)
+                    )
                 }
             }
         }

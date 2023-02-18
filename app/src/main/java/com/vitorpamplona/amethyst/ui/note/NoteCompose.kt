@@ -31,6 +31,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -120,17 +121,19 @@ fun NoteCompose(
             onClick = { showHiddenNote = true }
         )
     } else {
-        val isNew = routeForLastRead?.run {
-            val lastTime = NotificationCache.load(this, context)
+        var isNew by remember { mutableStateOf<Boolean>(false) }
 
-            val createdAt = note.event?.createdAt
-            if (createdAt != null) {
-                NotificationCache.markAsRead(this, createdAt, context)
-                createdAt > lastTime
-            } else {
-                false
+        LaunchedEffect(key1 = routeForLastRead) {
+            routeForLastRead?.let {
+                val lastTime = NotificationCache.load(it, context)
+
+                val createdAt = note.event?.createdAt
+                if (createdAt != null) {
+                    NotificationCache.markAsRead(it, createdAt, context)
+                    isNew = createdAt > lastTime
+                }
             }
-        } ?: false
+        }
 
         Column(modifier =
             modifier.combinedClickable(

@@ -18,6 +18,7 @@ import coil.decode.SvgDecoder
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import coil.request.CachePolicy
+import coil.util.DebugLogger
 import com.vitorpamplona.amethyst.EncryptedStorage
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
@@ -51,7 +52,7 @@ class MainActivity : ComponentActivity() {
           add(GifDecoder.Factory())
         }
         add(SvgDecoder.Factory())
-      }
+      } //.logger(DebugLogger())
         .respectCacheHeaders(false)
         .build()
     }
@@ -76,7 +77,7 @@ class MainActivity : ComponentActivity() {
   override fun onResume() {
     super.onResume()
     // Only starts after login
-    //ServiceManager.start()
+    ServiceManager.start()
   }
 
   override fun onPause() {

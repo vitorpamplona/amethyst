@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.service
 
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -12,12 +11,15 @@ import nostr.postr.events.ContactListEvent
 import nostr.postr.events.MetadataEvent
 import nostr.postr.events.TextNoteEvent
 
-object NostrUserProfileDataSource: NostrDataSource<Note>("UserProfileFeed") {
-  lateinit var account: Account
+object NostrUserProfileDataSource: NostrDataSource("UserProfileFeed") {
   var user: User? = null
 
-  fun loadUserProfile(userId: String) {
-    user = LocalCache.getOrCreateUser(userId)
+  fun loadUserProfile(userId: String?) {
+    if (userId != null) {
+      user = LocalCache.getOrCreateUser(userId)
+    }
+
+    resetFilters()
   }
 
   fun createUserInfoFilter(): TypedFilter {
@@ -72,14 +74,6 @@ object NostrUserProfileDataSource: NostrDataSource<Note>("UserProfileFeed") {
   )
 
   val userInfoChannel = requestNewChannel()
-
-  override fun feed(): List<Note> {
-    return user?.notes
-      ?.filter { account.isAcceptable(it) }
-      ?.sortedBy { it.event?.createdAt }
-      ?.reversed()
-      ?: emptyList()
-  }
 
   override fun updateChannelFilters() {
     userInfoChannel.typedFilters = listOf(

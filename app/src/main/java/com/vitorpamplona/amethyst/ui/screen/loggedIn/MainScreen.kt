@@ -38,7 +38,7 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
             .background(MaterialTheme.colors.primaryVariant)
             .statusBarsPadding(),
         bottomBar = {
-            AppBottomBar(navController)
+            AppBottomBar(navController, accountViewModel)
         },
         topBar = {
             AppTopBar(navController, scaffoldState, accountViewModel)

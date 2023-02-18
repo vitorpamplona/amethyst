@@ -1,7 +1,6 @@
 package com.vitorpamplona.amethyst.ui.navigation
 
 import android.util.Log
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,45 +35,33 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import coil.Coil
-import coil.compose.AsyncImage
-import coil.compose.rememberAsyncImagePainter
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
-import com.vitorpamplona.amethyst.service.NostrChatRoomDataSource
+import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
 import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
 import com.vitorpamplona.amethyst.service.NostrGlobalDataSource
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
-import com.vitorpamplona.amethyst.service.NostrNotificationDataSource
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.NostrThreadDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
-import com.vitorpamplona.amethyst.service.NostrUserProfileFollowersDataSource
-import com.vitorpamplona.amethyst.service.NostrUserProfileFollowsDataSource
-import com.vitorpamplona.amethyst.service.NostrUserProfileZapsDataSource
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
-import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
 import com.vitorpamplona.amethyst.ui.screen.RelayPoolViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import java.net.URLEncoder
 import kotlinx.coroutines.launch
 
 @Composable
@@ -141,12 +128,11 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
 
                                     NostrAccountDataSource.printCounter()
                                     NostrChannelDataSource.printCounter()
-                                    NostrChatRoomDataSource.printCounter()
+                                    NostrChatroomDataSource.printCounter()
                                     NostrChatroomListDataSource.printCounter()
 
                                     NostrGlobalDataSource.printCounter()
                                     NostrHomeDataSource.printCounter()
-                                    NostrNotificationDataSource.printCounter()
 
                                     NostrSingleEventDataSource.printCounter()
                                     NostrSearchEventOrUserDataSource.printCounter()
@@ -155,9 +141,6 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
                                     NostrThreadDataSource.printCounter()
 
                                     NostrUserProfileDataSource.printCounter()
-                                    NostrUserProfileFollowersDataSource.printCounter()
-                                    NostrUserProfileFollowsDataSource.printCounter()
-                                    NostrUserProfileZapsDataSource.printCounter()
 
                                     println("Connected Relays: " + RelayPool.connectedRelays())
 

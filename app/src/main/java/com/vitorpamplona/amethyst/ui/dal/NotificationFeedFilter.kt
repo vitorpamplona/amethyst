@@ -1,4 +1,4 @@
-package com.vitorpamplona.amethyst.service
+package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
@@ -10,7 +10,7 @@ import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import nostr.postr.JsonFilter
 
-object NostrNotificationDataSource: NostrDataSource<Note>("NotificationFeed") {
+object NotificationFeedFilter: FeedFilter<Note>() {
   lateinit var account: Account
 
   override fun feed(): List<Note> {
@@ -25,6 +25,4 @@ object NostrNotificationDataSource: NostrDataSource<Note>("NotificationFeed") {
       .sortedBy { it.event?.createdAt }
       .reversed()
   }
-
-  override fun updateChannelFilters() {}
 }

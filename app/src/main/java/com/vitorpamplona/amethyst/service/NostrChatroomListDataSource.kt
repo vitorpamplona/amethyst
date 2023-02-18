@@ -10,7 +10,7 @@ import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import nostr.postr.JsonFilter
 import nostr.postr.events.PrivateDmEvent
 
-object NostrChatroomListDataSource: NostrDataSource<Note>("MailBoxFeed") {
+object NostrChatroomListDataSource: NostrDataSource("MailBoxFeed") {
   lateinit var account: Account
 
   fun createMessagesToMeFilter() = TypedFilter(
@@ -72,22 +72,6 @@ object NostrChatroomListDataSource: NostrDataSource<Note>("MailBoxFeed") {
   }
 
   val chatroomListChannel = requestNewChannel()
-
-  // returns the last Note of each user.
-  override fun feed(): List<Note> {
-    val privateChatrooms = account.userProfile().privateChatrooms
-    val messagingWith = privateChatrooms.keys.filter { account.isAcceptable(it) }
-
-    val privateMessages = messagingWith.mapNotNull {
-      privateChatrooms[it]?.roomMessages?.sortedBy { it.event?.createdAt }?.lastOrNull { it.event != null }
-    }
-
-    val publicChannels = account.followingChannels().map {
-      it.notes.values.filter { account.isAcceptable(it) }.sortedBy { it.event?.createdAt }.lastOrNull { it.event != null }
-    }
-
-    return (privateMessages + publicChannels).filterNotNull().sortedBy { it.event?.createdAt }.reversed()
-  }
 
   override fun updateChannelFilters() {
     val list = listOf(

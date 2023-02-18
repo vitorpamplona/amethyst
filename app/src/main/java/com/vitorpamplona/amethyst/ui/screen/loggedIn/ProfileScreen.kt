@@ -1,11 +1,8 @@
 package com.vitorpamplona.amethyst.ui.screen
 
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
@@ -40,31 +37,28 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import coil.compose.AsyncImage
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.google.accompanist.pager.rememberPagerState
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.NostrGlobalDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
-import com.vitorpamplona.amethyst.service.NostrUserProfileFollowersDataSource
-import com.vitorpamplona.amethyst.service.NostrUserProfileFollowsDataSource
-import com.vitorpamplona.amethyst.service.NostrUserProfileZapsDataSource
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
 import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
+import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowersFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowsFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.UserProfileNoteFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.UserProfileZapsFeedFilter
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -81,10 +75,12 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
 
     if (userId == null) return
 
+    UserProfileNoteFeedFilter.loadUserProfile(account, userId)
+    UserProfileFollowersFeedFilter.loadUserProfile(account, userId)
+    UserProfileFollowsFeedFilter.loadUserProfile(account, userId)
+    UserProfileZapsFeedFilter.loadUserProfile(userId)
+
     NostrUserProfileDataSource.loadUserProfile(userId)
-    NostrUserProfileFollowersDataSource.loadUserProfile(userId)
-    NostrUserProfileFollowsDataSource.loadUserProfile(userId)
-    NostrUserProfileZapsDataSource.loadUserProfile(userId)
 
     val lifeCycleOwner = LocalLifecycleOwner.current
 
@@ -92,17 +88,13 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
         val observer = LifecycleEventObserver { source, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Profile Start")
+                NostrUserProfileDataSource.loadUserProfile(userId)
                 NostrUserProfileDataSource.start()
-                NostrUserProfileFollowersDataSource.start()
-                NostrUserProfileFollowsDataSource.start()
-                NostrUserProfileZapsDataSource.start()
             }
             if (event == Lifecycle.Event.ON_PAUSE) {
                 println("Profile Stop")
+                NostrUserProfileDataSource.loadUserProfile(null)
                 NostrUserProfileDataSource.stop()
-                NostrUserProfileFollowsDataSource.stop()
-                NostrUserProfileFollowersDataSource.stop()
-                NostrUserProfileZapsDataSource.stop()
             }
         }
 
