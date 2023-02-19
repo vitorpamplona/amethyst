@@ -37,12 +37,11 @@ class ThreadAssembler {
       val note = LocalCache.getOrCreateNote(noteId)
 
       if (note.event != null) {
-        val thread = mutableListOf<Note>()
-        val threadSet = mutableSetOf<Note>()
+        val thread = mutableSetOf<Note>()
 
-        val threadRoot = searchRoot(note) ?: note
+        val threadRoot = searchRoot(note, thread) ?: note
 
-        loadDown(threadRoot, thread, threadSet)
+        loadDown(threadRoot, thread)
 
         thread.toSet()
       } else {
@@ -55,13 +54,12 @@ class ThreadAssembler {
     return result
   }
 
-  fun loadDown(note: Note, thread: MutableList<Note>, threadSet: MutableSet<Note>) {
-    if (note !in threadSet) {
+  fun loadDown(note: Note, thread: MutableSet<Note>) {
+    if (note !in thread) {
       thread.add(note)
-      threadSet.add(note)
 
       note.replies.forEach {
-        loadDown(it, thread, threadSet)
+        loadDown(it, thread)
       }
     }
   }
