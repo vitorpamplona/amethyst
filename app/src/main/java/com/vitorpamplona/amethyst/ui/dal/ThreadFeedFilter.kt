@@ -9,9 +9,10 @@ object ThreadFeedFilter: FeedFilter<Note>() {
   var noteId: String? = null
 
   override fun feed(): List<Note> {
+    val cachedSignatures: MutableMap<Note, String> = mutableMapOf()
     val eventsToWatch = noteId?.let { ThreadAssembler().findThreadFor(it) } ?: emptySet()
     // Currently orders by date of each event, descending, at each level of the reply stack
-    val order = compareByDescending<Note> { it.replyLevelSignature() }
+    val order = compareByDescending<Note> { it.replyLevelSignature(cachedSignatures) }
 
     return eventsToWatch.sortedWith(order)
   }

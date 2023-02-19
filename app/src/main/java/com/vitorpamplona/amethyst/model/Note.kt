@@ -73,25 +73,30 @@ class Note(val idHex: String) {
             .format(DateTimeFormatter.ofPattern("uuuu-MM-dd-HH:mm:ss"))
     }
 
-    fun replyLevelSignature(): String {
+    /**
+     * This method caches signatures during each execution to avoid recalculation in longer threads
+     */
+    fun replyLevelSignature(cachedSignatures: MutableMap<Note, String> = mutableMapOf()): String {
         val replyTo = replyTo
         if (replyTo == null || replyTo.isEmpty()) {
             return "/" + formattedDateTime(event?.createdAt ?: 0) + ";"
         }
 
         return replyTo
-            .map { it.replyLevelSignature() }
+            .map {
+                cachedSignatures[it] ?: it.replyLevelSignature(cachedSignatures).apply { cachedSignatures.put(it, this) }
+            }
             .maxBy { it.length }.removeSuffix(";") + "/" + formattedDateTime(event?.createdAt ?: 0) + ";"
     }
 
-    fun replyLevel(): Int {
+    fun replyLevel(cachedLevels: MutableMap<Note, Int> = mutableMapOf()): Int {
         val replyTo = replyTo
         if (replyTo == null || replyTo.isEmpty()) {
             return 0
         }
 
         return replyTo.maxOf {
-            it.replyLevel()
+            cachedLevels[it] ?: it.replyLevel(cachedLevels).apply { cachedLevels.put(it, this) }
         } + 1
     }
 

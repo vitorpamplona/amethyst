@@ -26,11 +26,11 @@ fun ThreadScreen(noteId: String?, accountViewModel: AccountViewModel, navControl
     val lifeCycleOwner = LocalLifecycleOwner.current
 
     if (account != null && noteId != null) {
-        ThreadFeedFilter.loadThread(noteId)
-        NostrThreadDataSource.loadThread(noteId)
         val feedViewModel: NostrThreadFeedViewModel = viewModel()
 
         LaunchedEffect(Unit) {
+            ThreadFeedFilter.loadThread(noteId)
+            NostrThreadDataSource.loadThread(noteId)
             feedViewModel.invalidateData()
         }
 
