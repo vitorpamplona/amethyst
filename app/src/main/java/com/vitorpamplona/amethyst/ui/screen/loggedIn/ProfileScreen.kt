@@ -57,7 +57,8 @@ import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
 import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowersFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowsFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.UserProfileNoteFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.UserProfileConversationsFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.UserProfileNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileZapsFeedFilter
 import com.vitorpamplona.amethyst.ui.note.UserPicture
@@ -65,7 +66,6 @@ import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import kotlinx.coroutines.launch
-import nostr.postr.toNpub
 import nostr.postr.toNsec
 
 @OptIn(ExperimentalPagerApi::class)
@@ -76,7 +76,8 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
 
     if (userId == null) return
 
-    UserProfileNoteFeedFilter.loadUserProfile(account, userId)
+    UserProfileNewThreadFeedFilter.loadUserProfile(account, userId)
+    UserProfileConversationsFeedFilter.loadUserProfile(account, userId)
     UserProfileFollowersFeedFilter.loadUserProfile(account, userId)
     UserProfileFollowsFeedFilter.loadUserProfile(account, userId)
     UserProfileZapsFeedFilter.loadUserProfile(userId)
@@ -164,62 +165,38 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                             tabsSize = it
                         }
                     ) {
-                        Tab(
-                            selected = pagerState.currentPage == 0,
-                            onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
-                            text = {
+                        val tabs = listOf<@Composable() (() -> Unit)?>(
+                            {
                                 Text(text = "Notes")
-                            }
-                        )
-
-                        Tab(
-                            selected = pagerState.currentPage == 1,
-                            onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
-                            text = {
+                            },
+                            {
+                                Text(text = "Replies")
+                            },
+                            {
                                 val userState by baseUser.live().follows.observeAsState()
                                 val userFollows = userState?.user?.follows?.size ?: "--"
 
                                 Text(text = "$userFollows Follows")
-                            }
-                        )
-
-                        Tab(
-                            selected = pagerState.currentPage == 2,
-                            onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
-                            text = {
+                            },
+                            {
                                 val userState by baseUser.live().follows.observeAsState()
                                 val userFollows = userState?.user?.followers?.size ?: "--"
 
                                 Text(text = "$userFollows Followers")
-                            }
-                        )
-
-                        Tab(
-                            selected = pagerState.currentPage == 3,
-                            onClick = { coroutineScope.launch { pagerState.animateScrollToPage(3) } },
-                            text = {
+                            },
+                            {
                                 val userState by baseUser.live().zaps.observeAsState()
                                 val userZaps = userState?.user?.zappedAmount()
 
                                 Text(text = "${showAmount(userZaps)} Zaps")
-                            }
-                        )
-
-                        Tab(
-                            selected = pagerState.currentPage == 4,
-                            onClick = { coroutineScope.launch { pagerState.animateScrollToPage(4) } },
-                            text = {
+                            },
+                            {
                                 val userState by baseUser.live().reports.observeAsState()
                                 val userReports = userState?.user?.reports?.values?.flatten()?.count()
 
                                 Text(text = "${userReports} Reports")
-                            }
-                        )
-
-                        Tab(
-                            selected = pagerState.currentPage == 5,
-                            onClick = { coroutineScope.launch { pagerState.animateScrollToPage(5) } },
-                            text = {
+                            },
+                            {
                                 val userState by baseUser.live().relays.observeAsState()
                                 val userRelaysBeingUsed =
                                     userState?.user?.relaysBeingUsed?.size ?: "--"
@@ -230,21 +207,30 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                                 Text(text = "$userRelaysBeingUsed / $userRelays Relays")
                             }
                         )
+
+                        tabs.forEachIndexed { index, function ->
+                            Tab(
+                                selected = pagerState.currentPage == index,
+                                onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
+                                text = function
+                            )
+                        }
                     }
                     HorizontalPager(
-                        count = 6,
+                        count = 7,
                         state = pagerState,
                         modifier = with(LocalDensity.current) {
                             Modifier.height((columnSize.height - tabsSize.height).toDp())
                         }
                     ) {
                         when (pagerState.currentPage) {
-                            0 -> TabNotes(baseUser, accountViewModel, navController)
-                            1 -> TabFollows(baseUser, accountViewModel, navController)
-                            2 -> TabFollowers(baseUser, accountViewModel, navController)
-                            3 -> TabReceivedZaps(baseUser, accountViewModel, navController)
-                            4 -> TabReports(baseUser, accountViewModel, navController)
-                            5 -> TabRelays(baseUser, accountViewModel, navController)
+                            0 -> TabNotesNewThreads(baseUser, accountViewModel, navController)
+                            1 -> TabNotesConversations(baseUser, accountViewModel, navController)
+                            2 -> TabFollows(baseUser, accountViewModel, navController)
+                            3 -> TabFollowers(baseUser, accountViewModel, navController)
+                            4 -> TabReceivedZaps(baseUser, accountViewModel, navController)
+                            5 -> TabReports(baseUser, accountViewModel, navController)
+                            6 -> TabRelays(baseUser, accountViewModel, navController)
                         }
                     }
                 }
@@ -465,10 +451,30 @@ private fun DrawBanner(baseUser: User) {
 }
 
 @Composable
-fun TabNotes(user: User, accountViewModel: AccountViewModel, navController: NavController) {
+fun TabNotesNewThreads(user: User, accountViewModel: AccountViewModel, navController: NavController) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     if (accountState != null) {
-        val feedViewModel: NostrUserProfileFeedViewModel = viewModel()
+        val feedViewModel: NostrUserProfileNewThreadsFeedViewModel = viewModel()
+
+        LaunchedEffect(Unit) {
+            feedViewModel.refresh()
+        }
+
+        Column(Modifier.fillMaxHeight()) {
+            Column(
+                modifier = Modifier.padding(vertical = 0.dp)
+            ) {
+                FeedView(feedViewModel, accountViewModel, navController, null)
+            }
+        }
+    }
+}
+
+@Composable
+fun TabNotesConversations(user: User, accountViewModel: AccountViewModel, navController: NavController) {
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    if (accountState != null) {
+        val feedViewModel: NostrUserProfileConversationsFeedViewModel = viewModel()
 
         LaunchedEffect(Unit) {
             feedViewModel.refresh()

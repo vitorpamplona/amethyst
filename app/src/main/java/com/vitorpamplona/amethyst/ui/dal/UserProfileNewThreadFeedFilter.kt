@@ -5,7 +5,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 
-object UserProfileNoteFeedFilter: FeedFilter<Note>() {
+object UserProfileNewThreadFeedFilter: FeedFilter<Note>() {
   var account: Account? = null
   var user: User? = null
 
@@ -16,7 +16,7 @@ object UserProfileNoteFeedFilter: FeedFilter<Note>() {
 
   override fun feed(): List<Note> {
     return user?.notes
-      ?.filter { account?.isAcceptable(it) == true }
+      ?.filter { account?.isAcceptable(it) == true && it.isNewThread() }
       ?.sortedBy { it.event?.createdAt }
       ?.reversed()
       ?: emptyList()

@@ -14,7 +14,8 @@ import com.vitorpamplona.amethyst.ui.dal.GlobalFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ThreadFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.UserProfileNoteFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.UserProfileConversationsFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.UserProfileNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
@@ -32,7 +33,8 @@ class NostrChannelFeedViewModel: FeedViewModel(ChannelFeedFilter)
 class NostrChatRoomFeedViewModel: FeedViewModel(ChatroomFeedFilter)
 class NostrGlobalFeedViewModel: FeedViewModel(GlobalFeedFilter)
 class NostrThreadFeedViewModel: FeedViewModel(ThreadFeedFilter)
-class NostrUserProfileFeedViewModel: FeedViewModel(UserProfileNoteFeedFilter)
+class NostrUserProfileNewThreadsFeedViewModel: FeedViewModel(UserProfileNewThreadFeedFilter)
+class NostrUserProfileConversationsFeedViewModel: FeedViewModel(UserProfileConversationsFeedFilter)
 class NostrUserProfileReportFeedViewModel: FeedViewModel(UserProfileReportsFeedFilter)
 class NostrChatroomListKnownFeedViewModel: FeedViewModel(ChatroomListKnownFeedFilter)
 class NostrChatroomListNewFeedViewModel: FeedViewModel(ChatroomListNewFeedFilter)
