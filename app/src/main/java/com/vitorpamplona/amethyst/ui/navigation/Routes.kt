@@ -124,7 +124,7 @@ private fun messagesHasNewItems(account: Account, cache: NotificationCache, cont
     ChatroomListKnownFeedFilter.account = account
 
     return ChatroomListKnownFeedFilter.feed().any {
-        if (it.channel == null) {
+        if (it.channel == null && it.author != account.userProfile()) {
             val lastTime = cache.load("Room/${it.author?.pubkeyHex}", context)
 
             (it.event?.createdAt ?: 0) > lastTime
