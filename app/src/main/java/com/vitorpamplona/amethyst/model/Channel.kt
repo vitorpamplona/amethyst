@@ -4,6 +4,7 @@ import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
+import com.vitorpamplona.amethyst.ui.dal.ChannelFeedFilter
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import fr.acinq.secp256k1.Hex
 import java.util.concurrent.ConcurrentHashMap
@@ -52,6 +53,23 @@ class Channel(val idHex: String) {
 
     private fun refreshObservers() {
         live.refresh()
+    }
+
+    fun pruneOldAndHiddenMessages(account: Account): Set<Note> {
+        val important = notes.values
+            .filter { it.author?.let { it1 -> account.isHidden(it1) } == false }
+            .sortedBy { it.event?.createdAt }
+            .reversed()
+            .take(1000)
+            .toSet()
+
+        val toBeRemoved = notes.values.filter { it in important }.toSet()
+
+        toBeRemoved.forEach {
+            notes.remove(it.idHex)
+        }
+
+        return toBeRemoved
     }
 }
 

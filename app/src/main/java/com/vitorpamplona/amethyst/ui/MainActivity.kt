@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui
 
+import android.content.ComponentCallbacks2
 import android.net.Uri
 import android.os.Build.VERSION.SDK_INT
 import android.os.Bundle
@@ -22,6 +23,7 @@ import coil.util.DebugLogger
 import com.vitorpamplona.amethyst.EncryptedStorage
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.decodePublicKey
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.Nip19
@@ -84,5 +86,15 @@ class MainActivity : ComponentActivity() {
     ServiceManager.pause()
 
     super.onPause()
+  }
+
+  /**
+   * Release memory when the UI becomes hidden or when system resources become low.
+   * @param level the memory-related event that was raised.
+   */
+  override fun onTrimMemory(level: Int) {
+    super.onTrimMemory(level)
+    println("Trim Memory $level")
+    ServiceManager.cleanUp()
   }
 }

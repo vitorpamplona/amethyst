@@ -544,6 +544,29 @@ object LocalCache {
     }
   }
 
+  fun cleanObservers() {
+    notes.forEach {
+      it.value.clearLive()
+    }
+
+    users.forEach {
+      it.value.clearLive()
+    }
+  }
+
+  fun pruneOldAndHiddenMessages(account: Account) {
+    channels.forEach {
+      val toBeRemoved = it.value.pruneOldAndHiddenMessages(account)
+
+      toBeRemoved.forEach {
+        notes.remove(it.idHex)
+        // Doesn't need to clean up the replies and mentions.. Too small to matter.
+      }
+
+      println("PRUNE: ${toBeRemoved.size} messages removed from ${it.value.info.name}")
+    }
+  }
+
   // Observers line up here.
   val live: LocalCacheLiveData = LocalCacheLiveData(this)
 

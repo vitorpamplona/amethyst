@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst
 
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
@@ -64,6 +65,14 @@ object ServiceManager {
     NostrUserProfileDataSource.stop()
 
     Client.disconnect()
+  }
+
+  fun cleanUp() {
+    LocalCache.cleanObservers()
+
+    account?.let {
+      LocalCache.pruneOldAndHiddenMessages(it)
+    }
   }
 
 }

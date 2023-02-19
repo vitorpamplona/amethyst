@@ -38,7 +38,7 @@ object NostrChatroomListDataSource: NostrDataSource("MailBoxFeed") {
   )
 
   fun createMyChannelsFilter() = TypedFilter(
-    types = setOf(FeedType.PUBLIC_CHATS),
+    types = FeedType.values().toSet(), // Metadata comes from any relay
       filter = JsonFilter(
       kinds = listOf(ChannelCreateEvent.kind),
       ids = account.followingChannels.toList()
@@ -48,7 +48,7 @@ object NostrChatroomListDataSource: NostrDataSource("MailBoxFeed") {
   fun createLastChannelInfoFilter(): List<TypedFilter> {
     return account.followingChannels.map {
       TypedFilter(
-        types = setOf(FeedType.PUBLIC_CHATS),
+        types = FeedType.values().toSet(), // Metadata comes from any relay
         filter = JsonFilter(
           kinds = listOf(ChannelMetadataEvent.kind),
           tags = mapOf("e" to listOf(it)),

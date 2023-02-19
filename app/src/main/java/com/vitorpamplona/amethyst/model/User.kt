@@ -363,3 +363,4 @@ class UserLiveData(val user: User): LiveData<UserState>(UserState(user)) {
 }
 
 class UserState(val user: User)
+
