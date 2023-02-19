@@ -13,8 +13,10 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import nostr.postr.events.ContactListEvent
 import nostr.postr.events.MetadataEvent
 import nostr.postr.toNpub
@@ -43,6 +45,7 @@ class User(val pubkeyHex: String) {
 
     var reports = mapOf<User, Set<Note>>()
         private set
+    var latestReportTime: Long = 0
 
     var zaps = mapOf<Note, Note?>()
         private set
@@ -139,6 +142,11 @@ class User(val pubkeyHex: String) {
         } else if (reports[author]?.contains(note) == false) {
             reports = reports + Pair(author, (reports[author] ?: emptySet()) + note)
             liveReports.invalidateData()
+        }
+
+        val reportTime = note.event?.createdAt ?: 0
+        if (reportTime > latestReportTime) {
+            latestReportTime = reportTime
         }
     }
 
