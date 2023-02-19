@@ -131,10 +131,8 @@ abstract class NostrDataSource(val debugName: String) {
 
   open fun stop() {
     subscriptions.values.forEach { channel ->
-      if (channel.typedFilters != null) {// if it is active, close
-        Client.close(channel.id)
-        channel.typedFilters = null
-      }
+      Client.close(channel.id)
+      channel.typedFilters = null
     }
   }
 
