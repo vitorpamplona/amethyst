@@ -69,6 +69,7 @@ object Client: RelayPool.Listener {
 
     fun close(subscriptionId: String) {
         RelayPool.close(subscriptionId)
+        subscriptions = subscriptions.minus(subscriptionId)
     }
 
     fun disconnect() {
