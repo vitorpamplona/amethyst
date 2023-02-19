@@ -298,9 +298,14 @@ class UserLiveData(val user: User): LiveData<UserState>(UserState(user)) {
         handlerWaiting.set(true)
         val scope = CoroutineScope(Job() + Dispatchers.Main)
         scope.launch {
-            delay(100)
-            refresh()
-            handlerWaiting.set(false)
+            try {
+                delay(100)
+                refresh()
+            } finally {
+                withContext(NonCancellable) {
+                    handlerWaiting.set(false)
+                }
+            }
         }
     }
 

@@ -22,8 +22,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import nostr.postr.Contact
 import nostr.postr.Persona
 import nostr.postr.Utils
@@ -424,9 +426,14 @@ class Account(
     handlerWaiting.set(true)
     val scope = CoroutineScope(Job() + Dispatchers.Default)
     scope.launch {
-      delay(100)
-      live.refresh()
-      handlerWaiting.set(false)
+      try {
+        delay(100)
+        live.refresh()
+      } finally {
+        withContext(NonCancellable) {
+          handlerWaiting.set(false)
+        }
+      }
     }
   }
 
