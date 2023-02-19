@@ -61,6 +61,7 @@ object ServiceManager {
     NostrSingleEventDataSource.stop()
     NostrSingleUserDataSource.stop()
     NostrThreadDataSource.stop()
+    NostrUserProfileDataSource.stop()
 
     Client.disconnect()
   }
