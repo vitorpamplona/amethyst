@@ -15,8 +15,7 @@ object NotificationFeedFilter: FeedFilter<Note>() {
 
   override fun feed(): List<Note> {
     return account.userProfile().taggedPosts
-      .filter { it.event != null }
-      .filter { account.isAcceptable(it) }
+      .filter { it.author == null || !account.isHidden(it.author!!) }
       .filter {
            it.event !is ChannelCreateEvent
         && it.event !is ChannelMetadataEvent
