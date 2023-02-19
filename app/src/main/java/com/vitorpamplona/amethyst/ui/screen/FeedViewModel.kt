@@ -15,6 +15,7 @@ import com.vitorpamplona.amethyst.ui.dal.HomeConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileNoteFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -32,6 +33,7 @@ class NostrChatRoomFeedViewModel: FeedViewModel(ChatroomFeedFilter)
 class NostrGlobalFeedViewModel: FeedViewModel(GlobalFeedFilter)
 class NostrThreadFeedViewModel: FeedViewModel(ThreadFeedFilter)
 class NostrUserProfileFeedViewModel: FeedViewModel(UserProfileNoteFeedFilter)
+class NostrUserProfileReportFeedViewModel: FeedViewModel(UserProfileReportsFeedFilter)
 class NostrChatroomListKnownFeedViewModel: FeedViewModel(ChatroomListKnownFeedFilter)
 class NostrChatroomListNewFeedViewModel: FeedViewModel(ChatroomListNewFeedFilter)
 class NostrHomeFeedViewModel: FeedViewModel(HomeNewThreadFeedFilter)
@@ -42,12 +44,11 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>): ViewModel() {
     private val _feedContent = MutableStateFlow<FeedState>(FeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
 
-    open fun newListFromDataSource(): List<Note> {
+    fun newListFromDataSource(): List<Note> {
         return localFilter.loadTop()
     }
 
     fun refresh() {
-        println("Model Refresh: ${this::class.simpleName}")
         val scope = CoroutineScope(Job() + Dispatchers.Default)
         scope.launch {
             refreshSuspended()
@@ -72,7 +73,6 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>): ViewModel() {
         val scope = CoroutineScope(Job() + Dispatchers.Main)
         scope.launch {
             val currentState = feedContent.value
-
             if (notes.isEmpty()) {
                 _feedContent.update { FeedState.Empty }
             } else if (currentState is FeedState.Loaded) {
