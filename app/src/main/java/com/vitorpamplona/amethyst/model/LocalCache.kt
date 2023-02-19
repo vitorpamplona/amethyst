@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.model
 
 import android.util.Log
+import android.util.LruCache
 import androidx.lifecycle.LiveData
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
@@ -52,6 +53,9 @@ object LocalCache {
   val users = ConcurrentHashMap<HexKey, User>()
   val notes = ConcurrentHashMap<HexKey, Note>()
   val channels = ConcurrentHashMap<HexKey, Channel>()
+
+  val recentMessages = LruCache<Int, Int>(1000)
+  val spamMessages = LruCache<Int, Int>(1000)
 
   fun checkGetOrCreateUser(key: HexKey): User? {
     return try {
@@ -118,7 +122,22 @@ object LocalCache {
       .format(DateTimeFormatter.ofPattern("uuuu MMM d hh:mm a"))
   }
 
+  fun isRepeatedMessageSpam(event: Event): Boolean {
+    // double list strategy:
+    // if duplicated, it goes into spam. 1000 spam messages are saved into the spam list.
+
+    val hash = event.content.hashCode()
+    if (event.content.length > 50 && (recentMessages[hash] != null || spamMessages[hash] != null)) {
+      spamMessages.put(hash, hash)
+      return true
+    }
+    recentMessages.put(hash, hash)
+    return false
+  }
+
   fun consume(event: TextNoteEvent, relay: Relay? = null) {
+    if (isRepeatedMessageSpam(event)) return
+
     val note = getOrCreateNote(event.id.toHex())
 
     val author = getOrCreateUser(event.pubKey.toHexKey())
@@ -403,6 +422,7 @@ object LocalCache {
 
   fun consume(event: ChannelMessageEvent, relay: Relay?) {
     if (event.channel.isNullOrBlank()) return
+    if (isRepeatedMessageSpam(event)) return
 
     val channel = getOrCreateChannel(event.channel)
 
