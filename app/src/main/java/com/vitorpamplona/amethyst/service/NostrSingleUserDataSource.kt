@@ -34,7 +34,8 @@ object NostrSingleUserDataSource: NostrDataSource("SingleUserFeed") {
         types = FeedType.values().toSet(),
         filter = JsonFilter(
           kinds = listOf(ReportEvent.kind),
-          tags = mapOf("p" to listOf(it))
+          tags = mapOf("p" to listOf(it)),
+          since = LocalCache.users[it]?.latestReportTime
         )
       )
     }
@@ -46,8 +47,11 @@ object NostrSingleUserDataSource: NostrDataSource("SingleUserFeed") {
     invalidateFilters()
   }
 
+  val userChannelOnce = requestNewChannel()
+
   override fun updateChannelFilters() {
-    userChannel.typedFilters = listOfNotNull(createUserFilter(), createUserReportFilter()).flatten()
+    userChannel.typedFilters = listOfNotNull(createUserFilter()).flatten().ifEmpty { null }
+    userChannelOnce.typedFilters = listOfNotNull(createUserReportFilter()).flatten().ifEmpty { null }
   }
 
   fun add(userId: String) {
