@@ -95,12 +95,12 @@ fun TabKnown(accountViewModel: AccountViewModel, navController: NavController) {
     DisposableEffect(accountViewModel) {
         val observer = LifecycleEventObserver { source, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                println("Global Start")
+                println("Chatroom List Start")
                 NostrChatroomListDataSource.start()
                 feedViewModel.invalidateData()
             }
             if (event == Lifecycle.Event.ON_PAUSE) {
-                println("Global Stop")
+                println("Chatroom List Stop")
                 NostrChatroomListDataSource.stop()
             }
         }
@@ -137,12 +137,12 @@ fun TabNew(accountViewModel: AccountViewModel, navController: NavController) {
     DisposableEffect(accountViewModel) {
         val observer = LifecycleEventObserver { source, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                println("Global Start")
+                println("Chatroom List Start")
                 NostrChatroomListDataSource.start()
                 feedViewModel.invalidateData()
             }
             if (event == Lifecycle.Event.ON_PAUSE) {
-                println("Global Stop")
+                println("Chatroom List Stop")
                 NostrChatroomListDataSource.stop()
             }
         }

@@ -59,13 +59,13 @@ fun HomeScreen(accountViewModel: AccountViewModel, navController: NavController)
     DisposableEffect(accountViewModel) {
         val observer = LifecycleEventObserver { source, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                println("Global Start")
+                println("Home Start")
                 NostrHomeDataSource.start()
                 feedViewModel.invalidateData()
                 feedViewModelReplies.invalidateData()
             }
             if (event == Lifecycle.Event.ON_PAUSE) {
-                println("Global Stop")
+                println("Home Stop")
                 NostrHomeDataSource.stop()
             }
         }
