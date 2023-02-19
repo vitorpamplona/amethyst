@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowersFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileNoteFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileZapsFeedFilter
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.showAmount
@@ -79,6 +80,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
     UserProfileFollowersFeedFilter.loadUserProfile(account, userId)
     UserProfileFollowsFeedFilter.loadUserProfile(account, userId)
     UserProfileZapsFeedFilter.loadUserProfile(userId)
+    UserProfileReportsFeedFilter.loadUserProfile(userId)
 
     NostrUserProfileDataSource.loadUserProfile(userId)
 
@@ -101,6 +103,9 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
         lifeCycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifeCycleOwner.lifecycle.removeObserver(observer)
+            println("Profile Dispose")
+            NostrUserProfileDataSource.loadUserProfile(null)
+            NostrUserProfileDataSource.stop()
         }
     }
 
@@ -204,6 +209,17 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                             selected = pagerState.currentPage == 4,
                             onClick = { coroutineScope.launch { pagerState.animateScrollToPage(4) } },
                             text = {
+                                val userState by baseUser.liveReports.observeAsState()
+                                val userReports = userState?.user?.reports?.values?.flatten()?.count()
+
+                                Text(text = "${userReports} Reports")
+                            }
+                        )
+
+                        Tab(
+                            selected = pagerState.currentPage == 5,
+                            onClick = { coroutineScope.launch { pagerState.animateScrollToPage(5) } },
+                            text = {
                                 val userState by baseUser.liveRelays.observeAsState()
                                 val userRelaysBeingUsed =
                                     userState?.user?.relaysBeingUsed?.size ?: "--"
@@ -216,7 +232,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                         )
                     }
                     HorizontalPager(
-                        count = 5,
+                        count = 6,
                         state = pagerState,
                         modifier = with(LocalDensity.current) {
                             Modifier.height((columnSize.height - tabsSize.height).toDp())
@@ -227,7 +243,8 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                             1 -> TabFollows(baseUser, accountViewModel, navController)
                             2 -> TabFollowers(baseUser, accountViewModel, navController)
                             3 -> TabReceivedZaps(baseUser, accountViewModel, navController)
-                            4 -> TabRelays(baseUser, accountViewModel, navController)
+                            4 -> TabReports(baseUser, accountViewModel, navController)
+                            5 -> TabRelays(baseUser, accountViewModel, navController)
                         }
                     }
                 }
@@ -510,6 +527,26 @@ fun TabReceivedZaps(user: User, accountViewModel: AccountViewModel, navControlle
                 modifier = Modifier.padding(vertical = 0.dp)
             ) {
                 LnZapFeedView(feedViewModel, accountViewModel, navController)
+            }
+        }
+    }
+}
+
+@Composable
+fun TabReports(user: User, accountViewModel: AccountViewModel, navController: NavController) {
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    if (accountState != null) {
+        val feedViewModel: NostrUserProfileReportFeedViewModel = viewModel()
+
+        LaunchedEffect(Unit) {
+            feedViewModel.refresh()
+        }
+
+        Column(Modifier.fillMaxHeight()) {
+            Column(
+                modifier = Modifier.padding(vertical = 0.dp)
+            ) {
+                FeedView(feedViewModel, accountViewModel, navController, null)
             }
         }
     }

@@ -105,8 +105,9 @@ fun NoteCompose(
 
     var moreActionsExpanded by remember { mutableStateOf(false) }
 
+    val noteEvent = note?.event
 
-    if (note?.event == null) {
+    if (noteEvent == null) {
         BlankNote(modifier.combinedClickable(
             onClick = {  },
             onLongClick = { popupExpanded = true },
@@ -127,7 +128,7 @@ fun NoteCompose(
             routeForLastRead?.let {
                 val lastTime = NotificationCache.load(it, context)
 
-                val createdAt = note.event?.createdAt
+                val createdAt = noteEvent.createdAt
                 if (createdAt != null) {
                     NotificationCache.markAsRead(it, createdAt, context)
                     isNew = createdAt > lastTime
@@ -138,7 +139,7 @@ fun NoteCompose(
         Column(modifier =
             modifier.combinedClickable(
                 onClick = {
-                    if (note.event !is ChannelMessageEvent) {
+                    if (noteEvent !is ChannelMessageEvent) {
                         navController.navigate("Note/${note.idHex}"){
                             launchSingleTop = true
                         }
@@ -174,7 +175,7 @@ fun NoteCompose(
 
                             NoteAuthorPicture(note, navController, account.userProfile(), 55.dp)
 
-                            if (note.event is RepostEvent) {
+                            if (noteEvent is RepostEvent) {
                                 note.replyTo?.lastOrNull()?.let {
                                     Box(
                                         Modifier
@@ -190,7 +191,7 @@ fun NoteCompose(
 
                             // boosted picture
                             val baseChannel = note.channel
-                            if (note.event is ChannelMessageEvent && baseChannel != null) {
+                            if (noteEvent is ChannelMessageEvent && baseChannel != null) {
                                 val channelState by baseChannel.live.observeAsState()
                                 val channel = channelState?.channel
 
@@ -222,7 +223,7 @@ fun NoteCompose(
                             }
                         }
 
-                        if (note.event is RepostEvent) {
+                        if (noteEvent is RepostEvent) {
                             note.replyTo?.lastOrNull()?.let {
                                 RelayBadges(it)
                             }
@@ -236,9 +237,9 @@ fun NoteCompose(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         NoteUsernameDisplay(note, Modifier.weight(1f))
 
-                        if (note.event !is RepostEvent) {
+                        if (noteEvent !is RepostEvent) {
                             Text(
-                                timeAgo(note.event?.createdAt),
+                                timeAgo(noteEvent.createdAt),
                                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                                 maxLines = 1
                             )
@@ -265,15 +266,15 @@ fun NoteCompose(
                         }
                     }
 
-                    if (note.event is TextNoteEvent && (note.replyTo != null || note.mentions != null)) {
+                    if (noteEvent is TextNoteEvent && (note.replyTo != null || note.mentions != null)) {
                         ReplyInformation(note.replyTo, note.mentions, navController)
-                    } else if (note.event is ChannelMessageEvent && (note.replyTo != null || note.mentions != null)) {
+                    } else if (noteEvent is ChannelMessageEvent && (note.replyTo != null || note.mentions != null)) {
                         note.channel?.let {
                             ReplyInformationChannel(note.replyTo, note.mentions, it, navController)
                         }
                     }
 
-                    if (note.event is ReactionEvent || note.event is RepostEvent) {
+                    if (noteEvent is ReactionEvent || noteEvent is RepostEvent) {
                         note.replyTo?.lastOrNull()?.let {
                             NoteCompose(
                                 it,
@@ -285,16 +286,35 @@ fun NoteCompose(
                         }
 
                         // Reposts have trash in their contents.
-                        if (note.event is ReactionEvent) {
+                        if (noteEvent is ReactionEvent) {
                             val refactorReactionText =
-                                if (note.event?.content == "+") "❤" else note.event?.content ?: " "
+                                if (noteEvent.content == "+") "❤" else noteEvent.content ?: " "
 
                             Text(
                                 text = refactorReactionText
                             )
                         }
+                    } else if (noteEvent is ReportEvent) {
+                        val reportType = noteEvent.reportType.map {
+                            when (it) {
+                                ReportEvent.ReportType.EXPLICIT -> "Explicit Content"
+                                ReportEvent.ReportType.SPAM -> "Spam"
+                                ReportEvent.ReportType.IMPERSONATION -> "Impersonation"
+                                ReportEvent.ReportType.ILLEGAL -> "Illegal Behavior"
+                                else -> "Unkown"
+                            }
+                        }.joinToString(", ")
+
+                        Text(
+                            text = reportType
+                        )
+
+                        Divider(
+                            modifier = Modifier.padding(top = 10.dp),
+                            thickness = 0.25.dp
+                        )
                     } else {
-                        val eventContent = note.event?.content
+                        val eventContent = noteEvent.content
                         val canPreview = note.author == account.userProfile()
                           || (note.author?.let { account.userProfile().isFollowing(it) } ?: true )
                           || !noteForReports.hasAnyReports()
@@ -303,7 +323,7 @@ fun NoteCompose(
                             TranslateableRichTextViewer(
                                 eventContent,
                                 canPreview,
-                                note.event?.tags,
+                                noteEvent.tags,
                                 accountViewModel,
                                 navController
                             )
