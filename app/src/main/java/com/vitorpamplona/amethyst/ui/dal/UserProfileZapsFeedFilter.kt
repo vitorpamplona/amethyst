@@ -9,7 +9,7 @@ object UserProfileZapsFeedFilter: FeedFilter<Pair<Note,Note>>() {
   var user: User? = null
 
   fun loadUserProfile(userId: String) {
-    user = LocalCache.getOrCreateUser(userId)
+    user = LocalCache.checkGetOrCreateUser(userId)
   }
 
   override fun feed(): List<Pair<Note,Note>> {

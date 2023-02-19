@@ -14,7 +14,7 @@ import com.vitorpamplona.amethyst.model.User
 
 @Composable
 fun NoteUsernameDisplay(baseNote: Note, weight: Modifier = Modifier) {
-  val noteState by baseNote.live.observeAsState()
+  val noteState by baseNote.live().metadata.observeAsState()
   val note = noteState?.note ?: return
 
   val author = note.author
@@ -26,7 +26,7 @@ fun NoteUsernameDisplay(baseNote: Note, weight: Modifier = Modifier) {
 
 @Composable
 fun UsernameDisplay(baseUser: User, weight: Modifier = Modifier) {
-  val userState by baseUser.liveMetadata.observeAsState()
+  val userState by baseUser.live().metadata.observeAsState()
   val user = userState?.user ?: return
 
   if (user.bestUsername() != null || user.bestDisplayName() != null) {
@@ -53,7 +53,7 @@ fun UsernameDisplay(baseUser: User, weight: Modifier = Modifier) {
     }
   } else {
     Text(
-      user.pubkeyDisplayHex,
+      user.pubkeyDisplayHex(),
       fontWeight = FontWeight.Bold,
       maxLines = 1,
       overflow = TextOverflow.Ellipsis,

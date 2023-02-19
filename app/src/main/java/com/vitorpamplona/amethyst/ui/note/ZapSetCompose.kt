@@ -20,22 +20,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.screen.LikeSetCard
 import com.vitorpamplona.amethyst.ui.screen.ZapSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 
 @Composable
 fun ZapSetCompose(zapSetCard: ZapSetCard, modifier: Modifier = Modifier, isInnerNote: Boolean = false, routeForLastRead: String, accountViewModel: AccountViewModel, navController: NavController) {
-    val noteState by zapSetCard.note.live.observeAsState()
+    val noteState by zapSetCard.note.live().metadata.observeAsState()
     val note = noteState?.note
 
     val accountState by accountViewModel.accountLiveData.observeAsState()

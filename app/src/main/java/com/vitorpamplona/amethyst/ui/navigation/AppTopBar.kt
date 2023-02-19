@@ -78,7 +78,7 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
-    val accountUserState by account.userProfile().liveMetadata.observeAsState()
+    val accountUserState by account.userProfile().live().metadata.observeAsState()
     val accountUser = accountUserState?.user ?: return
 
     val relayViewModel: RelayPoolViewModel = viewModel { RelayPoolViewModel() }
@@ -149,7 +149,7 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
                                     println("Image Memory Cache ${(imageLoader.memoryCache?.size ?: 0)/(1024*1024)}/${(imageLoader.memoryCache?.maxSize ?: 0)/(1024*1024)} MB")
 
                                     println("Notes: " + LocalCache.notes.filter { it.value.event != null }.size +"/"+ LocalCache.notes.size)
-                                    println("Users: " + LocalCache.users.filter { it.value.latestMetadata != null }.size +"/"+ LocalCache.users.size)
+                                    println("Users: " + LocalCache.users.filter { it.value.info?.latestMetadata != null }.size +"/"+ LocalCache.users.size)
                                 }
                             ) {
                                 Icon(

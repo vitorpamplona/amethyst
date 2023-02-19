@@ -19,6 +19,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import com.vitorpamplona.amethyst.model.RelayInfo
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
@@ -35,9 +36,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class RelayFeedViewModel: ViewModel() {
-    val order = compareByDescending<User.RelayInfo> { it.lastEvent }.thenByDescending { it.counter }.thenBy { it.url }
+    val order = compareByDescending<RelayInfo> { it.lastEvent }.thenByDescending { it.counter }.thenBy { it.url }
 
-    private val _feedContent = MutableStateFlow<List<User.RelayInfo>>(emptyList())
+    private val _feedContent = MutableStateFlow<List<RelayInfo>>(emptyList())
     val feedContent = _feedContent.asStateFlow()
 
     var currentUser: User? = null
@@ -49,7 +50,7 @@ class RelayFeedViewModel: ViewModel() {
 
             val newRelaysFromRecord = currentUser?.relays?.entries?.mapNotNull {
                 if (it.key !in beingUsedSet) {
-                    User.RelayInfo(it.key, 0, 0)
+                    RelayInfo(it.key, 0, 0)
                 } else {
                     null
                 }
@@ -67,14 +68,14 @@ class RelayFeedViewModel: ViewModel() {
 
     fun subscribeTo(user: User) {
         currentUser = user
-        user.liveRelays.observeForever(listener)
-        user.liveRelayInfo.observeForever(listener)
+        user.live().relays.observeForever(listener)
+        user.live().relayInfo.observeForever(listener)
         invalidateData()
     }
 
     fun unsubscribeTo(user: User) {
-        user.liveRelays.removeObserver(listener)
-        user.liveRelayInfo.removeObserver(listener)
+        user.live().relays.removeObserver(listener)
+        user.live().relayInfo.removeObserver(listener)
         currentUser = null
     }
 

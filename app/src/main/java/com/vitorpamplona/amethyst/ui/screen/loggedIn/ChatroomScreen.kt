@@ -162,7 +162,7 @@ fun ChatroomHeader(baseUser: User, accountViewModel: AccountViewModel, navContro
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
 
-                val authorState by baseUser.liveMetadata.observeAsState()
+                val authorState by baseUser.live().metadata.observeAsState()
                 val author = authorState?.user!!
 
                 AsyncImageProxy(

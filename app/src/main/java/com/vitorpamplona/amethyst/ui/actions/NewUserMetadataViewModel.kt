@@ -29,19 +29,19 @@ class NewUserMetadataViewModel: ViewModel() {
         account.userProfile().let {
             userName.value = it.bestUsername() ?: ""
             displayName.value = it.bestDisplayName() ?: ""
-            about.value = it.info.about ?: ""
-            picture.value = it.info.picture ?: ""
-            banner.value = it.info.banner ?: ""
-            website.value = it.info.website ?: ""
-            nip05.value = it.info.nip05 ?: ""
-            lnAddress.value = it.info.lud16 ?: ""
-            lnURL.value = it.info.lud06 ?: ""
+            about.value = it.info?.about ?: ""
+            picture.value = it.info?.picture ?: ""
+            banner.value = it.info?.banner ?: ""
+            website.value = it.info?.website ?: ""
+            nip05.value = it.info?.nip05 ?: ""
+            lnAddress.value = it.info?.lud16 ?: ""
+            lnURL.value = it.info?.lud06 ?: ""
         }
     }
 
     fun create() {
         // Tries to not delete any existing attribute that we do not work with.
-        val latest = account.userProfile().latestMetadata
+        val latest = account.userProfile().info?.latestMetadata
         val currentJson = if (latest != null) {
             ObjectMapper().readTree(
                 ByteArrayInputStream(latest.content.toByteArray(Charsets.UTF_8))

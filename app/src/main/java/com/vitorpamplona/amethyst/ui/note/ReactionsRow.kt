@@ -53,16 +53,16 @@ fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel) {
   val accountState by accountViewModel.accountLiveData.observeAsState()
   val account = accountState?.account ?: return
 
-  val reactionsState by baseNote.liveReactions.observeAsState()
+  val reactionsState by baseNote.live().reactions.observeAsState()
   val reactedNote = reactionsState?.note
 
-  val boostsState by baseNote.liveBoosts.observeAsState()
+  val boostsState by baseNote.live().boosts.observeAsState()
   val boostedNote = boostsState?.note
 
-  val zapsState by baseNote.liveZaps.observeAsState()
+  val zapsState by baseNote.live().zaps.observeAsState()
   val zappedNote = zapsState?.note
 
-  val repliesState by baseNote.liveReplies.observeAsState()
+  val repliesState by baseNote.live().replies.observeAsState()
   val replies = repliesState?.note?.replies ?: emptySet()
 
   val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)

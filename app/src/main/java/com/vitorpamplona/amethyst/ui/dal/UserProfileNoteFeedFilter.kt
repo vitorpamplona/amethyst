@@ -6,17 +6,17 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 
 object UserProfileNoteFeedFilter: FeedFilter<Note>() {
-  lateinit var account: Account
+  var account: Account? = null
   var user: User? = null
 
   fun loadUserProfile(accountLoggedIn: Account, userId: String) {
     account = accountLoggedIn
-    user = LocalCache.getOrCreateUser(userId)
+    user = LocalCache.checkGetOrCreateUser(userId)
   }
 
   override fun feed(): List<Note> {
     return user?.notes
-      ?.filter { account.isAcceptable(it) }
+      ?.filter { account?.isAcceptable(it) == true }
       ?.sortedBy { it.event?.createdAt }
       ?.reversed()
       ?: emptyList()

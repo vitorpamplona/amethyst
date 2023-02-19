@@ -271,7 +271,7 @@ private fun NoteCopyButton(
             expanded = popupExpanded,
             onDismissRequest = { popupExpanded = false }
         ) {
-            DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(note.id.toNote())); popupExpanded = false }) {
+            DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(note.idNote())); popupExpanded = false }) {
                 Text("Copy Channel ID (Note) to the Clipboard")
             }
         }

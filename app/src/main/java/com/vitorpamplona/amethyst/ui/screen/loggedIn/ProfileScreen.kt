@@ -176,7 +176,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                             selected = pagerState.currentPage == 1,
                             onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
                             text = {
-                                val userState by baseUser.liveFollows.observeAsState()
+                                val userState by baseUser.live().follows.observeAsState()
                                 val userFollows = userState?.user?.follows?.size ?: "--"
 
                                 Text(text = "$userFollows Follows")
@@ -187,7 +187,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                             selected = pagerState.currentPage == 2,
                             onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
                             text = {
-                                val userState by baseUser.liveFollows.observeAsState()
+                                val userState by baseUser.live().follows.observeAsState()
                                 val userFollows = userState?.user?.followers?.size ?: "--"
 
                                 Text(text = "$userFollows Followers")
@@ -198,7 +198,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                             selected = pagerState.currentPage == 3,
                             onClick = { coroutineScope.launch { pagerState.animateScrollToPage(3) } },
                             text = {
-                                val userState by baseUser.liveZaps.observeAsState()
+                                val userState by baseUser.live().zaps.observeAsState()
                                 val userZaps = userState?.user?.zappedAmount()
 
                                 Text(text = "${showAmount(userZaps)} Zaps")
@@ -209,7 +209,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                             selected = pagerState.currentPage == 4,
                             onClick = { coroutineScope.launch { pagerState.animateScrollToPage(4) } },
                             text = {
-                                val userState by baseUser.liveReports.observeAsState()
+                                val userState by baseUser.live().reports.observeAsState()
                                 val userReports = userState?.user?.reports?.values?.flatten()?.count()
 
                                 Text(text = "${userReports} Reports")
@@ -220,11 +220,11 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                             selected = pagerState.currentPage == 5,
                             onClick = { coroutineScope.launch { pagerState.animateScrollToPage(5) } },
                             text = {
-                                val userState by baseUser.liveRelays.observeAsState()
+                                val userState by baseUser.live().relays.observeAsState()
                                 val userRelaysBeingUsed =
                                     userState?.user?.relaysBeingUsed?.size ?: "--"
 
-                                val userStateRelayInfo by baseUser.liveRelayInfo.observeAsState()
+                                val userStateRelayInfo by baseUser.live().relayInfo.observeAsState()
                                 val userRelays = userStateRelayInfo?.user?.relays?.size ?: "--"
 
                                 Text(text = "$userRelaysBeingUsed / $userRelays Relays")
@@ -263,7 +263,7 @@ private fun ProfileHeader(
     val ctx = LocalContext.current.applicationContext
     var popupExpanded by remember { mutableStateOf(false) }
 
-    val accountUserState by account.userProfile().liveFollows.observeAsState()
+    val accountUserState by account.userProfile().live().follows.observeAsState()
     val accountUser = accountUserState?.user ?: return
 
     Box {
@@ -357,24 +357,28 @@ private fun ProfileHeader(
 
 @Composable
 private fun DrawAdditionalInfo(baseUser: User, account: Account) {
-    val userState by baseUser.liveMetadata.observeAsState()
+    val userState by baseUser.live().metadata.observeAsState()
     val user = userState?.user ?: return
 
     val uri = LocalUriHandler.current
 
-    Text(
-        user.bestDisplayName() ?: "",
-        modifier = Modifier.padding(top = 7.dp),
-        fontWeight = FontWeight.Bold,
-        fontSize = 25.sp
-    )
-    Text(
-        "@${user.bestUsername()}",
-        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-        modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp)
-    )
+    user.bestDisplayName()?.let {
+        Text( "$it",
+            modifier = Modifier.padding(top = 7.dp),
+            fontWeight = FontWeight.Bold,
+            fontSize = 25.sp
+        )
+    }
 
-    val website = user.info.website
+    user.bestUsername()?.let {
+        Text(
+            "@$it",
+            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+            modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp)
+        )
+    }
+
+    val website = user.info?.website
     if (!website.isNullOrEmpty()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
@@ -386,7 +390,7 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account) {
 
             ClickableText(
                 text = AnnotatedString(website.removePrefix("https://")),
-                onClick = { user.info.website?.let { runCatching { uri.openUri(it) } } },
+                onClick = { website.let { runCatching { uri.openUri(it) } } },
                 style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary),
                 modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp)
             )
@@ -395,7 +399,7 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account) {
 
     var ZapExpanded by remember { mutableStateOf(false) }
 
-    val lud16 = user.info.lud16?.trim()
+    val lud16 = user.info?.lud16?.trim()
 
     if (!lud16.isNullOrEmpty()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -423,19 +427,21 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account) {
         }
     }
 
-    Text(
-        "${user.info.about}",
-        color = MaterialTheme.colors.onSurface,
-        modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)
-    )
+    user.info?.about?.let {
+        Text(
+            "$it",
+            color = MaterialTheme.colors.onSurface,
+            modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)
+        )
+    }
 }
 
 @Composable
 private fun DrawBanner(baseUser: User) {
-    val userState by baseUser.liveMetadata.observeAsState()
+    val userState by baseUser.live().metadata.observeAsState()
     val user = userState?.user ?: return
 
-    val banner = user.info.banner
+    val banner = user.info?.banner
 
     if (banner != null && banner.isNotBlank()) {
         AsyncImageProxy(
@@ -632,7 +638,7 @@ private fun NPubCopyButton(
             expanded = popupExpanded,
             onDismissRequest = { popupExpanded = false }
         ) {
-            DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(user.pubkey.toNpub())); popupExpanded = false }) {
+            DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(user.pubkeyNpub())); popupExpanded = false }) {
                 Text("Copy Public Key (NPub) to the Clipboard")
             }
         }
@@ -750,7 +756,7 @@ fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () ->
         expanded = popupExpanded,
         onDismissRequest = onDismiss
     ) {
-        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(user.pubkey.toNpub())); onDismiss() }) {
+        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(user.pubkeyNpub())); onDismiss() }) {
             Text("Copy User ID")
         }
 

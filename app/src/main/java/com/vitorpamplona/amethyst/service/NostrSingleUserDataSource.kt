@@ -9,17 +9,17 @@ import nostr.postr.JsonFilter
 import nostr.postr.events.MetadataEvent
 
 object NostrSingleUserDataSource: NostrDataSource("SingleUserFeed") {
-  var usersToWatch = setOf<String>()
+  var usersToWatch = setOf<User>()
 
   fun createUserFilter(): List<TypedFilter>? {
     if (usersToWatch.isEmpty()) return null
 
-    return usersToWatch.filter { LocalCache.getOrCreateUser(it).latestMetadata == null }.map {
+    return usersToWatch.filter { it.info?.latestMetadata == null }.map {
       TypedFilter(
         types = FeedType.values().toSet(),
         filter = JsonFilter(
           kinds = listOf(MetadataEvent.kind),
-          authors = listOf(it),
+          authors = listOf(it.pubkeyHex),
           limit = 1
         )
       )
@@ -34,8 +34,8 @@ object NostrSingleUserDataSource: NostrDataSource("SingleUserFeed") {
         types = FeedType.values().toSet(),
         filter = JsonFilter(
           kinds = listOf(ReportEvent.kind),
-          tags = mapOf("p" to listOf(it)),
-          since = LocalCache.users[it]?.latestReportTime
+          tags = mapOf("p" to listOf(it.pubkeyHex)),
+          since = it.latestReportTime
         )
       )
     }
@@ -54,13 +54,13 @@ object NostrSingleUserDataSource: NostrDataSource("SingleUserFeed") {
     userChannelOnce.typedFilters = listOfNotNull(createUserReportFilter()).flatten().ifEmpty { null }
   }
 
-  fun add(userId: String) {
-    usersToWatch = usersToWatch.plus(userId)
+  fun add(user: User) {
+    usersToWatch = usersToWatch.plus(user)
     invalidateFilters()
   }
 
-  fun remove(userId: String) {
-    usersToWatch = usersToWatch.minus(userId)
+  fun remove(user: User) {
+    usersToWatch = usersToWatch.minus(user)
     invalidateFilters()
   }
 }

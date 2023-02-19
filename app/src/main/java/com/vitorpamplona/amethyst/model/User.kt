@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.model
 
-import android.util.Log
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
@@ -22,16 +21,10 @@ import nostr.postr.events.MetadataEvent
 import nostr.postr.toNpub
 
 class User(val pubkeyHex: String) {
-    val pubkey = Hex.decode(pubkeyHex)
-    val pubkeyDisplayHex = pubkey.toNpub().toShortenHex()
+    var info: UserMetadata? = null
 
-    var info = UserMetadata()
-
-    var updatedMetadataAt: Long = 0;
     var updatedFollowsAt: Long = 0;
-
     var latestContactList: ContactListEvent? = null
-    var latestMetadata: MetadataEvent? = null
 
     var follows = setOf<User>()
         private set
@@ -56,44 +49,44 @@ class User(val pubkeyHex: String) {
     var relaysBeingUsed = mapOf<String, RelayInfo>()
         private set
 
-    data class Chatroom(var roomMessages: Set<Note>)
-
     var privateChatrooms = mapOf<User, Chatroom>()
         private set
 
-    var latestReportRequestEOSE: Long? = null
+    fun pubkey() = Hex.decode(pubkeyHex)
+    fun pubkeyNpub() = pubkey().toNpub()
+    fun pubkeyDisplayHex() = pubkeyNpub().toShortenHex()
 
     fun toBestDisplayName(): String {
-        return bestDisplayName() ?: bestUsername() ?: pubkeyDisplayHex
+        return bestDisplayName() ?: bestUsername() ?: pubkeyDisplayHex()
     }
 
     fun bestUsername(): String? {
-        return info.name?.ifBlank { null } ?: info.username?.ifBlank { null }
+        return info?.name?.ifBlank { null } ?: info?.username?.ifBlank { null }
     }
 
     fun bestDisplayName(): String? {
-        return info.displayName?.ifBlank { null } ?: info.display_name?.ifBlank { null }
+        return info?.displayName?.ifBlank { null } ?: info?.display_name?.ifBlank { null }
     }
 
     fun profilePicture(): String? {
-        if (info.picture.isNullOrBlank()) info.picture = null
-        return info.picture
+        if (info?.picture.isNullOrBlank()) info?.picture = null
+        return info?.picture
     }
 
     fun follow(user: User, followedAt: Long) {
         follows = follows + user
         user.followers = user.followers + this
 
-        liveFollows.invalidateData()
-        user.liveFollows.invalidateData()
+        liveSet?.follows?.invalidateData()
+        user.liveSet?.follows?.invalidateData()
     }
 
     fun unfollow(user: User) {
         follows = follows - user
         user.followers = user.followers - this
 
-        liveFollows.invalidateData()
-        user.liveFollows.invalidateData()
+        liveSet?.follows?.invalidateData()
+        user.liveSet?.follows?.invalidateData()
     }
 
     fun follow(users: Set<User>, followedAt: Long) {
@@ -101,11 +94,11 @@ class User(val pubkeyHex: String) {
         users.forEach {
             if (this !in it.followers) {
                 it.followers = it.followers + this
-                it.liveFollows.invalidateData()
+                it.liveSet?.follows?.invalidateData()
             }
         }
 
-        liveFollows.invalidateData()
+        liveSet?.follows?.invalidateData()
     }
 
     fun unfollow(users: Set<User>) {
@@ -113,10 +106,10 @@ class User(val pubkeyHex: String) {
         users.forEach {
             if (this in it.followers) {
                 it.followers = it.followers - this
-                it.liveFollows.invalidateData()
+                it.liveSet?.follows?.invalidateData()
             }
         }
-        liveFollows.invalidateData()
+        liveSet?.follows?.invalidateData()
     }
 
     fun addTaggedPost(note: Note) {
@@ -138,10 +131,10 @@ class User(val pubkeyHex: String) {
 
         if (author !in reports.keys) {
             reports = reports + Pair(author, setOf(note))
-            liveReports.invalidateData()
+            liveSet?.reports?.invalidateData()
         } else if (reports[author]?.contains(note) == false) {
             reports = reports + Pair(author, (reports[author] ?: emptySet()) + note)
-            liveReports.invalidateData()
+            liveSet?.reports?.invalidateData()
         }
 
         val reportTime = note.event?.createdAt ?: 0
@@ -153,10 +146,10 @@ class User(val pubkeyHex: String) {
     fun addZap(zapRequest: Note, zap: Note?) {
         if (zapRequest !in zaps.keys) {
             zaps = zaps + Pair(zapRequest, zap)
-            liveZaps.invalidateData()
+            liveSet?.zaps?.invalidateData()
         } else if (zapRequest in zaps.keys && zaps[zapRequest] == null) {
             zaps = zaps + Pair(zapRequest, zap)
-            liveZaps.invalidateData()
+            liveSet?.zaps?.invalidateData()
         }
     }
 
@@ -195,15 +188,9 @@ class User(val pubkeyHex: String) {
         val privateChatroom = getOrCreatePrivateChatroom(user)
         if (msg !in privateChatroom.roomMessages) {
             privateChatroom.roomMessages = privateChatroom.roomMessages + msg
-            liveMessages.invalidateData()
+            liveSet?.messages?.invalidateData()
         }
     }
-
-    data class RelayInfo (
-        val url: String,
-        var lastEvent: Long,
-        var counter: Long
-    )
 
     fun addRelay(relay: Relay, eventTime: Long) {
         val here = relaysBeingUsed[relay.url]
@@ -216,7 +203,7 @@ class User(val pubkeyHex: String) {
             here.counter++
         }
 
-        liveRelayInfo.invalidateData()
+        liveSet?.relayInfo?.invalidateData()
     }
     
     fun updateFollows(newFollows: Set<User>, updateAt: Long) {
@@ -232,14 +219,15 @@ class User(val pubkeyHex: String) {
     fun updateRelays(relayUse: Map<String, ContactListEvent.ReadWrite>) {
         // no need to test if relays are different. The Account will check for us.
         relays = relayUse
-        liveRelays.invalidateData()
+        liveSet?.relays?.invalidateData()
     }
 
-    fun updateUserInfo(newUserInfo: UserMetadata, updateAt: Long) {
+    fun updateUserInfo(newUserInfo: UserMetadata, latestMetadata: MetadataEvent) {
         info = newUserInfo
-        updatedMetadataAt = updateAt
+        info?.latestMetadata = latestMetadata
+        info?.updatedMetadataAt = latestMetadata.createdAt
 
-        liveMetadata.invalidateData()
+        liveSet?.metadata?.invalidateData()
     }
 
     fun isFollowing(user: User): Boolean {
@@ -258,15 +246,54 @@ class User(val pubkeyHex: String) {
         } != null
     }
 
-    // UI Observers line up here.
-    val liveFollows: UserLiveData = UserLiveData(this)
-    val liveReports: UserLiveData = UserLiveData(this)
-    val liveMessages: UserLiveData = UserLiveData(this)
-    val liveRelays: UserLiveData = UserLiveData(this)
-    val liveRelayInfo: UserLiveData = UserLiveData(this)
-    val liveMetadata: UserLiveData = UserLiveData(this)
-    val liveZaps: UserLiveData = UserLiveData(this)
+    fun anyNameStartsWith(username: String): Boolean {
+        return info?.anyNameStartsWith(username) ?: false
+    }
+
+    var liveSet: UserLiveSet? = null
+
+    fun live(): UserLiveSet {
+        if (liveSet == null) {
+            liveSet = UserLiveSet(this)
+        }
+        return liveSet!!
+    }
+
+    fun clearLive() {
+        if (liveSet != null && liveSet?.isInUse() == true) {
+            liveSet = null
+        }
+    }
 }
+
+class UserLiveSet(u: User) {
+    // UI Observers line up here.
+    val follows: UserLiveData = UserLiveData(u)
+    val reports: UserLiveData = UserLiveData(u)
+    val messages: UserLiveData = UserLiveData(u)
+    val relays: UserLiveData = UserLiveData(u)
+    val relayInfo: UserLiveData = UserLiveData(u)
+    val metadata: UserLiveData = UserLiveData(u)
+    val zaps: UserLiveData = UserLiveData(u)
+
+    fun isInUse(): Boolean {
+        return follows.hasObservers()
+          || reports.hasObservers()
+          || messages.hasObservers()
+          || relays.hasObservers()
+          || relayInfo.hasObservers()
+          || metadata.hasObservers()
+          || zaps.hasObservers()
+    }
+}
+
+data class RelayInfo (
+    val url: String,
+    var lastEvent: Long,
+    var counter: Long
+)
+
+data class Chatroom(var roomMessages: Set<Note>)
 
 class UserMetadata {
     var name: String? = null
@@ -286,6 +313,9 @@ class UserMetadata {
     var iris: String? = null
     var main_relay: String? = null
     var twitter: String? = null
+
+    var updatedMetadataAt: Long = 0;
+    var latestMetadata: MetadataEvent? = null
 
     fun anyNameStartsWith(prefix: String): Boolean {
         return listOfNotNull(name, username, display_name, displayName, nip05, lud06, lud16)
@@ -323,12 +353,12 @@ class UserLiveData(val user: User): LiveData<UserState>(UserState(user)) {
 
     override fun onActive() {
         super.onActive()
-        NostrSingleUserDataSource.add(user.pubkeyHex)
+        NostrSingleUserDataSource.add(user)
     }
 
     override fun onInactive() {
         super.onInactive()
-        NostrSingleUserDataSource.remove(user.pubkeyHex)
+        NostrSingleUserDataSource.remove(user)
     }
 }
 

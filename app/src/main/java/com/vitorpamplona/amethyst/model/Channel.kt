@@ -5,12 +5,10 @@ import com.vitorpamplona.amethyst.service.NostrSingleChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
+import fr.acinq.secp256k1.Hex
 import java.util.concurrent.ConcurrentHashMap
 
-class Channel(val id: ByteArray) {
-    val idHex = id.toHexKey()
-    val idDisplayHex = id.toShortenHex()
-
+class Channel(val idHex: String) {
     var creator: User? = null
     var info = ChannelCreateEvent.ChannelData(null, null, null)
 
@@ -18,8 +16,12 @@ class Channel(val id: ByteArray) {
 
     val notes = ConcurrentHashMap<HexKey, Note>()
 
+    fun id() = Hex.decode(idHex)
+    fun idNote() = id().toNote()
+    fun idDisplayNote() = idNote().toShortenHex()
+
     fun toBestDisplayName(): String {
-        return info.name ?: idDisplayHex
+        return info.name ?: idDisplayNote()
     }
 
     @Synchronized

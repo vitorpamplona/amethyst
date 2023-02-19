@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.vitorpamplona.amethyst.model.RelayInfo
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import java.time.Instant
@@ -30,7 +31,7 @@ import java.time.format.DateTimeFormatter
 
 @Composable
 fun RelayCompose(
-    relay: User.RelayInfo,
+    relay: RelayInfo,
     accountViewModel: AccountViewModel,
     navController: NavController,
     onAddRelay: () -> Unit,

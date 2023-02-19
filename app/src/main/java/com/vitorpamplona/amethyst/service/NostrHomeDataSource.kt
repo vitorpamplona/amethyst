@@ -26,7 +26,7 @@ object NostrHomeDataSource: NostrDataSource("HomeFeed") {
   override fun start() {
     if (this::account.isInitialized) {
       GlobalScope.launch(Dispatchers.Main) {
-        account.userProfile().liveFollows.observeForever(cacheListener)
+        account.userProfile().live().follows.observeForever(cacheListener)
       }
     }
     super.start()
@@ -36,7 +36,7 @@ object NostrHomeDataSource: NostrDataSource("HomeFeed") {
     super.stop()
     if (this::account.isInitialized) {
       GlobalScope.launch(Dispatchers.Main) {
-        account.userProfile().liveFollows.removeObserver(cacheListener)
+        account.userProfile().live().follows.removeObserver(cacheListener)
       }
     }
   }
@@ -45,7 +45,7 @@ object NostrHomeDataSource: NostrDataSource("HomeFeed") {
     val follows = account.userProfile().follows
 
     val followKeys = follows.map {
-      it.pubkey.toHex().substring(0, 6)
+      it.pubkeyHex.substring(0, 6)
     }
 
     val followSet = followKeys.plus(account.userProfile().pubkeyHex.substring(0, 6))

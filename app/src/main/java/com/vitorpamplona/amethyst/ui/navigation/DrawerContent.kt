@@ -123,16 +123,16 @@ fun DrawerContent(navController: NavHostController,
 fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffoldState: ScaffoldState, navController: NavController) {
     val coroutineScope = rememberCoroutineScope()
 
-    val accountUserState by baseAccountUser.liveMetadata.observeAsState()
+    val accountUserState by baseAccountUser.live().metadata.observeAsState()
     val accountUser = accountUserState?.user ?: return
 
-    val accountUserFollowsState by baseAccountUser.liveFollows.observeAsState()
+    val accountUserFollowsState by baseAccountUser.live().follows.observeAsState()
     val accountUserFollows = accountUserFollowsState?.user ?: return
 
     val ctx = LocalContext.current.applicationContext
 
     Box {
-        val banner = accountUser.info.banner
+        val banner = accountUser.info?.banner
         if (banner != null && banner.isNotBlank()) {
             AsyncImageProxy(
                 model = ResizeImage(banner, 150.dp),

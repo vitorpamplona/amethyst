@@ -1,7 +1,6 @@
 package com.vitorpamplona.amethyst.model
 
 import androidx.lifecycle.LiveData
-import com.vitorpamplona.amethyst.lnurl.LnInvoiceUtil
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
@@ -11,7 +10,6 @@ import fr.acinq.secp256k1.Hex
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.Collections
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -21,18 +19,13 @@ import com.vitorpamplona.amethyst.service.relays.Relay
 import java.math.BigDecimal
 import java.util.Date
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.regex.Matcher
 import java.util.regex.Pattern
 import nostr.postr.events.Event
+import nostr.postr.toNpub
 
 val tagSearch = Pattern.compile("(?:\\s|\\A)\\#\\[([0-9]+)\\]")
 
 class Note(val idHex: String) {
-    // These fields are always available.
-    // They are immutable
-    val id = Hex.decode(idHex)
-    val idDisplayNote = id.toNote().toShortenHex()
-
     // These fields are only available after the Text Note event is received.
     // They are immutable after that.
     var event: Event? = null
@@ -59,13 +52,17 @@ class Note(val idHex: String) {
 
     var lastReactionsDownloadTime: Long? = null
 
+    fun id() = Hex.decode(idHex)
+    fun idNote() = id().toNote()
+    fun idDisplayNote() = idNote().toShortenHex()
+
     fun loadEvent(event: Event, author: User, mentions: List<User>, replyTo: List<Note>) {
         this.event = event
         this.author = author
         this.mentions = mentions
         this.replyTo = replyTo
 
-        live.invalidateData()
+        liveSet?.metadata?.invalidateData()
     }
 
     fun formattedDateTime(timestamp: Long): String {
@@ -103,31 +100,31 @@ class Note(val idHex: String) {
     fun addReply(note: Note) {
         if (note !in replies) {
             replies = replies + note
-            liveReplies.invalidateData()
+            liveSet?.replies?.invalidateData()
         }
     }
 
     fun addBoost(note: Note) {
         if (note !in boosts) {
             boosts = boosts + note
-            liveBoosts.invalidateData()
+            liveSet?.boosts?.invalidateData()
         }
     }
 
     fun addZap(zapRequest: Note, zap: Note?) {
         if (zapRequest !in zaps.keys) {
             zaps = zaps + Pair(zapRequest, zap)
-            liveZaps.invalidateData()
+            liveSet?.zaps?.invalidateData()
         } else if (zapRequest in zaps.keys && zaps[zapRequest] == null) {
             zaps = zaps + Pair(zapRequest, zap)
-            liveZaps.invalidateData()
+            liveSet?.zaps?.invalidateData()
         }
     }
 
     fun addReaction(note: Note) {
         if (note !in reactions) {
             reactions = reactions + note
-            liveReactions.invalidateData()
+            liveSet?.reactions?.invalidateData()
         }
     }
 
@@ -136,17 +133,17 @@ class Note(val idHex: String) {
 
         if (author !in reports.keys) {
             reports = reports + Pair(author, setOf(note))
-            liveReports.invalidateData()
+            liveSet?.reports?.invalidateData()
         } else if (reports[author]?.contains(note) == false) {
             reports = reports + Pair(author, (reports[author] ?: emptySet()) + note)
-            liveReports.invalidateData()
+            liveSet?.reports?.invalidateData()
         }
     }
 
     fun addRelay(relay: Relay) {
         if (relay.url !in relays) {
             relays = relays + relay.url
-            liveRelays.invalidateData()
+            liveSet?.relays?.invalidateData()
         }
     }
 
@@ -189,7 +186,7 @@ class Note(val idHex: String) {
         val dayAgo = Date().time / 1000 - 24*60*60
         return reports.isNotEmpty() ||
           (author?.reports?.values?.filter {
-              it.firstOrNull { it.event?.createdAt ?: 0 > dayAgo } != null
+              it.firstOrNull { ( it.event?.createdAt ?: 0 ) > dayAgo } != null
           }?.isNotEmpty() ?: false)
     }
 
@@ -200,7 +197,9 @@ class Note(val idHex: String) {
             try {
                 val tag = matcher.group(1)?.let { event?.tags?.get(it.toInt()) }
                 if (tag != null && tag[0] == "p") {
-                    returningList.add(LocalCache.getOrCreateUser(tag[1]))
+                    LocalCache.checkGetOrCreateUser(tag[1])?.let {
+                        returningList.add(it)
+                    }
                 }
             } catch (e: Exception) {
 
@@ -233,15 +232,42 @@ class Note(val idHex: String) {
         return boosts.firstOrNull { it.author == loggedIn && (it.event?.createdAt ?: 0) > currentTime - (60 * 5)} != null // 5 minute protection
     }
 
-    // Observers line up here.
-    val live: NoteLiveData = NoteLiveData(this)
+    var liveSet: NoteLiveSet? = null
 
-    val liveReactions: NoteLiveData = NoteLiveData(this)
-    val liveBoosts: NoteLiveData = NoteLiveData(this)
-    val liveReplies: NoteLiveData = NoteLiveData(this)
-    val liveReports: NoteLiveData = NoteLiveData(this)
-    val liveRelays: NoteLiveData = NoteLiveData(this)
-    val liveZaps: NoteLiveData = NoteLiveData(this)
+    fun live(): NoteLiveSet {
+        if (liveSet == null) {
+            liveSet = NoteLiveSet(this)
+        }
+        return liveSet!!
+    }
+
+    fun clearLive() {
+        if (liveSet != null && liveSet?.isInUse() == true) {
+            liveSet = null
+        }
+    }
+}
+
+
+class NoteLiveSet(u: Note) {
+    // Observers line up here.
+    val metadata: NoteLiveData = NoteLiveData(u)
+
+    val reactions: NoteLiveData = NoteLiveData(u)
+    val boosts: NoteLiveData = NoteLiveData(u)
+    val replies: NoteLiveData = NoteLiveData(u)
+    val reports: NoteLiveData = NoteLiveData(u)
+    val relays: NoteLiveData = NoteLiveData(u)
+    val zaps: NoteLiveData = NoteLiveData(u)
+
+    fun isInUse(): Boolean {
+        return reactions.hasObservers()
+          || boosts.hasObservers()
+          || replies.hasObservers()
+          || reports.hasObservers()
+          || relays.hasObservers()
+          || zaps.hasObservers()
+    }
 }
 
 class NoteLiveData(val note: Note): LiveData<NoteState>(NoteState(note)) {

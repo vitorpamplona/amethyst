@@ -4,7 +4,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Divider
 import androidx.compose.material.MaterialTheme
@@ -21,7 +20,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.LocalPreferences
-import com.vitorpamplona.amethyst.lnurl.LnInvoiceUtil
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.ui.screen.FollowButton
@@ -35,13 +33,13 @@ fun ZapNoteCompose(baseNote: Pair<Note, Note>, accountViewModel: AccountViewMode
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
-    val userState by account.userProfile().liveFollows.observeAsState()
+    val userState by account.userProfile().live().follows.observeAsState()
     val userFollows = userState?.user ?: return
 
-    val noteState by baseNote.second.live.observeAsState()
+    val noteState by baseNote.second.live().metadata.observeAsState()
     val noteZap = noteState?.note ?: return
 
-    val baseNoteRequest by baseNote.first.live.observeAsState()
+    val baseNoteRequest by baseNote.first.live().metadata.observeAsState()
     val noteZapRequest = baseNoteRequest?.note ?: return
 
     val baseAuthor = noteZapRequest.author
@@ -74,11 +72,11 @@ fun ZapNoteCompose(baseNote: Pair<Note, Note>, accountViewModel: AccountViewMode
                         UsernameDisplay(baseAuthor)
                     }
 
-                    val userState by baseAuthor.liveMetadata.observeAsState()
+                    val userState by baseAuthor.live().metadata.observeAsState()
                     val user = userState?.user ?: return
 
                     Text(
-                        user.info.about ?: "",
+                        user.info?.about ?: "",
                         color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis

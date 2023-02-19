@@ -2,33 +2,27 @@ package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
-import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -47,12 +41,10 @@ import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import coil.compose.rememberAsyncImagePainter
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.RoboHashCache
@@ -60,11 +52,8 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
-import com.vitorpamplona.amethyst.service.model.ReactionEvent
-import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
-import com.vitorpamplona.amethyst.ui.components.RichTextViewer
 import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -74,13 +63,13 @@ val ChatBubbleShapeThem = RoundedCornerShape(3.dp, 15.dp, 15.dp, 15.dp)
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote: Boolean = false, accountViewModel: AccountViewModel, navController: NavController) {
-    val noteState by baseNote.live.observeAsState()
+    val noteState by baseNote.live().metadata.observeAsState()
     val note = noteState?.note
 
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
-    val noteReportsState by baseNote.liveReports.observeAsState()
+    val noteReportsState by baseNote.live().reports.observeAsState()
     val noteForReports = noteReportsState?.note ?: return
 
     val accountUser = account.userProfile()
@@ -158,7 +147,7 @@ fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote
                             modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 5.dp),
                         ) {
 
-                            val authorState by note.author!!.liveMetadata.observeAsState()
+                            val authorState by note.author!!.live().metadata.observeAsState()
                             val author = authorState?.user!!
 
                             if (innerQuote || author != accountUser && note.event is ChannelMessageEvent) {
@@ -279,7 +268,7 @@ fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote
 
 @Composable
 private fun RelayBadges(baseNote: Note) {
-    val noteRelaysState by baseNote.liveRelays.observeAsState()
+    val noteRelaysState by baseNote.live().relays.observeAsState()
     val noteRelays = noteRelaysState?.note?.relays ?: emptySet()
 
     var expanded by remember { mutableStateOf(false) }

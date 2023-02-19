@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -23,8 +22,6 @@ import androidx.compose.material.DropdownMenu
 import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
-import androidx.compose.material.LocalContentColor
-import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
@@ -40,10 +37,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -51,33 +46,27 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import coil.compose.rememberAsyncImagePainter
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.RoboHashCache
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.toNote
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
-import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
-import com.vitorpamplona.amethyst.ui.components.RichTextViewer
 import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Following
 import nostr.postr.events.TextNoteEvent
-import nostr.postr.toNpub
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -92,10 +81,10 @@ fun NoteCompose(
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
-    val noteState by baseNote.live.observeAsState()
+    val noteState by baseNote.live().metadata.observeAsState()
     val note = noteState?.note
 
-    val noteReportsState by baseNote.liveReports.observeAsState()
+    val noteReportsState by baseNote.live().reports.observeAsState()
     val noteForReports = noteReportsState?.note ?: return
 
     var popupExpanded by remember { mutableStateOf(false) }
@@ -346,7 +335,7 @@ fun NoteCompose(
 
 @Composable
 private fun RelayBadges(baseNote: Note) {
-    val noteRelaysState by baseNote.liveRelays.observeAsState()
+    val noteRelaysState by baseNote.live().relays.observeAsState()
     val noteRelays = noteRelaysState?.note?.relays ?: emptySet()
 
     var expanded by remember { mutableStateOf(false) }
@@ -423,7 +412,7 @@ fun NoteAuthorPicture(
     pictureModifier: Modifier = Modifier,
     onClick: ((User) -> Unit)? = null
 ) {
-    val noteState by baseNote.live.observeAsState()
+    val noteState by baseNote.live().metadata.observeAsState()
     val note = noteState?.note ?: return
 
     val author = note.author
@@ -470,7 +459,7 @@ fun UserPicture(
     pictureModifier: Modifier = Modifier,
     onClick: ((User) -> Unit)? = null
 ) {
-    val userState by baseUser.liveMetadata.observeAsState()
+    val userState by baseUser.live().metadata.observeAsState()
     val user = userState?.user ?: return
 
     val ctx = LocalContext.current.applicationContext
@@ -499,7 +488,7 @@ fun UserPicture(
 
         )
 
-        val accountState by baseUserAccount.liveFollows.observeAsState()
+        val accountState by baseUserAccount.live().follows.observeAsState()
         val accountUser = accountState?.user ?: return
 
         if (accountUser.isFollowing(user) || user == accountUser) {
@@ -545,10 +534,10 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
         DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(accountViewModel.decrypt(note) ?: "")); onDismiss() }) {
             Text("Copy Text")
         }
-        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(note.author?.pubkey?.toNpub() ?: "")); onDismiss() }) {
+        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(note.author?.pubkeyNpub() ?: "")); onDismiss() }) {
             Text("Copy User PubKey")
         }
-        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(note.id.toNote())); onDismiss() }) {
+        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(note.idNote())); onDismiss() }) {
             Text("Copy Note ID")
         }
         Divider()

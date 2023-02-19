@@ -22,6 +22,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import com.vitorpamplona.amethyst.service.relays.Relay
+import fr.acinq.secp256k1.Hex
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTimedValue
@@ -51,6 +52,17 @@ object LocalCache {
   val users = ConcurrentHashMap<HexKey, User>()
   val notes = ConcurrentHashMap<HexKey, Note>()
   val channels = ConcurrentHashMap<HexKey, Channel>()
+
+  fun checkGetOrCreateUser(key: HexKey): User? {
+    return try {
+      val checkHex = Hex.decode(key) // Checks if this is a valid Hex
+      getOrCreateUser(key)
+    } catch (e: IllegalArgumentException) {
+      Log.e("LocalCache", "Invalid Key to create user: $key", e)
+      null
+    }
+  }
+
   @Synchronized
   fun getOrCreateUser(key: HexKey): User {
     return users[key] ?: run {
@@ -72,7 +84,7 @@ object LocalCache {
   @Synchronized
   fun getOrCreateChannel(key: String): Channel {
     return channels[key] ?: run {
-      val answer = Channel(key.toByteArray())
+      val answer = Channel(key)
       channels.put(key, answer)
       answer
     }
@@ -82,18 +94,19 @@ object LocalCache {
   fun consume(event: MetadataEvent) {
     // new event
     val oldUser = getOrCreateUser(event.pubKey.toHexKey())
-    if (event.createdAt > oldUser.updatedMetadataAt) {
+    if (oldUser.info == null || event.createdAt > oldUser.info!!.updatedMetadataAt) {
       val newUser = try {
-        metadataParser.readValue<UserMetadata>(ByteArrayInputStream(event.content.toByteArray(Charsets.UTF_8)), UserMetadata::class.java)
+        metadataParser.readValue(
+          ByteArrayInputStream(event.content.toByteArray(Charsets.UTF_8)),
+          UserMetadata::class.java
+        )
       } catch (e: Exception) {
         e.printStackTrace()
         Log.w("MT", "Content Parse Error ${e.localizedMessage} ${event.content}")
         return
       }
 
-      oldUser.updateUserInfo(newUser, event.createdAt)
-      oldUser.latestMetadata = event
-
+      oldUser.updateUserInfo(newUser, event)
       //Log.d("MT", "New User Metadata ${oldUser.pubkeyDisplayHex} ${oldUser.toBestDisplayName()}")
     } else {
       //Log.d("MT","Relay sent a previous Metadata Event ${oldUser.toBestDisplayName()} ${formattedDateTime(event.createdAt)} > ${formattedDateTime(oldUser.updatedAt)}")
@@ -118,7 +131,7 @@ object LocalCache {
     // Already processed this event.
     if (note.event != null) return
 
-    val mentions = event.mentions.map { getOrCreateUser(it) }
+    val mentions = event.mentions.mapNotNull { checkGetOrCreateUser(it) }
     val replyTo = replyToWithoutCitations(event).map { getOrCreateNote(it) }
 
     note.loadEvent(event, author, mentions, replyTo)
@@ -227,7 +240,7 @@ object LocalCache {
     //Log.d("PM", "${author.toBestDisplayName()} to ${recipient?.toBestDisplayName()}")
 
     val repliesTo = event.tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }.map { getOrCreateNote(it) }
-    val mentions = event.tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }.map { getOrCreateUser(it) }
+    val mentions = event.tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }.mapNotNull { checkGetOrCreateUser(it) }
 
     note.loadEvent(event, author, mentions, repliesTo)
 
@@ -252,7 +265,7 @@ object LocalCache {
     //Log.d("TN", "New Boost (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${formattedDateTime(event.createdAt)}")
 
     val author = getOrCreateUser(event.pubKey.toHexKey())
-    val mentions = event.originalAuthor.map { getOrCreateUser(it) }
+    val mentions = event.originalAuthor.mapNotNull { checkGetOrCreateUser(it) }
     val repliesTo = event.boostedPost.map { getOrCreateNote(it) }
 
     note.loadEvent(event, author, mentions, repliesTo)
@@ -283,7 +296,7 @@ object LocalCache {
     if (note.event != null) return
 
     val author = getOrCreateUser(event.pubKey.toHexKey())
-    val mentions = event.originalAuthor.map { getOrCreateUser(it) }
+    val mentions = event.originalAuthor.mapNotNull { checkGetOrCreateUser(it) }
     val repliesTo = event.originalPost.map { getOrCreateNote(it) }
 
     note.loadEvent(event, author, mentions, repliesTo)
@@ -328,7 +341,7 @@ object LocalCache {
     if (note.event != null) return
 
     val author = getOrCreateUser(event.pubKey.toHexKey())
-    val mentions = event.reportedAuthor.map { getOrCreateUser(it) }
+    val mentions = event.reportedAuthor.mapNotNull { checkGetOrCreateUser(it) }
     val repliesTo = event.reportedPost.map { getOrCreateNote(it) }
 
     note.loadEvent(event, author, mentions, repliesTo)
@@ -406,7 +419,7 @@ object LocalCache {
     // Already processed this event.
     if (note.event != null) return
 
-    val mentions = event.mentions.map { getOrCreateUser(it) }
+    val mentions = event.mentions.mapNotNull { checkGetOrCreateUser(it) }
     val replyTo = event.replyTos
       .map { getOrCreateNote(it) }
       .filter { it.event !is ChannelCreateEvent }
@@ -447,7 +460,7 @@ object LocalCache {
     if (note.event != null) return
 
     val author = getOrCreateUser(event.pubKey.toHexKey())
-    val mentions = event.zappedAuthor.map { getOrCreateUser(it) }
+    val mentions = event.zappedAuthor.mapNotNull { checkGetOrCreateUser(it) }
     val repliesTo = event.zappedPost.map { getOrCreateNote(it) }
 
     note.loadEvent(event, author, mentions, repliesTo)
@@ -483,7 +496,7 @@ object LocalCache {
     if (note.event != null) return
 
     val author = getOrCreateUser(event.pubKey.toHexKey())
-    val mentions = event.zappedAuthor.map { getOrCreateUser(it) }
+    val mentions = event.zappedAuthor.mapNotNull { checkGetOrCreateUser(it) }
     val repliesTo = event.zappedPost.map { getOrCreateNote(it) }
 
     note.loadEvent(event, author, mentions, repliesTo)
@@ -508,9 +521,9 @@ object LocalCache {
 
   fun findUsersStartingWith(username: String): List<User> {
     return users.values.filter {
-           it.info.anyNameStartsWith(username)
+          (it.anyNameStartsWith(username))
         || it.pubkeyHex.startsWith(username, true)
-        || it.pubkey.toNpub().startsWith(username, true)
+        || it.pubkeyNpub().startsWith(username, true)
     }
   }
 
@@ -519,15 +532,15 @@ object LocalCache {
       (it.event is TextNoteEvent && it.event?.content?.contains(text, true) ?: false)
         || (it.event is ChannelMessageEvent && it.event?.content?.contains(text, true) ?: false)
         || it.idHex.startsWith(text, true)
-        || it.id.toNote().startsWith(text, true)
+        || it.idNote().startsWith(text, true)
     }
   }
 
   fun findChannelsStartingWith(text: String): List<Channel> {
     return channels.values.filter {
-      it.anyNameStartsWith(text)
+        it.anyNameStartsWith(text)
         || it.idHex.startsWith(text, true)
-        || it.id.toNote().startsWith(text, true)
+        || it.idNote().startsWith(text, true)
     }
   }
 

@@ -161,7 +161,7 @@ class NewPostViewModel: ViewModel() {
         userSuggestionAnchor?.let {
             val lastWord = message.text.substring(0, it.end).substringAfterLast("\n").substringAfterLast(" ")
             val lastWordStart = it.end - lastWord.length
-            val wordToInsert = "@${item.pubkey.toNpub()} "
+            val wordToInsert = "@${item.pubkeyNpub()} "
 
             message = TextFieldValue(
                 message.text.replaceRange(lastWordStart, it.end, wordToInsert),

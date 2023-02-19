@@ -276,8 +276,8 @@ class Account(
     val user = LocalCache.users[toUser] ?: return
 
     val signedEvent = PrivateDmEvent.create(
-      recipientPubKey = user.pubkey,
-      publishedRecipientPubKey = user.pubkey,
+      recipientPubKey = user.pubkey(),
+      publishedRecipientPubKey = user.pubkey(),
       msg = message,
       privateKey = loggedIn.privKey!!,
       advertiseNip18 = false
@@ -406,7 +406,7 @@ class Account(
   }
 
   init {
-    userProfile().liveRelays.observeForever {
+    userProfile().live().relays.observeForever {
       GlobalScope.launch(Dispatchers.IO) {
         reconnectIfRelaysHaveChanged()
       }

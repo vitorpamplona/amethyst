@@ -34,7 +34,7 @@ fun UserCompose(baseUser: User, accountViewModel: AccountViewModel, navControlle
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
-    val userState by account.userProfile().liveFollows.observeAsState()
+    val userState by account.userProfile().live().follows.observeAsState()
     val userFollows = userState?.user ?: return
 
     val ctx = LocalContext.current.applicationContext
@@ -60,11 +60,11 @@ fun UserCompose(baseUser: User, accountViewModel: AccountViewModel, navControlle
                     UsernameDisplay(baseUser)
                 }
 
-                val userState by baseUser.liveMetadata.observeAsState()
+                val userState by baseUser.live().metadata.observeAsState()
                 val user = userState?.user ?: return
 
                 Text(
-                    user.info.about ?: "",
+                    user.info?.about ?: "",
                     color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis

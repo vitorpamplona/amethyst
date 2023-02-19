@@ -1,14 +1,11 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Arrangement.Center
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -33,7 +30,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
@@ -41,9 +37,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import coil.compose.AsyncImage
-import coil.compose.rememberAsyncImagePainter
-import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.model.Note
@@ -55,7 +48,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
 fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navController: NavController) {
-    val noteState by baseNote.live.observeAsState()
+    val noteState by baseNote.live().metadata.observeAsState()
     val note = noteState?.note
 
     val accountState by accountViewModel.accountLiveData.observeAsState()
@@ -69,7 +62,7 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
     if (note?.event == null) {
         BlankNote(Modifier)
     } else if (note.channel != null) {
-        val authorState by note.author!!.liveMetadata.observeAsState()
+        val authorState by note.author!!.live().metadata.observeAsState()
         val author = authorState?.user
 
         val channelState by note.channel!!.live.observeAsState()

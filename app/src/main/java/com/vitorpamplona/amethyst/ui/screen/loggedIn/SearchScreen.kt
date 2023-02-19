@@ -296,11 +296,11 @@ fun UserLine(
                     UsernameDisplay(baseUser)
                 }
 
-                val userState by baseUser.liveMetadata.observeAsState()
+                val userState by baseUser.live().metadata.observeAsState()
                 val user = userState?.user ?: return
 
                 Text(
-                    user.info.about?.take(100) ?: "",
+                    user.info?.about?.take(100) ?: "",
                     color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis

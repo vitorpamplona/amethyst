@@ -9,13 +9,8 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.text.AnnotatedString
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.toByteArray
-import com.vitorpamplona.amethyst.model.toNote
 import com.vitorpamplona.amethyst.service.Nip19
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.ui.note.toShortenHex
-import nostr.postr.toNpub
 
 @Composable
 fun ClickableRoute(
@@ -25,7 +20,7 @@ fun ClickableRoute(
   if (nip19.type == Nip19.Type.USER) {
     val userBase = LocalCache.getOrCreateUser(nip19.hex)
 
-    val userState by userBase.liveMetadata.observeAsState()
+    val userState by userBase.live().metadata.observeAsState()
     val user = userState?.user ?: return
 
     val route = "User/${nip19.hex}"
@@ -38,12 +33,12 @@ fun ClickableRoute(
     )
   } else {
     val noteBase = LocalCache.getOrCreateNote(nip19.hex)
-    val noteState by noteBase.live.observeAsState()
+    val noteState by noteBase.live().metadata.observeAsState()
     val note = noteState?.note ?: return
 
     if (note.event is ChannelCreateEvent) {
       ClickableText(
-        text = AnnotatedString("@${note.idDisplayNote} "),
+        text = AnnotatedString("@${note.idDisplayNote()} "),
         onClick = { navController.navigate("Channel/${nip19.hex}") },
         style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary)
       )
@@ -55,7 +50,7 @@ fun ClickableRoute(
       )
     } else {
       ClickableText(
-        text = AnnotatedString("@${note.idDisplayNote} "),
+        text = AnnotatedString("@${note.idDisplayNote()} "),
         onClick = { navController.navigate("Note/${nip19.hex}") },
         style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary)
       )

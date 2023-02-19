@@ -112,7 +112,7 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 35.dp, vertical = 10.dp)
               ) {
-                QrCodeDrawer("nostr:${user.pubkey.toNpub()}")
+                QrCodeDrawer("nostr:${user.pubkeyNpub()}")
               }
 
             }

@@ -9,7 +9,7 @@ object UserProfileReportsFeedFilter: FeedFilter<Note>() {
   var user: User? = null
 
   fun loadUserProfile(userId: String) {
-    user = LocalCache.getOrCreateUser(userId)
+    user = LocalCache.checkGetOrCreateUser(userId)
   }
 
   override fun feed(): List<Note> {

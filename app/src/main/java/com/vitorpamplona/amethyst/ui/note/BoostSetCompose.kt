@@ -31,7 +31,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
 fun BoostSetCompose(boostSetCard: BoostSetCard, isInnerNote: Boolean = false, routeForLastRead: String, accountViewModel: AccountViewModel, navController: NavController) {
-    val noteState by boostSetCard.note.live.observeAsState()
+    val noteState by boostSetCard.note.live().metadata.observeAsState()
     val note = noteState?.note
 
     val accountState by accountViewModel.accountLiveData.observeAsState()

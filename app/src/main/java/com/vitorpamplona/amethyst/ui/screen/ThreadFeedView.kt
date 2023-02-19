@@ -3,20 +3,15 @@ package com.vitorpamplona.amethyst.ui.screen
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Divider
-import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
@@ -28,20 +23,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.collectAsState
-import androidx.compose.ui.text.style.TextDirection
 import androidx.navigation.NavController
-import coil.compose.AsyncImage
-import coil.compose.rememberAsyncImagePainter
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.components.RichTextViewer
 import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
 import com.vitorpamplona.amethyst.ui.note.BlankNote
 import com.vitorpamplona.amethyst.ui.note.HiddenNote
@@ -49,8 +39,6 @@ import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
-import com.vitorpamplona.amethyst.ui.note.UserPicture
-import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.timeAgoLong
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -162,10 +150,10 @@ fun Modifier.drawReplyLevel(level: Int, color: Color): Modifier = this
 
 @Composable
 fun NoteMaster(baseNote: Note, accountViewModel: AccountViewModel, navController: NavController) {
-    val noteState by baseNote.live.observeAsState()
+    val noteState by baseNote.live().metadata.observeAsState()
     val note = noteState?.note
 
-    val noteReportsState by baseNote.liveReports.observeAsState()
+    val noteReportsState by baseNote.live().reports.observeAsState()
     val noteForReports = noteReportsState?.note ?: return
 
     val accountState by accountViewModel.accountLiveData.observeAsState()
