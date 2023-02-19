@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.service
 
+import android.util.Log
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -17,66 +18,70 @@ object NostrUserProfileDataSource: NostrDataSource("UserProfileFeed") {
   fun loadUserProfile(userId: String?) {
     if (userId != null) {
       user = LocalCache.getOrCreateUser(userId)
+    } else {
+      user = null
     }
 
     resetFilters()
   }
 
-  fun createUserInfoFilter(): TypedFilter {
-    return TypedFilter(
+  fun createUserInfoFilter() = user?.let {
+    TypedFilter(
       types = FeedType.values().toSet(),
       filter = JsonFilter(
         kinds = listOf(MetadataEvent.kind),
-        authors = listOf(user!!.pubkeyHex),
+        authors = listOf(it.pubkeyHex),
         limit = 1
       )
     )
   }
 
-  fun createUserPostsFilter(): TypedFilter {
-    return TypedFilter(
+  fun createUserPostsFilter() = user?.let {
+    TypedFilter(
       types = FeedType.values().toSet(),
       filter = JsonFilter(
         kinds = listOf(TextNoteEvent.kind),
-        authors = listOf(user!!.pubkeyHex),
+        authors = listOf(it.pubkeyHex),
         limit = 100
       )
     )
   }
 
-  fun createUserReceivedZapsFilter(): TypedFilter {
-    return TypedFilter(
+  fun createUserReceivedZapsFilter() = user?.let {
+    TypedFilter(
       types = FeedType.values().toSet(),
       filter = JsonFilter(
         kinds = listOf(LnZapEvent.kind),
-        tags = mapOf("p" to listOf(user!!.pubkeyHex))
+        tags = mapOf("p" to listOf(it.pubkeyHex))
       )
     )
   }
 
-  fun createFollowFilter(): TypedFilter {
-    return TypedFilter(
+  fun createFollowFilter() = user?.let {
+    TypedFilter(
       types = FeedType.values().toSet(),
       filter = JsonFilter(
         kinds = listOf(ContactListEvent.kind),
-        authors = listOf(user!!.pubkeyHex),
+        authors = listOf(it.pubkeyHex),
         limit = 1
       )
     )
   }
 
-  fun createFollowersFilter() = TypedFilter(
-    types = FeedType.values().toSet(),
-    filter = JsonFilter(
-      kinds = listOf(ContactListEvent.kind),
-      tags = mapOf("p" to listOf(user!!.pubkeyHex))
+  fun createFollowersFilter() = user?.let {
+    TypedFilter(
+      types = FeedType.values().toSet(),
+      filter = JsonFilter(
+        kinds = listOf(ContactListEvent.kind),
+        tags = mapOf("p" to listOf(it.pubkeyHex))
+      )
     )
-  )
+  }
 
   val userInfoChannel = requestNewChannel()
 
   override fun updateChannelFilters() {
-    userInfoChannel.typedFilters = listOf(
+    userInfoChannel.typedFilters = listOfNotNull(
       createUserInfoFilter(),
       createUserPostsFilter(),
       createFollowFilter(),
