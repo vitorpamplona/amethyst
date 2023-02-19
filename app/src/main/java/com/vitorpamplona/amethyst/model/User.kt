@@ -126,6 +126,10 @@ class User(val pubkeyHex: String) {
         }
     }
 
+    fun clearNotes() {
+        notes = setOf<Note>()
+    }
+
     fun addReport(note: Note) {
         val author = note.author ?: return
 

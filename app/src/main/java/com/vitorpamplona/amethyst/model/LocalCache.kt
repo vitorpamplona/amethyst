@@ -567,6 +567,56 @@ object LocalCache {
     }
   }
 
+  fun pruneNonFollows(account: Account) {
+    val follows = account.userProfile().follows
+    val knownPMs = account.userProfile().privateChatrooms.filter {
+      account.userProfile().hasSentMessagesTo(it.key) && account.isAcceptable(it.key)
+    }
+
+    val followsFollow = follows.map {
+      it.follows
+    }.flatten()
+
+    val followSet = follows.plus(knownPMs).plus(account.userProfile()).plus(followsFollow)
+
+    val toBeRemoved = notes
+      .filter {
+        (it.value.author == null || it.value.author!! !in followSet) && it.value.event?.kind == TextNoteEvent.kind && it.value.liveSet?.isInUse() != true
+      }
+
+    toBeRemoved.forEach {
+      notes.remove(it.key)
+    }
+
+    val toBeRemovedUsers = users
+      .filter {
+        (it.value !in followSet) && it.value.liveSet?.isInUse() != true
+      }
+
+    toBeRemovedUsers.forEach {
+      users.remove(it.key)
+    }
+
+    println("PRUNE: ${toBeRemoved.size} messages removed because they came from NonFollows")
+    println("PRUNE: ${toBeRemovedUsers.size} users removed because are NonFollows")
+  }
+
+  fun pruneHiddenMessages(account: Account) {
+    val toBeRemoved = account.hiddenUsers.map {
+      users[it]?.notes ?: emptySet()
+    }.flatten()
+
+    account.hiddenUsers.forEach {
+      users[it]?.clearNotes()
+    }
+
+    toBeRemoved.forEach {
+      notes.remove(it.idHex)
+    }
+
+    println("PRUNE: ${toBeRemoved.size} messages removed because they were Hidden")
+  }
+
   // Observers line up here.
   val live: LocalCacheLiveData = LocalCacheLiveData(this)
 
