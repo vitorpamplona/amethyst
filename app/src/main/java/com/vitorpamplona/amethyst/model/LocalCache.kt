@@ -16,14 +16,13 @@ import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
+import com.vitorpamplona.amethyst.service.relays.Relay
+import fr.acinq.secp256k1.Hex
 import java.io.ByteArrayInputStream
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
-import com.vitorpamplona.amethyst.service.relays.Relay
-import fr.acinq.secp256k1.Hex
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTimedValue
@@ -42,7 +41,6 @@ import nostr.postr.events.PrivateDmEvent
 import nostr.postr.events.RecommendRelayEvent
 import nostr.postr.events.TextNoteEvent
 import nostr.postr.toHex
-import nostr.postr.toNpub
 
 
 object LocalCache {
@@ -198,29 +196,27 @@ object LocalCache {
     //Log.d("RR", event.toJson())
   }
 
-  @OptIn(ExperimentalTime::class)
   fun consume(event: ContactListEvent) {
     val user = getOrCreateUser(event.pubKey.toHexKey())
 
     if (event.createdAt > user.updatedFollowsAt) {
-      val (value, elapsed) = measureTimedValue {
-        user.updateFollows(
-          event.follows.map {
-            try {
-              val pubKey = decodePublicKey(it.pubKeyHex)
-              getOrCreateUser(pubKey.toHexKey())
-            } catch (e: Exception) {
-              println("Could not parse Hex key: ${it.pubKeyHex}")
-              println("UpdateFollows: " + event.toJson())
-              e.printStackTrace()
-              null
-            }
-          }.filterNotNull().toSet(),
-          event.createdAt
-        )
-      }
+      user.updateFollows(
+        event.follows.map {
+          try {
+            val pubKey = decodePublicKey(it.pubKeyHex)
+            getOrCreateUser(pubKey.toHexKey())
+          } catch (e: Exception) {
+            println("Could not parse Hex key: ${it.pubKeyHex}")
+            println("UpdateFollows: " + event.toJson())
+            e.printStackTrace()
+            null
+          }
+        }.filterNotNull().toSet(),
+        event.createdAt
+      )
 
-      val (valueRelays, elapsedRelays) = measureTimedValue {
+      // Saves relay list only if it's a user that is currently been seen
+      if (user.liveSet?.isInUse() == true) {
         try {
           if (event.content.isNotEmpty()) {
             val relays: Map<String, ContactListEvent.ReadWrite> =
@@ -234,11 +230,15 @@ object LocalCache {
         } catch (e: Exception) {
           e.printStackTrace()
         }
+
+        // Saves relay list only if it's a user that is currently been seen
+        user.latestContactList = event
       }
 
-      Log.d("CL", "AAA ${user.toBestDisplayName()} ${event.follows.size} in ${elapsed} and \t${elapsedRelays}")
-
-      user.latestContactList = event
+      Log.d(
+        "CL",
+        "AAA ${user.toBestDisplayName()} ${event.follows.size}"
+      )
     }
   }
 
