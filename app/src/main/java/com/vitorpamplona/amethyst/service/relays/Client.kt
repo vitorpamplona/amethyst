@@ -81,7 +81,7 @@ object Client: RelayPool.Listener {
     override fun onEvent(event: Event, subscriptionId: String, relay: Relay) {
         // Releases the Web thread for the new payload.
         // May need to add a processing queue if processing new events become too costly.
-        GlobalScope.launch(Dispatchers.IO) {
+        GlobalScope.launch(Dispatchers.Default) {
             listeners.forEach { it.onEvent(event, subscriptionId, relay) }
         }
     }
@@ -89,7 +89,7 @@ object Client: RelayPool.Listener {
     override fun onError(error: Error, subscriptionId: String, relay: Relay) {
         // Releases the Web thread for the new payload.
         // May need to add a processing queue if processing new events become too costly.
-        GlobalScope.launch(Dispatchers.IO) {
+        GlobalScope.launch(Dispatchers.Default) {
             listeners.forEach { it.onError(error, subscriptionId, relay) }
         }
     }
@@ -97,7 +97,7 @@ object Client: RelayPool.Listener {
     override fun onRelayStateChange(type: Relay.Type, relay: Relay, channel: String?) {
         // Releases the Web thread for the new payload.
         // May need to add a processing queue if processing new events become too costly.
-        GlobalScope.launch(Dispatchers.IO) {
+        GlobalScope.launch(Dispatchers.Default) {
             listeners.forEach { it.onRelayStateChange(type, relay, channel) }
         }
     }
@@ -105,7 +105,7 @@ object Client: RelayPool.Listener {
     override fun onSendResponse(eventId: String, success: Boolean, message: String, relay: Relay) {
         // Releases the Web thread for the new payload.
         // May need to add a processing queue if processing new events become too costly.
-        GlobalScope.launch(Dispatchers.IO) {
+        GlobalScope.launch(Dispatchers.Default) {
             listeners.forEach { it.onSendResponse(eventId, success, message, relay) }
         }
     }
