@@ -148,8 +148,8 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
                                     println("Image Disk Cache ${(imageLoader.diskCache?.size ?: 0)/(1024*1024)}/${(imageLoader.diskCache?.maxSize ?: 0)/(1024*1024)} MB")
                                     println("Image Memory Cache ${(imageLoader.memoryCache?.size ?: 0)/(1024*1024)}/${(imageLoader.memoryCache?.maxSize ?: 0)/(1024*1024)} MB")
 
-                                    println("Notes: " + LocalCache.notes.size)
-                                    println("Users: " + LocalCache.users.size)
+                                    println("Notes: " + LocalCache.notes.filter { it.value.event != null }.size +"/"+ LocalCache.notes.size)
+                                    println("Users: " + LocalCache.users.filter { it.value.latestMetadata != null }.size +"/"+ LocalCache.users.size)
                                 }
                             ) {
                                 Icon(
