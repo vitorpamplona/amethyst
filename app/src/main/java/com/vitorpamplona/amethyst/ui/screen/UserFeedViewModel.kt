@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 
 class NostrUserProfileFollowsUserFeedViewModel: UserFeedViewModel(UserProfileFollowsFeedFilter)
 class NostrUserProfileFollowersUserFeedViewModel: UserFeedViewModel(UserProfileFollowersFeedFilter)
@@ -72,8 +74,14 @@ open class UserFeedViewModel(val dataSource: FeedFilter<User>): ViewModel() {
         handlerWaiting.set(true)
         val scope = CoroutineScope(Job() + Dispatchers.Default)
         scope.launch {
-            delay(50)
-            refresh()
+            try {
+                delay(50)
+                refresh()
+            } finally {
+                withContext(NonCancellable) {
+                    handlerWaiting.set(false)
+                }
+            }
             handlerWaiting.set(false)
         }
     }

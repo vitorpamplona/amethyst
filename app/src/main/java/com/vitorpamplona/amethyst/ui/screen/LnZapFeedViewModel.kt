@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.NonCancellable
 
 class NostrUserProfileZapsFeedViewModel: LnZapFeedViewModel(UserProfileZapsFeedFilter)
 
@@ -69,8 +70,14 @@ open class LnZapFeedViewModel(val dataSource: FeedFilter<Pair<Note, Note>>): Vie
         handlerWaiting.set(true)
         val scope = CoroutineScope(Job() + Dispatchers.Default)
         scope.launch {
-            delay(50)
-            refresh()
+            try {
+                delay(50)
+                refresh()
+            } finally {
+                withContext(NonCancellable) {
+                    handlerWaiting.set(false)
+                }
+            }
             handlerWaiting.set(false)
         }
     }

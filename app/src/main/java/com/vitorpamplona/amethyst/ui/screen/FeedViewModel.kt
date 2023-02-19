@@ -19,11 +19,13 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class NostrChannelFeedViewModel: FeedViewModel(ChannelFeedFilter)
 class NostrChatRoomFeedViewModel: FeedViewModel(ChatroomFeedFilter)
@@ -90,9 +92,14 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>): ViewModel() {
         handlerWaiting.set(true)
         val scope = CoroutineScope(Job() + Dispatchers.Default)
         scope.launch {
-            delay(50)
-            refresh()
-            handlerWaiting.set(false)
+            try {
+                delay(50)
+                refresh()
+            } finally {
+                withContext(NonCancellable) {
+                    handlerWaiting.set(false)
+                }
+            }
         }
     }
 
