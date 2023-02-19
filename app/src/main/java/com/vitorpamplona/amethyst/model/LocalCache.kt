@@ -52,8 +52,8 @@ object LocalCache {
   val notes = ConcurrentHashMap<HexKey, Note>()
   val channels = ConcurrentHashMap<HexKey, Channel>()
 
-  val recentMessages = LruCache<Int, Int>(1000)
-  val spamMessages = LruCache<Int, Int>(1000)
+  val recentMessages = LruCache<Int, String>(1000)
+  val spamMessages = LruCache<Int, String>(1000)
 
   fun checkGetOrCreateUser(key: HexKey): User? {
     return try {
@@ -120,16 +120,24 @@ object LocalCache {
       .format(DateTimeFormatter.ofPattern("uuuu MMM d hh:mm a"))
   }
 
+  @Synchronized
   fun isRepeatedMessageSpam(event: Event): Boolean {
+    val idHex = event.id.toHexKey()
+    // if already processed, return
+    if (notes[idHex] != null) return false
+
     // double list strategy:
     // if duplicated, it goes into spam. 1000 spam messages are saved into the spam list.
-
-    val hash = event.content.hashCode()
-    if (event.content.length > 50 && (recentMessages[hash] != null || spamMessages[hash] != null)) {
-      spamMessages.put(hash, hash)
+    val hash = (event.content + event.tags.flatten().joinToString(",")).hashCode()
+    if (event.content.length > 50 && ((recentMessages[hash] != null && recentMessages[hash] != idHex) || spamMessages[hash] != null)) {
+      Log.w("Potential SPAM Message", "${event.id.toHex()} ${recentMessages[hash]} ${spamMessages[hash] != null} ${event.content.replace("\n", " | ")}")
+      if (spamMessages.get(hash) == null) {
+        spamMessages.put(hash, event.pubKey.toHexKey())
+        liveSpam.invalidateData()
+      }
       return true
     }
-    recentMessages.put(hash, hash)
+    recentMessages.put(hash, idHex)
     return false
   }
 
@@ -639,6 +647,7 @@ object LocalCache {
 
   // Observers line up here.
   val live: LocalCacheLiveData = LocalCacheLiveData(this)
+  val liveSpam: LocalCacheLiveData = LocalCacheLiveData(this)
 
   private fun refreshObservers() {
     live.invalidateData()

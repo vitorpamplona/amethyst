@@ -58,6 +58,8 @@ class Account(
   var dontTranslateFrom: Set<String> = getLanguagesSpokenByUser(),
   var translateTo: String = Locale.getDefault().language
 ) {
+  var transientHiddenUsers: Set<String> = setOf()
+
   fun userProfile(): User {
     return LocalCache.getOrCreateUser(loggedIn.pubKey.toHexKey())
   }
@@ -67,7 +69,7 @@ class Account(
   }
 
   fun hiddenUsers(): List<User> {
-    return hiddenUsers.map { LocalCache.getOrCreateUser(it) }
+    return (hiddenUsers + transientHiddenUsers).map { LocalCache.getOrCreateUser(it) }
   }
 
   fun isWriteable(): Boolean {
@@ -321,6 +323,7 @@ class Account(
 
   fun showUser(pubkeyHex: String) {
     hiddenUsers = hiddenUsers - pubkeyHex
+    transientHiddenUsers = transientHiddenUsers - pubkeyHex
     invalidateData(live)
   }
 
@@ -409,6 +412,18 @@ class Account(
     userProfile().live().relays.observeForever {
       GlobalScope.launch(Dispatchers.IO) {
         reconnectIfRelaysHaveChanged()
+      }
+    }
+    LocalCache.liveSpam.observeForever {
+      GlobalScope.launch(Dispatchers.IO) {
+        LocalCache.spamMessages.snapshot().values.forEach {
+          if (it !in hiddenUsers) {
+            val userToBlock = LocalCache.getOrCreateUser(it)
+            if (userToBlock != userProfile() && userToBlock !in userProfile().follows) {
+              transientHiddenUsers = transientHiddenUsers + it
+            }
+          }
+        }
       }
     }
   }
