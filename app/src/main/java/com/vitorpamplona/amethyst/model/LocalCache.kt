@@ -23,11 +23,15 @@ import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import com.vitorpamplona.amethyst.service.relays.Relay
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.time.ExperimentalTime
+import kotlin.time.measureTimedValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import nostr.postr.events.ContactListEvent
 import nostr.postr.events.DeletionEvent
 import nostr.postr.events.Event
@@ -115,7 +119,7 @@ object LocalCache {
     if (note.event != null) return
 
     val mentions = event.mentions.map { getOrCreateUser(it) }
-    val replyTo = event.replyTos.map { getOrCreateNote(it) }
+    val replyTo = replyToWithoutCitations(event).map { getOrCreateNote(it) }
 
     note.loadEvent(event, author, mentions, replyTo)
 
@@ -140,43 +144,67 @@ object LocalCache {
     refreshObservers()
   }
 
+  private fun replyToWithoutCitations(event: TextNoteEvent): List<String> {
+    var citations = mutableSetOf<String>()
+    // Removes citations from replies:
+    val matcher = tagSearch.matcher(event.content)
+    while (matcher.find()) {
+      try {
+        val tag = matcher.group(1)?.let { event.tags[it.toInt()] }
+        if (tag != null && tag[0] == "e") {
+          citations.add(tag[1])
+        }
+      } catch (e: Exception) {
+
+      }
+    }
+
+    return event.replyTos.filter { it !in citations }
+  }
+
   fun consume(event: RecommendRelayEvent) {
     //Log.d("RR", event.toJson())
   }
 
+  @OptIn(ExperimentalTime::class)
   fun consume(event: ContactListEvent) {
     val user = getOrCreateUser(event.pubKey.toHexKey())
 
     if (event.createdAt > user.updatedFollowsAt) {
-      Log.d("CL", "AAA ${user.toBestDisplayName()} ${event.follows.size}")
-      user.updateFollows(
-        event.follows.map {
-          try {
-            val pubKey = decodePublicKey(it.pubKeyHex)
-            getOrCreateUser(pubKey.toHexKey())
-          } catch (e: Exception) {
-            println("Could not parse Hex key: ${it.pubKeyHex}")
-            println("UpdateFollows: " + event.toJson())
-            e.printStackTrace()
-            null
-          }
-        }.filterNotNull().toSet(),
-        event.createdAt
-      )
-
-      try {
-        if (event.content.isNotEmpty()) {
-          val relays: Map<String, ContactListEvent.ReadWrite> =
-            Event.gson.fromJson(
-              event.content,
-              object : TypeToken<Map<String, ContactListEvent.ReadWrite>>() {}.type
-            )
-
-          user.updateRelays(relays)
-        }
-      } catch (e: Exception) {
-        e.printStackTrace()
+      val (value, elapsed) = measureTimedValue {
+        user.updateFollows(
+          event.follows.map {
+            try {
+              val pubKey = decodePublicKey(it.pubKeyHex)
+              getOrCreateUser(pubKey.toHexKey())
+            } catch (e: Exception) {
+              println("Could not parse Hex key: ${it.pubKeyHex}")
+              println("UpdateFollows: " + event.toJson())
+              e.printStackTrace()
+              null
+            }
+          }.filterNotNull().toSet(),
+          event.createdAt
+        )
       }
+
+      val (valueRelays, elapsedRelays) = measureTimedValue {
+        try {
+          if (event.content.isNotEmpty()) {
+            val relays: Map<String, ContactListEvent.ReadWrite> =
+              Event.gson.fromJson(
+                event.content,
+                object : TypeToken<Map<String, ContactListEvent.ReadWrite>>() {}.type
+              )
+
+            user.updateRelays(relays)
+          }
+        } catch (e: Exception) {
+          e.printStackTrace()
+        }
+      }
+
+      Log.d("CL", "AAA ${user.toBestDisplayName()} ${event.follows.size} in ${elapsed} and \t${elapsedRelays}")
 
       user.latestContactList = event
     }
@@ -524,9 +552,14 @@ class LocalCacheLiveData(val cache: LocalCache): LiveData<LocalCacheState>(Local
     handlerWaiting.set(true)
     val scope = CoroutineScope(Job() + Dispatchers.Main)
     scope.launch {
-      delay(100)
-      refresh()
-      handlerWaiting.set(false)
+      try {
+        delay(100)
+        refresh()
+      } finally {
+        withContext(NonCancellable) {
+          handlerWaiting.set(false)
+        }
+      }
     }
   }
 
