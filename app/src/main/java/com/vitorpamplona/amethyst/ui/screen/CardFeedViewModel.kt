@@ -38,6 +38,8 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>): ViewModel() {
             refreshSuspended()
         }
     }
+
+    @Synchronized
     private fun refreshSuspended() {
         val notes = dataSource.loadTop()
 
