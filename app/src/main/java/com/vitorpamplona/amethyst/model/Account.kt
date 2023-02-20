@@ -56,7 +56,8 @@ class Account(
   var hiddenUsers: Set<String> = setOf(),
   var localRelays: Set<RelaySetupInfo> = Constants.defaultRelays.toSet(),
   var dontTranslateFrom: Set<String> = getLanguagesSpokenByUser(),
-  var translateTo: String = Locale.getDefault().language
+  var translateTo: String = Locale.getDefault().language,
+  var zapAmountChoices: List<Long> = listOf(500L, 1000L, 5000L)
 ) {
   var transientHiddenUsers: Set<String> = setOf()
 
@@ -324,6 +325,11 @@ class Account(
   fun showUser(pubkeyHex: String) {
     hiddenUsers = hiddenUsers - pubkeyHex
     transientHiddenUsers = transientHiddenUsers - pubkeyHex
+    invalidateData(live)
+  }
+
+  fun changeZapAmounts(newAmounts: List<Long>) {
+    zapAmountChoices = newAmounts
     invalidateData(live)
   }
 

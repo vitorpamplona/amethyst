@@ -23,6 +23,7 @@ class LocalPreferences(context: Context) {
       remove("relays")
       remove("dontTranslateFrom")
       remove("translateTo")
+      remove("zapAmounts")
     }.apply()
   }
 
@@ -35,6 +36,7 @@ class LocalPreferences(context: Context) {
       account.localRelays.let { putString("relays", gson.toJson(it)) }
       account.dontTranslateFrom.let { putStringSet("dontTranslateFrom", it) }
       account.translateTo.let { putString("translateTo", it) }
+      account.zapAmountChoices.let { putString("zapAmounts", gson.toJson(it)) }
     }.apply()
   }
 
@@ -52,6 +54,11 @@ class LocalPreferences(context: Context) {
       val dontTranslateFrom = getStringSet("dontTranslateFrom", null) ?: setOf()
       val translateTo = getString("translateTo", null) ?: Locale.getDefault().language
 
+      val zapAmountChoices = gson.fromJson(
+        getString("zapAmounts", "[]"),
+        object : TypeToken<List<Long>>() {}.type
+      ) ?: listOf(500L, 1000L, 5000L)
+
       if (pubKey != null) {
         return Account(
           Persona(privKey = privKey?.toByteArray(), pubKey = pubKey.toByteArray()),
@@ -59,7 +66,8 @@ class LocalPreferences(context: Context) {
           hiddenUsers,
           localRelays,
           dontTranslateFrom,
-          translateTo
+          translateTo,
+          zapAmountChoices
         )
       } else {
         return null
