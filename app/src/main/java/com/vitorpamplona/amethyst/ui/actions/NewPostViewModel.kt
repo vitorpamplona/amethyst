@@ -31,7 +31,7 @@ class NewPostViewModel: ViewModel() {
     var userSuggestions by mutableStateOf<List<User>>(emptyList())
     var userSuggestionAnchor: TextRange? = null
 
-    fun load(account: Account, replyingTo: Note?) {
+    fun load(account: Account, replyingTo: Note?, quote: Note?) {
         originalNote = replyingTo
         replyingTo?.let { replyNote ->
             this.replyTos = (replyNote.replyTo ?: emptyList()).plus(replyNote)
@@ -45,29 +45,60 @@ class NewPostViewModel: ViewModel() {
 
             }
         }
+
+        quote?.let {
+            message = TextFieldValue(message.text + "\n\n@${it.idNote()}")
+        }
+
         this.account = account
     }
 
-    fun addUserToMentionsIfNotInAndReturnIndex(user: User): Int {
-        val replyToSize = replyTos?.size ?: 0
+    fun addUserToMentions(user: User) {
+        mentions = if (mentions?.contains(user) == true) mentions else mentions?.plus(user) ?: listOf(user)
+    }
 
-        var myMentions = mentions
-        if (myMentions == null) {
-            mentions = listOf(user)
-            return replyToSize + 0 // position of the user
-        }
+    fun addNoteToReplyTos(note: Note) {
+        note.author?.let { addUserToMentions(it) }
+        replyTos = if (replyTos?.contains(note) == true) replyTos else replyTos?.plus(note) ?: listOf(note)
+    }
 
-        val index = myMentions.indexOf(user)
+    fun tagIndex(user: User): Int {
+        // Postr Events assembles replies before mentions in the tag order
+        return (replyTos?.size ?: 0) + (mentions?.indexOf(user) ?: 0)
+    }
 
-        if (index >= 0) return replyToSize + index
-
-        myMentions = myMentions.plus(user)
-        mentions = myMentions
-        return replyToSize + myMentions.indexOf(user)
+    fun tagIndex(note: Note): Int {
+        // Postr Events assembles replies before mentions in the tag order
+        return (replyTos?.indexOf(note) ?: 0)
     }
 
     fun sendPost() {
-        // Moves @npub to mentions
+        // adds all references to mentions and reply tos
+        message.text.split('\n').forEach { paragraph: String ->
+            paragraph.split(' ').forEach { word: String ->
+                try {
+                    if (word.startsWith("@npub") && word.length >= 64) {
+                        val keyB32 = word.substring(0, 64)
+
+                        val key = decodePublicKey(keyB32.removePrefix("@"))
+                        val user = LocalCache.getOrCreateUser(key.toHexKey())
+
+                        addUserToMentions(user)
+                    } else if (word.startsWith("@note") && word.length >= 64) {
+                        val keyB32 = word.substring(0, 64)
+
+                        val key = decodePublicKey(keyB32.removePrefix("@"))
+                        val note = LocalCache.getOrCreateNote(key.toHexKey())
+
+                        addNoteToReplyTos(note)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+
+        // Tags the text in the correct order.
         val newMessage = message.text.split('\n').map { paragraph: String ->
             paragraph.split(' ').map { word: String ->
                 try {
@@ -78,15 +109,20 @@ class NewPostViewModel: ViewModel() {
                         val key = decodePublicKey(keyB32.removePrefix("@"))
                         val user = LocalCache.getOrCreateUser(key.toHexKey())
 
-                        val index = addUserToMentionsIfNotInAndReturnIndex(user)
+                        "#[${tagIndex(user)}]$restOfWord"
+                    } else if (word.startsWith("@note") && word.length >= 64) {
+                        val keyB32 = word.substring(0, 64)
+                        val restOfWord = word.substring(64)
 
-                        val newWord = "#[${index}]"
+                        val key = decodePublicKey(keyB32.removePrefix("@"))
+                        val note = LocalCache.getOrCreateNote(key.toHexKey())
 
-                        newWord + restOfWord
+                        "#[${tagIndex(note)}]$restOfWord"
                     } else {
                         word
                     }
                 } catch (e: Exception) {
+                    e.printStackTrace()
                     // if it can't parse the key, don't try to change.
                     word
                 }

@@ -45,10 +45,8 @@ import nostr.postr.events.TextNoteEvent
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, account: Account) {
+fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = null, account: Account) {
     val postViewModel: NewPostViewModel = viewModel()
-
-    postViewModel.load(account, baseReplyTo)
 
     val context = LocalContext.current
 
@@ -59,6 +57,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, account: Account
     val scroolState = rememberScrollState()
 
     LaunchedEffect(Unit) {
+        postViewModel.load(account, baseReplyTo, quote)
         delay(100)
         focusRequester.requestFocus()
 

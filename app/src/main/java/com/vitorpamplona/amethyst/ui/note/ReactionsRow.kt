@@ -109,11 +109,20 @@ fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel) {
     mutableStateOf<Note?>(null)
   }
 
+  var wantsToQuote by remember {
+    mutableStateOf<Note?>(null)
+  }
+
   if (wantsToReplyTo != null)
-    NewPostView({ wantsToReplyTo = null }, wantsToReplyTo, account)
+    NewPostView({ wantsToReplyTo = null }, wantsToReplyTo, null, account)
+
+  if (wantsToQuote != null)
+    NewPostView({ wantsToQuote = null }, null, wantsToQuote, account)
 
   var wantsToZap by remember { mutableStateOf(false) }
   var wantsToChangeZapAmount by remember { mutableStateOf(false) }
+
+  var wantsToBoost by remember { mutableStateOf(false) }
 
   Row(
     modifier = Modifier
@@ -156,7 +165,7 @@ fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel) {
       modifier = Modifier.then(Modifier.size(20.dp)),
       onClick = {
         if (account.isWriteable())
-          accountViewModel.boost(baseNote)
+          wantsToBoost = true
         else
           scope.launch {
             Toast.makeText(
@@ -167,6 +176,20 @@ fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel) {
           }
       }
     ) {
+      if (wantsToBoost) {
+        BoostTypeChoicePopup(
+          baseNote,
+          accountViewModel,
+          onDismiss = {
+            wantsToBoost = false
+          },
+          onQuote = {
+            wantsToBoost = false
+            wantsToQuote = baseNote
+          }
+        )
+      }
+
       if (boostedNote?.isBoostedBy(account.userProfile()) == true) {
         Icon(
           painter = painterResource(R.drawable.ic_retweeted),
@@ -341,6 +364,52 @@ fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel) {
         modifier = Modifier.height(24.dp),
         colorFilter = ColorFilter.tint(grayTint)
       )
+    }
+  }
+}
+
+
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun BoostTypeChoicePopup(baseNote: Note, accountViewModel: AccountViewModel, onDismiss: () -> Unit, onQuote: () -> Unit) {
+  val scope = rememberCoroutineScope()
+
+  val accountState by accountViewModel.accountLiveData.observeAsState()
+  val account = accountState?.account ?: return
+
+  Popup(
+    alignment = Alignment.BottomCenter,
+    offset = IntOffset(0, -50),
+    onDismissRequest = { onDismiss() }
+  ) {
+    FlowRow() {
+      Button(
+        modifier = Modifier.padding(horizontal = 3.dp),
+        onClick = {
+          accountViewModel.boost(baseNote)
+          onDismiss()
+        },
+        shape = RoundedCornerShape(20.dp),
+        colors = ButtonDefaults
+          .buttonColors(
+            backgroundColor = MaterialTheme.colors.primary
+          )
+      ) {
+        Text("Boost", color = Color.White, textAlign = TextAlign.Center)
+      }
+
+      Button(
+        modifier = Modifier.padding(horizontal = 3.dp),
+        onClick = onQuote,
+        shape = RoundedCornerShape(20.dp),
+        colors = ButtonDefaults
+          .buttonColors(
+            backgroundColor = MaterialTheme.colors.primary
+          )
+      ) {
+        Text("Quote", color = Color.White, textAlign = TextAlign.Center)
+      }
     }
   }
 }

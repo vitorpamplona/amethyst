@@ -41,6 +41,8 @@ fun decodePublicKey(key: String): ByteArray {
     Persona(privKey = key.bechToBytes()).pubKey
   } else if (key.startsWith("npub")) {
     key.bechToBytes()
+  } else if (key.startsWith("note")) {
+    key.bechToBytes()
   } else { //if (pattern.matcher(key).matches()) {
   //} else {
     Hex.decode(key)
