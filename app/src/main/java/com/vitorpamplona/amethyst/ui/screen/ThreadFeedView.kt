@@ -163,7 +163,7 @@ fun NoteMaster(baseNote: Note, accountViewModel: AccountViewModel, navController
 
     if (note?.event == null) {
         BlankNote()
-    } else if (!account.isAcceptable(noteForReports)) {
+    } else if (!account.isAcceptable(noteForReports) && !showHiddenNote) {
         HiddenNote(
             account.getRelevantReports(noteForReports),
             account.userProfile(),
