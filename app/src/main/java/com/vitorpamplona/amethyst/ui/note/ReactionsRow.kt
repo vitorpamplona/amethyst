@@ -487,7 +487,7 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, account: Account) {
             },
             keyboardOptions = KeyboardOptions.Default.copy(
               capitalization = KeyboardCapitalization.None,
-              keyboardType = KeyboardType.Number
+              keyboardType = KeyboardType.Decimal
             ),
             placeholder = {
               Text(
