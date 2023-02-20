@@ -1,5 +1,7 @@
 package com.vitorpamplona.amethyst.model
 
+import android.util.Patterns
+import androidx.compose.ui.text.toLowerCase
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
@@ -9,6 +11,7 @@ import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import fr.acinq.secp256k1.Hex
 import java.math.BigDecimal
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.regex.Pattern
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -16,9 +19,12 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import nostr.postr.Bech32
 import nostr.postr.events.ContactListEvent
 import nostr.postr.events.MetadataEvent
 import nostr.postr.toNpub
+
+val lnurlpPattern = Pattern.compile("(?i:http|https):\\/\\/((.+)\\/)*\\.well-known\\/lnurlp\\/(.*)")
 
 class User(val pubkeyHex: String) {
     var info: UserMetadata? = null
@@ -230,6 +236,22 @@ class User(val pubkeyHex: String) {
         info = newUserInfo
         info?.latestMetadata = latestMetadata
         info?.updatedMetadataAt = latestMetadata.createdAt
+
+        if (newUserInfo.lud16.isNullOrBlank() && newUserInfo.lud06?.toLowerCase()?.startsWith("lnurl") == true) {
+            try {
+                val url = String(Bech32.decodeBytes(newUserInfo.lud06!!, false).second)
+
+                val matcher = lnurlpPattern.matcher(url)
+                while (matcher.find()) {
+                    val domain = matcher.group(2)
+                    val username = matcher.group(3)
+
+                    info?.lud16 = "$username@$domain"
+                }
+            } catch (t: Throwable) {
+                // Doesn't create errors.
+            }
+        }
 
         liveSet?.metadata?.invalidateData()
     }
