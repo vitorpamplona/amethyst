@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.lnurl
 
+import androidx.compose.ui.text.toLowerCase
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import java.net.URLEncoder
 import kotlinx.coroutines.CoroutineScope
@@ -20,11 +21,19 @@ class LightningAddressResolver {
   fun assembleUrl(lnaddress: String): String? {
     val parts = lnaddress.split("@")
 
-    if (parts.size != 2) {
-      return null
+    if (parts.size == 2) {
+      return "https://${parts[1]}/.well-known/lnurlp/${parts[0]}"
     }
 
-    return "https://${parts[1]}/.well-known/lnurlp/${parts[0]}"
+    if (lnaddress.toLowerCase().startsWith("lnurl")) {
+      return try {
+        String(Bech32.decodeBytes(lnaddress, false).second)
+      } catch (e: Exception) {
+        null
+      }
+    }
+
+    return null
   }
 
   fun fetchLightningAddressJson(lnaddress: String, onSuccess: (String) -> Unit, onError: (String) -> Unit) {

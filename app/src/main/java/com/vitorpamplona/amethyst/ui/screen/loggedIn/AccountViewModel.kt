@@ -25,7 +25,7 @@ class AccountViewModel(private val account: Account): ViewModel() {
   }
 
   fun zap(note: Note, amount: Long, message: String, context: Context, onError: (String) -> Unit) {
-    val lud16 = note.author?.info?.lud16?.trim()
+    val lud16 = note.author?.info?.lud16?.trim() ?: note.author?.info?.lud06?.trim()
 
     if (lud16.isNullOrBlank()) {
       onError("User does not have a lightning address setup to receive sats")
