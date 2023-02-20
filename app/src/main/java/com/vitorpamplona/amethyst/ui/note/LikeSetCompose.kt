@@ -1,6 +1,8 @@
 package com.vitorpamplona.amethyst.ui.note
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,9 +28,11 @@ import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.ui.screen.LikeSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun LikeSetCompose(likeSetCard: LikeSetCard, modifier: Modifier = Modifier, isInnerNote: Boolean = false, routeForLastRead: String, accountViewModel: AccountViewModel, navController: NavController) {
     val noteState by likeSetCard.note.live().metadata.observeAsState()
@@ -38,6 +42,9 @@ fun LikeSetCompose(likeSetCard: LikeSetCard, modifier: Modifier = Modifier, isIn
     val account = accountState?.account ?: return
 
     val context = LocalContext.current.applicationContext
+
+    val noteEvent = note?.event
+    var popupExpanded by remember { mutableStateOf(false) }
 
     if (note == null) {
         BlankNote(Modifier, isInnerNote)
@@ -55,6 +62,19 @@ fun LikeSetCompose(likeSetCard: LikeSetCard, modifier: Modifier = Modifier, isIn
         Column(
             modifier = Modifier.background(
                 if (isNew) MaterialTheme.colors.primary.copy(0.12f) else MaterialTheme.colors.background
+            ).combinedClickable(
+                onClick = {
+                    if (noteEvent !is ChannelMessageEvent) {
+                        navController.navigate("Note/${note.idHex}"){
+                            launchSingleTop = true
+                        }
+                    } else {
+                        note.channel?.let {
+                            navController.navigate("Channel/${it.idHex}")
+                        }
+                    }
+                },
+                onLongClick = { popupExpanded = true }
             )
         ) {
             Row(modifier = Modifier
@@ -91,6 +111,8 @@ fun LikeSetCompose(likeSetCard: LikeSetCard, modifier: Modifier = Modifier, isIn
                     }
 
                     NoteCompose(note, null, Modifier.padding(top = 5.dp), true, accountViewModel, navController)
+
+                    NoteDropDownMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
                 }
             }
         }
