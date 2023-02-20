@@ -223,6 +223,7 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
                     }
                 }
             },
+            singleLine = true,
             colors = TextFieldDefaults.textFieldColors(
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent
