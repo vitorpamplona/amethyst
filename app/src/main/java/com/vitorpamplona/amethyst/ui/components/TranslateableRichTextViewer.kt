@@ -73,6 +73,7 @@ fun TranslateableRichTextViewer(
       canPreview,
       modifier,
       tags,
+      accountViewModel,
       navController
     )
 

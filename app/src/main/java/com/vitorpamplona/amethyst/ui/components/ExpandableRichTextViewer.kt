@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
 fun ExpandableRichTextViewer(
@@ -30,6 +31,7 @@ fun ExpandableRichTextViewer(
   canPreview: Boolean,
   modifier: Modifier = Modifier,
   tags: List<List<String>>?,
+  accountViewModel: AccountViewModel,
   navController: NavController
 ) {
   var showFullText by remember { mutableStateOf(false) }
@@ -37,7 +39,7 @@ fun ExpandableRichTextViewer(
   val text = if (showFullText) content else content.take(350)
 
   Box(contentAlignment = Alignment.BottomCenter) {
-    RichTextViewer(text, canPreview, modifier, tags, navController)
+    RichTextViewer(text, canPreview, modifier, tags, accountViewModel, navController)
 
     if (content.length > 350 && !showFullText) {
       Row(

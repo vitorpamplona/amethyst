@@ -56,7 +56,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.toNote
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
@@ -74,7 +73,8 @@ fun NoteCompose(
     baseNote: Note,
     routeForLastRead: String? = null,
     modifier: Modifier = Modifier,
-    isInnerNote: Boolean = false,
+    isBoostedNote: Boolean = false,
+    isQuotedNote: Boolean = false,
     accountViewModel: AccountViewModel,
     navController: NavController
 ) {
@@ -100,13 +100,13 @@ fun NoteCompose(
         BlankNote(modifier.combinedClickable(
             onClick = {  },
             onLongClick = { popupExpanded = true },
-        ), isInnerNote)
+        ), isBoostedNote)
     } else if (!account.isAcceptable(noteForReports) && !showHiddenNote) {
         HiddenNote(
             account.getRelevantReports(noteForReports),
             account.userProfile(),
             modifier,
-            isInnerNote,
+            isBoostedNote,
             navController,
             onClick = { showHiddenNote = true }
         )
@@ -150,12 +150,12 @@ fun NoteCompose(
             Row(
                 modifier = Modifier
                     .padding(
-                        start = if (!isInnerNote) 12.dp else 0.dp,
-                        end = if (!isInnerNote) 12.dp else 0.dp,
+                        start = if (!isBoostedNote) 12.dp else 0.dp,
+                        end = if (!isBoostedNote) 12.dp else 0.dp,
                         top = 10.dp)
             ) {
 
-                if (!isInnerNote) {
+                if (!isBoostedNote && !isQuotedNote) {
                     Column(Modifier.width(55.dp)) {
                     // Draws the boosted picture outside the boosted card.
                         Box(modifier = Modifier
@@ -222,8 +222,13 @@ fun NoteCompose(
                     }
                 }
 
-                Column(modifier = Modifier.padding(start = if (!isInnerNote) 10.dp else 0.dp)) {
+                Column(
+                    modifier = Modifier.padding(start = if (!isBoostedNote && !isQuotedNote) 10.dp else 0.dp)
+                ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (isQuotedNote) {
+                            NoteAuthorPicture(note, navController, account.userProfile(), 25.dp)
+                        }
                         NoteUsernameDisplay(note, Modifier.weight(1f))
 
                         if (noteEvent !is RepostEvent) {
@@ -268,7 +273,7 @@ fun NoteCompose(
                             NoteCompose(
                                 it,
                                 modifier = Modifier,
-                                isInnerNote = true,
+                                isBoostedNote = true,
                                 accountViewModel = accountViewModel,
                                 navController = navController
                             )

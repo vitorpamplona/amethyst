@@ -2,11 +2,16 @@ package com.vitorpamplona.amethyst.ui.components
 
 import android.util.Patterns
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.lnurl.LnInvoiceUtil
@@ -14,7 +19,9 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.toByteArray
 import com.vitorpamplona.amethyst.model.toNote
 import com.vitorpamplona.amethyst.service.Nip19
+import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import nostr.postr.toNpub
 import java.net.MalformedURLException
 import java.net.URISyntaxException
@@ -47,6 +54,7 @@ fun RichTextViewer(
   canPreview: Boolean,
   modifier: Modifier = Modifier,
   tags: List<List<String>>?,
+  accountViewModel: AccountViewModel,
   navController: NavController,
 ) {
   Column(modifier = modifier.animateContentSize()) {
@@ -77,7 +85,7 @@ fun RichTextViewer(
             } else if (noProtocolUrlValidator.matcher(word).matches()) {
               UrlPreview("https://$word", word)
             } else if (tagIndex.matcher(word).matches() && tags != null) {
-              TagLink(word, tags, navController)
+              TagLink(word, tags, accountViewModel, navController)
             } else if (isBechLink(word)) {
               BechLink(word, navController)
             } else {
@@ -96,7 +104,7 @@ fun RichTextViewer(
             } else if (noProtocolUrlValidator.matcher(word).matches()) {
               ClickableUrl(word, "https://$word")
             } else if (tagIndex.matcher(word).matches() && tags != null) {
-              TagLink(word, tags, navController)
+              TagLink(word, tags, accountViewModel, navController)
             } else if (isBechLink(word)) {
               BechLink(word, navController)
             } else {
@@ -150,7 +158,7 @@ fun BechLink(word: String, navController: NavController) {
 
 
 @Composable
-fun TagLink(word: String, tags: List<List<String>>, navController: NavController) {
+fun TagLink(word: String, tags: List<List<String>>, accountViewModel: AccountViewModel, navController: NavController) {
   val matcher = tagIndex.matcher(word)
 
   val index = try {
@@ -176,7 +184,17 @@ fun TagLink(word: String, tags: List<List<String>>, navController: NavController
     } else if (tags[index][0] == "e") {
       val note = LocalCache.notes[tags[index][1]]
       if (note != null) {
-        ClickableNoteTag(note, navController)
+        //ClickableNoteTag(note, navController)
+        NoteCompose(
+          baseNote = note,
+          accountViewModel = accountViewModel,
+          modifier = Modifier.padding(0.dp)
+            .fillMaxWidth()
+            .clip(shape = RoundedCornerShape(15.dp))
+            .border(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.12f), RoundedCornerShape(15.dp))
+            .background(MaterialTheme.colors.onSurface.copy(alpha = 0.05f)),
+          isQuotedNote = true,
+          navController = navController)
       } else {
         Text(text = "${tags[index][1].toByteArray().toNote().toShortenHex()} ")
       }

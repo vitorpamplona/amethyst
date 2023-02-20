@@ -110,7 +110,14 @@ fun LikeSetCompose(likeSetCard: LikeSetCard, modifier: Modifier = Modifier, isIn
                         }
                     }
 
-                    NoteCompose(note, null, Modifier.padding(top = 5.dp), true, accountViewModel, navController)
+                    NoteCompose(
+                        baseNote = note,
+                        routeForLastRead = null,
+                        modifier = Modifier.padding(top = 5.dp),
+                        isBoostedNote = true,
+                        accountViewModel = accountViewModel,
+                        navController = navController
+                    )
 
                     NoteDropDownMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
                 }
