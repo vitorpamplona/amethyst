@@ -102,6 +102,7 @@ class NewPostViewModel: ViewModel() {
         message = TextFieldValue("")
         urlPreview = null
         isUploadingImage = false
+        mentions = null
     }
 
     fun upload(it: Uri, context: Context) {
@@ -128,6 +129,7 @@ class NewPostViewModel: ViewModel() {
         message = TextFieldValue("")
         urlPreview = null
         isUploadingImage = false
+        mentions = null
     }
 
     fun findUrlInMessage(): String? {
