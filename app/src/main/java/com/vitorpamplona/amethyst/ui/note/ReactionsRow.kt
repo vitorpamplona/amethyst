@@ -438,15 +438,14 @@ class UpdateZapAmountViewModel: ViewModel() {
 fun UpdateZapAmountDialog(onClose: () -> Unit, account: Account) {
   val postViewModel: UpdateZapAmountViewModel = viewModel()
 
-  postViewModel.load(account)
-
   val ctx = LocalContext.current.applicationContext
 
   // initialize focus reference to be able to request focus programmatically
   val focusRequester = remember { FocusRequester() }
   val keyboardController = LocalSoftwareKeyboardController.current
 
-  LaunchedEffect(Unit) {
+  LaunchedEffect(account) {
+    postViewModel.load(account)
     delay(100)
     focusRequester.requestFocus()
   }
