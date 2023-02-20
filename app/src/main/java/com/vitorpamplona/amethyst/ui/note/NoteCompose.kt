@@ -312,6 +312,7 @@ fun NoteCompose(
                             TranslateableRichTextViewer(
                                 eventContent,
                                 canPreview,
+                                Modifier.fillMaxWidth(),
                                 noteEvent.tags,
                                 accountViewModel,
                                 navController

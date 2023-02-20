@@ -28,6 +28,7 @@ import androidx.navigation.NavController
 fun ExpandableRichTextViewer(
   content: String,
   canPreview: Boolean,
+  modifier: Modifier = Modifier,
   tags: List<List<String>>?,
   navController: NavController
 ) {
@@ -36,7 +37,7 @@ fun ExpandableRichTextViewer(
   val text = if (showFullText) content else content.take(350)
 
   Box(contentAlignment = Alignment.BottomCenter) {
-    RichTextViewer(text, canPreview, tags, navController)
+    RichTextViewer(text, canPreview, modifier, tags, navController)
 
     if (content.length > 350 && !showFullText) {
       Row(

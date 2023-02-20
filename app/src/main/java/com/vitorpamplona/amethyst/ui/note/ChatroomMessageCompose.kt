@@ -224,6 +224,7 @@ fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote
                                         TranslateableRichTextViewer(
                                             eventContent,
                                             canPreview,
+                                            Modifier,
                                             note.event?.tags,
                                             accountViewModel,
                                             navController
@@ -232,6 +233,7 @@ fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote
                                         TranslateableRichTextViewer(
                                             "Could Not decrypt the message",
                                             true,
+                                            Modifier,
                                             note.event?.tags,
                                             accountViewModel,
                                             navController

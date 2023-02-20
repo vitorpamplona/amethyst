@@ -45,12 +45,11 @@ fun isValidURL(url: String?): Boolean {
 fun RichTextViewer(
   content: String,
   canPreview: Boolean,
+  modifier: Modifier = Modifier,
   tags: List<List<String>>?,
-  navController: NavController
+  navController: NavController,
 ) {
-  Column(
-    Modifier
-      .animateContentSize()) {
+  Column(modifier = modifier.animateContentSize()) {
     // FlowRow doesn't work well with paragraphs. So we need to split them
     content.split('\n').forEach { paragraph ->
 

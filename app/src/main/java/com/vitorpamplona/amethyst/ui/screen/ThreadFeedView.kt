@@ -218,6 +218,7 @@ fun NoteMaster(baseNote: Note, accountViewModel: AccountViewModel, navController
                         TranslateableRichTextViewer(
                             eventContent,
                             canPreview,
+                            Modifier.fillMaxWidth(),
                             note.event?.tags,
                             accountViewModel,
                             navController

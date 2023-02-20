@@ -37,6 +37,7 @@ import java.util.Locale
 fun TranslateableRichTextViewer(
   content: String,
   canPreview: Boolean,
+  modifier: Modifier = Modifier,
   tags: List<List<String>>?,
   accountViewModel: AccountViewModel,
   navController: NavController
@@ -70,6 +71,7 @@ fun TranslateableRichTextViewer(
     ExpandableRichTextViewer(
       toBeViewed,
       canPreview,
+      modifier,
       tags,
       navController
     )

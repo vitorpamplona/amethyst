@@ -128,14 +128,13 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>): ViewModel() {
         val scope = CoroutineScope(Job() + Dispatchers.Default)
         scope.launch {
             try {
-                delay(50)
+                delay(150)
                 refresh()
             } finally {
                 withContext(NonCancellable) {
                     handlerWaiting.set(false)
                 }
             }
-            handlerWaiting.set(false)
         }
     }
 
