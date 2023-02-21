@@ -74,6 +74,16 @@ object LocalCache {
     }
   }
 
+  fun checkGetOrCreateNote(key: HexKey): Note? {
+    return try {
+      val checkHex = Hex.decode(key) // Checks if this is a valid Hex
+      getOrCreateNote(key)
+    } catch (e: IllegalArgumentException) {
+      Log.e("LocalCache", "Invalid Key to create note: $key", e)
+      null
+    }
+  }
+
   @Synchronized
   fun getOrCreateNote(idHex: String): Note {
     return notes[idHex] ?: run {
@@ -82,6 +92,17 @@ object LocalCache {
       answer
     }
   }
+
+  fun checkGetOrCreateChannel(key: HexKey): Channel? {
+    return try {
+      val checkHex = Hex.decode(key) // Checks if this is a valid Hex
+      getOrCreateChannel(key)
+    } catch (e: IllegalArgumentException) {
+      Log.e("LocalCache", "Invalid Key to create channel: $key", e)
+      null
+    }
+  }
+
 
   @Synchronized
   fun getOrCreateChannel(key: String): Channel {
@@ -145,7 +166,6 @@ object LocalCache {
     if (isRepeatedMessageSpam(event)) return
 
     val note = getOrCreateNote(event.id.toHex())
-
     val author = getOrCreateUser(event.pubKey.toHexKey())
 
     if (relay != null) {
@@ -157,7 +177,7 @@ object LocalCache {
     if (note.event != null) return
 
     val mentions = event.mentions.mapNotNull { checkGetOrCreateUser(it) }
-    val replyTo = replyToWithoutCitations(event).map { getOrCreateNote(it) }
+    val replyTo = replyToWithoutCitations(event).mapNotNull { checkGetOrCreateNote(it) }
 
     note.loadEvent(event, author, mentions, replyTo)
 
@@ -266,7 +286,7 @@ object LocalCache {
 
     //Log.d("PM", "${author.toBestDisplayName()} to ${recipient?.toBestDisplayName()}")
 
-    val repliesTo = event.tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }.map { getOrCreateNote(it) }
+    val repliesTo = event.tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }.mapNotNull { checkGetOrCreateNote(it) }
     val mentions = event.tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }.mapNotNull { checkGetOrCreateUser(it) }
 
     note.loadEvent(event, author, mentions, repliesTo)
@@ -293,7 +313,7 @@ object LocalCache {
 
     val author = getOrCreateUser(event.pubKey.toHexKey())
     val mentions = event.originalAuthor.mapNotNull { checkGetOrCreateUser(it) }
-    val repliesTo = event.boostedPost.map { getOrCreateNote(it) }
+    val repliesTo = event.boostedPost.mapNotNull { checkGetOrCreateNote(it) }
 
     note.loadEvent(event, author, mentions, repliesTo)
 
@@ -324,7 +344,7 @@ object LocalCache {
 
     val author = getOrCreateUser(event.pubKey.toHexKey())
     val mentions = event.originalAuthor.mapNotNull { checkGetOrCreateUser(it) }
-    val repliesTo = event.originalPost.map { getOrCreateNote(it) }
+    val repliesTo = event.originalPost.mapNotNull { checkGetOrCreateNote(it) }
 
     note.loadEvent(event, author, mentions, repliesTo)
 
@@ -369,7 +389,7 @@ object LocalCache {
 
     val author = getOrCreateUser(event.pubKey.toHexKey())
     val mentions = event.reportedAuthor.mapNotNull { checkGetOrCreateUser(it) }
-    val repliesTo = event.reportedPost.map { getOrCreateNote(it) }
+    val repliesTo = event.reportedPost.mapNotNull { checkGetOrCreateNote(it) }
 
     note.loadEvent(event, author, mentions, repliesTo)
 
@@ -410,7 +430,7 @@ object LocalCache {
     if (event.channel.isNullOrBlank()) return
 
     // new event
-    val oldChannel = getOrCreateChannel(event.channel)
+    val oldChannel = checkGetOrCreateChannel(event.channel) ?: return
     val author = getOrCreateUser(event.pubKey.toHexKey())
     if (event.createdAt > oldChannel.updatedMetadataAt) {
       if (oldChannel.creator == null || oldChannel.creator == author) {
@@ -432,7 +452,7 @@ object LocalCache {
     if (event.channel.isNullOrBlank()) return
     if (isRepeatedMessageSpam(event)) return
 
-    val channel = getOrCreateChannel(event.channel)
+    val channel = checkGetOrCreateChannel(event.channel) ?: return
 
     val note = getOrCreateNote(event.id.toHex())
     channel.addNote(note)
@@ -449,7 +469,7 @@ object LocalCache {
 
     val mentions = event.mentions.mapNotNull { checkGetOrCreateUser(it) }
     val replyTo = event.replyTos
-      .map { getOrCreateNote(it) }
+      .mapNotNull { checkGetOrCreateNote(it) }
       .filter { it.event !is ChannelCreateEvent }
 
     note.channel = channel
@@ -489,7 +509,7 @@ object LocalCache {
 
     val author = getOrCreateUser(event.pubKey.toHexKey())
     val mentions = event.zappedAuthor.mapNotNull { checkGetOrCreateUser(it) }
-    val repliesTo = event.zappedPost.map { getOrCreateNote(it) }
+    val repliesTo = event.zappedPost.mapNotNull { checkGetOrCreateNote(it) }
 
     note.loadEvent(event, author, mentions, repliesTo)
 
@@ -525,7 +545,7 @@ object LocalCache {
 
     val author = getOrCreateUser(event.pubKey.toHexKey())
     val mentions = event.zappedAuthor.mapNotNull { checkGetOrCreateUser(it) }
-    val repliesTo = event.zappedPost.map { getOrCreateNote(it) }
+    val repliesTo = event.zappedPost.mapNotNull { checkGetOrCreateNote(it) }
 
     note.loadEvent(event, author, mentions, repliesTo)
 

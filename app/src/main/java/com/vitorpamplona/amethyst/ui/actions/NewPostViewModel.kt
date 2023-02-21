@@ -76,24 +76,12 @@ class NewPostViewModel: ViewModel() {
         // adds all references to mentions and reply tos
         message.text.split('\n').forEach { paragraph: String ->
             paragraph.split(' ').forEach { word: String ->
-                try {
-                    if (word.startsWith("@npub") && word.length >= 64) {
-                        val keyB32 = word.substring(0, 64)
+                val results = parseDirtyWordForKey(word)
 
-                        val key = decodePublicKey(keyB32.removePrefix("@"))
-                        val user = LocalCache.getOrCreateUser(key.toHexKey())
-
-                        addUserToMentions(user)
-                    } else if (word.startsWith("@note") && word.length >= 64) {
-                        val keyB32 = word.substring(0, 64)
-
-                        val key = decodePublicKey(keyB32.removePrefix("@"))
-                        val note = LocalCache.getOrCreateNote(key.toHexKey())
-
-                        addNoteToReplyTos(note)
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
+                if (results?.type == "npub") {
+                    addUserToMentions(LocalCache.getOrCreateUser(results.keyHex))
+                } else if (results?.type == "note") {
+                    addNoteToReplyTos(LocalCache.getOrCreateNote(results.keyHex))
                 }
             }
         }
@@ -101,29 +89,16 @@ class NewPostViewModel: ViewModel() {
         // Tags the text in the correct order.
         val newMessage = message.text.split('\n').map { paragraph: String ->
             paragraph.split(' ').map { word: String ->
-                try {
-                    if (word.startsWith("@npub") && word.length >= 64) {
-                        val keyB32 = word.substring(0, 64)
-                        val restOfWord = word.substring(64)
+                val results = parseDirtyWordForKey(word)
+                if (results?.type == "npub") {
+                    val user = LocalCache.getOrCreateUser(results.keyHex)
 
-                        val key = decodePublicKey(keyB32.removePrefix("@"))
-                        val user = LocalCache.getOrCreateUser(key.toHexKey())
+                    "#[${tagIndex(user)}]${results.restOfWord}"
+                } else if (results?.type == "note") {
+                    val note = LocalCache.getOrCreateNote(results.keyHex)
 
-                        "#[${tagIndex(user)}]$restOfWord"
-                    } else if (word.startsWith("@note") && word.length >= 64) {
-                        val keyB32 = word.substring(0, 64)
-                        val restOfWord = word.substring(64)
-
-                        val key = decodePublicKey(keyB32.removePrefix("@"))
-                        val note = LocalCache.getOrCreateNote(key.toHexKey())
-
-                        "#[${tagIndex(note)}]$restOfWord"
-                    } else {
-                        word
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    // if it can't parse the key, don't try to change.
+                    "#[${tagIndex(note)}]${results.restOfWord}"
+                } else {
                     word
                 }
             }.joinToString(" ")

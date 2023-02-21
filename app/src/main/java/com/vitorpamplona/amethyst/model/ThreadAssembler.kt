@@ -9,7 +9,7 @@ class ThreadAssembler {
     if (note.replyTo == null || note.replyTo?.isEmpty() == true) return note
 
     val markedAsRoot = note.event?.tags?.firstOrNull { it[0] == "e" && it.size > 3 && it[3] == "root" }?.getOrNull(1)
-    if (markedAsRoot != null) return LocalCache.getOrCreateNote(markedAsRoot)
+    if (markedAsRoot != null) return LocalCache.checkGetOrCreateNote(markedAsRoot)
 
     val hasNoReplyTo = note.replyTo?.firstOrNull { it.replyTo?.isEmpty() == true }
     if (hasNoReplyTo != null) return hasNoReplyTo

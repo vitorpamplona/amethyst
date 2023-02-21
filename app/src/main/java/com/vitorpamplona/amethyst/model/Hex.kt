@@ -48,3 +48,36 @@ fun decodePublicKey(key: String): ByteArray {
     Hex.decode(key)
   }
 }
+
+data class DirtyKeyInfo(val type: String, val keyHex: String, val restOfWord: String)
+
+fun parseDirtyWordForKey(mightBeAKey: String): DirtyKeyInfo? {
+  var key = mightBeAKey
+  if (key.startsWith("nostr:", true)) {
+    key = key.substring("nostr:".length)
+  }
+
+  key = key.removePrefix("@")
+
+  if (key.length < 63)
+    return null
+
+  try {
+
+    val keyB32 = key.substring(0, 63)
+    val restOfWord = key.substring(63)
+
+    if (key.startsWith("nsec1", true)) {
+      return DirtyKeyInfo("npub", Persona(privKey = keyB32.bechToBytes()).pubKey.toHexKey(), restOfWord)
+    } else if (key.startsWith("npub1", true)) {
+      return DirtyKeyInfo("npub", keyB32.bechToBytes().toHexKey(), restOfWord)
+    } else if (key.startsWith("note1", true)) {
+      return DirtyKeyInfo("note", keyB32.bechToBytes().toHexKey(), restOfWord)
+    }
+
+  } catch (e: Exception) {
+    e.printStackTrace()
+  }
+
+  return null
+}
