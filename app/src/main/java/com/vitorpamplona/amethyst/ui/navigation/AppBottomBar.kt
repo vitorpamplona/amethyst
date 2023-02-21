@@ -121,6 +121,10 @@ private fun NotifiableIcon(item: Route, currentRoute: String?, accountViewModel:
             hasNewItems = item.hasNewItems(account, notif.cache, context)
         }
 
+        LaunchedEffect(key1 = db) {
+            hasNewItems = item.hasNewItems(account, notif.cache, context)
+        }
+
         if (hasNewItems) {
             Box(
                 Modifier
