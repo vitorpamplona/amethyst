@@ -24,7 +24,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-object NotificationViewModel: CardFeedViewModel(NotificationFeedFilter)
+class NotificationViewModel: CardFeedViewModel(NotificationFeedFilter)
 
 open class CardFeedViewModel(val dataSource: FeedFilter<Note>): ViewModel() {
     private val _feedContent = MutableStateFlow<CardFeedState>(CardFeedState.Loading)
