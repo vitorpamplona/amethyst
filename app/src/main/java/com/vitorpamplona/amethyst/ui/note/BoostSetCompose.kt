@@ -51,7 +51,7 @@ fun BoostSetCompose(boostSetCard: BoostSetCard, isInnerNote: Boolean = false, ro
     } else {
         var isNew by remember { mutableStateOf<Boolean>(false) }
 
-        LaunchedEffect(key1 = routeForLastRead) {
+        LaunchedEffect(key1 = boostSetCard) {
             isNew = boostSetCard.createdAt > NotificationCache.load(routeForLastRead, context)
 
             val createdAt = note.event?.createdAt

@@ -51,7 +51,7 @@ fun LikeSetCompose(likeSetCard: LikeSetCard, modifier: Modifier = Modifier, isIn
     } else {
         var isNew by remember { mutableStateOf<Boolean>(false) }
 
-        LaunchedEffect(key1 = routeForLastRead) {
+        LaunchedEffect(key1 = likeSetCard) {
             isNew = likeSetCard.createdAt > NotificationCache.load(routeForLastRead, context)
 
             val createdAt = note.event?.createdAt

@@ -51,7 +51,7 @@ fun ZapSetCompose(zapSetCard: ZapSetCard, modifier: Modifier = Modifier, isInner
     } else {
         var isNew by remember { mutableStateOf<Boolean>(false) }
 
-        LaunchedEffect(key1 = routeForLastRead) {
+        LaunchedEffect(key1 = zapSetCard) {
             isNew = zapSetCard.createdAt > NotificationCache.load(routeForLastRead, context)
 
             val createdAt = note.event?.createdAt
