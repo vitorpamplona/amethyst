@@ -102,7 +102,7 @@ fun ZapSetCompose(zapSetCard: ZapSetCard, modifier: Modifier = Modifier, isInner
                     FlowRow() {
                         zapSetCard.zapEvents.forEach {
                             NoteAuthorPicture(
-                                note = it,
+                                note = it.key,
                                 navController = navController,
                                 userAccount = account.userProfile(),
                                 size = 35.dp

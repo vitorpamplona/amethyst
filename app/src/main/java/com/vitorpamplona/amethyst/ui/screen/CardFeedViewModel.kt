@@ -71,15 +71,15 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>): ViewModel() {
 
         val reactionCards = reactionsPerEvent.map { LikeSetCard(it.key, it.value) }
 
-        val zapsPerEvent = mutableMapOf<Note, MutableList<Note>>()
+        val zapsPerEvent = mutableMapOf<Note, MutableMap<Note, Note>>()
         notes
             .filter { it.event is LnZapEvent}
             .forEach { zapEvent ->
                 val zappedPost = zapEvent.replyTo?.lastOrNull() { it.event !is ChannelMetadataEvent && it.event !is ChannelCreateEvent }
                 if (zappedPost != null) {
-                    val key = zappedPost.zaps.filter { it.value == zapEvent }.keys.firstOrNull()
-                    if (key != null) {
-                        zapsPerEvent.getOrPut(zappedPost, { mutableListOf() }).add(key)
+                    val zapRequest = zappedPost.zaps.filter { it.value == zapEvent }.keys.firstOrNull()
+                    if (zapRequest != null) {
+                        zapsPerEvent.getOrPut(zappedPost, { mutableMapOf() }).put(zapRequest, zapEvent)
                     }
                 }
             }

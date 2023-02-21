@@ -24,8 +24,8 @@ class LikeSetCard(val note: Note, val likeEvents: List<Note>): Card() {
     override fun id() = note.idHex + "L" + createdAt
 }
 
-class ZapSetCard(val note: Note, val zapEvents: List<Note>): Card() {
-    val createdAt = zapEvents.maxOf { it.event?.createdAt ?: 0 }
+class ZapSetCard(val note: Note, val zapEvents: Map<Note, Note>): Card() {
+    val createdAt = zapEvents.maxOf { it.value.event?.createdAt ?: 0 }
     override fun createdAt(): Long {
         return createdAt
     }
