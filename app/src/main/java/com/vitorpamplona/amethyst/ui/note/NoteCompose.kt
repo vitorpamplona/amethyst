@@ -228,8 +228,11 @@ fun NoteCompose(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (isQuotedNote) {
                             NoteAuthorPicture(note, navController, account.userProfile(), 25.dp)
+                            NoteUsernameDisplay(note, Modifier.padding(start = 5.dp).weight(1f))
+                        } else {
+                            NoteUsernameDisplay(note, Modifier.weight(1f))
                         }
-                        NoteUsernameDisplay(note, Modifier.weight(1f))
+
 
                         if (noteEvent !is RepostEvent) {
                             Text(
