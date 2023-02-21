@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextDirection
@@ -175,23 +176,34 @@ fun TagLink(word: String, tags: List<List<String>>, accountViewModel: AccountVie
 
   if (index >= 0 && index < tags.size) {
     if (tags[index][0] == "p") {
-      val user = LocalCache.users[tags[index][1]]
-      if (user != null) {
-        ClickableUserTag(user, navController)
+      val baseUser = LocalCache.checkGetOrCreateUser(tags[index][1])
+      if (baseUser != null) {
+        val userState = baseUser.live().metadata.observeAsState()
+        val user = userState.value?.user
+        if (user != null) {
+          ClickableUserTag(user, navController)
+        } else {
+          Text(text = "${tags[index][1].toByteArray().toNpub().toShortenHex()} ")
+        }
       } else {
         Text(text = "${tags[index][1].toByteArray().toNpub().toShortenHex()} ")
       }
     } else if (tags[index][0] == "e") {
-      val note = LocalCache.notes[tags[index][1]]
+      val note = LocalCache.checkGetOrCreateNote(tags[index][1])
       if (note != null) {
         //ClickableNoteTag(note, navController)
         NoteCompose(
           baseNote = note,
           accountViewModel = accountViewModel,
-          modifier = Modifier.padding(0.dp)
+          modifier = Modifier
+            .padding(0.dp)
             .fillMaxWidth()
             .clip(shape = RoundedCornerShape(15.dp))
-            .border(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.12f), RoundedCornerShape(15.dp))
+            .border(
+              1.dp,
+              MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
+              RoundedCornerShape(15.dp)
+            )
             .background(MaterialTheme.colors.onSurface.copy(alpha = 0.05f)),
           isQuotedNote = true,
           navController = navController)
