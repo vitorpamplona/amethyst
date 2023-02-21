@@ -420,13 +420,13 @@ class Account(
         reconnectIfRelaysHaveChanged()
       }
     }
-    LocalCache.liveSpam.observeForever {
+    LocalCache.antiSpam.liveSpam.observeForever {
       GlobalScope.launch(Dispatchers.IO) {
-        LocalCache.spamMessages.snapshot().values.forEach {
-          if (it !in hiddenUsers) {
-            val userToBlock = LocalCache.getOrCreateUser(it)
+        it.cache.spamMessages.snapshot().values.forEach {
+          if (it.pubkeyHex !in transientHiddenUsers && it.duplicatedMessages > 5) {
+            val userToBlock = LocalCache.getOrCreateUser(it.pubkeyHex)
             if (userToBlock != userProfile() && userToBlock !in userProfile().follows) {
-              transientHiddenUsers = transientHiddenUsers + it
+              transientHiddenUsers = transientHiddenUsers + it.pubkeyHex
             }
           }
         }

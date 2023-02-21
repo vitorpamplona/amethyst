@@ -41,21 +41,22 @@ import nostr.postr.events.PrivateDmEvent
 import nostr.postr.events.RecommendRelayEvent
 import nostr.postr.events.TextNoteEvent
 import nostr.postr.toHex
+import nostr.postr.toNpub
 
+data class Spammer(val pubkeyHex: HexKey, var duplicatedMessages: Int)
 
 object LocalCache {
   val metadataParser = jacksonObjectMapper()
     .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
     .readerFor(UserMetadata::class.java)
 
+  val antiSpam = AntiSpamFilter()
+
   val users = ConcurrentHashMap<HexKey, User>()
   val notes = ConcurrentHashMap<HexKey, Note>()
   val channels = ConcurrentHashMap<HexKey, Channel>()
 
-  val recentMessages = LruCache<Int, String>(1000)
-  val spamMessages = LruCache<Int, String>(1000)
-
-  fun checkGetOrCreateUser(key: HexKey): User? {
+  fun checkGetOrCreateUser(key: String): User? {
     return try {
       val checkHex = Hex.decode(key) // Checks if this is a valid Hex
       getOrCreateUser(key)
@@ -74,7 +75,7 @@ object LocalCache {
     }
   }
 
-  fun checkGetOrCreateNote(key: HexKey): Note? {
+  fun checkGetOrCreateNote(key: String): Note? {
     return try {
       val checkHex = Hex.decode(key) // Checks if this is a valid Hex
       getOrCreateNote(key)
@@ -93,7 +94,7 @@ object LocalCache {
     }
   }
 
-  fun checkGetOrCreateChannel(key: HexKey): Channel? {
+  fun checkGetOrCreateChannel(key: String): Channel? {
     return try {
       val checkHex = Hex.decode(key) // Checks if this is a valid Hex
       getOrCreateChannel(key)
@@ -141,29 +142,9 @@ object LocalCache {
       .format(DateTimeFormatter.ofPattern("uuuu MMM d hh:mm a"))
   }
 
-  @Synchronized
-  fun isRepeatedMessageSpam(event: Event): Boolean {
-    val idHex = event.id.toHexKey()
-    // if already processed, return
-    if (notes[idHex] != null) return false
-
-    // double list strategy:
-    // if duplicated, it goes into spam. 1000 spam messages are saved into the spam list.
-    val hash = (event.content + event.tags.flatten().joinToString(",")).hashCode()
-    if (event.content.length > 50 && ((recentMessages[hash] != null && recentMessages[hash] != idHex) || spamMessages[hash] != null)) {
-      Log.w("Potential SPAM Message", "${event.id.toHex()} ${recentMessages[hash]} ${spamMessages[hash] != null} ${event.content.replace("\n", " | ")}")
-      if (spamMessages.get(hash) == null) {
-        spamMessages.put(hash, event.pubKey.toHexKey())
-        liveSpam.invalidateData()
-      }
-      return true
-    }
-    recentMessages.put(hash, idHex)
-    return false
-  }
 
   fun consume(event: TextNoteEvent, relay: Relay? = null) {
-    if (isRepeatedMessageSpam(event)) return
+    if (antiSpam.isSpam(event)) return
 
     val note = getOrCreateNote(event.id.toHex())
     val author = getOrCreateUser(event.pubKey.toHexKey())
@@ -450,7 +431,7 @@ object LocalCache {
 
   fun consume(event: ChannelMessageEvent, relay: Relay?) {
     if (event.channel.isNullOrBlank()) return
-    if (isRepeatedMessageSpam(event)) return
+    if (antiSpam.isSpam(event)) return
 
     val channel = checkGetOrCreateChannel(event.channel) ?: return
 
@@ -667,7 +648,6 @@ object LocalCache {
 
   // Observers line up here.
   val live: LocalCacheLiveData = LocalCacheLiveData(this)
-  val liveSpam: LocalCacheLiveData = LocalCacheLiveData(this)
 
   private fun refreshObservers() {
     live.invalidateData()
