@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.note
 
+import android.widget.Space
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -228,7 +230,8 @@ fun NoteCompose(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (isQuotedNote) {
                             NoteAuthorPicture(note, navController, account.userProfile(), 25.dp)
-                            NoteUsernameDisplay(note, Modifier.padding(start = 5.dp).weight(1f))
+                            Spacer(Modifier.padding(horizontal = 5.dp))
+                            NoteUsernameDisplay(note, Modifier.weight(1f))
                         } else {
                             NoteUsernameDisplay(note, Modifier.weight(1f))
                         }
