@@ -109,7 +109,7 @@ private fun homeHasNewItems(account: Account, cache: NotificationCache, context:
 
     HomeNewThreadFeedFilter.account = account
 
-    return HomeNewThreadFeedFilter.feed().any {(it.event?.createdAt ?: 0) > lastTime }
+    return (HomeNewThreadFeedFilter.feed().firstOrNull { it.event?.createdAt != null }?.event?.createdAt ?: 0) > lastTime
 }
 
 private fun notificationHasNewItems(account: Account, cache: NotificationCache, context: Context): Boolean {
@@ -117,19 +117,17 @@ private fun notificationHasNewItems(account: Account, cache: NotificationCache, 
 
     NotificationFeedFilter.account = account
 
-    return NotificationFeedFilter.feed().any {(it.event?.createdAt ?: 0) > lastTime }
+    return (NotificationFeedFilter.feed().firstOrNull { it.event?.createdAt != null }?.event?.createdAt ?: 0) > lastTime
 }
 
 private fun messagesHasNewItems(account: Account, cache: NotificationCache, context: Context): Boolean {
     ChatroomListKnownFeedFilter.account = account
 
-    return ChatroomListKnownFeedFilter.feed().any {
-        if (it.channel == null && it.author != account.userProfile()) {
-            val lastTime = cache.load("Room/${it.author?.pubkeyHex}", context)
+    val note = ChatroomListKnownFeedFilter.feed().firstOrNull {
+        it.event?.createdAt != null && it.channel == null && it.author != account.userProfile()
+    } ?: return false
 
-            (it.event?.createdAt ?: 0) > lastTime
-        } else {
-            false
-        }
-    }
+    val lastTime = cache.load("Room/${note.author?.pubkeyHex}", context)
+
+    return (note.event?.createdAt ?: 0) > lastTime
 }

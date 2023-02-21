@@ -61,9 +61,16 @@ class Account(
   var latestContactList: ContactListEvent? = null
 ) {
   var transientHiddenUsers: Set<String> = setOf()
+  @Transient
+  var userProfile: User? = null
 
   fun userProfile(): User {
-    return LocalCache.getOrCreateUser(loggedIn.pubKey.toHexKey())
+    userProfile?.let { return it }
+
+    val newUser = LocalCache.getOrCreateUser(loggedIn.pubKey.toHexKey())
+    userProfile = newUser
+
+    return newUser
   }
 
   fun followingChannels(): List<Channel> {
@@ -483,10 +490,10 @@ class Account(
   val liveLanguages: AccountLiveData = AccountLiveData(this)
   val saveable: AccountLiveData = AccountLiveData(this)
 
-  fun isHidden(user: User) = user in hiddenUsers()
+  fun isHidden(user: User) = user.pubkeyHex in hiddenUsers || user.pubkeyHex in transientHiddenUsers
 
   fun isAcceptable(user: User): Boolean {
-    return user !in hiddenUsers()  // if user hasn't hided this author
+    return !isHidden(user)  // if user hasn't hided this author
         && user.reportsBy( userProfile() ).isEmpty() // if user has not reported this post
         && user.reportAuthorsBy( userProfile().follows ).size < 5
   }

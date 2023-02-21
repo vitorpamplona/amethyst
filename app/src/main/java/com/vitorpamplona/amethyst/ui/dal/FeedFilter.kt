@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.dal
 
+import android.util.Log
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import kotlin.time.ExperimentalTime
@@ -10,8 +11,14 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 abstract class FeedFilter<T>() {
+  @OptIn(ExperimentalTime::class)
   fun loadTop(): List<T> {
-    return feed().take(1000)
+    val (feed, elapsed) = measureTimedValue {
+      feed().take(1000)
+    }
+
+    Log.d("Time","${this.javaClass.simpleName} Feed in ${elapsed}")
+    return feed
   }
 
   abstract fun feed(): List<T>
