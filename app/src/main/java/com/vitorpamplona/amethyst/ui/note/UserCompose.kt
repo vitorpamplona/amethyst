@@ -75,7 +75,6 @@ fun UserCompose(baseUser: User, accountViewModel: AccountViewModel, navControlle
                 if (account.isHidden(baseUser)) {
                     ShowUserButton {
                         account.showUser(baseUser.pubkeyHex)
-                        LocalPreferences(ctx).saveToEncryptedStorage(account)
                     }
                 } else if (userFollows.isFollowing(baseUser)) {
                     UnfollowButton { account.unfollow(baseUser) }

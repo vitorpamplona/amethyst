@@ -8,6 +8,9 @@ import com.vitorpamplona.amethyst.model.toByteArray
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import java.util.Locale
 import nostr.postr.Persona
+import nostr.postr.events.ContactListEvent
+import nostr.postr.events.Event
+import nostr.postr.events.Event.Companion.getRefinedEvent
 import nostr.postr.toHex
 
 class LocalPreferences(context: Context) {
@@ -24,6 +27,7 @@ class LocalPreferences(context: Context) {
       remove("dontTranslateFrom")
       remove("translateTo")
       remove("zapAmounts")
+      remove("latestContactList")
     }.apply()
   }
 
@@ -37,6 +41,7 @@ class LocalPreferences(context: Context) {
       account.dontTranslateFrom.let { putStringSet("dontTranslateFrom", it) }
       account.translateTo.let { putString("translateTo", it) }
       account.zapAmountChoices.let { putString("zapAmounts", gson.toJson(it)) }
+      account.latestContactList.let { putString("latestContactList", Event.gson.toJson(it)) }
     }.apply()
   }
 
@@ -59,6 +64,15 @@ class LocalPreferences(context: Context) {
         object : TypeToken<List<Long>>() {}.type
       ) ?: listOf(500L, 1000L, 5000L)
 
+      val latestContactList = try {
+        getString("latestContactList", null)?.let {
+          Event.gson.fromJson(it, Event::class.java).getRefinedEvent(true) as ContactListEvent
+        }
+      } catch (e: Throwable) {
+        e.printStackTrace()
+        null
+      }
+
       if (pubKey != null) {
         return Account(
           Persona(privKey = privKey?.toByteArray(), pubKey = pubKey.toByteArray()),
@@ -67,7 +81,8 @@ class LocalPreferences(context: Context) {
           localRelays,
           dontTranslateFrom,
           translateTo,
-          zapAmountChoices
+          zapAmountChoices,
+          latestContactList
         )
       } else {
         return null

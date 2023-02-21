@@ -1,16 +1,15 @@
 package com.vitorpamplona.amethyst.ui.screen
 
-import android.util.Log
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.LocalCache
 import fr.acinq.secp256k1.Hex
 import java.util.regex.Pattern
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -70,9 +69,35 @@ class AccountStateViewModel(private val localPreferences: LocalPreferences): Vie
     scope.launch {
       ServiceManager.start(account)
     }
+
+    GlobalScope.launch(Dispatchers.Main) {
+      account.saveable.observeForever(saveListener)
+    }
+  }
+
+  private val saveListener: (com.vitorpamplona.amethyst.model.AccountState) -> Unit = {
+    GlobalScope.launch(Dispatchers.IO) {
+      localPreferences.saveToEncryptedStorage(it.account)
+    }
   }
 
   fun logOff() {
+    val state = accountContent.value
+
+    when (state) {
+      is AccountState.LoggedIn -> {
+        GlobalScope.launch(Dispatchers.Main) {
+          state.account.saveable.removeObserver(saveListener)
+        }
+      }
+      is AccountState.LoggedInViewOnly -> {
+        GlobalScope.launch(Dispatchers.Main) {
+          state.account.saveable.removeObserver(saveListener)
+        }
+      }
+      else -> {}
+    }
+
     _accountContent.update { AccountState.LoggedOff }
 
     localPreferences.clearEncryptedStorage()

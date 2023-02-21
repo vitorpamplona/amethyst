@@ -1,7 +1,5 @@
 package com.vitorpamplona.amethyst.ui
 
-import android.content.ComponentCallbacks2
-import android.net.Uri
 import android.os.Build.VERSION.SDK_INT
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -16,24 +14,13 @@ import coil.ImageLoader
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.decode.SvgDecoder
-import coil.disk.DiskCache
-import coil.memory.MemoryCache
-import coil.request.CachePolicy
-import coil.util.DebugLogger
-import com.vitorpamplona.amethyst.EncryptedStorage
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.decodePublicKey
-import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.Nip19
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.screen.AccountScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
-import fr.acinq.secp256k1.Hex
-import nostr.postr.Persona
-import nostr.postr.bechToBytes
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,11 +51,11 @@ class MainActivity : ComponentActivity() {
         // A surface container using the 'background' color from the theme
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background) {
 
-          val accountViewModel: AccountStateViewModel = viewModel {
+          val accountStateViewModel: AccountStateViewModel = viewModel {
             AccountStateViewModel(LocalPreferences(applicationContext))
           }
 
-          AccountScreen(accountViewModel, startingPage)
+          AccountScreen(accountStateViewModel, startingPage)
         }
       }
     }
@@ -78,6 +65,7 @@ class MainActivity : ComponentActivity() {
 
   override fun onResume() {
     super.onResume()
+    
     // Only starts after login
     ServiceManager.start()
   }

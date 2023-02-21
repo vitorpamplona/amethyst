@@ -38,8 +38,6 @@ class NewChannelViewModel: ViewModel() {
                     channelDescription.value.text,
                     channelPicture.value.text
                 )
-
-                LocalPreferences(context).saveToEncryptedStorage(account)
             } else
                 account.sendChangeChannel(
                     channelName.value.text,

@@ -306,13 +306,10 @@ private fun EditButton(account: Account, channel: Channel) {
 
 @Composable
 private fun JoinButton(account: Account, channel: Channel, navController: NavController) {
-    val context = LocalContext.current.applicationContext
-
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
             account.joinChannel(channel.idHex)
-            LocalPreferences(context).saveToEncryptedStorage(account)
             navController.navigate(Route.Message.route)
         },
         shape = RoundedCornerShape(20.dp),
@@ -328,13 +325,10 @@ private fun JoinButton(account: Account, channel: Channel, navController: NavCon
 
 @Composable
 private fun LeaveButton(account: Account, channel: Channel, navController: NavController) {
-    val context = LocalContext.current.applicationContext
-
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
             account.leaveChannel(channel.idHex)
-            LocalPreferences(context).saveToEncryptedStorage(account)
             navController.navigate(Route.Message.route)
         },
         shape = RoundedCornerShape(20.dp),

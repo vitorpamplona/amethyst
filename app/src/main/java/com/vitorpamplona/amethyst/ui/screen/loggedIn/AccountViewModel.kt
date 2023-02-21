@@ -11,6 +11,8 @@ import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountState
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.LocalCacheState
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.ReportEvent
@@ -67,21 +69,17 @@ class AccountViewModel(private val account: Account): ViewModel() {
 
   fun hide(user: User, ctx: Context) {
     account.hideUser(user.pubkeyHex)
-    LocalPreferences(ctx).saveToEncryptedStorage(account)
   }
 
   fun show(user: User, ctx: Context) {
     account.showUser(user.pubkeyHex)
-    LocalPreferences(ctx).saveToEncryptedStorage(account)
   }
 
   fun translateTo(lang: Locale, ctx: Context) {
     account.updateTranslateTo(lang.language)
-    LocalPreferences(ctx).saveToEncryptedStorage(account)
   }
 
   fun dontTranslateFrom(lang: String, ctx: Context) {
     account.addDontTranslateFrom(lang)
-    LocalPreferences(ctx).saveToEncryptedStorage(account)
   }
 }

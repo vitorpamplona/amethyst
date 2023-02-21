@@ -540,7 +540,6 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, account: Account) {
           SaveButton(
             onPost = {
               postViewModel.sendPost()
-              LocalPreferences(ctx).saveToEncryptedStorage(account)
               onClose()
             },
             isActive = postViewModel.amounts.text.isNotBlank()

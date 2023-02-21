@@ -102,7 +102,6 @@ fun ZapNoteCompose(baseNote: Pair<Note, Note>, accountViewModel: AccountViewMode
                     if (account.isHidden(baseAuthor)) {
                         ShowUserButton {
                             account.showUser(baseAuthor.pubkeyHex)
-                            LocalPreferences(ctx).saveToEncryptedStorage(account)
                         }
                     } else if (userFollows.isFollowing(baseAuthor)) {
                         UnfollowButton { account.unfollow(baseAuthor) }

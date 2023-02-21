@@ -57,7 +57,8 @@ class Account(
   var localRelays: Set<RelaySetupInfo> = Constants.defaultRelays.toSet(),
   var dontTranslateFrom: Set<String> = getLanguagesSpokenByUser(),
   var translateTo: String = Locale.getDefault().language,
-  var zapAmountChoices: List<Long> = listOf(500L, 1000L, 5000L)
+  var zapAmountChoices: List<Long> = listOf(500L, 1000L, 5000L),
+  var latestContactList: ContactListEvent? = null
 ) {
   var transientHiddenUsers: Set<String> = setOf()
 
@@ -80,18 +81,23 @@ class Account(
   fun sendNewRelayList(relays: Map<String, ContactListEvent.ReadWrite>) {
     if (!isWriteable()) return
 
-    val lastestContactList = userProfile().latestContactList
-    val event = if (lastestContactList != null) {
-      ContactListEvent.create(
-        lastestContactList.follows,
+    val contactList = latestContactList
+
+    if (contactList != null && contactList.follows.size > 0) {
+      val event = ContactListEvent.create(
+        contactList.follows,
         relays,
         loggedIn.privKey!!)
-    } else {
-      ContactListEvent.create(listOf(), relays, loggedIn.privKey!!)
-    }
 
-    Client.send(event)
-    LocalCache.consume(event)
+      Client.send(event)
+      LocalCache.consume(event)
+    } else {
+      val event = ContactListEvent.create(listOf(), relays, loggedIn.privKey!!)
+
+      // Keep this local to avoid erasing a good contact list.
+      // Client.send(event)
+      LocalCache.consume(event)
+    }
   }
 
   fun sendNewUserMetadata(toString: String) {
@@ -208,10 +214,11 @@ class Account(
   fun follow(user: User) {
     if (!isWriteable()) return
 
-    val lastestContactList = userProfile().latestContactList
-    val event = if (lastestContactList != null) {
+    val contactList = latestContactList
+
+    val event = if (contactList != null && contactList.follows.size > 0) {
       ContactListEvent.create(
-        lastestContactList.follows.plus(Contact(user.pubkeyHex, null)),
+        contactList.follows.plus(Contact(user.pubkeyHex, null)),
         userProfile().relays,
         loggedIn.privKey!!)
     } else {
@@ -230,12 +237,14 @@ class Account(
   fun unfollow(user: User) {
     if (!isWriteable()) return
 
-    val lastestContactList = userProfile().latestContactList
-    if (lastestContactList != null) {
+    val contactList = latestContactList
+
+    if (contactList != null && contactList.follows.size > 0) {
       val event = ContactListEvent.create(
-        lastestContactList.follows.filter { it.pubKeyHex != user.pubkeyHex },
+        contactList.follows.filter { it.pubKeyHex != user.pubkeyHex },
         userProfile().relays,
         loggedIn.privKey!!)
+
       Client.send(event)
       LocalCache.consume(event)
     }
@@ -309,28 +318,35 @@ class Account(
 
   fun joinChannel(idHex: String) {
     followingChannels = followingChannels + idHex
-    invalidateData(live)
+    live.invalidateData()
+
+    saveable.invalidateData()
   }
 
   fun leaveChannel(idHex: String) {
     followingChannels = followingChannels - idHex
-    invalidateData(live)
+    live.invalidateData()
+
+    saveable.invalidateData()
   }
 
   fun hideUser(pubkeyHex: String) {
     hiddenUsers = hiddenUsers + pubkeyHex
-    invalidateData(live)
+    live.invalidateData()
+    saveable.invalidateData()
   }
 
   fun showUser(pubkeyHex: String) {
     hiddenUsers = hiddenUsers - pubkeyHex
     transientHiddenUsers = transientHiddenUsers - pubkeyHex
-    invalidateData(live)
+    live.invalidateData()
+    saveable.invalidateData()
   }
 
   fun changeZapAmounts(newAmounts: List<Long>) {
     zapAmountChoices = newAmounts
-    invalidateData(live)
+    live.invalidateData()
+    saveable.invalidateData()
   }
 
   fun sendChangeChannel(name: String, about: String, picture: String, channel: Channel) {
@@ -384,12 +400,23 @@ class Account(
 
   fun addDontTranslateFrom(languageCode: String) {
     dontTranslateFrom = dontTranslateFrom.plus(languageCode)
-    invalidateData(liveLanguages)
+    liveLanguages.invalidateData()
+
+    saveable.invalidateData()
   }
 
   fun updateTranslateTo(languageCode: String) {
     translateTo = languageCode
-    invalidateData(liveLanguages)
+    liveLanguages.invalidateData()
+
+    saveable.invalidateData()
+  }
+
+  private fun updateContactListTo(newContactList: ContactListEvent?) {
+    if ((newContactList?.follows?.size ?: 0) > 0 && latestContactList != newContactList) {
+      latestContactList = newContactList
+      saveable.invalidateData()
+    }
   }
 
   fun activeRelays(): Array<Relay>? {
@@ -415,11 +442,28 @@ class Account(
   }
 
   init {
+    latestContactList?.let {
+      println("Loading saved contacts ${it.toJson()}")
+      if (userProfile().latestContactList == null) {
+        LocalCache.consume(it)
+      }
+    }
+
+    // Observes relays to restart connections
     userProfile().live().relays.observeForever {
       GlobalScope.launch(Dispatchers.IO) {
         reconnectIfRelaysHaveChanged()
       }
     }
+
+    // saves contact list for the next time.
+    userProfile().live().follows.observeForever {
+      GlobalScope.launch(Dispatchers.IO) {
+        updateContactListTo(userProfile().latestContactList)
+      }
+    }
+
+    // imports transient blocks due to spam.
     LocalCache.antiSpam.liveSpam.observeForever {
       GlobalScope.launch(Dispatchers.IO) {
         it.cache.spamMessages.snapshot().values.forEach {
@@ -437,26 +481,7 @@ class Account(
   // Observers line up here.
   val live: AccountLiveData = AccountLiveData(this)
   val liveLanguages: AccountLiveData = AccountLiveData(this)
-
-  var handlerWaiting = AtomicBoolean()
-
-  @Synchronized
-  private fun invalidateData(live: AccountLiveData) {
-    if (handlerWaiting.getAndSet(true)) return
-
-    handlerWaiting.set(true)
-    val scope = CoroutineScope(Job() + Dispatchers.Default)
-    scope.launch {
-      try {
-        delay(100)
-        live.refresh()
-      } finally {
-        withContext(NonCancellable) {
-          handlerWaiting.set(false)
-        }
-      }
-    }
-  }
+  val saveable: AccountLiveData = AccountLiveData(this)
 
   fun isHidden(user: User) = user in hiddenUsers()
 
@@ -496,10 +521,32 @@ class Account(
   fun saveRelayList(value: List<RelaySetupInfo>) {
     localRelays = value.toSet()
     sendNewRelayList(value.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) } )
+
+    saveable.invalidateData()
   }
 }
 
 class AccountLiveData(private val account: Account): LiveData<AccountState>(AccountState(account)) {
+  var handlerWaiting = AtomicBoolean()
+
+  @Synchronized
+  fun invalidateData() {
+    if (handlerWaiting.getAndSet(true)) return
+
+    handlerWaiting.set(true)
+    val scope = CoroutineScope(Job() + Dispatchers.Default)
+    scope.launch {
+      try {
+        delay(100)
+        refresh()
+      } finally {
+        withContext(NonCancellable) {
+          handlerWaiting.set(false)
+        }
+      }
+    }
+  }
+
   fun refresh() {
     postValue(AccountState(account))
   }

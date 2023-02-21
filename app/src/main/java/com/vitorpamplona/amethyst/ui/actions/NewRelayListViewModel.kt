@@ -25,7 +25,6 @@ class NewRelayListViewModel: ViewModel() {
     fun create(ctx: Context) {
         relays.let {
             account.saveRelayList(it.value)
-            LocalPreferences(ctx).saveToEncryptedStorage(account)
         }
 
         clear(ctx)

@@ -323,7 +323,6 @@ private fun ProfileHeader(
                         if (account.isHidden(baseUser)) {
                             ShowUserButton {
                                 account.showUser(baseUser.pubkeyHex)
-                                LocalPreferences(ctx).saveToEncryptedStorage(account)
                             }
                         } else if (accountUser.isFollowing(baseUser)) {
                             UnfollowButton { account.unfollow(baseUser) }
