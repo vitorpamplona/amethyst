@@ -3,11 +3,14 @@ package com.vitorpamplona.amethyst
 import android.content.Context
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.model.Note
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 object NotificationCache {
   val lastReadByRoute = mutableMapOf<String, Long>()
@@ -20,7 +23,7 @@ object NotificationCache {
       val scope = CoroutineScope(Job() + Dispatchers.IO)
       scope.launch {
         LocalPreferences(context).saveLastRead(route, timestampInSecs)
-        invalidateData()
+        live.invalidateData()
       }
     }
   }
@@ -36,24 +39,31 @@ object NotificationCache {
 
   // Observers line up here.
   val live: NotificationLiveData = NotificationLiveData(this)
-
-  // Refreshes observers in batches.
-  var handlerWaiting = false
-  @Synchronized
-  fun invalidateData() {
-    if (handlerWaiting) return
-
-    handlerWaiting = true
-    val scope = CoroutineScope(Job() + Dispatchers.Default)
-    scope.launch {
-      delay(100)
-      live.refresh()
-      handlerWaiting = false
-    }
-  }
 }
 
 class NotificationLiveData(val cache: NotificationCache): LiveData<NotificationState>(NotificationState(cache)) {
+  // Refreshes observers in batches.
+  var handlerWaiting = AtomicBoolean()
+
+  @Synchronized
+  fun invalidateData() {
+    if (!hasActiveObservers()) return
+    if (handlerWaiting.getAndSet(true)) return
+
+    handlerWaiting.set(true)
+    val scope = CoroutineScope(Job() + Dispatchers.Main)
+    scope.launch {
+      try {
+        delay(100)
+        refresh()
+      } finally {
+        withContext(NonCancellable) {
+          handlerWaiting.set(false)
+        }
+      }
+    }
+  }
+
   fun refresh() {
     postValue(NotificationState(cache))
   }
