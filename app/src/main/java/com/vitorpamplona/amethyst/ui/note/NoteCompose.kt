@@ -555,7 +555,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
         }
         Divider()
         DropdownMenuItem(onClick = { note.author?.let { accountViewModel.hide(it, context) }; onDismiss() }) {
-            Text("Hide User")
+            Text("Block & Hide User")
         }
         Divider()
         DropdownMenuItem(onClick = {

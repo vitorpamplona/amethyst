@@ -781,7 +781,7 @@ fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () ->
                 }
             } else {
                 DropdownMenuItem(onClick = { user.let { accountViewModel.hide(it, context) }; onDismiss() }) {
-                    Text("Hide User")
+                    Text("Block & Hide User")
                 }
             }
             Divider()
