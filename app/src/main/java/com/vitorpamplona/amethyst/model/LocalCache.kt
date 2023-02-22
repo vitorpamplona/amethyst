@@ -149,7 +149,7 @@ object LocalCache {
     val author = getOrCreateUser(event.pubKey.toHexKey())
 
     if (relay != null) {
-      author.addRelay(relay, event.createdAt)
+      author.addRelayBeingUsed(relay, event.createdAt)
       note.addRelay(relay)
     }
 
@@ -207,7 +207,7 @@ object LocalCache {
   fun consume(event: ContactListEvent) {
     val user = getOrCreateUser(event.pubKey.toHexKey())
 
-    if (event.createdAt > user.updatedFollowsAt && event.follows.size > 0) {
+    if (event.createdAt > user.updatedFollowsAt && event.follows.isNotEmpty()) {
       // Saves relay list only if it's a user that is currently been seen
       user.latestContactList = event
 
@@ -255,7 +255,7 @@ object LocalCache {
     val author = getOrCreateUser(event.pubKey.toHexKey())
 
     if (relay != null) {
-      author.addRelay(relay, event.createdAt)
+      author.addRelayBeingUsed(relay, event.createdAt)
       note.addRelay(relay)
     }
 
@@ -440,7 +440,7 @@ object LocalCache {
     val author = getOrCreateUser(event.pubKey.toHexKey())
 
     if (relay != null) {
-      author.addRelay(relay, event.createdAt)
+      author.addRelayBeingUsed(relay, event.createdAt)
       note.addRelay(relay)
     }
 

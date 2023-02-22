@@ -527,7 +527,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
         DropdownMenuItem(onClick = { accountViewModel.broadcast(note); onDismiss() }) {
             Text("Broadcast")
         }
-        if (note.author != accountViewModel.accountLiveData.value?.account?.userProfile) {
+        if (note.author != accountViewModel.accountLiveData.value?.account?.userProfile()) {
             Divider()
             DropdownMenuItem(onClick = {
                 note.author?.let {

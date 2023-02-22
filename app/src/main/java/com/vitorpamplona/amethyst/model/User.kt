@@ -202,7 +202,7 @@ class User(val pubkeyHex: String) {
         }
     }
 
-    fun addRelay(relay: Relay, eventTime: Long) {
+    fun addRelayBeingUsed(relay: Relay, eventTime: Long) {
         val here = relaysBeingUsed[relay.url]
         if (here == null) {
             relaysBeingUsed = relaysBeingUsed + Pair(relay.url, RelayInfo(relay.url, eventTime, 1))

@@ -26,14 +26,17 @@ import com.vitorpamplona.amethyst.service.NostrHomeDataSource
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
 import com.vitorpamplona.amethyst.ui.note.RelayCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class RelayFeedViewModel: ViewModel() {
     val order = compareByDescending<RelayInfo> { it.lastEvent }.thenByDescending { it.counter }.thenBy { it.url }
@@ -79,21 +82,24 @@ class RelayFeedViewModel: ViewModel() {
         currentUser = null
     }
 
-    override fun onCleared() {
-        currentUser?.let { unsubscribeTo(it) }
-    }
+    var handlerWaiting = AtomicBoolean()
 
-    var handlerWaiting = false
     @Synchronized
-    fun invalidateData() {
-        if (handlerWaiting) return
+    private fun invalidateData() {
+        if (handlerWaiting.getAndSet(true)) return
 
-        handlerWaiting = true
+        handlerWaiting.set(true)
         val scope = CoroutineScope(Job() + Dispatchers.Default)
         scope.launch {
-            delay(100)
-            refresh()
-            handlerWaiting = false
+            try {
+                delay(50)
+                refresh()
+            } finally {
+                withContext(NonCancellable) {
+                    handlerWaiting.set(false)
+                }
+            }
+            handlerWaiting.set(false)
         }
     }
 }

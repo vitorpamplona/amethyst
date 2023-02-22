@@ -198,8 +198,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                             },
                             {
                                 val userState by baseUser.live().relays.observeAsState()
-                                val userRelaysBeingUsed =
-                                    userState?.user?.relaysBeingUsed?.size ?: "--"
+                                val userRelaysBeingUsed = userState?.user?.relaysBeingUsed?.size ?: "--"
 
                                 val userStateRelayInfo by baseUser.live().relayInfo.observeAsState()
                                 val userRelays = userStateRelayInfo?.user?.relays?.size ?: "--"
@@ -567,8 +566,26 @@ fun TabReports(user: User, accountViewModel: AccountViewModel, navController: Na
 fun TabRelays(user: User, accountViewModel: AccountViewModel, navController: NavController) {
     val feedViewModel: RelayFeedViewModel = viewModel()
 
-    LaunchedEffect(key1 = user) {
-        feedViewModel.subscribeTo(user)
+    val lifeCycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(user) {
+        val observer = LifecycleEventObserver { source, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                println("Profile Relay Start")
+                feedViewModel.subscribeTo(user)
+            }
+            if (event == Lifecycle.Event.ON_PAUSE) {
+                println("Profile Relay Stop")
+                feedViewModel.unsubscribeTo(user)
+            }
+        }
+
+        lifeCycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifeCycleOwner.lifecycle.removeObserver(observer)
+            println("Profile Relay Dispose")
+            feedViewModel.unsubscribeTo(user)
+        }
     }
 
     Column(Modifier.fillMaxHeight()) {
