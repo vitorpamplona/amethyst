@@ -64,6 +64,11 @@ class Account(
   @Transient
   var userProfile: User? = null
 
+  // Observers line up here.
+  val live: AccountLiveData = AccountLiveData(this)
+  val liveLanguages: AccountLiveData = AccountLiveData(this)
+  val saveable: AccountLiveData = AccountLiveData(this)
+
   fun userProfile(): User {
     userProfile?.let { return it }
 
@@ -420,7 +425,10 @@ class Account(
   }
 
   private fun updateContactListTo(newContactList: ContactListEvent?) {
-    if ((newContactList?.follows?.size ?: 0) > 0 && latestContactList != newContactList) {
+    if (newContactList?.follows.isNullOrEmpty()) return
+
+    // Events might be different objects, we have to compare their ids.
+    if (latestContactList?.id?.toHex() != newContactList?.id?.toHex()) {
       latestContactList = newContactList
       saveable.invalidateData()
     }
@@ -447,48 +455,6 @@ class Account(
       RelayPool.requestAndWatch()
     }
   }
-
-  init {
-    latestContactList?.let {
-      println("Loading saved contacts ${it.toJson()}")
-      if (userProfile().latestContactList == null) {
-        LocalCache.consume(it)
-      }
-    }
-
-    // Observes relays to restart connections
-    userProfile().live().relays.observeForever {
-      GlobalScope.launch(Dispatchers.IO) {
-        reconnectIfRelaysHaveChanged()
-      }
-    }
-
-    // saves contact list for the next time.
-    userProfile().live().follows.observeForever {
-      GlobalScope.launch(Dispatchers.IO) {
-        updateContactListTo(userProfile().latestContactList)
-      }
-    }
-
-    // imports transient blocks due to spam.
-    LocalCache.antiSpam.liveSpam.observeForever {
-      GlobalScope.launch(Dispatchers.IO) {
-        it.cache.spamMessages.snapshot().values.forEach {
-          if (it.pubkeyHex !in transientHiddenUsers && it.duplicatedMessages > 5) {
-            val userToBlock = LocalCache.getOrCreateUser(it.pubkeyHex)
-            if (userToBlock != userProfile() && userToBlock !in userProfile().follows) {
-              transientHiddenUsers = transientHiddenUsers + it.pubkeyHex
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // Observers line up here.
-  val live: AccountLiveData = AccountLiveData(this)
-  val liveLanguages: AccountLiveData = AccountLiveData(this)
-  val saveable: AccountLiveData = AccountLiveData(this)
 
   fun isHidden(user: User) = user.pubkeyHex in hiddenUsers || user.pubkeyHex in transientHiddenUsers
 
@@ -530,6 +496,43 @@ class Account(
     sendNewRelayList(value.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) } )
 
     saveable.invalidateData()
+  }
+
+  init {
+    latestContactList?.let {
+      println("Loading saved contacts ${it.toJson()}")
+      if (userProfile().latestContactList == null) {
+        LocalCache.consume(it)
+      }
+    }
+
+    // Observes relays to restart connections
+    userProfile().live().relays.observeForever {
+      GlobalScope.launch(Dispatchers.IO) {
+        reconnectIfRelaysHaveChanged()
+      }
+    }
+
+    // saves contact list for the next time.
+    userProfile().live().follows.observeForever {
+      GlobalScope.launch(Dispatchers.IO) {
+        updateContactListTo(userProfile().latestContactList)
+      }
+    }
+
+    // imports transient blocks due to spam.
+    LocalCache.antiSpam.liveSpam.observeForever {
+      GlobalScope.launch(Dispatchers.IO) {
+        it.cache.spamMessages.snapshot().values.forEach {
+          if (it.pubkeyHex !in transientHiddenUsers && it.duplicatedMessages > 5) {
+            val userToBlock = LocalCache.getOrCreateUser(it.pubkeyHex)
+            if (userToBlock != userProfile() && userToBlock !in userProfile().follows) {
+              transientHiddenUsers = transientHiddenUsers + it.pubkeyHex
+            }
+          }
+        }
+      }
+    }
   }
 }
 
