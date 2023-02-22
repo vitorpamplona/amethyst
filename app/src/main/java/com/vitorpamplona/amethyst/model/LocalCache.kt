@@ -1,7 +1,6 @@
 package com.vitorpamplona.amethyst.model
 
 import android.util.Log
-import android.util.LruCache
 import androidx.lifecycle.LiveData
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
@@ -24,8 +23,6 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.time.ExperimentalTime
-import kotlin.time.measureTimedValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -227,20 +224,19 @@ object LocalCache {
       )
 
       // Saves relay list only if it's a user that is currently been seen
-      if (user.liveSet?.isInUse() == true) {
-        try {
-          if (event.content.isNotEmpty()) {
-            val relays: Map<String, ContactListEvent.ReadWrite> =
-              Event.gson.fromJson(
-                event.content,
-                object : TypeToken<Map<String, ContactListEvent.ReadWrite>>() {}.type
-              )
+      try {
+        if (event.content.isNotEmpty()) {
+          val relays: Map<String, ContactListEvent.ReadWrite> =
+            Event.gson.fromJson(
+              event.content,
+              object : TypeToken<Map<String, ContactListEvent.ReadWrite>>() {}.type
+            )
 
-            user.updateRelays(relays)
-          }
-        } catch (e: Exception) {
-          e.printStackTrace()
+          user.updateRelays(relays)
         }
+      } catch (e: Exception) {
+        println("relay import issue")
+        e.printStackTrace()
       }
 
       Log.d(
