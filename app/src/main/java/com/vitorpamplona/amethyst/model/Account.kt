@@ -58,7 +58,7 @@ class Account(
   var dontTranslateFrom: Set<String> = getLanguagesSpokenByUser(),
   var translateTo: String = Locale.getDefault().language,
   var zapAmountChoices: List<Long> = listOf(500L, 1000L, 5000L),
-  var latestContactList: ContactListEvent? = null
+  var backupContactList: ContactListEvent? = null
 ) {
   var transientHiddenUsers: Set<String> = setOf()
 
@@ -86,7 +86,7 @@ class Account(
   fun sendNewRelayList(relays: Map<String, ContactListEvent.ReadWrite>) {
     if (!isWriteable()) return
 
-    val contactList = latestContactList
+    val contactList = userProfile().latestContactList
 
     if (contactList != null && contactList.follows.size > 0) {
       val event = ContactListEvent.create(
@@ -219,7 +219,7 @@ class Account(
   fun follow(user: User) {
     if (!isWriteable()) return
 
-    val contactList = latestContactList
+    val contactList = userProfile().latestContactList
 
     val event = if (contactList != null && contactList.follows.size > 0) {
       ContactListEvent.create(
@@ -242,7 +242,7 @@ class Account(
   fun unfollow(user: User) {
     if (!isWriteable()) return
 
-    val contactList = latestContactList
+    val contactList = userProfile().latestContactList
 
     if (contactList != null && contactList.follows.size > 0) {
       val event = ContactListEvent.create(
@@ -421,8 +421,8 @@ class Account(
     if (newContactList?.follows.isNullOrEmpty()) return
 
     // Events might be different objects, we have to compare their ids.
-    if (latestContactList?.id?.toHex() != newContactList?.id?.toHex()) {
-      latestContactList = newContactList
+    if (backupContactList?.id?.toHex() != newContactList?.id?.toHex()) {
+      backupContactList = newContactList
       saveable.invalidateData()
     }
   }
@@ -492,7 +492,7 @@ class Account(
   }
 
   init {
-    latestContactList?.let {
+    backupContactList?.let {
       println("Loading saved contacts ${it.toJson()}")
       if (userProfile().latestContactList == null) {
         LocalCache.consume(it)
@@ -508,9 +508,7 @@ class Account(
 
     // saves contact list for the next time.
     userProfile().live().follows.observeForever {
-      GlobalScope.launch(Dispatchers.IO) {
-        updateContactListTo(userProfile().latestContactList)
-      }
+      updateContactListTo(userProfile().latestContactList)
     }
 
     // imports transient blocks due to spam.

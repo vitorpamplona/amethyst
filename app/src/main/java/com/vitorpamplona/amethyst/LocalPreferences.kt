@@ -41,7 +41,7 @@ class LocalPreferences(context: Context) {
       account.dontTranslateFrom.let { putStringSet("dontTranslateFrom", it) }
       account.translateTo.let { putString("translateTo", it) }
       account.zapAmountChoices.let { putString("zapAmounts", gson.toJson(it)) }
-      account.latestContactList.let { putString("latestContactList", Event.gson.toJson(it)) }
+      account.backupContactList.let { putString("latestContactList", Event.gson.toJson(it)) }
     }.apply()
   }
 
