@@ -183,10 +183,11 @@ fun TagLink(word: String, tags: List<List<String>>, accountViewModel: AccountVie
         if (user != null) {
           ClickableUserTag(user, navController)
         } else {
-          Text(text = "${tags[index][1].toByteArray().toNpub().toShortenHex()} ")
+          Text(text = "$word ")
         }
       } else {
-        Text(text = "${tags[index][1].toByteArray().toNpub().toShortenHex()} ")
+        // if here the tag is not a valid Nostr Hex
+        Text(text = "$word ")
       }
     } else if (tags[index][0] == "e") {
       val note = LocalCache.checkGetOrCreateNote(tags[index][1])
@@ -208,11 +209,10 @@ fun TagLink(word: String, tags: List<List<String>>, accountViewModel: AccountVie
           isQuotedNote = true,
           navController = navController)
       } else {
-        Text(text = "${tags[index][1].toByteArray().toNote().toShortenHex()} ")
+        // if here the tag is not a valid Nostr Hex
+        Text(text = "$word ")
       }
     } else
       Text(text = "$word ")
   }
 }
-
-
