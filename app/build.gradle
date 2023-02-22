@@ -62,16 +62,16 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:$nav_version")
 
     // Observe Live data as State
-    implementation 'androidx.compose.runtime:runtime-livedata:1.4.0-alpha04'
+    implementation 'androidx.compose.runtime:runtime-livedata:1.4.0-beta01'
 
-    implementation 'androidx.compose.material:material:1.4.0-alpha05'
-    implementation "androidx.compose.material:material-icons-extended:1.4.0-alpha05"
+    implementation 'androidx.compose.material:material:1.4.0-beta01'
+    implementation "androidx.compose.material:material-icons-extended:1.4.0-beta01"
 
     // Lifecycle
-    implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.6.0-alpha05'
-    implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.6.0-alpha05'
-    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.6.0-alpha05'
-    implementation 'androidx.lifecycle:lifecycle-livedata:2.6.0-alpha05'
+    implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.6.0-beta01'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.6.0-beta01'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.6.0-beta01'
+    implementation 'androidx.lifecycle:lifecycle-livedata:2.6.0-beta01'
 
     // Swipe Refresh
     implementation 'com.google.accompanist:accompanist-swiperefresh:0.29.0-alpha'
@@ -101,7 +101,7 @@ dependencies {
     implementation 'androidx.security:security-crypto-ktx:1.1.0-alpha04'
 
     // view videos
-    implementation 'com.google.android.exoplayer:exoplayer:2.18.2'
+    implementation 'com.google.android.exoplayer:exoplayer:2.18.3'
 
     // Load images from the web.
     implementation "io.coil-kt:coil-compose:2.2.2"
