@@ -527,38 +527,47 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
         DropdownMenuItem(onClick = { accountViewModel.broadcast(note); onDismiss() }) {
             Text("Broadcast")
         }
-        Divider()
-        DropdownMenuItem(onClick = { note.author?.let { accountViewModel.hide(it, context) }; onDismiss() }) {
-            Text("Block & Hide User")
-        }
-        Divider()
-        DropdownMenuItem(onClick = {
-            accountViewModel.report(note, ReportEvent.ReportType.SPAM);
-            note.author?.let { accountViewModel.hide(it, context) }
-            onDismiss()
-        }) {
-            Text("Report Spam / Scam")
-        }
-        DropdownMenuItem(onClick = {
-            accountViewModel.report(note, ReportEvent.ReportType.IMPERSONATION);
-            note.author?.let { accountViewModel.hide(it, context) }
-            onDismiss()
-        }) {
-            Text("Report Impersonation")
-        }
-        DropdownMenuItem(onClick = {
-            accountViewModel.report(note, ReportEvent.ReportType.EXPLICIT);
-            note.author?.let { accountViewModel.hide(it, context) }
-            onDismiss()
-        }) {
-            Text("Report Explicit Content")
-        }
-        DropdownMenuItem(onClick = {
-            accountViewModel.report(note, ReportEvent.ReportType.ILLEGAL);
-            note.author?.let { accountViewModel.hide(it, context) }
-            onDismiss()
-        }) {
-            Text("Report Illegal Behaviour")
+        if (note.author != accountViewModel.accountLiveData.value?.account?.userProfile) {
+            Divider()
+            DropdownMenuItem(onClick = {
+                note.author?.let {
+                    accountViewModel.hide(
+                        it,
+                        context
+                    )
+                }; onDismiss()
+            }) {
+                Text("Block & Hide User")
+            }
+            Divider()
+            DropdownMenuItem(onClick = {
+                accountViewModel.report(note, ReportEvent.ReportType.SPAM);
+                note.author?.let { accountViewModel.hide(it, context) }
+                onDismiss()
+            }) {
+                Text("Report Spam / Scam")
+            }
+            DropdownMenuItem(onClick = {
+                accountViewModel.report(note, ReportEvent.ReportType.IMPERSONATION);
+                note.author?.let { accountViewModel.hide(it, context) }
+                onDismiss()
+            }) {
+                Text("Report Impersonation")
+            }
+            DropdownMenuItem(onClick = {
+                accountViewModel.report(note, ReportEvent.ReportType.EXPLICIT);
+                note.author?.let { accountViewModel.hide(it, context) }
+                onDismiss()
+            }) {
+                Text("Report Explicit Content")
+            }
+            DropdownMenuItem(onClick = {
+                accountViewModel.report(note, ReportEvent.ReportType.ILLEGAL);
+                note.author?.let { accountViewModel.hide(it, context) }
+                onDismiss()
+            }) {
+                Text("Report Illegal Behaviour")
+            }
         }
     }
 }
