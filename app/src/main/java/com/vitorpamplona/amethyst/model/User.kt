@@ -1,7 +1,5 @@
 package com.vitorpamplona.amethyst.model
 
-import android.util.Patterns
-import androidx.compose.ui.text.toLowerCase
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
@@ -356,7 +354,6 @@ class UserLiveData(val user: User): LiveData<UserState>(UserState(user)) {
 
     @Synchronized
     fun invalidateData() {
-        if (!hasActiveObservers()) return
         if (handlerWaiting.getAndSet(true)) return
 
         handlerWaiting.set(true)
