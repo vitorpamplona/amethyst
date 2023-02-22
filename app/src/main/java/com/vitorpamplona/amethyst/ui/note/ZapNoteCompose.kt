@@ -11,6 +11,7 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -27,6 +28,8 @@ import com.vitorpamplona.amethyst.ui.screen.ShowUserButton
 import com.vitorpamplona.amethyst.ui.screen.UnfollowButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Composable
 fun ZapNoteCompose(baseNote: Pair<Note, Note>, accountViewModel: AccountViewModel, navController: NavController) {
@@ -45,6 +48,7 @@ fun ZapNoteCompose(baseNote: Pair<Note, Note>, accountViewModel: AccountViewMode
     val baseAuthor = noteZapRequest.author
 
     val ctx = LocalContext.current.applicationContext
+    val coroutineScope = rememberCoroutineScope()
 
     if (baseAuthor == null) {
         BlankNote()
@@ -104,9 +108,9 @@ fun ZapNoteCompose(baseNote: Pair<Note, Note>, accountViewModel: AccountViewMode
                             account.showUser(baseAuthor.pubkeyHex)
                         }
                     } else if (userFollows.isFollowing(baseAuthor)) {
-                        UnfollowButton { account.unfollow(baseAuthor) }
+                        UnfollowButton { coroutineScope.launch(Dispatchers.IO) { account.unfollow(baseAuthor) } }
                     } else {
-                        FollowButton { account.follow(baseAuthor) }
+                        FollowButton { coroutineScope.launch(Dispatchers.IO) { account.follow(baseAuthor) } }
                     }
                 }
             }

@@ -184,11 +184,11 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
             Text(" @${accountUser.bestUsername()}", color = Color.LightGray)
             Row(modifier = Modifier.padding(top = 15.dp)) {
                 Row() {
-                    Text("${accountUserFollows.follows?.size ?: "--"}", fontWeight = FontWeight.Bold)
+                    Text("${accountUserFollows.follows.size}", fontWeight = FontWeight.Bold)
                     Text(" Following")
                 }
                 Row(modifier = Modifier.padding(start = 10.dp)) {
-                    Text("${accountUserFollows.followers?.size ?: "--"}", fontWeight = FontWeight.Bold)
+                    Text("${accountUserFollows.followers.size}", fontWeight = FontWeight.Bold)
                     Text(" Followers")
                 }
             }

@@ -13,6 +13,7 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,6 +29,8 @@ import com.vitorpamplona.amethyst.ui.screen.FollowButton
 import com.vitorpamplona.amethyst.ui.screen.ShowUserButton
 import com.vitorpamplona.amethyst.ui.screen.UnfollowButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Composable
 fun UserCompose(baseUser: User, accountViewModel: AccountViewModel, navController: NavController) {
@@ -38,6 +41,7 @@ fun UserCompose(baseUser: User, accountViewModel: AccountViewModel, navControlle
     val userFollows = userState?.user ?: return
 
     val ctx = LocalContext.current.applicationContext
+    val coroutineScope = rememberCoroutineScope()
 
     Column(modifier =
         Modifier.clickable(
@@ -77,9 +81,9 @@ fun UserCompose(baseUser: User, accountViewModel: AccountViewModel, navControlle
                         account.showUser(baseUser.pubkeyHex)
                     }
                 } else if (userFollows.isFollowing(baseUser)) {
-                    UnfollowButton { account.unfollow(baseUser) }
+                    UnfollowButton { coroutineScope.launch(Dispatchers.IO) { account.unfollow(baseUser) } }
                 } else {
-                    FollowButton { account.follow(baseUser) }
+                    FollowButton { coroutineScope.launch(Dispatchers.IO) { account.follow(baseUser) } }
                 }
             }
         }

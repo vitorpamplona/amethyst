@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import nostr.postr.toNsec
 
@@ -251,6 +252,8 @@ private fun ProfileHeader(
     val accountUserState by account.userProfile().live().follows.observeAsState()
     val accountUser = accountUserState?.user ?: return
 
+    val coroutineScope = rememberCoroutineScope()
+    
     Box {
         DrawBanner(baseUser)
 
@@ -324,9 +327,9 @@ private fun ProfileHeader(
                                 account.showUser(baseUser.pubkeyHex)
                             }
                         } else if (accountUser.isFollowing(baseUser)) {
-                            UnfollowButton { account.unfollow(baseUser) }
+                            UnfollowButton { coroutineScope.launch(Dispatchers.IO) { account.unfollow(baseUser) } }
                         } else {
-                            FollowButton { account.follow(baseUser) }
+                            FollowButton { coroutineScope.launch(Dispatchers.IO) { account.follow(baseUser) } }
                         }
                     }
                 }
