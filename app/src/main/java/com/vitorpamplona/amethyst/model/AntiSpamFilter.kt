@@ -14,6 +14,8 @@ import kotlinx.coroutines.withContext
 import nostr.postr.events.Event
 import nostr.postr.toHex
 
+data class Spammer(val pubkeyHex: HexKey, var duplicatedMessages: Set<HexKey>)
+
 class AntiSpamFilter {
   val recentMessages = LruCache<Int, String>(1000)
   val spamMessages = LruCache<Int, Spammer>(1000)
@@ -39,10 +41,12 @@ class AntiSpamFilter {
 
       // Log down offenders
       if (spamMessages.get(hash) == null) {
-        spamMessages.put(hash, Spammer(event.pubKey.toHexKey(), 2))
+        spamMessages.put(hash, Spammer(event.pubKey.toHexKey(), setOf(recentMessages[hash], event.id.toHex())))
         liveSpam.invalidateData()
       } else {
-        spamMessages.get(hash).duplicatedMessages++
+        val spammer = spamMessages.get(hash)
+        spammer.duplicatedMessages = spammer.duplicatedMessages + event.id.toHex()
+
         liveSpam.invalidateData()
       }
 

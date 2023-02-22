@@ -43,7 +43,6 @@ import nostr.postr.events.TextNoteEvent
 import nostr.postr.toHex
 import nostr.postr.toNpub
 
-data class Spammer(val pubkeyHex: HexKey, var duplicatedMessages: Int)
 
 object LocalCache {
   val metadataParser = jacksonObjectMapper()

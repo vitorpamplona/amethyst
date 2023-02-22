@@ -515,7 +515,7 @@ class Account(
     LocalCache.antiSpam.liveSpam.observeForever {
       GlobalScope.launch(Dispatchers.IO) {
         it.cache.spamMessages.snapshot().values.forEach {
-          if (it.pubkeyHex !in transientHiddenUsers && it.duplicatedMessages > 5) {
+          if (it.pubkeyHex !in transientHiddenUsers && it.duplicatedMessages.size >= 5) {
             val userToBlock = LocalCache.getOrCreateUser(it.pubkeyHex)
             if (userToBlock != userProfile() && userToBlock !in userProfile().follows) {
               transientHiddenUsers = transientHiddenUsers + it.pubkeyHex
