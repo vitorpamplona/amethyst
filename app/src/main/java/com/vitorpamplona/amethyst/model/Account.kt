@@ -61,8 +61,6 @@ class Account(
   var latestContactList: ContactListEvent? = null
 ) {
   var transientHiddenUsers: Set<String> = setOf()
-  @Transient
-  var userProfile: User? = null
 
   // Observers line up here.
   val live: AccountLiveData = AccountLiveData(this)
@@ -70,12 +68,7 @@ class Account(
   val saveable: AccountLiveData = AccountLiveData(this)
 
   fun userProfile(): User {
-    userProfile?.let { return it }
-
-    val newUser = LocalCache.getOrCreateUser(loggedIn.pubKey.toHexKey())
-    userProfile = newUser
-
-    return newUser
+    return LocalCache.getOrCreateUser(loggedIn.pubKey.toHexKey())
   }
 
   fun followingChannels(): List<Channel> {
