@@ -65,7 +65,7 @@ object NostrChatroomListDataSource: NostrDataSource("MailBoxFeed") {
         filter = JsonFilter(
           kinds = listOf(ChannelMessageEvent.kind),
           tags = mapOf("e" to listOf(it)),
-          limit = 1
+          limit = 10
         )
       )
     }
