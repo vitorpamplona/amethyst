@@ -208,7 +208,10 @@ object LocalCache {
   fun consume(event: ContactListEvent) {
     val user = getOrCreateUser(event.pubKey.toHexKey())
 
-    if (event.createdAt > user.updatedFollowsAt) {
+    if (event.createdAt > user.updatedFollowsAt && event.follows.size > 0) {
+      // Saves relay list only if it's a user that is currently been seen
+      user.latestContactList = event
+
       user.updateFollows(
         event.follows.map {
           try {
@@ -239,9 +242,6 @@ object LocalCache {
         } catch (e: Exception) {
           e.printStackTrace()
         }
-
-        // Saves relay list only if it's a user that is currently been seen
-        user.latestContactList = event
       }
 
       Log.d(
