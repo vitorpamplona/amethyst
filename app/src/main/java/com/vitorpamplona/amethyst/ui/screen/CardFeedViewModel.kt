@@ -50,7 +50,7 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>): ViewModel() {
             val newCards = convertToCard(notes.minus(lastNotesCopy))
             if (newCards.isNotEmpty()) {
                 lastNotes = notes
-                updateFeed((oldNotesState.feed.value + newCards).sortedBy { it.createdAt() }.reversed())
+                updateFeed((oldNotesState.feed.value + newCards).distinctBy { it.id() }.sortedBy { it.createdAt() }.reversed())
             }
         } else {
             val cards = convertToCard(notes)
