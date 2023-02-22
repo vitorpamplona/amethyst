@@ -119,6 +119,9 @@ dependencies {
     implementation "com.google.accompanist:accompanist-pager:$accompanist_version" // Pager
     implementation "com.google.accompanist:accompanist-pager-indicators:$accompanist_version"
 
+    // Parses URLs from Text:
+    implementation "io.github.url-detector:url-detector:0.1.23"
+
     // For QR generation
     implementation 'com.google.zxing:core:3.5.1'
     implementation "androidx.camera:camera-camera2:1.2.1"
