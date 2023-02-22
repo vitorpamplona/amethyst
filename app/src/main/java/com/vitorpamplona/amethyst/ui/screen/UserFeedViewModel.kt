@@ -42,9 +42,7 @@ open class UserFeedViewModel(val dataSource: FeedFilter<User>): ViewModel() {
         val oldNotesState = feedContent.value
         if (oldNotesState is UserFeedState.Loaded) {
             // Using size as a proxy for has changed.
-            if (notes.size != oldNotesState.feed.value.size || notes.firstOrNull() != oldNotesState.feed.value.firstOrNull()) {
-                updateFeed(notes)
-            }
+            updateFeed(notes)
         } else {
             updateFeed(notes)
         }

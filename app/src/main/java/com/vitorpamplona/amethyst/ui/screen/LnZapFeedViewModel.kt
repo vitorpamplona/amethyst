@@ -38,9 +38,7 @@ open class LnZapFeedViewModel(val dataSource: FeedFilter<Pair<Note, Note>>): Vie
         val oldNotesState = feedContent.value
         if (oldNotesState is LnZapFeedState.Loaded) {
             // Using size as a proxy for has changed.
-            if (notes.size != oldNotesState.feed.value.size || notes.firstOrNull() != oldNotesState.feed.value.firstOrNull()) {
-                updateFeed(notes)
-            }
+            updateFeed(notes)
         } else {
             updateFeed(notes)
         }
