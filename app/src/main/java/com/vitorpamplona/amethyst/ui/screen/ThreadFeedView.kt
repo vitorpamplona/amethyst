@@ -78,15 +78,9 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
                         }
                     }
                     is FeedState.Loaded -> {
-                        var noteIdPositionInThread by remember { mutableStateOf(0) }
-                        // only in the first transition
-                        LaunchedEffect(noteIdPositionInThread) {
-                            listState.animateScrollToItem(noteIdPositionInThread, 0)
-                        }
-
-                        val notePosition = state.feed.value.filter { it.idHex == noteId}.firstOrNull()
-                        if (notePosition != null) {
-                            noteIdPositionInThread = state.feed.value.indexOf(notePosition)
+                        LaunchedEffect(noteId) {
+                            val noteForPosition = state.feed.value.filter { it.idHex == noteId}.firstOrNull()
+                            listState.animateScrollToItem(state.feed.value.indexOf(noteForPosition), 0)
                         }
 
                         LazyColumn(
