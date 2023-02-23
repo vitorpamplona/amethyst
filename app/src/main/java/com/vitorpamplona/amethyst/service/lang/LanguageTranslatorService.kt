@@ -97,10 +97,11 @@ object LanguageTranslatorService {
   private fun lnDictionary(text: String): Map<String, String> {
     val matcher = lnRegex.matcher(text)
     val returningList = mutableMapOf<String, String>()
+    val counter = 0
     while (matcher.find()) {
       try {
         val lnInvoice = matcher.group()
-        val short = lnInvoice.replaceRange(8, lnInvoice.length-8, "")
+        val short = "Amethystlnindexer${counter}"
         returningList.put(short, lnInvoice)
       } catch (e: Exception) {
 
@@ -116,7 +117,7 @@ object LanguageTranslatorService {
     val counter = 0
 
     return urlsInText.associate {
-      "Amethystindexer${counter}" to it.originalUrl
+      "Amethysturlindexer${counter}" to it.originalUrl
     }
   }
 
