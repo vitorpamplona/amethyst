@@ -14,6 +14,8 @@ android {
         versionCode 65
         versionName "0.17.9"
 
+        resConfigs "en"
+
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary true
