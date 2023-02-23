@@ -585,6 +585,19 @@ object LocalCache {
       toBeRemoved.forEach {
         notes.remove(it.idHex)
         // Doesn't need to clean up the replies and mentions.. Too small to matter.
+
+        // reverts the add
+        it.mentions?.forEach { user ->
+          user.removeTaggedPost(it)
+        }
+        it.replyTo?.forEach { replyingNote ->
+          replyingNote.author?.removeTaggedPost(it)
+        }
+
+        // Counts the replies
+        it.replyTo?.forEach { replyingNote ->
+          it.removeReply(it)
+        }
       }
 
       println("PRUNE: ${toBeRemoved.size} messages removed from ${it.value.info.name}")
@@ -635,6 +648,22 @@ object LocalCache {
     }
 
     toBeRemoved.forEach {
+      // reverts the add
+      it.mentions?.forEach { user ->
+        user.removeTaggedPost(it)
+      }
+      it.replyTo?.forEach { replyingNote ->
+        replyingNote.author?.removeTaggedPost(it)
+      }
+
+      // Counts the replies
+      it.replyTo?.forEach { replyingNote ->
+        it.removeReply(it)
+        it.removeBoost(it)
+        it.removeReaction(it)
+        it.removeZap(it)
+      }
+
       notes.remove(it.idHex)
     }
 

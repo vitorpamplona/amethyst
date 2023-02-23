@@ -104,6 +104,25 @@ class Note(val idHex: String) {
         }
     }
 
+    fun removeReply(note: Note) {
+        replies = replies - note
+    }
+    fun removeBoost(note: Note) {
+        boosts = boosts - note
+    }
+    fun removeReaction(note: Note) {
+        reactions = reactions - note
+    }
+    fun removeZap(note: Note) {
+        if (zaps[note] != null) {
+            zaps = zaps.minus(note)
+        } else if (zaps.containsValue(note)) {
+            val toRemove = zaps.filterValues { it == note }
+            zaps = zaps.minus(toRemove.keys)
+        }
+    }
+
+
     fun addBoost(note: Note) {
         if (note !in boosts) {
             boosts = boosts + note
@@ -261,7 +280,8 @@ class NoteLiveSet(u: Note) {
     val zaps: NoteLiveData = NoteLiveData(u)
 
     fun isInUse(): Boolean {
-        return reactions.hasObservers()
+        return metadata.hasObservers()
+          || reactions.hasObservers()
           || boosts.hasObservers()
           || replies.hasObservers()
           || reports.hasObservers()

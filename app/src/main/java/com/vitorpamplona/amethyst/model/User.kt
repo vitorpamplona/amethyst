@@ -123,6 +123,10 @@ class User(val pubkeyHex: String) {
         }
     }
 
+    fun removeTaggedPost(note: Note) {
+        taggedPosts = taggedPosts - note
+    }
+
     fun addNote(note: Note) {
         if (note !in notes) {
             notes = notes + note
