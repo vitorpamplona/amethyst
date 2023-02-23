@@ -64,12 +64,12 @@ class NewPostViewModel: ViewModel() {
 
     fun tagIndex(user: User): Int {
         // Postr Events assembles replies before mentions in the tag order
-        return (replyTos?.size ?: 0) + (mentions?.indexOf(user) ?: 0)
+        return (if (originalNote?.channel != null) 1 else 0) + (replyTos?.size ?: 0) + (mentions?.indexOf(user) ?: 0)
     }
 
     fun tagIndex(note: Note): Int {
         // Postr Events assembles replies before mentions in the tag order
-        return (replyTos?.indexOf(note) ?: 0)
+        return (if (originalNote?.channel != null) 1 else 0) + (replyTos?.indexOf(note) ?: 0)
     }
 
     fun sendPost() {

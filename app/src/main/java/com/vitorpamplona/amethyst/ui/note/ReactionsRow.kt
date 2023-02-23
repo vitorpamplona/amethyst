@@ -1,8 +1,8 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import android.widget.Toast
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -10,10 +10,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,7 +25,6 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
-import androidx.compose.material.TextFieldDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.outlined.BarChart
@@ -68,10 +66,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
-import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.RelaySetupInfo
+import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.actions.SaveButton
@@ -429,7 +428,7 @@ private fun ZapAmountChoicePopup(baseNote: Note, accountViewModel: AccountViewMo
     onDismissRequest = { onDismiss() }
   ) {
 
-    FlowRow() {
+    FlowRow(horizontalArrangement = Arrangement.Center) {
 
       account.zapAmountChoices.forEach { amountInSats ->
         Button(
@@ -475,34 +474,46 @@ private fun ZapAmountChoicePopup(baseNote: Note, accountViewModel: AccountViewMo
 class UpdateZapAmountViewModel: ViewModel() {
   private var account: Account? = null
 
-  var amounts by mutableStateOf(TextFieldValue(""))
+  var nextAmount by mutableStateOf(TextFieldValue(""))
+  var amountSet by mutableStateOf(listOf<Long>())
 
   fun load(account: Account) {
     this.account = account
-    this.amounts = TextFieldValue(account.zapAmountChoices.joinToString(", "))
+    this.amountSet = account.zapAmountChoices
   }
 
   fun toListOfAmounts(commaSeparatedAmounts: String): List<Long> {
     return commaSeparatedAmounts.split(",").map { it.trim().toLongOrNull() ?: 0 }
   }
 
-  fun updateAmounts(commaSeparatedAmounts: TextFieldValue) {
-    val correctedText = toListOfAmounts(commaSeparatedAmounts.text).joinToString(", ")
-    amounts = TextFieldValue(correctedText, commaSeparatedAmounts.selection, commaSeparatedAmounts.composition)
+  fun addAmount() {
+    val newValue = nextAmount.text.trim().toLongOrNull()
+    if (newValue != null)
+      amountSet = amountSet + newValue
+
+    nextAmount = TextFieldValue("")
+  }
+
+  fun removeAmount(amount: Long) {
+    amountSet = amountSet - amount
   }
 
   fun sendPost() {
-    account?.changeZapAmounts(toListOfAmounts(amounts.text))
-    amounts = TextFieldValue("")
+    account?.changeZapAmounts(amountSet)
+    nextAmount = TextFieldValue("")
   }
 
   fun cancel() {
-    amounts = TextFieldValue("")
+    nextAmount = TextFieldValue("")
+  }
+
+  fun hasChanged(): Boolean {
+    return amountSet != account?.zapAmountChoices
   }
 }
 
 
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun UpdateZapAmountDialog(onClose: () -> Unit, account: Account) {
   val postViewModel: UpdateZapAmountViewModel = viewModel()
@@ -510,19 +521,17 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, account: Account) {
   val ctx = LocalContext.current.applicationContext
 
   // initialize focus reference to be able to request focus programmatically
-  val focusRequester = remember { FocusRequester() }
   val keyboardController = LocalSoftwareKeyboardController.current
 
   LaunchedEffect(account) {
     postViewModel.load(account)
-    delay(100)
-    focusRequester.requestFocus()
   }
 
   Dialog(
     onDismissRequest = { onClose() },
     properties = DialogProperties(
-      dismissOnClickOutside = false
+      dismissOnClickOutside = false,
+      usePlatformDefaultWidth = false,
     )
   ) {
     Surface() {
@@ -542,20 +551,46 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, account: Account) {
               postViewModel.sendPost()
               onClose()
             },
-            isActive = postViewModel.amounts.text.isNotBlank()
+            isActive = postViewModel.hasChanged()
           )
         }
 
+        Spacer(modifier = Modifier.height(10.dp))
+
         Row(modifier = Modifier.fillMaxWidth()) {
+          Column(modifier = Modifier.animateContentSize()) {
+            FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+              postViewModel.amountSet.forEach { amountInSats ->
+                Button(
+                  modifier = Modifier.padding(horizontal = 3.dp),
+                  shape = RoundedCornerShape(20.dp),
+                  colors = ButtonDefaults
+                    .buttonColors(
+                      backgroundColor = MaterialTheme.colors.primary
+                    ),
+                  onClick = {
+                    postViewModel.removeAmount(amountInSats)
+                  }
+                ) {
+                  Text("⚡ ${showAmount(amountInSats.toBigDecimal())} ✖", color = Color.White, textAlign = TextAlign.Center)
+                }
+              }
+            }
+          }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
           OutlinedTextField(
-            label = { Text(text = "Comma-separated Zap amounts in sats") },
-            value = postViewModel.amounts,
+            label = { Text(text = "New Amount in Sats") },
+            value = postViewModel.nextAmount,
             onValueChange = {
-              postViewModel.updateAmounts(it)
+              postViewModel.nextAmount = it
             },
             keyboardOptions = KeyboardOptions.Default.copy(
               capitalization = KeyboardCapitalization.None,
-              keyboardType = KeyboardType.Decimal
+              keyboardType = KeyboardType.Number
             ),
             placeholder = {
               Text(
@@ -564,15 +599,19 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, account: Account) {
               )
             },
             singleLine = true,
-            modifier = Modifier
-              .fillMaxWidth()
-              .focusRequester(focusRequester)
-              .onFocusChanged {
-                if (it.isFocused) {
-                  keyboardController?.show()
-                }
-              }
+            modifier = Modifier.padding(end = 10.dp).weight(1f)
           )
+
+          Button(
+            onClick = { postViewModel.addAmount() },
+            shape = RoundedCornerShape(20.dp),
+            colors = ButtonDefaults
+              .buttonColors(
+                backgroundColor = MaterialTheme.colors.primary
+              )
+          ) {
+            Text(text = "Add", color = Color.White)
+          }
         }
       }
     }
