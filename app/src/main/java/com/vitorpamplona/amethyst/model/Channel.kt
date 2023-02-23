@@ -51,10 +51,6 @@ class Channel(val idHex: String) {
     // Observers line up here.
     val live: ChannelLiveData = ChannelLiveData(this)
 
-    private fun refreshObservers() {
-        live.refresh()
-    }
-
     fun pruneOldAndHiddenMessages(account: Account): Set<Note> {
         val important = notes.values
             .filter { it.author?.let { it1 -> account.isHidden(it1) } == false }
@@ -63,7 +59,7 @@ class Channel(val idHex: String) {
             .take(1000)
             .toSet()
 
-        val toBeRemoved = notes.values.filter { it in important }.toSet()
+        val toBeRemoved = notes.values.filter { it !in important }.toSet()
 
         toBeRemoved.forEach {
             notes.remove(it.idHex)
