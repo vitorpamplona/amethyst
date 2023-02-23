@@ -98,13 +98,25 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
                         ) {
                             itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { index, item ->
                                 if (index == 0)
-                                    NoteMaster(item, accountViewModel = accountViewModel, navController = navController)
+                                    NoteMaster(item,
+                                        modifier = Modifier.drawReplyLevel(
+                                            item.replyLevel(),
+                                            MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                                            if (item.idHex == noteId) MaterialTheme.colors.primary.copy(alpha = 0.52f) else MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                        ),
+                                        accountViewModel = accountViewModel,
+                                        navController = navController
+                                    )
                                 else {
                                     Column() {
                                         Row() {
                                             NoteCompose(
                                                 item,
-                                                modifier = Modifier.drawReplyLevel(item.replyLevel(), MaterialTheme.colors.onSurface.copy(alpha = 0.32f)),
+                                                modifier = Modifier.drawReplyLevel(
+                                                    item.replyLevel(),
+                                                    MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                                                    if (item.idHex == noteId) MaterialTheme.colors.primary.copy(alpha = 0.52f) else MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                                ),
                                                 isBoostedNote = false,
                                                 accountViewModel = accountViewModel,
                                                 navController = navController,
@@ -125,7 +137,7 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
 }
 
 // Creates a Zebra pattern where each bar is a reply level.
-fun Modifier.drawReplyLevel(level: Int, color: Color): Modifier = this
+fun Modifier.drawReplyLevel(level: Int, color: Color, selected: Color): Modifier = this
     .drawBehind {
         val paddingDp = 2
         val strokeWidthDp = 2
@@ -137,7 +149,7 @@ fun Modifier.drawReplyLevel(level: Int, color: Color): Modifier = this
 
         repeat(level) {
             this.drawLine(
-                color,
+                if (it == level-1) selected else color,
                 Offset(padding + it * levelWidth, 0f),
                 Offset(padding + it * levelWidth, size.height),
                 strokeWidth = strokeWidth
@@ -149,7 +161,11 @@ fun Modifier.drawReplyLevel(level: Int, color: Color): Modifier = this
     .padding(start = (2 + (level * 3)).dp)
 
 @Composable
-fun NoteMaster(baseNote: Note, accountViewModel: AccountViewModel, navController: NavController) {
+fun NoteMaster(baseNote: Note,
+               modifier: Modifier = Modifier,
+               accountViewModel: AccountViewModel,
+               navController: NavController
+) {
     val noteState by baseNote.live().metadata.observeAsState()
     val note = noteState?.note
 
@@ -174,7 +190,7 @@ fun NoteMaster(baseNote: Note, accountViewModel: AccountViewModel, navController
         )
     } else {
         Column(
-            Modifier
+            modifier
                 .fillMaxWidth()
                 .padding(top = 10.dp)) {
             Row(modifier = Modifier
