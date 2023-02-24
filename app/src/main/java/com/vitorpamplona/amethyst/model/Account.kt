@@ -147,7 +147,7 @@ class Account(
     }
 
     note.event?.let {
-      return LnZapRequestEvent.create(it, userProfile().relays?.keys ?: localRelays.map { it.url }.toSet(), loggedIn.privKey!!)
+      return LnZapRequestEvent.create(it, userProfile().relays?.keys?.ifEmpty { null } ?: localRelays.map { it.url }.toSet(), loggedIn.privKey!!)
     }
 
     return null
@@ -159,7 +159,7 @@ class Account(
   fun createZapRequestFor(userPubKeyHex: String): LnZapRequestEvent? {
     if (!isWriteable()) return null
 
-    return LnZapRequestEvent.create(userPubKeyHex, userProfile().relays?.keys ?: localRelays.map { it.url }.toSet(), loggedIn.privKey!!)
+    return LnZapRequestEvent.create(userPubKeyHex, userProfile().relays?.keys?.ifEmpty { null } ?: localRelays.map { it.url }.toSet(), loggedIn.privKey!!)
   }
 
   fun report(note: Note, type: ReportEvent.ReportType) {
