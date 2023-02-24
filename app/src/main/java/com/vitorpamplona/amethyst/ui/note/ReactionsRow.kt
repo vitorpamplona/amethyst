@@ -447,7 +447,7 @@ private fun ZapAmountChoicePopup(baseNote: Note, accountViewModel: AccountViewMo
               backgroundColor = MaterialTheme.colors.primary
             )
         ) {
-          Text("⚡ ${showAmount(amountInSats.toBigDecimal())}",
+          Text("⚡ ${showAmount(amountInSats.toBigDecimal().setScale(1))}",
             color = Color.White,
             textAlign = TextAlign.Center,
             modifier = Modifier.combinedClickable(
@@ -572,7 +572,7 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, account: Account) {
                     postViewModel.removeAmount(amountInSats)
                   }
                 ) {
-                  Text("⚡ ${showAmount(amountInSats.toBigDecimal())} ✖", color = Color.White, textAlign = TextAlign.Center)
+                  Text("⚡ ${showAmount(amountInSats.toBigDecimal().setScale(1))} ✖", color = Color.White, textAlign = TextAlign.Center)
                 }
               }
             }
