@@ -667,11 +667,11 @@ object LocalCache {
       }
 
       // Counts the replies
-      it.replyTo?.forEach { replyingNote ->
-        it.removeReply(it)
-        it.removeBoost(it)
-        it.removeReaction(it)
-        it.removeZap(it)
+      it.replyTo?.forEach { masterNote ->
+        masterNote.removeReply(it)
+        masterNote.removeBoost(it)
+        masterNote.removeReaction(it)
+        masterNote.removeZap(it)
       }
 
       notes.remove(it.idHex)
