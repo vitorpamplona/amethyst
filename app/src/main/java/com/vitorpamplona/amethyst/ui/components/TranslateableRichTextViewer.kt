@@ -3,15 +3,20 @@ package com.vitorpamplona.amethyst.ui.components
 import android.content.res.Resources
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.Divider
 import androidx.compose.material.DropdownMenu
 import androidx.compose.material.DropdownMenuItem
+import androidx.compose.material.Icon
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -55,14 +60,21 @@ fun TranslateableRichTextViewer(
   val account = accountState?.account ?: return
 
   LaunchedEffect(accountState) {
-    LanguageTranslatorService.autoTranslate(content, account.dontTranslateFrom, account.translateTo)
-      .addOnCompleteListener { task ->
-        if (task.isSuccessful) {
-          translatedTextState.value = task.result
-        } else {
-          translatedTextState.value = ResultOrError(content, null, null, null)
+    LanguageTranslatorService.autoTranslate(
+      content,
+      account.dontTranslateFrom,
+      account.translateTo
+    ).addOnCompleteListener { task ->
+      if (task.isSuccessful) {
+        if (task.result.sourceLang != null && task.result.targetLang != null) {
+          val preference = account.preferenceBetween(task.result.sourceLang!!, task.result.targetLang!!)
+          showOriginal = preference == task.result.sourceLang
         }
+        translatedTextState.value = task.result
+      } else {
+        translatedTextState.value = ResultOrError(content, null, null, null)
       }
+    }
   }
 
   val toBeViewed = if (showOriginal) content else translatedTextState.value.result ?: content
@@ -82,7 +94,9 @@ fun TranslateableRichTextViewer(
 
     if (source != null && target != null) {
       if (source != target) {
-        Row(modifier = Modifier.fillMaxWidth().padding(top = 5.dp)) {
+        Row(modifier = Modifier
+          .fillMaxWidth()
+          .padding(top = 5.dp)) {
           val clickableTextStyle =
             SpanStyle(color = MaterialTheme.colors.primary.copy(alpha = 0.52f))
 
@@ -131,9 +145,56 @@ fun TranslateableRichTextViewer(
               accountViewModel.dontTranslateFrom(source, context)
               langSettingsPopupExpanded = false
             }) {
+              if (source in account.dontTranslateFrom)
+                Icon(
+                  imageVector = Icons.Default.Check,
+                  contentDescription = null,
+                  modifier = Modifier.size(24.dp)
+                )
+              else
+                Spacer(modifier = Modifier.size(24.dp))
+
+              Spacer(modifier = Modifier.size(10.dp))
+
               Text("Never translate from ${Locale(source).displayName}")
             }
             Divider()
+            DropdownMenuItem(onClick = {
+              accountViewModel.prefer(source, target, source)
+              langSettingsPopupExpanded = false
+            }) {
+              if (account.preferenceBetween(source, target) == source)
+                Icon(
+                  imageVector = Icons.Default.Check,
+                  contentDescription = null,
+                  modifier = Modifier.size(24.dp)
+                )
+              else
+                Spacer(modifier = Modifier.size(24.dp))
+
+              Spacer(modifier = Modifier.size(10.dp))
+
+              Text("Show in ${Locale(source).displayName} first")
+            }
+            DropdownMenuItem(onClick = {
+              accountViewModel.prefer(source, target, target)
+              langSettingsPopupExpanded = false
+            }) {
+              if (account.preferenceBetween(source, target) == target)
+                Icon(
+                  imageVector = Icons.Default.Check,
+                  contentDescription = null,
+                  modifier = Modifier.size(24.dp)
+                )
+              else
+                Spacer(modifier = Modifier.size(24.dp))
+
+              Spacer(modifier = Modifier.size(10.dp))
+
+              Text("Show in ${Locale(target).displayName} first")
+            }
+            Divider()
+
             val languageList =
               ConfigurationCompat.getLocales(Resources.getSystem().getConfiguration())
             for (i in 0 until languageList.size()) {
@@ -142,6 +203,17 @@ fun TranslateableRichTextViewer(
                   accountViewModel.translateTo(lang, context)
                   langSettingsPopupExpanded = false
                 }) {
+                  if (lang.language in account.translateTo)
+                    Icon(
+                      imageVector = Icons.Default.Check,
+                      contentDescription = null,
+                      modifier = Modifier.size(24.dp)
+                    )
+                  else
+                    Spacer(modifier = Modifier.size(24.dp))
+
+                  Spacer(modifier = Modifier.size(10.dp))
+                  
                   Text("Always translate to ${lang.displayName}")
                 }
               }

@@ -82,4 +82,8 @@ class AccountViewModel(private val account: Account): ViewModel() {
   fun dontTranslateFrom(lang: String, ctx: Context) {
     account.addDontTranslateFrom(lang)
   }
+
+  fun prefer(source: String, target: String, preference: String) {
+    account.prefer(source, target, preference)
+  }
 }

@@ -56,6 +56,7 @@ class Account(
   var hiddenUsers: Set<String> = setOf(),
   var localRelays: Set<RelaySetupInfo> = Constants.defaultRelays.toSet(),
   var dontTranslateFrom: Set<String> = getLanguagesSpokenByUser(),
+  var languagePreferences: Map<String, String> = mapOf(),
   var translateTo: String = Locale.getDefault().language,
   var zapAmountChoices: List<Long> = listOf(500L, 1000L, 5000L),
   var backupContactList: ContactListEvent? = null
@@ -417,6 +418,15 @@ class Account(
     saveable.invalidateData()
   }
 
+  fun prefer(source: String, target: String, preference: String) {
+    languagePreferences = languagePreferences + Pair("$source,$target", preference)
+    saveable.invalidateData()
+  }
+
+  fun preferenceBetween(source: String, target: String): String? {
+    return languagePreferences.get("$source,$target")
+  }
+
   private fun updateContactListTo(newContactList: ContactListEvent?) {
     if (newContactList?.follows.isNullOrEmpty()) return
 
@@ -490,6 +500,8 @@ class Account(
 
     saveable.invalidateData()
   }
+
+
 
   init {
     backupContactList?.let {
