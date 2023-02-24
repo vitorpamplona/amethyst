@@ -4,10 +4,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,12 +21,14 @@ import androidx.compose.material.Divider
 import androidx.compose.material.DropdownMenu
 import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.material.TextFieldDefaults
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Share
@@ -74,6 +79,7 @@ import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.actions.PostButton
 import com.vitorpamplona.amethyst.ui.dal.ChannelFeedFilter
 import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import nostr.postr.toNpub
 
@@ -84,6 +90,7 @@ fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, accoun
 
     if (account != null && channelId != null) {
         val newPost = remember { mutableStateOf(TextFieldValue("")) }
+        val replyTo = remember { mutableStateOf<Note?>(null) }
 
         ChannelFeedFilter.loadMessagesBetween(account, channelId)
         NostrChannelDataSource.loadMessagesBetween(channelId)
@@ -130,13 +137,47 @@ fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, accoun
                     .padding(vertical = 0.dp)
                     .weight(1f, true)
             ) {
-                ChatroomFeedView(feedViewModel, accountViewModel, navController, "Channel/${channelId}")
+                ChatroomFeedView(feedViewModel, accountViewModel, navController, "Channel/${channelId}") {
+                    replyTo.value = it
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            val replyingNote = replyTo.value
+            if (replyingNote != null) {
+                Row(Modifier.padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        ChatroomMessageCompose(
+                            baseNote = replyingNote,
+                            null,
+                            innerQuote = true,
+                            accountViewModel = accountViewModel,
+                            navController = navController,
+                            onWantsToReply = {
+                                replyTo.value = it
+                            }
+                        )
+                    }
+
+                    Column(Modifier.padding(end = 10.dp)) {
+                        IconButton(
+                            modifier = Modifier.size(30.dp),
+                            onClick = { replyTo.value = null }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Cancel,
+                                null,
+                                modifier = Modifier.padding(end = 5.dp).size(30.dp),
+                                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                            )
+                        }
+                    }
+                }
             }
 
             //LAST ROW
-            Row(modifier = Modifier
-                .padding(10.dp)
-                .fillMaxWidth(),
+            Row(modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp).fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -158,8 +199,9 @@ fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, accoun
                     trailingIcon = {
                         PostButton(
                             onPost = {
-                                account.sendChannelMeesage(newPost.value.text, channel.idHex, null, null)
+                                account.sendChannelMeesage(newPost.value.text, channel.idHex, replyTo.value, null)
                                 newPost.value = TextFieldValue("")
+                                replyTo.value = null
                                 feedViewModel.refresh() // Don't wait a full second before updating
                             },
                             newPost.value.text.isNotBlank(),
@@ -220,7 +262,9 @@ fun ChannelHeader(baseChannel: Channel, account: Account, accountStateViewModel:
                     }
                 }
 
-                Row(modifier = Modifier.height(35.dp).padding(bottom = 3.dp)) {
+                Row(modifier = Modifier
+                    .height(35.dp)
+                    .padding(bottom = 3.dp)) {
                     NoteCopyButton(channel)
 
                     if (channel.creator == account.userProfile()) {
@@ -253,7 +297,9 @@ private fun NoteCopyButton(
     var popupExpanded by remember { mutableStateOf(false) }
 
     Button(
-        modifier = Modifier.padding(horizontal = 3.dp).width(50.dp),
+        modifier = Modifier
+            .padding(horizontal = 3.dp)
+            .width(50.dp),
         onClick = { popupExpanded = true },
         shape = RoundedCornerShape(20.dp),
         colors = ButtonDefaults
@@ -288,7 +334,9 @@ private fun EditButton(account: Account, channel: Channel) {
         NewChannelView({ wantsToPost = false }, account = account, channel)
 
     Button(
-        modifier = Modifier.padding(horizontal = 3.dp).width(50.dp),
+        modifier = Modifier
+            .padding(horizontal = 3.dp)
+            .width(50.dp),
         onClick = { wantsToPost = true },
         shape = RoundedCornerShape(20.dp),
         colors = ButtonDefaults

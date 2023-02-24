@@ -18,11 +18,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.navigation.NavController
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun ChatroomFeedView(viewModel: FeedViewModel, accountViewModel: AccountViewModel, navController: NavController, routeForLastRead: String?) {
+fun ChatroomFeedView(viewModel: FeedViewModel, accountViewModel: AccountViewModel, navController: NavController, routeForLastRead: String?, onWantsToReply: (Note) -> Unit ) {
     val feedState by viewModel.feedContent.collectAsState()
 
     var isRefreshing by remember { mutableStateOf(false) }
@@ -65,7 +66,7 @@ fun ChatroomFeedView(viewModel: FeedViewModel, accountViewModel: AccountViewMode
                     ) {
                         var previousDate: String = ""
                         itemsIndexed(state.feed.value, key = { index, item -> item.idHex }) { index, item ->
-                            ChatroomMessageCompose(item, routeForLastRead, accountViewModel = accountViewModel, navController = navController)
+                            ChatroomMessageCompose(item, routeForLastRead, accountViewModel = accountViewModel, navController = navController, onWantsToReply = onWantsToReply)
                         }
                     }
                 }

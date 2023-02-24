@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.note
 
+import android.content.Context
 import android.widget.Toast
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -49,6 +50,7 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -78,6 +80,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import java.math.BigDecimal
 import java.math.RoundingMode
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -86,23 +89,6 @@ import kotlinx.coroutines.launch
 fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel) {
   val accountState by accountViewModel.accountLiveData.observeAsState()
   val account = accountState?.account ?: return
-
-  val reactionsState by baseNote.live().reactions.observeAsState()
-  val reactedNote = reactionsState?.note
-
-  val boostsState by baseNote.live().boosts.observeAsState()
-  val boostedNote = boostsState?.note
-
-  val zapsState by baseNote.live().zaps.observeAsState()
-  val zappedNote = zapsState?.note
-
-  val repliesState by baseNote.live().replies.observeAsState()
-  val replies = repliesState?.note?.replies ?: emptySet()
-
-  val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-  val uri = LocalUriHandler.current
-  val context = LocalContext.current
-  val scope = rememberCoroutineScope()
 
   var wantsToReplyTo by remember {
     mutableStateOf<Note?>(null)
@@ -118,256 +104,337 @@ fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel) {
   if (wantsToQuote != null)
     NewPostView({ wantsToQuote = null }, null, wantsToQuote, account)
 
-  var wantsToZap by remember { mutableStateOf(false) }
-  var wantsToChangeZapAmount by remember { mutableStateOf(false) }
-
-  var wantsToBoost by remember { mutableStateOf(false) }
-
   Row(
-    modifier = Modifier
-      .padding(top = 8.dp)
-      .fillMaxWidth(),
+    modifier = Modifier.padding(top = 8.dp).fillMaxWidth(),
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.SpaceBetween
   ) {
-    IconButton(
-      modifier = Modifier.then(Modifier.size(20.dp)),
-      onClick = {
-        if (account.isWriteable())
-          wantsToReplyTo = baseNote
-        else
-          scope.launch {
-            Toast.makeText(
-              context,
-              "Login with a Private key to be able to reply",
-              Toast.LENGTH_SHORT
-            ).show()
-          }
-      }
-    ) {
-      Icon(
-        painter = painterResource(R.drawable.ic_comment),
-        null,
-        modifier = Modifier.size(15.dp),
-        tint = grayTint,
-      )
+    ReplyReaction(baseNote, accountViewModel, Modifier.weight(1f)) {
+      wantsToReplyTo = baseNote
     }
 
-    Text(
-      "  ${showCount(replies.size)}",
-      fontSize = 14.sp,
-      color = grayTint,
-      modifier = Modifier.weight(1f)
-    )
-
-    IconButton(
-      modifier = Modifier.then(Modifier.size(20.dp)),
-      onClick = {
-        if (account.isWriteable())
-          wantsToBoost = true
-        else
-          scope.launch {
-            Toast.makeText(
-              context,
-              "Login with a Private key to be able to boost posts",
-              Toast.LENGTH_SHORT
-            ).show()
-          }
-      }
-    ) {
-      if (wantsToBoost) {
-        BoostTypeChoicePopup(
-          baseNote,
-          accountViewModel,
-          onDismiss = {
-            wantsToBoost = false
-          },
-          onQuote = {
-            wantsToBoost = false
-            wantsToQuote = baseNote
-          }
-        )
-      }
-
-      if (boostedNote?.isBoostedBy(account.userProfile()) == true) {
-        Icon(
-          painter = painterResource(R.drawable.ic_retweeted),
-          null,
-          modifier = Modifier.size(20.dp),
-          tint = Color.Unspecified
-        )
-      } else {
-        Icon(
-          painter = painterResource(R.drawable.ic_retweet),
-          null,
-          modifier = Modifier.size(20.dp),
-          tint = grayTint
-        )
-      }
+    BoostReaction(baseNote, accountViewModel, Modifier.weight(1f)) {
+      wantsToQuote = baseNote
     }
 
-    Text(
-      "  ${showCount(boostedNote?.boosts?.size)}",
-      fontSize = 14.sp,
-      color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-      modifier = Modifier.weight(1f)
-    )
+    LikeReaction(baseNote, accountViewModel, Modifier.weight(1f))
 
-    IconButton(
-      modifier = Modifier.then(Modifier.size(20.dp)),
-      onClick = {
-        if (account.isWriteable())
-          accountViewModel.reactTo(baseNote)
-        else
-          scope.launch {
-            Toast.makeText(
-              context,
-              "Login with a Private key to like Posts",
-              Toast.LENGTH_SHORT
-            ).show()
-          }
-      }
-    ) {
-      if (reactedNote?.isReactedBy(account.userProfile()) == true) {
-        Icon(
-          painter = painterResource(R.drawable.ic_liked),
-          null,
-          modifier = Modifier.size(16.dp),
-          tint = Color.Unspecified
-        )
-      } else {
-        Icon(
-          painter = painterResource(R.drawable.ic_like),
-          null,
-          modifier = Modifier.size(16.dp),
-          tint = grayTint
-        )
-      }
-    }
+    ZapReaction(baseNote, accountViewModel, Modifier.weight(1f))
 
-    Text(
-      "  ${showCount(reactedNote?.reactions?.size)}",
-      fontSize = 14.sp,
-      color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-      modifier = Modifier.weight(1f)
-    )
-
-
-    Row(
-      modifier = Modifier
-        .then(Modifier.size(20.dp))
-        .combinedClickable(
-          role = Role.Button,
-          interactionSource = remember { MutableInteractionSource() },
-          indication = rememberRipple(bounded = false, radius = 24.dp),
-          onClick = {
-            if (account.zapAmountChoices.isEmpty()) {
-              scope.launch {
-                Toast
-                  .makeText(
-                    context,
-                    "No Zap Amount Setup. Long Press to change",
-                    Toast.LENGTH_SHORT
-                  )
-                  .show()
-              }
-            } else if (!account.isWriteable()) {
-              scope.launch {
-                Toast
-                  .makeText(
-                    context,
-                    "Login with a Private key to be able to send Zaps",
-                    Toast.LENGTH_SHORT
-                  )
-                  .show()
-              }
-            } else if (account.zapAmountChoices.size == 1) {
-              accountViewModel.zap(baseNote, account.zapAmountChoices.first() * 1000, "", context) {
-                scope.launch {
-                  Toast
-                    .makeText(context, it, Toast.LENGTH_SHORT)
-                    .show()
-                }
-              }
-            } else if (account.zapAmountChoices.size > 1) {
-              wantsToZap = true
-            }
-          },
-          onLongClick = {
-            wantsToChangeZapAmount = true
-          }
-        )
-    ) {
-      if (wantsToZap) {
-        ZapAmountChoicePopup(
-          baseNote,
-          accountViewModel,
-          onDismiss = {
-            wantsToZap = false
-          },
-          onChangeAmount = {
-            wantsToZap = false
-            wantsToChangeZapAmount = true
-          }
-        )
-      }
-      if (wantsToChangeZapAmount) {
-        UpdateZapAmountDialog({ wantsToChangeZapAmount = false }, account = account)
-      }
-
-      if (zappedNote?.isZappedBy(account.userProfile()) == true) {
-        Icon(
-          imageVector = Icons.Default.Bolt,
-          contentDescription = "Zaps",
-          modifier = Modifier.size(20.dp),
-          tint = BitcoinOrange
-        )
-      } else {
-        Icon(
-          imageVector = Icons.Outlined.Bolt,
-          contentDescription = "Zaps",
-          modifier = Modifier.size(20.dp),
-          tint = grayTint
-        )
-      }
-    }
-
-    Text(
-      showAmount(zappedNote?.zappedAmount()),
-      fontSize = 14.sp,
-      color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-      modifier = Modifier.weight(1f)
-    )
-
-    IconButton(
-      modifier = Modifier.then(Modifier.size(20.dp)),
-      onClick = { uri.openUri("https://counter.amethyst.social/${baseNote.idHex}/") }
-    ) {
-      Icon(
-        imageVector = Icons.Outlined.BarChart,
-        null,
-        modifier = Modifier.size(19.dp),
-        tint = grayTint
-      )
-    }
-
-    Row(modifier = Modifier.weight(1f)) {
-      AsyncImage(
-        model = ImageRequest.Builder(LocalContext.current)
-          .data("https://counter.amethyst.social/${baseNote.idHex}.svg?label=+&color=00000000")
-          .crossfade(true)
-          .diskCachePolicy(CachePolicy.DISABLED)
-          .memoryCachePolicy(CachePolicy.ENABLED)
-          .build(),
-        contentDescription = "View count",
-        modifier = Modifier.height(24.dp),
-        colorFilter = ColorFilter.tint(grayTint)
-      )
-    }
+    ViewCountReaction(baseNote, Modifier.weight(1f))
   }
 }
 
 
+@Composable
+fun ReplyReaction(
+  baseNote: Note,
+  accountViewModel: AccountViewModel,
+  textModifier: Modifier = Modifier,
+  showCounter: Boolean = true,
+  onPress: () -> Unit,
+) {
+  val repliesState by baseNote.live().replies.observeAsState()
+  val replies = repliesState?.note?.replies ?: emptySet()
+
+  val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+  val context = LocalContext.current
+  val scope = rememberCoroutineScope()
+
+  IconButton(
+    modifier = Modifier.then(Modifier.size(20.dp)),
+    onClick = {
+      if (accountViewModel.isWriteable())
+        onPress()
+      else
+        scope.launch {
+          Toast.makeText(
+            context,
+            "Login with a Private key to be able to reply",
+            Toast.LENGTH_SHORT
+          ).show()
+        }
+    }
+  ) {
+    Icon(
+      painter = painterResource(R.drawable.ic_comment),
+      null,
+      modifier = Modifier.size(15.dp),
+      tint = grayTint,
+    )
+  }
+
+  if (showCounter)
+    Text(
+      " ${showCount(replies.size)}",
+      fontSize = 14.sp,
+      color = grayTint,
+      modifier = textModifier
+    )
+}
+
+@Composable
+private fun BoostReaction(
+  baseNote: Note,
+  accountViewModel: AccountViewModel,
+  textModifier: Modifier = Modifier,
+  onQuotePress: () -> Unit,
+) {
+  val boostsState by baseNote.live().boosts.observeAsState()
+  val boostedNote = boostsState?.note
+
+  val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+  val context = LocalContext.current
+  val scope = rememberCoroutineScope()
+
+  var wantsToBoost by remember { mutableStateOf(false) }
+
+  IconButton(
+    modifier = Modifier.then(Modifier.size(20.dp)),
+    onClick = {
+      if (accountViewModel.isWriteable())
+        wantsToBoost = true
+      else
+        scope.launch {
+          Toast.makeText(
+            context,
+            "Login with a Private key to be able to boost posts",
+            Toast.LENGTH_SHORT
+          ).show()
+        }
+    }
+  ) {
+    if (wantsToBoost) {
+      BoostTypeChoicePopup(
+        baseNote,
+        accountViewModel,
+        onDismiss = {
+          wantsToBoost = false
+        },
+        onQuote = {
+          wantsToBoost = false
+          onQuotePress()
+        }
+      )
+    }
+
+    if (boostedNote?.isBoostedBy(accountViewModel.userProfile()) == true) {
+      Icon(
+        painter = painterResource(R.drawable.ic_retweeted),
+        null,
+        modifier = Modifier.size(20.dp),
+        tint = Color.Unspecified
+      )
+    } else {
+      Icon(
+        painter = painterResource(R.drawable.ic_retweet),
+        null,
+        modifier = Modifier.size(20.dp),
+        tint = grayTint
+      )
+    }
+  }
+
+  Text(
+    " ${showCount(boostedNote?.boosts?.size)}",
+    fontSize = 14.sp,
+    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+    modifier = textModifier
+  )
+}
+
+@Composable
+fun LikeReaction(
+  baseNote: Note,
+  accountViewModel: AccountViewModel,
+  textModifier: Modifier = Modifier
+) {
+  val reactionsState by baseNote.live().reactions.observeAsState()
+  val reactedNote = reactionsState?.note
+
+  val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+  val context = LocalContext.current
+  val scope = rememberCoroutineScope()
+
+  IconButton(
+    modifier = Modifier.then(Modifier.size(20.dp)),
+    onClick = {
+      if (accountViewModel.isWriteable())
+        accountViewModel.reactTo(baseNote)
+      else
+        scope.launch {
+          Toast.makeText(
+            context,
+            "Login with a Private key to like Posts",
+            Toast.LENGTH_SHORT
+          ).show()
+        }
+    }
+  ) {
+    if (reactedNote?.isReactedBy(accountViewModel.userProfile()) == true) {
+      Icon(
+        painter = painterResource(R.drawable.ic_liked),
+        null,
+        modifier = Modifier.size(16.dp),
+        tint = Color.Unspecified
+      )
+    } else {
+      Icon(
+        painter = painterResource(R.drawable.ic_like),
+        null,
+        modifier = Modifier.size(16.dp),
+        tint = grayTint
+      )
+    }
+  }
+
+  Text(
+    " ${showCount(reactedNote?.reactions?.size)}",
+    fontSize = 14.sp,
+    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+    modifier = textModifier
+  )
+}
+
+
+@Composable
+@OptIn(ExperimentalFoundationApi::class)
+fun ZapReaction(
+  baseNote: Note,
+  accountViewModel: AccountViewModel,
+  textModifier: Modifier = Modifier,
+) {
+  val accountState by accountViewModel.accountLiveData.observeAsState()
+  val account = accountState?.account ?: return
+
+  val zapsState by baseNote.live().zaps.observeAsState()
+  val zappedNote = zapsState?.note
+
+  var wantsToZap by remember { mutableStateOf(false) }
+  var wantsToChangeZapAmount by remember { mutableStateOf(false) }
+
+  val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+  val context = LocalContext.current
+  val scope = rememberCoroutineScope()
+
+  Row(
+    modifier = Modifier
+      .then(Modifier.size(20.dp))
+      .combinedClickable(
+        role = Role.Button,
+        interactionSource = remember { MutableInteractionSource() },
+        indication = rememberRipple(bounded = false, radius = 24.dp),
+        onClick = {
+          if (account.zapAmountChoices.isEmpty()) {
+            scope.launch {
+              Toast
+                .makeText(
+                  context,
+                  "No Zap Amount Setup. Long Press to change",
+                  Toast.LENGTH_SHORT
+                )
+                .show()
+            }
+          } else if (!accountViewModel.isWriteable()) {
+            scope.launch {
+              Toast
+                .makeText(
+                  context,
+                  "Login with a Private key to be able to send Zaps",
+                  Toast.LENGTH_SHORT
+                )
+                .show()
+            }
+          } else if (account.zapAmountChoices.size == 1) {
+            accountViewModel.zap(baseNote, account.zapAmountChoices.first() * 1000, "", context) {
+              scope.launch {
+                Toast
+                  .makeText(context, it, Toast.LENGTH_SHORT)
+                  .show()
+              }
+            }
+          } else if (account.zapAmountChoices.size > 1) {
+            wantsToZap = true
+          }
+        },
+        onLongClick = {
+          wantsToChangeZapAmount = true
+        }
+      )
+  ) {
+    if (wantsToZap) {
+      ZapAmountChoicePopup(
+        baseNote,
+        accountViewModel,
+        onDismiss = {
+          wantsToZap = false
+        },
+        onChangeAmount = {
+          wantsToZap = false
+          wantsToChangeZapAmount = true
+        }
+      )
+    }
+    if (wantsToChangeZapAmount) {
+      UpdateZapAmountDialog({ wantsToChangeZapAmount = false }, account = account)
+    }
+
+    if (zappedNote?.isZappedBy(account.userProfile()) == true) {
+      Icon(
+        imageVector = Icons.Default.Bolt,
+        contentDescription = "Zaps",
+        modifier = Modifier.size(20.dp),
+        tint = BitcoinOrange
+      )
+    } else {
+      Icon(
+        imageVector = Icons.Outlined.Bolt,
+        contentDescription = "Zaps",
+        modifier = Modifier.size(20.dp),
+        tint = grayTint
+      )
+    }
+  }
+
+  Text(
+    showAmount(zappedNote?.zappedAmount()),
+    fontSize = 14.sp,
+    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+    modifier = textModifier
+  )
+}
+
+@Composable
+private fun ViewCountReaction(baseNote: Note, textModifier: Modifier = Modifier) {
+  val uri = LocalUriHandler.current
+  val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+
+  IconButton(
+    modifier = Modifier.then(Modifier.size(20.dp)),
+    onClick = { uri.openUri("https://counter.amethyst.social/${baseNote.idHex}/") }
+  ) {
+    Icon(
+      imageVector = Icons.Outlined.BarChart,
+      null,
+      modifier = Modifier.size(19.dp),
+      tint = grayTint
+    )
+  }
+
+  Row(modifier = textModifier) {
+    AsyncImage(
+      model = ImageRequest.Builder(LocalContext.current)
+        .data("https://counter.amethyst.social/${baseNote.idHex}.svg?label=+&color=00000000")
+        .crossfade(true)
+        .diskCachePolicy(CachePolicy.DISABLED)
+        .memoryCachePolicy(CachePolicy.ENABLED)
+        .build(),
+      contentDescription = "View count",
+      modifier = Modifier.height(24.dp),
+      colorFilter = ColorFilter.tint(grayTint)
+    )
+  }
+}
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -415,7 +482,7 @@ private fun BoostTypeChoicePopup(baseNote: Note, accountViewModel: AccountViewMo
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
-private fun ZapAmountChoicePopup(baseNote: Note, accountViewModel: AccountViewModel, onDismiss: () -> Unit, onChangeAmount: () -> Unit) {
+fun ZapAmountChoicePopup(baseNote: Note, accountViewModel: AccountViewModel, onDismiss: () -> Unit, onChangeAmount: () -> Unit) {
   val context = LocalContext.current
   val scope = rememberCoroutineScope()
 

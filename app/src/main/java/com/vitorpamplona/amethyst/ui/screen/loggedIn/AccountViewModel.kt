@@ -22,6 +22,14 @@ class AccountViewModel(private val account: Account): ViewModel() {
   val accountLiveData: LiveData<AccountState> = account.live.map { it }
   val accountLanguagesLiveData: LiveData<AccountState> = account.liveLanguages.map { it }
 
+  fun isWriteable(): Boolean {
+    return account.isWriteable()
+  }
+
+  fun userProfile(): User {
+    return account.userProfile()
+  }
+
   fun reactTo(note: Note) {
     account.reactTo(note)
   }

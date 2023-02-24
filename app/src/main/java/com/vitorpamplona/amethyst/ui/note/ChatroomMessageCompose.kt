@@ -1,34 +1,48 @@
 package com.vitorpamplona.amethyst.ui.note
 
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.Divider
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,16 +52,23 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.RoboHashCache
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
@@ -56,13 +77,15 @@ import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import kotlinx.coroutines.launch
 
 val ChatBubbleShapeMe = RoundedCornerShape(15.dp, 15.dp, 3.dp, 15.dp)
 val ChatBubbleShapeThem = RoundedCornerShape(3.dp, 15.dp, 15.dp, 15.dp)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote: Boolean = false, accountViewModel: AccountViewModel, navController: NavController) {
+fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote: Boolean = false, accountViewModel: AccountViewModel, navController: NavController, onWantsToReply: (Note) -> Unit) {
     val noteState by baseNote.live().metadata.observeAsState()
     val note = noteState?.note
 
@@ -121,17 +144,22 @@ fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote
 
         Column() {
             Row(
-                modifier = Modifier.fillMaxWidth(1f).padding(
-                    start = 12.dp,
-                    end = 12.dp,
-                    top = 5.dp,
-                    bottom = 5.dp
-                ),
+                modifier = Modifier
+                    .fillMaxWidth(1f)
+                    .padding(
+                        start = 12.dp,
+                        end = 12.dp,
+                        top = 5.dp,
+                        bottom = 5.dp
+                    ),
                 horizontalArrangement = alignment
             ) {
+                var availableBubbleSize by remember { mutableStateOf(IntSize.Zero) }
                 Row(
                     horizontalArrangement = alignment,
-                    modifier = Modifier.fillMaxWidth(if (innerQuote) 1f else 0.85f)
+                    modifier = Modifier.fillMaxWidth(if (innerQuote) 1f else 0.85f).onSizeChanged {
+                        availableBubbleSize = it
+                    },
                 ) {
 
                     Surface(
@@ -143,8 +171,12 @@ fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote
                                 onLongClick = { popupExpanded = true }
                             )
                     ) {
+                        var bubbleSize by remember { mutableStateOf(IntSize.Zero) }
+
                         Column(
-                            modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 5.dp),
+                            modifier = Modifier.padding(start = 10.dp, end = 5.dp, bottom = 5.dp).onSizeChanged {
+                                bubbleSize = it
+                            },
                         ) {
 
                             val authorState by note.author!!.live().metadata.observeAsState()
@@ -195,7 +227,8 @@ fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote
                                                 null,
                                                 innerQuote = true,
                                                 accountViewModel = accountViewModel,
-                                                navController = navController
+                                                navController = navController,
+                                                onWantsToReply = onWantsToReply
                                             )
                                     }
                                 }
@@ -244,20 +277,37 @@ fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote
 
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.End,
-                                modifier = Modifier.padding(top = 2.dp)
-                            ) {
-                                Text(
-                                    timeAgoLong(note.event?.createdAt),
-                                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-                                    fontSize = 12.sp
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                modifier = Modifier.padding(top = 2.dp).then(
+                                    with(LocalDensity.current) {
+                                        Modifier.widthIn(bubbleSize.width.toDp(), availableBubbleSize.width.toDp())
+                                    }
                                 )
+                            ) {
+                                Row() {
+                                    Text(
+                                        timeAgoShort(note.event?.createdAt),
+                                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                                        fontSize = 12.sp
+                                    )
 
-                                RelayBadges(note)
+                                    RelayBadges(note)
+
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                }
+
+                                Row() {
+                                    LikeReaction(baseNote, accountViewModel)
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    ZapReaction(baseNote, accountViewModel)
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    ReplyReaction(baseNote, accountViewModel, showCounter = false) {
+                                        onWantsToReply(baseNote)
+                                    }
+                                }
                             }
                         }
                     }
-
                 }
 
                 NoteDropDownMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
@@ -265,8 +315,6 @@ fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote
         }
     }
 }
-
-
 
 @Composable
 private fun RelayBadges(baseNote: Note) {
@@ -283,7 +331,10 @@ private fun RelayBadges(baseNote: Note) {
     FlowRow(Modifier.padding(start = 10.dp)) {
         relaysToDisplay.forEach {
             val url = it.removePrefix("wss://")
-            Box(Modifier.size(15.dp).padding(1.dp)) {
+            Box(
+                Modifier
+                    .size(15.dp)
+                    .padding(1.dp)) {
                 AsyncImage(
                     model = "https://${url}/favicon.ico",
                     placeholder = BitmapPainter(RoboHashCache.get(ctx, url)),
@@ -295,7 +346,7 @@ private fun RelayBadges(baseNote: Note) {
                         .fillMaxSize(1f)
                         .clip(shape = CircleShape)
                         .background(MaterialTheme.colors.background)
-                        .clickable(onClick = { uri.openUri("https://" + url) } )
+                        .clickable(onClick = { uri.openUri("https://" + url) })
                 )
             }
         }

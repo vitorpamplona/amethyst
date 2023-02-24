@@ -289,14 +289,50 @@ class Account(
     LocalCache.consume(signedEvent, null)
   }
 
+  fun createPrivateMessageWithReply(
+    recipientPubKey: ByteArray,
+    msg: String,
+    replyTos: List<String>? = null, mentions: List<String>? = null,
+    privateKey: ByteArray,
+    createdAt: Long = Date().time / 1000,
+    publishedRecipientPubKey: ByteArray? = null,
+    advertiseNip18: Boolean = true
+  ): PrivateDmEvent {
+    val content = Utils.encrypt(
+      if (advertiseNip18) {
+        PrivateDmEvent.nip18Advertisement
+      } else { "" } + msg,
+      privateKey,
+      recipientPubKey)
+    val pubKey = Utils.pubkeyCreate(privateKey)
+    val tags = mutableListOf<List<String>>()
+    publishedRecipientPubKey?.let {
+      tags.add(listOf("p", publishedRecipientPubKey.toHex()))
+    }
+    replyTos?.forEach {
+      tags.add(listOf("e", it))
+    }
+    mentions?.forEach {
+      tags.add(listOf("p", it))
+    }
+    val id = Event.generateId(pubKey, createdAt, PrivateDmEvent.kind, tags, content)
+    val sig = Utils.sign(id, privateKey)
+    return PrivateDmEvent(id, pubKey, createdAt, tags, content, sig)
+  }
+
   fun sendPrivateMeesage(message: String, toUser: String, replyingTo: Note? = null) {
     if (!isWriteable()) return
     val user = LocalCache.users[toUser] ?: return
 
-    val signedEvent = PrivateDmEvent.create(
+    val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
+    val mentionsHex = emptyList<String>()
+
+    val signedEvent = createPrivateMessageWithReply(
       recipientPubKey = user.pubkey(),
       publishedRecipientPubKey = user.pubkey(),
       msg = message,
+      replyTos = repliesToHex,
+      mentions = mentionsHex,
       privateKey = loggedIn.privKey!!,
       advertiseNip18 = false
     )

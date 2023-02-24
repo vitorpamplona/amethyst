@@ -22,6 +22,22 @@ fun timeAgo(mills: Long?): String {
     .replace(" days ago", "d")
 }
 
+fun timeAgoShort(mills: Long?): String {
+  if (mills == null) return " "
+
+  var humanReadable = DateUtils.getRelativeTimeSpanString(
+    mills * 1000,
+    System.currentTimeMillis(),
+    DateUtils.MINUTE_IN_MILLIS,
+    DateUtils.FORMAT_ABBREV_ALL
+  ).toString()
+  if (humanReadable.startsWith("In") || humanReadable.startsWith("0")) {
+    humanReadable = "now";
+  }
+
+  return humanReadable
+}
+
 fun timeAgoLong(mills: Long?): String {
   if (mills == null) return " "
 

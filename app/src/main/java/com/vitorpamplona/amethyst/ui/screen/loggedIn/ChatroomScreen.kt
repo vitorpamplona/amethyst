@@ -4,20 +4,26 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.Divider
+import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.material.TextFieldDefaults
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -41,6 +47,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.RoboHashCache
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
@@ -49,6 +56,7 @@ import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.actions.PostButton
 import com.vitorpamplona.amethyst.ui.dal.ChatroomFeedFilter
+import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -59,6 +67,7 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
 
     if (account != null && userId != null) {
         val newPost = remember { mutableStateOf(TextFieldValue("")) }
+        val replyTo = remember { mutableStateOf<Note?>(null) }
 
         ChatroomFeedFilter.loadMessagesBetween(account, userId)
         NostrChatroomDataSource.loadMessagesBetween(account, userId)
@@ -104,12 +113,47 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
                     .padding(vertical = 0.dp)
                     .weight(1f, true)
             ) {
-                ChatroomFeedView(feedViewModel, accountViewModel, navController, "Room/${userId}")
+                ChatroomFeedView(feedViewModel, accountViewModel, navController, "Room/${userId}") {
+                    replyTo.value = it
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            val replyingNote = replyTo.value
+            if (replyingNote != null) {
+                Row(Modifier.padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        ChatroomMessageCompose(
+                            baseNote = replyingNote,
+                            null,
+                            innerQuote = true,
+                            accountViewModel = accountViewModel,
+                            navController = navController,
+                            onWantsToReply = {
+                                replyTo.value = it
+                            }
+                        )
+                    }
+
+                    Column(Modifier.padding(end = 10.dp)) {
+                        IconButton(
+                            modifier = Modifier.size(30.dp),
+                            onClick = { replyTo.value = null }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Cancel,
+                                null,
+                                modifier = Modifier.padding(end = 5.dp).size(30.dp),
+                                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                            )
+                        }
+                    }
+                }
             }
 
             //LAST ROW
-            Row(modifier = Modifier
-                .padding(10.dp)
+            Row(modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp, top = 5.dp)
                 .fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
@@ -132,8 +176,9 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
                     trailingIcon = {
                         PostButton(
                             onPost = {
-                                account.sendPrivateMeesage(newPost.value.text, userId)
+                                account.sendPrivateMeesage(newPost.value.text, userId, replyTo.value)
                                 newPost.value = TextFieldValue("")
+                                replyTo.value = null
                                 feedViewModel.refresh() // Don't wait a full second before updating
                             },
                             newPost.value.text.isNotBlank(),
