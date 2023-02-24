@@ -106,19 +106,24 @@ class Note(val idHex: String) {
 
     fun removeReply(note: Note) {
         replies = replies - note
+        liveSet?.replies?.invalidateData()
     }
     fun removeBoost(note: Note) {
         boosts = boosts - note
+        liveSet?.boosts?.invalidateData()
     }
     fun removeReaction(note: Note) {
         reactions = reactions - note
+        liveSet?.reactions?.invalidateData()
     }
     fun removeZap(note: Note) {
         if (zaps[note] != null) {
             zaps = zaps.minus(note)
+            liveSet?.zaps?.invalidateData()
         } else if (zaps.containsValue(note)) {
             val toRemove = zaps.filterValues { it == note }
             zaps = zaps.minus(toRemove.keys)
+            liveSet?.zaps?.invalidateData()
         }
     }
 
