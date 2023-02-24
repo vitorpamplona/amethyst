@@ -301,7 +301,14 @@ fun BottomContent(user: User, scaffoldState: ScaffoldState, navController: NavCo
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 15.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
+            Text(
+                modifier = Modifier.padding(start = 16.dp),
+                text = "v"+BuildConfig.VERSION_NAME,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+            )
             /*
             IconButton(
                 onClick = {
