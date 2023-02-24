@@ -23,7 +23,7 @@ Amethyst brings the best social network to your Android phone. Just insert your 
 - [x] Relay Edit (separate relay sets for home, dms, public chats, global)
 - [x] Dropdown to Link Users when writing
 - [x] Lightning Tips
-- [ ] Zaps 
+- [x] Zaps 
 - [ ] Infinity Scroll 
 - [ ] Identity Verification (NIP-05)
 - [ ] Event Deletion (NIP-09)
