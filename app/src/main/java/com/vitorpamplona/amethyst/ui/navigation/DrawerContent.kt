@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.navigation
 
+import android.os.Build
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -73,6 +74,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalContext
+import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
@@ -177,12 +179,34 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
             )
             Text(
                 accountUser.bestDisplayName() ?: "",
-                modifier = Modifier.padding(top = 7.dp),
+                modifier = Modifier.padding(top = 7.dp).clickable(onClick = {
+                    accountUser.let {
+                        navController.navigate("User/${it.pubkeyHex}")
+                    }
+                    coroutineScope.launch {
+                        scaffoldState.drawerState.close()
+                    }
+                }),
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp
             )
-            Text(" @${accountUser.bestUsername()}", color = Color.LightGray)
-            Row(modifier = Modifier.padding(top = 15.dp)) {
+            Text(" @${accountUser.bestUsername()}", color = Color.LightGray,
+                modifier = Modifier.padding(top = 15.dp).clickable(onClick = {
+                accountUser.let {
+                    navController.navigate("User/${it.pubkeyHex}")
+                }
+                coroutineScope.launch {
+                    scaffoldState.drawerState.close()
+                }
+            }))
+            Row(modifier = Modifier.padding(top = 15.dp).clickable(onClick = {
+                accountUser.let {
+                    navController.navigate("User/${it.pubkeyHex}")
+                }
+                coroutineScope.launch {
+                    scaffoldState.drawerState.close()
+                }
+            })) {
                 Row() {
                     Text("${accountUserFollows.follows.size}", fontWeight = FontWeight.Bold)
                     Text(" Following")
