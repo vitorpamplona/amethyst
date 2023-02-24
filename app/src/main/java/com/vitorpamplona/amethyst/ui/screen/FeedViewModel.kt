@@ -50,6 +50,10 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>): ViewModel() {
         return localFilter.loadTop()
     }
 
+    fun clearFeed() {
+        _feedContent.update { FeedState.Loading }
+    }
+
     fun refresh() {
         val scope = CoroutineScope(Job() + Dispatchers.Default)
         scope.launch {

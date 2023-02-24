@@ -80,7 +80,9 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
                     is FeedState.Loaded -> {
                         LaunchedEffect(noteId) {
                             val noteForPosition = state.feed.value.filter { it.idHex == noteId}.firstOrNull()
-                            listState.animateScrollToItem(state.feed.value.indexOf(noteForPosition), 0)
+                            val position = state.feed.value.indexOf(noteForPosition)
+                            if (position > 0)
+                                listState.animateScrollToItem(position, 0)
                         }
 
                         LazyColumn(
