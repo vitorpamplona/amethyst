@@ -11,8 +11,8 @@ android {
         applicationId "com.vitorpamplona.amethyst"
         minSdk 26
         targetSdk 33
-        versionCode 67
-        versionName "0.17.11"
+        versionCode 68
+        versionName "0.18.0"
 
         resConfigs "en"
 
