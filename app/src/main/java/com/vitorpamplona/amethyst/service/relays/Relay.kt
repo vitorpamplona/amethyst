@@ -31,6 +31,7 @@ class Relay(
     private var isReady: Boolean = false
 
     var eventDownloadCounter = 0
+    var spamCounter = 0
     var eventUploadCounter = 0
     var errorCounter = 0
     var ping: Long? = null

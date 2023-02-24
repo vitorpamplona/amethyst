@@ -140,7 +140,12 @@ object LocalCache {
 
 
   fun consume(event: TextNoteEvent, relay: Relay? = null) {
-    if (antiSpam.isSpam(event)) return
+    if (antiSpam.isSpam(event)) {
+      relay?.let {
+        it.spamCounter++
+      }
+      return
+    }
 
     val note = getOrCreateNote(event.id.toHex())
     val author = getOrCreateUser(event.pubKey.toHexKey())
@@ -426,7 +431,12 @@ object LocalCache {
 
   fun consume(event: ChannelMessageEvent, relay: Relay?) {
     if (event.channel.isNullOrBlank()) return
-    if (antiSpam.isSpam(event)) return
+    if (antiSpam.isSpam(event)) {
+      relay?.let {
+        it.spamCounter++
+      }
+      return
+    }
 
     val channel = checkGetOrCreateChannel(event.channel) ?: return
 

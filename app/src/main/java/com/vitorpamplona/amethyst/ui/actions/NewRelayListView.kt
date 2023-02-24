@@ -23,6 +23,7 @@ import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Public
@@ -148,7 +149,7 @@ fun ServerConfigHeader() {
                 }
             }
 
-            Column(Modifier.weight(1f)) {
+            Column(Modifier.weight(1.4f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Spacer(modifier = Modifier.size(25.dp))
 
@@ -181,6 +182,16 @@ fun ServerConfigHeader() {
                     )
 
                     Spacer(modifier = Modifier.size(5.dp))
+
+                    Text(
+                        text = "Spam",
+                        maxLines = 1,
+                        fontSize = 14.sp,
+                        modifier = Modifier.weight(1f),
+                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                    )
+
+                    Spacer(modifier = Modifier.size(2.dp))
                 }
             }
         }
@@ -290,7 +301,7 @@ fun ServerConfig(
                         }
                     }
 
-                    Column(Modifier.weight(1f)) {
+                    Column(Modifier.weight(1.4f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             IconButton(
                                 modifier = Modifier.size(30.dp),
@@ -345,6 +356,21 @@ fun ServerConfig(
 
                             Text(
                                 text = "${countToHumanReadable(item.errorCount)}",
+                                maxLines = 1,
+                                fontSize = 14.sp,
+                                modifier = Modifier.weight(1f),
+                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                            )
+
+                            Icon(
+                                imageVector = Icons.Default.DeleteSweep,
+                                null,
+                                modifier = Modifier.padding(horizontal = 5.dp).size(15.dp),
+                                tint = if (item.spamCount > 0) Color.Yellow else Color.Green
+                            )
+
+                            Text(
+                                text = "${countToHumanReadable(item.spamCount)}",
                                 maxLines = 1,
                                 fontSize = 14.sp,
                                 modifier = Modifier.weight(1f),

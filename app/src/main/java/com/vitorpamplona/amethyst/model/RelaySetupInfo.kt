@@ -9,5 +9,6 @@ data class RelaySetupInfo(
     val errorCount: Int = 0,
     val downloadCount: Int = 0,
     val uploadCount: Int = 0,
+    val spamCount: Int = 0,
     val feedTypes: Set<FeedType>
 )

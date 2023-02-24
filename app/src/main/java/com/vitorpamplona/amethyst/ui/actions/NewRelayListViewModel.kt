@@ -42,8 +42,9 @@ class NewRelayListViewModel: ViewModel() {
                     val errorCounter = liveRelay?.errorCounter ?: 0
                     val eventDownloadCounter = liveRelay?.eventDownloadCounter ?: 0
                     val eventUploadCounter = liveRelay?.eventUploadCounter ?: 0
+                    val spamCounter = liveRelay?.spamCounter ?: 0
 
-                    RelaySetupInfo(it.key, it.value.read, it.value.write, errorCounter, eventDownloadCounter, eventUploadCounter, localInfoFeedTypes)
+                    RelaySetupInfo(it.key, it.value.read, it.value.write, errorCounter, eventDownloadCounter, eventUploadCounter, spamCounter, localInfoFeedTypes)
                 }.sortedBy { it.downloadCount }.reversed()
             else
                 account.localRelays.map {
@@ -52,8 +53,9 @@ class NewRelayListViewModel: ViewModel() {
                     val errorCounter = liveRelay?.errorCounter ?: 0
                     val eventDownloadCounter = liveRelay?.eventDownloadCounter ?: 0
                     val eventUploadCounter = liveRelay?.eventUploadCounter ?: 0
+                    val spamCounter = liveRelay?.spamCounter ?: 0
 
-                    RelaySetupInfo(it.url, it.read, it.write, errorCounter, eventDownloadCounter, eventUploadCounter, it.feedTypes)
+                    RelaySetupInfo(it.url, it.read, it.write, errorCounter, eventDownloadCounter, eventUploadCounter, spamCounter, it.feedTypes)
                 }.sortedBy { it.downloadCount }.reversed()
         }
     }
