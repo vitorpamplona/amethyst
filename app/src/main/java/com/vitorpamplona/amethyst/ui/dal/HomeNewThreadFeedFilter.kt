@@ -26,7 +26,7 @@ object HomeNewThreadFeedFilter: FeedFilter<Note>() {
       .filter {
         (it.event is TextNoteEvent || it.event is RepostEvent)
           && it.author in user.follows
-          && account.isAcceptable(it)
+          // && account.isAcceptable(it)  // This filter follows only. No need to check if acceptable
           && it.isNewThread()
       }
       .sortedBy { it.event?.createdAt }
