@@ -137,10 +137,12 @@ dependencies {
     // The idea is to make it work for degoogled phones
     implementation 'com.google.mlkit:barcode-scanning:17.0.3'
 
-    // Use this dependency to use the translate text
-    implementation 'com.google.mlkit:translate:17.0.1'
+    // Local model for language identification
     implementation 'com.google.mlkit:language-id:17.0.4'
-    implementation 'com.google.android.gms:play-services-mlkit-language-id:17.0.0'
+
+    // Google services model the translate text
+    implementation 'com.google.mlkit:translate:17.0.1'
+
 
     // Automatic memory leak detection
     debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.10'
