@@ -141,11 +141,6 @@ class Account(
   fun createZapRequestFor(note: Note): LnZapRequestEvent? {
     if (!isWriteable()) return null
 
-    if (note.hasZapped(userProfile())) {
-      // has already liked this note
-      return null
-    }
-
     note.event?.let {
       return LnZapRequestEvent.create(it, userProfile().relays?.keys?.ifEmpty { null } ?: localRelays.map { it.url }.toSet(), loggedIn.privKey!!)
     }
