@@ -26,6 +26,7 @@ object Client: RelayPool.Listener {
     private var relays = Constants.convertDefaultRelays()
     private var subscriptions = mapOf<String, List<TypedFilter>>()
 
+    @Synchronized
     fun connect(relays: Array<Relay>) {
         RelayPool.register(this)
         RelayPool.unloadRelays()
