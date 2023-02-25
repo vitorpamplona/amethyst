@@ -62,8 +62,6 @@ class MainActivity : ComponentActivity() {
     }
 
     Client.lenient = true
-
-    Locale.setDefault(Locale.ENGLISH)
   }
 
   override fun onResume() {
