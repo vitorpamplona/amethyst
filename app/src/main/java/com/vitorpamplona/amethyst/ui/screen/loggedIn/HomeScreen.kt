@@ -81,6 +81,7 @@ fun HomeScreen(accountViewModel: AccountViewModel, navController: NavController)
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
             TabRow(
+                backgroundColor = MaterialTheme.colors.background,
                 selectedTabIndex = pagerState.currentPage,
                 indicator = { tabPositions ->
                     TabRowDefaults.Indicator(

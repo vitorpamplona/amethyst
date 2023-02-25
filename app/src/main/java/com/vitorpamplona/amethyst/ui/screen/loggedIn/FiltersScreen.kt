@@ -41,6 +41,7 @@ fun FiltersScreen(accountViewModel: AccountViewModel, navController: NavControll
                 val coroutineScope = rememberCoroutineScope()
 
                 TabRow(
+                    backgroundColor = MaterialTheme.colors.background,
                     selectedTabIndex = pagerState.currentPage,
                     indicator = { tabPositions ->
                         TabRowDefaults.Indicator(

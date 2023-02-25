@@ -154,6 +154,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                 Column(modifier = Modifier.padding()) {
                     ProfileHeader(baseUser, navController, account, accountViewModel)
                     ScrollableTabRow(
+                        backgroundColor = MaterialTheme.colors.background,
                         selectedTabIndex = pagerState.currentPage,
                         indicator = { tabPositions ->
                             TabRowDefaults.Indicator(
