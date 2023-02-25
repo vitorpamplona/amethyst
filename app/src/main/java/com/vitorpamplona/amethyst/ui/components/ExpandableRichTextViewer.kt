@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -31,6 +32,7 @@ fun ExpandableRichTextViewer(
   canPreview: Boolean,
   modifier: Modifier = Modifier,
   tags: List<List<String>>?,
+  backgroundColor: Color,
   accountViewModel: AccountViewModel,
   navController: NavController
 ) {
@@ -39,7 +41,7 @@ fun ExpandableRichTextViewer(
   val text = if (showFullText) content else content.take(350)
 
   Box(contentAlignment = Alignment.BottomCenter) {
-    RichTextViewer(text, canPreview, modifier, tags, accountViewModel, navController)
+    RichTextViewer(text, canPreview, modifier, tags, backgroundColor, accountViewModel, navController)
 
     if (content.length > 350 && !showFullText) {
       Row(
@@ -50,8 +52,8 @@ fun ExpandableRichTextViewer(
           .background(
             brush = Brush.verticalGradient(
               colors = listOf(
-                MaterialTheme.colors.background.copy(alpha = 0f),
-                MaterialTheme.colors.background
+                backgroundColor.copy(alpha = 0f),
+                backgroundColor
               )
             )
           )
@@ -61,7 +63,7 @@ fun ExpandableRichTextViewer(
           onClick = { showFullText = !showFullText },
           shape = RoundedCornerShape(20.dp),
           colors = ButtonDefaults.buttonColors(
-            backgroundColor = MaterialTheme.colors.primary
+            backgroundColor = MaterialTheme.colors.primary.copy(alpha = 0.32f).compositeOver(MaterialTheme.colors.background)
           ),
           contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
         ) {

@@ -11,6 +11,8 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -55,6 +57,7 @@ fun RichTextViewer(
   canPreview: Boolean,
   modifier: Modifier = Modifier,
   tags: List<List<String>>?,
+  backgroundColor: Color,
   accountViewModel: AccountViewModel,
   navController: NavController,
 ) {
@@ -86,7 +89,7 @@ fun RichTextViewer(
             } else if (noProtocolUrlValidator.matcher(word).matches()) {
               UrlPreview("https://$word", word)
             } else if (tagIndex.matcher(word).matches() && tags != null) {
-              TagLink(word, tags, accountViewModel, navController)
+              TagLink(word, tags, backgroundColor, accountViewModel, navController)
             } else if (isBechLink(word)) {
               BechLink(word, navController)
             } else {
@@ -105,7 +108,7 @@ fun RichTextViewer(
             } else if (noProtocolUrlValidator.matcher(word).matches()) {
               ClickableUrl(word, "https://$word")
             } else if (tagIndex.matcher(word).matches() && tags != null) {
-              TagLink(word, tags, accountViewModel, navController)
+              TagLink(word, tags, backgroundColor, accountViewModel, navController)
             } else if (isBechLink(word)) {
               BechLink(word, navController)
             } else {
@@ -159,7 +162,7 @@ fun BechLink(word: String, navController: NavController) {
 
 
 @Composable
-fun TagLink(word: String, tags: List<List<String>>, accountViewModel: AccountViewModel, navController: NavController) {
+fun TagLink(word: String, tags: List<List<String>>, backgroundColor: Color, accountViewModel: AccountViewModel, navController: NavController) {
   val matcher = tagIndex.matcher(word)
 
   val index = try {
@@ -204,8 +207,8 @@ fun TagLink(word: String, tags: List<List<String>>, accountViewModel: AccountVie
               1.dp,
               MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
               RoundedCornerShape(15.dp)
-            )
-            .background(MaterialTheme.colors.onSurface.copy(alpha = 0.05f)),
+            ),
+          parentBackgroundColor = MaterialTheme.colors.onSurface.copy(alpha = 0.05f).compositeOver(backgroundColor),
           isQuotedNote = true,
           navController = navController)
       } else {

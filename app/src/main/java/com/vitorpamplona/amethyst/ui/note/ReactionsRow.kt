@@ -686,8 +686,8 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, account: Account) {
 }
 
 fun showCount(count: Int?): String {
-  if (count == null) return " "
-  if (count == 0) return " "
+  if (count == null) return ""
+  if (count == 0) return ""
 
   return when {
     count >= 1000000000 -> "${Math.round(count / 1000000000f)}G"
@@ -702,8 +702,8 @@ val OneMega = BigDecimal(1000000)
 val OneKilo = BigDecimal(1000)
 
 fun showAmount(amount: BigDecimal?): String {
-  if (amount == null) return " "
-  if (amount.abs() < BigDecimal(0.01)) return " "
+  if (amount == null) return ""
+  if (amount.abs() < BigDecimal(0.01)) return ""
 
   return when {
     amount >= OneGiga -> "%.1fG".format(amount.div(OneGiga).setScale(1, RoundingMode.HALF_UP))

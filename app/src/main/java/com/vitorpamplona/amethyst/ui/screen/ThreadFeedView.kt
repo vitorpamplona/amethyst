@@ -232,6 +232,7 @@ fun NoteMaster(baseNote: Note,
                             canPreview,
                             Modifier.fillMaxWidth(),
                             note.event?.tags,
+                            MaterialTheme.colors.background,
                             accountViewModel,
                             navController
                         )

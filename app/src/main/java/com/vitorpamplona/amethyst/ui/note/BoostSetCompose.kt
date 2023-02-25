@@ -21,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -59,10 +60,14 @@ fun BoostSetCompose(boostSetCard: BoostSetCard, isInnerNote: Boolean = false, ro
                 NotificationCache.markAsRead(routeForLastRead, boostSetCard.createdAt, context)
         }
 
+        var backgroundColor = if (isNew) {
+            MaterialTheme.colors.primary.copy(0.12f).compositeOver(MaterialTheme.colors.background)
+        } else {
+            MaterialTheme.colors.background
+        }
+
         Column(
-            modifier = Modifier.background(
-                if (isNew) MaterialTheme.colors.primary.copy(0.12f) else MaterialTheme.colors.background
-            ).combinedClickable(
+            modifier = Modifier.background(backgroundColor).combinedClickable(
                 onClick = {
                     if (noteEvent !is ChannelMessageEvent) {
                         navController.navigate("Note/${note.idHex}"){
@@ -115,6 +120,7 @@ fun BoostSetCompose(boostSetCard: BoostSetCard, isInnerNote: Boolean = false, ro
                         routeForLastRead = null,
                         modifier = Modifier.padding(top = 5.dp),
                         isBoostedNote = true,
+                        parentBackgroundColor = backgroundColor,
                         accountViewModel = accountViewModel,
                         navController = navController
                     )

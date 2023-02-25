@@ -22,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -59,10 +60,14 @@ fun ZapSetCompose(zapSetCard: ZapSetCard, modifier: Modifier = Modifier, isInner
                 NotificationCache.markAsRead(routeForLastRead, zapSetCard.createdAt, context)
         }
 
+        var backgroundColor = if (isNew) {
+            MaterialTheme.colors.primary.copy(0.12f).compositeOver(MaterialTheme.colors.background)
+        } else {
+            MaterialTheme.colors.background
+        }
+
         Column(
-            modifier = Modifier.background(
-                if (isNew) MaterialTheme.colors.primary.copy(0.12f) else MaterialTheme.colors.background
-            ).combinedClickable(
+            modifier = Modifier.background(backgroundColor).combinedClickable(
                 onClick = {
                   if (noteEvent !is ChannelMessageEvent) {
                       navController.navigate("Note/${note.idHex}"){
@@ -115,6 +120,7 @@ fun ZapSetCompose(zapSetCard: ZapSetCard, modifier: Modifier = Modifier, isInner
                         routeForLastRead = null,
                         modifier = Modifier.padding(top = 5.dp),
                         isBoostedNote = true,
+                        parentBackgroundColor = backgroundColor,
                         accountViewModel = accountViewModel,
                         navController = navController
                     )

@@ -25,6 +25,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -44,6 +45,7 @@ fun TranslateableRichTextViewer(
   canPreview: Boolean,
   modifier: Modifier = Modifier,
   tags: List<List<String>>?,
+  backgroundColor: Color,
   accountViewModel: AccountViewModel,
   navController: NavController
 ) {
@@ -85,8 +87,9 @@ fun TranslateableRichTextViewer(
       canPreview,
       modifier,
       tags,
+      backgroundColor,
       accountViewModel,
-      navController
+      navController,
     )
 
     val target = translatedTextState.value.targetLang

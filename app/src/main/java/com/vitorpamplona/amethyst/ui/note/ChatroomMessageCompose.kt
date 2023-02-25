@@ -51,6 +51,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -85,7 +86,16 @@ val ChatBubbleShapeThem = RoundedCornerShape(3.dp, 15.dp, 15.dp, 15.dp)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote: Boolean = false, accountViewModel: AccountViewModel, navController: NavController, onWantsToReply: (Note) -> Unit) {
+fun ChatroomMessageCompose(
+    baseNote: Note,
+    routeForLastRead: String?,
+    innerQuote: Boolean = false,
+    parentBackgroundColor: Color? = null,
+    accountViewModel: AccountViewModel,
+    navController: NavController,
+    onWantsToReply: (Note) -> Unit
+) {
+
     val noteState by baseNote.live().metadata.observeAsState()
     val note = noteState?.note
 
@@ -128,6 +138,12 @@ fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote
             shape = ChatBubbleShapeThem
         }
 
+        if (parentBackgroundColor != null) {
+            backgroundBubbleColor = backgroundBubbleColor.compositeOver(parentBackgroundColor)
+        } else {
+            backgroundBubbleColor = backgroundBubbleColor.compositeOver(MaterialTheme.colors.background)
+        }
+
         var isNew by remember { mutableStateOf<Boolean>(false) }
 
         LaunchedEffect(key1 = routeForLastRead) {
@@ -143,21 +159,23 @@ fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote
         }
 
         Column() {
+            val modif = if (innerQuote) Modifier.padding(top = 10.dp, end = 5.dp) else Modifier.fillMaxWidth(1f).padding(
+                start = 12.dp,
+                end = 12.dp,
+                top = 5.dp,
+                bottom = 5.dp
+            )
+
             Row(
-                modifier = Modifier
-                    .fillMaxWidth(1f)
-                    .padding(
-                        start = 12.dp,
-                        end = 12.dp,
-                        top = 5.dp,
-                        bottom = 5.dp
-                    ),
+                modifier = modif,
                 horizontalArrangement = alignment
             ) {
                 var availableBubbleSize by remember { mutableStateOf(IntSize.Zero) }
+                val modif2 = if (innerQuote) Modifier else Modifier.fillMaxWidth(0.85f)
+
                 Row(
                     horizontalArrangement = alignment,
-                    modifier = Modifier.fillMaxWidth(if (innerQuote) 1f else 0.85f).onSizeChanged {
+                    modifier = modif2.onSizeChanged {
                         availableBubbleSize = it
                     },
                 ) {
@@ -226,6 +244,7 @@ fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote
                                                 note,
                                                 null,
                                                 innerQuote = true,
+                                                parentBackgroundColor = backgroundBubbleColor,
                                                 accountViewModel = accountViewModel,
                                                 navController = navController,
                                                 onWantsToReply = onWantsToReply
@@ -259,6 +278,7 @@ fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote
                                             canPreview,
                                             Modifier,
                                             note.event?.tags,
+                                            backgroundBubbleColor,
                                             accountViewModel,
                                             navController
                                         )
@@ -268,6 +288,7 @@ fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote
                                             true,
                                             Modifier,
                                             note.event?.tags,
+                                            backgroundBubbleColor,
                                             accountViewModel,
                                             navController
                                         )
@@ -278,7 +299,7 @@ fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween,
-                                modifier = Modifier.padding(top = 2.dp).then(
+                                modifier = Modifier.padding(top = 5.dp).then(
                                     with(LocalDensity.current) {
                                         Modifier.widthIn(bubbleSize.width.toDp(), availableBubbleSize.width.toDp())
                                     }
@@ -298,9 +319,9 @@ fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote
 
                                 Row() {
                                     LikeReaction(baseNote, accountViewModel)
-                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Spacer(modifier = Modifier.width(5.dp))
                                     ZapReaction(baseNote, accountViewModel)
-                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Spacer(modifier = Modifier.width(5.dp))
                                     ReplyReaction(baseNote, accountViewModel, showCounter = false) {
                                         onWantsToReply(baseNote)
                                     }

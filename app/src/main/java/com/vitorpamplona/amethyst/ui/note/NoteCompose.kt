@@ -12,8 +12,10 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -50,6 +52,7 @@ fun NoteCompose(
     modifier: Modifier = Modifier,
     isBoostedNote: Boolean = false,
     isQuotedNote: Boolean = false,
+    parentBackgroundColor: Color? = null,
     accountViewModel: AccountViewModel,
     navController: NavController
 ) {
@@ -100,8 +103,18 @@ fun NoteCompose(
             }
         }
 
-        Column(modifier =
-            modifier.combinedClickable(
+        var backgroundColor = if (isNew) {
+            val newColor = MaterialTheme.colors.primary.copy(0.12f)
+            if (parentBackgroundColor != null) {
+                newColor.compositeOver(parentBackgroundColor)
+            } else {
+                newColor.compositeOver(MaterialTheme.colors.background)
+            }
+          } else {
+            parentBackgroundColor ?: MaterialTheme.colors.background
+          }
+
+        Column(modifier = modifier.combinedClickable(
                 onClick = {
                     if (noteEvent !is ChannelMessageEvent) {
                         navController.navigate("Note/${note.idHex}"){
@@ -114,13 +127,7 @@ fun NoteCompose(
                     }
                 },
                 onLongClick = { popupExpanded = true }
-            ).run {
-                if (isNew) {
-                    this.background(MaterialTheme.colors.primary.copy(0.12f))
-                } else {
-                    this
-                }
-            }
+            ).background(backgroundColor)
         ) {
             Row(
                 modifier = Modifier
@@ -253,6 +260,7 @@ fun NoteCompose(
                                 it,
                                 modifier = Modifier,
                                 isBoostedNote = true,
+                                parentBackgroundColor = backgroundColor,
                                 accountViewModel = accountViewModel,
                                 navController = navController
                             )
@@ -274,7 +282,7 @@ fun NoteCompose(
                                 ReportEvent.ReportType.SPAM -> "Spam"
                                 ReportEvent.ReportType.IMPERSONATION -> "Impersonation"
                                 ReportEvent.ReportType.ILLEGAL -> "Illegal Behavior"
-                                else -> "Unkown"
+                                else -> "Unknown"
                             }
                         }.joinToString(", ")
 
@@ -298,6 +306,7 @@ fun NoteCompose(
                                 canPreview,
                                 Modifier.fillMaxWidth(),
                                 noteEvent.tags,
+                                backgroundColor,
                                 accountViewModel,
                                 navController
                             )
