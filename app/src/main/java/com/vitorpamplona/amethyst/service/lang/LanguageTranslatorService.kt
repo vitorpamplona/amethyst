@@ -116,7 +116,7 @@ object LanguageTranslatorService {
 
     val counter = 0
 
-    return urlsInText.associate {
+    return urlsInText.filter { !it.originalUrl.contains("，") || !it.originalUrl.contains("。")  }.associate {
       "Amethysturlindexer${counter}" to it.originalUrl
     }
   }
