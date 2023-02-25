@@ -266,7 +266,7 @@ class Note(val idHex: String) {
     }
 
     fun clearLive() {
-        if (liveSet != null && liveSet?.isInUse() == true) {
+        if (liveSet != null && liveSet?.isInUse() == false) {
             liveSet = null
         }
     }
