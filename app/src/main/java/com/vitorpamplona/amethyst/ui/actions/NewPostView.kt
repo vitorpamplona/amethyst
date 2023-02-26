@@ -108,7 +108,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                     ) {
                         Column(modifier = Modifier.fillMaxWidth().verticalScroll(scroolState)) {
                             if (postViewModel.replyTos != null && baseReplyTo?.event is TextNoteEvent) {
-                                ReplyInformation(postViewModel.replyTos, postViewModel.mentions, "✖ ") {
+                                ReplyInformation(postViewModel.replyTos, postViewModel.mentions, account, "✖ ") {
                                     postViewModel.removeFromReplyList(it)
                                 }
                             }

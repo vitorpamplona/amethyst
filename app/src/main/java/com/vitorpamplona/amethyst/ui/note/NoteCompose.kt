@@ -247,10 +247,12 @@ fun NoteCompose(
                     }
 
                     if (noteEvent is TextNoteEvent && (note.replyTo != null || note.mentions != null)) {
-                        ReplyInformation(note.replyTo, note.mentions, navController)
+                        ReplyInformation(note.replyTo, note.mentions, account, navController)
                     } else if (noteEvent is ChannelMessageEvent && (note.replyTo != null || note.mentions != null)) {
+                        val sortedMentions = note.mentions?.toSet()?.sortedBy { account.userProfile().isFollowing(it) }
+
                         note.channel?.let {
-                            ReplyInformationChannel(note.replyTo, note.mentions, it, navController)
+                            ReplyInformationChannel(note.replyTo, sortedMentions, it, navController)
                         }
                     }
 
