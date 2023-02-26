@@ -57,12 +57,15 @@ class LightningAddressResolver {
       client.newCall(request).enqueue(object : Callback {
         override fun onResponse(call: Call, response: Response) {
           response.use {
-            onSuccess(response.body.string())
+            if (it.isSuccessful)
+              onSuccess(it.body.string())
+            else
+              onError("Could not resolve ${lnaddress}. Error: ${it.code}. Check if the server up and if the lightning address ${lnaddress} is correct")
           }
         }
 
         override fun onFailure(call: Call, e: java.io.IOException) {
-          onError("Could not resolve User's LNURL address from ${url}. Check if the server up and if the lightning address ${lnaddress} is correct")
+          onError("Could not resolve ${url}. Check if the server up and if the lightning address ${lnaddress} is correct")
           e.printStackTrace()
         }
       })
@@ -93,12 +96,15 @@ class LightningAddressResolver {
       client.newCall(request).enqueue(object : Callback {
         override fun onResponse(call: Call, response: Response) {
           response.use {
-            onSuccess(response.body.string())
+            if (it.isSuccessful)
+              onSuccess(response.body.string())
+            else
+              onError("Could not fetch invoice from $lnCallback")
           }
         }
 
         override fun onFailure(call: Call, e: java.io.IOException) {
-          onError("Could not fetch an invoice from ${lnCallback}. Message ${e.message}")
+          onError("Could not fetch an invoice from $lnCallback. Message ${e.message}")
           e.printStackTrace()
         }
       })
@@ -125,6 +131,7 @@ class LightningAddressResolver {
           onError("Error Parsing JSON from Lightning Address. Check the user's lightning setup")
           null
         }
+
         val callback = lnurlp?.get("callback")?.asText()
 
         if (callback == null) {
@@ -145,7 +152,7 @@ class LightningAddressResolver {
 
               lnInvoice?.get("pr")?.asText()?.let { pr ->
                 onSuccess(pr)
-              }
+              } ?: onError("Invoice Not Created (element pr not found in the resulting JSON)")
             },
             onError = onError
           )

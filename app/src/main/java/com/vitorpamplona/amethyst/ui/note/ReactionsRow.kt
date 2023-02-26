@@ -372,6 +372,11 @@ fun ZapReaction(
         onChangeAmount = {
           wantsToZap = false
           wantsToChangeZapAmount = true
+        },
+        onError = {
+          scope.launch {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+          }
         }
       )
     }
@@ -439,11 +444,6 @@ private fun ViewCountReaction(baseNote: Note, textModifier: Modifier = Modifier)
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun BoostTypeChoicePopup(baseNote: Note, accountViewModel: AccountViewModel, onDismiss: () -> Unit, onQuote: () -> Unit) {
-  val scope = rememberCoroutineScope()
-
-  val accountState by accountViewModel.accountLiveData.observeAsState()
-  val account = accountState?.account ?: return
-
   Popup(
     alignment = Alignment.BottomCenter,
     offset = IntOffset(0, -50),
@@ -482,9 +482,8 @@ private fun BoostTypeChoicePopup(baseNote: Note, accountViewModel: AccountViewMo
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
-fun ZapAmountChoicePopup(baseNote: Note, accountViewModel: AccountViewModel, onDismiss: () -> Unit, onChangeAmount: () -> Unit) {
+fun ZapAmountChoicePopup(baseNote: Note, accountViewModel: AccountViewModel, onDismiss: () -> Unit, onChangeAmount: () -> Unit, onError: (text: String) -> Unit) {
   val context = LocalContext.current
-  val scope = rememberCoroutineScope()
 
   val accountState by accountViewModel.accountLiveData.observeAsState()
   val account = accountState?.account ?: return
@@ -501,11 +500,7 @@ fun ZapAmountChoicePopup(baseNote: Note, accountViewModel: AccountViewModel, onD
         Button(
           modifier = Modifier.padding(horizontal = 3.dp),
           onClick = {
-            accountViewModel.zap(baseNote, amountInSats * 1000, "", context) {
-              scope.launch {
-                Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
-              }
-            }
+            accountViewModel.zap(baseNote, amountInSats * 1000, "", context, onError)
             onDismiss()
           },
           shape = RoundedCornerShape(20.dp),
@@ -519,11 +514,7 @@ fun ZapAmountChoicePopup(baseNote: Note, accountViewModel: AccountViewModel, onD
             textAlign = TextAlign.Center,
             modifier = Modifier.combinedClickable(
               onClick = {
-                accountViewModel.zap(baseNote, amountInSats * 1000, "", context) {
-                  scope.launch {
-                    Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
-                  }
-                }
+                accountViewModel.zap(baseNote, amountInSats * 1000, "", context, onError)
                 onDismiss()
               },
               onLongClick = {
