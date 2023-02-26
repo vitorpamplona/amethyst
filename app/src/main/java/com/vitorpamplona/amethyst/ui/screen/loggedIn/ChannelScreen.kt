@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -144,9 +145,9 @@ fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, accoun
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            val replyingNote = replyTo.value
-            if (replyingNote != null) {
-                Row(Modifier.padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.padding(horizontal = 10.dp).animateContentSize(), verticalAlignment = Alignment.CenterVertically) {
+                val replyingNote = replyTo.value
+                if (replyingNote != null) {
                     Column(Modifier.weight(1f)) {
                         ChatroomMessageCompose(
                             baseNote = replyingNote,
@@ -177,7 +178,7 @@ fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, accoun
             }
 
             //LAST ROW
-            Row(modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp).fillMaxWidth(),
+            Row(modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp, top= 5.dp).fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {

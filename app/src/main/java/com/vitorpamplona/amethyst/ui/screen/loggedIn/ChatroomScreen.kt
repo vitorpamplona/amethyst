@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -120,9 +121,9 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            val replyingNote = replyTo.value
-            if (replyingNote != null) {
-                Row(Modifier.padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.padding(horizontal = 10.dp).animateContentSize(), verticalAlignment = Alignment.CenterVertically) {
+                val replyingNote = replyTo.value
+                if (replyingNote != null) {
                     Column(Modifier.weight(1f)) {
                         ChatroomMessageCompose(
                             baseNote = replyingNote,
