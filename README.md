@@ -11,22 +11,24 @@ Amethyst brings the best social network to your Android phone. Just insert your 
 - [x] Notifications Feed
 - [x] Global Feed
 - [x] Reactions (like, boost, reply)
-- [x] Image Preview (gifs, svgs)
+- [x] Image/Video Preview (gifs, svgs, etc)
 - [x] Url Preview
 - [x] View Threads
 - [x] Private Messages (NIP-04)
 - [x] User Profiles (follow/unfollow)
 - [x] Public Chats (NIP-28)
-- [x] Notification Bubbles
+- [x] Notification Dots
 - [x] Reporting and Hide User capability
+- [x] Automatic Translations
 - [x] Profile Edit
 - [x] Relay Edit (separate relay sets for home, dms, public chats, global)
 - [x] Dropdown to Link Users when writing
 - [x] Lightning Tips
 - [x] Zaps 
+- [x] Event Deletion (NIP-09: like, boost, text notes and reports)
+- [ ] Internationalization
 - [ ] Infinity Scroll 
 - [ ] Identity Verification (NIP-05)
-- [ ] Event Deletion (NIP-09)
 - [ ] Account Creation / Backup Guidance
 - [ ] Message Sent feedback
 
