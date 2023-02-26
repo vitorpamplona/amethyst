@@ -30,6 +30,7 @@ import nostr.postr.Contact
 import nostr.postr.Persona
 import nostr.postr.Utils
 import nostr.postr.events.ContactListEvent
+import nostr.postr.events.DeletionEvent
 import nostr.postr.events.Event
 import nostr.postr.events.MetadataEvent
 import nostr.postr.events.PrivateDmEvent
@@ -123,10 +124,26 @@ class Account(
     }
   }
 
+  fun reactionTo(note: Note): List<Note> {
+    return note.reactedBy(userProfile(), "+")
+  }
+
+  fun hasBoosted(note: Note): Boolean {
+    return boostsTo(note).isNotEmpty()
+  }
+
+  fun boostsTo(note: Note): List<Note> {
+    return note.boostedBy(userProfile())
+  }
+
+  fun hasReacted(note: Note): Boolean {
+    return note.hasReacted(userProfile(), "+")
+  }
+
   fun reactTo(note: Note) {
     if (!isWriteable()) return
 
-    if (note.hasReacted(userProfile(), "+")) {
+    if (hasReacted(note)) {
       // has already liked this note
       return
     }
@@ -151,6 +168,7 @@ class Account(
   fun createZapRequestFor(user: User): LnZapRequestEvent? {
     return createZapRequestFor(user.pubkeyHex)
   }
+
   fun createZapRequestFor(userPubKeyHex: String): LnZapRequestEvent? {
     if (!isWriteable()) return null
 
@@ -174,7 +192,7 @@ class Account(
     note.event?.let {
       val event = ReportEvent.create(it, type, loggedIn.privKey!!)
       Client.send(event)
-      LocalCache.consume(event)
+      LocalCache.consume(event, null)
     }
   }
 
@@ -188,13 +206,29 @@ class Account(
 
     val event = ReportEvent.create(user.pubkeyHex, type, loggedIn.privKey!!)
     Client.send(event)
-    LocalCache.consume(event)
+    LocalCache.consume(event, null)
+  }
+
+  fun delete(note: Note) {
+    delete(listOf(note))
+  }
+
+  fun delete(notes: List<Note>) {
+    if (!isWriteable()) return
+
+    val myNotes = notes.filter { it.author == userProfile() }.map { it.idHex }
+
+    if (myNotes.isNotEmpty()) {
+      val event = DeletionEvent.create(myNotes, loggedIn.privKey!!)
+      Client.send(event)
+      LocalCache.consume(event)
+    }
   }
 
   fun boost(note: Note) {
     if (!isWriteable()) return
 
-    if (note.hasBoosted(userProfile())) {
+    if (note.hasBoostedInTheLast5Minutes(userProfile())) {
       // has already bosted in the past 5mins 
       return
     }
@@ -531,8 +565,6 @@ class Account(
 
     saveable.invalidateData()
   }
-
-
 
   init {
     backupContactList?.let {

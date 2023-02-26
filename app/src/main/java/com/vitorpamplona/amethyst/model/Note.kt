@@ -21,7 +21,6 @@ import java.util.Date
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.regex.Pattern
 import nostr.postr.events.Event
-import nostr.postr.toNpub
 
 val tagSearch = Pattern.compile("(?:\\s|\\A)\\#\\[([0-9]+)\\]")
 
@@ -116,6 +115,18 @@ class Note(val idHex: String) {
         reactions = reactions - note
         liveSet?.reactions?.invalidateData()
     }
+
+    fun removeReport(deleteNote: Note) {
+        val author = deleteNote.author ?: return
+
+        if (author in reports.keys && reports[author]?.contains(deleteNote) == true ) {
+            reports[author]?.let {
+                reports = reports + Pair(author, it.minus(deleteNote))
+                liveSet?.reports?.invalidateData()
+            }
+        }
+    }
+
     fun removeZap(note: Note) {
         if (zaps[note] != null) {
             zaps = zaps.minus(note)
@@ -248,12 +259,20 @@ class Note(val idHex: String) {
     }
 
     fun hasReacted(loggedIn: User, content: String): Boolean {
-        return reactions.firstOrNull { it.author == loggedIn && it.event?.content == content } != null
+        return reactedBy(loggedIn, content).isNotEmpty()
     }
 
-    fun hasBoosted(loggedIn: User): Boolean {
+    fun reactedBy(loggedIn: User, content: String): List<Note> {
+        return reactions.filter { it.author == loggedIn && it.event?.content == content }
+    }
+
+    fun hasBoostedInTheLast5Minutes(loggedIn: User): Boolean {
         val currentTime = Date().time / 1000
         return boosts.firstOrNull { it.author == loggedIn && (it.event?.createdAt ?: 0) > currentTime - (60 * 5)} != null // 5 minute protection
+    }
+
+    fun boostedBy(loggedIn: User): List<Note> {
+        return boosts.filter { it.author == loggedIn }
     }
 
     var liveSet: NoteLiveSet? = null

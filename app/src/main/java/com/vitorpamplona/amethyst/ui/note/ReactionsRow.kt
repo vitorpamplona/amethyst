@@ -192,9 +192,13 @@ private fun BoostReaction(
   IconButton(
     modifier = Modifier.then(Modifier.size(20.dp)),
     onClick = {
-      if (accountViewModel.isWriteable())
-        wantsToBoost = true
-      else
+      if (accountViewModel.isWriteable()) {
+        if (accountViewModel.hasBoosted(baseNote)) {
+          accountViewModel.deleteBoostsTo(baseNote)
+        } else {
+          wantsToBoost = true
+        }
+      } else
         scope.launch {
           Toast.makeText(
             context,
@@ -250,7 +254,7 @@ fun LikeReaction(
   textModifier: Modifier = Modifier
 ) {
   val reactionsState by baseNote.live().reactions.observeAsState()
-  val reactedNote = reactionsState?.note
+  val reactedNote = reactionsState?.note ?: return
 
   val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
   val context = LocalContext.current
@@ -259,9 +263,13 @@ fun LikeReaction(
   IconButton(
     modifier = Modifier.then(Modifier.size(20.dp)),
     onClick = {
-      if (accountViewModel.isWriteable())
-        accountViewModel.reactTo(baseNote)
-      else
+      if (accountViewModel.isWriteable()) {
+        if (accountViewModel.hasReactedTo(baseNote)) {
+          accountViewModel.deleteReactionTo(baseNote)
+        } else {
+          accountViewModel.reactTo(baseNote)
+        }
+      } else
         scope.launch {
           Toast.makeText(
             context,

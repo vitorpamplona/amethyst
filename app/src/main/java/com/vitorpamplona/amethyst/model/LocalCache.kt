@@ -281,7 +281,41 @@ object LocalCache {
   }
 
   fun consume(event: DeletionEvent) {
-    //Log.d("DEL", event.toJson())
+    var deletedAtLeastOne = false
+
+    event.deleteEvents.mapNotNull { notes[it] }.forEach { deleteNote ->
+      // must be the same author
+      if (deleteNote.author?.pubkeyHex == event.pubKey.toHexKey()) {
+        deleteNote.author?.removeNote(deleteNote)
+
+        // reverts the add
+        deleteNote.mentions?.forEach { user ->
+          user.removeTaggedPost(deleteNote)
+          user.removeReport(deleteNote)
+        }
+
+        deleteNote.replyTo?.forEach { replyingNote ->
+          replyingNote.author?.removeTaggedPost(deleteNote)
+        }
+
+        // Counts the replies
+        deleteNote.replyTo?.forEach { masterNote ->
+          masterNote.removeReply(deleteNote)
+          masterNote.removeBoost(deleteNote)
+          masterNote.removeReaction(deleteNote)
+          masterNote.removeZap(deleteNote)
+          masterNote.removeReport(deleteNote)
+        }
+
+        notes.remove(deleteNote.idHex)
+
+        deletedAtLeastOne = true
+      }
+    }
+
+    if (deletedAtLeastOne) {
+      live.invalidateData()
+    }
   }
 
   fun consume(event: RepostEvent) {
@@ -362,13 +396,18 @@ object LocalCache {
     }
   }
 
-  fun consume(event: ReportEvent) {
+  fun consume(event: ReportEvent, relay: Relay?) {
     val note = getOrCreateNote(event.id.toHex())
+    val author = getOrCreateUser(event.pubKey.toHexKey())
+
+    if (relay != null) {
+      author.addRelayBeingUsed(relay, event.createdAt)
+      note.addRelay(relay)
+    }
 
     // Already processed this event.
     if (note.event != null) return
 
-    val author = getOrCreateUser(event.pubKey.toHexKey())
     val mentions = event.reportedAuthor.mapNotNull { checkGetOrCreateUser(it) }
     val repliesTo = event.reportedPost.mapNotNull { checkGetOrCreateNote(it) }
 
@@ -658,6 +697,8 @@ object LocalCache {
     }
 
     toBeRemoved.forEach {
+      it.author?.removeNote(it)
+
       // reverts the add
       it.mentions?.forEach { user ->
         user.removeTaggedPost(it)
@@ -672,6 +713,7 @@ object LocalCache {
         masterNote.removeBoost(it)
         masterNote.removeReaction(it)
         masterNote.removeZap(it)
+        masterNote.removeReport(it)
       }
 
       notes.remove(it.idHex)

@@ -134,6 +134,10 @@ class User(val pubkeyHex: String) {
         }
     }
 
+    fun removeNote(note: Note) {
+        notes = notes - note
+    }
+
     fun clearNotes() {
         notes = setOf<Note>()
     }
@@ -152,6 +156,17 @@ class User(val pubkeyHex: String) {
         val reportTime = note.event?.createdAt ?: 0
         if (reportTime > latestReportTime) {
             latestReportTime = reportTime
+        }
+    }
+
+    fun removeReport(deleteNote: Note) {
+        val author = deleteNote.author ?: return
+
+        if (author in reports.keys && reports[author]?.contains(deleteNote) == true ) {
+            reports[author]?.let {
+                reports = reports + Pair(author, it.minus(deleteNote))
+                liveSet?.reports?.invalidateData()
+            }
         }
     }
 

@@ -536,6 +536,12 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
         DropdownMenuItem(onClick = { accountViewModel.broadcast(note); onDismiss() }) {
             Text("Broadcast")
         }
+        if (note.author == accountViewModel.accountLiveData.value?.account?.userProfile()) {
+            Divider()
+            DropdownMenuItem(onClick = { accountViewModel.delete(note); onDismiss() }) {
+                Text("Request Deletion")
+            }
+        }
         if (note.author != accountViewModel.accountLiveData.value?.account?.userProfile()) {
             Divider()
             DropdownMenuItem(onClick = {
@@ -546,7 +552,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
                     )
                 }; onDismiss()
             }) {
-                Text("Block & Hide User")
+                Text("Block & Hide Author")
             }
             Divider()
             DropdownMenuItem(onClick = {

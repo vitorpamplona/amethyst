@@ -34,6 +34,22 @@ class AccountViewModel(private val account: Account): ViewModel() {
     account.reactTo(note)
   }
 
+  fun hasReactedTo(baseNote: Note): Boolean {
+    return account.hasReacted(baseNote)
+  }
+
+  fun deleteReactionTo(note: Note) {
+    account.delete(account.reactionTo(note))
+  }
+
+  fun hasBoosted(baseNote: Note): Boolean {
+    return account.hasBoosted(baseNote)
+  }
+
+  fun deleteBoostsTo(note: Note) {
+    account.delete(account.boostsTo(note))
+  }
+
   fun zap(note: Note, amount: Long, message: String, context: Context, onError: (String) -> Unit) {
     val lud16 = note.author?.info?.lud16?.trim() ?: note.author?.info?.lud06?.trim()
 
@@ -71,6 +87,10 @@ class AccountViewModel(private val account: Account): ViewModel() {
     account.broadcast(note)
   }
 
+  fun delete(note: Note) {
+    account.delete(note)
+  }
+
   fun decrypt(note: Note): String? {
     return account.decryptContent(note)
   }
@@ -94,4 +114,8 @@ class AccountViewModel(private val account: Account): ViewModel() {
   fun prefer(source: String, target: String, preference: String) {
     account.prefer(source, target, preference)
   }
+
+
+
+
 }

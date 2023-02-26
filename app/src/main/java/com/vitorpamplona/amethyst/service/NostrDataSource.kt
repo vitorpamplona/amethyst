@@ -74,7 +74,7 @@ abstract class NostrDataSource(val debugName: String) {
                 LocalCache.consume(repostEvent)
               }
               ReactionEvent.kind -> LocalCache.consume(ReactionEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
-              ReportEvent.kind -> LocalCache.consume(ReportEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
+              ReportEvent.kind -> LocalCache.consume(ReportEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig), relay)
 
               LnZapEvent.kind -> {
                 val zapEvent = LnZapEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig)

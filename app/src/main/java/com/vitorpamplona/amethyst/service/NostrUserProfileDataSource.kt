@@ -42,7 +42,7 @@ object NostrUserProfileDataSource: NostrDataSource("UserProfileFeed") {
       filter = JsonFilter(
         kinds = listOf(TextNoteEvent.kind),
         authors = listOf(it.pubkeyHex),
-        limit = 100
+        limit = 200
       )
     )
   }
