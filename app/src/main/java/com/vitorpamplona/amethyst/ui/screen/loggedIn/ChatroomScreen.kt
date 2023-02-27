@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
 import com.vitorpamplona.amethyst.ui.actions.PostButton
 import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
+import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.dal.ChatroomFeedFilter
 import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
@@ -225,6 +226,10 @@ fun ChatroomHeader(baseUser: User, accountViewModel: AccountViewModel, navContro
                 Column(modifier = Modifier.padding(start = 10.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         UsernameDisplay(baseUser)
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        ObserveDisplayNip05Status(baseUser)
                     }
                 }
             }
