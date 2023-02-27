@@ -132,6 +132,7 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
                                                 ),
                                                 parentBackgroundColor = if (item.idHex == noteId) MaterialTheme.colors.primary.copy(0.12f).compositeOver(MaterialTheme.colors.background) else null,
                                                 isBoostedNote = false,
+                                                unPackReply = false,
                                                 accountViewModel = accountViewModel,
                                                 navController = navController,
                                             )

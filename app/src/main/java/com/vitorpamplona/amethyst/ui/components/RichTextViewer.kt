@@ -88,7 +88,7 @@ fun RichTextViewer(
             } else if (noProtocolUrlValidator.matcher(word).matches()) {
               UrlPreview("https://$word", word)
             } else if (tagIndex.matcher(word).matches() && tags != null) {
-              TagLink(word, tags, backgroundColor, accountViewModel, navController)
+              TagLink(word, tags, canPreview, backgroundColor, accountViewModel, navController)
             } else if (isBechLink(word)) {
               BechLink(word, navController)
             } else {
@@ -107,7 +107,7 @@ fun RichTextViewer(
             } else if (noProtocolUrlValidator.matcher(word).matches()) {
               ClickableUrl(word, "https://$word")
             } else if (tagIndex.matcher(word).matches() && tags != null) {
-              TagLink(word, tags, backgroundColor, accountViewModel, navController)
+              TagLink(word, tags, canPreview, backgroundColor, accountViewModel, navController)
             } else if (isBechLink(word)) {
               BechLink(word, navController)
             } else {
@@ -161,7 +161,7 @@ fun BechLink(word: String, navController: NavController) {
 
 
 @Composable
-fun TagLink(word: String, tags: List<List<String>>, backgroundColor: Color, accountViewModel: AccountViewModel, navController: NavController) {
+fun TagLink(word: String, tags: List<List<String>>, canPreview: Boolean, backgroundColor: Color, accountViewModel: AccountViewModel, navController: NavController) {
   val matcher = tagIndex.matcher(word)
 
   val index = try {
@@ -194,22 +194,27 @@ fun TagLink(word: String, tags: List<List<String>>, backgroundColor: Color, acco
     } else if (tags[index][0] == "e") {
       val note = LocalCache.checkGetOrCreateNote(tags[index][1])
       if (note != null) {
-        //ClickableNoteTag(note, navController)
-        NoteCompose(
-          baseNote = note,
-          accountViewModel = accountViewModel,
-          modifier = Modifier
-            .padding(0.dp)
-            .fillMaxWidth()
-            .clip(shape = RoundedCornerShape(15.dp))
-            .border(
-              1.dp,
-              MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
-              RoundedCornerShape(15.dp)
-            ),
-          parentBackgroundColor = MaterialTheme.colors.onSurface.copy(alpha = 0.05f).compositeOver(backgroundColor),
-          isQuotedNote = true,
-          navController = navController)
+        if (canPreview) {
+          NoteCompose(
+            baseNote = note,
+            accountViewModel = accountViewModel,
+            modifier = Modifier
+              .padding(0.dp)
+              .fillMaxWidth()
+              .clip(shape = RoundedCornerShape(15.dp))
+              .border(
+                1.dp,
+                MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
+                RoundedCornerShape(15.dp)
+              ),
+            parentBackgroundColor = MaterialTheme.colors.onSurface.copy(alpha = 0.05f)
+              .compositeOver(backgroundColor),
+            isQuotedNote = true,
+            navController = navController
+          )
+        } else {
+          ClickableNoteTag(note, navController)
+        }
       } else {
         // if here the tag is not a valid Nostr Hex
         Text(text = "$word ")

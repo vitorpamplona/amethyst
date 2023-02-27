@@ -1,9 +1,9 @@
 package com.vitorpamplona.amethyst.ui.note
 
-import android.util.Log
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandMore
@@ -45,10 +45,9 @@ import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Following
 import kotlin.time.ExperimentalTime
-import kotlin.time.measureTimedValue
 import nostr.postr.events.TextNoteEvent
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalTime::class, ExperimentalTime::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun NoteCompose(
     baseNote: Note,
@@ -56,6 +55,8 @@ fun NoteCompose(
     modifier: Modifier = Modifier,
     isBoostedNote: Boolean = false,
     isQuotedNote: Boolean = false,
+    unPackReply: Boolean = true,
+    makeItShort: Boolean = false,
     parentBackgroundColor: Color? = null,
     accountViewModel: AccountViewModel,
     navController: NavController
@@ -253,11 +254,36 @@ fun NoteCompose(
                         }
                     }
 
-                    if (note.author != null)
+                    if (note.author != null && !makeItShort) {
                         ObserveDisplayNip05Status(note.author!!)
+                    }
+                    
+                    Spacer(modifier = Modifier.height(3.dp))
 
                     if (noteEvent is TextNoteEvent && (note.replyTo != null || note.mentions != null)) {
-                        ReplyInformation(note.replyTo, note.mentions, account, navController)
+                        val replyingDirectlyTo = note.replyTo?.lastOrNull()
+                        if (replyingDirectlyTo != null && unPackReply) {
+                            NoteCompose(
+                                baseNote = replyingDirectlyTo,
+                                isQuotedNote = true,
+                                modifier = Modifier
+                                    .padding(0.dp)
+                                    .fillMaxWidth()
+                                    .clip(shape = RoundedCornerShape(15.dp))
+                                    .border(
+                                        1.dp,
+                                        MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
+                                        RoundedCornerShape(15.dp)
+                                    ),
+                                unPackReply = false,
+                                makeItShort = true,
+                                parentBackgroundColor = MaterialTheme.colors.onSurface.copy(alpha = 0.05f).compositeOver(backgroundColor),
+                                accountViewModel = accountViewModel,
+                                navController = navController
+                            )
+                        } else {
+                            ReplyInformation(note.replyTo, note.mentions, account, navController)
+                        }
                     } else if (noteEvent is ChannelMessageEvent && (note.replyTo != null || note.mentions != null)) {
                         val sortedMentions = note.mentions?.toSet()?.sortedBy { account.userProfile().isFollowing(it) }
 
@@ -272,6 +298,7 @@ fun NoteCompose(
                                 it,
                                 modifier = Modifier,
                                 isBoostedNote = true,
+                                unPackReply = false,
                                 parentBackgroundColor = backgroundColor,
                                 accountViewModel = accountViewModel,
                                 navController = navController
@@ -315,7 +342,7 @@ fun NoteCompose(
                         if (eventContent != null) {
                             TranslateableRichTextViewer(
                                 eventContent,
-                                canPreview,
+                                canPreview = canPreview && !makeItShort,
                                 Modifier.fillMaxWidth(),
                                 noteEvent.tags,
                                 backgroundColor,
@@ -324,7 +351,8 @@ fun NoteCompose(
                             )
                         }
 
-                        ReactionsRow(note, accountViewModel)
+                        if (!makeItShort)
+                            ReactionsRow(note, accountViewModel)
 
                         Divider(
                             modifier = Modifier.padding(top = 10.dp),
