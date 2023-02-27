@@ -362,7 +362,7 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account) {
 
     Row(verticalAlignment = Alignment.Bottom) {
         user.bestDisplayName()?.let {
-            Text( "$it",
+            Text(it,
                 modifier = Modifier.padding(top = 7.dp),
                 fontWeight = FontWeight.Bold,
                 fontSize = 25.sp
