@@ -120,6 +120,7 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
                                                     MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                                                     if (item.idHex == noteId) MaterialTheme.colors.primary.copy(alpha = 0.52f) else MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                                                 ),
+                                                parentBackgroundColor = if (item.idHex == noteId) MaterialTheme.colors.primary.copy(0.12f).compositeOver(MaterialTheme.colors.background) else null,
                                                 isBoostedNote = false,
                                                 accountViewModel = accountViewModel,
                                                 navController = navController,
