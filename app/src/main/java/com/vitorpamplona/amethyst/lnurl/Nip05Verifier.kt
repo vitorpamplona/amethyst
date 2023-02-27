@@ -18,7 +18,7 @@ class Nip05Verifier {
   val client = OkHttpClient.Builder().build()
 
   fun assembleUrl(nip05address: String): String? {
-    val parts = nip05address.split("@")
+    val parts = nip05address.trim().split("@")
 
     if (parts.size == 2) {
       return "https://${parts[1]}/.well-known/nostr.json?name=${parts[0]}"
@@ -43,23 +43,27 @@ class Nip05Verifier {
     }
 
     withContext(Dispatchers.IO) {
-      val request: Request = Request.Builder().url(url).build()
+      try {
+        val request: Request = Request.Builder().url(url).build()
 
-      client.newCall(request).enqueue(object : Callback {
-        override fun onResponse(call: Call, response: Response) {
-          response.use {
-            if (it.isSuccessful)
-              onSuccess(it.body.string())
-            else
-              onError("Could not resolve ${nip05}. Error: ${it.code}. Check if the server up and if the address ${nip05} is correct")
+        client.newCall(request).enqueue(object : Callback {
+          override fun onResponse(call: Call, response: Response) {
+            response.use {
+              if (it.isSuccessful)
+                onSuccess(it.body.string())
+              else
+                onError("Could not resolve ${nip05}. Error: ${it.code}. Check if the server up and if the address ${nip05} is correct")
+            }
           }
-        }
 
-        override fun onFailure(call: Call, e: java.io.IOException) {
-          onError("Could not resolve ${url}. Check if the server up and if the address ${nip05} is correct")
-          e.printStackTrace()
-        }
-      })
+          override fun onFailure(call: Call, e: java.io.IOException) {
+            onError("Could not resolve ${url}. Check if the server up and if the address ${nip05} is correct")
+            e.printStackTrace()
+          }
+        })
+      } catch (e: java.lang.Exception) {
+        onError("Could not resolve '${url}': ${e.message}")
+      }
     }
   }
 
