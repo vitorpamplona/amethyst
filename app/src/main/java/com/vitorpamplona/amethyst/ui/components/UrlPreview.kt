@@ -11,6 +11,8 @@ import androidx.compose.runtime.setValue
 import com.baha.url.preview.IUrlPreviewCallback
 import com.baha.url.preview.UrlInfoItem
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 
 @Composable
@@ -19,18 +21,20 @@ fun UrlPreview(url: String, urlText: String, showUrlIfError: Boolean = true) {
 
   // Doesn't use a viewModel because of viewModel reusing issues (too many UrlPreview are created).
   LaunchedEffect(url) {
-    UrlCachedPreviewer.previewInfo(url, object : IUrlPreviewCallback {
-      override fun onComplete(urlInfo: UrlInfoItem) {
-        if (urlInfo.allFetchComplete() && urlInfo.url == url)
-          urlPreviewState = UrlPreviewState.Loaded(urlInfo)
-        else
-          urlPreviewState = UrlPreviewState.Empty
-      }
+    withContext(Dispatchers.IO) {
+      UrlCachedPreviewer.previewInfo(url, object : IUrlPreviewCallback {
+        override fun onComplete(urlInfo: UrlInfoItem) {
+          if (urlInfo.allFetchComplete() && urlInfo.url == url)
+            urlPreviewState = UrlPreviewState.Loaded(urlInfo)
+          else
+            urlPreviewState = UrlPreviewState.Empty
+        }
 
-      override fun onFailed(throwable: Throwable) {
-        urlPreviewState = UrlPreviewState.Error("Error parsing preview for ${url}: ${throwable.message}")
-      }
-    })
+        override fun onFailed(throwable: Throwable) {
+          urlPreviewState = UrlPreviewState.Error("Error parsing preview for ${url}: ${throwable.message}")
+        }
+      })
+    }
   }
 
   Crossfade(targetState = urlPreviewState, animationSpec = tween(durationMillis = 100)) { state ->

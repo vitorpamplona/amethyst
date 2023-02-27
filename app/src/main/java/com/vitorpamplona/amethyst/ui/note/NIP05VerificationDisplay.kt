@@ -33,42 +33,46 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserMetadata
 import com.vitorpamplona.amethyst.ui.theme.Nip05
 import java.util.Date
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun nip05VerificationAsAState(user: UserMetadata, pubkeyHex: String): State<Boolean?> {
-    var nip05Verified = remember { mutableStateOf<Boolean?>(null) }
+  var nip05Verified = remember { mutableStateOf<Boolean?>(null) }
 
   LaunchedEffect(key1 = user) {
-    user.nip05?.ifBlank { null }?.let { nip05 ->
-      val now = Date().time / 1000
-      if ((user.nip05LastVerificationTime ?: 0) > (now - 60 * 60)) { // 1hour
-        nip05Verified.value = user.nip05Verified
-      } else {
-        Nip05Verifier().verifyNip05(
-          nip05,
-          onSuccess = {
-            // Marks user as verified
-            if (it == pubkeyHex) {
-              user.nip05Verified = true
-              user.nip05LastVerificationTime = now
-              nip05Verified.value = true
-            } else {
-              user.nip05Verified = false
+    withContext(Dispatchers.IO) {
+      user.nip05?.ifBlank { null }?.let { nip05 ->
+        val now = Date().time / 1000
+        if ((user.nip05LastVerificationTime ?: 0) > (now - 60 * 60)) { // 1hour
+          nip05Verified.value = user.nip05Verified
+        } else {
+          Nip05Verifier().verifyNip05(
+            nip05,
+            onSuccess = {
+              // Marks user as verified
+              if (it == pubkeyHex) {
+                user.nip05Verified = true
+                user.nip05LastVerificationTime = now
+                nip05Verified.value = true
+              } else {
+                user.nip05Verified = false
+                user.nip05LastVerificationTime = 0
+                nip05Verified.value = false
+              }
+            },
+            onError = {
               user.nip05LastVerificationTime = 0
+              user.nip05Verified = false
               nip05Verified.value = false
             }
-          },
-          onError = {
-            user.nip05LastVerificationTime = 0
-            user.nip05Verified = false
-            nip05Verified.value = false
-          }
-        )
+          )
+        }
       }
     }
   }
 
-    return nip05Verified
+  return nip05Verified
 }
 
 @Composable
