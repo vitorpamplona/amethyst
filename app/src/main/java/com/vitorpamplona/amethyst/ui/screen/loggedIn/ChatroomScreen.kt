@@ -1,4 +1,4 @@
-package com.vitorpamplona.amethyst.ui.screen
+package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
@@ -59,6 +59,8 @@ import com.vitorpamplona.amethyst.ui.actions.PostButton
 import com.vitorpamplona.amethyst.ui.dal.ChatroomFeedFilter
 import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.screen.ChatroomFeedView
+import com.vitorpamplona.amethyst.ui.screen.NostrChatRoomFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable

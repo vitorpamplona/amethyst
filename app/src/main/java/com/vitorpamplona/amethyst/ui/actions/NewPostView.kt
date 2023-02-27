@@ -38,7 +38,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.*
 import com.vitorpamplona.amethyst.ui.navigation.UploadFromGallery
 import com.vitorpamplona.amethyst.ui.note.ReplyInformation
-import com.vitorpamplona.amethyst.ui.screen.UserLine
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.UserLine
 import kotlinx.coroutines.delay
 import nostr.postr.events.TextNoteEvent
 

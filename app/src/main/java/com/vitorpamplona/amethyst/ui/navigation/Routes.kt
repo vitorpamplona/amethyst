@@ -19,15 +19,15 @@ import com.vitorpamplona.amethyst.ui.dal.ChatroomListKnownFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
-import com.vitorpamplona.amethyst.ui.screen.ChannelScreen
-import com.vitorpamplona.amethyst.ui.screen.ChatroomListScreen
-import com.vitorpamplona.amethyst.ui.screen.ChatroomScreen
-import com.vitorpamplona.amethyst.ui.screen.FiltersScreen
-import com.vitorpamplona.amethyst.ui.screen.HomeScreen
-import com.vitorpamplona.amethyst.ui.screen.NotificationScreen
-import com.vitorpamplona.amethyst.ui.screen.ProfileScreen
-import com.vitorpamplona.amethyst.ui.screen.SearchScreen
-import com.vitorpamplona.amethyst.ui.screen.ThreadScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChatroomListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChatroomScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.FiltersScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.HomeScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.NotificationScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.ProfileScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.SearchScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.ThreadScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 

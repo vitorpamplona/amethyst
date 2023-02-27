@@ -1,4 +1,4 @@
-package com.vitorpamplona.amethyst.ui.screen
+package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.graphics.Rect
 import android.view.ViewTreeObserver
@@ -74,6 +74,17 @@ import com.vitorpamplona.amethyst.ui.dal.UserProfileZapsFeedFilter
 import com.vitorpamplona.amethyst.ui.navigation.Keyboard
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.showAmount
+import com.vitorpamplona.amethyst.ui.screen.FeedView
+import com.vitorpamplona.amethyst.ui.screen.LnZapFeedView
+import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileConversationsFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileFollowersUserFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileFollowsUserFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileNewThreadsFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileReportFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileZapsFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.RelayFeedView
+import com.vitorpamplona.amethyst.ui.screen.RelayFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.UserFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Nip05

@@ -1,4 +1,4 @@
-package com.vitorpamplona.amethyst.ui.screen
+package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -17,6 +17,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.service.NostrThreadDataSource
 import com.vitorpamplona.amethyst.ui.dal.ThreadFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.NostrThreadFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.ThreadFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable

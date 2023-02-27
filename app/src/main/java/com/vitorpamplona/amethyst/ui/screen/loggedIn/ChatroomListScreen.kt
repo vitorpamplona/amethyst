@@ -1,4 +1,4 @@
-package com.vitorpamplona.amethyst.ui.screen
+package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -30,6 +30,9 @@ import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
 import com.vitorpamplona.amethyst.ui.dal.ChatroomListKnownFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ChatroomListNewFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.ChatroomListFeedView
+import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListKnownFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListNewFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.launch
 

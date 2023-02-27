@@ -1,4 +1,4 @@
-package com.vitorpamplona.amethyst.ui.screen
+package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
@@ -26,6 +26,8 @@ import com.vitorpamplona.amethyst.ui.navigation.AppTopBar
 import com.vitorpamplona.amethyst.ui.navigation.DrawerContent
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.navigation.currentRoute
+import com.vitorpamplona.amethyst.ui.screen.AccountState
+import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
