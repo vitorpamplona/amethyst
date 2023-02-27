@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.note
 
+import android.util.Log
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -43,9 +44,11 @@ import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Following
+import kotlin.time.ExperimentalTime
+import kotlin.time.measureTimedValue
 import nostr.postr.events.TextNoteEvent
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalTime::class, ExperimentalTime::class)
 @Composable
 fun NoteCompose(
     baseNote: Note,
@@ -132,6 +135,7 @@ fun NoteCompose(
             )
             .background(backgroundColor)
         ) {
+
             Row(
                 modifier = Modifier
                     .padding(
@@ -220,32 +224,32 @@ fun NoteCompose(
                         }
 
 
-                        if (noteEvent !is RepostEvent) {
-                            Text(
-                                timeAgo(noteEvent.createdAt),
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-                                maxLines = 1
-                            )
-
-                            IconButton(
-                                modifier = Modifier.then(Modifier.size(24.dp)),
-                                onClick = { moreActionsExpanded = true }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.MoreVert,
-                                    null,
-                                    modifier = Modifier.size(15.dp),
-                                    tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-                                )
-
-                                NoteDropDownMenu(baseNote, moreActionsExpanded, { moreActionsExpanded = false }, accountViewModel)
-                            }
-                        } else {
+                        if (noteEvent is RepostEvent) {
                             Text(
                                 "  boosted",
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                             )
+                        }
+
+                        Text(
+                            timeAgo(noteEvent.createdAt),
+                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                            maxLines = 1
+                        )
+
+                        IconButton(
+                            modifier = Modifier.then(Modifier.size(24.dp)),
+                            onClick = { moreActionsExpanded = true }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                null,
+                                modifier = Modifier.size(15.dp),
+                                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                            )
+
+                            NoteDropDownMenu(baseNote, moreActionsExpanded, { moreActionsExpanded = false }, accountViewModel)
                         }
                     }
 
