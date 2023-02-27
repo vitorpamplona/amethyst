@@ -173,7 +173,11 @@ fun NoteMaster(baseNote: Note,
 
     var showHiddenNote by remember { mutableStateOf(false) }
 
-    if (note?.event == null) {
+    var moreActionsExpanded by remember { mutableStateOf(false) }
+
+    val noteEvent = note?.event
+
+    if (noteEvent == null) {
         BlankNote()
     } else if (!account.isAcceptable(noteForReports) && !showHiddenNote) {
         HiddenNote(
@@ -206,15 +210,30 @@ fun NoteMaster(baseNote: Note,
 
                 Column(modifier = Modifier.padding(start = 10.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        NoteUsernameDisplay(baseNote)
+                        NoteUsernameDisplay(baseNote, Modifier.weight(1f))
+
+                        Text(
+                            timeAgo(noteEvent.createdAt),
+                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                            maxLines = 1
+                        )
+
+                        IconButton(
+                            modifier = Modifier.then(Modifier.size(24.dp)),
+                            onClick = { moreActionsExpanded = true }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                null,
+                                modifier = Modifier.size(15.dp),
+                                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                            )
+
+                            NoteDropDownMenu(baseNote, moreActionsExpanded, { moreActionsExpanded = false }, accountViewModel)
+                        }
                     }
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            timeAgoLong(note.event?.createdAt),
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                        )
-                    }
+                    ObserveDisplayNip05Status(baseNote)
                 }
             }
 
