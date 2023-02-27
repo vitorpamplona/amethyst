@@ -30,7 +30,6 @@ fun ThreadScreen(noteId: String?, accountViewModel: AccountViewModel, navControl
         val feedViewModel: NostrThreadFeedViewModel = viewModel()
 
         LaunchedEffect(noteId) {
-            feedViewModel.clearFeed()
             ThreadFeedFilter.loadThread(noteId)
             NostrThreadDataSource.loadThread(noteId)
             feedViewModel.invalidateData()

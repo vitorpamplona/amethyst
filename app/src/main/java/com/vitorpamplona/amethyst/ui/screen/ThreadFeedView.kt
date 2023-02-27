@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.accompanist.swiperefresh.SwipeRefresh
@@ -48,6 +49,7 @@ import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import kotlinx.coroutines.delay
 
 @Composable
 fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: AccountViewModel, navController: NavController) {
@@ -86,10 +88,18 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
                     }
                     is FeedState.Loaded -> {
                         LaunchedEffect(noteId) {
+                            // waits to load the thread to scroll to item.
+                            delay(100)
                             val noteForPosition = state.feed.value.filter { it.idHex == noteId}.firstOrNull()
-                            val position = state.feed.value.indexOf(noteForPosition)
-                            if (position > 0)
-                                listState.animateScrollToItem(position, 0)
+                            var position = state.feed.value.indexOf(noteForPosition)
+
+                            if (position >= 0) {
+                                if (position >= 1 && position < state.feed.value.size - 1) {
+                                    position -- // show the replying note
+                                }
+
+                                listState.animateScrollToItem(position)
+                            }
                         }
 
                         LazyColumn(
