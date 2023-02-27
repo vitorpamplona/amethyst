@@ -38,6 +38,8 @@ import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.service.lang.ResultOrError
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import java.util.Locale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun TranslateableRichTextViewer(
@@ -62,19 +64,21 @@ fun TranslateableRichTextViewer(
   val account = accountState?.account ?: return
 
   LaunchedEffect(accountState) {
-    LanguageTranslatorService.autoTranslate(
-      content,
-      account.dontTranslateFrom,
-      account.translateTo
-    ).addOnCompleteListener { task ->
-      if (task.isSuccessful) {
-        if (task.result.sourceLang != null && task.result.targetLang != null) {
-          val preference = account.preferenceBetween(task.result.sourceLang!!, task.result.targetLang!!)
-          showOriginal = preference == task.result.sourceLang
+    withContext(Dispatchers.IO) {
+      LanguageTranslatorService.autoTranslate(
+        content,
+        account.dontTranslateFrom,
+        account.translateTo
+      ).addOnCompleteListener { task ->
+        if (task.isSuccessful && content != task.result.result) {
+          if (task.result.sourceLang != null && task.result.targetLang != null) {
+            val preference = account.preferenceBetween(task.result.sourceLang!!, task.result.targetLang!!)
+            showOriginal = preference == task.result.sourceLang
+          }
+          translatedTextState.value = task.result
+        } else {
+          translatedTextState.value = ResultOrError(content, null, null, null)
         }
-        translatedTextState.value = task.result
-      } else {
-        translatedTextState.value = ResultOrError(content, null, null, null)
       }
     }
   }
