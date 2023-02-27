@@ -56,6 +56,7 @@ import com.google.accompanist.pager.rememberPagerState
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.lnurl.Nip05Verifier
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserMetadata
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
@@ -366,7 +367,6 @@ fun nip05VerificationAsAState(user: UserMetadata, pubkeyHex: String): State<Bool
             if ((user.nip05LastVerificationTime ?: 0) > (now - 60*60)) { // 1hour
                 nip05Verified.value = user.nip05Verified
             } else {
-                println("Checking NIP05 online")
                 Nip05Verifier().verifyNip05(
                     nip05,
                     onSuccess = {
@@ -482,6 +482,16 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account) {
 }
 
 @Composable
+fun ObserveDisplayNip05Status(baseNote: Note) {
+    val noteState by baseNote.live().metadata.observeAsState()
+    val note = noteState?.note ?: return
+
+    val author = note.author
+    if (author != null)
+        ObserveDisplayNip05Status(author)
+}
+
+@Composable
 fun ObserveDisplayNip05Status(baseUser: User) {
     val userState by baseUser.live().metadata.observeAsState()
     val user = userState?.user ?: return
@@ -492,33 +502,40 @@ fun ObserveDisplayNip05Status(baseUser: User) {
         if (nip05.split("@").size == 2) {
             val nip05Verified by nip05VerificationAsAState(user.info!!, user.pubkeyHex)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = AnnotatedString(nip05.split("@")[0]),
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                if (nip05.split("@")[0] != "_")
+                    Text(
+                        text = AnnotatedString(nip05.split("@")[0]),
+                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
 
                 if (nip05Verified == null) {
                     Icon(
                         tint = Color.Yellow,
                         imageVector = Icons.Default.Downloading,
                         contentDescription = "Downloading",
-                        modifier = Modifier.size(14.dp).padding(top = 1.dp)
+                        modifier = Modifier
+                            .size(14.dp)
+                            .padding(top = 1.dp)
                     )
                 } else if (nip05Verified == true) {
                     Icon(
                         painter = painterResource(R.drawable.ic_verified),
                         "NIP-05 Verified",
                         tint = Nip05.copy(0.52f),
-                        modifier = Modifier.size(14.dp).padding(top = 1.dp)
+                        modifier = Modifier
+                            .size(14.dp)
+                            .padding(top = 1.dp)
                     )
                 } else {
                     Icon(
                         tint = Color.Red,
                         imageVector = Icons.Default.Report,
                         contentDescription = "Invalid Nip05",
-                        modifier = Modifier.size(14.dp).padding(top = 1.dp)
+                        modifier = Modifier
+                            .size(14.dp)
+                            .padding(top = 1.dp)
                     )
                 }
 
@@ -526,8 +543,8 @@ fun ObserveDisplayNip05Status(baseUser: User) {
                     text = AnnotatedString(nip05.split("@")[1]),
                     onClick = { nip05.let { runCatching { uri.openUri("https://${it.split("@")[1]}") } } },
                     style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(0.52f)),
-                    modifier = Modifier.padding(top = 1.dp, bottom = 1.dp),
-                    maxLines = 1
+                    maxLines = 1,
+                    overflow = TextOverflow.Visible
                 )
             }
         }
@@ -539,42 +556,48 @@ fun DisplayNip05Status(user: User) {
     val uri = LocalUriHandler.current
 
     user.nip05()?.let { nip05 ->
-        val nip05Verified by nip05VerificationAsAState(user.info!!, user.pubkeyHex)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (nip05Verified == null) {
-                Icon(
-                    tint = Color.Yellow,
-                    imageVector = Icons.Default.Downloading,
-                    contentDescription = "Downloading",
-                    modifier = Modifier.size(16.dp)
+        if (nip05.split("@").size == 2) {
+            val nip05Verified by nip05VerificationAsAState(user.info!!, user.pubkeyHex)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (nip05Verified == null) {
+                    Icon(
+                        tint = Color.Yellow,
+                        imageVector = Icons.Default.Downloading,
+                        contentDescription = "Downloading",
+                        modifier = Modifier.size(16.dp)
+                    )
+                } else if (nip05Verified == true) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_verified),
+                        "NIP-05 Verified",
+                        tint = Nip05,
+                        modifier = Modifier.size(16.dp)
+                    )
+                } else {
+                    Icon(
+                        tint = Color.Red,
+                        imageVector = Icons.Default.Report,
+                        contentDescription = "Invalid Nip05",
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+
+                Text(
+                    text = AnnotatedString(nip05.split("@")[0] + "@"),
+                    modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-            } else if (nip05Verified == true) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_verified),
-                    "NIP-05 Verified",
-                    tint = Nip05,
-                    modifier = Modifier.size(16.dp)
-                )
-            } else {
-                Icon(
-                    tint = Color.Red,
-                    imageVector = Icons.Default.Report,
-                    contentDescription = "Invalid Nip05",
-                    modifier = Modifier.size(16.dp)
+
+                ClickableText(
+                    text = AnnotatedString(nip05.split("@")[1]),
+                    onClick = { nip05.let { runCatching { uri.openUri("https://${it.split("@")[1]}") } } },
+                    style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary),
+                    modifier = Modifier.padding(top = 1.dp, bottom = 1.dp),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
-
-            Text(
-                text = AnnotatedString(nip05.split("@")[0] + "@"),
-                modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp)
-            )
-
-            ClickableText(
-                text = AnnotatedString(nip05.split("@")[1]),
-                onClick = { nip05.let { runCatching { uri.openUri("https://${it.split("@")[1]}") } } },
-                style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary),
-                modifier = Modifier.padding(top = 1.dp, bottom = 1.dp)
-            )
         }
     }
 }
