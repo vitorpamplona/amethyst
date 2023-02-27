@@ -1,8 +1,5 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
-import android.graphics.Rect
-import android.view.ViewTreeObserver
-import android.widget.Toast
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.*
@@ -12,12 +9,10 @@ import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.Downloading
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Report
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -35,13 +30,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -54,16 +46,14 @@ import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.google.accompanist.pager.rememberPagerState
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.lnurl.Nip05Verifier
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.UserMetadata
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
+import com.vitorpamplona.amethyst.ui.components.DisplayNip05ProfileStatus
 import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowersFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowsFeedFilter
@@ -71,7 +61,6 @@ import com.vitorpamplona.amethyst.ui.dal.UserProfileConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileZapsFeedFilter
-import com.vitorpamplona.amethyst.ui.navigation.Keyboard
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.screen.FeedView
@@ -85,10 +74,7 @@ import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileZapsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RelayFeedView
 import com.vitorpamplona.amethyst.ui.screen.RelayFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.UserFeedView
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
-import com.vitorpamplona.amethyst.ui.theme.Nip05
-import java.util.Date
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import nostr.postr.toNsec
@@ -367,44 +353,6 @@ private fun ProfileHeader(
     }
 }
 
-
-@Composable
-fun nip05VerificationAsAState(user: UserMetadata, pubkeyHex: String): State<Boolean?> {
-    var nip05Verified = remember { mutableStateOf<Boolean?>(null) }
-
-    LaunchedEffect(key1 = user) {
-        user.nip05?.ifBlank { null }?.let { nip05 ->
-            val now = Date().time / 1000
-            if ((user.nip05LastVerificationTime ?: 0) > (now - 60*60)) { // 1hour
-                nip05Verified.value = user.nip05Verified
-            } else {
-                Nip05Verifier().verifyNip05(
-                    nip05,
-                    onSuccess = {
-                        // Marks user as verified
-                        if (it == pubkeyHex) {
-                            user.nip05Verified = true
-                            user.nip05LastVerificationTime = now
-                            nip05Verified.value = true
-                        } else {
-                            user.nip05Verified = false
-                            user.nip05LastVerificationTime = 0
-                            nip05Verified.value = false
-                        }
-                    },
-                    onError = {
-                        user.nip05LastVerificationTime = 0
-                        user.nip05Verified = false
-                        nip05Verified.value = false
-                    }
-                )
-            }
-        }
-    }
-
-    return nip05Verified
-}
-
 @Composable
 private fun DrawAdditionalInfo(baseUser: User, account: Account) {
     val userState by baseUser.live().metadata.observeAsState()
@@ -430,7 +378,7 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account) {
         }
     }
 
-    DisplayNip05Status(user)
+    DisplayNip05ProfileStatus(user)
 
     val website = user.info?.website
     if (!website.isNullOrEmpty()) {
@@ -489,127 +437,6 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account) {
             color = MaterialTheme.colors.onSurface,
             modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)
         )
-    }
-}
-
-@Composable
-fun ObserveDisplayNip05Status(baseNote: Note) {
-    val noteState by baseNote.live().metadata.observeAsState()
-    val note = noteState?.note ?: return
-
-    val author = note.author
-    if (author != null)
-        ObserveDisplayNip05Status(author)
-}
-
-@Composable
-fun ObserveDisplayNip05Status(baseUser: User) {
-    val userState by baseUser.live().metadata.observeAsState()
-    val user = userState?.user ?: return
-
-    val uri = LocalUriHandler.current
-
-    user.nip05()?.let { nip05 ->
-        if (nip05.split("@").size == 2) {
-            val nip05Verified by nip05VerificationAsAState(user.info!!, user.pubkeyHex)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (nip05.split("@")[0] != "_")
-                    Text(
-                        text = AnnotatedString(nip05.split("@")[0]),
-                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
-                if (nip05Verified == null) {
-                    Icon(
-                        tint = Color.Yellow,
-                        imageVector = Icons.Default.Downloading,
-                        contentDescription = "Downloading",
-                        modifier = Modifier
-                            .size(14.dp)
-                            .padding(top = 1.dp)
-                    )
-                } else if (nip05Verified == true) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_verified),
-                        "NIP-05 Verified",
-                        tint = Nip05.copy(0.52f),
-                        modifier = Modifier
-                            .size(14.dp)
-                            .padding(top = 1.dp)
-                    )
-                } else {
-                    Icon(
-                        tint = Color.Red,
-                        imageVector = Icons.Default.Report,
-                        contentDescription = "Invalid Nip05",
-                        modifier = Modifier
-                            .size(14.dp)
-                            .padding(top = 1.dp)
-                    )
-                }
-
-                ClickableText(
-                    text = AnnotatedString(nip05.split("@")[1]),
-                    onClick = { nip05.let { runCatching { uri.openUri("https://${it.split("@")[1]}") } } },
-                    style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(0.52f)),
-                    maxLines = 1,
-                    overflow = TextOverflow.Visible
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun DisplayNip05Status(user: User) {
-    val uri = LocalUriHandler.current
-
-    user.nip05()?.let { nip05 ->
-        if (nip05.split("@").size == 2) {
-            val nip05Verified by nip05VerificationAsAState(user.info!!, user.pubkeyHex)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (nip05Verified == null) {
-                    Icon(
-                        tint = Color.Yellow,
-                        imageVector = Icons.Default.Downloading,
-                        contentDescription = "Downloading",
-                        modifier = Modifier.size(16.dp)
-                    )
-                } else if (nip05Verified == true) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_verified),
-                        "NIP-05 Verified",
-                        tint = Nip05,
-                        modifier = Modifier.size(16.dp)
-                    )
-                } else {
-                    Icon(
-                        tint = Color.Red,
-                        imageVector = Icons.Default.Report,
-                        contentDescription = "Invalid Nip05",
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-
-                Text(
-                    text = AnnotatedString(nip05.split("@")[0] + "@"),
-                    modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                ClickableText(
-                    text = AnnotatedString(nip05.split("@")[1]),
-                    onClick = { nip05.let { runCatching { uri.openUri("https://${it.split("@")[1]}") } } },
-                    style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary),
-                    modifier = Modifier.padding(top = 1.dp, bottom = 1.dp),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
     }
 }
 
