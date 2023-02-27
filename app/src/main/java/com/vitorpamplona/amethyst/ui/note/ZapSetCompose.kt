@@ -55,9 +55,7 @@ fun ZapSetCompose(zapSetCard: ZapSetCard, modifier: Modifier = Modifier, isInner
         LaunchedEffect(key1 = zapSetCard) {
             isNew = zapSetCard.createdAt > NotificationCache.load(routeForLastRead, context)
 
-            val createdAt = note.event?.createdAt
-            if (createdAt != null)
-                NotificationCache.markAsRead(routeForLastRead, zapSetCard.createdAt, context)
+            NotificationCache.markAsRead(routeForLastRead, zapSetCard.createdAt, context)
         }
 
         var backgroundColor = if (isNew) {

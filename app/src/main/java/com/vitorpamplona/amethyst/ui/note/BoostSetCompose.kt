@@ -47,7 +47,7 @@ fun BoostSetCompose(boostSetCard: BoostSetCard, isInnerNote: Boolean = false, ro
     val noteEvent = note?.event
     var popupExpanded by remember { mutableStateOf(false) }
 
-    if (note?.event == null) {
+    if (note == null) {
         BlankNote(Modifier, isInnerNote)
     } else {
         var isNew by remember { mutableStateOf<Boolean>(false) }
@@ -55,9 +55,7 @@ fun BoostSetCompose(boostSetCard: BoostSetCard, isInnerNote: Boolean = false, ro
         LaunchedEffect(key1 = boostSetCard) {
             isNew = boostSetCard.createdAt > NotificationCache.load(routeForLastRead, context)
 
-            val createdAt = note.event?.createdAt
-            if (createdAt != null)
-                NotificationCache.markAsRead(routeForLastRead, boostSetCard.createdAt, context)
+            NotificationCache.markAsRead(routeForLastRead, boostSetCard.createdAt, context)
         }
 
         var backgroundColor = if (isNew) {

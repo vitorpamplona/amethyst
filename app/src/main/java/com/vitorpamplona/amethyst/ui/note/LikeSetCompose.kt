@@ -55,9 +55,7 @@ fun LikeSetCompose(likeSetCard: LikeSetCard, modifier: Modifier = Modifier, isIn
         LaunchedEffect(key1 = likeSetCard) {
             isNew = likeSetCard.createdAt > NotificationCache.load(routeForLastRead, context)
 
-            val createdAt = note.event?.createdAt
-            if (createdAt != null)
-                NotificationCache.markAsRead(routeForLastRead, likeSetCard.createdAt, context)
+            NotificationCache.markAsRead(routeForLastRead, likeSetCard.createdAt, context)
         }
 
         var backgroundColor = if (isNew) {
