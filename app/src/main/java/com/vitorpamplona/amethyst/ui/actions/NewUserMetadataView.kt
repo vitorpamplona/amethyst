@@ -61,7 +61,7 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                             postViewModel.create()
                             onClose()
                         },
-                        postViewModel.userName.value.isNotBlank()
+                        true
                     )
                 }
 

@@ -7,6 +7,6 @@ fun ByteArray.toShortenHex(): String {
 }
 
 fun String.toShortenHex(): String {
-  return replaceRange(6, length-6, ":")
+  return replaceRange(8, length-8, ":")
 }
 

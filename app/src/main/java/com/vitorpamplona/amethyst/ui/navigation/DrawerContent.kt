@@ -150,28 +150,33 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
                         }
                     })
             )
-            Text(
-                accountUser.bestDisplayName() ?: "",
-                modifier = Modifier.padding(top = 7.dp).clickable(onClick = {
-                    accountUser.let {
-                        navController.navigate("User/${it.pubkeyHex}")
-                    }
-                    coroutineScope.launch {
-                        scaffoldState.drawerState.close()
-                    }
-                }),
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp
-            )
-            Text(" @${accountUser.bestUsername()}", color = Color.LightGray,
-                modifier = Modifier.padding(top = 15.dp).clickable(onClick = {
-                accountUser.let {
-                    navController.navigate("User/${it.pubkeyHex}")
-                }
-                coroutineScope.launch {
-                    scaffoldState.drawerState.close()
-                }
-            }))
+            if (accountUser.bestDisplayName() != null) {
+                Text(
+                    accountUser.bestDisplayName() ?: "",
+                    modifier = Modifier.padding(top = 7.dp).clickable(onClick = {
+                        accountUser.let {
+                            navController.navigate("User/${it.pubkeyHex}")
+                        }
+                        coroutineScope.launch {
+                            scaffoldState.drawerState.close()
+                        }
+                    }),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
+            }
+            if (accountUser.bestUsername() != null) {
+                Text(" @${accountUser.bestUsername()}", color = Color.LightGray,
+                    modifier = Modifier.padding(top = 15.dp).clickable(onClick = {
+                        accountUser.let {
+                            navController.navigate("User/${it.pubkeyHex}")
+                        }
+                        coroutineScope.launch {
+                            scaffoldState.drawerState.close()
+                        }
+                    })
+                )
+            }
             Row(modifier = Modifier.padding(top = 15.dp).clickable(onClick = {
                 accountUser.let {
                     navController.navigate("User/${it.pubkeyHex}")
