@@ -72,6 +72,10 @@ class User(val pubkeyHex: String) {
         return info?.displayName?.ifBlank { null } ?: info?.display_name?.ifBlank { null }
     }
 
+    fun nip05(): String? {
+        return info?.nip05?.ifBlank { null }
+    }
+
     fun profilePicture(): String? {
         if (info?.picture.isNullOrBlank()) info?.picture = null
         return info?.picture
@@ -347,7 +351,11 @@ class UserMetadata {
     var banner: String? = null
     var website: String? = null
     var about: String? = null
+
     var nip05: String? = null
+    var nip05Verified: Boolean = false
+    var nip05LastVerificationTime: Long? = 0
+
     var domain: String? = null
     var lud06: String? = null
     var lud16: String? = null

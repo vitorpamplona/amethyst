@@ -40,6 +40,8 @@ import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
+import com.vitorpamplona.amethyst.ui.screen.DisplayNip05Status
+import com.vitorpamplona.amethyst.ui.screen.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Following
 import nostr.postr.events.TextNoteEvent
@@ -114,10 +116,11 @@ fun NoteCompose(
             parentBackgroundColor ?: MaterialTheme.colors.background
           }
 
-        Column(modifier = modifier.combinedClickable(
+        Column(modifier = modifier
+            .combinedClickable(
                 onClick = {
                     if (noteEvent !is ChannelMessageEvent) {
-                        navController.navigate("Note/${note.idHex}"){
+                        navController.navigate("Note/${note.idHex}") {
                             launchSingleTop = true
                         }
                     } else {
@@ -127,7 +130,8 @@ fun NoteCompose(
                     }
                 },
                 onLongClick = { popupExpanded = true }
-            ).background(backgroundColor)
+            )
+            .background(backgroundColor)
         ) {
             Row(
                 modifier = Modifier
@@ -245,6 +249,9 @@ fun NoteCompose(
                             )
                         }
                     }
+
+                    if (note.author != null)
+                        ObserveDisplayNip05Status(note.author!!)
 
                     if (noteEvent is TextNoteEvent && (note.replyTo != null || note.mentions != null)) {
                         ReplyInformation(note.replyTo, note.mentions, account, navController)
