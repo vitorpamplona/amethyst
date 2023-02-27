@@ -3,12 +3,19 @@ package com.vitorpamplona.amethyst.ui.actions
 import android.content.ContentResolver
 import android.net.Uri
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import okhttp3.*
+import java.io.IOException
+import java.util.UUID
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody
+import okhttp3.Response
 import okio.BufferedSink
 import okio.source
-import java.io.IOException
-import java.util.*
 
 object ImageUploader {
   fun uploadImage(

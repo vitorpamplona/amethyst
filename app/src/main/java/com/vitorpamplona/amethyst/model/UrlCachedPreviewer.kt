@@ -7,7 +7,6 @@ import com.vitorpamplona.amethyst.ui.components.imageExtension
 import com.vitorpamplona.amethyst.ui.components.isValidURL
 import com.vitorpamplona.amethyst.ui.components.noProtocolUrlValidator
 import com.vitorpamplona.amethyst.ui.components.videoExtension
-import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

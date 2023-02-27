@@ -3,10 +3,7 @@ package com.vitorpamplona.amethyst.service.model
 import com.vitorpamplona.amethyst.lnurl.LnInvoiceUtil
 import com.vitorpamplona.amethyst.service.relays.Client
 import java.math.BigDecimal
-import java.util.Date
-import nostr.postr.Utils
 import nostr.postr.events.Event
-import nostr.postr.toHex
 
 class LnZapEvent (
   id: ByteArray,

@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.lnurl
 
-import androidx.compose.ui.text.toLowerCase
 import java.math.BigDecimal
 import java.util.Locale
 import java.util.regex.Pattern

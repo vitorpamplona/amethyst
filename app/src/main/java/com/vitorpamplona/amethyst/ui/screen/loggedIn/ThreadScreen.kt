@@ -19,7 +19,6 @@ import com.vitorpamplona.amethyst.service.NostrThreadDataSource
 import com.vitorpamplona.amethyst.ui.dal.ThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.NostrThreadFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.ThreadFeedView
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
 fun ThreadScreen(noteId: String?, accountViewModel: AccountViewModel, navController: NavController) {

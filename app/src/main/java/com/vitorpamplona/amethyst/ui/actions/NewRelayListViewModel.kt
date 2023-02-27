@@ -2,7 +2,6 @@ package com.vitorpamplona.amethyst.ui.actions
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
-import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.service.relays.FeedType

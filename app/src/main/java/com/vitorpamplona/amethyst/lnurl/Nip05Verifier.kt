@@ -1,13 +1,11 @@
 package com.vitorpamplona.amethyst.lnurl
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import java.net.URLEncoder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import nostr.postr.Bech32
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.OkHttpClient

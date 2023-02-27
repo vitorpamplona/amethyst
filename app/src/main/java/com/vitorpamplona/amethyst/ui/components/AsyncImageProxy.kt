@@ -11,11 +11,9 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.compose.LocalImageLoader
-import java.net.URLEncoder
 import java.util.Base64
 
 data class ResizeImage(val url: String?, val size: Dp)

@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.lnurl
 
-import androidx.compose.ui.text.toLowerCase
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import java.net.URLEncoder
 import kotlinx.coroutines.CoroutineScope

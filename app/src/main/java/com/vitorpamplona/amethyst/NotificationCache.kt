@@ -2,7 +2,6 @@ package com.vitorpamplona.amethyst
 
 import android.content.Context
 import androidx.lifecycle.LiveData
-import com.vitorpamplona.amethyst.model.Note
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

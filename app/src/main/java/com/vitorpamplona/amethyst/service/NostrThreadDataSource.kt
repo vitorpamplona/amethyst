@@ -1,15 +1,9 @@
 package com.vitorpamplona.amethyst.service
 
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ThreadAssembler
-import com.vitorpamplona.amethyst.service.model.ReactionEvent
-import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
-import com.vitorpamplona.amethyst.ui.dal.ThreadFeedFilter
 import nostr.postr.JsonFilter
-import nostr.postr.events.TextNoteEvent
 
 object NostrThreadDataSource: NostrDataSource("SingleThreadFeed") {
   private var eventToWatch: String? = null

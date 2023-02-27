@@ -3,8 +3,6 @@ package com.vitorpamplona.amethyst.service.model
 import java.util.Date
 import nostr.postr.Utils
 import nostr.postr.events.Event
-import nostr.postr.events.MetadataEvent
-import nostr.postr.toHex
 
 class ChannelMuteUserEvent (
   id: ByteArray,

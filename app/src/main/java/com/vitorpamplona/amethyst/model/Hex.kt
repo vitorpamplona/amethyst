@@ -2,7 +2,6 @@ package com.vitorpamplona.amethyst.model
 
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import fr.acinq.secp256k1.Hex
-import java.util.regex.Pattern
 import nostr.postr.Bech32
 import nostr.postr.Persona
 import nostr.postr.bechToBytes

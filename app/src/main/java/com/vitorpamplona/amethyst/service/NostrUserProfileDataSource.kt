@@ -1,8 +1,6 @@
 package com.vitorpamplona.amethyst.service
 
-import android.util.Log
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.relays.FeedType

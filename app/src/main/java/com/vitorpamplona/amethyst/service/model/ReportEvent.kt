@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.service.model
 
-import androidx.compose.ui.text.toUpperCase
 import java.util.Date
 import nostr.postr.Utils
 import nostr.postr.events.Event

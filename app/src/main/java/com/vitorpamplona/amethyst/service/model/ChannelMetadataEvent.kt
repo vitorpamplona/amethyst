@@ -2,11 +2,9 @@ package com.vitorpamplona.amethyst.service.model
 
 import android.util.Log
 import java.util.Date
-import nostr.postr.ContactMetaData
 import nostr.postr.Utils
 import nostr.postr.events.Event
 import nostr.postr.events.MetadataEvent
-import nostr.postr.toHex
 
 class ChannelMetadataEvent (
   id: ByteArray,

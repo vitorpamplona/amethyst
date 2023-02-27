@@ -1,7 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.compose.runtime.MutableState
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 
 sealed class UserFeedState {

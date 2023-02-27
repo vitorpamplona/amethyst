@@ -1,14 +1,11 @@
 package com.vitorpamplona.amethyst.service
 
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.decodePublicKey
-import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import nostr.postr.JsonFilter
 import nostr.postr.bechToBytes
 import nostr.postr.events.MetadataEvent
-import nostr.postr.events.TextNoteEvent
 import nostr.postr.toHex
 
 object NostrSearchEventOrUserDataSource: NostrDataSource("SingleEventFeed") {

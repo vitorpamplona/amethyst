@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import fr.acinq.secp256k1.Hex
 import java.util.regex.Pattern
 import kotlinx.coroutines.CoroutineScope

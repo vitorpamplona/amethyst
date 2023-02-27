@@ -1,8 +1,6 @@
 package com.vitorpamplona.amethyst
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.util.LruCache
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import java.util.UUID

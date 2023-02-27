@@ -1,12 +1,7 @@
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.LocalCacheState
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserState
-import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import kotlinx.coroutines.Dispatchers
@@ -14,7 +9,6 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import nostr.postr.JsonFilter
 import nostr.postr.events.TextNoteEvent
-import nostr.postr.toHex
 
 object NostrHomeDataSource: NostrDataSource("HomeFeed") {
   lateinit var account: Account

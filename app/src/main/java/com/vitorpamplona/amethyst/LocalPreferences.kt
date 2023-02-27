@@ -4,8 +4,8 @@ import android.content.Context
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.toByteArray
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
+import com.vitorpamplona.amethyst.model.toByteArray
 import java.util.Locale
 import nostr.postr.Persona
 import nostr.postr.events.ContactListEvent

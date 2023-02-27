@@ -3,7 +3,6 @@ package com.vitorpamplona.amethyst.service.model
 import java.util.Date
 import nostr.postr.Utils
 import nostr.postr.events.Event
-import nostr.postr.toHex
 
 class ChannelHideMessageEvent (
   id: ByteArray,

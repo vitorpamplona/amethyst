@@ -1,9 +1,7 @@
 package com.vitorpamplona.amethyst.service.model
 
-import com.vitorpamplona.amethyst.service.relays.Client
 import java.util.Date
 import nostr.postr.Utils
-import nostr.postr.events.ContactListEvent
 import nostr.postr.events.Event
 import nostr.postr.toHex
 
