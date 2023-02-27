@@ -1,6 +1,6 @@
 package com.vitorpamplona.amethyst.service.model
 
-import com.vitorpamplona.amethyst.lnurl.LnInvoiceUtil
+import com.vitorpamplona.amethyst.service.lnurl.LnInvoiceUtil
 import com.vitorpamplona.amethyst.service.relays.Client
 import java.math.BigDecimal
 import nostr.postr.events.Event

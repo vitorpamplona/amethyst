@@ -37,7 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat.startActivity
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.model.Account
 import kotlinx.coroutines.launch
 

@@ -1,4 +1,4 @@
-package com.vitorpamplona.amethyst.lnurl
+package com.vitorpamplona.amethyst.service.lnurl
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import java.net.URLEncoder

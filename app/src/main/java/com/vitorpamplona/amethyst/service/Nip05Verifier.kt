@@ -1,4 +1,4 @@
-package com.vitorpamplona.amethyst.lnurl
+package com.vitorpamplona.amethyst.service
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import kotlinx.coroutines.CoroutineScope

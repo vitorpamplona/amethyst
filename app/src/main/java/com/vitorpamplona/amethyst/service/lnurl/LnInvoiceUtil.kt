@@ -1,4 +1,4 @@
-package com.vitorpamplona.amethyst.lnurl
+package com.vitorpamplona.amethyst.service.lnurl
 
 import java.math.BigDecimal
 import java.util.Locale

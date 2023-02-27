@@ -20,7 +20,7 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowRow
-import com.vitorpamplona.amethyst.lnurl.LnInvoiceUtil
+import com.vitorpamplona.amethyst.service.lnurl.LnInvoiceUtil
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.Nip19
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
