@@ -6,31 +6,48 @@ Amethyst brings the best social network to your Android phone. Just insert your 
 
 # Current Features
 
-- [x] Account Management
+- [x] Event Builders / WebSocket Subscriptions (NIP-01, NIP-15)
 - [x] Home Feed
 - [x] Notifications Feed
 - [x] Global Feed
-- [x] Reactions (like, boost, reply)
-- [x] Image/Video Preview (gifs, svgs, etc)
-- [x] Url Preview
+- [x] Reactions (likes NIP-25, boost, reply)
+- [x] Image/Video/Url/LnInvoice Previews
 - [x] View Threads
 - [x] Private Messages (NIP-04)
-- [x] User Profiles (follow/unfollow)
+- [x] User Profiles (edit/follow/unfollow - NIP-02)
 - [x] Public Chats (NIP-28)
+- [x] Bech Encoding support (NIP-19)
 - [x] Notification Dots
-- [x] Reporting and Hide User capability
+- [x] Reporting and Hide User capability (NIP-56)
 - [x] Automatic Translations
-- [x] Profile Edit
 - [x] Relay Edit (separate relay sets for home, dms, public chats, global)
-- [x] Dropdown to Link Users when writing
+- [x] User/Note Tagging (NIP-08, NIP-10)
 - [x] Lightning Tips
-- [x] Zaps 
+- [x] Zaps (NIP-57)
+- [x] URI Support (NIP-21)
 - [x] Event Deletion (NIP-09: like, boost, text notes and reports)
+- [x] Identity Verification (NIP-05)
+- [ ] Local Database 
+- [ ] View Individual Reactions (Like, Boost, Zaps, Reports) per Post
+- [ ] Bookmarks, Pinned Posts, Muted Events (NIP-51)
+- [ ] Sensitive Content (NIP-36) 
+- [ ] Relay Pages (NIP-11)
+- [ ] Relay Authentication (NIP-42)
+- [ ] Generic Tags (NIP-12)
+- [ ] Proof of Work in the Phone (NIP-13, NIP-20)
+- [ ] Events with a Subject (NIP-14)
+- [ ] Long-form Content (NIP-23) 
+- [ ] Online Relay Search (NIP-50)
+- [ ] Workspaces
+- [ ] Expiration Support (NIP-40)
 - [ ] Internationalization
-- [ ] Infinity Scroll 
-- [ ] Identity Verification (NIP-05)
-- [ ] Account Creation / Backup Guidance
-- [ ] Message Sent feedback
+- [ ] Infinity Scroll
+- [ ] Badges (NIP-58)
+- [ ] Relay List Metadata (NIP-65)
+- [ ] Signing Requests (NIP-46)
+- [ ] Delegated Event Signing (NIP-26)
+- [ ] Account Creation / Backup Guidance (NIP-06)
+- [ ] Message Sent feedback (NIP-20)
 
 # Development Overview
 
