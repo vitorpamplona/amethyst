@@ -56,27 +56,6 @@ fun HomeScreen(accountViewModel: AccountViewModel, navController: NavController)
         feedViewModelReplies.invalidateData()
     }
 
-    val lifeCycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(accountViewModel) {
-        val observer = LifecycleEventObserver { source, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                println("Home Start")
-                NostrHomeDataSource.start()
-                feedViewModel.invalidateData()
-                feedViewModelReplies.invalidateData()
-            }
-            if (event == Lifecycle.Event.ON_PAUSE) {
-                println("Home Stop")
-                NostrHomeDataSource.stop()
-            }
-        }
-
-        lifeCycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifeCycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
-
     Column(Modifier.fillMaxHeight()) {
         Column(
             modifier = Modifier.padding(vertical = 0.dp)

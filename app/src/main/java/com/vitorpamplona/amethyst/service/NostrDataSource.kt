@@ -123,10 +123,12 @@ abstract class NostrDataSource(val debugName: String) {
   }
 
   open fun start() {
+    println("DataSource: ${this.javaClass.simpleName} Start")
     resetFilters()
   }
 
   open fun stop() {
+    println("DataSource: ${this.javaClass.simpleName} Stop")
     subscriptions.values.forEach { channel ->
       Client.close(channel.id)
       channel.typedFilters = null
