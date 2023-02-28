@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.ui.screen.FeedView
 import com.vitorpamplona.amethyst.ui.screen.NostrGlobalFeedViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -86,6 +87,8 @@ fun SearchScreen(accountViewModel: AccountViewModel, navController: NavControlle
     val lifeCycleOwner = LocalLifecycleOwner.current
 
     LaunchedEffect(Unit) {
+        feedViewModel.invalidateData()
+        delay(500)
         feedViewModel.invalidateData()
     }
 
