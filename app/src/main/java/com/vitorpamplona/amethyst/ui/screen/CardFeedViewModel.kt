@@ -69,7 +69,7 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>): ViewModel() {
                     reactionsPerEvent.getOrPut(reactedPost, { mutableListOf() }).add(it)
             }
 
-        val reactionCards = reactionsPerEvent.map { LikeSetCard(it.key, it.value) }
+        //val reactionCards = reactionsPerEvent.map { LikeSetCard(it.key, it.value) }
 
         val zapsPerEvent = mutableMapOf<Note, MutableMap<Note, Note>>()
         notes
@@ -84,7 +84,7 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>): ViewModel() {
                 }
             }
 
-        val zapCards = zapsPerEvent.map { ZapSetCard(it.key, it.value) }
+        //val zapCards = zapsPerEvent.map { ZapSetCard(it.key, it.value) }
 
         val boostsPerEvent = mutableMapOf<Note, MutableList<Note>>()
         notes
@@ -95,11 +95,20 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>): ViewModel() {
                     boostsPerEvent.getOrPut(boostedPost, { mutableListOf() }).add(it)
             }
 
-        val boostCards = boostsPerEvent.map { BoostSetCard(it.key, it.value) }
+        //val boostCards = boostsPerEvent.map { BoostSetCard(it.key, it.value) }
+
+        val allBaseNotes = zapsPerEvent.keys + boostsPerEvent.keys + reactionsPerEvent.keys
+        val multiCards = allBaseNotes.map {
+            MultiSetCard(it,
+                boostsPerEvent.get(it) ?: emptyList(),
+                reactionsPerEvent.get(it) ?: emptyList(),
+                zapsPerEvent.get(it) ?: emptyMap()
+            )
+        }
 
         val textNoteCards = notes.filter { it.event !is ReactionEvent && it.event !is RepostEvent  && it.event !is LnZapEvent }.map { NoteCard(it) }
 
-        return (reactionCards + boostCards + zapCards + textNoteCards).sortedBy { it.createdAt() }.reversed()
+        return (multiCards + textNoteCards).sortedBy { it.createdAt() }.reversed()
     }
 
     private fun updateFeed(notes: List<Card>) {

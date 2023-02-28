@@ -20,6 +20,7 @@ import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.vitorpamplona.amethyst.ui.note.BoostSetCompose
 import com.vitorpamplona.amethyst.ui.note.LikeSetCompose
+import com.vitorpamplona.amethyst.ui.note.MultiSetCompose
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.ZapSetCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -116,6 +117,12 @@ private fun FeedLoaded(
                 is BoostSetCard -> BoostSetCompose(
                     item,
                     isInnerNote = false,
+                    accountViewModel = accountViewModel,
+                    navController = navController,
+                    routeForLastRead = routeForLastRead
+                )
+                is MultiSetCard -> MultiSetCompose(
+                    item,
                     accountViewModel = accountViewModel,
                     navController = navController,
                     routeForLastRead = routeForLastRead
