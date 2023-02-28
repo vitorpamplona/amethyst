@@ -67,10 +67,7 @@ import com.vitorpamplona.amethyst.ui.screen.FeedView
 import com.vitorpamplona.amethyst.ui.screen.NostrGlobalFeedViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.channels.Channel as CoroutineChannel
@@ -90,7 +87,7 @@ fun SearchScreen(accountViewModel: AccountViewModel, navController: NavControlle
     }
 
     DisposableEffect(accountViewModel) {
-        val observer = LifecycleEventObserver { source, event ->
+        val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Global Start")
                 NostrGlobalDataSource.start()
@@ -149,7 +146,7 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
                 .filter { it.isNotBlank() }
                 .distinctUntilChanged()
                 .debounce(300)
-                .collect {
+                .collectLatest {
                     if (it.removePrefix("npub").removePrefix("note").length >= 4)
                         onlineSearch.search(it)
 
@@ -240,11 +237,11 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
                 bottom = 10.dp
             )
         ) {
-            itemsIndexed(searchResults.value, key = { _, item -> "u"+item.pubkeyHex }) { index, item ->
+            itemsIndexed(searchResults.value, key = { _, item -> "u"+item.pubkeyHex }) { _, item ->
                 UserCompose(item, accountViewModel = accountViewModel, navController = navController)
             }
 
-            itemsIndexed(searchResultsChannels.value, key = { _, item -> "c"+item.idHex }) { index, item ->
+            itemsIndexed(searchResultsChannels.value, key = { _, item -> "c"+item.idHex }) { _, item ->
                 ChannelName(
                     channelPicture = item.profilePicture(),
                     channelPicturePlaceholder = BitmapPainter(RoboHashCache.get(ctx, item.idHex)),
@@ -260,7 +257,7 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
                     onClick = { navController.navigate("Channel/${item.idHex}") })
             }
 
-            itemsIndexed(searchResultsNotes.value, key = { _, item -> "n"+item.idHex }) { index, item ->
+            itemsIndexed(searchResultsNotes.value, key = { _, item -> "n"+item.idHex }) { _, item ->
                 NoteCompose(item, accountViewModel = accountViewModel, navController = navController)
             }
         }

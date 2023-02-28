@@ -12,6 +12,15 @@ object Constants {
     }.toTypedArray()
   }
 
+  val defaultSearchRelays = listOf(
+    Relay(
+      url = "wss://relay.nostr.band",
+      read = true,
+      write = false,
+      activeTypes = setOf(FeedType.GLOBAL)
+    )
+  )
+
   val defaultRelays = arrayOf(
     // Free relays
     RelaySetupInfo("wss://nostr.bitcoiner.social", read = true, write = true, feedTypes = activeTypes),

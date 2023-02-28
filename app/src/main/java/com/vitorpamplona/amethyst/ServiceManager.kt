@@ -14,6 +14,7 @@ import com.vitorpamplona.amethyst.service.NostrThreadDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Constants
+import com.vitorpamplona.amethyst.service.relays.Constants.defaultSearchRelays
 
 object ServiceManager {
   private var account: Account? = null
@@ -27,7 +28,7 @@ object ServiceManager {
     val myAccount = account
 
     if (myAccount != null) {
-      Client.connect(myAccount.activeRelays() ?: myAccount.convertLocalRelays())
+      Client.connect(myAccount.activeRelays() ?: myAccount.convertLocalRelays(), defaultSearchRelays)
 
       // start services
       NostrAccountDataSource.account = myAccount
@@ -46,7 +47,7 @@ object ServiceManager {
       NostrSingleUserDataSource.start()
     } else {
       // if not logged in yet, start a basic service wit default relays
-      Client.connect(Constants.convertDefaultRelays())
+      Client.connect(Constants.convertDefaultRelays(), defaultSearchRelays)
     }
   }
 

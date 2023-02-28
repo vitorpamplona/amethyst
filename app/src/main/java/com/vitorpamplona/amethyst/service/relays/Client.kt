@@ -5,6 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import nostr.postr.events.Event
+import nostr.postr.events.TextNoteEvent
 
 /**
  * The Nostr Client manages multiple personae the user may switch between. Events are received and
@@ -27,11 +28,19 @@ object Client: RelayPool.Listener {
     private var subscriptions = mapOf<String, List<TypedFilter>>()
 
     @Synchronized
-    fun connect(relays: Array<Relay>) {
+    fun connect(relays: Array<Relay>, searchRelays: List<Relay>) {
         RelayPool.register(this)
         RelayPool.unloadRelays()
         RelayPool.loadRelays(relays.toList())
+        RelayPool.loadSearchRelays(searchRelays)
         this.relays = relays
+    }
+
+    fun sendSearchRequest(
+        searchText: String,
+        requestId: String = UUID.randomUUID().toString().substring(0..10)
+    ) {
+        RelayPool.sendSearchRequest(searchText, requestId)
     }
 
     fun isSameRelaySetConfig(newRelayConfig: Array<Relay>): Boolean {
@@ -77,6 +86,12 @@ object Client: RelayPool.Listener {
         RelayPool.unregister(this)
         RelayPool.disconnect()
         RelayPool.unloadRelays()
+    }
+
+    override fun onSearchEvent(event: TextNoteEvent, relay: Relay) {
+        GlobalScope.launch(Dispatchers.Default) {
+            listeners.forEach { it.onSearchEvent(event, relay) }
+        }
     }
 
     override fun onEvent(event: Event, subscriptionId: String, relay: Relay) {
@@ -128,6 +143,7 @@ object Client: RelayPool.Listener {
     }
 
     abstract class Listener {
+        open fun onSearchEvent(event: TextNoteEvent, relay: Relay) = Unit
         /**
          * A new message was received
          */

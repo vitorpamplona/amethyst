@@ -1,11 +1,13 @@
 package com.vitorpamplona.amethyst.service.relays
 
+import android.view.SearchEvent
 import androidx.lifecycle.LiveData
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import nostr.postr.events.Event
+import nostr.postr.events.TextNoteEvent
 
 /**
  * RelayPool manages the connection to multiple Relays and lets consumers deal with simple events.
@@ -16,6 +18,7 @@ object RelayPool: Relay.Listener {
 
     private var relays = listOf<Relay>()
     private var listeners = setOf<Listener>()
+    private var searchRelays = listOf<Relay>()
 
     fun availableRelays(): Int {
         return relays.size
@@ -30,11 +33,16 @@ object RelayPool: Relay.Listener {
     }
 
     fun loadRelays(relayList: List<Relay>){
-        if (!relayList.isNullOrEmpty()){
+        if (!relayList.isNullOrEmpty()) {
             relayList.forEach { addRelay(it) }
         } else {
             Constants.convertDefaultRelays().forEach { addRelay(it) }
         }
+    }
+
+    fun loadSearchRelays(relayList: List<Relay>) {
+        searchRelays = relayList
+        relayList.forEach { addSearchRelay(it) }
     }
 
     fun unloadRelays() {
@@ -54,6 +62,13 @@ object RelayPool: Relay.Listener {
         relays.forEach { it.sendFilterOnlyIfDisconnected() }
     }
 
+    fun sendSearchRequest(searchText: String, requestId: String) {
+        searchRelays.forEach {
+            it.requestAndWatch()
+            it.sendSearchRequest(searchText, requestId)
+        }
+    }
+
     fun send(signedEvent: Event) {
         relays.forEach { it.send(signedEvent) }
     }
@@ -71,6 +86,10 @@ object RelayPool: Relay.Listener {
         relays += relay
     }
 
+    fun addSearchRelay(relay: Relay) {
+        relay.register(this)
+    }
+
     fun removeRelay(relay: Relay) {
         relay.unregister(this)
         relays = relays.minus(relay)
@@ -85,6 +104,7 @@ object RelayPool: Relay.Listener {
     }
 
     interface Listener {
+        fun onSearchEvent(event: TextNoteEvent, relay: Relay)
         fun onEvent(event: Event, subscriptionId: String, relay: Relay)
 
         fun onError(error: Error, subscriptionId: String, relay: Relay)
@@ -92,6 +112,11 @@ object RelayPool: Relay.Listener {
         fun onRelayStateChange(type: Relay.Type, relay: Relay, channel: String?)
 
         fun onSendResponse(eventId: String, success: Boolean, message: String, relay: Relay)
+    }
+
+    @Synchronized
+    override fun onSearchEvent(event: TextNoteEvent, relay: Relay) {
+        listeners.forEach { it.onSearchEvent(event, relay) }
     }
 
     @Synchronized

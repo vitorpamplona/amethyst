@@ -4,6 +4,7 @@ import android.util.Log
 import com.google.gson.JsonElement
 import java.util.Date
 import nostr.postr.events.Event
+import nostr.postr.events.TextNoteEvent
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -76,9 +77,13 @@ class Relay(
                         val channel = msg[1].asString
                         when (type) {
                             "EVENT" -> {
-                                //Log.w("Relay", "Relay onEVENT $url, $channel")
-                                eventDownloadCounter++
                                 val event = Event.fromJson(msg[2], Client.lenient)
+                                if(url == "wss://relay.nostr.band") {
+                                   // Log.e("TextEvent", "Relay onEVENT $channel, $msg")
+                                    listeners.forEach { it.onSearchEvent(event as TextNoteEvent, this@Relay) }
+                                    return
+                                }
+                                eventDownloadCounter++
                                 listeners.forEach { it.onEvent(this@Relay, channel, event) }
                             }
                             "EOSE" -> listeners.forEach {
@@ -183,6 +188,14 @@ class Relay(
         }
     }
 
+    fun sendSearchRequest(searchText: String, requestId: String) {
+        if(read) {
+            val request = """["REQ","$requestId",{"kinds": [1],"search":"$searchText","limit":100}]"""
+            socket?.send(request)
+         //   Log.e("TextEvent", "request -> $request, -> $url, -> $response")
+        }
+    }
+
     fun sendFilterOnlyIfDisconnected() {
         if (socket == null) {
             // waits 60 seconds to reconnect after disconnected.
@@ -223,6 +236,7 @@ class Relay(
     }
 
     interface Listener {
+        fun onSearchEvent(event: TextNoteEvent, relay: Relay)
         /**
          * A new message was received
          */

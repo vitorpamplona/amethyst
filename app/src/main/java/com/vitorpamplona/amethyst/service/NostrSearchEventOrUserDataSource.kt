@@ -50,9 +50,9 @@ object NostrSearchEventOrUserDataSource: NostrDataSource("SingleEventFeed") {
         eventId
       }
       hexToWatch = hex
-      invalidateFilters()
+      sendSearchRequest(hexToWatch ?: throw IllegalArgumentException("hex is null"))
     } catch (e: Exception) {
-      // Usually when people add an incomplete npub or note.
+      println(e)
     }
   }
 

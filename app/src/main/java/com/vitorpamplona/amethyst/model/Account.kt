@@ -12,6 +12,7 @@ import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Constants
+import com.vitorpamplona.amethyst.service.relays.Constants.defaultSearchRelays
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.RelayPool
@@ -519,7 +520,7 @@ class Account(
     val newRelaySet = activeRelays() ?: convertLocalRelays()
     if (!Client.isSameRelaySetConfig(newRelaySet)) {
       Client.disconnect()
-      Client.connect(newRelaySet)
+      Client.connect(newRelaySet, defaultSearchRelays)
       RelayPool.requestAndWatch()
     }
   }

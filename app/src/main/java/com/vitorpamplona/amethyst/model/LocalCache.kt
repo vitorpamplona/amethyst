@@ -49,7 +49,7 @@ object LocalCache {
   val antiSpam = AntiSpamFilter()
 
   val users = ConcurrentHashMap<HexKey, User>()
-  val notes = ConcurrentHashMap<HexKey, Note>()
+  var notes = ConcurrentHashMap<HexKey, Note>()
   val channels = ConcurrentHashMap<HexKey, Channel>()
 
   fun checkGetOrCreateUser(key: String): User? {
@@ -85,7 +85,8 @@ object LocalCache {
   fun getOrCreateNote(idHex: String): Note {
     return notes[idHex] ?: run {
       val answer = Note(idHex)
-      notes.put(idHex, answer)
+      val newNotes = ConcurrentHashMap(mapOf(Pair(idHex, answer)) + notes)
+      notes = newNotes
       answer
     }
   }
@@ -146,7 +147,9 @@ object LocalCache {
       }
       return
     }
-
+    if(relay?.url == "wss://relay.nostr.band") {
+      Log.e("TAG", "event -> ${event.content}, -> ${event.id}")
+    }
     val note = getOrCreateNote(event.id.toHex())
     val author = getOrCreateUser(event.pubKey.toHexKey())
 

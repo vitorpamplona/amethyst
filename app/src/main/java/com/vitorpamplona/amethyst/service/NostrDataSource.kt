@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.service
 
+import android.util.Log
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelHideMessageEvent
@@ -43,6 +44,9 @@ abstract class NostrDataSource(val debugName: String) {
   }
 
   private val clientListener = object : Client.Listener() {
+    override fun onSearchEvent(event: TextNoteEvent, relay: Relay) {
+      LocalCache.consume(event, relay)
+    }
     override fun onEvent(event: Event, subscriptionId: String, relay: Relay) {
       if (subscriptionId in subscriptions.keys) {
         if (!event.hasValidSignature()) return
@@ -155,6 +159,13 @@ abstract class NostrDataSource(val debugName: String) {
       delay(200)
       resetFiltersSuspend()
       handlerWaiting = false
+    }
+  }
+
+  fun sendSearchRequest(searchText: String) {
+    val scope = CoroutineScope(Job() + Dispatchers.IO)
+    scope.launch {
+      Client.sendSearchRequest(searchText)
     }
   }
 
