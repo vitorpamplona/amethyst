@@ -20,7 +20,7 @@ Amethyst brings the best social network to your Android phone. Just insert your 
 - [x] Notification Dots
 - [x] Reporting and Hide User capability (NIP-56)
 - [x] Automatic Translations
-- [x] Relay Edit (separate relay sets for home, dms, public chats, global)
+- [x] Relay Sets (home, dms, public chats, global)
 - [x] User/Note Tagging (NIP-08, NIP-10)
 - [x] Lightning Tips
 - [x] Zaps (NIP-57)
