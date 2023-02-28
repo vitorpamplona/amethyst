@@ -13,7 +13,7 @@ A clear and concise description of what the problem is. Ex. I'm always frustrate
 **Describe the solution you'd like**
 A clear and concise description of what you want to happen.
 
-**Bounty offered for the implementation**
+**Bounty (in Bitcoin sats) offered for the implementation**
 Incentivize developers to work on your feature. Describe clear milestones to claim payment. 
 
 **Additional context**

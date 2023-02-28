@@ -28,5 +28,5 @@ If applicable, add a video and/or screenshots to help explain your problem.
  - Android Version [e.g. 33]: 
  - App Version [e.g. v0.20.3]: 
 
-**Bounty in Bitcoin sats offered for a solution if any**
-Incentive developers to work on your issue. Describe clear milestones to claim payment.
+**Bounty (in Bitcoin sats) offered for a solution**
+Incentivize developers to work on your issue. Describe clear milestones to claim payment.
