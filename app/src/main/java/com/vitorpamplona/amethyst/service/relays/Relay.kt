@@ -88,7 +88,7 @@ class Relay(
                             "NOTICE" -> listeners.forEach {
                                 //Log.w("Relay", "Relay onNotice $url, $channel")
                                 // "channel" being the second string in the string array ...
-                                it.onError(this@Relay, channel, Error("Relay sent notice: $channel"))
+                                it.onError(this@Relay, channel, Error("Relay sent notice: " + channel))
                             }
                             "OK" -> listeners.forEach {
                                 //Log.w("Relay", "Relay onOK $url, $channel")

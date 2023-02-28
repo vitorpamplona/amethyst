@@ -25,6 +25,8 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.R
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun ExpandableRichTextViewer(
@@ -67,7 +69,7 @@ fun ExpandableRichTextViewer(
           ),
           contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
         ) {
-          Text(text = "Show More", color = Color.White)
+          Text(text = stringResource(R.string.show_more), color = Color.White)
         }
       }
     }

@@ -17,7 +17,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import coil.compose.AsyncImage
+import com.vitorpamplona.amethyst.R
 
 @Composable
 fun ZoomableAsyncImage(imageUrl: String) {
@@ -46,14 +48,16 @@ fun ZoomableAsyncImage(imageUrl: String) {
     ) {
         AsyncImage(
             model = imageUrl,
-            contentDescription = "Profile Image",
+            contentDescription = stringResource(id = R.string.profile_image),
             contentScale = ContentScale.FillWidth,
-            modifier = Modifier.fillMaxSize().graphicsLayer(
-                scaleX = scale,
-                scaleY = scale,
-                translationX = offsetX,
-                translationY = offsetY
-            ),
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer(
+                    scaleX = scale,
+                    scaleY = scale,
+                    translationX = offsetX,
+                    translationY = offsetY
+                ),
         )
     }
 }

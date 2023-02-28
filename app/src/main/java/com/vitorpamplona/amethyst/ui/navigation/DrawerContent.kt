@@ -51,6 +51,8 @@ import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.launch
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun DrawerContent(navController: NavHostController,
@@ -111,7 +113,7 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
         if (banner != null && banner.isNotBlank()) {
             AsyncImageProxy(
                 model = ResizeImage(banner, 150.dp),
-                contentDescription = "Profile Image",
+                contentDescription = stringResource(id = R.string.profile_image),
                 contentScale = ContentScale.FillWidth,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -120,7 +122,7 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
         } else {
             Image(
                 painter = painterResource(R.drawable.profile_banner),
-                contentDescription = "Profile Banner",
+                contentDescription = stringResource(R.string.profile_banner),
                 contentScale = ContentScale.FillWidth,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -131,7 +133,7 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
         Column(modifier = modifier) {
             AsyncImageProxy(
                 model = ResizeImage(accountUser.profilePicture(), 100.dp),
-                contentDescription = "Profile Image",
+                contentDescription = stringResource(id = R.string.profile_image),
                 placeholder = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
                 fallback = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
                 error = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
@@ -187,11 +189,11 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
             })) {
                 Row() {
                     Text("${accountUserFollows.follows.size}", fontWeight = FontWeight.Bold)
-                    Text(" Following")
+                    Text(stringResource(R.string.following))
                 }
                 Row(modifier = Modifier.padding(start = 10.dp)) {
                     Text("${accountUserFollows.followers.size}", fontWeight = FontWeight.Bold)
-                    Text(" Followers")
+                    Text(stringResource(R.string.followers))
                 }
             }
         }
@@ -216,7 +218,7 @@ fun ListContent(
                         scaffoldState,
                         "User/${accountUser.pubkeyHex}",
                         Route.Profile.icon,
-                        "Profile"
+                        stringResource(R.string.profile)
                     )
 
                 Divider(
@@ -231,14 +233,14 @@ fun ListContent(
                         }
                     })) {
                         Text(
-                            text = "Security Filters",
+                            text = stringResource(R.string.security_filters),
                             fontSize = 18.sp,
                             fontWeight = W500
                         )
                     }
                     Row(modifier = Modifier.clickable(onClick = { accountViewModel.logOff() })) {
                         Text(
-                            text = "Log out",
+                            text = stringResource(R.string.log_out),
                             modifier = Modifier.padding(vertical = 15.dp),
                             fontSize = 18.sp,
                             fontWeight = W500
