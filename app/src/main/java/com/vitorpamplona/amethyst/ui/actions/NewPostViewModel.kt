@@ -9,6 +9,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.*
 import com.vitorpamplona.amethyst.ui.components.isValidURL
 import com.vitorpamplona.amethyst.ui.components.noProtocolUrlValidator
@@ -130,9 +131,10 @@ class NewPostViewModel: ViewModel() {
             onError = {
                 isUploadingImage = false
                 viewModelScope.launch {
-                    imageUploadingError.emit("Failed to upload the image")
+                    imageUploadingError.emit(context.getString(R.string.failed_to_upload_the_image))
                 }
-            }
+            },
+            context = context
         )
     }
 

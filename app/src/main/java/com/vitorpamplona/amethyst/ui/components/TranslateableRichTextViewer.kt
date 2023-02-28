@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
@@ -33,6 +34,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.core.os.ConfigurationCompat
 import androidx.navigation.NavController
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.service.lang.ResultOrError
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -103,17 +105,17 @@ fun TranslateableRichTextViewer(
           val annotatedTranslationString = buildAnnotatedString {
             withStyle(clickableTextStyle) {
               pushStringAnnotation("langSettings", true.toString())
-              append("Auto")
+              append(stringResource(R.string.auto))
             }
 
-            append("-translated from ")
+            append("-${stringResource(R.string.translated_from)} ")
 
             withStyle(clickableTextStyle) {
               pushStringAnnotation("showOriginal", true.toString())
               append(Locale(source).displayName)
             }
 
-            append(" to ")
+            append(" ${stringResource(R.string.to)} ")
 
             withStyle(clickableTextStyle) {
               pushStringAnnotation("showOriginal", false.toString())
@@ -156,7 +158,7 @@ fun TranslateableRichTextViewer(
 
               Spacer(modifier = Modifier.size(10.dp))
 
-              Text("Never translate from ${Locale(source).displayName}")
+              Text(stringResource(R.string.never_translate_from) + "${Locale(source).displayName}")
             }
             Divider()
             DropdownMenuItem(onClick = {
@@ -174,7 +176,14 @@ fun TranslateableRichTextViewer(
 
               Spacer(modifier = Modifier.size(10.dp))
 
-              Text("Show in ${Locale(source).displayName} first")
+              // TODO : Rashed translate this
+              Text(
+                "${stringResource(R.string.show_in)} ${Locale(source).displayName} ${
+                  stringResource(
+                    R.string.first
+                  )
+                }"
+              )
             }
             DropdownMenuItem(onClick = {
               accountViewModel.prefer(source, target, target)
@@ -191,7 +200,7 @@ fun TranslateableRichTextViewer(
 
               Spacer(modifier = Modifier.size(10.dp))
 
-              Text("Show in ${Locale(target).displayName} first")
+              Text("${stringResource(id = R.string.show_in)} ${Locale(target).displayName} ${R.string.first}")
             }
             Divider()
 
@@ -214,7 +223,7 @@ fun TranslateableRichTextViewer(
 
                   Spacer(modifier = Modifier.size(10.dp))
                   
-                  Text("Always translate to ${lang.displayName}")
+                  Text("${stringResource(R.string.always_translate_to)}${lang.displayName}")
                 }
               }
             }

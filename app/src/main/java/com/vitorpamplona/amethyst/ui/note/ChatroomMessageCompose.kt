@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -47,6 +48,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
@@ -121,12 +123,14 @@ fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote
 
         Column() {
             Row(
-                modifier = Modifier.fillMaxWidth(1f).padding(
-                    start = 12.dp,
-                    end = 12.dp,
-                    top = 5.dp,
-                    bottom = 5.dp
-                ),
+                modifier = Modifier
+                    .fillMaxWidth(1f)
+                    .padding(
+                        start = 12.dp,
+                        end = 12.dp,
+                        top = 5.dp,
+                        bottom = 5.dp
+                    ),
                 horizontalArrangement = alignment
             ) {
                 Row(
@@ -161,7 +165,7 @@ fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote
                                         placeholder = BitmapPainter(RoboHashCache.get(context, author.pubkeyHex)),
                                         fallback = BitmapPainter(RoboHashCache.get(context, author.pubkeyHex)),
                                         error = BitmapPainter(RoboHashCache.get(context, author.pubkeyHex)),
-                                        contentDescription = "Profile Image",
+                                        contentDescription = stringResource(id = R.string.profile_image),
                                         modifier = Modifier
                                             .width(25.dp)
                                             .height(25.dp)
@@ -201,18 +205,23 @@ fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote
                                 }
                             }
 
+                            // TODO: extract String and pass arguments
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 val event = note.event
                                 if (event is ChannelCreateEvent) {
-                                    Text(text = "${note.author?.toBestDisplayName()} created " +
-                                      "${event.channelInfo.name ?: ""} with " +
-                                      "description of '${event.channelInfo.about ?: ""}', " +
-                                      "and picture '${event.channelInfo.picture ?: ""}'")
+                                    Text(text = note.author?.toBestDisplayName()
+                                        .toString() + " ${stringResource(R.string.created)} " + (event.channelInfo.name
+                                        ?: "") +" ${stringResource(R.string.with_description_of)} '" + (event.channelInfo.about
+                                        ?: "") + "', ${stringResource(R.string.and_picture)} '" + (event.channelInfo.picture
+                                        ?: "") + "'"
+                                    )
                                 } else if (event is ChannelMetadataEvent) {
-                                    Text(text = "${note.author?.toBestDisplayName()} changed " +
-                                      "chat name to '${event.channelInfo.name ?: ""}', " +
-                                      "description to '${event.channelInfo.about ?: ""}', " +
-                                      "and picture to '${event.channelInfo.picture ?: ""}'")
+                                    Text(text = note.author?.toBestDisplayName()
+                                        .toString() + " ${stringResource(R.string.changed_chat_name_to)} '" + (event.channelInfo.name
+                                        ?: "") + "$', {stringResource(R.string.description_to)} '" + (event.channelInfo.about
+                                        ?: "") + "', ${stringResource(R.string.and_picture_to)} '" + (event.channelInfo.picture
+                                        ?: "") + "'"
+                                    )
                                 } else {
                                     val eventContent = accountViewModel.decrypt(note)
 
@@ -231,7 +240,7 @@ fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote
                                         )
                                     } else {
                                         TranslateableRichTextViewer(
-                                            "Could Not decrypt the message",
+                                            stringResource(R.string.could_not_decrypt_the_message),
                                             true,
                                             Modifier,
                                             note.event?.tags,
@@ -248,7 +257,7 @@ fun ChatroomMessageCompose(baseNote: Note, routeForLastRead: String?, innerQuote
                                 modifier = Modifier.padding(top = 2.dp)
                             ) {
                                 Text(
-                                    timeAgoLong(note.event?.createdAt),
+                                    timeAgoLong(note.event?.createdAt, context),
                                     color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                                     fontSize = 12.sp
                                 )
@@ -283,19 +292,22 @@ private fun RelayBadges(baseNote: Note) {
     FlowRow(Modifier.padding(start = 10.dp)) {
         relaysToDisplay.forEach {
             val url = it.removePrefix("wss://")
-            Box(Modifier.size(15.dp).padding(1.dp)) {
+            Box(
+                Modifier
+                    .size(15.dp)
+                    .padding(1.dp)) {
                 AsyncImage(
                     model = "https://${url}/favicon.ico",
                     placeholder = BitmapPainter(RoboHashCache.get(ctx, url)),
                     fallback = BitmapPainter(RoboHashCache.get(ctx, url)),
                     error = BitmapPainter(RoboHashCache.get(ctx, url)),
-                    contentDescription = "Relay Icon",
+                    contentDescription = stringResource(id = R.string.relay_icon),
                     colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }),
                     modifier = Modifier
                         .fillMaxSize(1f)
                         .clip(shape = CircleShape)
                         .background(MaterialTheme.colors.background)
-                        .clickable(onClick = { uri.openUri("https://" + url) } )
+                        .clickable(onClick = { uri.openUri("https://" + url) })
                 )
             }
         }

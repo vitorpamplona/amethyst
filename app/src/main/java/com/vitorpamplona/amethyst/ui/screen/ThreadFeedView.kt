@@ -28,6 +28,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
@@ -171,6 +172,8 @@ fun NoteMaster(baseNote: Note,
 
     var showHiddenNote by remember { mutableStateOf(false) }
 
+    val context = LocalContext.current
+
     if (note?.event == null) {
         BlankNote()
     } else if (!account.isAcceptable(noteForReports) && !showHiddenNote) {
@@ -209,7 +212,7 @@ fun NoteMaster(baseNote: Note,
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            timeAgoLong(note.event?.createdAt),
+                            timeAgoLong(note.event?.createdAt, context = context),
                             color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                         )
                     }

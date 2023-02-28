@@ -11,10 +11,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import com.vitorpamplona.amethyst.R
 import kotlinx.coroutines.launch
 
 /**
@@ -29,6 +31,7 @@ fun SaveToGallery(url: String) {
     val localContext = LocalContext.current
     val scope = rememberCoroutineScope()
 
+
     fun saveImage() {
         ImageSaver.saveImage(
             context = localContext,
@@ -37,7 +40,7 @@ fun SaveToGallery(url: String) {
                 scope.launch {
                     Toast.makeText(
                         localContext,
-                        "Image saved to the gallery",
+                        localContext.getString(R.string.image_saved_to_the_gallery),
                         Toast.LENGTH_SHORT
                     )
                         .show()
@@ -47,7 +50,7 @@ fun SaveToGallery(url: String) {
                 scope.launch {
                     Toast.makeText(
                         localContext,
-                        "Failed to save the image",
+                        localContext.getString(R.string.failed_to_save_the_image),
                         Toast.LENGTH_SHORT
                     )
                         .show()
@@ -78,6 +81,6 @@ fun SaveToGallery(url: String) {
                 backgroundColor = Color.Gray
             )
     ) {
-        Text(text = "Save", color = Color.White)
+        Text(text = stringResource(id = R.string.save), color = Color.White)
     }
 }

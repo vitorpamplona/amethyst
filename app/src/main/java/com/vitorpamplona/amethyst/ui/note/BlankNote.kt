@@ -14,9 +14,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowRow
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 
@@ -35,7 +37,7 @@ fun BlankNote(modifier: Modifier = Modifier, isQuote: Boolean = false) {
           verticalAlignment = Alignment.CenterVertically
         ) {
           Text(
-            text = "Referenced post not found",
+            text = stringResource(R.string.referenced_post_not_found),
             modifier = Modifier.padding(30.dp),
             color = Color.Gray,
           )
@@ -67,7 +69,7 @@ fun HiddenNote(reports: Set<Note>, loggedIn: User, modifier: Modifier = Modifier
         ) {
           Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(30.dp)) {
             Text(
-              text = "Post was flagged as inappropriate by",
+              text = stringResource(R.string.post_was_flagged_as_inappropriate_by),
               color = Color.Gray,
             )
             FlowRow(modifier = Modifier.padding(top = 10.dp)) {
@@ -91,7 +93,7 @@ fun HiddenNote(reports: Set<Note>, loggedIn: User, modifier: Modifier = Modifier
                 ),
               contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
             ) {
-              Text(text = "Show Anyway", color = Color.White)
+              Text(text = stringResource(R.string.show_anyway), color = Color.White)
             }
           }
         }

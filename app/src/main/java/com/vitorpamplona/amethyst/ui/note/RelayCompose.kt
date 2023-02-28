@@ -18,10 +18,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.RelayInfo
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -39,6 +41,8 @@ fun RelayCompose(
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
+
+    val context = LocalContext.current
 
     Column() {
         Row(
@@ -60,13 +64,13 @@ fun RelayCompose(
                     )
 
                     Text(
-                        timeAgo(relay.lastEvent),
+                        timeAgo(relay.lastEvent, context = context),
                         maxLines = 1
                     )
                 }
-
+                // TODO : Rashed (2) Translate
                 Text(
-                    "${relay.counter} posts received",
+                    "${relay.counter} ${stringResource(R.string.posts_received)}",
                     color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -101,7 +105,7 @@ fun AddRelayButton(onClick: () -> Unit) {
             ),
         contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
     ) {
-        Text(text = "Add", color = Color.White)
+        Text(text = stringResource(id = R.string.add), color = Color.White)
     }
 }
 
@@ -117,7 +121,7 @@ fun RemoveRelayButton(onClick: () -> Unit) {
             ),
         contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
     ) {
-        Text(text = "Remove", color = Color.White)
+        Text(text = stringResource(R.string.remove), color = Color.White)
     }
 }
 

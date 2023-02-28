@@ -23,10 +23,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.ui.screen.ZapSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -60,22 +62,24 @@ fun ZapSetCompose(zapSetCard: ZapSetCard, modifier: Modifier = Modifier, isInner
         }
 
         Column(
-            modifier = Modifier.background(
-                if (isNew) MaterialTheme.colors.primary.copy(0.12f) else MaterialTheme.colors.background
-            ).combinedClickable(
-                onClick = {
-                  if (noteEvent !is ChannelMessageEvent) {
-                      navController.navigate("Note/${note.idHex}"){
-                          launchSingleTop = true
-                      }
-                  } else {
-                      note.channel?.let {
-                          navController.navigate("Channel/${it.idHex}")
-                      }
-                  }
-                },
-                onLongClick = { popupExpanded = true }
-            )
+            modifier = Modifier
+                .background(
+                    if (isNew) MaterialTheme.colors.primary.copy(0.12f) else MaterialTheme.colors.background
+                )
+                .combinedClickable(
+                    onClick = {
+                        if (noteEvent !is ChannelMessageEvent) {
+                            navController.navigate("Note/${note.idHex}") {
+                                launchSingleTop = true
+                            }
+                        } else {
+                            note.channel?.let {
+                                navController.navigate("Channel/${it.idHex}")
+                            }
+                        }
+                    },
+                    onLongClick = { popupExpanded = true }
+                )
         ) {
             Row(modifier = Modifier
                 .padding(
@@ -91,9 +95,11 @@ fun ZapSetCompose(zapSetCard: ZapSetCard, modifier: Modifier = Modifier, isInner
                         .padding(0.dp)) {
                         Icon(
                             imageVector = Icons.Default.Bolt,
-                            contentDescription = "Zaps",
+                            contentDescription = stringResource(id = R.string.zaps),
                             tint = BitcoinOrange,
-                            modifier = Modifier.size(25.dp).align(Alignment.TopEnd)
+                            modifier = Modifier
+                                .size(25.dp)
+                                .align(Alignment.TopEnd)
                         )
                     }
                 }

@@ -16,6 +16,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -25,6 +26,7 @@ import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.google.accompanist.pager.rememberPagerState
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.NostrGlobalDataSource
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
 import com.vitorpamplona.amethyst.ui.dal.HomeConversationsFeedFilter
@@ -93,7 +95,7 @@ fun HomeScreen(accountViewModel: AccountViewModel, navController: NavController)
                     selected = pagerState.currentPage == 0,
                     onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
                     text = {
-                        Text(text = "New Threads")
+                        Text(text = stringResource(R.string.new_threads))
                     }
                 )
 
@@ -101,7 +103,7 @@ fun HomeScreen(accountViewModel: AccountViewModel, navController: NavController)
                     selected = pagerState.currentPage == 1,
                     onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
                     text = {
-                        Text(text = "Conversations")
+                        Text(text = stringResource(R.string.conversations))
                     }
                 )
             }

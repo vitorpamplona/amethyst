@@ -19,6 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
@@ -45,7 +46,7 @@ fun NewChannelButton(account: Account) {
     ) {
         Icon(
             imageVector = Icons.Outlined.Add,
-            contentDescription = "New Channel",
+            contentDescription = stringResource(R.string.new_channel),
             modifier = Modifier.size(26.dp),
             tint = Color.White
         )

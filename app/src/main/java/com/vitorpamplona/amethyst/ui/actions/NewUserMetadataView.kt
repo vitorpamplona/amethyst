@@ -17,11 +17,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
@@ -72,13 +74,13 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
 
                 Row(modifier = Modifier.fillMaxWidth(1f), verticalAlignment = Alignment.CenterVertically) {
                     OutlinedTextField(
-                        label = { Text(text = "Display Name") },
+                        label = { Text(text = stringResource(R.string.display_name)) },
                         modifier =  Modifier.weight(1f),
                         value = postViewModel.displayName.value,
                         onValueChange = { postViewModel.displayName.value = it },
                         placeholder = {
                             Text(
-                                text = "My display name",
+                                text = stringResource(R.string.my_display_name),
                                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                             )
                         },
@@ -91,13 +93,13 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                     Text("@", Modifier.padding(5.dp))
 
                     OutlinedTextField(
-                        label = { Text(text = "Username") },
+                        label = { Text(text = stringResource(R.string.username)) },
                         modifier = Modifier.weight(1f),
                         value = postViewModel.userName.value,
                         onValueChange = { postViewModel.userName.value = it },
                         placeholder = {
                             Text(
-                                text = "My username",
+                                text = stringResource(R.string.my_username),
                                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                             )
                         },
@@ -108,7 +110,7 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                 Spacer(modifier = Modifier.height(10.dp))
 
                 OutlinedTextField(
-                    label = { Text(text = "About me") },
+                    label = { Text(text = stringResource(R.string.about_me)) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(100.dp),
@@ -116,7 +118,7 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                     onValueChange = { postViewModel.about.value = it },
                     placeholder = {
                         Text(
-                            text = "About me",
+                            text = stringResource(id = R.string.about_me),
                             color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                         )
                     },
@@ -129,7 +131,7 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                 Spacer(modifier = Modifier.height(10.dp))
 
                 OutlinedTextField(
-                    label = { Text(text = "Avatar URL") },
+                    label = { Text(text = stringResource(R.string.avatar_url)) },
                     modifier = Modifier.fillMaxWidth(),
                     value = postViewModel.picture.value,
                     onValueChange = { postViewModel.picture.value = it },
@@ -145,7 +147,7 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                 Spacer(modifier = Modifier.height(10.dp))
 
                 OutlinedTextField(
-                    label = { Text(text = "Banner URL") },
+                    label = { Text(text = stringResource(R.string.banner_url)) },
                     modifier = Modifier.fillMaxWidth(),
                     value = postViewModel.banner.value,
                     onValueChange = { postViewModel.banner.value = it },
@@ -161,7 +163,7 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                 Spacer(modifier = Modifier.height(10.dp))
 
                 OutlinedTextField(
-                    label = { Text(text = "Website URL") },
+                    label = { Text(text = stringResource(R.string.website_url)) },
                     modifier = Modifier.fillMaxWidth(),
                     value = postViewModel.website.value,
                     onValueChange = { postViewModel.website.value = it },
@@ -177,7 +179,7 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                 Spacer(modifier = Modifier.height(10.dp))
 
                 OutlinedTextField(
-                    label = { Text(text = "NIP-05") },
+                    label = { Text(text = stringResource(R.string.nip_05)) },
                     modifier = Modifier.fillMaxWidth(),
                     value = postViewModel.nip05.value,
                     onValueChange = { postViewModel.nip05.value = it },
@@ -192,7 +194,7 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
 
                 Spacer(modifier = Modifier.height(10.dp))
                 OutlinedTextField(
-                    label = { Text(text = "LN Address") },
+                    label = { Text(text = stringResource(R.string.ln_address)) },
                     modifier = Modifier.fillMaxWidth(),
                     value = postViewModel.lnAddress.value,
                     onValueChange = { postViewModel.lnAddress.value = it },
@@ -208,13 +210,13 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                 Spacer(modifier = Modifier.height(10.dp))
 
                 OutlinedTextField(
-                    label = { Text(text = "LN URL (outdated)") },
+                    label = { Text(text = stringResource(R.string.ln_url_outdated)) },
                     modifier = Modifier.fillMaxWidth(),
                     value = postViewModel.lnURL.value,
                     onValueChange = { postViewModel.lnURL.value = it },
                     placeholder = {
                         Text(
-                            text = "LNURL...",
+                            text = stringResource(R.string.lnurl),
                             color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                         )
                     },

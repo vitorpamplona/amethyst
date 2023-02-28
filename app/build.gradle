@@ -14,7 +14,7 @@ android {
         versionCode 67
         versionName "0.17.11"
 
-        resConfigs "en"
+        resConfigs ("en", "ar")
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

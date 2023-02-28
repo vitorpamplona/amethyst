@@ -74,6 +74,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
@@ -138,7 +139,7 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
         if (banner != null && banner.isNotBlank()) {
             AsyncImageProxy(
                 model = ResizeImage(banner, 150.dp),
-                contentDescription = "Profile Image",
+                contentDescription = stringResource(id = R.string.profile_image),
                 contentScale = ContentScale.FillWidth,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -147,7 +148,7 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
         } else {
             Image(
                 painter = painterResource(R.drawable.profile_banner),
-                contentDescription = "Profile Banner",
+                contentDescription = stringResource(R.string.profile_banner),
                 contentScale = ContentScale.FillWidth,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -158,7 +159,7 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
         Column(modifier = modifier) {
             AsyncImageProxy(
                 model = ResizeImage(accountUser.profilePicture(), 100.dp),
-                contentDescription = "Profile Image",
+                contentDescription = stringResource(id = R.string.profile_image),
                 placeholder = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
                 fallback = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
                 error = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
@@ -179,41 +180,47 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
             )
             Text(
                 accountUser.bestDisplayName() ?: "",
-                modifier = Modifier.padding(top = 7.dp).clickable(onClick = {
+                modifier = Modifier
+                    .padding(top = 7.dp)
+                    .clickable(onClick = {
+                        accountUser.let {
+                            navController.navigate("User/${it.pubkeyHex}")
+                        }
+                        coroutineScope.launch {
+                            scaffoldState.drawerState.close()
+                        }
+                    }),
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp
+            )
+            Text(" @${accountUser.bestUsername()}", color = Color.LightGray,
+                modifier = Modifier
+                    .padding(top = 15.dp)
+                    .clickable(onClick = {
+                        accountUser.let {
+                            navController.navigate("User/${it.pubkeyHex}")
+                        }
+                        coroutineScope.launch {
+                            scaffoldState.drawerState.close()
+                        }
+                    }))
+            Row(modifier = Modifier
+                .padding(top = 15.dp)
+                .clickable(onClick = {
                     accountUser.let {
                         navController.navigate("User/${it.pubkeyHex}")
                     }
                     coroutineScope.launch {
                         scaffoldState.drawerState.close()
                     }
-                }),
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp
-            )
-            Text(" @${accountUser.bestUsername()}", color = Color.LightGray,
-                modifier = Modifier.padding(top = 15.dp).clickable(onClick = {
-                accountUser.let {
-                    navController.navigate("User/${it.pubkeyHex}")
-                }
-                coroutineScope.launch {
-                    scaffoldState.drawerState.close()
-                }
-            }))
-            Row(modifier = Modifier.padding(top = 15.dp).clickable(onClick = {
-                accountUser.let {
-                    navController.navigate("User/${it.pubkeyHex}")
-                }
-                coroutineScope.launch {
-                    scaffoldState.drawerState.close()
-                }
-            })) {
+                })) {
                 Row() {
                     Text("${accountUserFollows.follows.size}", fontWeight = FontWeight.Bold)
-                    Text(" Following")
+                    Text(stringResource(R.string.following))
                 }
                 Row(modifier = Modifier.padding(start = 10.dp)) {
                     Text("${accountUserFollows.followers.size}", fontWeight = FontWeight.Bold)
-                    Text(" Followers")
+                    Text(stringResource(R.string.followers))
                 }
             }
         }
@@ -238,7 +245,7 @@ fun ListContent(
                         scaffoldState,
                         "User/${accountUser.pubkeyHex}",
                         Route.Profile.icon,
-                        "Profile"
+                        stringResource(R.string.profile)
                     )
 
                 Divider(
@@ -253,14 +260,14 @@ fun ListContent(
                         }
                     })) {
                         Text(
-                            text = "Security Filters",
+                            text = stringResource(R.string.security_filters),
                             fontSize = 18.sp,
                             fontWeight = W500
                         )
                     }
                     Row(modifier = Modifier.clickable(onClick = { accountViewModel.logOff() })) {
                         Text(
-                            text = "Log out",
+                            text = stringResource(R.string.log_out),
                             modifier = Modifier.padding(vertical = 15.dp),
                             fontSize = 18.sp,
                             fontWeight = W500

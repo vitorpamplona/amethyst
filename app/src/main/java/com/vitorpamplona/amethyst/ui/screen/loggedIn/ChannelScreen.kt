@@ -44,6 +44,7 @@ import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -60,6 +61,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Channel
@@ -150,7 +152,7 @@ fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, accoun
                     modifier = Modifier.weight(1f, true),
                     placeholder = {
                         Text(
-                            text = "reply here.. ",
+                            text = stringResource(R.string.reply_here),
                             color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                         )
                     },
@@ -192,7 +194,7 @@ fun ChannelHeader(baseChannel: Channel, account: Account, accountStateViewModel:
                     placeholder = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
                     fallback = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
                     error = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
-                    contentDescription = "Profile Image",
+                    contentDescription = context.getString(R.string.profile_image),
                     modifier = Modifier
                         .width(35.dp)
                         .height(35.dp)
@@ -264,7 +266,7 @@ private fun NoteCopyButton(
         Icon(
             tint = Color.White,
             imageVector = Icons.Default.Share,
-            contentDescription = "Copies the Note ID to the clipboard for sharing"
+            contentDescription = stringResource(R.string.copies_the_note_id_to_the_clipboard_for_sharing)
         )
 
         DropdownMenu(
@@ -272,7 +274,7 @@ private fun NoteCopyButton(
             onDismissRequest = { popupExpanded = false }
         ) {
             DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(note.idNote())); popupExpanded = false }) {
-                Text("Copy Channel ID (Note) to the Clipboard")
+                Text(stringResource(R.string.copy_channel_id_note_to_the_clipboard))
             }
         }
     }
@@ -299,7 +301,7 @@ private fun EditButton(account: Account, channel: Channel) {
         Icon(
             tint = Color.White,
             imageVector = Icons.Default.EditNote,
-            contentDescription = "Edits the Channel Metadata"
+            contentDescription = stringResource(R.string.edits_the_channel_metadata)
         )
     }
 }
@@ -319,7 +321,7 @@ private fun JoinButton(account: Account, channel: Channel, navController: NavCon
             ),
         contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
     ) {
-        Text(text = "Join", color = Color.White)
+        Text(text = stringResource(R.string.join), color = Color.White)
     }
 }
 
@@ -338,6 +340,6 @@ private fun LeaveButton(account: Account, channel: Channel, navController: NavCo
             ),
         contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
     ) {
-        Text(text = "Leave", color = Color.White)
+        Text(text = stringResource(R.string.leave), color = Color.White)
     }
 }

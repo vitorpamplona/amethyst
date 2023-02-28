@@ -29,6 +29,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -36,6 +37,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
@@ -87,7 +89,7 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
                   placeholder = BitmapPainter(RoboHashCache.get(ctx, user.pubkeyHex)),
                   fallback = BitmapPainter(RoboHashCache.get(ctx, user.pubkeyHex)),
                   error = BitmapPainter(RoboHashCache.get(ctx, user.pubkeyHex)),
-                  contentDescription = "Profile Image",
+                  contentDescription = stringResource(R.string.profile_image),
                   modifier = Modifier
                     .width(100.dp)
                     .height(100.dp)
@@ -133,7 +135,7 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
                     backgroundColor = MaterialTheme.colors.primary
                   )
               ) {
-                Text(text = "Scan QR")
+                Text(text = stringResource(R.string.scan_qr))
               }
             }
 
@@ -141,7 +143,7 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
 
             Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
               Text(
-                "Point to the QR Code",
+                stringResource(R.string.point_to_the_qr_code),
                 modifier = Modifier.padding(top = 7.dp),
                 fontWeight = FontWeight.Bold,
                 fontSize = 25.sp
@@ -171,7 +173,7 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
                     backgroundColor = MaterialTheme.colors.primary
                   )
               ) {
-                Text(text = "Show QR")
+                Text(text = stringResource(R.string.show_qr))
               }
             }
 

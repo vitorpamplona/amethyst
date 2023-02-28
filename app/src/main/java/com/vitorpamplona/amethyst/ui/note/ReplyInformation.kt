@@ -13,12 +13,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowRow
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -36,7 +38,7 @@ fun ReplyInformation(replyTo: List<Note>?, mentions: List<User>?, prefix: String
     if (mentions != null && mentions.isNotEmpty()) {
       if (replyTo != null && replyTo.isNotEmpty()) {
         Text(
-          "replying to ",
+          stringResource(R.string.replying_to),
           fontSize = 13.sp,
           color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
         )
@@ -62,7 +64,7 @@ fun ReplyInformation(replyTo: List<Note>?, mentions: List<User>?, prefix: String
               )
             } else if (idx < mentionSet.size - 1) {
               Text(
-                " and ",
+                stringResource(R.string.and),
                 fontSize = 13.sp,
                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
               )
@@ -101,7 +103,7 @@ fun ReplyInformationChannel(replyTo: List<Note>?,
 
   FlowRow() {
     Text(
-      "in channel ",
+      stringResource(R.string.in_channel),
       fontSize = 13.sp,
       color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
     )
@@ -115,7 +117,7 @@ fun ReplyInformationChannel(replyTo: List<Note>?,
     if (mentions != null && mentions.isNotEmpty()) {
       if (replyTo != null && replyTo.isNotEmpty()) {
         Text(
-          "replying to ",
+          stringResource(id = R.string.replying_to),
           fontSize = 13.sp,
           color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
         )
@@ -141,7 +143,7 @@ fun ReplyInformationChannel(replyTo: List<Note>?,
               )
             } else if (idx < mentionSet.size - 1) {
               Text(
-                " and ",
+                " ${stringResource(id = R.string.add)} ",
                 fontSize = 13.sp,
                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
               )

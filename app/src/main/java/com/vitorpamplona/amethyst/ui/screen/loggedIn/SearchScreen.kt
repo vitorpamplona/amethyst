@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
@@ -200,7 +201,7 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
                 .defaultMinSize(minHeight = 20.dp),
             placeholder = {
                 Text(
-                    text = "npub, hex, username ",
+                    text = stringResource(R.string.npub_hex_username),
                     color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                 )
             },
@@ -218,7 +219,7 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
                     ) {
                         Icon(
                             imageVector = Icons.Default.Clear,
-                            contentDescription = "Clear"
+                            contentDescription = stringResource(R.string.clear)
                         )
                     }
                 }

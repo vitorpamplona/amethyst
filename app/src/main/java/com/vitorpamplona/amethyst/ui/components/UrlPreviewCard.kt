@@ -15,10 +15,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.baha.url.preview.UrlInfoItem
+import com.vitorpamplona.amethyst.R
 
 @Composable
 fun UrlPreviewCard(
@@ -36,7 +38,7 @@ fun UrlPreviewCard(
     Column {
       AsyncImage(
         model = previewInfo.image,
-        contentDescription = "Preview Card Image for ${url}",
+        contentDescription = stringResource(R.string.preview_card_image_for, url),
         contentScale = ContentScale.FillWidth,
         modifier = Modifier.fillMaxWidth()
       )

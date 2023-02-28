@@ -8,6 +8,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountState
@@ -30,7 +31,7 @@ class AccountViewModel(private val account: Account): ViewModel() {
     val lud16 = note.author?.info?.lud16?.trim() ?: note.author?.info?.lud06?.trim()
 
     if (lud16.isNullOrBlank()) {
-      onError("User does not have a lightning address setup to receive sats")
+      onError(context.getString(R.string.user_does_not_have_a_lightning_address_setup_to_receive_sats))
       return
     }
 

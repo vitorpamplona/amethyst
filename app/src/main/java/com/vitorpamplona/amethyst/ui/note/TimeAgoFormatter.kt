@@ -1,10 +1,13 @@
 package com.vitorpamplona.amethyst.ui.note
 
+import android.content.Context
 import android.text.format.DateUtils
+import com.vitorpamplona.amethyst.R
 
-fun timeAgo(mills: Long?): String {
+// TODO : Translate in feature
+fun timeAgo(mills: Long?, context : Context): String {
   if (mills == null) return " "
-  if (mills == 0L) return " • never"
+  if (mills == 0L) return " • ${context.getString(R.string.never)}"
 
   var humanReadable = DateUtils.getRelativeTimeSpanString(
     mills * 1000,
@@ -13,16 +16,16 @@ fun timeAgo(mills: Long?): String {
     DateUtils.FORMAT_ABBREV_ALL
   ).toString()
   if (humanReadable.startsWith("In") || humanReadable.startsWith("0")) {
-    humanReadable = "now";
+    humanReadable = context.getString(R.string.now);
   }
 
   return " • " + humanReadable
-    .replace(" hr. ago", "h")
-    .replace(" min. ago", "m")
-    .replace(" days ago", "d")
+    .replace(" hr. ago", context.getString(R.string.h))
+    .replace(" min. ago", context.getString(R.string.m))
+    .replace(" days ago", context.getString(R.string.d))
 }
 
-fun timeAgoLong(mills: Long?): String {
+fun timeAgoLong(mills: Long?, context: Context): String {
   if (mills == null) return " "
 
   var humanReadable = DateUtils.getRelativeTimeSpanString(
@@ -32,7 +35,7 @@ fun timeAgoLong(mills: Long?): String {
     DateUtils.FORMAT_SHOW_TIME
   ).toString()
   if (humanReadable.startsWith("In") || humanReadable.startsWith("0")) {
-    humanReadable = "now";
+    humanReadable = context.getString(R.string.now);
   }
 
   return humanReadable

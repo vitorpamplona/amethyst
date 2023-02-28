@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextDirection
@@ -40,6 +41,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
@@ -124,7 +126,7 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
                     shape = RoundedCornerShape(25.dp),
                     placeholder = {
                         Text(
-                            text = "reply here.. ",
+                            text = stringResource(id = R.string.reply_here),
                             color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                         )
                     },
@@ -170,7 +172,7 @@ fun ChatroomHeader(baseUser: User, accountViewModel: AccountViewModel, navContro
                     placeholder = BitmapPainter(RoboHashCache.get(ctx, author.pubkeyHex)),
                     fallback = BitmapPainter(RoboHashCache.get(ctx, author.pubkeyHex)),
                     error = BitmapPainter(RoboHashCache.get(ctx, author.pubkeyHex)),
-                    contentDescription = "Profile Image",
+                    contentDescription = stringResource(id = R.string.profile_image),
                     modifier = Modifier
                         .width(35.dp)
                         .height(35.dp)

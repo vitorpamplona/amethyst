@@ -16,6 +16,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -25,6 +26,7 @@ import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.google.accompanist.pager.rememberPagerState
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
@@ -56,7 +58,7 @@ fun ChatroomListScreen(accountViewModel: AccountViewModel, navController: NavCon
                     selected = pagerState.currentPage == 0,
                     onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
                     text = {
-                        Text(text = "Known")
+                        Text(text = stringResource(R.string.known))
                     }
                 )
 
@@ -64,7 +66,7 @@ fun ChatroomListScreen(accountViewModel: AccountViewModel, navController: NavCon
                     selected = pagerState.currentPage == 1,
                     onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
                     text = {
-                        Text(text = "New Requests")
+                        Text(text = stringResource(R.string.new_requests))
                     }
                 )
             }
