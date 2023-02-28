@@ -193,7 +193,7 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, modifier: Modifier = Modifier, r
 
                     Row(Modifier.fillMaxWidth()) {
                         Box(modifier = Modifier
-                            .width(55.dp)
+                            .width(65.dp)
                             .padding(0.dp)) {
                         }
 
