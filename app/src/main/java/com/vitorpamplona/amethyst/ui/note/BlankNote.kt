@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.note
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -29,13 +30,14 @@ fun BlankNote(modifier: Modifier = Modifier, isQuote: Boolean = false) {
           modifier = Modifier.padding(
             start = 20.dp,
             end = 20.dp,
-            bottom = 25.dp,
+            bottom = 8.dp,
             top = 15.dp
           ),
-          verticalAlignment = Alignment.CenterVertically
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.Center
         ) {
           Text(
-            text = "Referenced post not found",
+            text = "Post not found",
             modifier = Modifier.padding(30.dp),
             color = Color.Gray,
           )
@@ -59,9 +61,7 @@ fun HiddenNote(reports: Set<Note>, loggedIn: User, modifier: Modifier = Modifier
         Row(
           modifier = Modifier.padding(
             start = 20.dp,
-            end = 20.dp,
-            bottom = 25.dp,
-            top = 15.dp
+            end = 20.dp
           ),
           verticalAlignment = Alignment.CenterVertically
         ) {
@@ -97,7 +97,6 @@ fun HiddenNote(reports: Set<Note>, loggedIn: User, modifier: Modifier = Modifier
         }
 
         Divider(
-          modifier = Modifier.padding(vertical = 10.dp),
           thickness = 0.25.dp
         )
       }
