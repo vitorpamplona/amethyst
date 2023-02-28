@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Following
 import kotlin.time.ExperimentalTime
+import nostr.postr.events.PrivateDmEvent
 import nostr.postr.events.TextNoteEvent
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -336,7 +337,8 @@ fun NoteCompose(
                             thickness = 0.25.dp
                         )
                     } else {
-                        val eventContent = noteEvent.content
+                        val eventContent = accountViewModel.decrypt(note)
+
                         val canPreview = note.author == account.userProfile()
                           || (note.author?.let { account.userProfile().isFollowing(it) } ?: true )
                           || !noteForReports.hasAnyReports()
