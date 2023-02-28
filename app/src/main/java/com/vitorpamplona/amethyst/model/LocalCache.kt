@@ -408,8 +408,8 @@ object LocalCache {
     // Already processed this event.
     if (note.event != null) return
 
-    val mentions = event.reportedAuthor.mapNotNull { checkGetOrCreateUser(it) }
-    val repliesTo = event.reportedPost.mapNotNull { checkGetOrCreateNote(it) }
+    val mentions = event.reportedAuthor.mapNotNull { checkGetOrCreateUser(it.key) }
+    val repliesTo = event.reportedPost.mapNotNull { checkGetOrCreateNote(it.key) }
 
     note.loadEvent(event, author, mentions, repliesTo)
 

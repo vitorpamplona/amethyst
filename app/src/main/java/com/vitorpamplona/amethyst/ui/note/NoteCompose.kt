@@ -315,22 +315,24 @@ fun NoteCompose(
                             )
                         }
                     } else if (noteEvent is ReportEvent) {
-                        val reportType = noteEvent.reportType.map {
-                            when (it) {
+                        val reportType = (noteEvent.reportedPost + noteEvent.reportedAuthor).map {
+                            when (it.reportType) {
                                 ReportEvent.ReportType.EXPLICIT -> "Explicit Content"
+                                ReportEvent.ReportType.NUDITY -> "Nudity"
+                                ReportEvent.ReportType.PROFANITY -> "Profanity / Hateful speech"
                                 ReportEvent.ReportType.SPAM -> "Spam"
                                 ReportEvent.ReportType.IMPERSONATION -> "Impersonation"
                                 ReportEvent.ReportType.ILLEGAL -> "Illegal Behavior"
                                 else -> "Unknown"
                             }
-                        }.joinToString(", ")
+                        }.toSet().joinToString(", ")
 
                         Text(
                             text = reportType
                         )
 
                         Divider(
-                            modifier = Modifier.padding(top = 10.dp),
+                            modifier = Modifier.padding(top = 40.dp),
                             thickness = 0.25.dp
                         )
                     } else {
@@ -603,6 +605,13 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
                 Text("Report Spam / Scam")
             }
             DropdownMenuItem(onClick = {
+                accountViewModel.report(note, ReportEvent.ReportType.PROFANITY);
+                note.author?.let { accountViewModel.hide(it, context) }
+                onDismiss()
+            }) {
+                Text("Report Hateful Speech")
+            }
+            DropdownMenuItem(onClick = {
                 accountViewModel.report(note, ReportEvent.ReportType.IMPERSONATION);
                 note.author?.let { accountViewModel.hide(it, context) }
                 onDismiss()
@@ -610,11 +619,11 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
                 Text("Report Impersonation")
             }
             DropdownMenuItem(onClick = {
-                accountViewModel.report(note, ReportEvent.ReportType.EXPLICIT);
+                accountViewModel.report(note, ReportEvent.ReportType.NUDITY);
                 note.author?.let { accountViewModel.hide(it, context) }
                 onDismiss()
             }) {
-                Text("Report Explicit Content")
+                Text("Report Nudity")
             }
             DropdownMenuItem(onClick = {
                 accountViewModel.report(note, ReportEvent.ReportType.ILLEGAL);
