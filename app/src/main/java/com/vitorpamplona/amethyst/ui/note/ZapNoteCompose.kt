@@ -15,11 +15,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -94,7 +97,7 @@ fun ZapNoteCompose(baseNote: Pair<Note, Note>, accountViewModel: AccountViewMode
                     verticalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        showAmount(amount) + " sats",
+                        "${showAmount(amount)} ${stringResource(R.string.sats)}",
                         color = BitcoinOrange,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.W500,

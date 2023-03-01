@@ -25,6 +25,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
@@ -136,7 +137,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                     },
                                 placeholder = {
                                     Text(
-                                        text = "What's on your mind?",
+                                        text = stringResource(R.string.what_s_on_your_mind),
                                         color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                                     )
                                 },
@@ -221,7 +222,7 @@ fun CloseButton(onCancel: () -> Unit) {
                 backgroundColor = Color.Gray
             )
     ) {
-        Text(text = "Cancel", color = Color.White)
+        Text(text = stringResource(R.string.cancel), color = Color.White)
     }
 }
 
@@ -240,7 +241,7 @@ fun PostButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifier = 
                 backgroundColor = if (isActive) MaterialTheme.colors.primary else Color.Gray
             )
     ) {
-        Text(text = "Post", color = Color.White)
+        Text(text = stringResource(R.string.post), color = Color.White)
     }
 }
 
@@ -259,7 +260,7 @@ fun SaveButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifier = 
                 backgroundColor = if (isActive) MaterialTheme.colors.primary else Color.Gray
             )
     ) {
-        Text(text = "Save", color = Color.White)
+        Text(text = stringResource(R.string.save), color = Color.White)
     }
 }
 
@@ -278,7 +279,7 @@ fun CreateButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifier 
                 backgroundColor = if (isActive) MaterialTheme.colors.primary else Color.Gray
             )
     ) {
-        Text(text = "Create", color = Color.White)
+        Text(text = stringResource(R.string.create), color = Color.White)
     }
 }
 

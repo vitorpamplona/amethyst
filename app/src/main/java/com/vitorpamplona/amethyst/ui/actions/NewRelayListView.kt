@@ -41,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -141,7 +142,7 @@ fun ServerConfigHeader() {
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "Relay Address",
+                        text = stringResource(R.string.relay_address),
                         modifier = Modifier.weight(1f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -154,7 +155,7 @@ fun ServerConfigHeader() {
                     Spacer(modifier = Modifier.size(25.dp))
 
                     Text(
-                        text = "Posts",
+                        text = stringResource(R.string.posts),
                         maxLines = 1,
                         fontSize = 14.sp,
                         modifier = Modifier.weight(1f),
@@ -164,7 +165,7 @@ fun ServerConfigHeader() {
                     Spacer(modifier = Modifier.size(10.dp))
 
                     Text(
-                        text = "Posts",
+                        text = stringResource(id = R.string.posts),
                         maxLines = 1,
                         fontSize = 14.sp,
                         modifier = Modifier.weight(1f),
@@ -174,7 +175,7 @@ fun ServerConfigHeader() {
                     Spacer(modifier = Modifier.size(10.dp))
 
                     Text(
-                        text = "Errors",
+                        text = stringResource(R.string.errors),
                         maxLines = 1,
                         fontSize = 14.sp,
                         modifier = Modifier.weight(1f),
@@ -227,7 +228,9 @@ fun ServerConfig(
                     Icon(
                         imageVector = Icons.Default.Cancel,
                         null,
-                        modifier = Modifier.padding(end = 5.dp).size(15.dp),
+                        modifier = Modifier
+                            .padding(end = 5.dp)
+                            .size(15.dp),
                         tint = Color.Red
                     )
                 }
@@ -252,8 +255,10 @@ fun ServerConfig(
                             ) {
                                 Icon(
                                     painterResource(R.drawable.ic_home),
-                                    "Home Feed",
-                                    modifier = Modifier.padding(end = 5.dp).size(15.dp),
+                                    stringResource(R.string.home_feed),
+                                    modifier = Modifier
+                                        .padding(end = 5.dp)
+                                        .size(15.dp),
                                     tint = if (item.feedTypes.contains(FeedType.FOLLOWS)) Color.Green else MaterialTheme.colors.onSurface.copy(
                                         alpha = 0.32f
                                     )
@@ -265,8 +270,10 @@ fun ServerConfig(
                             ) {
                                 Icon(
                                     painterResource(R.drawable.ic_dm),
-                                    "Private Message Feed",
-                                    modifier = Modifier.padding(horizontal = 5.dp).size(15.dp),
+                                    stringResource(R.string.private_message_feed),
+                                    modifier = Modifier
+                                        .padding(horizontal = 5.dp)
+                                        .size(15.dp),
                                     tint = if (item.feedTypes.contains(FeedType.PRIVATE_DMS)) Color.Green else MaterialTheme.colors.onSurface.copy(
                                         alpha = 0.32f
                                     )
@@ -278,8 +285,10 @@ fun ServerConfig(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Groups,
-                                    "Public Chat Feed",
-                                    modifier = Modifier.padding(horizontal = 5.dp).size(15.dp),
+                                    stringResource(R.string.public_chat_feed),
+                                    modifier = Modifier
+                                        .padding(horizontal = 5.dp)
+                                        .size(15.dp),
                                     tint = if (item.feedTypes.contains(FeedType.PUBLIC_CHATS)) Color.Green else MaterialTheme.colors.onSurface.copy(
                                         alpha = 0.32f
                                     )
@@ -291,8 +300,10 @@ fun ServerConfig(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Public,
-                                    "Global Feed",
-                                    modifier = Modifier.padding(horizontal = 5.dp).size(15.dp),
+                                    stringResource(R.string.global_feed),
+                                    modifier = Modifier
+                                        .padding(horizontal = 5.dp)
+                                        .size(15.dp),
                                     tint = if (item.feedTypes.contains(FeedType.GLOBAL)) Color.Green else MaterialTheme.colors.onSurface.copy(
                                         alpha = 0.32f
                                     )
@@ -310,7 +321,9 @@ fun ServerConfig(
                                 Icon(
                                     imageVector = Icons.Default.Download,
                                     null,
-                                    modifier = Modifier.padding(horizontal = 5.dp).size(15.dp),
+                                    modifier = Modifier
+                                        .padding(horizontal = 5.dp)
+                                        .size(15.dp),
                                     tint = if (item.read) Color.Green else MaterialTheme.colors.onSurface.copy(
                                         alpha = 0.32f
                                     )
@@ -332,7 +345,9 @@ fun ServerConfig(
                                 Icon(
                                     imageVector = Icons.Default.Upload,
                                     null,
-                                    modifier = Modifier.padding(horizontal = 5.dp).size(15.dp),
+                                    modifier = Modifier
+                                        .padding(horizontal = 5.dp)
+                                        .size(15.dp),
                                     tint = if (item.write) Color.Green else MaterialTheme.colors.onSurface.copy(
                                         alpha = 0.32f
                                     )
@@ -350,7 +365,9 @@ fun ServerConfig(
                             Icon(
                                 imageVector = Icons.Default.SyncProblem,
                                 null,
-                                modifier = Modifier.padding(horizontal = 5.dp).size(15.dp),
+                                modifier = Modifier
+                                    .padding(horizontal = 5.dp)
+                                    .size(15.dp),
                                 tint = if (item.errorCount > 0) Color.Yellow else Color.Green
                             )
 
@@ -396,7 +413,7 @@ fun EditableServerConfig(relayToAdd: String, onNewRelay: (RelaySetupInfo) -> Uni
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         OutlinedTextField(
-            label = { Text(text = "Add a Relay") },
+            label = { Text(text = stringResource(R.string.add_a_relay)) },
             modifier =  Modifier.weight(1f),
             value = url,
             onValueChange = { url = it },
@@ -449,7 +466,7 @@ fun EditableServerConfig(relayToAdd: String, onNewRelay: (RelaySetupInfo) -> Uni
                     backgroundColor = if (url.isNotBlank()) MaterialTheme.colors.primary else MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                 )
         ) {
-            Text(text = "Add", color = Color.White)
+            Text(text = stringResource(id = R.string.add), color = Color.White)
         }
 
     }

@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.actions
 
 import android.content.ContentResolver
+import android.content.Context
 import android.net.Uri
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import java.io.IOException
@@ -8,6 +9,7 @@ import java.util.UUID
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.MediaType
+import com.vitorpamplona.amethyst.R
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
@@ -23,6 +25,7 @@ object ImageUploader {
     contentResolver: ContentResolver,
     onSuccess: (String) -> Unit,
     onError: (Throwable) -> Unit,
+    context : Context
 ) {
     val contentType = contentResolver.getType(uri)
 
@@ -40,7 +43,7 @@ object ImageUploader {
           override fun writeTo(sink: BufferedSink) {
             val imageInputStream = contentResolver.openInputStream(uri)
             checkNotNull(imageInputStream) {
-              "Can't open the image input stream"
+              context.getString(R.string.can_t_open_the_image_input_stream)
             }
 
             imageInputStream.source().use(sink::writeAll)
@@ -63,7 +66,7 @@ object ImageUploader {
             val tree = jacksonObjectMapper().readTree(body.string())
             val url = tree?.get("data")?.get("link")?.asText()
             checkNotNull(url) {
-              "There must be an uploaded image URL in the response"
+              context.getString(R.string.there_must_be_an_uploaded_image_url_in_the_response)
             }
 
             onSuccess(url)

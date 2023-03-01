@@ -12,10 +12,12 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import com.vitorpamplona.amethyst.R
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -54,9 +56,9 @@ fun UploadFromGallery(
                     }
                 ) {
                     if (!isUploading) {
-                        Text("Upload Image")
+                        Text(stringResource(R.string.upload_image))
                     } else {
-                        Text("Uploading…")
+                        Text(stringResource(R.string.uploading))
                     }
                 }
             }
@@ -68,9 +70,9 @@ fun UploadFromGallery(
                 enabled = !isUploading,
             ) {
                 if (!isUploading) {
-                    Text("Upload Image")
+                    Text(stringResource(R.string.upload_image))
                 } else {
-                    Text("Uploading…")
+                    Text(stringResource(R.string.uploading))
                 }
             }
         }

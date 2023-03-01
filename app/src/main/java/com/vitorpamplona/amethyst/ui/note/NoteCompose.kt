@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -186,7 +187,7 @@ fun NoteCompose(
                                             placeholder = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
                                             fallback = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
                                             error = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
-                                            contentDescription = "Group Picture",
+                                            contentDescription = stringResource(R.string.group_picture),
                                             modifier = Modifier
                                                 .width(30.dp)
                                                 .height(30.dp)
@@ -235,7 +236,7 @@ fun NoteCompose(
                         }
 
                         Text(
-                            timeAgo(noteEvent.createdAt),
+                            timeAgo(noteEvent.createdAt, context = context),
                             color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                             maxLines = 1
                         )
@@ -258,7 +259,7 @@ fun NoteCompose(
                     if (note.author != null && !makeItShort) {
                         ObserveDisplayNip05Status(note.author!!)
                     }
-                    
+
                     Spacer(modifier = Modifier.height(3.dp))
 
                     if (noteEvent is TextNoteEvent && (note.replyTo != null || note.mentions != null)) {
@@ -316,15 +317,15 @@ fun NoteCompose(
                             )
                         }
                     } else if (noteEvent is ReportEvent) {
-                        val reportType = (noteEvent.reportedPost + noteEvent.reportedAuthor).map {
-                            when (it.reportType) {
-                                ReportEvent.ReportType.EXPLICIT -> "Explicit Content"
-                                ReportEvent.ReportType.NUDITY -> "Nudity"
-                                ReportEvent.ReportType.PROFANITY -> "Profanity / Hateful speech"
-                                ReportEvent.ReportType.SPAM -> "Spam"
-                                ReportEvent.ReportType.IMPERSONATION -> "Impersonation"
-                                ReportEvent.ReportType.ILLEGAL -> "Illegal Behavior"
-                                else -> "Unknown"
+                        val reportType = noteEvent.reportType.map {
+                            when (it) {
+                                ReportEvent.ReportType.EXPLICIT -> stringResource(R.string.explicit_content)
+                                ReportEvent.ReportType.NUDITY -> stringResource(R.string.nudity)
+                                ReportEvent.ReportType.PROFANITY -> stringResource(R.string.profanity_hateful_speech)
+                                ReportEvent.ReportType.SPAM -> stringResource(R.string.spam)
+                                ReportEvent.ReportType.IMPERSONATION -> stringResource(R.string.impersonation)
+                                ReportEvent.ReportType.ILLEGAL -> stringResource(R.string.illegal_behavior)
+                                else -> stringResource(R.string.unknown)
                             }
                         }.toSet().joinToString(", ")
 
@@ -395,7 +396,7 @@ private fun RelayBadges(baseNote: Note) {
                     placeholder = BitmapPainter(RoboHashCache.get(ctx, url)),
                     fallback = BitmapPainter(RoboHashCache.get(ctx, url)),
                     error = BitmapPainter(RoboHashCache.get(ctx, url)),
-                    contentDescription = "Relay Icon",
+                    contentDescription = stringResource(R.string.relay_icon),
                     colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }),
                     modifier = Modifier
                         .fillMaxSize(1f)
@@ -464,7 +465,7 @@ fun NoteAuthorPicture(
         if (author == null) {
             Image(
                 painter = BitmapPainter(RoboHashCache.get(ctx, "ohnothisauthorisnotfound")),
-                contentDescription = "Unknown Author",
+                contentDescription = stringResource(R.string.unknown_author),
                 modifier = pictureModifier
                     .fillMaxSize(1f)
                     .clip(shape = CircleShape)
@@ -509,7 +510,7 @@ fun UserPicture(
 
         AsyncImageProxy(
             model = ResizeImage(user.profilePicture(), size),
-            contentDescription = "Profile Image",
+            contentDescription = stringResource(id = R.string.profile_image),
             placeholder = BitmapPainter(RoboHashCache.get(ctx, user.pubkeyHex)),
             fallback = BitmapPainter(RoboHashCache.get(ctx, user.pubkeyHex)),
             error = BitmapPainter(RoboHashCache.get(ctx, user.pubkeyHex)),
@@ -548,7 +549,7 @@ fun UserPicture(
 
                 Icon(
                     painter = painterResource(R.drawable.ic_verified),
-                    "Following",
+                    stringResource(id = R.string.following),
                     modifier = Modifier.fillMaxSize(),
                     tint = Following
                 )
@@ -568,17 +569,17 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
         onDismissRequest = onDismiss
     ) {
         DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(accountViewModel.decrypt(note) ?: "")); onDismiss() }) {
-            Text("Copy Text")
+            Text(stringResource(R.string.copy_text))
         }
         DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(note.author?.pubkeyNpub() ?: "")); onDismiss() }) {
-            Text("Copy User PubKey")
+            Text(stringResource(R.string.copy_user_pubkey))
         }
         DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(note.idNote())); onDismiss() }) {
-            Text("Copy Note ID")
+            Text(stringResource(R.string.copy_note_id))
         }
         Divider()
         DropdownMenuItem(onClick = { accountViewModel.broadcast(note); onDismiss() }) {
-            Text("Broadcast")
+            Text(stringResource(R.string.broadcast))
         }
         if (note.author == accountViewModel.accountLiveData.value?.account?.userProfile()) {
             Divider()
@@ -596,7 +597,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
                     )
                 }; onDismiss()
             }) {
-                Text("Block & Hide Author")
+                Text(stringResource(R.string.block_hide_user))
             }
             Divider()
             DropdownMenuItem(onClick = {
@@ -604,7 +605,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
                 note.author?.let { accountViewModel.hide(it, context) }
                 onDismiss()
             }) {
-                Text("Report Spam / Scam")
+                Text(stringResource(R.string.report_spam_scam))
             }
             DropdownMenuItem(onClick = {
                 accountViewModel.report(note, ReportEvent.ReportType.PROFANITY);
@@ -618,21 +619,21 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
                 note.author?.let { accountViewModel.hide(it, context) }
                 onDismiss()
             }) {
-                Text("Report Impersonation")
+                Text(stringResource(R.string.report_impersonation))
             }
             DropdownMenuItem(onClick = {
                 accountViewModel.report(note, ReportEvent.ReportType.NUDITY);
                 note.author?.let { accountViewModel.hide(it, context) }
                 onDismiss()
             }) {
-                Text("Report Nudity")
+                Text(stringResource(R.string.report_nudity_porn))
             }
             DropdownMenuItem(onClick = {
                 accountViewModel.report(note, ReportEvent.ReportType.ILLEGAL);
                 note.author?.let { accountViewModel.hide(it, context) }
                 onDismiss()
             }) {
-                Text("Report Illegal Behaviour")
+                Text(stringResource(R.string.report_illegal_behaviour))
             }
         }
     }

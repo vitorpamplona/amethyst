@@ -45,6 +45,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -53,6 +54,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
@@ -193,7 +195,7 @@ fun ChatroomMessageCompose(
                                         placeholder = BitmapPainter(RoboHashCache.get(context, author.pubkeyHex)),
                                         fallback = BitmapPainter(RoboHashCache.get(context, author.pubkeyHex)),
                                         error = BitmapPainter(RoboHashCache.get(context, author.pubkeyHex)),
-                                        contentDescription = "Profile Image",
+                                        contentDescription = stringResource(id = R.string.profile_image),
                                         modifier = Modifier
                                             .width(25.dp)
                                             .height(25.dp)
@@ -238,15 +240,19 @@ fun ChatroomMessageCompose(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 val event = note.event
                                 if (event is ChannelCreateEvent) {
-                                    Text(text = "${note.author?.toBestDisplayName()} created " +
-                                      "${event.channelInfo.name ?: ""} with " +
-                                      "description of '${event.channelInfo.about ?: ""}', " +
-                                      "and picture '${event.channelInfo.picture ?: ""}'")
+                                    Text(text = note.author?.toBestDisplayName()
+                                        .toString() + " ${stringResource(R.string.created)} " + (event.channelInfo.name
+                                        ?: "") +" ${stringResource(R.string.with_description_of)} '" + (event.channelInfo.about
+                                        ?: "") + "', ${stringResource(R.string.and_picture)} '" + (event.channelInfo.picture
+                                        ?: "") + "'"
+                                    )
                                 } else if (event is ChannelMetadataEvent) {
-                                    Text(text = "${note.author?.toBestDisplayName()} changed " +
-                                      "chat name to '${event.channelInfo.name ?: ""}', " +
-                                      "description to '${event.channelInfo.about ?: ""}', " +
-                                      "and picture to '${event.channelInfo.picture ?: ""}'")
+                                    Text(text = note.author?.toBestDisplayName()
+                                        .toString() + " ${stringResource(R.string.changed_chat_name_to)} '" + (event.channelInfo.name
+                                        ?: "") + "$', {stringResource(R.string.description_to)} '" + (event.channelInfo.about
+                                        ?: "") + "', ${stringResource(R.string.and_picture_to)} '" + (event.channelInfo.picture
+                                        ?: "") + "'"
+                                    )
                                 } else {
                                     val eventContent = accountViewModel.decrypt(note)
 
@@ -266,7 +272,7 @@ fun ChatroomMessageCompose(
                                         )
                                     } else {
                                         TranslateableRichTextViewer(
-                                            "Could Not decrypt the message",
+                                            stringResource(R.string.could_not_decrypt_the_message),
                                             true,
                                             Modifier,
                                             note.event?.tags,
@@ -289,7 +295,7 @@ fun ChatroomMessageCompose(
                             ) {
                                 Row() {
                                     Text(
-                                        timeAgoShort(note.event?.createdAt),
+                                        timeAgoShort(note.event?.createdAt, context),
                                         color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                                         fontSize = 12.sp
                                     )
@@ -343,7 +349,7 @@ private fun RelayBadges(baseNote: Note) {
                     placeholder = BitmapPainter(RoboHashCache.get(ctx, url)),
                     fallback = BitmapPainter(RoboHashCache.get(ctx, url)),
                     error = BitmapPainter(RoboHashCache.get(ctx, url)),
-                    contentDescription = "Relay Icon",
+                    contentDescription = stringResource(id = R.string.relay_icon),
                     colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }),
                     modifier = Modifier
                         .fillMaxSize(1f)
