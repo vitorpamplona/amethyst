@@ -24,7 +24,7 @@ fun NotificationScreen(accountViewModel: AccountViewModel, navController: NavCon
     NotificationFeedFilter.account = account
     val feedViewModel: NotificationViewModel = viewModel()
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(accountViewModel) {
         feedViewModel.refresh()
     }
 

@@ -51,7 +51,7 @@ fun HomeScreen(accountViewModel: AccountViewModel, navController: NavController)
     val pagerState = rememberPagerState()
     val coroutineScope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(accountViewModel) {
         NostrHomeDataSource.resetFilters()
 
         feedViewModel.invalidateData()

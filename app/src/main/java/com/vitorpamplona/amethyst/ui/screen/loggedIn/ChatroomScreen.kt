@@ -78,7 +78,7 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
         val feedViewModel: NostrChatRoomFeedViewModel = viewModel()
         val lifeCycleOwner = LocalLifecycleOwner.current
 
-        LaunchedEffect(Unit) {
+        LaunchedEffect(userId) {
             feedViewModel.invalidateData()
         }
 
