@@ -16,7 +16,17 @@ import coil.compose.AsyncImagePainter
 import coil.compose.LocalImageLoader
 import java.util.Base64
 
-data class ResizeImage(val url: String?, val size: Dp)
+data class ResizeImage(val url: String?, val size: Dp) {
+  fun proxyUrl(): String? {
+    if (url == null) return null
+
+    // Fixes Image size to reduce pings to servers for each size used in the app
+    val imgPx = 200 // with(LocalDensity.current) { model.size.toPx().toInt() }
+    val base64 = Base64.getUrlEncoder().encodeToString(url.toByteArray())
+
+    return "https://d12fidohs5rlxk.cloudfront.net/preset:sharp/rs:fit:$imgPx:$imgPx:0/gravity:sm/$base64"
+  }
+}
 
 
 @Composable
@@ -40,7 +50,6 @@ fun AsyncImageProxy(
     AsyncImage(
       model = model.url,
       contentDescription = contentDescription,
-      imageLoader = LocalImageLoader.current,
       modifier = modifier,
       placeholder = placeholder,
       error = error,
@@ -55,14 +64,9 @@ fun AsyncImageProxy(
       filterQuality = filterQuality
     )
   } else {
-    val imgPx = with(LocalDensity.current) { model.size.toPx().toInt() }
-    val base64 = Base64.getUrlEncoder().encodeToString(model.url.toByteArray())
-    val extension = model.url.split(".").lastOrNull()
-
     AsyncImage(
-      model = "https://d12fidohs5rlxk.cloudfront.net/preset:sharp/rs:fit:$imgPx:$imgPx:0/gravity:sm/$base64",
+      model = model.proxyUrl(),
       contentDescription = contentDescription,
-      imageLoader = LocalImageLoader.current,
       modifier = modifier,
       placeholder = placeholder,
       error = error,
