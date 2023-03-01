@@ -92,7 +92,7 @@ fun ReplyInformation(replyTo: List<Note>?, dupMentions: List<User>?, account: Ac
                 )
 
                 Text(
-                  " others",
+                  " ${stringResource(R.string.others)}",
                   fontSize = 13.sp,
                   color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                 )

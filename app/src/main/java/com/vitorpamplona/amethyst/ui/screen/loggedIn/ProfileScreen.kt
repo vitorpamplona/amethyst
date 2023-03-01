@@ -830,6 +830,14 @@ fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () ->
                 Text(stringResource(id = R.string.report_spam_scam))
             }
             DropdownMenuItem(onClick = {
+                accountViewModel.report(user, ReportEvent.ReportType.PROFANITY);
+                user.let { accountViewModel.hide(it, context) }
+                onDismiss()
+            }) {
+                Text(stringResource(R.string.report_hateful_speech))
+            }
+
+            DropdownMenuItem(onClick = {
                 accountViewModel.report(user, ReportEvent.ReportType.IMPERSONATION);
                 user.let { accountViewModel.hide(it, context) }
                 onDismiss()
@@ -837,11 +845,11 @@ fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () ->
                 Text(stringResource(id = R.string.report_impersonation))
             }
             DropdownMenuItem(onClick = {
-                accountViewModel.report(user, ReportEvent.ReportType.EXPLICIT);
+                accountViewModel.report(user, ReportEvent.ReportType.NUDITY);
                 user.let { accountViewModel.hide(it, context) }
                 onDismiss()
             }) {
-                Text(stringResource(id = R.string.report_explicit_content))
+                Text(stringResource(R.string.report_nudity_porn))
             }
             DropdownMenuItem(onClick = {
                 accountViewModel.report(user, ReportEvent.ReportType.ILLEGAL);

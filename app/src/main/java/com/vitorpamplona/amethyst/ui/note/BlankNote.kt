@@ -39,7 +39,7 @@ fun BlankNote(modifier: Modifier = Modifier, isQuote: Boolean = false) {
           horizontalArrangement = Arrangement.Center
         ) {
           Text(
-            text = stringResource(R.string.referenced_post_not_found),
+            text = stringResource(R.string.post_not_found),
             modifier = Modifier.padding(30.dp),
             color = Color.Gray,
           )

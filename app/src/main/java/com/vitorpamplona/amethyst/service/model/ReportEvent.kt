@@ -60,6 +60,8 @@ class ReportEvent (
     EXPLICIT,
     ILLEGAL,
     SPAM,
-    IMPERSONATION
+    IMPERSONATION,
+    NUDITY,
+    PROFANITY
   }
 }

@@ -8,13 +8,13 @@
     <string name="scan_qr">مسح QR</string>
     <string name="show_anyway">عرض على أي حال</string>
     <string name="post_was_flagged_as_inappropriate_by">تم وضع علامة على المنشور على أنه غير لائق بواسطة</string>
-    <string name="referenced_post_not_found">المنشور المشار إليه غير موجود</string>
+    <string name="post_not_found">المنشور غير موجود</string>
     <string name="channel_image">صورة القناة</string>
     <string name="referenced_event_not_found">لم يتم العثور على الحدث المشار إليه</string>
     <string name="could_not_decrypt_the_message">لا يمكن فك تشفير الرسالة</string>
     <string name="group_picture">صورة المجموعة</string>
     <string name="explicit_content">محتوى فاضح</string>
-    <string name="spam">زسائل عشوائية</string>
+    <string name="spam">رسائل عشوائية</string>
     <string name="impersonation">التمثيل</string>
     <string name="illegal_behavior">تصرف غير قانوني</string>
     <string name="unknown">غير معروف</string>
@@ -170,4 +170,9 @@
     <string name="h">س</string>
     <string name="m">د</string>
     <string name="d">يوم</string>
+    <string name="nudity">عُري</string>
+    <string name="profanity_hateful_speech">الألفاظ النابية / خطاب كراهية</string>
+    <string name="report_hateful_speech">أبلغ عن كلام يحض على الكراهية</string>
+    <string name="report_nudity_porn">الإبلاغ عن عُري / إباحي</string>
+    <string name="others">others</string>
 </resources>

@@ -322,6 +322,8 @@ fun NoteCompose(
                                 ReportEvent.ReportType.SPAM -> stringResource(R.string.spam)
                                 ReportEvent.ReportType.IMPERSONATION -> stringResource(R.string.impersonation)
                                 ReportEvent.ReportType.ILLEGAL -> stringResource(R.string.illegal_behavior)
+                                ReportEvent.ReportType.NUDITY -> stringResource(R.string.nudity)
+                                ReportEvent.ReportType.PROFANITY -> stringResource(R.string.profanity_hateful_speech)
                                 else -> stringResource(R.string.unknown)
                             }
                         }.joinToString(", ")

@@ -21,6 +21,7 @@ import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.screen.AccountScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -61,6 +62,8 @@ class MainActivity : ComponentActivity() {
     }
 
     Client.lenient = true
+
+    Locale.setDefault(Locale.ENGLISH)
   }
 
   override fun onResume() {
