@@ -612,7 +612,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
                 note.author?.let { accountViewModel.hide(it, context) }
                 onDismiss()
             }) {
-                Text("Report Hateful Speech")
+                Text(stringResource(R.string.report_hateful_speech))
             }
             DropdownMenuItem(onClick = {
                 accountViewModel.report(note, ReportEvent.ReportType.IMPERSONATION);
