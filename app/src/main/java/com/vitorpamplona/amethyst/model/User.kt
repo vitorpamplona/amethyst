@@ -370,7 +370,7 @@ class UserMetadata {
 
     fun anyNameStartsWith(prefix: String): Boolean {
         return listOfNotNull(name, username, display_name, displayName, nip05, lud06, lud16)
-              .filter { it.startsWith(prefix, true) }.isNotEmpty()
+              .any { it.startsWith(prefix, true) }
     }
 }
 
