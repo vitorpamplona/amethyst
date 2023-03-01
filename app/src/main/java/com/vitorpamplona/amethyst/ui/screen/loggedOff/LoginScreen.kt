@@ -100,7 +100,7 @@ fun LoginPage(accountViewModel: AccountStateViewModel) {
                 onValueChange = { key.value = it },
                 keyboardOptions = KeyboardOptions(
                     autoCorrect = false,
-                    keyboardType = KeyboardType.Ascii,
+                    keyboardType = KeyboardType.Password,
                     imeAction = ImeAction.Go
                 ),
                 placeholder = {
