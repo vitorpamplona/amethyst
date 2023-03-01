@@ -317,8 +317,8 @@ fun NoteCompose(
                             )
                         }
                     } else if (noteEvent is ReportEvent) {
-                        val reportType = noteEvent.reportType.map {
-                            when (it) {
+                        val reportType = (noteEvent.reportedPost + noteEvent.reportedAuthor).map {
+                            when (it.reportType) {
                                 ReportEvent.ReportType.EXPLICIT -> stringResource(R.string.explicit_content)
                                 ReportEvent.ReportType.NUDITY -> stringResource(R.string.nudity)
                                 ReportEvent.ReportType.PROFANITY -> stringResource(R.string.profanity_hateful_speech)
