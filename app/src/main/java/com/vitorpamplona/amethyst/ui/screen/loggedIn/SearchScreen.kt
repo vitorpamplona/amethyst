@@ -151,7 +151,7 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
                         onlineSearch.search(it)
 
                     searchResults.value = LocalCache.findUsersStartingWith(it)
-                    searchResultsNotes.value = LocalCache.findNotesStartingWith(it)
+                    searchResultsNotes.value = LocalCache.findNotesStartingWith(it).sortedBy { note -> note.event?.createdAt }.reversed()
                     searchResultsChannels.value = LocalCache.findChannelsStartingWith(it)
                 }
         }

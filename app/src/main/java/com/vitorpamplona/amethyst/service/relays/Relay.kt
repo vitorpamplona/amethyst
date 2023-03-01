@@ -24,7 +24,7 @@ class Relay(
     private val httpClient = OkHttpClient.Builder()
         .followRedirects(true)
         .followSslRedirects(true)
-        .build();
+        .build()
 
     private var listeners = setOf<Listener>()
     private var socket: WebSocket? = null
