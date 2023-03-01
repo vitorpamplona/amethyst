@@ -17,6 +17,7 @@ object HomeConversationsFeedFilter: FeedFilter<Note>() {
         (it.event is TextNoteEvent || it.event is RepostEvent)
           && it.author in user.follows
           // && account.isAcceptable(it)  // This filter follows only. No need to check if acceptable
+          && it.author?.let { !HomeNewThreadFeedFilter.account.isHidden(it) } ?: true
           && !it.isNewThread()
       }
       .sortedBy { it.event?.createdAt }
