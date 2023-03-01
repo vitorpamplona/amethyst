@@ -16,24 +16,29 @@ import kotlinx.coroutines.withContext
 
 
 @Composable
-fun UrlPreview(url: String, urlText: String, showUrlIfError: Boolean = true) {
-  var urlPreviewState by remember { mutableStateOf<UrlPreviewState>(UrlPreviewState.Loading) }
+fun UrlPreview(url: String, urlText: String) {
+  val default = UrlCachedPreviewer.cache[url]?.let { UrlPreviewState.Loaded(it) } ?: UrlPreviewState.Loading
+
+  var urlPreviewState by remember { mutableStateOf(default) }
 
   // Doesn't use a viewModel because of viewModel reusing issues (too many UrlPreview are created).
   LaunchedEffect(url) {
-    withContext(Dispatchers.IO) {
-      UrlCachedPreviewer.previewInfo(url, object : IUrlPreviewCallback {
-        override fun onComplete(urlInfo: UrlInfoItem) {
-          if (urlInfo.allFetchComplete() && urlInfo.url == url)
-            urlPreviewState = UrlPreviewState.Loaded(urlInfo)
-          else
-            urlPreviewState = UrlPreviewState.Empty
-        }
+    if (urlPreviewState == UrlPreviewState.Loading) {
+      withContext(Dispatchers.IO) {
+        UrlCachedPreviewer.previewInfo(url, object : IUrlPreviewCallback {
+          override fun onComplete(urlInfo: UrlInfoItem) {
+            if (urlInfo.allFetchComplete() && urlInfo.url == url)
+              urlPreviewState = UrlPreviewState.Loaded(urlInfo)
+            else
+              urlPreviewState = UrlPreviewState.Empty
+          }
 
-        override fun onFailed(throwable: Throwable) {
-          urlPreviewState = UrlPreviewState.Error("Error parsing preview for ${url}: ${throwable.message}")
-        }
-      })
+          override fun onFailed(throwable: Throwable) {
+            urlPreviewState =
+              UrlPreviewState.Error("Error parsing preview for ${url}: ${throwable.message}")
+          }
+        })
+      }
     }
   }
 
@@ -43,9 +48,7 @@ fun UrlPreview(url: String, urlText: String, showUrlIfError: Boolean = true) {
         UrlPreviewCard(url, state.previewInfo)
       }
       else -> {
-        if (showUrlIfError) {
-          ClickableUrl(urlText, url)
-        }
+        ClickableUrl(urlText, url)
       }
     }
   }
