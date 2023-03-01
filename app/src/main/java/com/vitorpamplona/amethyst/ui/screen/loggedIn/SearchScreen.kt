@@ -65,11 +65,8 @@ import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.FeedView
 import com.vitorpamplona.amethyst.ui.screen.NostrGlobalFeedViewModel
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.channels.Channel as CoroutineChannel
 
 @Composable
@@ -141,21 +138,21 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
 
     LaunchedEffect(Unit) {
         // Wait for text changes to stop for 300 ms before firing off search.
-        withContext(Dispatchers.IO){
+        withContext(Dispatchers.IO) {
             searchTextChanges.receiveAsFlow()
                 .filter { it.isNotBlank() }
                 .distinctUntilChanged()
                 .debounce(300)
                 .collectLatest {
-                    if (it.removePrefix("npub").removePrefix("note").length >= 4)
+                    if (it.removePrefix("npub").removePrefix("note").isNotEmpty())
                         onlineSearch.search(it)
-
+                    delay(500)
                     searchResults.value = LocalCache.findUsersStartingWith(it)
-                    searchResultsNotes.value = LocalCache.findNotesStartingWith(it).sortedBy { note -> note.event?.createdAt }.reversed()
+                    searchResultsNotes.value = LocalCache.findNotesStartingWith(it)
+                        .sortedBy { note -> note.event?.createdAt }.reversed()
                     searchResultsChannels.value = LocalCache.findChannelsStartingWith(it)
                 }
         }
-
     }
 
     DisposableEffect(Unit) {
@@ -237,11 +234,19 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
                 bottom = 10.dp
             )
         ) {
-            itemsIndexed(searchResults.value, key = { _, item -> "u"+item.pubkeyHex }) { _, item ->
-                UserCompose(item, accountViewModel = accountViewModel, navController = navController)
+            itemsIndexed(
+                searchResults.value,
+                key = { _, item -> "u" + item.pubkeyHex }) { _, item ->
+                UserCompose(
+                    item,
+                    accountViewModel = accountViewModel,
+                    navController = navController
+                )
             }
 
-            itemsIndexed(searchResultsChannels.value, key = { _, item -> "c"+item.idHex }) { _, item ->
+            itemsIndexed(
+                searchResultsChannels.value,
+                key = { _, item -> "c" + item.idHex }) { _, item ->
                 ChannelName(
                     channelPicture = item.profilePicture(),
                     channelPicturePlaceholder = BitmapPainter(RoboHashCache.get(ctx, item.idHex)),
@@ -257,8 +262,14 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
                     onClick = { navController.navigate("Channel/${item.idHex}") })
             }
 
-            itemsIndexed(searchResultsNotes.value, key = { _, item -> "n"+item.idHex }) { _, item ->
-                NoteCompose(item, accountViewModel = accountViewModel, navController = navController)
+            itemsIndexed(
+                searchResultsNotes.value,
+                key = { _, item -> "n" + item.idHex }) { _, item ->
+                NoteCompose(
+                    item,
+                    accountViewModel = accountViewModel,
+                    navController = navController
+                )
             }
         }
     }
@@ -270,9 +281,10 @@ fun UserLine(
     account: Account,
     onClick: () -> Unit
 ) {
-    Column(modifier = Modifier
-        .fillMaxWidth()
-        .clickable(onClick = onClick)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
     ) {
         Row(
             modifier = Modifier

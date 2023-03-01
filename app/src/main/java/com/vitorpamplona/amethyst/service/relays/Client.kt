@@ -88,7 +88,7 @@ object Client: RelayPool.Listener {
         RelayPool.unloadRelays()
     }
 
-    override fun onSearchEvent(event: TextNoteEvent, relay: Relay) {
+    override fun onSearchEvent(event: Event, relay: Relay) {
         GlobalScope.launch(Dispatchers.Default) {
             listeners.forEach { it.onSearchEvent(event, relay) }
         }
@@ -143,7 +143,7 @@ object Client: RelayPool.Listener {
     }
 
     abstract class Listener {
-        open fun onSearchEvent(event: TextNoteEvent, relay: Relay) = Unit
+        open fun onSearchEvent(event: Event, relay: Relay) = Unit
         /**
          * A new message was received
          */

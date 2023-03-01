@@ -44,8 +44,11 @@ abstract class NostrDataSource(val debugName: String) {
   }
 
   private val clientListener = object : Client.Listener() {
-    override fun onSearchEvent(event: TextNoteEvent, relay: Relay) {
-      LocalCache.consume(event, relay)
+    override fun onSearchEvent(event: Event, relay: Relay) {
+      when(event) {
+        is TextNoteEvent -> LocalCache.consume(event, relay)
+        is MetadataEvent -> LocalCache.consume(event)
+      }
     }
     override fun onEvent(event: Event, subscriptionId: String, relay: Relay) {
       if (subscriptionId in subscriptions.keys) {

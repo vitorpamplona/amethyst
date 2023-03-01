@@ -104,7 +104,7 @@ object RelayPool: Relay.Listener {
     }
 
     interface Listener {
-        fun onSearchEvent(event: TextNoteEvent, relay: Relay)
+        fun onSearchEvent(event: Event, relay: Relay)
         fun onEvent(event: Event, subscriptionId: String, relay: Relay)
 
         fun onError(error: Error, subscriptionId: String, relay: Relay)
@@ -115,7 +115,7 @@ object RelayPool: Relay.Listener {
     }
 
     @Synchronized
-    override fun onSearchEvent(event: TextNoteEvent, relay: Relay) {
+    override fun onSearchEvent(event: Event, relay: Relay) {
         listeners.forEach { it.onSearchEvent(event, relay) }
     }
 
