@@ -1,18 +1,16 @@
 package com.vitorpamplona.amethyst.service.relays
 
-import android.view.SearchEvent
 import androidx.lifecycle.LiveData
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import nostr.postr.events.Event
-import nostr.postr.events.TextNoteEvent
 
 /**
  * RelayPool manages the connection to multiple Relays and lets consumers deal with simple events.
  */
-object RelayPool: Relay.Listener {
+object RelayPool : Relay.Listener {
 
     val scope = CoroutineScope(Job() + Dispatchers.IO)
 
@@ -32,7 +30,7 @@ object RelayPool: Relay.Listener {
         return relays.firstOrNull() { it.url == url }
     }
 
-    fun loadRelays(relayList: List<Relay>){
+    fun loadRelays(relayList: List<Relay>) {
         if (!relayList.isNullOrEmpty()) {
             relayList.forEach { addRelay(it) }
         } else {
@@ -73,7 +71,7 @@ object RelayPool: Relay.Listener {
         relays.forEach { it.send(signedEvent) }
     }
 
-    fun close(subscriptionId: String){
+    fun close(subscriptionId: String) {
         relays.forEach { it.close(subscriptionId) }
     }
 
@@ -148,7 +146,7 @@ object RelayPool: Relay.Listener {
     }
 }
 
-class RelayPoolLiveData(val relays: RelayPool): LiveData<RelayPoolState>(RelayPoolState(relays)) {
+class RelayPoolLiveData(val relays: RelayPool) : LiveData<RelayPoolState>(RelayPoolState(relays)) {
     fun refresh() {
         postValue(RelayPoolState(relays))
     }
