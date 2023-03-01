@@ -94,7 +94,6 @@ object RelayPool: Relay.Listener {
         fun onSendResponse(eventId: String, success: Boolean, message: String, relay: Relay)
     }
 
-    @Synchronized
     override fun onEvent(relay: Relay, subscriptionId: String, event: Event) {
         listeners.forEach { it.onEvent(event, subscriptionId, relay) }
     }

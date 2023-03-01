@@ -67,12 +67,10 @@ class AntiSpamLiveData(val cache: AntiSpamFilter): LiveData<AntiSpamState>(AntiS
   // Refreshes observers in batches.
   var handlerWaiting = AtomicBoolean()
 
-  @Synchronized
   fun invalidateData() {
     if (!hasActiveObservers()) return
     if (handlerWaiting.getAndSet(true)) return
 
-    handlerWaiting.set(true)
     val scope = CoroutineScope(Job() + Dispatchers.Main)
     scope.launch {
       try {

@@ -87,11 +87,10 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>): ViewModel() {
     }
 
     private var handlerWaiting = AtomicBoolean()
-    @Synchronized
+
     fun invalidateData() {
         if (handlerWaiting.getAndSet(true)) return
 
-        handlerWaiting.set(true)
         val scope = CoroutineScope(Job() + Dispatchers.Default)
         scope.launch {
             try {

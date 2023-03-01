@@ -23,7 +23,6 @@ class Channel(val idHex: String) {
         return info.name ?: idDisplayNote()
     }
 
-    @Synchronized
     fun addNote(note: Note) {
         notes[note.idHex] = note
     }

@@ -605,11 +605,9 @@ class Account(
 class AccountLiveData(private val account: Account): LiveData<AccountState>(AccountState(account)) {
   var handlerWaiting = AtomicBoolean()
 
-  @Synchronized
   fun invalidateData() {
     if (handlerWaiting.getAndSet(true)) return
 
-    handlerWaiting.set(true)
     val scope = CoroutineScope(Job() + Dispatchers.Default)
     scope.launch {
       try {

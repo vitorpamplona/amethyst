@@ -379,11 +379,9 @@ class UserLiveData(val user: User): LiveData<UserState>(UserState(user)) {
     // Refreshes observers in batches.
     var handlerWaiting = AtomicBoolean()
 
-    @Synchronized
     fun invalidateData() {
         if (handlerWaiting.getAndSet(true)) return
 
-        handlerWaiting.set(true)
         val scope = CoroutineScope(Job() + Dispatchers.Main)
         scope.launch {
             try {
