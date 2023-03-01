@@ -490,13 +490,15 @@ fun UserPicture(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun UserPicture(
     baseUser: User,
     baseUserAccount: User,
     size: Dp,
     pictureModifier: Modifier = Modifier,
-    onClick: ((User) -> Unit)? = null
+    onClick: ((User) -> Unit)? = null,
+    onLongClick: ((User) -> Unit)? = null
 ) {
     val userState by baseUser.live().metadata.observeAsState()
     val user = userState?.user ?: return
@@ -519,7 +521,9 @@ fun UserPicture(
                 .clip(shape = CircleShape)
                 .background(MaterialTheme.colors.background)
                 .run {
-                    if (onClick != null)
+                    if (onClick != null && onLongClick != null)
+                        this.combinedClickable(onClick = { onClick(user) }, onLongClick = { onLongClick(user) } )
+                    else if (onClick != null)
                         this.clickable(onClick = { onClick(user) } )
                     else
                         this

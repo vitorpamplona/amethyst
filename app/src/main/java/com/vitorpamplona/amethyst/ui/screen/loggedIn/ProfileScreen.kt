@@ -265,7 +265,8 @@ private fun ProfileHeader(
     val accountUser = accountUserState?.user ?: return
 
     val coroutineScope = rememberCoroutineScope()
-    
+    val clipboardManager = LocalClipboardManager.current
+
     Box {
         DrawBanner(baseUser)
 
@@ -310,12 +311,23 @@ private fun ProfileHeader(
             ) {
 
                 UserPicture(
-                    baseUser, navController, account.userProfile(), 100.dp,
+                    baseUser = baseUser,
+                    baseUserAccount = account.userProfile(),
+                    size = 100.dp,
                     pictureModifier = Modifier.border(
                         3.dp,
                         MaterialTheme.colors.background,
-                        CircleShape
-                    )
+                        CircleShape), 
+                    onClick =  {
+                        navController.navigate("User/${it.pubkeyHex}")
+                    },
+                    onLongClick = {
+                        ResizeImage(it.info?.picture, 100.dp).proxyUrl()?.let { it1 ->
+                            clipboardManager.setText(
+                                AnnotatedString(it1)
+                            )
+                        }
+                    }
                 )
 
                 Spacer(Modifier.weight(1f))
@@ -441,12 +453,14 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun DrawBanner(baseUser: User) {
     val userState by baseUser.live().metadata.observeAsState()
     val user = userState?.user ?: return
 
     val banner = user.info?.banner
+    val clipboardManager = LocalClipboardManager.current
 
     if (banner != null && banner.isNotBlank()) {
         AsyncImageProxy(
@@ -455,7 +469,12 @@ private fun DrawBanner(baseUser: User) {
             contentScale = ContentScale.FillWidth,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(125.dp)
+                .height(125.dp).combinedClickable(
+                    onClick = {},
+                    onLongClick = {
+                        clipboardManager.setText(AnnotatedString(banner))
+                    }
+                )
         )
     } else {
         Image(
