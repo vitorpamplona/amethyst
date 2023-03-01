@@ -79,7 +79,7 @@ class Relay(
                             "EVENT" -> {
                                 val event = Event.fromJson(msg[2], Client.lenient)
                                 if(url == "wss://relay.nostr.band") {
-                                   // Log.e("TextEvent", "Relay onEVENT $channel, $msg")
+                                  // Log.e("TextEvent", "Relay onEVENT $channel, $msg")
                                     listeners.forEach { it.onSearchEvent(event as TextNoteEvent, this@Relay) }
                                     return
                                 }
@@ -192,7 +192,7 @@ class Relay(
         if(read) {
             val request = """["REQ","$requestId",{"kinds": [1],"search":"$searchText","limit":100}]"""
             socket?.send(request)
-         //   Log.e("TextEvent", "request -> $request, -> $url, -> $response")
+        // Log.e("TextEvent", "request -> $request, -> $url")
         }
     }
 

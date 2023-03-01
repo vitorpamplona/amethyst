@@ -147,9 +147,9 @@ object LocalCache {
       }
       return
     }
-    if(relay?.url == "wss://relay.nostr.band") {
-      Log.e("TAG", "event -> ${event.content}, -> ${event.id}")
-    }
+//    if(relay?.url == "wss://relay.nostr.band") {
+//      Log.e("TAG", "event -> ${event.content}, -> ${event.id}")
+//    }
     val note = getOrCreateNote(event.id.toHex())
     val author = getOrCreateUser(event.pubKey.toHexKey())
 
