@@ -8,8 +8,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import com.baha.url.preview.IUrlPreviewCallback
 import com.baha.url.preview.UrlInfoItem
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -18,7 +20,7 @@ import kotlinx.coroutines.withContext
 @Composable
 fun UrlPreview(url: String, urlText: String, showUrlIfError: Boolean = true) {
   var urlPreviewState by remember { mutableStateOf<UrlPreviewState>(UrlPreviewState.Loading) }
-
+  var context = LocalContext.current
   // Doesn't use a viewModel because of viewModel reusing issues (too many UrlPreview are created).
   LaunchedEffect(url) {
     withContext(Dispatchers.IO) {
@@ -31,7 +33,7 @@ fun UrlPreview(url: String, urlText: String, showUrlIfError: Boolean = true) {
         }
 
         override fun onFailed(throwable: Throwable) {
-          urlPreviewState = UrlPreviewState.Error("Error parsing preview for ${url}: ${throwable.message}")
+          urlPreviewState = UrlPreviewState.Error(context.getString(R.string.error_parsing_preview_for, url, throwable.message))
         }
       })
     }

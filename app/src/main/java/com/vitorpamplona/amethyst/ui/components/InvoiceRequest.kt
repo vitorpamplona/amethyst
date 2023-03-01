@@ -30,6 +30,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -73,7 +74,7 @@ fun InvoiceRequest(lud16: String, toUserPubKeyHex: String, account: Account, onC
         )
 
         Text(
-          text = "Lightning Tips",
+          text = stringResource(R.string.lightning_tips),
           fontSize = 20.sp,
           fontWeight = FontWeight.W500,
           modifier = Modifier.padding(start = 10.dp)
@@ -86,13 +87,13 @@ fun InvoiceRequest(lud16: String, toUserPubKeyHex: String, account: Account, onC
       var amount by remember { mutableStateOf(1000L) }
 
       OutlinedTextField(
-        label = { Text(text = "Note to Receiver") },
+        label = { Text(text = stringResource(R.string.note_to_receiver)) },
         modifier = Modifier.fillMaxWidth(),
         value = message,
         onValueChange = { message = it },
         placeholder = {
           Text(
-            text = "Thank you so much!",
+            text = stringResource(R.string.thank_you_so_much),
             color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
           )
         },
@@ -103,7 +104,7 @@ fun InvoiceRequest(lud16: String, toUserPubKeyHex: String, account: Account, onC
       )
 
       OutlinedTextField(
-        label = { Text(text = "Amount in Sats") },
+        label = { Text(text = stringResource(R.string.amount_in_sats)) },
         modifier = Modifier.fillMaxWidth(),
         value = amount.toString(),
         onValueChange = {
@@ -152,7 +153,7 @@ fun InvoiceRequest(lud16: String, toUserPubKeyHex: String, account: Account, onC
           backgroundColor = MaterialTheme.colors.primary
         )
       ) {
-        Text(text = "Send Sats", color = Color.White, fontSize = 20.sp)
+        Text(text = stringResource(R.string.send_sats), color = Color.White, fontSize = 20.sp)
       }
     }
   }

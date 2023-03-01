@@ -31,6 +31,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -179,34 +180,34 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                     ) {
                         val tabs = listOf<@Composable() (() -> Unit)?>(
                             {
-                                Text(text = "Notes")
+                                Text(text = stringResource(R.string.notes))
                             },
                             {
-                                Text(text = "Replies")
+                                Text(text = stringResource(R.string.replies))
                             },
                             {
                                 val userState by baseUser.live().follows.observeAsState()
                                 val userFollows = userState?.user?.follows?.size ?: "--"
 
-                                Text(text = "$userFollows Follows")
+                                Text(text = "$userFollows ${stringResource(R.string.follows)}")
                             },
                             {
                                 val userState by baseUser.live().follows.observeAsState()
-                                val userFollows = userState?.user?.followers?.size ?: "--"
+                                val userFollowers = userState?.user?.followers?.size ?: "--"
 
-                                Text(text = "$userFollows Followers")
+                                Text(text = "$userFollowers ${stringResource(id = R.string.followers)}")
                             },
                             {
                                 val userState by baseUser.live().zaps.observeAsState()
                                 val userZaps = userState?.user?.zappedAmount()
 
-                                Text(text = "${showAmount(userZaps)} Zaps")
+                                Text(text = "${showAmount(userZaps)} ${stringResource(id = R.string.zaps)}")
                             },
                             {
                                 val userState by baseUser.live().reports.observeAsState()
                                 val userReports = userState?.user?.reports?.values?.flatten()?.count()
 
-                                Text(text = "${userReports} Reports")
+                                Text(text = "${userReports.toString()} ${stringResource(R.string.reports)}")
                             },
                             {
                                 val userState by baseUser.live().relays.observeAsState()
@@ -215,7 +216,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                                 val userStateRelayInfo by baseUser.live().relayInfo.observeAsState()
                                 val userRelays = userStateRelayInfo?.user?.relays?.size ?: "--"
 
-                                Text(text = "$userRelaysBeingUsed / $userRelays Relays")
+                                Text(text = "$userRelaysBeingUsed / $userRelays ${stringResource(R.string.relays)}")
                             }
                         )
 
@@ -288,7 +289,7 @@ private fun ProfileHeader(
                 Icon(
                     tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                     imageVector = Icons.Default.MoreVert,
-                    contentDescription = "More Options",
+                    contentDescription = stringResource(R.string.more_options),
                 )
 
                 UserProfileDropDownMenu(baseUser, popupExpanded, { popupExpanded = false }, accountViewModel)
@@ -386,7 +387,7 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account) {
             Icon(
                 tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                 imageVector = Icons.Default.Link,
-                contentDescription = "Website",
+                contentDescription = stringResource(R.string.website),
                 modifier = Modifier.size(16.dp)
             )
 
@@ -408,7 +409,7 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account) {
             Icon(
                 tint = BitcoinOrange,
                 imageVector = Icons.Default.Bolt,
-                contentDescription = "Lightning Address",
+                contentDescription = stringResource(R.string.lightning_address),
                 modifier = Modifier.size(16.dp)
             )
 
@@ -450,7 +451,7 @@ private fun DrawBanner(baseUser: User) {
     if (banner != null && banner.isNotBlank()) {
         AsyncImageProxy(
             model = ResizeImage(banner, 125.dp),
-            contentDescription = "Profile Image",
+            contentDescription = stringResource(id = R.string.profile_image),
             contentScale = ContentScale.FillWidth,
             modifier = Modifier
                 .fillMaxWidth()
@@ -459,7 +460,7 @@ private fun DrawBanner(baseUser: User) {
     } else {
         Image(
             painter = painterResource(R.drawable.profile_banner),
-            contentDescription = "Profile Banner",
+            contentDescription = stringResource(id = R.string.profile_banner),
             contentScale = ContentScale.FillWidth,
             modifier = Modifier
                 .fillMaxWidth()
@@ -638,7 +639,7 @@ private fun NSecCopyButton(
         Icon(
             tint = Color.White,
             imageVector = Icons.Default.Key,
-            contentDescription = "Copies the Nsec ID (your password) to the clipboard for backup"
+            contentDescription = stringResource(R.string.copies_the_nsec_id_your_password_to_the_clipboard_for_backup)
         )
 
         DropdownMenu(
@@ -646,7 +647,7 @@ private fun NSecCopyButton(
             onDismissRequest = { popupExpanded = false }
         ) {
             DropdownMenuItem(onClick = {  account.loggedIn.privKey?.let { clipboardManager.setText(AnnotatedString(it.toNsec())) }; popupExpanded = false }) {
-                Text("Copy Private Key to the Clipboard")
+                Text(stringResource(R.string.copy_private_key_to_the_clipboard))
             }
         }
     }
@@ -673,7 +674,7 @@ private fun NPubCopyButton(
         Icon(
             tint = Color.White,
             imageVector = Icons.Default.Share,
-            contentDescription = "Copies the public key to the clipboard for sharing"
+            contentDescription = stringResource(R.string.copies_the_public_key_to_the_clipboard_for_sharing)
         )
 
         DropdownMenu(
@@ -681,7 +682,7 @@ private fun NPubCopyButton(
             onDismissRequest = { popupExpanded = false }
         ) {
             DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(user.pubkeyNpub())); popupExpanded = false }) {
-                Text("Copy Public Key (NPub) to the Clipboard")
+                Text(stringResource(R.string.copy_public_key_npub_to_the_clipboard))
             }
         }
     }
@@ -702,7 +703,7 @@ private fun MessageButton(user: User, navController: NavController) {
     ) {
         Icon(
             painter = painterResource(R.drawable.ic_dm),
-            "Send a Direct Message",
+            stringResource(R.string.send_a_direct_message),
             modifier = Modifier.size(20.dp),
             tint = Color.White
         )
@@ -732,7 +733,7 @@ private fun EditButton(account: Account) {
         Icon(
             tint = Color.White,
             imageVector = Icons.Default.EditNote,
-            contentDescription = "Edits the User's Metadata"
+            contentDescription = stringResource(R.string.edits_the_user_s_metadata)
         )
     }
 }
@@ -749,7 +750,7 @@ fun UnfollowButton(onClick: () -> Unit) {
             ),
         contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
     ) {
-        Text(text = "Unfollow", color = Color.White)
+        Text(text = stringResource(R.string.unfollow), color = Color.White)
     }
 }
 
@@ -765,7 +766,7 @@ fun FollowButton(onClick: () -> Unit) {
             ),
         contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
     ) {
-        Text(text = "Follow", color = Color.White, textAlign = TextAlign.Center)
+        Text(text = stringResource(R.string.follow), color = Color.White, textAlign = TextAlign.Center)
     }
 }
 
@@ -781,7 +782,7 @@ fun ShowUserButton(onClick: () -> Unit) {
             ),
         contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
     ) {
-        Text(text = "Unblock", color = Color.White)
+        Text(text = stringResource(R.string.unblock), color = Color.White)
     }
 }
 
@@ -799,7 +800,7 @@ fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () ->
         onDismissRequest = onDismiss
     ) {
         DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(user.pubkeyNpub())); onDismiss() }) {
-            Text("Copy User ID")
+            Text(stringResource(R.string.copy_user_id))
         }
 
         if ( account.userProfile() != user) {
@@ -813,11 +814,11 @@ fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () ->
                         )
                     }; onDismiss()
                 }) {
-                    Text("Unblock User")
+                    Text(stringResource(R.string.unblock_user))
                 }
             } else {
                 DropdownMenuItem(onClick = { user.let { accountViewModel.hide(it, context) }; onDismiss() }) {
-                    Text("Block & Hide User")
+                    Text(stringResource(id = R.string.block_hide_user))
                 }
             }
             Divider()
@@ -826,35 +827,35 @@ fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () ->
                 user.let { accountViewModel.hide(it, context) }
                 onDismiss()
             }) {
-                Text("Report Spam / Scam")
+                Text(stringResource(id = R.string.report_spam_scam))
             }
             DropdownMenuItem(onClick = {
                 accountViewModel.report(user, ReportEvent.ReportType.PROFANITY);
                 user.let { accountViewModel.hide(it, context) }
                 onDismiss()
             }) {
-                Text("Report Hateful speech")
+                Text(stringResource(R.string.report_hateful_speech))
             }
             DropdownMenuItem(onClick = {
                 accountViewModel.report(user, ReportEvent.ReportType.IMPERSONATION);
                 user.let { accountViewModel.hide(it, context) }
                 onDismiss()
             }) {
-                Text("Report Impersonation")
+                Text(stringResource(id = R.string.report_impersonation))
             }
             DropdownMenuItem(onClick = {
                 accountViewModel.report(user, ReportEvent.ReportType.NUDITY);
                 user.let { accountViewModel.hide(it, context) }
                 onDismiss()
             }) {
-                Text("Report Nudity / Porn")
+                Text(stringResource(R.string.report_nudity_porn))
             }
             DropdownMenuItem(onClick = {
                 accountViewModel.report(user, ReportEvent.ReportType.ILLEGAL);
                 user.let { accountViewModel.hide(it, context) }
                 onDismiss()
             }) {
-                Text("Report Illegal Behaviour")
+                Text(stringResource(id = R.string.report_illegal_behaviour))
             }
         }
     }

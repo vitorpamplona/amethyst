@@ -10,6 +10,7 @@ import android.provider.MediaStore
 import androidx.annotation.RequiresApi
 import androidx.core.net.toUri
 import java.io.File
+import com.vitorpamplona.amethyst.R
 import okhttp3.*
 import okio.BufferedSource
 import okio.IOException
@@ -49,7 +50,7 @@ object ImageSaver {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                         val contentType = response.header("Content-Type")
                         checkNotNull(contentType) {
-                            "Can't find out the content type"
+                            context.getString(R.string.can_t_find_out_the_content_type)
                         }
 
                         saveContentQ(
@@ -57,6 +58,7 @@ object ImageSaver {
                             contentType = contentType,
                             contentSource = response.body.source(),
                             contentResolver = context.contentResolver,
+                            context = context
                         )
                     } else {
                         saveContentDefault(
@@ -80,6 +82,7 @@ object ImageSaver {
         contentType: String,
         contentSource: BufferedSource,
         contentResolver: ContentResolver,
+        context: Context
     ) {
         val contentValues = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
@@ -93,13 +96,13 @@ object ImageSaver {
         val uri =
             contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
         checkNotNull(uri) {
-            "Can't insert the new content"
+            context.getString(R.string.can_t_insert_the_new_content)
         }
 
         try {
             val outputStream = contentResolver.openOutputStream(uri)
             checkNotNull(outputStream) {
-                "Can't open the content output stream"
+                context.getString(R.string.can_t_open_the_content_output_stream)
             }
 
             outputStream.use {

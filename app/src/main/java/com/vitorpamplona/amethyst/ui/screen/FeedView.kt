@@ -22,10 +22,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -122,7 +124,7 @@ fun LoadingFeed() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text("Loading feed")
+        Text(stringResource(R.string.loading_feed))
     }
 }
 
@@ -135,12 +137,12 @@ fun FeedError(errorMessage: String, onRefresh: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text("Error loading replies: $errorMessage")
+        Text("${stringResource(R.string.error_loading_replies)} $errorMessage")
         Button(
             modifier = Modifier.align(Alignment.CenterHorizontally),
             onClick = onRefresh
         ) {
-            Text(text = "Try again")
+            Text(text = stringResource(R.string.try_again))
         }
     }
 }
@@ -154,9 +156,9 @@ fun FeedEmpty(onRefresh: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text("Feed is empty.")
+        Text(stringResource(R.string.feed_is_empty))
         OutlinedButton(onClick = onRefresh) {
-            Text(text = "Refresh")
+            Text(text = stringResource(R.string.refresh))
         }
     }
 }

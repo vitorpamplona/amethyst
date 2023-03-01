@@ -22,6 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -68,7 +69,7 @@ fun InvoicePreview(lnInvoice: String) {
         )
 
         Text(
-          text = "Lightning Invoice",
+          text = stringResource(R.string.lightning_invoice),
           fontSize = 20.sp,
           fontWeight = FontWeight.W500,
           modifier = Modifier.padding(start = 10.dp)
@@ -79,7 +80,9 @@ fun InvoicePreview(lnInvoice: String) {
 
       amount?.let {
         Text(
-          text = "${NumberFormat.getInstance().format(amount)} sats",
+          text = "${
+            NumberFormat.getInstance().format(amount)
+          } ${stringResource(id = R.string.sats)}",
           fontSize = 25.sp,
           fontWeight = FontWeight.W500,
           modifier = Modifier
@@ -90,7 +93,9 @@ fun InvoicePreview(lnInvoice: String) {
 
 
       Button(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(vertical = 10.dp),
         onClick = {
           runCatching {
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse("lightning:$lnInvoice"))
@@ -102,7 +107,7 @@ fun InvoicePreview(lnInvoice: String) {
           backgroundColor = MaterialTheme.colors.primary
         )
       ) {
-        Text(text = "Pay", color = Color.White, fontSize = 20.sp)
+        Text(text = stringResource(R.string.pay), color = Color.White, fontSize = 20.sp)
       }
     }
   }

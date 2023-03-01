@@ -13,6 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -20,6 +21,7 @@ import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.google.accompanist.pager.rememberPagerState
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.dal.HiddenAccountsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.NostrHiddenAccountsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.UserFeedView
@@ -55,7 +57,7 @@ fun FiltersScreen(accountViewModel: AccountViewModel, navController: NavControll
                         selected = pagerState.currentPage == 0,
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
                         text = {
-                            Text(text = "Blocked Users")
+                            Text(text = stringResource(R.string.blocked_users))
                         }
                     )
                 }

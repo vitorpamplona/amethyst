@@ -38,8 +38,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
@@ -60,6 +62,7 @@ fun LoginPage(accountViewModel: AccountStateViewModel) {
     val acceptedTerms = remember { mutableStateOf(false) }
     var termsAcceptanceIsRequired by remember { mutableStateOf("") }
     val uri = LocalUriHandler.current
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -81,7 +84,7 @@ fun LoginPage(accountViewModel: AccountStateViewModel) {
 
             Image(
                 painterResource(id = R.drawable.amethyst),
-                contentDescription = "App Logo",
+                contentDescription = stringResource(R.string.app_logo),
                 modifier = Modifier.size(200.dp),
                 contentScale = ContentScale.Inside
             )
@@ -102,7 +105,7 @@ fun LoginPage(accountViewModel: AccountStateViewModel) {
                 ),
                 placeholder = {
                     Text(
-                        text = "nsec / npub / hex private key",
+                        text = stringResource(R.string.nsec_npub_hex_private_key),
                         color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                     )
                 },
@@ -110,7 +113,8 @@ fun LoginPage(accountViewModel: AccountStateViewModel) {
                     IconButton(onClick = { showPassword = !showPassword }) {
                         Icon(
                             imageVector = if (showPassword) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                            contentDescription = if (showPassword) "Show Password" else "Hide Password"
+                            contentDescription = if (showPassword) stringResource(R.string.show_password) else stringResource(
+                                                            R.string.hide_password)
                         )
                     }
                 },
@@ -120,7 +124,7 @@ fun LoginPage(accountViewModel: AccountStateViewModel) {
                         try {
                             accountViewModel.login(key.value.text)
                         } catch (e: Exception) {
-                            errorMessage = "Invalid key"
+                            errorMessage = context.getString(R.string.invalid_key)
                         }
                     }
                 )
@@ -141,10 +145,10 @@ fun LoginPage(accountViewModel: AccountStateViewModel) {
                     onCheckedChange = { acceptedTerms.value = it }
                 )
 
-                Text(text = "I accept the ")
+                Text(text = stringResource(R.string.i_accept_the))
 
                 ClickableText(
-                    text = AnnotatedString("terms of use"),
+                    text = AnnotatedString(stringResource(R.string.terms_of_use)),
                     onClick = { runCatching { uri.openUri("https://github.com/vitorpamplona/amethyst/blob/main/PRIVACY.md") } },
                     style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary),
                 )
@@ -164,18 +168,18 @@ fun LoginPage(accountViewModel: AccountStateViewModel) {
                 Button(
                     onClick = {
                         if (!acceptedTerms.value) {
-                            termsAcceptanceIsRequired = "Acceptance of terms is required"
+                            termsAcceptanceIsRequired = context.getString(R.string.acceptance_of_terms_is_required)
                         }
 
                         if (key.value.text.isBlank()) {
-                            errorMessage = "Key is required"
+                            errorMessage = context.getString(R.string.key_is_required)
                         }
 
                         if (acceptedTerms.value && key.value.text.isNotBlank()) {
                             try {
                                 accountViewModel.login(key.value.text)
                             } catch (e: Exception) {
-                                errorMessage = "Invalid key"
+                                errorMessage = context.getString(R.string.invalid_key)
                             }
                         }
                     },
@@ -188,14 +192,14 @@ fun LoginPage(accountViewModel: AccountStateViewModel) {
                             backgroundColor = if (acceptedTerms.value) MaterialTheme.colors.primary else Color.Gray
                         )
                 ) {
-                    Text(text = "Login")
+                    Text(text = stringResource(R.string.login))
                 }
             }
         }
 
         // The last child is glued to the bottom.
         ClickableText(
-            text = AnnotatedString("Generate a new key"),
+            text = AnnotatedString(stringResource(R.string.generate_a_new_key)),
             modifier = Modifier
                 .padding(20.dp)
                 .fillMaxWidth(),
@@ -203,7 +207,7 @@ fun LoginPage(accountViewModel: AccountStateViewModel) {
                 if (acceptedTerms.value) {
                     accountViewModel.newKey()
                 } else {
-                    termsAcceptanceIsRequired = "Acceptance of terms is required"
+                    termsAcceptanceIsRequired = context.getString(R.string.acceptance_of_terms_is_required)
                 }
             },
             style = TextStyle(

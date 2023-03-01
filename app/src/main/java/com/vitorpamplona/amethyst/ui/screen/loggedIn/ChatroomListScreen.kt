@@ -16,6 +16,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -32,6 +33,7 @@ import com.vitorpamplona.amethyst.ui.screen.ChatroomListFeedView
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListKnownFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListNewFeedViewModel
 import kotlinx.coroutines.launch
+import com.vitorpamplona.amethyst.R
 
 @OptIn(ExperimentalPagerApi::class)
 @Composable
@@ -57,7 +59,7 @@ fun ChatroomListScreen(accountViewModel: AccountViewModel, navController: NavCon
                     selected = pagerState.currentPage == 0,
                     onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
                     text = {
-                        Text(text = "Known")
+                        Text(text = stringResource(R.string.known))
                     }
                 )
 
@@ -65,7 +67,7 @@ fun ChatroomListScreen(accountViewModel: AccountViewModel, navController: NavCon
                     selected = pagerState.currentPage == 1,
                     onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
                     text = {
-                        Text(text = "New Requests")
+                        Text(text = stringResource(R.string.new_requests))
                     }
                 )
             }

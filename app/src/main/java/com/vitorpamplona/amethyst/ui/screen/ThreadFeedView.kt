@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.delay
+import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: AccountViewModel, navController: NavController) {
@@ -192,6 +193,8 @@ fun NoteMaster(baseNote: Note,
 
     var showHiddenNote by remember { mutableStateOf(false) }
 
+    val context = LocalContext.current
+
     var moreActionsExpanded by remember { mutableStateOf(false) }
 
     val noteEvent = note?.event
@@ -232,7 +235,7 @@ fun NoteMaster(baseNote: Note,
                         NoteUsernameDisplay(baseNote, Modifier.weight(1f))
 
                         Text(
-                            timeAgo(noteEvent.createdAt),
+                            timeAgo(noteEvent.createdAt, context = context),
                             color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                             maxLines = 1
                         )

@@ -47,6 +47,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -141,7 +142,7 @@ fun ReplyReaction(
         scope.launch {
           Toast.makeText(
             context,
-            "Login with a Private key to be able to reply",
+            context.getString(R.string.login_with_a_private_key_to_be_able_to_reply),
             Toast.LENGTH_SHORT
           ).show()
         }
@@ -193,7 +194,7 @@ private fun BoostReaction(
         scope.launch {
           Toast.makeText(
             context,
-            "Login with a Private key to be able to boost posts",
+            context.getString(R.string.login_with_a_private_key_to_be_able_to_boost_posts),
             Toast.LENGTH_SHORT
           ).show()
         }
@@ -264,7 +265,7 @@ fun LikeReaction(
         scope.launch {
           Toast.makeText(
             context,
-            "Login with a Private key to like Posts",
+            context.getString(R.string.login_with_a_private_key_to_like_posts),
             Toast.LENGTH_SHORT
           ).show()
         }
@@ -329,7 +330,7 @@ fun ZapReaction(
               Toast
                 .makeText(
                   context,
-                  "No Zap Amount Setup. Long Press to change",
+                  context.getString(R.string.no_zap_amount_setup_long_press_to_change),
                   Toast.LENGTH_SHORT
                 )
                 .show()
@@ -339,7 +340,7 @@ fun ZapReaction(
               Toast
                 .makeText(
                   context,
-                  "Login with a Private key to be able to send Zaps",
+                  context.getString(R.string.login_with_a_private_key_to_be_able_to_send_zaps),
                   Toast.LENGTH_SHORT
                 )
                 .show()
@@ -386,14 +387,14 @@ fun ZapReaction(
     if (zappedNote?.isZappedBy(account.userProfile()) == true) {
       Icon(
         imageVector = Icons.Default.Bolt,
-        contentDescription = "Zaps",
+        contentDescription = stringResource(R.string.zaps),
         modifier = Modifier.size(20.dp),
         tint = BitcoinOrange
       )
     } else {
       Icon(
         imageVector = Icons.Outlined.Bolt,
-        contentDescription = "Zaps",
+        contentDescription = stringResource(id = R.string.zaps),
         modifier = Modifier.size(20.dp),
         tint = grayTint
       )
@@ -433,7 +434,7 @@ private fun ViewCountReaction(baseNote: Note, textModifier: Modifier = Modifier)
         .diskCachePolicy(CachePolicy.DISABLED)
         .memoryCachePolicy(CachePolicy.ENABLED)
         .build(),
-      contentDescription = "View count",
+      contentDescription = stringResource(R.string.view_count),
       modifier = Modifier.height(24.dp),
       colorFilter = ColorFilter.tint(grayTint)
     )
@@ -461,7 +462,7 @@ private fun BoostTypeChoicePopup(baseNote: Note, accountViewModel: AccountViewMo
             backgroundColor = MaterialTheme.colors.primary
           )
       ) {
-        Text("Boost", color = Color.White, textAlign = TextAlign.Center)
+        Text(stringResource(R.string.boost), color = Color.White, textAlign = TextAlign.Center)
       }
 
       Button(
@@ -473,7 +474,7 @@ private fun BoostTypeChoicePopup(baseNote: Note, accountViewModel: AccountViewMo
             backgroundColor = MaterialTheme.colors.primary
           )
       ) {
-        Text("Quote", color = Color.White, textAlign = TextAlign.Center)
+        Text(stringResource(R.string.quote), color = Color.White, textAlign = TextAlign.Center)
       }
     }
   }
@@ -640,7 +641,7 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, account: Account) {
 
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
           OutlinedTextField(
-            label = { Text(text = "New Amount in Sats") },
+            label = { Text(text = stringResource(R.string.new_amount_in_sats)) },
             value = postViewModel.nextAmount,
             onValueChange = {
               postViewModel.nextAmount = it
@@ -656,7 +657,9 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, account: Account) {
               )
             },
             singleLine = true,
-            modifier = Modifier.padding(end = 10.dp).weight(1f)
+            modifier = Modifier
+              .padding(end = 10.dp)
+              .weight(1f)
           )
 
           Button(
@@ -667,7 +670,7 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, account: Account) {
                 backgroundColor = MaterialTheme.colors.primary
               )
           ) {
-            Text(text = "Add", color = Color.White)
+            Text(text = stringResource(R.string.add), color = Color.White)
           }
         }
       }

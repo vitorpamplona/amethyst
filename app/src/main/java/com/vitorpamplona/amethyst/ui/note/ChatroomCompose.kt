@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
@@ -38,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.NotificationCache
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
@@ -71,9 +73,9 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
         val noteEvent = note.event
 
         val description = if (noteEvent is ChannelCreateEvent) {
-            "Channel created"
+            stringResource(R.string.channel_created)
         } else if (noteEvent is ChannelMetadataEvent) {
-            "Channel Information changed to "
+            "${stringResource(R.string.channel_information_changed_to)} "
         } else {
             noteEvent?.content
         }
@@ -97,7 +99,7 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
                         style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
                     )
                     Text(
-                        " Public Chat",
+                       " ${stringResource(R.string.public_chat)}",
                         color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                     )
                 },
@@ -158,7 +160,7 @@ fun ChannelName(
                 placeholder = channelPicturePlaceholder,
                 fallback = channelPicturePlaceholder,
                 error = channelPicturePlaceholder,
-                contentDescription = "Channel Image",
+                contentDescription = stringResource(R.string.channel_image),
                 modifier = Modifier
                     .width(55.dp)
                     .height(55.dp)
@@ -182,6 +184,8 @@ fun ChannelName(
     hasNewMessages: Boolean,
     onClick: () -> Unit
 ) {
+
+    val context = LocalContext.current
     Column(modifier = Modifier.clickable(onClick = onClick) ) {
         Row(
             modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp)
@@ -198,7 +202,7 @@ fun ChannelName(
 
                     channelLastTime?.let {
                         Text(
-                            timeAgo(channelLastTime),
+                            timeAgo(channelLastTime, context),
                             color = MaterialTheme.colors.onSurface.copy(alpha = 0.52f)
                         )
                     }
@@ -217,7 +221,7 @@ fun ChannelName(
                         )
                     else
                         Text(
-                            "Referenced event not found",
+                            stringResource(R.string.referenced_event_not_found),
                             color = MaterialTheme.colors.onSurface.copy(alpha = 0.52f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,

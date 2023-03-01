@@ -36,6 +36,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -201,7 +202,7 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
                         placeholder = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
                         fallback = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
                         error = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
-                        contentDescription = "Profile Image",
+                        contentDescription = stringResource(id = R.string.profile_image),
                         modifier = Modifier
                             .width(34.dp)
                             .height(34.dp)
