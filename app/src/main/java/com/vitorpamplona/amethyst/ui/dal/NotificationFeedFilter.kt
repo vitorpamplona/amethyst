@@ -24,6 +24,19 @@ object NotificationFeedFilter: FeedFilter<Note>() {
         && it.event !is LnZapRequestEvent
       }
       .filter {
+        it.event !is TextNoteEvent
+          ||
+          (
+            it.event is TextNoteEvent
+              &&
+              (
+                it.replyTo?.any { it.author == account.userProfile() } == true
+                  ||
+                  account.userProfile() in it.directlyCiteUsers()
+                )
+            )
+      }
+      .filter {
         it.event !is ReactionEvent
           ||
           (
