@@ -89,29 +89,9 @@ fun TabKnown(accountViewModel: AccountViewModel, navController: NavController) {
     ChatroomListKnownFeedFilter.account = account
     val feedViewModel: NostrChatroomListKnownFeedViewModel = viewModel()
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(accountViewModel) {
         NostrChatroomListDataSource.resetFilters()
         feedViewModel.invalidateData()
-    }
-
-    val lifeCycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(accountViewModel) {
-        val observer = LifecycleEventObserver { source, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                println("Chatroom List Start")
-                NostrChatroomListDataSource.start()
-                feedViewModel.invalidateData()
-            }
-            if (event == Lifecycle.Event.ON_PAUSE) {
-                println("Chatroom List Stop")
-                NostrChatroomListDataSource.stop()
-            }
-        }
-
-        lifeCycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifeCycleOwner.lifecycle.removeObserver(observer)
-        }
     }
 
     Column(Modifier.fillMaxHeight()) {
@@ -131,29 +111,9 @@ fun TabNew(accountViewModel: AccountViewModel, navController: NavController) {
     ChatroomListNewFeedFilter.account = account
     val feedViewModel: NostrChatroomListNewFeedViewModel = viewModel()
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(accountViewModel) {
         NostrChatroomListDataSource.resetFilters()
-        feedViewModel.refresh() // refresh view
-    }
-
-    val lifeCycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(accountViewModel) {
-        val observer = LifecycleEventObserver { source, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                println("Chatroom List Start")
-                NostrChatroomListDataSource.start()
-                feedViewModel.invalidateData()
-            }
-            if (event == Lifecycle.Event.ON_PAUSE) {
-                println("Chatroom List Stop")
-                NostrChatroomListDataSource.stop()
-            }
-        }
-
-        lifeCycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifeCycleOwner.lifecycle.removeObserver(observer)
-        }
+        feedViewModel.invalidateData() // refresh view
     }
 
     Column(Modifier.fillMaxHeight()) {

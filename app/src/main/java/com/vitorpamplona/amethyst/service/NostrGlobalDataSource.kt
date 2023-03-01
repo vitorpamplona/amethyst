@@ -8,7 +8,6 @@ import nostr.postr.JsonFilter
 import nostr.postr.events.TextNoteEvent
 
 object NostrGlobalDataSource: NostrDataSource("GlobalFeed") {
-  lateinit var account: Account
   fun createGlobalFilter() = TypedFilter(
     types = setOf(FeedType.GLOBAL),
     filter = JsonFilter(

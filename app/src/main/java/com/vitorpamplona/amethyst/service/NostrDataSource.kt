@@ -17,11 +17,14 @@ import com.vitorpamplona.amethyst.service.relays.Subscription
 import com.vitorpamplona.amethyst.service.relays.hasValidSignature
 import java.util.Date
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import nostr.postr.events.ContactListEvent
 import nostr.postr.events.DeletionEvent
 import nostr.postr.events.Event
@@ -41,6 +44,7 @@ abstract class NostrDataSource(val debugName: String) {
       println("AAA Count ${it.key}: ${it.value.counter}")
     }
   }
+
 
   private val clientListener = object : Client.Listener() {
     override fun onEvent(event: Event, subscriptionId: String, relay: Relay) {
@@ -91,7 +95,6 @@ abstract class NostrDataSource(val debugName: String) {
         } catch (e: Exception) {
           e.printStackTrace()
         }
-
       }
     }
 
@@ -123,10 +126,12 @@ abstract class NostrDataSource(val debugName: String) {
   }
 
   open fun start() {
+    println("DataSource: ${this.javaClass.simpleName} Start")
     resetFilters()
   }
 
   open fun stop() {
+    println("DataSource: ${this.javaClass.simpleName} Stop")
     subscriptions.values.forEach { channel ->
       Client.close(channel.id)
       channel.typedFilters = null
@@ -144,17 +149,24 @@ abstract class NostrDataSource(val debugName: String) {
     subscriptions = subscriptions.minus(subscription.id)
   }
 
-  var handlerWaiting = false
-  @Synchronized
-  fun invalidateFilters() {
-    if (handlerWaiting) return
+  // Refreshes observers in batches.
+  var handlerWaiting = AtomicBoolean()
 
-    handlerWaiting = true
+  fun invalidateFilters() {
+    if (handlerWaiting.getAndSet(true)) return
+
+    println("DataSource: ${this.javaClass.simpleName} InvalidateFilters")
+
     val scope = CoroutineScope(Job() + Dispatchers.IO)
     scope.launch {
-      delay(200)
-      resetFiltersSuspend()
-      handlerWaiting = false
+      try {
+        delay(200)
+        resetFiltersSuspend()
+      } finally {
+        withContext(NonCancellable) {
+          handlerWaiting.set(false)
+        }
+      }
     }
   }
 

@@ -65,11 +65,9 @@ open class UserFeedViewModel(val dataSource: FeedFilter<User>): ViewModel() {
 
     var handlerWaiting = AtomicBoolean()
 
-    @Synchronized
     private fun invalidateData() {
         if (handlerWaiting.getAndSet(true)) return
 
-        handlerWaiting.set(true)
         val scope = CoroutineScope(Job() + Dispatchers.Default)
         scope.launch {
             try {

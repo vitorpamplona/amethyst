@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Following
 import kotlin.time.ExperimentalTime
+import nostr.postr.events.PrivateDmEvent
 import nostr.postr.events.TextNoteEvent
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -319,25 +320,26 @@ fun NoteCompose(
                         val reportType = noteEvent.reportType.map {
                             when (it) {
                                 ReportEvent.ReportType.EXPLICIT -> stringResource(R.string.explicit_content)
+                                ReportEvent.ReportType.NUDITY -> stringResource(R.string.nudity)
+                                ReportEvent.ReportType.PROFANITY -> stringResource(R.string.profanity_hateful_speech)
                                 ReportEvent.ReportType.SPAM -> stringResource(R.string.spam)
                                 ReportEvent.ReportType.IMPERSONATION -> stringResource(R.string.impersonation)
                                 ReportEvent.ReportType.ILLEGAL -> stringResource(R.string.illegal_behavior)
-                                ReportEvent.ReportType.NUDITY -> stringResource(R.string.nudity)
-                                ReportEvent.ReportType.PROFANITY -> stringResource(R.string.profanity_hateful_speech)
                                 else -> stringResource(R.string.unknown)
                             }
-                        }.joinToString(", ")
+                        }.toSet().joinToString(", ")
 
                         Text(
                             text = reportType
                         )
 
                         Divider(
-                            modifier = Modifier.padding(top = 10.dp),
+                            modifier = Modifier.padding(top = 40.dp),
                             thickness = 0.25.dp
                         )
                     } else {
-                        val eventContent = noteEvent.content
+                        val eventContent = accountViewModel.decrypt(note)
+
                         val canPreview = note.author == account.userProfile()
                           || (note.author?.let { account.userProfile().isFollowing(it) } ?: true )
                           || !noteForReports.hasAnyReports()
@@ -606,6 +608,13 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
                 Text(stringResource(R.string.report_spam_scam))
             }
             DropdownMenuItem(onClick = {
+                accountViewModel.report(note, ReportEvent.ReportType.PROFANITY);
+                note.author?.let { accountViewModel.hide(it, context) }
+                onDismiss()
+            }) {
+                Text("Report Hateful Speech")
+            }
+            DropdownMenuItem(onClick = {
                 accountViewModel.report(note, ReportEvent.ReportType.IMPERSONATION);
                 note.author?.let { accountViewModel.hide(it, context) }
                 onDismiss()
@@ -613,11 +622,11 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
                 Text(stringResource(R.string.report_impersonation))
             }
             DropdownMenuItem(onClick = {
-                accountViewModel.report(note, ReportEvent.ReportType.EXPLICIT);
+                accountViewModel.report(note, ReportEvent.ReportType.NUDITY);
                 note.author?.let { accountViewModel.hide(it, context) }
                 onDismiss()
             }) {
-                Text(stringResource(R.string.report_explicit_content))
+                Text(stringResource(R.string.report_nudity_porn))
             }
             DropdownMenuItem(onClick = {
                 accountViewModel.report(note, ReportEvent.ReportType.ILLEGAL);

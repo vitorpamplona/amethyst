@@ -836,7 +836,6 @@ fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () ->
             }) {
                 Text(stringResource(R.string.report_hateful_speech))
             }
-
             DropdownMenuItem(onClick = {
                 accountViewModel.report(user, ReportEvent.ReportType.IMPERSONATION);
                 user.let { accountViewModel.hide(it, context) }

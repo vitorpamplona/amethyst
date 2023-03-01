@@ -5,6 +5,8 @@ import nostr.postr.Utils
 import nostr.postr.events.Event
 import nostr.postr.toHex
 
+data class ReportedKey(val key: String, val reportType: ReportEvent.ReportType)
+
 // NIP 56 event.
 class ReportEvent (
   id: ByteArray,
@@ -15,14 +17,37 @@ class ReportEvent (
   sig: ByteArray
 ): Event(id, pubKey, createdAt, kind, tags, content, sig) {
 
-  @Transient val reportType: List<ReportType>
-  @Transient val reportedPost: List<String>
-  @Transient val reportedAuthor: List<String>
+  @Transient val reportedPost: List<ReportedKey>
+  @Transient val reportedAuthor: List<ReportedKey>
 
   init {
-    reportType = tags.filter { it.firstOrNull() == "report" }.mapNotNull { it.getOrNull(1) }.map { ReportType.valueOf(it.toUpperCase()) }
-    reportedPost = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
-    reportedAuthor = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
+    // Works with old and new structures for report.
+
+    var reportType = tags.filter { it.firstOrNull() == "report" }.mapNotNull { it.getOrNull(1) }.map { ReportType.valueOf(it.toUpperCase()) }.firstOrNull()
+    if (reportType == null) {
+      reportType = tags.mapNotNull { it.getOrNull(2) }.map { ReportType.valueOf(it.toUpperCase()) }.firstOrNull()
+    }
+    if (reportType == null) {
+      reportType = ReportType.SPAM
+    }
+
+    reportedPost = tags
+      .filter { it.firstOrNull() == "e" && it.getOrNull(1) != null }
+      .map {
+        ReportedKey(
+          it[1],
+          it.getOrNull(2)?.toUpperCase()?.let { it1 -> ReportType.valueOf(it1) }?: reportType
+        )
+      }
+
+    reportedAuthor = tags
+      .filter { it.firstOrNull() == "p" && it.getOrNull(1) != null }
+      .map {
+        ReportedKey(
+          it[1],
+        it.getOrNull(2)?.toUpperCase()?.let { it1 -> ReportType.valueOf(it1) }?: reportType
+        )
+      }
   }
 
   companion object {
@@ -31,12 +56,11 @@ class ReportEvent (
     fun create(reportedPost: Event, type: ReportType, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ReportEvent {
       val content = ""
 
-      val reportTypeTag = listOf("report", type.name.toLowerCase())
-      val reportPostTag = listOf("e", reportedPost.id.toHex())
-      val reportAuthorTag = listOf("p", reportedPost.pubKey.toHex())
+      val reportPostTag = listOf("e", reportedPost.id.toHex(), type.name.toLowerCase())
+      val reportAuthorTag = listOf("p", reportedPost.pubKey.toHex(), type.name.toLowerCase())
 
       val pubKey = Utils.pubkeyCreate(privateKey)
-      val tags:List<List<String>> = listOf(reportTypeTag, reportPostTag, reportAuthorTag)
+      val tags:List<List<String>> = listOf(reportPostTag, reportAuthorTag)
       val id = generateId(pubKey, createdAt, kind, tags, content)
       val sig = Utils.sign(id, privateKey)
       return ReportEvent(id, pubKey, createdAt, tags, content, sig)
@@ -45,11 +69,10 @@ class ReportEvent (
     fun create(reportedUser: String, type: ReportType, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ReportEvent {
       val content = ""
 
-      val reportTypeTag = listOf("report", type.name.toLowerCase())
-      val reportAuthorTag = listOf("p", reportedUser)
+      val reportAuthorTag = listOf("p", reportedUser, type.name.toLowerCase())
 
       val pubKey = Utils.pubkeyCreate(privateKey)
-      val tags:List<List<String>> = listOf(reportTypeTag, reportAuthorTag)
+      val tags:List<List<String>> = listOf(reportAuthorTag)
       val id = generateId(pubKey, createdAt, kind, tags, content)
       val sig = Utils.sign(id, privateKey)
       return ReportEvent(id, pubKey, createdAt, tags, content, sig)
@@ -57,11 +80,11 @@ class ReportEvent (
   }
 
   enum class ReportType() {
-    EXPLICIT,
+    EXPLICIT, // Not used anymore.
     ILLEGAL,
     SPAM,
     IMPERSONATION,
     NUDITY,
-    PROFANITY
+    PROFANITY,
   }
 }

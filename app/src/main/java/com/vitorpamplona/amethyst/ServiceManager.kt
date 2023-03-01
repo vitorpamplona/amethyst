@@ -33,7 +33,6 @@ object ServiceManager {
       NostrAccountDataSource.account = myAccount
       NostrHomeDataSource.account = myAccount
       NostrChatroomListDataSource.account = myAccount
-      NostrGlobalDataSource.account = myAccount
 
       // Notification Elements
       NostrAccountDataSource.start()

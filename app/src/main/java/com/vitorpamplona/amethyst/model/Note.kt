@@ -18,8 +18,10 @@ import java.util.regex.Pattern
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import nostr.postr.events.Event
 
 val tagSearch = Pattern.compile("(?:\\s|\\A)\\#\\[([0-9]+)\\]")
@@ -318,17 +320,20 @@ class NoteLiveData(val note: Note): LiveData<NoteState>(NoteState(note)) {
     // Refreshes observers in batches.
     var handlerWaiting = AtomicBoolean()
 
-    @Synchronized
     fun invalidateData() {
         if (!hasActiveObservers()) return
         if (handlerWaiting.getAndSet(true)) return
 
-        handlerWaiting.set(true)
         val scope = CoroutineScope(Job() + Dispatchers.Main)
         scope.launch {
-            delay(100)
-            refresh()
-            handlerWaiting.set(false)
+            try {
+                delay(100)
+                refresh()
+            } finally {
+                withContext(NonCancellable) {
+                    handlerWaiting.set(false)
+                }
+            }
         }
     }
 

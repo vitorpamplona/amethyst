@@ -83,7 +83,6 @@ fun SearchScreen(accountViewModel: AccountViewModel, navController: NavControlle
     val account = accountState?.account ?: return
 
     GlobalFeedFilter.account = account
-    NostrGlobalDataSource.account = account
     val feedViewModel: NostrGlobalFeedViewModel = viewModel()
     val lifeCycleOwner = LocalLifecycleOwner.current
 
