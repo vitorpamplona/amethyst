@@ -5,13 +5,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import nostr.postr.events.Event
+import nostr.postr.events.TextNoteEvent
 
 /**
  * The Nostr Client manages multiple personae the user may switch between. Events are received and
  * published through multiple relays.
  * Events are stored with their respective persona.
  */
-object Client : RelayPool.Listener {
+object Client: RelayPool.Listener {
     /**
      * Lenient mode:
      *
@@ -143,7 +144,6 @@ object Client : RelayPool.Listener {
 
     abstract class Listener {
         open fun onSearchEvent(event: Event, relay: Relay) = Unit
-
         /**
          * A new message was received
          */
@@ -162,7 +162,6 @@ object Client : RelayPool.Listener {
         /**
          * When an relay saves or rejects a new event.
          */
-        open fun onSendResponse(eventId: String, success: Boolean, message: String, relay: Relay) =
-            Unit
+        open fun onSendResponse(eventId: String, success: Boolean, message: String, relay: Relay) = Unit
     }
 }
