@@ -5,40 +5,19 @@ import androidx.lifecycle.LiveData
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.google.gson.reflect.TypeToken
-import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.service.model.ChannelHideMessageEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMuteUserEvent
-import com.vitorpamplona.amethyst.service.model.LnZapEvent
-import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
-import com.vitorpamplona.amethyst.service.model.ReactionEvent
-import com.vitorpamplona.amethyst.service.model.ReportEvent
-import com.vitorpamplona.amethyst.service.model.RepostEvent
+import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.Relay
 import fr.acinq.secp256k1.Hex
+import kotlinx.coroutines.*
+import nostr.postr.events.*
+import nostr.postr.toHex
+import nostr.postr.toNpub
 import java.io.ByteArrayInputStream
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import nostr.postr.events.ContactListEvent
-import nostr.postr.events.DeletionEvent
-import nostr.postr.events.Event
-import nostr.postr.events.MetadataEvent
-import nostr.postr.events.PrivateDmEvent
-import nostr.postr.events.RecommendRelayEvent
-import nostr.postr.events.TextNoteEvent
-import nostr.postr.toHex
-import nostr.postr.toNpub
 
 
 object LocalCache {
@@ -85,8 +64,7 @@ object LocalCache {
   fun getOrCreateNote(idHex: String): Note {
     return notes[idHex] ?: run {
       val answer = Note(idHex)
-      val newNotes = ConcurrentHashMap(mapOf(Pair(idHex, answer)) + notes)
-      notes = newNotes
+      notes[idHex] = answer
       answer
     }
   }

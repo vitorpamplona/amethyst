@@ -145,12 +145,12 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
                 .debounce(300)
                 .collectLatest {
                     if (it.removePrefix("npub").removePrefix("note").isNotEmpty())
-                        onlineSearch.search(it)
+                        onlineSearch.search(it.trim())
                     delay(500)
-                    searchResults.value = LocalCache.findUsersStartingWith(it)
-                    searchResultsNotes.value = LocalCache.findNotesStartingWith(it)
+                    searchResults.value = LocalCache.findUsersStartingWith(it.trim())
+                    searchResultsNotes.value = LocalCache.findNotesStartingWith(it.trim())
                         .sortedBy { note -> note.event?.createdAt }.reversed()
-                    searchResultsChannels.value = LocalCache.findChannelsStartingWith(it)
+                    searchResultsChannels.value = LocalCache.findChannelsStartingWith(it.trim())
                 }
         }
     }

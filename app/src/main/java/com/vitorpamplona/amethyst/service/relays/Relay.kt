@@ -4,7 +4,6 @@ import android.util.Log
 import com.google.gson.JsonElement
 import java.util.Date
 import nostr.postr.events.Event
-import nostr.postr.events.TextNoteEvent
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response

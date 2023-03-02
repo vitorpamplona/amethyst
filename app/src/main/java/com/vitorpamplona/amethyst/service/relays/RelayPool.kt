@@ -1,13 +1,11 @@
 package com.vitorpamplona.amethyst.service.relays
 
-import android.view.SearchEvent
 import androidx.lifecycle.LiveData
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import nostr.postr.events.Event
-import nostr.postr.events.TextNoteEvent
 
 /**
  * RelayPool manages the connection to multiple Relays and lets consumers deal with simple events.

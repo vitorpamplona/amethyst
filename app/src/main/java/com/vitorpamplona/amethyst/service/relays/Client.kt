@@ -5,7 +5,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import nostr.postr.events.Event
-import nostr.postr.events.TextNoteEvent
 
 /**
  * The Nostr Client manages multiple personae the user may switch between. Events are received and

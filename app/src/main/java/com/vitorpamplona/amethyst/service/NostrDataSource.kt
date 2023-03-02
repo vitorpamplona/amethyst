@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.service
 
-import android.util.Log
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelHideMessageEvent
