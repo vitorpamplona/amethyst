@@ -276,9 +276,8 @@ object LocalCache {
             val pubKey = decodePublicKey(it.pubKeyHex)
             getOrCreateUser(pubKey.toHexKey())
           } catch (e: Exception) {
-            println("Could not parse Hex key: ${it.pubKeyHex}")
-            println("UpdateFollows: " + event.toJson())
-            e.printStackTrace()
+            Log.w("ContactList Parser", "Ignoring: Could not parse Hex key: ${it.pubKeyHex} in ${event.toJson()}")
+            //e.printStackTrace()
             null
           }
         }.filterNotNull().toSet(),

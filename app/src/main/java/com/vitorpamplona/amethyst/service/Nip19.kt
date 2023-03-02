@@ -36,8 +36,8 @@ class Nip19 {
         }
       }
     } catch (e: Throwable) {
-      println("Trying to Decode NIP19: ${uri}")
-      e.printStackTrace()
+      println("Issue trying to Decode NIP19 ${uri}: ${e.message}")
+      //e.printStackTrace()
     }
 
     return null
