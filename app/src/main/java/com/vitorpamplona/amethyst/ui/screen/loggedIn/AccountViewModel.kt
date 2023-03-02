@@ -113,7 +113,4 @@ class AccountViewModel(private val account: Account): ViewModel() {
     account.prefer(source, target, preference)
   }
 
-
-
-
 }

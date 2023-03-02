@@ -23,7 +23,7 @@ import com.vitorpamplona.amethyst.ui.note.ChatroomCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun ChatroomListFeedView(viewModel: FeedViewModel, accountViewModel: AccountViewModel, navController: NavController) {
+fun ChatroomListFeedView(viewModel: FeedViewModel, accountViewModel: AccountViewModel, navController: NavController, markAsReadBefore: Long) {
     val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
 
     var isRefreshing by remember { mutableStateOf(false) }
@@ -58,7 +58,7 @@ fun ChatroomListFeedView(viewModel: FeedViewModel, accountViewModel: AccountView
                         }
                     }
                     is FeedState.Loaded -> {
-                        FeedLoaded(state, accountViewModel, navController)
+                        FeedLoaded(state, accountViewModel, navController, markAsReadBefore)
                     }
                     FeedState.Loading -> {
                         LoadingFeed()
@@ -73,7 +73,8 @@ fun ChatroomListFeedView(viewModel: FeedViewModel, accountViewModel: AccountView
 private fun FeedLoaded(
     state: FeedState.Loaded,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    navController: NavController,
+    markAsReadBefore: Long,
 ) {
     val listState = rememberLazyListState()
 
@@ -87,6 +88,7 @@ private fun FeedLoaded(
         itemsIndexed(state.feed.value, key = { index, item -> if (index == 0) index else item.idHex }) { index, item ->
             ChatroomCompose(
                 item,
+                markAsReadBefore,
                 accountViewModel = accountViewModel,
                 navController = navController
             )

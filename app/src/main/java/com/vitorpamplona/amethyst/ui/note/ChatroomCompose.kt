@@ -49,7 +49,12 @@ import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navController: NavController) {
+fun ChatroomCompose(
+    baseNote: Note,
+    markAsReadBefore: Long,
+    accountViewModel: AccountViewModel,
+    navController: NavController
+) {
     val noteState by baseNote.live().metadata.observeAsState()
     val note = noteState?.note
 
@@ -84,7 +89,13 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
 
             LaunchedEffect(key1 = notificationCache) {
                 noteEvent?.let {
-                    hasNewMessages = it.createdAt > notificationCache.cache.load("Channel/${channel.idHex}", context)
+                    val route = "Channel/${channel.idHex}"
+                    if (it.createdAt < markAsReadBefore) {
+                        notificationCache.cache.markAsRead(route, it.createdAt, context)
+                        hasNewMessages = false
+                    } else {
+                        hasNewMessages = it.createdAt > notificationCache.cache.load(route, context)
+                    }
                 }
             }
 
@@ -127,7 +138,13 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
 
             LaunchedEffect(key1 = notificationCache) {
                 noteEvent?.let {
-                    hasNewMessages = it.createdAt > notificationCache.cache.load("Room/${userToComposeOn.pubkeyHex}", context)
+                    val route = "Room/${userToComposeOn.pubkeyHex}"
+                    if (it.createdAt < markAsReadBefore) {
+                        notificationCache.cache.markAsRead(route, it.createdAt, context)
+                        hasNewMessages = false
+                    } else {
+                        hasNewMessages = it.createdAt > notificationCache.cache.load(route, context)
+                    }
                 }
             }
 
@@ -140,7 +157,6 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
                 onClick = { navController.navigate("Room/${user.pubkeyHex}") })
         }
     }
-
 }
 
 @Composable
