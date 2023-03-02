@@ -6,6 +6,7 @@ import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
+import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
@@ -35,7 +36,7 @@ object NostrSingleEventDataSource: NostrDataSource("SingleEventFeed") {
         types = FeedType.values().toSet(),
         filter = JsonFilter(
           kinds = listOf(
-            TextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind, ReportEvent.kind, LnZapEvent.kind, LnZapRequestEvent.kind
+            TextNoteEvent.kind, LongTextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind, ReportEvent.kind, LnZapEvent.kind, LnZapRequestEvent.kind
           ),
           tags = mapOf("e" to listOf(it.idHex)),
           since = it.lastReactionsDownloadTime
@@ -69,7 +70,7 @@ object NostrSingleEventDataSource: NostrDataSource("SingleEventFeed") {
         types = FeedType.values().toSet(),
         filter = JsonFilter(
           kinds = listOf(
-            TextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind, LnZapEvent.kind, LnZapRequestEvent.kind,
+            TextNoteEvent.kind, LongTextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind, LnZapEvent.kind, LnZapRequestEvent.kind,
             ChannelMessageEvent.kind, ChannelCreateEvent.kind, ChannelMetadataEvent.kind
           ),
           ids = interestedEvents.toList()

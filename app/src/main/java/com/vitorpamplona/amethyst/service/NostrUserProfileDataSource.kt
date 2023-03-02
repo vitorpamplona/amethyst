@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.service
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
+import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import nostr.postr.JsonFilter
@@ -38,7 +39,7 @@ object NostrUserProfileDataSource: NostrDataSource("UserProfileFeed") {
     TypedFilter(
       types = FeedType.values().toSet(),
       filter = JsonFilter(
-        kinds = listOf(TextNoteEvent.kind),
+        kinds = listOf(TextNoteEvent.kind, LongTextNoteEvent.kind),
         authors = listOf(it.pubkeyHex),
         limit = 200
       )
