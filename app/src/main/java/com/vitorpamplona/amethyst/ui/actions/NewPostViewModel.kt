@@ -9,12 +9,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.parseDirtyWordForKey
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.*
 import com.vitorpamplona.amethyst.ui.components.isValidURL
 import com.vitorpamplona.amethyst.ui.components.noProtocolUrlValidator
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -134,10 +129,9 @@ class NewPostViewModel: ViewModel() {
             onError = {
                 isUploadingImage = false
                 viewModelScope.launch {
-                    imageUploadingError.emit(context.getString(R.string.failed_to_upload_the_image))
+                    imageUploadingError.emit("Failed to upload the image")
                 }
-            },
-            context = context
+            }
         )
     }
 
