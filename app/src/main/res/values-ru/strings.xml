@@ -24,7 +24,7 @@
     <string name="copy_note_id">Скопировать ID записи</string>
     <string name="broadcast">Разослать</string>
     <string name="block_hide_user">Блокировать и скрыть пользователя</string>
-    <string name="report_spam_scam">Сообщить о спаме / мошеничестве</string>
+    <string name="report_spam_scam">Сообщить о спаме / мошенничестве</string>
     <string name="report_impersonation">Сообщить о выдаче себя за другое лицо</string>
     <string name="report_explicit_content">Сообщить об откровенном содержании</string>
     <string name="report_illegal_behaviour">Сообщить о незаконных действиях</string>
@@ -93,7 +93,7 @@
     <string name="failed_to_save_the_image">Не удалось сохранить фото</string>
     <string name="upload_image">Загрузить\nфото</string>
     <string name="uploading">Загрузка…</string>
-    <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Пользователь не усталовил Lightning адрес для получения чаевых</string>
+    <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Пользователь не установил Lightning адрес для получения чаевых</string>
     <string name="reply_here">"ответить.. "</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">Копирует ID записи для отправки</string>
     <string name="copy_channel_id_note_to_the_clipboard">Скопировать ID канала (записи)</string>
