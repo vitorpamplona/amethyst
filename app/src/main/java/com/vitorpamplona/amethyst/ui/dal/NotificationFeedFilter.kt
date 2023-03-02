@@ -7,7 +7,7 @@ import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
-import nostr.postr.events.TextNoteEvent
+import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 
 object NotificationFeedFilter: FeedFilter<Note>() {
   lateinit var account: Account

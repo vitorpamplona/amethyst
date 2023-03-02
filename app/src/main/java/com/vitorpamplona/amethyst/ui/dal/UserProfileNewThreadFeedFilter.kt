@@ -15,7 +15,7 @@ object UserProfileNewThreadFeedFilter: FeedFilter<Note>() {
   }
 
   override fun feed(): List<Note> {
-    return user?.notes
+    return user?.notes?.plus(user?.longFormNotes?.values?.flatten() ?: emptySet())
       ?.filter { account?.isAcceptable(it) == true && it.isNewThread() }
       ?.sortedBy { it.event?.createdAt }
       ?.reversed()

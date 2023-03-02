@@ -14,10 +14,36 @@ import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import java.util.Date
 import nostr.postr.JsonFilter
-import nostr.postr.events.TextNoteEvent
+import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 
 object NostrSingleEventDataSource: NostrDataSource("SingleEventFeed") {
   private var eventsToWatch = setOf<String>()
+
+  private fun createAddressFilter(): List<TypedFilter>? {
+    val addressesToWatch = eventsToWatch.map { LocalCache.getOrCreateNote(it) }.filter { it.address() != null }
+
+    if (addressesToWatch.isEmpty()) {
+      return null
+    }
+
+    val now = Date().time / 1000
+
+    return addressesToWatch.filter {
+      val lastTime = it.lastReactionsDownloadTime
+      lastTime == null || lastTime < (now - 10)
+    }.map {
+      TypedFilter(
+        types = FeedType.values().toSet(),
+        filter = JsonFilter(
+          kinds = listOf(
+            TextNoteEvent.kind, LongTextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind, ReportEvent.kind, LnZapEvent.kind, LnZapRequestEvent.kind
+          ),
+          tags = mapOf("a" to listOf(it.address()!!)),
+          since = it.lastReactionsDownloadTime
+        )
+      )
+    }
+  }
 
   private fun createRepliesAndReactionsFilter(): List<TypedFilter>? {
     val reactionsToWatch = eventsToWatch.map { LocalCache.getOrCreateNote(it) }
@@ -91,8 +117,9 @@ object NostrSingleEventDataSource: NostrDataSource("SingleEventFeed") {
   override fun updateChannelFilters() {
     val reactions = createRepliesAndReactionsFilter()
     val missing = createLoadEventsIfNotLoadedFilter()
+    val addresses = createAddressFilter()
 
-    singleEventChannel.typedFilters = listOfNotNull(reactions, missing).flatten().ifEmpty { null }
+    singleEventChannel.typedFilters = listOfNotNull(reactions, missing, addresses).flatten().ifEmpty { null }
   }
 
   fun add(eventId: String) {

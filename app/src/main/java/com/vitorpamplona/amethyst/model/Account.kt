@@ -34,7 +34,7 @@ import nostr.postr.events.DeletionEvent
 import nostr.postr.events.Event
 import nostr.postr.events.MetadataEvent
 import nostr.postr.events.PrivateDmEvent
-import nostr.postr.events.TextNoteEvent
+import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import nostr.postr.toHex
 
 val DefaultChannels = setOf(
@@ -290,18 +290,20 @@ class Account(
 
     val repliesToHex = replyTo?.map { it.idHex }
     val mentionsHex = mentions?.map { it.pubkeyHex }
+    val addressesHex = replyTo?.mapNotNull { it.address() }
 
     val signedEvent = TextNoteEvent.create(
       msg = message,
       replyTos = repliesToHex,
       mentions = mentionsHex,
+      addresses = addressesHex,
       privateKey = loggedIn.privKey!!
     )
     Client.send(signedEvent)
     LocalCache.consume(signedEvent)
   }
 
-  fun sendChannelMeesage(message: String, toChannel: String, replyingTo: Note? = null, mentions: List<User>?) {
+  fun sendChannelMessage(message: String, toChannel: String, replyingTo: Note? = null, mentions: List<User>?) {
     if (!isWriteable()) return
 
     val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }

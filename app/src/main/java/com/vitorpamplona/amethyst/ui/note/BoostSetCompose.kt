@@ -72,7 +72,7 @@ fun BoostSetCompose(boostSetCard: BoostSetCard, isInnerNote: Boolean = false, ro
                             launchSingleTop = true
                         }
                     } else {
-                        note.channel?.let {
+                        note.channel()?.let {
                             navController.navigate("Channel/${it.idHex}")
                         }
                     }

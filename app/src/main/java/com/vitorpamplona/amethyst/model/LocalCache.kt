@@ -37,7 +37,7 @@ import nostr.postr.events.Event
 import nostr.postr.events.MetadataEvent
 import nostr.postr.events.PrivateDmEvent
 import nostr.postr.events.RecommendRelayEvent
-import nostr.postr.events.TextNoteEvent
+import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import nostr.postr.toHex
 import nostr.postr.toNpub
 
@@ -212,7 +212,7 @@ object LocalCache {
     //Log.d("TN", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${note.event?.content?.take(100)} ${formattedDateTime(event.createdAt)}")
 
     // Prepares user's profile view.
-    author.addNote(note)
+    author.addLongFormNote(note)
 
     // Adds notifications to users.
     mentions.forEach {
@@ -220,11 +220,6 @@ object LocalCache {
     }
     replyTo.forEach {
       it.author?.addTaggedPost(note)
-    }
-
-    // Counts the replies
-    replyTo.forEach {
-      it.addReply(note)
     }
 
     refreshObservers()
@@ -492,7 +487,6 @@ object LocalCache {
 
         val note = getOrCreateNote(event.id.toHex())
         oldChannel.addNote(note)
-        note.channel = oldChannel
         note.loadEvent(event, author, emptyList(), emptyList())
 
         refreshObservers()
@@ -514,7 +508,6 @@ object LocalCache {
 
         val note = getOrCreateNote(event.id.toHex())
         oldChannel.addNote(note)
-        note.channel = oldChannel
         note.loadEvent(event, author, emptyList(), emptyList())
 
         refreshObservers()
@@ -553,7 +546,6 @@ object LocalCache {
       .mapNotNull { checkGetOrCreateNote(it) }
       .filter { it.event !is ChannelCreateEvent }
 
-    note.channel = channel
     note.loadEvent(event, author, mentions, replyTo)
 
     //Log.d("CM", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${note.event?.content} ${formattedDateTime(event.createdAt)}")
@@ -658,8 +650,9 @@ object LocalCache {
 
   fun findNotesStartingWith(text: String): List<Note> {
     return notes.values.filter {
-      (it.event is TextNoteEvent && it.event?.content?.contains(text, true) ?: false)
+           (it.event is TextNoteEvent && it.event?.content?.contains(text, true) ?: false)
         || (it.event is ChannelMessageEvent && it.event?.content?.contains(text, true) ?: false)
+        || (it.event is LongTextNoteEvent && it.event?.content?.contains(text, true) ?: false)
         || it.idHex.startsWith(text, true)
         || it.idNote().startsWith(text, true)
     }
@@ -745,7 +738,7 @@ object LocalCache {
 
   fun pruneHiddenMessages(account: Account) {
     val toBeRemoved = account.hiddenUsers.map {
-      users[it]?.notes ?: emptySet()
+        (users[it]?.notes ?: emptySet()) + (users[it]?.longFormNotes?.values?.flatten() ?: emptySet())
     }.flatten()
 
     account.hiddenUsers.forEach {
@@ -754,6 +747,7 @@ object LocalCache {
 
     toBeRemoved.forEach {
       it.author?.removeNote(it)
+      it.author?.removeLongFormNote(it)
 
       // reverts the add
       it.mentions?.forEach { user ->

@@ -60,7 +60,12 @@ class ReportEvent (
       val reportAuthorTag = listOf("p", reportedPost.pubKey.toHex(), type.name.toLowerCase())
 
       val pubKey = Utils.pubkeyCreate(privateKey)
-      val tags:List<List<String>> = listOf(reportPostTag, reportAuthorTag)
+      var tags:List<List<String>> = listOf(reportPostTag, reportAuthorTag)
+
+      if (reportedPost is LongTextNoteEvent) {
+        tags = tags + listOf( listOf("a", reportedPost.address) )
+      }
+
       val id = generateId(pubKey, createdAt, kind, tags, content)
       val sig = Utils.sign(id, privateKey)
       return ReportEvent(id, pubKey, createdAt, tags, content, sig)

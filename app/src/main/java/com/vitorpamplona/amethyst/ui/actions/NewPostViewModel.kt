@@ -46,7 +46,6 @@ class NewPostViewModel: ViewModel() {
                 } else {
                     this.mentions = currentMentions.plus(replyUser)
                 }
-
             }
         }
 
@@ -68,12 +67,12 @@ class NewPostViewModel: ViewModel() {
 
     fun tagIndex(user: User): Int {
         // Postr Events assembles replies before mentions in the tag order
-        return (if (originalNote?.channel != null) 1 else 0) + (replyTos?.size ?: 0) + (mentions?.indexOf(user) ?: 0)
+        return (if (originalNote?.channel() != null) 1 else 0) + (replyTos?.size ?: 0) + (mentions?.indexOf(user) ?: 0)
     }
 
     fun tagIndex(note: Note): Int {
         // Postr Events assembles replies before mentions in the tag order
-        return (if (originalNote?.channel != null) 1 else 0) + (replyTos?.indexOf(note) ?: 0)
+        return (if (originalNote?.channel() != null) 1 else 0) + (replyTos?.indexOf(note) ?: 0)
     }
 
     fun sendPost() {
@@ -108,8 +107,8 @@ class NewPostViewModel: ViewModel() {
             }.joinToString(" ")
         }.joinToString("\n")
 
-        if (originalNote?.channel != null) {
-            account?.sendChannelMeesage(newMessage, originalNote!!.channel!!.idHex, originalNote!!, mentions)
+        if (originalNote?.channel() != null) {
+            account?.sendChannelMessage(newMessage, originalNote!!.channel()!!.idHex, originalNote!!, mentions)
         } else {
             account?.sendPost(newMessage, replyTos, mentions)
         }

@@ -41,7 +41,7 @@ import com.vitorpamplona.amethyst.ui.navigation.UploadFromGallery
 import com.vitorpamplona.amethyst.ui.note.ReplyInformation
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.UserLine
 import kotlinx.coroutines.delay
-import nostr.postr.events.TextNoteEvent
+import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 
 
 @OptIn(ExperimentalComposeUiApi::class)

@@ -9,7 +9,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import nostr.postr.JsonFilter
-import nostr.postr.events.TextNoteEvent
+import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 
 object NostrHomeDataSource: NostrDataSource("HomeFeed") {
   lateinit var account: Account

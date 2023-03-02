@@ -74,6 +74,7 @@ fun parseDirtyWordForKey(mightBeAKey: String): DirtyKeyInfo? {
       return DirtyKeyInfo("note", keyB32.bechToBytes().toHexKey(), restOfWord)
     }
 
+
   } catch (e: Exception) {
     e.printStackTrace()
   }

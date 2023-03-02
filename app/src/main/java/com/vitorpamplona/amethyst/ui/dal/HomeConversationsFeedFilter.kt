@@ -4,7 +4,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.RepostEvent
-import nostr.postr.events.TextNoteEvent
+import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 
 object HomeConversationsFeedFilter: FeedFilter<Note>() {
   lateinit var account: Account

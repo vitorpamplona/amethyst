@@ -63,11 +63,11 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
 
     if (note?.event == null) {
         BlankNote(Modifier)
-    } else if (note.channel != null) {
+    } else if (note.channel() != null) {
         val authorState by note.author!!.live().metadata.observeAsState()
         val author = authorState?.user
 
-        val channelState by note.channel!!.live.observeAsState()
+        val channelState by note.channel()!!.live.observeAsState()
         val channel = channelState?.channel
 
         val noteEvent = note.event

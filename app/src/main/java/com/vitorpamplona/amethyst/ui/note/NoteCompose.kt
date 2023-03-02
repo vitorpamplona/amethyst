@@ -35,6 +35,7 @@ import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.RoboHashCache
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
@@ -51,7 +52,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Following
 import kotlin.time.ExperimentalTime
 import nostr.postr.events.PrivateDmEvent
-import nostr.postr.events.TextNoteEvent
+import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -133,7 +134,7 @@ fun NoteCompose(
                             launchSingleTop = true
                         }
                     } else {
-                        note.channel?.let {
+                        note.channel()?.let {
                             navController.navigate("Channel/${it.idHex}")
                         }
                     }
@@ -175,7 +176,7 @@ fun NoteCompose(
                             }
 
                             // boosted picture
-                            val baseChannel = note.channel
+                            val baseChannel = note.channel()
                             if (noteEvent is ChannelMessageEvent && baseChannel != null) {
                                 val channelState by baseChannel.live.observeAsState()
                                 val channel = channelState?.channel
@@ -293,7 +294,7 @@ fun NoteCompose(
                     } else if (noteEvent is ChannelMessageEvent && (note.replyTo != null || note.mentions != null)) {
                         val sortedMentions = note.mentions?.toSet()?.sortedBy { account.userProfile().isFollowing(it) }
 
-                        note.channel?.let {
+                        note.channel()?.let {
                             ReplyInformationChannel(note.replyTo, sortedMentions, it, navController)
                         }
                     }

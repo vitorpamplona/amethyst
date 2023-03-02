@@ -72,7 +72,7 @@ fun LikeSetCompose(likeSetCard: LikeSetCard, modifier: Modifier = Modifier, isIn
                             launchSingleTop = true
                         }
                     } else {
-                        note.channel?.let {
+                        note.channel()?.let {
                             navController.navigate("Channel/${it.idHex}")
                         }
                     }

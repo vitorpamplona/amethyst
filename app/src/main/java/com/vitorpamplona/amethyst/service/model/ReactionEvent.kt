@@ -35,7 +35,12 @@ class ReactionEvent (
 
     fun create(content: String, originalNote: Event, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ReactionEvent {
       val pubKey = Utils.pubkeyCreate(privateKey)
-      val tags = listOf( listOf("e", originalNote.id.toHex()), listOf("p", originalNote.pubKey.toHex()))
+
+      var tags = listOf( listOf("e", originalNote.id.toHex()), listOf("p", originalNote.pubKey.toHex()))
+      if (originalNote is LongTextNoteEvent) {
+        tags = tags + listOf( listOf("a", originalNote.address) )
+      }
+
       val id = generateId(pubKey, createdAt, kind, tags, content)
       val sig = Utils.sign(id, privateKey)
       return ReactionEvent(id, pubKey, createdAt, tags, content, sig)

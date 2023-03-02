@@ -32,7 +32,7 @@ import nostr.postr.events.Event
 import nostr.postr.events.MetadataEvent
 import nostr.postr.events.PrivateDmEvent
 import nostr.postr.events.RecommendRelayEvent
-import nostr.postr.events.TextNoteEvent
+import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 
 abstract class NostrDataSource(val debugName: String) {
   private var subscriptions = mapOf<String, Subscription>()
@@ -63,12 +63,14 @@ abstract class NostrDataSource(val debugName: String) {
         try {
           when (event) {
             is MetadataEvent -> LocalCache.consume(event)
-            is TextNoteEvent -> LocalCache.consume(event, relay)
+            //is TextNoteEvent -> LocalCache.consume(event, relay) overrides default TextNote
             is RecommendRelayEvent -> LocalCache.consume(event)
             is ContactListEvent -> LocalCache.consume(event)
             is PrivateDmEvent -> LocalCache.consume(event, relay)
             is DeletionEvent -> LocalCache.consume(event)
             else -> when (event.kind) {
+              TextNoteEvent.kind -> LocalCache.consume(TextNoteEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig), relay)
+
               RepostEvent.kind -> {
                 val repostEvent = RepostEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig)
 

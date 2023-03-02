@@ -9,7 +9,7 @@ import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import nostr.postr.JsonFilter
 import nostr.postr.events.ContactListEvent
 import nostr.postr.events.MetadataEvent
-import nostr.postr.events.TextNoteEvent
+import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 
 object NostrUserProfileDataSource: NostrDataSource("UserProfileFeed") {
   var user: User? = null

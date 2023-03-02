@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.service.model
 
+import com.vitorpamplona.amethyst.model.toHexKey
 import java.util.Date
 import nostr.postr.Utils
 import nostr.postr.events.Event
@@ -20,11 +21,16 @@ class LongTextNoteEvent(
     @Transient val summary: String?
     @Transient val publishedAt: Long?
     @Transient val topics: List<String>
+    @Transient val address: String
+    @Transient val dTag: String?
 
     init {
         replyTos = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
         mentions = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
 
+        dTag = tags.filter { it.firstOrNull() == "d" }.mapNotNull { it.getOrNull(1) }.firstOrNull()
+
+        address = tags.filter { it.firstOrNull() == "a" }.mapNotNull { it.getOrNull(1) }.firstOrNull() ?: "$kind:${pubKey.toHexKey()}:$dTag"
         topics = tags.filter { it.firstOrNull() == "t" }.mapNotNull { it.getOrNull(1) }
         title = tags.filter { it.firstOrNull() == "title" }.mapNotNull { it.getOrNull(1) }.firstOrNull()
         image = tags.filter { it.firstOrNull() == "image" }.mapNotNull { it.getOrNull(1) }.firstOrNull()

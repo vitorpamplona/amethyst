@@ -268,7 +268,7 @@ fun NoteMaster(baseNote: Note,
             }
 
             if (noteEvent is LongTextNoteEvent) {
-                Row(modifier = Modifier.padding(horizontal = 12.dp)) {
+                Row(modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp)) {
                     Column {
                         noteEvent.image?.let {
                             AsyncImage(
@@ -295,7 +295,10 @@ fun NoteMaster(baseNote: Note,
 
                         noteEvent.summary?.let {
                             Text(
-                                text = it
+                                text = it,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 10.dp)
                             )
                         }
                     }

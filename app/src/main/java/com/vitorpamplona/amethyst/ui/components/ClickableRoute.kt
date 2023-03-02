@@ -42,10 +42,10 @@ fun ClickableRoute(
         onClick = { navController.navigate("Channel/${nip19.hex}") },
         style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary)
       )
-    } else if (note.channel != null) {
+    } else if (note.channel() != null) {
       ClickableText(
-        text = AnnotatedString("@${note.channel?.toBestDisplayName()} "),
-        onClick = { navController.navigate("Channel/${note.channel?.idHex}") },
+        text = AnnotatedString("@${note.channel()?.toBestDisplayName()} "),
+        onClick = { navController.navigate("Channel/${note.channel()?.idHex}") },
         style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary)
       )
     } else {

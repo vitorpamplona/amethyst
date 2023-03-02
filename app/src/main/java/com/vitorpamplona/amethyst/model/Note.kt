@@ -2,7 +2,11 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
+import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
+import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
+import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
+import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.relays.Relay
@@ -23,6 +27,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import nostr.postr.events.Event
+import nostr.postr.toHex
 
 val tagSearch = Pattern.compile("(?:\\s|\\A)\\#\\[([0-9]+)\\]")
 
@@ -49,13 +54,21 @@ class Note(val idHex: String) {
     var relays = setOf<String>()
         private set
 
-    var channel: Channel? = null
-
     var lastReactionsDownloadTime: Long? = null
 
     fun id() = Hex.decode(idHex)
     fun idNote() = id().toNote()
     fun idDisplayNote() = idNote().toShortenHex()
+
+    fun channel(): Channel? {
+        val channelHex = (event as? ChannelMessageEvent)?.channel ?:
+                         (event as? ChannelMetadataEvent)?.channel ?:
+                         (event as? ChannelCreateEvent)?.let { idHex }
+
+        return channelHex?.let { LocalCache.checkGetOrCreateChannel(it) }
+    }
+
+    fun address() = (event as? LongTextNoteEvent)?.address
 
     fun loadEvent(event: Event, author: User, mentions: List<User>, replyTo: List<Note>) {
         this.event = event

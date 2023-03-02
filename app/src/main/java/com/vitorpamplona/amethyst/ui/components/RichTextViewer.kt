@@ -26,20 +26,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.text.Paragraph
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowRow
 import com.halilibo.richtext.markdown.Markdown
 import com.halilibo.richtext.markdown.MarkdownParseOptions
-import com.halilibo.richtext.ui.RichText
 import com.halilibo.richtext.ui.RichTextStyle
-import com.halilibo.richtext.ui.currentRichTextStyle
 import com.halilibo.richtext.ui.material.MaterialRichText
 import com.halilibo.richtext.ui.resolveDefaults
-import com.halilibo.richtext.ui.string.RichTextString
-import com.halilibo.richtext.ui.string.RichTextStringStyle
 import com.vitorpamplona.amethyst.service.lnurl.LnInvoiceUtil
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.Nip19
@@ -81,20 +81,47 @@ fun RichTextViewer(
   navController: NavController,
 ) {
 
+  val myMarkDownStyle = RichTextStyle().resolveDefaults().copy(
+    codeBlockStyle = RichTextStyle().resolveDefaults().codeBlockStyle?.copy(
+      textStyle = TextStyle(
+        fontFamily = FontFamily.Monospace,
+        fontSize = 14.sp
+      ),
+      modifier = Modifier
+        .padding(0.dp)
+        .fillMaxWidth()
+        .clip(shape = RoundedCornerShape(15.dp))
+        .border(
+          1.dp,
+          MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
+          RoundedCornerShape(15.dp)
+        )
+        .background(MaterialTheme.colors.onSurface.copy(alpha = 0.05f).compositeOver(backgroundColor))
+    ),
+    stringStyle = RichTextStyle().resolveDefaults().stringStyle?.copy(
+      linkStyle = SpanStyle(
+        textDecoration = TextDecoration.Underline,
+        color = MaterialTheme.colors.primary
+      ),
+      codeStyle = SpanStyle(
+        fontFamily = FontFamily.Monospace,
+        fontSize = 14.sp,
+        background = MaterialTheme.colors.onSurface.copy(alpha = 0.22f).compositeOver(backgroundColor)
+      )
+    )
+  )
+
   Column(modifier = modifier.animateContentSize()) {
 
-    if (content.startsWith("# ") || content.contains("##") || content.contains("```")) {
-      var richTextStyle by remember { mutableStateOf(RichTextStyle().resolveDefaults()) }
+    if ( content.startsWith("# ")
+      || content.contains("##")
+      || content.contains("**")
+      || content.contains("__")
+      || content.contains("```")
+    ) {
 
       MaterialRichText(
-        style = RichTextStyle().resolveDefaults().copy(
-          stringStyle = richTextStyle.stringStyle?.copy(
-            linkStyle = SpanStyle(
-              textDecoration = TextDecoration.Underline,
-              color = MaterialTheme.colors.primary
-            )
-          )
-        ),
+        style = myMarkDownStyle,
       ) {
         Markdown(
           content = content,
