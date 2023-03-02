@@ -798,7 +798,7 @@ class LocalCacheLiveData(val cache: LocalCache): LiveData<LocalCacheState>(Local
     val scope = CoroutineScope(Job() + Dispatchers.Main)
     scope.launch {
       try {
-        delay(500)
+        delay(50)
         refresh()
       } finally {
         withContext(NonCancellable) {

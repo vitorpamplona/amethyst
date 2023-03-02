@@ -94,6 +94,21 @@ fun TabKnown(accountViewModel: AccountViewModel, navController: NavController) {
         feedViewModel.invalidateData()
     }
 
+    val lifeCycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(accountViewModel) {
+        val observer = LifecycleEventObserver { source, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                NostrChatroomListDataSource.resetFilters()
+                feedViewModel.invalidateData()
+            }
+        }
+
+        lifeCycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifeCycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     Column(Modifier.fillMaxHeight()) {
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
