@@ -47,7 +47,7 @@
     <string name="profile">Perfil</string>
     <string name="security_filters">Filtros de segurança</string>
     <string name="log_out">Sair</string>
-    <string name="show_more">Mostar mais</string>
+    <string name="show_more">Mostrar mais</string>
     <string name="lightning_invoice">Fatura Lightning</string>
     <string name="pay">Pagar</string>
     <string name="lightning_tips">Doação Lightning</string>
