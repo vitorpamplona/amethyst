@@ -60,11 +60,6 @@
     <string name="error_parsing_preview_for">"Error parsing preview for %1$s : %2$s"</string>
     <string name="preview_card_image_for">"Preview Card Image for %1$s"</string>
     <string name="new_channel">New Channel</string>
-    <string name="can_t_find_out_the_content_type">Can\'t find out the content type</string>
-    <string name="can_t_insert_the_new_content">Can\'t insert the new content</string>
-    <string name="can_t_open_the_content_output_stream">Can\'t open the content output stream</string>
-    <string name="can_t_open_the_image_input_stream">Can\'t open the image input stream</string>
-    <string name="there_must_be_an_uploaded_image_url_in_the_response">There must be an uploaded image URL in the response</string>
     <string name="channel_name">Channel Name</string>
     <string name="my_awesome_group">My Awesome Group</string>
     <string name="picture_url">Picture Url</string>

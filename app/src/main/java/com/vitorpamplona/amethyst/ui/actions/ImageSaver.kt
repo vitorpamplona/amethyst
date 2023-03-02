@@ -9,12 +9,11 @@ import android.os.Environment
 import android.provider.MediaStore
 import androidx.annotation.RequiresApi
 import androidx.core.net.toUri
-import java.io.File
-import com.vitorpamplona.amethyst.R
 import okhttp3.*
 import okio.BufferedSource
 import okio.IOException
 import okio.sink
+import java.io.File
 
 
 object ImageSaver {
@@ -50,7 +49,7 @@ object ImageSaver {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                         val contentType = response.header("Content-Type")
                         checkNotNull(contentType) {
-                            context.getString(R.string.can_t_find_out_the_content_type)
+                            "Can't find out the content type"
                         }
 
                         saveContentQ(
@@ -58,7 +57,6 @@ object ImageSaver {
                             contentType = contentType,
                             contentSource = response.body.source(),
                             contentResolver = context.contentResolver,
-                            context = context
                         )
                     } else {
                         saveContentDefault(
@@ -82,7 +80,6 @@ object ImageSaver {
         contentType: String,
         contentSource: BufferedSource,
         contentResolver: ContentResolver,
-        context: Context
     ) {
         val contentValues = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
@@ -96,13 +93,13 @@ object ImageSaver {
         val uri =
             contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
         checkNotNull(uri) {
-            context.getString(R.string.can_t_insert_the_new_content)
+            "Can't insert the new content"
         }
 
         try {
             val outputStream = contentResolver.openOutputStream(uri)
             checkNotNull(outputStream) {
-                context.getString(R.string.can_t_open_the_content_output_stream)
+                "Can't open the content output stream"
             }
 
             outputStream.use {
