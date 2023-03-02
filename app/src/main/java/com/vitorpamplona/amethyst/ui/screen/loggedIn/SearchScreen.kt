@@ -88,8 +88,6 @@ fun SearchScreen(accountViewModel: AccountViewModel, navController: NavControlle
 
     LaunchedEffect(Unit) {
         feedViewModel.invalidateData()
-        delay(500)
-        feedViewModel.invalidateData()
     }
 
     DisposableEffect(accountViewModel) {

@@ -30,6 +30,7 @@ import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import kotlinx.coroutines.delay
 
 @Composable
 fun FeedView(
@@ -95,6 +96,11 @@ private fun FeedLoaded(
     navController: NavController
 ) {
     val listState = rememberLazyListState()
+
+    LaunchedEffect(Unit) {
+        delay(500)
+        listState.animateScrollToItem(0)
+    }
 
     LazyColumn(
         contentPadding = PaddingValues(
