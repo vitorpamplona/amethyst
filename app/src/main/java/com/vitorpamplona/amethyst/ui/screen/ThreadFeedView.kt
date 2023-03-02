@@ -33,6 +33,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.accompanist.swiperefresh.SwipeRefresh
@@ -51,6 +52,13 @@ import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.delay
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 
 @Composable
 fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: AccountViewModel, navController: NavController) {
@@ -256,6 +264,41 @@ fun NoteMaster(baseNote: Note,
                     }
 
                     ObserveDisplayNip05Status(baseNote)
+                }
+            }
+
+            if (noteEvent is LongTextNoteEvent) {
+                Row(modifier = Modifier.padding(horizontal = 12.dp)) {
+                    Column {
+                        noteEvent.image?.let {
+                            AsyncImage(
+                                model = noteEvent.image,
+                                contentDescription = stringResource(
+                                    R.string.preview_card_image_for,
+                                    noteEvent.image
+                                ),
+                                contentScale = ContentScale.FillWidth,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+
+                        noteEvent.title?.let {
+                            Text(
+                                text = it,
+                                fontSize = 30.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 10.dp)
+                            )
+                        }
+
+                        noteEvent.summary?.let {
+                            Text(
+                                text = it
+                            )
+                        }
+                    }
                 }
             }
 

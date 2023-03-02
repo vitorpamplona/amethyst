@@ -130,6 +130,11 @@ dependencies {
     implementation 'androidx.camera:camera-lifecycle:1.2.1'
     implementation 'androidx.camera:camera-view:1.2.1'
 
+    // Markdown
+    implementation "com.halilibo.compose-richtext:richtext-ui:0.16.0"
+    implementation "com.halilibo.compose-richtext:richtext-ui-material:0.16.0"
+    implementation "com.halilibo.compose-richtext:richtext-commonmark:0.16.0"
+
     // For QR Scanning
     implementation 'com.google.mlkit:vision-common:17.3.0'
 

@@ -12,6 +12,7 @@ import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMuteUserEvent
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
+import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
@@ -184,7 +185,52 @@ object LocalCache {
     refreshObservers()
   }
 
-  private fun replyToWithoutCitations(event: TextNoteEvent): List<String> {
+  fun consume(event: LongTextNoteEvent, relay: Relay?) {
+    if (antiSpam.isSpam(event)) {
+      relay?.let {
+        it.spamCounter++
+      }
+      return
+    }
+
+    val note = getOrCreateNote(event.id.toHex())
+    val author = getOrCreateUser(event.pubKey.toHexKey())
+
+    if (relay != null) {
+      author.addRelayBeingUsed(relay, event.createdAt)
+      note.addRelay(relay)
+    }
+
+    // Already processed this event.
+    if (note.event != null) return
+
+    val mentions = event.mentions.mapNotNull { checkGetOrCreateUser(it) }
+    val replyTo = replyToWithoutCitations(event).mapNotNull { checkGetOrCreateNote(it) }
+
+    note.loadEvent(event, author, mentions, replyTo)
+
+    //Log.d("TN", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${note.event?.content?.take(100)} ${formattedDateTime(event.createdAt)}")
+
+    // Prepares user's profile view.
+    author.addNote(note)
+
+    // Adds notifications to users.
+    mentions.forEach {
+      it.addTaggedPost(note)
+    }
+    replyTo.forEach {
+      it.author?.addTaggedPost(note)
+    }
+
+    // Counts the replies
+    replyTo.forEach {
+      it.addReply(note)
+    }
+
+    refreshObservers()
+  }
+
+  private fun findCitations(event: Event): Set<String> {
     var citations = mutableSetOf<String>()
     // Removes citations from replies:
     val matcher = tagSearch.matcher(event.content)
@@ -198,6 +244,17 @@ object LocalCache {
 
       }
     }
+    return citations
+  }
+
+  private fun replyToWithoutCitations(event: TextNoteEvent): List<String> {
+    val citations = findCitations(event)
+
+    return event.replyTos.filter { it !in citations }
+  }
+
+  private fun replyToWithoutCitations(event: LongTextNoteEvent): List<String> {
+    val citations = findCitations(event)
 
     return event.replyTos.filter { it !in citations }
   }

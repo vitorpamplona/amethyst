@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.UserState
+import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import kotlinx.coroutines.Dispatchers
@@ -47,7 +48,7 @@ object NostrHomeDataSource: NostrDataSource("HomeFeed") {
     return TypedFilter(
       types = setOf(FeedType.FOLLOWS),
       filter = JsonFilter(
-        kinds = listOf(TextNoteEvent.kind),
+        kinds = listOf(TextNoteEvent.kind, LongTextNoteEvent.kind),
         authors = followSet,
         limit = 400
       )

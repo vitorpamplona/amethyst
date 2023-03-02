@@ -2,24 +2,44 @@ package com.vitorpamplona.amethyst.ui.components
 
 import android.util.Patterns
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.LocalContentColor
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
+import androidx.compose.material.contentColorFor
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.text.Paragraph
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowRow
+import com.halilibo.richtext.markdown.Markdown
+import com.halilibo.richtext.markdown.MarkdownParseOptions
+import com.halilibo.richtext.ui.RichText
+import com.halilibo.richtext.ui.RichTextStyle
+import com.halilibo.richtext.ui.currentRichTextStyle
+import com.halilibo.richtext.ui.material.MaterialRichText
+import com.halilibo.richtext.ui.resolveDefaults
+import com.halilibo.richtext.ui.string.RichTextString
+import com.halilibo.richtext.ui.string.RichTextStringStyle
 import com.vitorpamplona.amethyst.service.lnurl.LnInvoiceUtil
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.Nip19
@@ -60,61 +80,82 @@ fun RichTextViewer(
   accountViewModel: AccountViewModel,
   navController: NavController,
 ) {
+
   Column(modifier = modifier.animateContentSize()) {
-    // FlowRow doesn't work well with paragraphs. So we need to split them
-    content.split('\n').forEach { paragraph ->
 
-      FlowRow() {
-        paragraph.split(' ').forEach { word: String ->
+    if (content.startsWith("# ") || content.contains("##") || content.contains("```")) {
+      var richTextStyle by remember { mutableStateOf(RichTextStyle().resolveDefaults()) }
 
-          if (canPreview) {
-            // Explicit URL
-            val lnInvoice = LnInvoiceUtil.findInvoice(word)
-            if (lnInvoice != null) {
-              InvoicePreview(lnInvoice)
-            } else if (isValidURL(word)) {
-              val removedParamsFromUrl = word.split("?")[0].toLowerCase()
-              if (imageExtension.matcher(removedParamsFromUrl).matches()) {
-                ZoomableImageView(word)
-              } else if (videoExtension.matcher(removedParamsFromUrl).matches()) {
-                VideoView(word)
+      MaterialRichText(
+        style = RichTextStyle().resolveDefaults().copy(
+          stringStyle = richTextStyle.stringStyle?.copy(
+            linkStyle = SpanStyle(
+              textDecoration = TextDecoration.Underline,
+              color = MaterialTheme.colors.primary
+            )
+          )
+        ),
+      ) {
+        Markdown(
+          content = content,
+          markdownParseOptions = MarkdownParseOptions.Default,
+        )
+      }
+    } else {
+      // FlowRow doesn't work well with paragraphs. So we need to split them
+      content.split('\n').forEach { paragraph ->
+        FlowRow() {
+          paragraph.split(' ').forEach { word: String ->
+
+            if (canPreview) {
+              // Explicit URL
+              val lnInvoice = LnInvoiceUtil.findInvoice(word)
+              if (lnInvoice != null) {
+                InvoicePreview(lnInvoice)
+              } else if (isValidURL(word)) {
+                val removedParamsFromUrl = word.split("?")[0].toLowerCase()
+                if (imageExtension.matcher(removedParamsFromUrl).matches()) {
+                  ZoomableImageView(word)
+                } else if (videoExtension.matcher(removedParamsFromUrl).matches()) {
+                  VideoView(word)
+                } else {
+                  UrlPreview(word, word)
+                }
+              } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
+                ClickableEmail(word)
+              } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
+                ClickablePhone(word)
+              } else if (noProtocolUrlValidator.matcher(word).matches()) {
+                UrlPreview("https://$word", word)
+              } else if (tagIndex.matcher(word).matches() && tags != null) {
+                TagLink(word, tags, canPreview, backgroundColor, accountViewModel, navController)
+              } else if (isBechLink(word)) {
+                BechLink(word, navController)
               } else {
-                UrlPreview(word, word)
+                Text(
+                  text = "$word ",
+                  style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+                )
               }
-            } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
-              ClickableEmail(word)
-            } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
-              ClickablePhone(word)
-            } else if (noProtocolUrlValidator.matcher(word).matches()) {
-              UrlPreview("https://$word", word)
-            } else if (tagIndex.matcher(word).matches() && tags != null) {
-              TagLink(word, tags, canPreview, backgroundColor, accountViewModel, navController)
-            } else if (isBechLink(word)) {
-              BechLink(word, navController)
             } else {
-              Text(
-                text = "$word ",
-                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
-              )
-            }
-          } else {
-            if (isValidURL(word)) {
-              ClickableUrl("$word ", word)
-            } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
-              ClickableEmail(word)
-            } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
-              ClickablePhone(word)
-            } else if (noProtocolUrlValidator.matcher(word).matches()) {
-              ClickableUrl(word, "https://$word")
-            } else if (tagIndex.matcher(word).matches() && tags != null) {
-              TagLink(word, tags, canPreview, backgroundColor, accountViewModel, navController)
-            } else if (isBechLink(word)) {
-              BechLink(word, navController)
-            } else {
-              Text(
-                text = "$word ",
-                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
-              )
+              if (isValidURL(word)) {
+                ClickableUrl("$word ", word)
+              } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
+                ClickableEmail(word)
+              } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
+                ClickablePhone(word)
+              } else if (noProtocolUrlValidator.matcher(word).matches()) {
+                ClickableUrl(word, "https://$word")
+              } else if (tagIndex.matcher(word).matches() && tags != null) {
+                TagLink(word, tags, canPreview, backgroundColor, accountViewModel, navController)
+              } else if (isBechLink(word)) {
+                BechLink(word, navController)
+              } else {
+                Text(
+                  text = "$word ",
+                  style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+                )
+              }
             }
           }
         }
