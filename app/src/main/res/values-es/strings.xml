@@ -36,7 +36,7 @@
     <string name="login_with_a_private_key_to_be_able_to_send_zaps">Inicie sesión con una clave privada para poder enviar Zaps</string>
     <string name="zaps">Zaps</string>
     <string name="view_count">Total vistas</string>
-    <string name="boost">Aumentar</string>
+    <string name="boost">Impulsar</string>
     <string name="quote">Cita</string>
     <string name="new_amount_in_sats">Nueva cantidad en Sats</string>
     <string name="add">Añadir</string>
