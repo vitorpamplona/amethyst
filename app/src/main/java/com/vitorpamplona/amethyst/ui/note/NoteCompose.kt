@@ -629,7 +629,8 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
         expanded = popupExpanded,
         onDismissRequest = onDismiss
     ) {
-        if (note.author != accountViewModel.accountLiveData.value?.account?.userProfile()) {
+        if (note.author != accountViewModel.accountLiveData.value?.account?.userProfile() && !accountViewModel.accountLiveData.value?.account?.userProfile()
+                !!.isFollowing(note.author!!)) {
 
             DropdownMenuItem(onClick = {
                 accountViewModel.follow(
