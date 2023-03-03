@@ -23,37 +23,17 @@ class Nip19 {
 
       val bytes = key.bechToBytes()
       if (key.startsWith("npub")) {
-        return Return(Type.USER, bytes.toHexKey())
-      }
-      if (key.startsWith("note")) {
-        return Return(Type.NOTE, bytes.toHexKey())
-      }
-      if (key.startsWith("nprofile")) {
-        val tlv = parseTLV(bytes)
-        val hex = tlv.get(NIP19TLVTypes.SPECIAL.id)?.get(0)?.toHexKey()
-        if (hex != null)
-          return Return(Type.USER, hex)
-      }
-      if (key.startsWith("nevent")) {
-        val tlv = parseTLV(bytes)
-        val hex = tlv.get(NIP19TLVTypes.SPECIAL.id)?.get(0)?.toHexKey()
-        if (hex != null)
-          return Return(Type.USER, hex)
-      }
-      if (key.startsWith("nrelay")) {
-        val tlv = parseTLV(bytes)
-        val relayUrl = tlv.get(NIP19TLVTypes.SPECIAL.id)?.get(0)?.toString(Charsets.UTF_8)
-        if (relayUrl != null)
-          return Return(Type.RELAY, relayUrl)
-      }
-      if (key.startsWith("naddr")) {
-        val tlv = parseTLV(bytes)
-        val d = tlv.get(NIP19TLVTypes.SPECIAL.id)?.get(0)?.toString(Charsets.UTF_8)
-        val relay = tlv.get(NIP19TLVTypes.RELAY.id)?.get(0)?.toString(Charsets.UTF_8)
-        val author = tlv.get(NIP19TLVTypes.AUTHOR.id)?.get(0)?.toHexKey()
-        val kind = tlv.get(NIP19TLVTypes.KIND.id)?.get(0)?.let { toInt32(it) }
-        if (d != null)
-          return Return(Type.ADDRESS, "$kind:$author:$d")
+        return npub(bytes)
+      } else if (key.startsWith("note")) {
+        return note(bytes)
+      } else if (key.startsWith("nprofile")) {
+        return nprofile(bytes)
+      } else if (key.startsWith("nevent")) {
+        return nevent(bytes)
+      } else if (key.startsWith("nrelay")) {
+        return nrelay(bytes)
+      } else if (key.startsWith("naddr")) {
+        return naddr(bytes)
       }
     } catch (e: Throwable) {
       println("Issue trying to Decode NIP19 ${uri}: ${e.message}")
@@ -61,6 +41,49 @@ class Nip19 {
     }
 
     return null
+  }
+
+  private fun npub(bytes: ByteArray): Return {
+    return Return(Type.USER, bytes.toHexKey())
+  }
+
+  private fun note(bytes: ByteArray): Return {
+    return Return(Type.NOTE, bytes.toHexKey());
+  }
+
+  private fun nprofile(bytes: ByteArray): Return? {
+    val tlv = parseTLV(bytes)
+    val hex = tlv.get(NIP19TLVTypes.SPECIAL.id)?.get(0)?.toHexKey() ?: return null
+
+    return Return(Type.USER, hex)
+  }
+
+  private fun nevent(bytes: ByteArray): Return? {
+    val hex = parseTLV(bytes)
+      .get(NIP19TLVTypes.SPECIAL.id)
+      ?.get(0)
+      ?.toHexKey() ?: return null
+
+    return Return(Type.USER, hex)
+  }
+
+  private fun nrelay(bytes: ByteArray): Return? {
+    val relayUrl = parseTLV(bytes)
+      .get(NIP19TLVTypes.SPECIAL.id)
+      ?.get(0)
+      ?.toString(Charsets.UTF_8) ?: return null
+
+    return Return(Type.RELAY, relayUrl)
+  }
+
+  private fun naddr(bytes: ByteArray): Return? {
+    val tlv = parseTLV(bytes)
+    val d = tlv.get(NIP19TLVTypes.SPECIAL.id)?.get(0)?.toString(Charsets.UTF_8) ?: return null
+    val relay = tlv.get(NIP19TLVTypes.RELAY.id)?.get(0)?.toString(Charsets.UTF_8)
+    val author = tlv.get(NIP19TLVTypes.AUTHOR.id)?.get(0)?.toHexKey()
+    val kind = tlv.get(NIP19TLVTypes.KIND.id)?.get(0)?.let { toInt32(it) }
+
+    return Return(Type.ADDRESS, "$kind:$author:$d")
   }
 }
 
