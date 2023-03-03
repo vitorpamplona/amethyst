@@ -5,7 +5,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import nostr.postr.events.Event
+import com.vitorpamplona.amethyst.service.model.Event
 
 /**
  * RelayPool manages the connection to multiple Relays and lets consumers deal with simple events.

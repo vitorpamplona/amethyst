@@ -1,17 +1,16 @@
 package com.vitorpamplona.amethyst.service.model
 
+import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.service.lnurl.LnInvoiceUtil
 import com.vitorpamplona.amethyst.service.relays.Client
-import java.math.BigDecimal
-import nostr.postr.events.Event
 
 class LnZapEvent (
-  id: ByteArray,
-  pubKey: ByteArray,
+  id: HexKey,
+  pubKey: HexKey,
   createdAt: Long,
   tags: List<List<String>>,
   content: String,
-  sig: ByteArray
+  sig: HexKey
 ): Event(id, pubKey, createdAt, kind, tags, content, sig) {
 
   fun zappedPost() = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }

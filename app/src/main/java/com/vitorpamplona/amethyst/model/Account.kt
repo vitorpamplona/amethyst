@@ -6,6 +6,7 @@ import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
+import com.vitorpamplona.amethyst.service.model.Contact
 import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
@@ -26,16 +27,12 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import nostr.postr.Contact
 import nostr.postr.Persona
-import nostr.postr.Utils
-import nostr.postr.events.ContactListEvent
-import nostr.postr.events.DeletionEvent
-import nostr.postr.events.Event
-import nostr.postr.events.MetadataEvent
-import nostr.postr.events.PrivateDmEvent
+import com.vitorpamplona.amethyst.service.model.ContactListEvent
+import com.vitorpamplona.amethyst.service.model.DeletionEvent
+import com.vitorpamplona.amethyst.service.model.MetadataEvent
+import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
-import nostr.postr.toHex
 
 val DefaultChannels = setOf(
   "25e5c82273a271cb1a840d0060391a0bf4965cafeb029d5ab55350b418953fbb", // -> Anigma's Nostr
@@ -89,10 +86,11 @@ class Account(
     if (!isWriteable()) return
 
     val contactList = userProfile().latestContactList
+    val follows = contactList?.follows() ?: emptyList()
 
-    if (contactList != null && contactList.follows.size > 0) {
+    if (contactList != null && follows.isNotEmpty()) {
       val event = ContactListEvent.create(
-        contactList.follows,
+        follows,
         relays,
         loggedIn.privKey!!)
 
@@ -111,14 +109,7 @@ class Account(
     if (!isWriteable()) return
 
     loggedIn.privKey?.let {
-      val createdAt = Date().time / 1000
-      val content = toString
-      val pubKey = Utils.pubkeyCreate(it)
-      val tags = listOf<List<String>>()
-      val id = Event.generateId(pubKey, createdAt, MetadataEvent.kind, tags, content)
-      val sig = Utils.sign(id, it)
-      val event = MetadataEvent(id, pubKey, createdAt, tags, content, sig)
-
+      val event = MetadataEvent.create(toString, loggedIn.privKey!!)
       Client.send(event)
       LocalCache.consume(event)
     }
@@ -250,10 +241,11 @@ class Account(
     if (!isWriteable()) return
 
     val contactList = userProfile().latestContactList
+    val follows = contactList?.follows() ?: emptyList()
 
-    val event = if (contactList != null && contactList.follows.size > 0) {
+    val event = if (contactList != null && follows.isNotEmpty()) {
       ContactListEvent.create(
-        contactList.follows.plus(Contact(user.pubkeyHex, null)),
+        follows.plus(Contact(user.pubkeyHex, null)),
         userProfile().relays,
         loggedIn.privKey!!)
     } else {
@@ -273,10 +265,11 @@ class Account(
     if (!isWriteable()) return
 
     val contactList = userProfile().latestContactList
+    val follows = contactList?.follows() ?: emptyList()
 
-    if (contactList != null && contactList.follows.size > 0) {
+    if (contactList != null && follows.isNotEmpty()) {
       val event = ContactListEvent.create(
-        contactList.follows.filter { it.pubKeyHex != user.pubkeyHex },
+        follows.filter { it.pubKeyHex != user.pubkeyHex },
         userProfile().relays,
         loggedIn.privKey!!)
 
@@ -320,37 +313,6 @@ class Account(
     LocalCache.consume(signedEvent, null)
   }
 
-  fun createPrivateMessageWithReply(
-    recipientPubKey: ByteArray,
-    msg: String,
-    replyTos: List<String>? = null, mentions: List<String>? = null,
-    privateKey: ByteArray,
-    createdAt: Long = Date().time / 1000,
-    publishedRecipientPubKey: ByteArray? = null,
-    advertiseNip18: Boolean = true
-  ): PrivateDmEvent {
-    val content = Utils.encrypt(
-      if (advertiseNip18) {
-        PrivateDmEvent.nip18Advertisement
-      } else { "" } + msg,
-      privateKey,
-      recipientPubKey)
-    val pubKey = Utils.pubkeyCreate(privateKey)
-    val tags = mutableListOf<List<String>>()
-    publishedRecipientPubKey?.let {
-      tags.add(listOf("p", publishedRecipientPubKey.toHex()))
-    }
-    replyTos?.forEach {
-      tags.add(listOf("e", it))
-    }
-    mentions?.forEach {
-      tags.add(listOf("p", it))
-    }
-    val id = Event.generateId(pubKey, createdAt, PrivateDmEvent.kind, tags, content)
-    val sig = Utils.sign(id, privateKey)
-    return PrivateDmEvent(id, pubKey, createdAt, tags, content, sig)
-  }
-
   fun sendPrivateMeesage(message: String, toUser: String, replyingTo: Note? = null) {
     if (!isWriteable()) return
     val user = LocalCache.users[toUser] ?: return
@@ -358,7 +320,7 @@ class Account(
     val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
     val mentionsHex = emptyList<String>()
 
-    val signedEvent = createPrivateMessageWithReply(
+    val signedEvent = PrivateDmEvent.create(
       recipientPubKey = user.pubkey(),
       publishedRecipientPubKey = user.pubkey(),
       msg = message,
@@ -386,7 +348,7 @@ class Account(
     Client.send(event)
     LocalCache.consume(event)
 
-    joinChannel(event.id.toHex())
+    joinChannel(event.id)
   }
 
   fun joinChannel(idHex: String) {
@@ -438,7 +400,7 @@ class Account(
     Client.send(event)
     LocalCache.consume(event)
 
-    joinChannel(event.id.toHex())
+    joinChannel(event.id)
   }
 
   fun decryptContent(note: Note): String? {
@@ -446,26 +408,12 @@ class Account(
     return if (event is PrivateDmEvent && loggedIn.privKey != null) {
       var pubkeyToUse = event.pubKey
 
-      val recepientPK = event.recipientPubKey
+      val recepientPK = event.recipientPubKey()
 
       if (note.author == userProfile() && recepientPK != null)
         pubkeyToUse = recepientPK
 
-      return try {
-        val sharedSecret = Utils.getSharedSecret(loggedIn.privKey!!, pubkeyToUse)
-
-        val retVal = Utils.decrypt(event.content, sharedSecret)
-
-        if (retVal.startsWith(PrivateDmEvent.nip18Advertisement)) {
-          retVal.substring(16)
-        } else {
-          retVal
-        }
-
-      } catch (e: Exception) {
-        e.printStackTrace()
-        null
-      }
+      event.plainContent(loggedIn.privKey!!, pubkeyToUse.toByteArray())
     } else {
       event?.content
     }
@@ -495,10 +443,10 @@ class Account(
   }
 
   private fun updateContactListTo(newContactList: ContactListEvent?) {
-    if (newContactList?.follows.isNullOrEmpty()) return
+    if (newContactList?.follows().isNullOrEmpty()) return
 
     // Events might be different objects, we have to compare their ids.
-    if (backupContactList?.id?.toHex() != newContactList?.id?.toHex()) {
+    if (backupContactList?.id != newContactList?.id) {
       backupContactList = newContactList
       saveable.invalidateData()
     }

@@ -5,7 +5,7 @@ import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import nostr.postr.JsonFilter
-import nostr.postr.events.MetadataEvent
+import com.vitorpamplona.amethyst.service.model.MetadataEvent
 
 object NostrSingleUserDataSource: NostrDataSource("SingleUserFeed") {
   var usersToWatch = setOf<User>()

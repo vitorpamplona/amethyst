@@ -21,8 +21,8 @@ data class ATag(val kind: Int, val pubKeyHex: String, val dTag: String) {
 
         val fullArray =
             byteArrayOf(NIP19TLVTypes.SPECIAL.id, dTag.size.toByte()) + dTag +
-              byteArrayOf(NIP19TLVTypes.AUTHOR.id, addr.size.toByte()) + addr +
-              byteArrayOf(NIP19TLVTypes.KIND.id, kind.size.toByte()) + kind
+            byteArrayOf(NIP19TLVTypes.AUTHOR.id, addr.size.toByte()) + addr +
+            byteArrayOf(NIP19TLVTypes.KIND.id, kind.size.toByte()) + kind
 
         return Bech32.encodeBytes(hrp = "naddr", fullArray, Bech32.Encoding.Bech32)
     }
@@ -41,7 +41,7 @@ data class ATag(val kind: Int, val pubKeyHex: String, val dTag: String) {
               Hex.decode(parts[1])
               ATag(parts[0].toInt(), parts[1], parts[2])
             } catch (t: Throwable) {
-              Log.w("Address", "Error parsing A Tag: ${atag}: ${t.message}")
+              Log.w("ATag",  "Error parsing A Tag: ${atag}: ${t.message}")
                 null
             }
         }
@@ -62,7 +62,7 @@ data class ATag(val kind: Int, val pubKeyHex: String, val dTag: String) {
                 }
 
             } catch (e: Throwable) {
-                println("Issue trying to Decode NIP19 ${this}: ${e.message}")
+                Log.w( "ATag", "Issue trying to Decode NIP19 ${this}: ${e.message}")
                 //e.printStackTrace()
             }
 

@@ -114,7 +114,7 @@
     <string name="website">Website</string>
     <string name="lightning_address">Lightning Address</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Copies the Nsec ID (your password) to the clipboard for backup</string>
-    <string name="copy_private_key_to_the_clipboard">Copy Private Key to the Clipboard</string>
+    <string name="copy_private_key_to_the_clipboard">Copy Secret Key to the Clipboard</string>
     <string name="copies_the_public_key_to_the_clipboard_for_sharing">Copies the public key to the clipboard for sharing</string>
     <string name="copy_public_key_npub_to_the_clipboard">Copy Public Key (NPub) to the Clipboard</string>
     <string name="send_a_direct_message">Send a Direct Message</string>
@@ -173,4 +173,12 @@
     <string name="report_hateful_speech">Report Hateful speech</string>
     <string name="report_nudity_porn">Report Nudity / Porn</string>
     <string name="others">others</string>
+    <string name="account_backup_tips_md">
+        ## Key Backup and Safety Tips
+        \n\nYour account is secured by a secret key. The key is long random string starting with **nsec1**. Anyone who has access to your secret key can publish content using your identity.
+        \n\n- Do **not** put your secret key in any website or software you do not trust.
+        \n- Amethyst developers will **never** ask you for your secret key.
+        \n- **Do** keep a secure backup of your secret key for account recovery. We recommend using a password manager.
+    </string>
+    <string name="secret_key_copied_to_clipboard">Secret key (nsec) copied to clipboard</string>
 </resources>

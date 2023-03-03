@@ -9,8 +9,8 @@ import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import nostr.postr.JsonFilter
-import nostr.postr.events.ContactListEvent
-import nostr.postr.events.MetadataEvent
+import com.vitorpamplona.amethyst.service.model.ContactListEvent
+import com.vitorpamplona.amethyst.service.model.MetadataEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 
 object NostrAccountDataSource: NostrDataSource("AccountData") {

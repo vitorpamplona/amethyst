@@ -3,7 +3,7 @@ package com.vitorpamplona.amethyst.service.relays
 import android.util.Log
 import com.google.gson.JsonElement
 import java.util.Date
-import nostr.postr.events.Event
+import com.vitorpamplona.amethyst.service.model.Event
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response

@@ -1,20 +1,21 @@
 package com.vitorpamplona.amethyst.service.model
 
+import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.toHexKey
 import java.util.Date
 import nostr.postr.Utils
-import nostr.postr.events.Event
 import nostr.postr.toHex
 
 data class ReportedKey(val key: String, val reportType: ReportEvent.ReportType)
 
 // NIP 56 event.
 class ReportEvent (
-  id: ByteArray,
-  pubKey: ByteArray,
+  id: HexKey,
+  pubKey: HexKey,
   createdAt: Long,
   tags: List<List<String>>,
   content: String,
-  sig: ByteArray
+  sig: HexKey
 ): Event(id, pubKey, createdAt, kind, tags, content, sig) {
 
   private fun defaultReportType(): ReportType {
@@ -55,10 +56,10 @@ class ReportEvent (
     fun create(reportedPost: Event, type: ReportType, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ReportEvent {
       val content = ""
 
-      val reportPostTag = listOf("e", reportedPost.id.toHex(), type.name.toLowerCase())
-      val reportAuthorTag = listOf("p", reportedPost.pubKey.toHex(), type.name.toLowerCase())
+      val reportPostTag = listOf("e", reportedPost.id, type.name.toLowerCase())
+      val reportAuthorTag = listOf("p", reportedPost.pubKey, type.name.toLowerCase())
 
-      val pubKey = Utils.pubkeyCreate(privateKey)
+      val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
       var tags:List<List<String>> = listOf(reportPostTag, reportAuthorTag)
 
       if (reportedPost is LongTextNoteEvent) {
@@ -67,7 +68,7 @@ class ReportEvent (
 
       val id = generateId(pubKey, createdAt, kind, tags, content)
       val sig = Utils.sign(id, privateKey)
-      return ReportEvent(id, pubKey, createdAt, tags, content, sig)
+      return ReportEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
     }
 
     fun create(reportedUser: String, type: ReportType, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ReportEvent {
@@ -75,11 +76,11 @@ class ReportEvent (
 
       val reportAuthorTag = listOf("p", reportedUser, type.name.toLowerCase())
 
-      val pubKey = Utils.pubkeyCreate(privateKey)
+      val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
       val tags:List<List<String>> = listOf(reportAuthorTag)
       val id = generateId(pubKey, createdAt, kind, tags, content)
       val sig = Utils.sign(id, privateKey)
-      return ReportEvent(id, pubKey, createdAt, tags, content, sig)
+      return ReportEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
     }
   }
 

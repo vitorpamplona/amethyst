@@ -4,7 +4,7 @@ import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import nostr.postr.events.Event
+import com.vitorpamplona.amethyst.service.model.Event
 
 /**
  * The Nostr Client manages multiple personae the user may switch between. Events are received and
@@ -38,9 +38,7 @@ object Client: RelayPool.Listener {
         if (relays.size != newRelayConfig.size) return false
 
         relays.forEach { oldRelayInfo ->
-            val newRelayInfo = newRelayConfig.find { it.url == oldRelayInfo.url }
-
-            if (newRelayInfo == null) return false
+            val newRelayInfo = newRelayConfig.find { it.url == oldRelayInfo.url } ?: return false
 
             if (!oldRelayInfo.isSameRelayConfig(newRelayInfo)) return false
         }

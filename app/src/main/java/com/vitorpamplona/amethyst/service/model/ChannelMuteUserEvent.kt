@@ -1,27 +1,27 @@
 package com.vitorpamplona.amethyst.service.model
 
+import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.toHexKey
 import java.util.Date
 import nostr.postr.Utils
-import nostr.postr.events.Event
 
 class ChannelMuteUserEvent (
-  id: ByteArray,
-  pubKey: ByteArray,
+  id: HexKey,
+  pubKey: HexKey,
   createdAt: Long,
   tags: List<List<String>>,
   content: String,
-  sig: ByteArray
+  sig: HexKey
 ): Event(id, pubKey, createdAt, kind, tags, content, sig) {
 
   fun usersToMute() = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
-
 
   companion object {
     const val kind = 44
 
     fun create(reason: String, usersToMute: List<String>?, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ChannelMuteUserEvent {
       val content = reason
-      val pubKey = Utils.pubkeyCreate(privateKey)
+      val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
       val tags =
         usersToMute?.map {
           listOf("p", it)
@@ -29,7 +29,7 @@ class ChannelMuteUserEvent (
 
       val id = generateId(pubKey, createdAt, kind, tags, content)
       val sig = Utils.sign(id, privateKey)
-      return ChannelMuteUserEvent(id, pubKey, createdAt, tags, content, sig)
+      return ChannelMuteUserEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
     }
   }
 }

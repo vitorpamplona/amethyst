@@ -24,7 +24,7 @@
     <string name="copy_user_pubkey">Copiar PubKey del usuario</string>
     <string name="copy_note_id">Copiar ID de la nota</string>
     <string name="broadcast">Transmisión</string>
-    <string name="block_hide_user">Bloquear y ocultar usuario></string>
+    <string name="block_hide_user">Bloquear y ocultar usuario</string>
     <string name="report_spam_scam">Reportar Spam / Estafa</string>
     <string name="report_impersonation">Reportar suplantación de identidad</string>
     <string name="report_explicit_content">Reportar contenido explícito</string>
@@ -36,7 +36,7 @@
     <string name="login_with_a_private_key_to_be_able_to_send_zaps">Inicie sesión con una clave privada para poder enviar Zaps</string>
     <string name="zaps">Zaps</string>
     <string name="view_count">Total vistas</string>
-    <string name="boost">Aumentar</string>
+    <string name="boost">Impulsar</string>
     <string name="boosted">boosted</string>
     <string name="quote">Cita</string>
     <string name="new_amount_in_sats">Nueva cantidad en Sats</string>
@@ -47,7 +47,7 @@
     <string name="profile_banner">Banner de perfil</string>
     <string name="following">" Siguiendo"</string>
     <string name="followers">" Seguidores"</string>
-    <string name="profile">Peril</string>
+    <string name="profile">Perfil</string>
     <string name="security_filters">Filtros de seguridad</string>
     <string name="log_out">Cerrar sesión</string>
     <string name="show_more">Mostrar más</string>
@@ -68,7 +68,7 @@
     <string name="description">Descripción</string>
     <string name="about_us">"Sobre nosotros… "</string>
     <string name="what_s_on_your_mind">¿Qué tienes en mente?</string>
-    <string name="post">Publicación</string>
+    <string name="post">Enviar</string>
     <string name="save">Guardar</string>
     <string name="create">Crear</string>
     <string name="cancel">Cancelar</string>
@@ -101,15 +101,15 @@
     <string name="copy_channel_id_note_to_the_clipboard">Copia la nota-ID del canal</string>
     <string name="edits_the_channel_metadata">Edita los metadatos del canal</string>
     <string name="join">Unirse</string>
-    <string name="known">Conocido</string>
+    <string name="known">Conocidos</string>
     <string name="new_requests">Nuevas solicitudes</string>
     <string name="blocked_users">Usuarios bloqueados</string>
     <string name="new_threads">Temas nuevos</string>
     <string name="conversations">Conversaciones</string>
     <string name="notes">Notas</string>
     <string name="replies">Respuestas</string>
-    <string name="follows">"Sigue"</string>
-    <string name="reports">"Reportes"</string>
+    <string name="follows">Siguiendo</string>
+    <string name="reports">Reportes</string>
     <string name="more_options">Más opciones</string>
     <string name="relays">" Retransmisores"</string>
     <string name="website">Sitio web</string>
@@ -137,7 +137,7 @@
     <string name="key_is_required">Se requiere la clave</string>
     <string name="login">Acceso</string>
     <string name="generate_a_new_key">Generar una nueva clave</string>
-    <string name="loading_feed">Cargando el tablón</string>
+    <string name="loading_feed">Cargando el tablón…</string>
     <string name="error_loading_replies">"Error al cargar las respuestas: "</string>
     <string name="try_again">Intentar otra vez</string>
     <string name="feed_is_empty">Tablón vacío</string>
@@ -151,7 +151,7 @@
     <string name="leave">Dejar</string>
     <string name="unfollow">Dejar de seguir</string>
     <string name="channel_created">Canal creado</string>
-    <string name="channel_information_changed_to">"La información del canal cambió a"</string>
+    <string name="channel_information_changed_to">La información del canal cambió a</string>
     <string name="public_chat">Chat público</string>
     <string name="posts_received">publicaciones recibidas</string>
     <string name="remove">Eliminar</string>
@@ -161,7 +161,7 @@
     <string name="to">a</string>
     <string name="show_in">Mostrar en</string>
     <string name="first">primero</string>
-    <string name="always_translate_to">Traducir siempre a</string>
+    <string name="always_translate_to">"Traducir siempre a "</string>
     <string name="nip_05" translatable="false">NIP-05</string>
     <string name="lnurl" translatable="false">LNURL...</string>
     <string name="never">nunca</string>
