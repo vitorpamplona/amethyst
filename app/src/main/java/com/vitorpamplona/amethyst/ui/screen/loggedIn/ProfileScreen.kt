@@ -10,7 +10,6 @@ import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.EditNote
-import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
@@ -78,7 +77,6 @@ import com.vitorpamplona.amethyst.ui.screen.UserFeedView
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import nostr.postr.toNsec
 
 @OptIn(ExperimentalPagerApi::class)
 @Composable
@@ -336,10 +334,6 @@ private fun ProfileHeader(
                     .height(35.dp)
                     .padding(bottom = 3.dp)) {
                     MessageButton(baseUser, navController)
-
-                    if (accountUser == baseUser && account.isWriteable()) {
-                        NSecCopyButton(account)
-                    }
 
                     NPubCopyButton(baseUser)
 
@@ -637,40 +631,7 @@ fun TabRelays(user: User, accountViewModel: AccountViewModel, navController: Nav
     }
 }
 
-@Composable
-private fun NSecCopyButton(
-    account: Account
-) {
-    val clipboardManager = LocalClipboardManager.current
-    var popupExpanded by remember { mutableStateOf(false) }
 
-    Button(
-        modifier = Modifier
-            .padding(horizontal = 3.dp)
-            .width(50.dp),
-        onClick = { popupExpanded = true },
-        shape = RoundedCornerShape(20.dp),
-        colors = ButtonDefaults
-            .buttonColors(
-                backgroundColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-            )
-    ) {
-        Icon(
-            tint = Color.White,
-            imageVector = Icons.Default.Key,
-            contentDescription = stringResource(R.string.copies_the_nsec_id_your_password_to_the_clipboard_for_backup)
-        )
-
-        DropdownMenu(
-            expanded = popupExpanded,
-            onDismissRequest = { popupExpanded = false }
-        ) {
-            DropdownMenuItem(onClick = {  account.loggedIn.privKey?.let { clipboardManager.setText(AnnotatedString(it.toNsec())) }; popupExpanded = false }) {
-                Text(stringResource(R.string.copy_private_key_to_the_clipboard))
-            }
-        }
-    }
-}
 
 @Composable
 private fun NPubCopyButton(

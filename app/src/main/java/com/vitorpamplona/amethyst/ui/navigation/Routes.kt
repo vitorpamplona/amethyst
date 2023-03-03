@@ -53,7 +53,7 @@ sealed class Route(
         buildScreen = { acc, accSt, nav -> { _ -> ChatroomListScreen(acc, nav) }}
     )
 
-    object Filters : Route("Filters", R.drawable.ic_dm,
+    object Filters : Route("Filters", R.drawable.ic_security,
         buildScreen = { acc, accSt, nav -> { _ -> FiltersScreen(acc, nav) }}
     )
 
