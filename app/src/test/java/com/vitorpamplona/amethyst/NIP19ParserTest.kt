@@ -2,7 +2,6 @@ package com.vitorpamplona.amethyst
 
 import com.vitorpamplona.amethyst.service.Nip19
 import com.vitorpamplona.amethyst.service.model.ATag
-import com.vitorpamplona.amethyst.service.toNAddr
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
