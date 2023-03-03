@@ -113,7 +113,9 @@ class AccountViewModel(private val account: Account): ViewModel() {
     account.prefer(source, target, preference)
   }
 
-
+  fun follow(user: User) {
+    account.follow(user)
+  }
 
 
 }
