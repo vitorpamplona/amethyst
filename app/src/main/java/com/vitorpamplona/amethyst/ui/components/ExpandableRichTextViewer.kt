@@ -46,7 +46,7 @@ fun ExpandableRichTextViewer(
   val text = if (showFullText) content else content.take(350)
 
   Box(contentAlignment = Alignment.BottomCenter) {
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    //CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
       RichTextViewer(
         text,
         canPreview,
@@ -56,7 +56,7 @@ fun ExpandableRichTextViewer(
         accountViewModel,
         navController
       )
-    }
+    //}
 
     if (content.length > 350 && !showFullText) {
       Row(
