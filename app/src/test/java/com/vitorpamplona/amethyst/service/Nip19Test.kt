@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.service
 
 import org.junit.Assert
+import org.junit.Ignore
 import org.junit.Test
 
 class Nip19Test {
@@ -18,7 +19,14 @@ class Nip19Test {
   @Test()
   fun to_int_32_length_4() {
     val actual = toInt32(byteArrayOfInts(1, 2, 3, 4))
+
     Assert.assertEquals(16909060, actual)
+  }
+
+  @Ignore("Not implemented yet")
+  @Test()
+  fun parse_TLV() {
+    // TODO
   }
 
   private fun byteArrayOfInts(vararg ints: Int) = ByteArray(ints.size) { pos -> ints[pos].toByte() }

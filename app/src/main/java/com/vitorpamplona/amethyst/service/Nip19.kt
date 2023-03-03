@@ -78,7 +78,7 @@ fun toInt32(bytes: ByteArray): Int {
 }
 
 fun parseTLV(data: ByteArray): Map<Byte, List<ByteArray>> {
-  var result = mutableMapOf<Byte, MutableList<ByteArray>>()
+  val result = mutableMapOf<Byte, MutableList<ByteArray>>()
   var rest = data
   while (rest.isNotEmpty()) {
     val t = rest[0]
@@ -88,9 +88,9 @@ fun parseTLV(data: ByteArray): Map<Byte, List<ByteArray>> {
     if (v.size < l) continue
 
     if (!result.containsKey(t)) {
-      result.put(t, mutableListOf())
+      result[t] = mutableListOf()
     }
-    result.get(t)?.add(v)
+    result[t]?.add(v)
   }
   return result
 }
