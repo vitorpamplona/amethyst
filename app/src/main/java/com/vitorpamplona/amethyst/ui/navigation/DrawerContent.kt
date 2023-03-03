@@ -7,12 +7,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Divider
 import androidx.compose.material.Icon
@@ -36,8 +37,8 @@ import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.font.FontWeight.Companion.W500
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -45,14 +46,14 @@ import androidx.navigation.NavHostController
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.RoboHashCache
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountBackupDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.launch
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun DrawerContent(navController: NavHostController,
@@ -88,7 +89,8 @@ fun DrawerContent(navController: NavHostController,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1F),
-                accountStateViewModel
+                accountStateViewModel,
+                account,
             )
 
             BottomContent(account.userProfile(), scaffoldState, navController)
@@ -155,38 +157,44 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
             if (accountUser.bestDisplayName() != null) {
                 Text(
                     accountUser.bestDisplayName() ?: "",
-                    modifier = Modifier.padding(top = 7.dp).clickable(onClick = {
-                        accountUser.let {
-                            navController.navigate("User/${it.pubkeyHex}")
-                        }
-                        coroutineScope.launch {
-                            scaffoldState.drawerState.close()
-                        }
-                    }),
+                    modifier = Modifier
+                        .padding(top = 7.dp)
+                        .clickable(onClick = {
+                            accountUser.let {
+                                navController.navigate("User/${it.pubkeyHex}")
+                            }
+                            coroutineScope.launch {
+                                scaffoldState.drawerState.close()
+                            }
+                        }),
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp
                 )
             }
             if (accountUser.bestUsername() != null) {
                 Text(" @${accountUser.bestUsername()}", color = Color.LightGray,
-                    modifier = Modifier.padding(top = 15.dp).clickable(onClick = {
-                        accountUser.let {
-                            navController.navigate("User/${it.pubkeyHex}")
-                        }
-                        coroutineScope.launch {
-                            scaffoldState.drawerState.close()
-                        }
-                    })
+                    modifier = Modifier
+                        .padding(top = 15.dp)
+                        .clickable(onClick = {
+                            accountUser.let {
+                                navController.navigate("User/${it.pubkeyHex}")
+                            }
+                            coroutineScope.launch {
+                                scaffoldState.drawerState.close()
+                            }
+                        })
                 )
             }
-            Row(modifier = Modifier.padding(top = 15.dp).clickable(onClick = {
-                accountUser.let {
-                    navController.navigate("User/${it.pubkeyHex}")
-                }
-                coroutineScope.launch {
-                    scaffoldState.drawerState.close()
-                }
-            })) {
+            Row(modifier = Modifier
+                .padding(top = 15.dp)
+                .clickable(onClick = {
+                    accountUser.let {
+                        navController.navigate("User/${it.pubkeyHex}")
+                    }
+                    coroutineScope.launch {
+                        scaffoldState.drawerState.close()
+                    }
+                })) {
                 Row() {
                     Text("${accountUserFollows.follows.size}", fontWeight = FontWeight.Bold)
                     Text(stringResource(R.string.following))
@@ -206,66 +214,84 @@ fun ListContent(
     navController: NavHostController,
     scaffoldState: ScaffoldState,
     modifier: Modifier,
-    accountViewModel: AccountStateViewModel
+    accountViewModel: AccountStateViewModel,
+    account: Account,
 ) {
     val coroutineScope = rememberCoroutineScope()
+    var backupDialogOpen by remember { mutableStateOf(false) }
 
-    Column(modifier = modifier) {
-        LazyColumn() {
-            item {
-                if (accountUser != null)
-                    NavigationRow(navController,
-                        scaffoldState,
-                        "User/${accountUser.pubkeyHex}",
-                        Route.Profile.icon,
-                        stringResource(R.string.profile)
-                    )
+    Column(modifier = modifier.fillMaxHeight()) {
+        if (accountUser != null)
+            NavigationRow(
+                title = stringResource(R.string.profile),
+                icon = Route.Profile.icon,
+                tint = MaterialTheme.colors.primary,
+                navController = navController,
+                scaffoldState = scaffoldState,
+                route = "User/${accountUser.pubkeyHex}",
+            )
 
-                Divider(
-                    modifier = Modifier.padding(bottom = 15.dp),
-                    thickness = 0.25.dp
-                )
-                Column(modifier = modifier.padding(horizontal = 25.dp)) {
-                    Row(modifier = Modifier.clickable(onClick = {
-                        navController.navigate(Route.Filters.route)
-                        coroutineScope.launch {
-                            scaffoldState.drawerState.close()
-                        }
-                    })) {
-                        Text(
-                            text = stringResource(R.string.security_filters),
-                            fontSize = 18.sp,
-                            fontWeight = W500
-                        )
-                    }
-                    Row(modifier = Modifier.clickable(onClick = { accountViewModel.logOff() })) {
-                        Text(
-                            text = stringResource(R.string.log_out),
-                            modifier = Modifier.padding(vertical = 15.dp),
-                            fontSize = 18.sp,
-                            fontWeight = W500
-                        )
-                    }
-                }
-            }
-        }
+        Divider(thickness = 0.25.dp)
+
+        NavigationRow(
+            title = stringResource(R.string.security_filters),
+            icon = Route.Filters.icon,
+            tint = MaterialTheme.colors.onBackground,
+            navController = navController,
+            scaffoldState = scaffoldState,
+            route = Route.Filters.route,
+        )
+
+        Divider(thickness = 0.25.dp)
+
+        IconRow(
+            title = "Backup Keys",
+            icon = R.drawable.ic_key,
+            tint = MaterialTheme.colors.onBackground,
+            onClick = { backupDialogOpen = true }
+        )
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        IconRow(
+            "Logout",
+            R.drawable.ic_logout,
+            MaterialTheme.colors.onBackground,
+            onClick = { accountViewModel.logOff() }
+        )
+    }
+
+    if (backupDialogOpen) {
+        AccountBackupDialog(account, onClose = { backupDialogOpen = false })
     }
 }
 
 @Composable
-fun NavigationRow(navController: NavHostController, scaffoldState: ScaffoldState, route: String, icon: Int, title: String) {
+fun NavigationRow(
+    title: String,
+    icon: Int,
+    tint: Color,
+    navController: NavHostController,
+    scaffoldState: ScaffoldState,
+    route: String,
+) {
     val coroutineScope = rememberCoroutineScope()
     val currentRoute = currentRoute(navController)
+    IconRow(title, icon, tint, onClick = {
+        if (currentRoute != route) {
+            navController.navigate(route)
+        }
+        coroutineScope.launch {
+            scaffoldState.drawerState.close()
+        }
+    })
+}
+
+@Composable
+fun IconRow(title: String, icon: Int, tint: Color, onClick: () -> Unit) {
     Row(modifier = Modifier
         .fillMaxWidth()
-        .clickable(onClick = {
-            if (currentRoute != route) {
-                navController.navigate(route)
-            }
-            coroutineScope.launch {
-                scaffoldState.drawerState.close()
-            }
-        })
+        .clickable(onClick = onClick)
     ) {
         Row(
             modifier = Modifier
@@ -276,7 +302,7 @@ fun NavigationRow(navController: NavHostController, scaffoldState: ScaffoldState
             Icon(
                 painter = painterResource(icon), null,
                 modifier = Modifier.size(22.dp),
-                tint = MaterialTheme.colors.primary
+                tint = tint
             )
             Text(
                 modifier = Modifier.padding(start = 16.dp),
