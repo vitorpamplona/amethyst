@@ -17,8 +17,8 @@
     <string name="spam">Spam</string>
     <string name="impersonation">Suplantación de identidad</string>
     <string name="illegal_behavior">Comportamiento ilegal</string>
-    <string name="unknown">Desconodido</string>
-    <string name="relay_icon">Icono de relé</string>
+    <string name="unknown">Desconocido</string>
+    <string name="relay_icon">Icono del transmisor</string>
     <string name="unknown_author">Autor desconocido</string>
     <string name="copy_text">Copiar texto</string>
     <string name="copy_user_pubkey">Copiar PubKey del usuario</string>
@@ -27,7 +27,7 @@
     <string name="block_hide_user">Bloquear y ocultar usuario></string>
     <string name="report_spam_scam">Reportar Spam / Estafa</string>
     <string name="report_impersonation">Reportar suplantación de identidad</string>
-    <string name="report_explicit_content">Reportar contenido explicito</string>
+    <string name="report_explicit_content">Reportar contenido explícito</string>
     <string name="report_illegal_behaviour">Reportar comportamiento ilegal</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">Inicie sesión con una clave privada para poder responder</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Inicie sesión con una clave privada para poder publicar posts</string>
@@ -65,7 +65,7 @@
     <string name="my_awesome_group">Mi grupo genial</string>
     <string name="picture_url">URL de imagen</string>
     <string name="description">Descripción</string>
-    <string name="about_us">"Sobre nosotros.. "</string>
+    <string name="about_us">"Sobre nosotros… "</string>
     <string name="what_s_on_your_mind">¿Qué tienes en mente?</string>
     <string name="post">Publicación</string>
     <string name="save">Guardar</string>
@@ -79,7 +79,7 @@
     <string name="private_message_feed">Fuente de mensajes privados</string>
     <string name="public_chat_feed">Fuente de chat público</string>
     <string name="global_feed">Fuente global</string>
-    <string name="add_a_relay">Anadir tramsmisor</string>
+    <string name="add_a_relay">Anadir transmisor</string>
     <string name="display_name">Nombre para mostrar</string>
     <string name="my_display_name">Mi nombre para mostrar</string>
     <string name="username">Nombre de usuario</string>
@@ -89,13 +89,13 @@
     <string name="banner_url">URL del banner</string>
     <string name="website_url">Dirección web</string>
     <string name="ln_address">Dirección LN</string>
-    <string name="ln_url_outdated">Dirección LN (outdated)</string>
+    <string name="ln_url_outdated">Dirección LN (antiguo)</string>
     <string name="image_saved_to_the_gallery">Imagen guardada en la galería</string>
     <string name="failed_to_save_the_image">Error al guardar la imagen</string>
     <string name="upload_image">Cargar imagen</string>
     <string name="uploading">Cargando…</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">El usuario no tiene una configuración de dirección Lightning para recibir sats</string>
-    <string name="reply_here">"responde aquí.. "</string>
+    <string name="reply_here">"responde aquí… "</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">Copia la nota-ID para compartir</string>
     <string name="copy_channel_id_note_to_the_clipboard">Copia la nota-ID del canal</string>
     <string name="edits_the_channel_metadata">Edita los metadatos del canal</string>
@@ -110,7 +110,7 @@
     <string name="follows">"Sigue"</string>
     <string name="reports">"Reportes"</string>
     <string name="more_options">Más opciones</string>
-    <string name="relays">" Retrasmisores"</string>
+    <string name="relays">" Retransmisores"</string>
     <string name="website">Sitio web</string>
     <string name="lightning_address">Dirección Lightning</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Copia la ID de Nsec (su contraseña) en el portapapeles para hacer una copia de seguridad</string>
@@ -131,7 +131,7 @@
     <string name="hide_password">Ocultar contraseña</string>
     <string name="invalid_key">Clave invalida</string>
     <string name="i_accept_the">"Acepto los "</string>
-    <string name="terms_of_use">terminos de uso</string>
+    <string name="terms_of_use">términos de uso</string>
     <string name="acceptance_of_terms_is_required">Se requiere la aceptación de los términos</string>
     <string name="key_is_required">Se requiere la clave</string>
     <string name="login">Acceso</string>
