@@ -133,7 +133,9 @@ fun RichTextViewer(
       // FlowRow doesn't work well with paragraphs. So we need to split them
       content.split('\n').forEach { paragraph ->
         FlowRow() {
-          val s = if (isArabic(paragraph))  paragraph.split(' ').reversed() else paragraph.split(' ');
+          // Did not work: if (isArabic(paragraph))  paragraph.split(' ').reversed() else
+          // English is not Right side
+          val s = paragraph.split(' ');
           s.forEach { word: String ->
             if (canPreview) {
               // Explicit URL
