@@ -5,7 +5,7 @@ import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import nostr.postr.JsonFilter
 import nostr.postr.bechToBytes
-import nostr.postr.events.MetadataEvent
+import com.vitorpamplona.amethyst.service.model.MetadataEvent
 import nostr.postr.toHex
 
 object NostrSearchEventOrUserDataSource: NostrDataSource("SingleEventFeed") {

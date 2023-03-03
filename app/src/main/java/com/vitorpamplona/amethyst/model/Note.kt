@@ -27,7 +27,7 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import nostr.postr.events.Event
+import com.vitorpamplona.amethyst.service.model.Event
 
 val tagSearch = Pattern.compile("(?:\\s|\\A)\\#\\[([0-9]+)\\]")
 
@@ -72,7 +72,7 @@ open class Note(val idHex: String) {
         val channelHex =
             (event as? ChannelMessageEvent)?.channel() ?:
             (event as? ChannelMetadataEvent)?.channel() ?:
-            (event as? ChannelCreateEvent)?.let { it.id.toHexKey() }
+            (event as? ChannelCreateEvent)?.let { it.id }
 
         return channelHex?.let { LocalCache.checkGetOrCreateChannel(it) }
     }
@@ -249,6 +249,22 @@ open class Note(val idHex: String) {
           (author?.reports?.values?.filter {
               it.firstOrNull { ( it.createdAt() ?: 0 ) > dayAgo } != null
           }?.isNotEmpty() ?: false)
+    }
+
+    fun directlyCiteUsersHex(): Set<HexKey> {
+        val matcher = tagSearch.matcher(event?.content ?: "")
+        val returningList = mutableSetOf<String>()
+        while (matcher.find()) {
+            try {
+                val tag = matcher.group(1)?.let { event?.tags?.get(it.toInt()) }
+                if (tag != null && tag[0] == "p") {
+                    returningList.add(tag[1])
+                }
+            } catch (e: Exception) {
+
+            }
+        }
+        return returningList
     }
 
     fun directlyCiteUsers(): Set<User> {

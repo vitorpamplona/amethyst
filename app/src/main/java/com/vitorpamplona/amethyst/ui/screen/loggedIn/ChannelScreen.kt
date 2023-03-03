@@ -121,7 +121,6 @@ fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, accoun
         Column(Modifier.fillMaxHeight()) {
             ChannelHeader(
                 channel, account,
-                accountStateViewModel = accountStateViewModel,
                 navController = navController
             )
 
@@ -213,7 +212,7 @@ fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, accoun
 }
 
 @Composable
-fun ChannelHeader(baseChannel: Channel, account: Account, accountStateViewModel: AccountStateViewModel, navController: NavController) {
+fun ChannelHeader(baseChannel: Channel, account: Account, navController: NavController) {
     val channelState by baseChannel.live.observeAsState()
     val channel = channelState?.channel ?: return
 

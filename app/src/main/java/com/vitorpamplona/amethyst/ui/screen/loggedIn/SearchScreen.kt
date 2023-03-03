@@ -86,8 +86,8 @@ fun SearchScreen(accountViewModel: AccountViewModel, navController: NavControlle
     val feedViewModel: NostrGlobalFeedViewModel = viewModel()
     val lifeCycleOwner = LocalLifecycleOwner.current
 
-    LaunchedEffect(Unit) {
-        feedViewModel.invalidateData()
+    LaunchedEffect(accountViewModel) {
+        feedViewModel.refresh()
     }
 
     DisposableEffect(accountViewModel) {
@@ -95,7 +95,7 @@ fun SearchScreen(accountViewModel: AccountViewModel, navController: NavControlle
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Global Start")
                 NostrGlobalDataSource.start()
-                feedViewModel.invalidateData()
+                feedViewModel.refresh()
             }
             if (event == Lifecycle.Event.ON_PAUSE) {
                 println("Global Stop")

@@ -1,17 +1,18 @@
 package com.vitorpamplona.amethyst.service.model
 
+import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.toHexKey
 import java.util.Date
 import nostr.postr.Utils
-import nostr.postr.events.Event
 import nostr.postr.toHex
 
 class LnZapRequestEvent (
-  id: ByteArray,
-  pubKey: ByteArray,
+  id: HexKey,
+  pubKey: HexKey,
   createdAt: Long,
   tags: List<List<String>>,
   content: String,
-  sig: ByteArray
+  sig: HexKey
 ): Event(id, pubKey, createdAt, kind, tags, content, sig) {
   fun zappedPost() = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
   fun zappedAuthor() = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
@@ -22,10 +23,10 @@ class LnZapRequestEvent (
 
     fun create(originalNote: Event, relays: Set<String>, privateKey: ByteArray, createdAt: Long = Date().time / 1000): LnZapRequestEvent {
       val content = ""
-      val pubKey = Utils.pubkeyCreate(privateKey)
+      val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
       var tags = listOf(
-        listOf("e", originalNote.id.toHex()),
-        listOf("p", originalNote.pubKey.toHex()),
+        listOf("e", originalNote.id),
+        listOf("p", originalNote.pubKey),
         listOf("relays") + relays
       )
       if (originalNote is LongTextNoteEvent) {
@@ -34,19 +35,19 @@ class LnZapRequestEvent (
 
       val id = generateId(pubKey, createdAt, kind, tags, content)
       val sig = Utils.sign(id, privateKey)
-      return LnZapRequestEvent(id, pubKey, createdAt, tags, content, sig)
+      return LnZapRequestEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
     }
 
     fun create(userHex: String, relays: Set<String>, privateKey: ByteArray, createdAt: Long = Date().time / 1000): LnZapRequestEvent {
       val content = ""
-      val pubKey = Utils.pubkeyCreate(privateKey)
+      val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
       val tags = listOf(
         listOf("p", userHex),
         listOf("relays") + relays
       )
       val id = generateId(pubKey, createdAt, kind, tags, content)
       val sig = Utils.sign(id, privateKey)
-      return LnZapRequestEvent(id, pubKey, createdAt, tags, content, sig)
+      return LnZapRequestEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
     }
   }
 }

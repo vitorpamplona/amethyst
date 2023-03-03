@@ -18,8 +18,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import nostr.postr.Bech32
-import nostr.postr.events.ContactListEvent
-import nostr.postr.events.MetadataEvent
+import com.vitorpamplona.amethyst.service.model.ContactListEvent
+import com.vitorpamplona.amethyst.service.model.MetadataEvent
 import nostr.postr.toNpub
 
 val lnurlpPattern = Pattern.compile("(?i:http|https):\\/\\/((.+)\\/)*\\.well-known\\/lnurlp\\/(.*)")

@@ -7,7 +7,7 @@ import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import nostr.postr.JsonFilter
-import nostr.postr.events.PrivateDmEvent
+import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 
 object NostrChatroomListDataSource: NostrDataSource("MailBoxFeed") {
   lateinit var account: Account

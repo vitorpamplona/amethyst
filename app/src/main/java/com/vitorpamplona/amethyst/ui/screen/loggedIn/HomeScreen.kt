@@ -55,8 +55,8 @@ fun HomeScreen(accountViewModel: AccountViewModel, navController: NavController)
     LaunchedEffect(accountViewModel) {
         NostrHomeDataSource.resetFilters()
 
-        feedViewModel.invalidateData()
-        feedViewModelReplies.invalidateData()
+        feedViewModel.refresh()
+        feedViewModelReplies.refresh()
     }
 
     val lifeCycleOwner = LocalLifecycleOwner.current
@@ -64,8 +64,8 @@ fun HomeScreen(accountViewModel: AccountViewModel, navController: NavController)
         val observer = LifecycleEventObserver { source, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 NostrHomeDataSource.resetFilters()
-                feedViewModel.invalidateData()
-                feedViewModelReplies.invalidateData()
+                feedViewModel.refresh()
+                feedViewModelReplies.refresh()
             }
         }
 

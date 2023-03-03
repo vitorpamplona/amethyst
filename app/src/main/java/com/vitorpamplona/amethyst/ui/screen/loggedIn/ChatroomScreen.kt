@@ -79,7 +79,7 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
         val lifeCycleOwner = LocalLifecycleOwner.current
 
         LaunchedEffect(userId) {
-            feedViewModel.invalidateData()
+            feedViewModel.refresh()
         }
 
         DisposableEffect(userId) {
@@ -87,7 +87,7 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
                 if (event == Lifecycle.Event.ON_RESUME) {
                     println("Private Message Start")
                     NostrChatroomDataSource.start()
-                    feedViewModel.invalidateData()
+                    feedViewModel.refresh()
                 }
                 if (event == Lifecycle.Event.ON_PAUSE) {
                     println("Private Message Stop")

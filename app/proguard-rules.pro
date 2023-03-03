@@ -25,7 +25,7 @@
 -keep class fr.acinq.secp256k1.jni.** { *; }
 # For the NostrPostr library
 -keep class nostr.postr.** { *; }
--keep class nostr.postr.events.** { *; }
+-keep class com.vitorpamplona.amethyst.service.model.** { *; }
 # Json parsing
 -keep class com.google.gson.reflect.** { *; }
 -keep class * extends com.google.gson.reflect.TypeToken

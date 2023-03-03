@@ -38,7 +38,9 @@ import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
+import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
@@ -51,8 +53,9 @@ import com.vitorpamplona.amethyst.ui.components.UrlPreviewCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Following
 import kotlin.time.ExperimentalTime
-import nostr.postr.events.PrivateDmEvent
+import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -85,6 +88,7 @@ fun NoteCompose(
     var moreActionsExpanded by remember { mutableStateOf(false) }
 
     val noteEvent = note?.event
+    val baseChannel = note?.channel()
 
     if (noteEvent == null) {
         BlankNote(modifier.combinedClickable(
@@ -100,6 +104,8 @@ fun NoteCompose(
             navController,
             onClick = { showHiddenNote = true }
         )
+    } else if ((noteEvent is ChannelCreateEvent || noteEvent is ChannelMetadataEvent) && baseChannel != null) {
+        ChannelHeader(baseChannel = baseChannel, account = account, navController = navController)
     } else {
         var isNew by remember { mutableStateOf<Boolean>(false) }
 
@@ -134,9 +140,11 @@ fun NoteCompose(
                             launchSingleTop = true
                         }
                     } else {
-                        note.channel()?.let {
-                            navController.navigate("Channel/${it.idHex}")
-                        }
+                        note
+                            .channel()
+                            ?.let {
+                                navController.navigate("Channel/${it.idHex}")
+                            }
                     }
                 },
                 onLongClick = { popupExpanded = true }
@@ -176,7 +184,6 @@ fun NoteCompose(
                             }
 
                             // boosted picture
-                            val baseChannel = note.channel()
                             if (noteEvent is ChannelMessageEvent && baseChannel != null) {
                                 val channelState by baseChannel.live.observeAsState()
                                 val channel = channelState?.channel

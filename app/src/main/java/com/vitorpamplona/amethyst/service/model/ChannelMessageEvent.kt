@@ -1,16 +1,17 @@
 package com.vitorpamplona.amethyst.service.model
 
+import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.toHexKey
 import java.util.Date
 import nostr.postr.Utils
-import nostr.postr.events.Event
 
 class ChannelMessageEvent (
-  id: ByteArray,
-  pubKey: ByteArray,
+  id: HexKey,
+  pubKey: HexKey,
   createdAt: Long,
   tags: List<List<String>>,
   content: String,
-  sig: ByteArray
+  sig: HexKey
 ): Event(id, pubKey, createdAt, kind, tags, content, sig) {
 
   fun channel() = tags.firstOrNull { it[0] == "e" && it.size > 3 && it[3] == "root" }?.getOrNull(1) ?: tags.firstOrNull { it.firstOrNull() == "e" }?.getOrNull(1)
@@ -22,7 +23,7 @@ class ChannelMessageEvent (
 
     fun create(message: String, channel: String, replyTos: List<String>? = null, mentions: List<String>? = null, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ChannelMessageEvent {
       val content = message
-      val pubKey = Utils.pubkeyCreate(privateKey)
+      val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
       val tags = mutableListOf(
         listOf("e", channel, "", "root")
       )
@@ -35,7 +36,7 @@ class ChannelMessageEvent (
 
       val id = generateId(pubKey, createdAt, kind, tags, content)
       val sig = Utils.sign(id, privateKey)
-      return ChannelMessageEvent(id, pubKey, createdAt, tags, content, sig)
+      return ChannelMessageEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
     }
   }
 }
