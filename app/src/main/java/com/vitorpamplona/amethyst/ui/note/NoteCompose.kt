@@ -134,9 +134,11 @@ fun NoteCompose(
                             launchSingleTop = true
                         }
                     } else {
-                        note.channel()?.let {
-                            navController.navigate("Channel/${it.idHex}")
-                        }
+                        note
+                            .channel()
+                            ?.let {
+                                navController.navigate("Channel/${it.idHex}")
+                            }
                     }
                 },
                 onLongClick = { popupExpanded = true }
@@ -234,7 +236,7 @@ fun NoteCompose(
 
                         if (noteEvent is RepostEvent) {
                             Text(
-                                "  boosted",
+                                "  ${stringResource(id = R.string.boosted)}",
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                             )

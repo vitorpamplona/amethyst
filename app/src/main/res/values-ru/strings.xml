@@ -36,6 +36,7 @@
     <string name="zaps">Запы</string>
     <string name="view_count">Просмотры</string>
     <string name="boost">Продвинуть</string>
+    <string name="boosted">boosted</string>
     <string name="quote">Цитировать</string>
     <string name="new_amount_in_sats">Новая сумма в sat</string>
     <string name="add">Добавить</string>

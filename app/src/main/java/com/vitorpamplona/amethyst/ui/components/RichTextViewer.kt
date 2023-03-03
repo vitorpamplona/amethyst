@@ -29,6 +29,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
@@ -132,8 +133,8 @@ fun RichTextViewer(
       // FlowRow doesn't work well with paragraphs. So we need to split them
       content.split('\n').forEach { paragraph ->
         FlowRow() {
-          paragraph.split(' ').forEach { word: String ->
-
+          val s = if (isArabic(paragraph))  paragraph.split(' ').reversed() else paragraph.split(' ');
+          s.forEach { word: String ->
             if (canPreview) {
               // Explicit URL
               val lnInvoice = LnInvoiceUtil.findInvoice(word)
@@ -189,6 +190,10 @@ fun RichTextViewer(
       }
     }
   }
+}
+
+private fun isArabic(text: String): Boolean {
+  return text.any { it in '\u0600'..'\u06FF' || it in '\u0750'..'\u077F' }
 }
 
 

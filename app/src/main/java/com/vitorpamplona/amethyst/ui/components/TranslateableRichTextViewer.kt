@@ -183,7 +183,6 @@ fun TranslateableRichTextViewer(
 
               Spacer(modifier = Modifier.size(10.dp))
 
-              // TODO : Rashed translate this
               Text(
                 "${stringResource(R.string.show_in)} ${Locale(source).displayName} ${
                   stringResource(
