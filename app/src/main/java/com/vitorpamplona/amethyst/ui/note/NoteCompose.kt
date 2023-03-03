@@ -636,6 +636,18 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
         expanded = popupExpanded,
         onDismissRequest = onDismiss
     ) {
+        if (note.author != accountViewModel.accountLiveData.value?.account?.userProfile() && !accountViewModel.accountLiveData.value?.account?.userProfile()
+                !!.isFollowing(note.author!!)) {
+
+            DropdownMenuItem(onClick = {
+                accountViewModel.follow(
+                    note.author ?: return@DropdownMenuItem
+                ); onDismiss()
+            }) {
+                Text(stringResource(R.string.follow))
+            }
+            Divider()
+        }
         DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(accountViewModel.decrypt(note) ?: "")); onDismiss() }) {
             Text(stringResource(R.string.copy_text))
         }
