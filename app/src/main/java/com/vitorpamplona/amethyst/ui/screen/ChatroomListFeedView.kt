@@ -4,21 +4,31 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Text
+import androidx.compose.material.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import com.vitorpamplona.amethyst.NotificationCache
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.note.ChatroomCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -77,19 +87,85 @@ private fun FeedLoaded(
 ) {
     val listState = rememberLazyListState()
 
-    LazyColumn(
-        contentPadding = PaddingValues(
-            top = 10.dp,
-            bottom = 10.dp
-        ),
-        state = listState
-    ) {
-        itemsIndexed(state.feed.value, key = { index, item -> if (index == 0) index else item.idHex }) { index, item ->
-            ChatroomCompose(
-                item,
-                accountViewModel = accountViewModel,
-                navController = navController
-            )
+    var markedAllAsRead by remember { mutableStateOf<Boolean>(false) }
+
+    Column {
+        TextButton(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+            onClick = { markedAllAsRead = true }
+        ) {
+            Text(stringResource(R.string.mark_all_as_read))
         }
+
+        LazyColumn(
+            contentPadding = PaddingValues(
+                top = 10.dp,
+                bottom = 10.dp
+            ),
+            state = listState
+        ) {
+            itemsIndexed(state.feed.value, key = { index, item -> if (index == 0) index else item.idHex }) { index, item ->
+                ChatroomCompose(
+                    item,
+                    accountViewModel = accountViewModel,
+                    navController = navController
+                )
+            }
+        }
+    }
+
+    @Composable
+    fun markAllAsRead() {
+        val accountState by accountViewModel.accountLiveData.observeAsState()
+        val account = accountState?.account ?: return
+
+        val notificationCacheState = NotificationCache.live.observeAsState()
+        val notificationCache = notificationCacheState.value ?: return
+
+        val context = LocalContext.current.applicationContext
+
+        state.feed.value.forEach { baseNote ->
+            val noteState by baseNote.live().metadata.observeAsState()
+            val note = noteState?.note
+
+            val routeForLastRead = if (note?.event == null) {
+                return@forEach
+            } else if (note.channel != null) {
+                val channelState by note.channel!!.live.observeAsState()
+                val channel = channelState?.channel
+
+                channel?.let {
+                    "Channel/${it.idHex}"
+                }
+
+            } else {
+                val replyAuthorBase = note.mentions?.first()
+
+                var userToComposeOn = note.author!!
+
+                if (replyAuthorBase != null) {
+                    if (note.author == account.userProfile()) {
+                        userToComposeOn = replyAuthorBase
+                    }
+                }
+
+                "Room/${userToComposeOn.pubkeyHex}"
+            }
+
+            routeForLastRead?.let {
+                LaunchedEffect(key1 = notificationCache) {
+                    val createdAt = note.event?.createdAt
+                    if (createdAt != null) {
+                        NotificationCache.markAsRead(it, createdAt, context)
+                    }
+                }
+            }
+        }
+    }
+
+
+    if (markedAllAsRead) {
+        markAllAsRead()
     }
 }
