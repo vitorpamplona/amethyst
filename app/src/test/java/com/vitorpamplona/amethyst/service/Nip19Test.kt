@@ -7,17 +7,19 @@ class Nip19Test {
 
   @Test(expected = IllegalArgumentException::class)
   fun to_int_32_length_smaller_than_4() {
-    toInt32(ByteArray(3))
+    toInt32(byteArrayOfInts(1, 2, 3))
   }
 
   @Test(expected = IllegalArgumentException::class)
   fun to_int_32_length_bigger_than_4() {
-    toInt32(ByteArray(5))
+    toInt32(byteArrayOfInts(1, 2, 3, 4, 5))
   }
 
   @Test()
   fun to_int_32_length_4() {
-    val actual = toInt32(ByteArray(4))
-    Assert.assertEquals(0, actual)
+    val actual = toInt32(byteArrayOfInts(1, 2, 3, 4))
+    Assert.assertEquals(16909060, actual)
   }
+
+  private fun byteArrayOfInts(vararg ints: Int) = ByteArray(ints.size) { pos -> ints[pos].toByte() }
 }
