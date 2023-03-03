@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.model
 
+import com.vitorpamplona.amethyst.service.model.ATag
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTimedValue
 
@@ -34,7 +35,16 @@ class ThreadAssembler {
   @OptIn(ExperimentalTime::class)
   fun findThreadFor(noteId: String): Set<Note> {
     val (result, elapsed) = measureTimedValue {
-      val note = LocalCache.getOrCreateNote(noteId)
+      val note = if (noteId.startsWith("naddr")) {
+        val aTag = ATag.parse(noteId)
+        if (aTag != null)
+          LocalCache.getOrCreateAddressableNote(aTag)
+        else
+          return emptySet()
+      } else {
+        LocalCache.getOrCreateNote(noteId)
+      }
+
 
       if (note.event != null) {
         val thread = mutableSetOf<Note>()

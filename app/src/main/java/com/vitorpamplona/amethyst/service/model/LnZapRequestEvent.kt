@@ -13,14 +13,9 @@ class LnZapRequestEvent (
   content: String,
   sig: ByteArray
 ): Event(id, pubKey, createdAt, kind, tags, content, sig) {
-
-  @Transient val zappedPost: List<String>
-  @Transient val zappedAuthor: List<String>
-
-  init {
-    zappedPost = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
-    zappedAuthor = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
-  }
+  fun zappedPost() = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
+  fun zappedAuthor() = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
+  fun taggedAddresses() = tags.filter { it.firstOrNull() == "a" }.mapNotNull { it.getOrNull(1) }.mapNotNull { ATag.parse(it) }
 
   companion object {
     const val kind = 9734
@@ -34,7 +29,7 @@ class LnZapRequestEvent (
         listOf("relays") + relays
       )
       if (originalNote is LongTextNoteEvent) {
-        tags = tags + listOf( listOf("a", originalNote.address) )
+        tags = tags + listOf( listOf("a", originalNote.address().toTag()) )
       }
 
       val id = generateId(pubKey, createdAt, kind, tags, content)

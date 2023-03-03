@@ -51,7 +51,7 @@ class Channel(val idHex: String) {
     fun pruneOldAndHiddenMessages(account: Account): Set<Note> {
         val important = notes.values
             .filter { it.author?.let { it1 -> account.isHidden(it1) } == false }
-            .sortedBy { it.event?.createdAt }
+            .sortedBy { it.createdAt() }
             .reversed()
             .take(1000)
             .toSet()

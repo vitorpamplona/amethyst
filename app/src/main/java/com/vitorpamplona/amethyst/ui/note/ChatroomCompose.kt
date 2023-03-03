@@ -83,8 +83,8 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
             var hasNewMessages by remember { mutableStateOf<Boolean>(false) }
 
             LaunchedEffect(key1 = notificationCache) {
-                noteEvent?.let {
-                    hasNewMessages = it.createdAt > notificationCache.cache.load("Channel/${channel.idHex}", context)
+                note.createdAt()?.let {
+                    hasNewMessages = it > notificationCache.cache.load("Channel/${channel.idHex}", context)
                 }
             }
 
@@ -103,7 +103,7 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
                         color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                     )
                 },
-                channelLastTime = note.event?.createdAt,
+                channelLastTime = note.createdAt(),
                 channelLastContent = "${author?.toBestDisplayName()}: " + description,
                 hasNewMessages = hasNewMessages,
                 onClick = { navController.navigate("Channel/${channel.idHex}") })
@@ -134,7 +134,7 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
             ChannelName(
                 channelPicture = { UserPicture(userToComposeOn, account.userProfile(), size = 55.dp) },
                 channelTitle = { UsernameDisplay(userToComposeOn, it) },
-                channelLastTime = noteEvent?.createdAt,
+                channelLastTime = note.createdAt(),
                 channelLastContent = accountViewModel.decrypt(note),
                 hasNewMessages = hasNewMessages,
                 onClick = { navController.navigate("Room/${user.pubkeyHex}") })

@@ -14,13 +14,9 @@ class ReactionEvent (
   sig: ByteArray
 ): Event(id, pubKey, createdAt, kind, tags, content, sig) {
 
-  @Transient val originalPost: List<String>
-  @Transient val originalAuthor: List<String>
-
-  init {
-    originalPost = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
-    originalAuthor = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
-  }
+  fun originalPost() = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
+  fun originalAuthor() = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
+  fun taggedAddresses() = tags.filter { it.firstOrNull() == "a" }.mapNotNull { it.getOrNull(1) }.mapNotNull { ATag.parse(it) }
 
   companion object {
     const val kind = 7
@@ -38,7 +34,7 @@ class ReactionEvent (
 
       var tags = listOf( listOf("e", originalNote.id.toHex()), listOf("p", originalNote.pubKey.toHex()))
       if (originalNote is LongTextNoteEvent) {
-        tags = tags + listOf( listOf("a", originalNote.address) )
+        tags = tags + listOf( listOf("a", originalNote.address().toTag()) )
       }
 
       val id = generateId(pubKey, createdAt, kind, tags, content)

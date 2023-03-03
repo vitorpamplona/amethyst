@@ -12,20 +12,14 @@ class TextNoteEvent(
     content: String,
     sig: ByteArray
 ): Event(id, pubKey, createdAt, kind, tags, content, sig) {
-    @Transient val replyTos: List<String>
-    @Transient val mentions: List<String>
-    @Transient val longFormAddress: List<String>
-
-    init {
-        longFormAddress = tags.filter { it.firstOrNull() == "a" }.mapNotNull { it.getOrNull(1) }
-        replyTos = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
-        mentions = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
-    }
+    fun mentions() = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
+    fun taggedAddresses() = tags.filter { it.firstOrNull() == "a" }.mapNotNull { it.getOrNull(1) }.mapNotNull { ATag.parse(it) }
+    fun replyTos() = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
 
     companion object {
         const val kind = 1
 
-        fun create(msg: String, replyTos: List<String>?, mentions: List<String>?, addresses: List<String>?, privateKey: ByteArray, createdAt: Long = Date().time / 1000): TextNoteEvent {
+        fun create(msg: String, replyTos: List<String>?, mentions: List<String>?, addresses: List<ATag>?, privateKey: ByteArray, createdAt: Long = Date().time / 1000): TextNoteEvent {
             val pubKey = Utils.pubkeyCreate(privateKey)
             val tags = mutableListOf<List<String>>()
             replyTos?.forEach {
@@ -35,7 +29,7 @@ class TextNoteEvent(
                 tags.add(listOf("p", it))
             }
             addresses?.forEach {
-                tags.add(listOf("a", it))
+                tags.add(listOf("a", it.toTag()))
             }
             val id = generateId(pubKey, createdAt, kind, tags, msg)
             val sig = Utils.sign(id, privateKey)

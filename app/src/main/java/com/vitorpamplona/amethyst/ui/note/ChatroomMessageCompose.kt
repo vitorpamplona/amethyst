@@ -134,7 +134,7 @@ fun ChatroomMessageCompose(
             routeForLastRead?.let {
                 val lastTime = NotificationCache.load(it, context)
 
-                val createdAt = note.event?.createdAt
+                val createdAt = note.createdAt()
                 if (createdAt != null) {
                     NotificationCache.markAsRead(it, createdAt, context)
                     isNew = createdAt > lastTime
@@ -241,16 +241,16 @@ fun ChatroomMessageCompose(
                                 val event = note.event
                                 if (event is ChannelCreateEvent) {
                                     Text(text = note.author?.toBestDisplayName()
-                                        .toString() + " ${stringResource(R.string.created)} " + (event.channelInfo.name
-                                        ?: "") +" ${stringResource(R.string.with_description_of)} '" + (event.channelInfo.about
-                                        ?: "") + "', ${stringResource(R.string.and_picture)} '" + (event.channelInfo.picture
+                                        .toString() + " ${stringResource(R.string.created)} " + (event.channelInfo().name
+                                        ?: "") +" ${stringResource(R.string.with_description_of)} '" + (event.channelInfo().about
+                                        ?: "") + "', ${stringResource(R.string.and_picture)} '" + (event.channelInfo().picture
                                         ?: "") + "'"
                                     )
                                 } else if (event is ChannelMetadataEvent) {
                                     Text(text = note.author?.toBestDisplayName()
-                                        .toString() + " ${stringResource(R.string.changed_chat_name_to)} '" + (event.channelInfo.name
-                                        ?: "") + "$', {stringResource(R.string.description_to)} '" + (event.channelInfo.about
-                                        ?: "") + "', ${stringResource(R.string.and_picture_to)} '" + (event.channelInfo.picture
+                                        .toString() + " ${stringResource(R.string.changed_chat_name_to)} '" + (event.channelInfo().name
+                                        ?: "") + "$', {stringResource(R.string.description_to)} '" + (event.channelInfo().about
+                                        ?: "") + "', ${stringResource(R.string.and_picture_to)} '" + (event.channelInfo().picture
                                         ?: "") + "'"
                                     )
                                 } else {
@@ -295,7 +295,7 @@ fun ChatroomMessageCompose(
                             ) {
                                 Row() {
                                     Text(
-                                        timeAgoShort(note.event?.createdAt, context),
+                                        timeAgoShort(note.createdAt(), context),
                                         color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                                         fontSize = 12.sp
                                     )

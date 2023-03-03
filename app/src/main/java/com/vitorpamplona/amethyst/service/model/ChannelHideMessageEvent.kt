@@ -12,11 +12,7 @@ class ChannelHideMessageEvent (
   content: String,
   sig: ByteArray
 ): Event(id, pubKey, createdAt, kind, tags, content, sig) {
-  @Transient val eventsToHide: List<String>
-
-  init {
-    eventsToHide = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
-  }
+  fun eventsToHide() = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
 
   companion object {
     const val kind = 43

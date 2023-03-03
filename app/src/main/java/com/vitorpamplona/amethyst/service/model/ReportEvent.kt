@@ -17,12 +17,8 @@ class ReportEvent (
   sig: ByteArray
 ): Event(id, pubKey, createdAt, kind, tags, content, sig) {
 
-  @Transient val reportedPost: List<ReportedKey>
-  @Transient val reportedAuthor: List<ReportedKey>
-
-  init {
+  private fun defaultReportType(): ReportType {
     // Works with old and new structures for report.
-
     var reportType = tags.filter { it.firstOrNull() == "report" }.mapNotNull { it.getOrNull(1) }.map { ReportType.valueOf(it.toUpperCase()) }.firstOrNull()
     if (reportType == null) {
       reportType = tags.mapNotNull { it.getOrNull(2) }.map { ReportType.valueOf(it.toUpperCase()) }.firstOrNull()
@@ -30,25 +26,28 @@ class ReportEvent (
     if (reportType == null) {
       reportType = ReportType.SPAM
     }
-
-    reportedPost = tags
-      .filter { it.firstOrNull() == "e" && it.getOrNull(1) != null }
-      .map {
-        ReportedKey(
-          it[1],
-          it.getOrNull(2)?.toUpperCase()?.let { it1 -> ReportType.valueOf(it1) }?: reportType
-        )
-      }
-
-    reportedAuthor = tags
-      .filter { it.firstOrNull() == "p" && it.getOrNull(1) != null }
-      .map {
-        ReportedKey(
-          it[1],
-        it.getOrNull(2)?.toUpperCase()?.let { it1 -> ReportType.valueOf(it1) }?: reportType
-        )
-      }
+    return reportType
   }
+
+  fun reportedPost() = tags
+    .filter { it.firstOrNull() == "e" && it.getOrNull(1) != null }
+    .map {
+      ReportedKey(
+        it[1],
+        it.getOrNull(2)?.toUpperCase()?.let { it1 -> ReportType.valueOf(it1) }?: defaultReportType()
+      )
+    }
+
+  fun reportedAuthor() = tags
+    .filter { it.firstOrNull() == "p" && it.getOrNull(1) != null }
+    .map {
+      ReportedKey(
+        it[1],
+        it.getOrNull(2)?.toUpperCase()?.let { it1 -> ReportType.valueOf(it1) }?: defaultReportType()
+      )
+    }
+
+  fun taggedAddresses() = tags.filter { it.firstOrNull() == "a" }.mapNotNull { it.getOrNull(1) }.mapNotNull { ATag.parse(it) }
 
   companion object {
     const val kind = 1984
@@ -63,7 +62,7 @@ class ReportEvent (
       var tags:List<List<String>> = listOf(reportPostTag, reportAuthorTag)
 
       if (reportedPost is LongTextNoteEvent) {
-        tags = tags + listOf( listOf("a", reportedPost.address) )
+        tags = tags + listOf( listOf("a", reportedPost.address().toTag()) )
       }
 
       val id = generateId(pubKey, createdAt, kind, tags, content)

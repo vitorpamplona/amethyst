@@ -13,7 +13,7 @@ object HomeNewThreadFeedFilter: FeedFilter<Note>() {
   override fun feed(): List<Note> {
     val user = account.userProfile()
 
-    return LocalCache.notes.values
+    val notes = LocalCache.notes.values
       .filter {
         (it.event is TextNoteEvent || it.event is RepostEvent || it.event is LongTextNoteEvent)
           && it.author in user.follows
@@ -21,7 +21,18 @@ object HomeNewThreadFeedFilter: FeedFilter<Note>() {
           && it.author?.let { !account.isHidden(it) } ?: true
           && it.isNewThread()
       }
-      .sortedBy { it.event?.createdAt }
+
+    val longFormNotes = LocalCache.addressables.values
+      .filter {
+        (it.event is TextNoteEvent || it.event is RepostEvent || it.event is LongTextNoteEvent)
+          && it.author in user.follows
+          // && account.isAcceptable(it)  // This filter follows only. No need to check if acceptable
+          && it.author?.let { !account.isHidden(it) } ?: true
+          && it.isNewThread()
+      }
+
+    return (notes + longFormNotes)
+      .sortedBy { it.createdAt() }
       .reversed()
   }
 }

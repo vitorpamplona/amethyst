@@ -4,6 +4,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
+import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 
 object GlobalFeedFilter: FeedFilter<Note>() {
@@ -11,11 +12,17 @@ object GlobalFeedFilter: FeedFilter<Note>() {
 
   override fun feed() = LocalCache.notes.values
     .filter {
-      (it.event is TextNoteEvent && (it.event as TextNoteEvent).replyTos.isEmpty()) ||
-      (it.event is ChannelMessageEvent && (it.event as ChannelMessageEvent).replyTos.isEmpty())
+      (it.event is TextNoteEvent || it.event is LongTextNoteEvent || it.event is ChannelMessageEvent)
+        && it.replyTo.isNullOrEmpty()
+    }
+    .filter {
+      // does not show events already in the public chat list
+           (it.channel() == null || it.channel() !in account.followingChannels())
+      // does not show people the user already follows
+        && (it.author !in account.userProfile().follows)
     }
     .filter { account.isAcceptable(it) }
-    .sortedBy { it.event?.createdAt }
+    .sortedBy { it.createdAt() }
     .reversed()
 
 }

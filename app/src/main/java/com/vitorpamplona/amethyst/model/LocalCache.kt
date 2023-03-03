@@ -5,6 +5,7 @@ import androidx.lifecycle.LiveData
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.google.gson.reflect.TypeToken
+import com.vitorpamplona.amethyst.service.model.ATag
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelHideMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
@@ -52,6 +53,7 @@ object LocalCache {
   val users = ConcurrentHashMap<HexKey, User>()
   val notes = ConcurrentHashMap<HexKey, Note>()
   val channels = ConcurrentHashMap<HexKey, Channel>()
+  val addressables = ConcurrentHashMap<String, AddressableNote>()
 
   fun checkGetOrCreateUser(key: String): User? {
     return try {
@@ -111,6 +113,29 @@ object LocalCache {
     }
   }
 
+  fun checkGetOrCreateAddressableNote(key: String): AddressableNote? {
+    return try {
+      val addr = ATag.parse(key)
+      if (addr != null)
+        getOrCreateAddressableNote(addr)
+      else
+        null
+    } catch (e: IllegalArgumentException) {
+      Log.e("LocalCache", "Invalid Key to create channel: $key", e)
+      null
+    }
+  }
+
+  @Synchronized
+  fun getOrCreateAddressableNote(key: ATag): AddressableNote {
+    return addressables[key.toNAddr()] ?: run {
+      val answer = AddressableNote(key)
+      answer.author = checkGetOrCreateUser(key.pubKeyHex)
+      addressables.put(key.toNAddr(), answer)
+      answer
+    }
+  }
+
 
   fun consume(event: MetadataEvent) {
     // new event
@@ -159,8 +184,9 @@ object LocalCache {
     // Already processed this event.
     if (note.event != null) return
 
-    val mentions = event.mentions.mapNotNull { checkGetOrCreateUser(it) }
-    val replyTo = replyToWithoutCitations(event).mapNotNull { checkGetOrCreateNote(it) }
+    val mentions = event.mentions().mapNotNull { checkGetOrCreateUser(it) }
+    val replyTo = replyToWithoutCitations(event).mapNotNull { checkGetOrCreateNote(it) } +
+                  event.taggedAddresses().mapNotNull { getOrCreateAddressableNote(it) }
 
     note.loadEvent(event, author, mentions, replyTo)
 
@@ -193,7 +219,7 @@ object LocalCache {
       return
     }
 
-    val note = getOrCreateNote(event.id.toHex())
+    val note = getOrCreateAddressableNote(event.address())
     val author = getOrCreateUser(event.pubKey.toHexKey())
 
     if (relay != null) {
@@ -202,27 +228,26 @@ object LocalCache {
     }
 
     // Already processed this event.
-    if (note.event != null) return
+    if (note.event?.id?.toHex() == event.id.toHex()) return
 
-    val mentions = event.mentions.mapNotNull { checkGetOrCreateUser(it) }
+    val mentions = event.mentions().mapNotNull { checkGetOrCreateUser(it) }
     val replyTo = replyToWithoutCitations(event).mapNotNull { checkGetOrCreateNote(it) }
 
-    note.loadEvent(event, author, mentions, replyTo)
+    if (event.createdAt > (note.createdAt() ?: 0)) {
+      note.loadEvent(event, author, mentions, replyTo)
 
-    //Log.d("TN", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${note.event?.content?.take(100)} ${formattedDateTime(event.createdAt)}")
+      author.addNote(note)
 
-    // Prepares user's profile view.
-    author.addLongFormNote(note)
+      // Adds notifications to users.
+      mentions.forEach {
+        it.addTaggedPost(note)
+      }
+      replyTo.forEach {
+        it.author?.addTaggedPost(note)
+      }
 
-    // Adds notifications to users.
-    mentions.forEach {
-      it.addTaggedPost(note)
+      refreshObservers()
     }
-    replyTo.forEach {
-      it.author?.addTaggedPost(note)
-    }
-
-    refreshObservers()
   }
 
   private fun findCitations(event: Event): Set<String> {
@@ -245,13 +270,13 @@ object LocalCache {
   private fun replyToWithoutCitations(event: TextNoteEvent): List<String> {
     val citations = findCitations(event)
 
-    return event.replyTos.filter { it !in citations }
+    return event.replyTos().filter { it !in citations }
   }
 
   private fun replyToWithoutCitations(event: LongTextNoteEvent): List<String> {
     val citations = findCitations(event)
 
-    return event.replyTos.filter { it !in citations }
+    return event.replyTos().filter { it !in citations }
   }
 
   fun consume(event: RecommendRelayEvent) {
@@ -378,8 +403,9 @@ object LocalCache {
     //Log.d("TN", "New Boost (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${formattedDateTime(event.createdAt)}")
 
     val author = getOrCreateUser(event.pubKey.toHexKey())
-    val mentions = event.originalAuthor.mapNotNull { checkGetOrCreateUser(it) }
-    val repliesTo = event.boostedPost.mapNotNull { checkGetOrCreateNote(it) }
+    val mentions = event.originalAuthor().mapNotNull { checkGetOrCreateUser(it) }
+    val repliesTo = event.boostedPost().mapNotNull { checkGetOrCreateNote(it) } +
+                    event.taggedAddresses().mapNotNull { getOrCreateAddressableNote(it) }
 
     note.loadEvent(event, author, mentions, repliesTo)
 
@@ -409,8 +435,9 @@ object LocalCache {
     if (note.event != null) return
 
     val author = getOrCreateUser(event.pubKey.toHexKey())
-    val mentions = event.originalAuthor.mapNotNull { checkGetOrCreateUser(it) }
-    val repliesTo = event.originalPost.mapNotNull { checkGetOrCreateNote(it) }
+    val mentions = event.originalAuthor().mapNotNull { checkGetOrCreateUser(it) }
+    val repliesTo = event.originalPost().mapNotNull { checkGetOrCreateNote(it) } +
+                    event.taggedAddresses().mapNotNull { getOrCreateAddressableNote(it) }
 
     note.loadEvent(event, author, mentions, repliesTo)
 
@@ -459,8 +486,9 @@ object LocalCache {
     // Already processed this event.
     if (note.event != null) return
 
-    val mentions = event.reportedAuthor.mapNotNull { checkGetOrCreateUser(it.key) }
-    val repliesTo = event.reportedPost.mapNotNull { checkGetOrCreateNote(it.key) }
+    val mentions = event.reportedAuthor().mapNotNull { checkGetOrCreateUser(it.key) }
+    val repliesTo = event.reportedPost().mapNotNull { checkGetOrCreateNote(it.key) } +
+                    event.taggedAddresses().mapNotNull { getOrCreateAddressableNote(it) }
 
     note.loadEvent(event, author, mentions, repliesTo)
 
@@ -483,7 +511,7 @@ object LocalCache {
     val author = getOrCreateUser(event.pubKey.toHexKey())
     if (event.createdAt > oldChannel.updatedMetadataAt) {
       if (oldChannel.creator == null || oldChannel.creator == author) {
-        oldChannel.updateChannelInfo(author, event.channelInfo, event.createdAt)
+        oldChannel.updateChannelInfo(author, event.channelInfo(), event.createdAt)
 
         val note = getOrCreateNote(event.id.toHex())
         oldChannel.addNote(note)
@@ -496,15 +524,16 @@ object LocalCache {
     }
   }
   fun consume(event: ChannelMetadataEvent) {
+    val channelId = event.channel()
     //Log.d("MT", "New User ${users.size} ${event.contactMetaData.name}")
-    if (event.channel.isNullOrBlank()) return
+    if (channelId.isNullOrBlank()) return
 
     // new event
-    val oldChannel = checkGetOrCreateChannel(event.channel) ?: return
+    val oldChannel = checkGetOrCreateChannel(channelId) ?: return
     val author = getOrCreateUser(event.pubKey.toHexKey())
     if (event.createdAt > oldChannel.updatedMetadataAt) {
       if (oldChannel.creator == null || oldChannel.creator == author) {
-        oldChannel.updateChannelInfo(author, event.channelInfo, event.createdAt)
+        oldChannel.updateChannelInfo(author, event.channelInfo(), event.createdAt)
 
         val note = getOrCreateNote(event.id.toHex())
         oldChannel.addNote(note)
@@ -518,7 +547,9 @@ object LocalCache {
   }
 
   fun consume(event: ChannelMessageEvent, relay: Relay?) {
-    if (event.channel.isNullOrBlank()) return
+    val channelId = event.channel()
+
+    if (channelId.isNullOrBlank()) return
     if (antiSpam.isSpam(event)) {
       relay?.let {
         it.spamCounter++
@@ -526,7 +557,7 @@ object LocalCache {
       return
     }
 
-    val channel = checkGetOrCreateChannel(event.channel) ?: return
+    val channel = checkGetOrCreateChannel(channelId) ?: return
 
     val note = getOrCreateNote(event.id.toHex())
     channel.addNote(note)
@@ -541,8 +572,8 @@ object LocalCache {
     // Already processed this event.
     if (note.event != null) return
 
-    val mentions = event.mentions.mapNotNull { checkGetOrCreateUser(it) }
-    val replyTo = event.replyTos
+    val mentions = event.mentions().mapNotNull { checkGetOrCreateUser(it) }
+    val replyTo = event.replyTos()
       .mapNotNull { checkGetOrCreateNote(it) }
       .filter { it.event !is ChannelCreateEvent }
 
@@ -580,13 +611,16 @@ object LocalCache {
     // Already processed this event.
     if (note.event != null) return
 
+    val zapRequest = event.containedPost()?.id?.toHexKey()?.let { getOrCreateNote(it) }
+
     val author = getOrCreateUser(event.pubKey.toHexKey())
-    val mentions = event.zappedAuthor.mapNotNull { checkGetOrCreateUser(it) }
-    val repliesTo = event.zappedPost.mapNotNull { checkGetOrCreateNote(it) }
+    val mentions = event.zappedAuthor().mapNotNull { checkGetOrCreateUser(it) }
+    val repliesTo = event.zappedPost().mapNotNull { checkGetOrCreateNote(it) } +
+                    event.taggedAddresses().map { getOrCreateAddressableNote(it) } +
+                    ((zapRequest?.event as? LnZapRequestEvent)?.taggedAddresses()?.map { getOrCreateAddressableNote(it) } ?: emptySet<Note>())
 
     note.loadEvent(event, author, mentions, repliesTo)
 
-    val zapRequest = event.containedPost?.id?.toHexKey()?.let { getOrCreateNote(it) }
     if (zapRequest == null) {
       Log.e("ZP","Zap Request not found. Unable to process Zap {${event.toJson()}}")
       return
@@ -617,8 +651,9 @@ object LocalCache {
     if (note.event != null) return
 
     val author = getOrCreateUser(event.pubKey.toHexKey())
-    val mentions = event.zappedAuthor.mapNotNull { checkGetOrCreateUser(it) }
-    val repliesTo = event.zappedPost.mapNotNull { checkGetOrCreateNote(it) }
+    val mentions = event.zappedAuthor().mapNotNull { checkGetOrCreateUser(it) }
+    val repliesTo = event.zappedPost().mapNotNull { checkGetOrCreateNote(it) } +
+                    event.taggedAddresses().mapNotNull { getOrCreateAddressableNote(it) }
 
     note.loadEvent(event, author, mentions, repliesTo)
 
@@ -652,9 +687,13 @@ object LocalCache {
     return notes.values.filter {
            (it.event is TextNoteEvent && it.event?.content?.contains(text, true) ?: false)
         || (it.event is ChannelMessageEvent && it.event?.content?.contains(text, true) ?: false)
-        || (it.event is LongTextNoteEvent && it.event?.content?.contains(text, true) ?: false)
         || it.idHex.startsWith(text, true)
         || it.idNote().startsWith(text, true)
+    } + addressables.values.filter {
+           (it.event as? LongTextNoteEvent)?.content?.contains(text, true) ?: false
+        || (it.event as? LongTextNoteEvent)?.title()?.contains(text, true) ?: false
+        || (it.event as? LongTextNoteEvent)?.summary()?.contains(text, true) ?: false
+        || it.idHex.startsWith(text, true)
     }
   }
 
@@ -738,7 +777,7 @@ object LocalCache {
 
   fun pruneHiddenMessages(account: Account) {
     val toBeRemoved = account.hiddenUsers.map {
-        (users[it]?.notes ?: emptySet()) + (users[it]?.longFormNotes?.values?.flatten() ?: emptySet())
+        (users[it]?.notes ?: emptySet())
     }.flatten()
 
     account.hiddenUsers.forEach {
@@ -747,7 +786,6 @@ object LocalCache {
 
     toBeRemoved.forEach {
       it.author?.removeNote(it)
-      it.author?.removeLongFormNote(it)
 
       // reverts the add
       it.mentions?.forEach { user ->

@@ -12,11 +12,9 @@ class ChannelMuteUserEvent (
   content: String,
   sig: ByteArray
 ): Event(id, pubKey, createdAt, kind, tags, content, sig) {
-  @Transient val usersToMute: List<String>
 
-  init {
-    usersToMute = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
-  }
+  fun usersToMute() = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
+
 
   companion object {
     const val kind = 44

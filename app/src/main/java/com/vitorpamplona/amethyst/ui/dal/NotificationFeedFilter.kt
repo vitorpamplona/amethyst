@@ -63,7 +63,7 @@ object NotificationFeedFilter: FeedFilter<Note>() {
             )
       }
 
-      .sortedBy { it.event?.createdAt }
+      .sortedBy { it.createdAt() }
       .reversed()
   }
 }

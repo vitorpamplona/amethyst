@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
+import com.vitorpamplona.amethyst.service.model.ATag
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
@@ -27,11 +28,18 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import nostr.postr.events.Event
-import nostr.postr.toHex
 
 val tagSearch = Pattern.compile("(?:\\s|\\A)\\#\\[([0-9]+)\\]")
 
-class Note(val idHex: String) {
+
+class AddressableNote(val address: ATag): Note(address.toNAddr()) {
+    override fun idNote() = address.toNAddr()
+    override fun idDisplayNote() = idNote().toShortenHex()
+    override fun address() = address
+    override fun createdAt() = (event as? LongTextNoteEvent)?.publishedAt() ?: event?.createdAt
+}
+
+open class Note(val idHex: String) {
     // These fields are only available after the Text Note event is received.
     // They are immutable after that.
     var event: Event? = null
@@ -57,18 +65,21 @@ class Note(val idHex: String) {
     var lastReactionsDownloadTime: Long? = null
 
     fun id() = Hex.decode(idHex)
-    fun idNote() = id().toNote()
-    fun idDisplayNote() = idNote().toShortenHex()
+    open fun idNote() = id().toNote()
+    open fun idDisplayNote() = idNote().toShortenHex()
 
     fun channel(): Channel? {
-        val channelHex = (event as? ChannelMessageEvent)?.channel ?:
-                         (event as? ChannelMetadataEvent)?.channel ?:
-                         (event as? ChannelCreateEvent)?.let { idHex }
+        val channelHex =
+            (event as? ChannelMessageEvent)?.channel() ?:
+            (event as? ChannelMetadataEvent)?.channel() ?:
+            (event as? ChannelCreateEvent)?.let { it.id.toHexKey() }
 
         return channelHex?.let { LocalCache.checkGetOrCreateChannel(it) }
     }
 
-    fun address() = (event as? LongTextNoteEvent)?.address
+    open fun address() = (event as? LongTextNoteEvent)?.address()
+
+    open fun createdAt() = event?.createdAt
 
     fun loadEvent(event: Event, author: User, mentions: List<User>, replyTo: List<Note>) {
         this.event = event
@@ -90,14 +101,14 @@ class Note(val idHex: String) {
     fun replyLevelSignature(cachedSignatures: MutableMap<Note, String> = mutableMapOf()): String {
         val replyTo = replyTo
         if (replyTo == null || replyTo.isEmpty()) {
-            return "/" + formattedDateTime(event?.createdAt ?: 0) + ";"
+            return "/" + formattedDateTime(createdAt() ?: 0) + ";"
         }
 
         return replyTo
             .map {
                 cachedSignatures[it] ?: it.replyLevelSignature(cachedSignatures).apply { cachedSignatures.put(it, this) }
             }
-            .maxBy { it.length }.removeSuffix(";") + "/" + formattedDateTime(event?.createdAt ?: 0) + ";"
+            .maxBy { it.length }.removeSuffix(";") + "/" + formattedDateTime(createdAt() ?: 0) + ";"
     }
 
     fun replyLevel(cachedLevels: MutableMap<Note, Int> = mutableMapOf()): Int {
@@ -236,7 +247,7 @@ class Note(val idHex: String) {
         val dayAgo = Date().time / 1000 - 24*60*60
         return reports.isNotEmpty() ||
           (author?.reports?.values?.filter {
-              it.firstOrNull { ( it.event?.createdAt ?: 0 ) > dayAgo } != null
+              it.firstOrNull { ( it.createdAt() ?: 0 ) > dayAgo } != null
           }?.isNotEmpty() ?: false)
     }
 
@@ -283,7 +294,7 @@ class Note(val idHex: String) {
 
     fun hasBoostedInTheLast5Minutes(loggedIn: User): Boolean {
         val currentTime = Date().time / 1000
-        return boosts.firstOrNull { it.author == loggedIn && (it.event?.createdAt ?: 0) > currentTime - (60 * 5)} != null // 5 minute protection
+        return boosts.firstOrNull { it.author == loggedIn && (it.createdAt() ?: 0) > currentTime - (60 * 5)} != null // 5 minute protection
     }
 
     fun boostedBy(loggedIn: User): List<Note> {
@@ -356,12 +367,21 @@ class NoteLiveData(val note: Note): LiveData<NoteState>(NoteState(note)) {
 
     override fun onActive() {
         super.onActive()
-        NostrSingleEventDataSource.add(note.idHex)
+        if (note is AddressableNote) {
+            NostrSingleEventDataSource.addAddress(note)
+        } else {
+            NostrSingleEventDataSource.add(note)
+        }
+
     }
 
     override fun onInactive() {
         super.onInactive()
-        NostrSingleEventDataSource.remove(note.idHex)
+        if (note is AddressableNote) {
+            NostrSingleEventDataSource.removeAddress(note)
+        } else {
+            NostrSingleEventDataSource.remove(note)
+        }
     }
 }
 

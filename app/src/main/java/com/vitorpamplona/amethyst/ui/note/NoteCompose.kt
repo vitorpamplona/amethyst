@@ -107,7 +107,7 @@ fun NoteCompose(
             routeForLastRead?.let {
                 val lastTime = NotificationCache.load(it, context)
 
-                val createdAt = noteEvent.createdAt
+                val createdAt = note.createdAt()
                 if (createdAt != null) {
                     NotificationCache.markAsRead(it, createdAt, context)
                     isNew = createdAt > lastTime
@@ -241,7 +241,7 @@ fun NoteCompose(
                         }
 
                         Text(
-                            timeAgo(noteEvent.createdAt, context = context),
+                            timeAgo(note.createdAt(), context = context),
                             color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                             maxLines = 1
                         )
@@ -322,7 +322,7 @@ fun NoteCompose(
                             )
                         }
                     } else if (noteEvent is ReportEvent) {
-                        val reportType = (noteEvent.reportedPost + noteEvent.reportedAuthor).map {
+                        val reportType = (noteEvent.reportedPost() + noteEvent.reportedAuthor()).map {
                             when (it.reportType) {
                                 ReportEvent.ReportType.EXPLICIT -> stringResource(R.string.explicit_content)
                                 ReportEvent.ReportType.NUDITY -> stringResource(R.string.nudity)
@@ -343,50 +343,7 @@ fun NoteCompose(
                             thickness = 0.25.dp
                         )
                     } else if (noteEvent is LongTextNoteEvent) {
-                        Row(
-                            modifier = Modifier
-                                .clip(shape = RoundedCornerShape(15.dp))
-                                .border(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.12f), RoundedCornerShape(15.dp))
-                        ) {
-                            Column {
-                                noteEvent.image?.let {
-                                    AsyncImage(
-                                        model = noteEvent.image,
-                                        contentDescription = stringResource(
-                                            R.string.preview_card_image_for,
-                                            noteEvent.image
-                                        ),
-                                        contentScale = ContentScale.FillWidth,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                }
-
-                                noteEvent.title?.let {
-                                    Text(
-                                        text = it,
-                                        style = MaterialTheme.typography.body2,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(start = 10.dp, end = 10.dp, top = 10.dp),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-
-                                noteEvent.summary?.let {
-                                    Text(
-                                        text = it,
-                                        style = MaterialTheme.typography.caption,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
-                                        color = Color.Gray,
-                                        maxLines = 3,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                            }
-                        }
+                        LongFormHeader(noteEvent)
 
                         ReactionsRow(note, accountViewModel)
 
@@ -424,6 +381,56 @@ fun NoteCompose(
 
                     NoteDropDownMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LongFormHeader(noteEvent: LongTextNoteEvent) {
+    Row(
+        modifier = Modifier
+            .clip(shape = RoundedCornerShape(15.dp))
+            .border(
+                1.dp,
+                MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
+                RoundedCornerShape(15.dp)
+            )
+    ) {
+        Column {
+            noteEvent.image()?.let {
+                AsyncImage(
+                    model = it,
+                    contentDescription = stringResource(
+                        R.string.preview_card_image_for,
+                        it
+                    ),
+                    contentScale = ContentScale.FillWidth,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            noteEvent.title()?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.body1,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 10.dp, end = 10.dp, top = 10.dp)
+                )
+            }
+
+            noteEvent.summary()?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.caption,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
+                    color = Color.Gray,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }

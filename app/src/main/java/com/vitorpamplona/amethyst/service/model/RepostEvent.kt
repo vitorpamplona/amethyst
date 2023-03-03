@@ -15,19 +15,15 @@ class RepostEvent (
   sig: ByteArray
 ): Event(id, pubKey, createdAt, kind, tags, content, sig) {
 
-  @Transient val boostedPost: List<String>
-  @Transient val originalAuthor: List<String>
-  @Transient val containedPost: Event?
 
-  init {
-    boostedPost = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
-    originalAuthor = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
+  fun boostedPost() = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
+  fun originalAuthor() = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
+  fun taggedAddresses() = tags.filter { it.firstOrNull() == "a" }.mapNotNull { it.getOrNull(1) }.mapNotNull { ATag.parse(it) }
 
-    containedPost = try {
-      fromJson(content, Client.lenient)
-    } catch (e: Exception) {
-      null
-    }
+  fun containedPost() = try {
+    fromJson(content, Client.lenient)
+  } catch (e: Exception) {
+    null
   }
 
   companion object {
@@ -43,7 +39,7 @@ class RepostEvent (
       var tags:List<List<String>> = boostedPost.tags.plus(listOf(replyToPost, replyToAuthor))
 
       if (boostedPost is LongTextNoteEvent) {
-        tags = tags + listOf( listOf("a", boostedPost.address) )
+        tags = tags + listOf( listOf("a", boostedPost.address().toTag()) )
       }
 
       val id = generateId(pubKey, createdAt, kind, tags, content)

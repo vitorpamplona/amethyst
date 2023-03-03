@@ -97,11 +97,6 @@ private fun FeedLoaded(
 ) {
     val listState = rememberLazyListState()
 
-    LaunchedEffect(Unit) {
-        delay(500)
-        listState.animateScrollToItem(0)
-    }
-
     LazyColumn(
         contentPadding = PaddingValues(
             top = 10.dp,

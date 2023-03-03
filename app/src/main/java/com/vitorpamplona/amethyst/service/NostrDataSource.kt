@@ -74,7 +74,7 @@ abstract class NostrDataSource(val debugName: String) {
               RepostEvent.kind -> {
                 val repostEvent = RepostEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig)
 
-                repostEvent.containedPost?.let { onEvent(it, subscriptionId, relay) }
+                repostEvent.containedPost()?.let { onEvent(it, subscriptionId, relay) }
                 LocalCache.consume(repostEvent)
               }
               ReactionEvent.kind -> LocalCache.consume(ReactionEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))
@@ -83,7 +83,7 @@ abstract class NostrDataSource(val debugName: String) {
               LnZapEvent.kind -> {
                 val zapEvent = LnZapEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig)
 
-                zapEvent.containedPost?.let { onEvent(it, subscriptionId, relay) }
+                zapEvent.containedPost()?.let { onEvent(it, subscriptionId, relay) }
                 LocalCache.consume(zapEvent)
               }
               LnZapRequestEvent.kind -> LocalCache.consume(LnZapRequestEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig))

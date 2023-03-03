@@ -290,13 +290,13 @@ class Account(
 
     val repliesToHex = replyTo?.map { it.idHex }
     val mentionsHex = mentions?.map { it.pubkeyHex }
-    val addressesHex = replyTo?.mapNotNull { it.address() }
+    val addresses = replyTo?.mapNotNull { it.address() }
 
     val signedEvent = TextNoteEvent.create(
       msg = message,
       replyTos = repliesToHex,
       mentions = mentionsHex,
-      addresses = addressesHex,
+      addresses = addresses,
       privateKey = loggedIn.privKey!!
     )
     Client.send(signedEvent)

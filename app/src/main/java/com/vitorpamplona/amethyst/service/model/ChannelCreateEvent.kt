@@ -14,15 +14,11 @@ class ChannelCreateEvent (
   content: String,
   sig: ByteArray
 ): Event(id, pubKey, createdAt, kind, tags, content, sig) {
-  @Transient val channelInfo: ChannelData
-
-  init {
-    channelInfo = try {
-      MetadataEvent.gson.fromJson(content, ChannelData::class.java)
-    } catch (e: Exception) {
-      Log.e("ChannelMetadataEvent", "Can't parse channel info $content", e)
-      ChannelData(null, null, null)
-    }
+  fun channelInfo() = try {
+    MetadataEvent.gson.fromJson(content, ChannelData::class.java)
+  } catch (e: Exception) {
+    Log.e("ChannelMetadataEvent", "Can't parse channel info $content", e)
+    ChannelData(null, null, null)
   }
 
   companion object {

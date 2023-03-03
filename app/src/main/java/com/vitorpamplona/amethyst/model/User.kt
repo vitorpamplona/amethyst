@@ -3,7 +3,6 @@ package com.vitorpamplona.amethyst.model
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
-import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
@@ -38,8 +37,7 @@ class User(val pubkeyHex: String) {
 
     var notes = setOf<Note>()
         private set
-    var longFormNotes = mapOf<String, Set<Note>>()
-        private set
+
     var taggedPosts = setOf<Note>()
         private set
 
@@ -145,27 +143,8 @@ class User(val pubkeyHex: String) {
         notes = notes - note
     }
 
-    fun addLongFormNote(note: Note) {
-        val address = (note.event as LongTextNoteEvent).address
-
-        if (address in longFormNotes.keys) {
-            if (longFormNotes[address]?.contains(note) == false)
-                longFormNotes = longFormNotes + Pair(address, (longFormNotes[address] ?: emptySet()) + note)
-        } else {
-            longFormNotes = longFormNotes + Pair(address, setOf(note))
-            // No need for Listener yet
-        }
-    }
-
-    fun removeLongFormNote(note: Note) {
-        val address = (note.event as LongTextNoteEvent).address ?: return
-
-        longFormNotes = longFormNotes - address
-    }
-
     fun clearNotes() {
         notes = setOf<Note>()
-        longFormNotes = mapOf<String, Set<Note>>()
     }
 
     fun addReport(note: Note) {
@@ -179,7 +158,7 @@ class User(val pubkeyHex: String) {
             liveSet?.reports?.invalidateData()
         }
 
-        val reportTime = note.event?.createdAt ?: 0
+        val reportTime = note.createdAt() ?: 0
         if (reportTime > latestReportTime) {
             latestReportTime = reportTime
         }
@@ -311,7 +290,7 @@ class User(val pubkeyHex: String) {
 
     fun hasReport(loggedIn: User, type: ReportEvent.ReportType): Boolean {
         return reports[loggedIn]?.firstOrNull() {
-              it.event is ReportEvent && (it.event as ReportEvent).reportedAuthor.any { it.reportType == type }
+              it.event is ReportEvent && (it.event as ReportEvent).reportedAuthor().any { it.reportType == type }
         } != null
     }
 
@@ -363,6 +342,7 @@ data class RelayInfo (
 )
 
 data class Chatroom(var roomMessages: Set<Note>)
+
 
 class UserMetadata {
     var name: String? = null

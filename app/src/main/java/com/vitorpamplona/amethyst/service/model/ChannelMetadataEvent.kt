@@ -14,19 +14,14 @@ class ChannelMetadataEvent (
   content: String,
   sig: ByteArray
 ): Event(id, pubKey, createdAt, kind, tags, content, sig) {
-  @Transient val channel: String?
-  @Transient val channelInfo: ChannelCreateEvent.ChannelData
-
-  init {
-    channel = tags.firstOrNull { it.firstOrNull() == "e" }?.getOrNull(1)
-    channelInfo =
-      try {
-        MetadataEvent.gson.fromJson(content, ChannelCreateEvent.ChannelData::class.java)
-      } catch (e: Exception) {
-        Log.e("ChannelMetadataEvent", "Can't parse channel info $content", e)
-        ChannelCreateEvent.ChannelData(null, null, null)
-      }
-  }
+  fun channel() = tags.firstOrNull { it.firstOrNull() == "e" }?.getOrNull(1)
+  fun channelInfo() =
+    try {
+      MetadataEvent.gson.fromJson(content, ChannelCreateEvent.ChannelData::class.java)
+    } catch (e: Exception) {
+      Log.e("ChannelMetadataEvent", "Can't parse channel info $content", e)
+      ChannelCreateEvent.ChannelData(null, null, null)
+    }
 
   companion object {
     const val kind = 41

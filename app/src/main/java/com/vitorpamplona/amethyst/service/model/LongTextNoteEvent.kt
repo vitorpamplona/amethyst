@@ -13,33 +13,21 @@ class LongTextNoteEvent(
     content: String,
     sig: ByteArray
 ): Event(id, pubKey, createdAt, kind, tags, content, sig) {
-    @Transient val replyTos: List<String>
-    @Transient val mentions: List<String>
+    fun replyTos() = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
+    fun mentions() = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
 
-    @Transient val title: String?
-    @Transient val image: String?
-    @Transient val summary: String?
-    @Transient val publishedAt: Long?
-    @Transient val topics: List<String>
-    @Transient val address: String
-    @Transient val dTag: String?
+    fun dTag() = tags.filter { it.firstOrNull() == "d" }.mapNotNull { it.getOrNull(1) }.firstOrNull() ?: ""
+    fun address() = ATag(kind, pubKey.toHexKey(), dTag())
 
-    init {
-        replyTos = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
-        mentions = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
+    fun topics() = tags.filter { it.firstOrNull() == "t" }.mapNotNull { it.getOrNull(1) }
+    fun title() = tags.filter { it.firstOrNull() == "title" }.mapNotNull { it.getOrNull(1) }.firstOrNull()
+    fun image() = tags.filter { it.firstOrNull() == "image" }.mapNotNull { it.getOrNull(1) }.firstOrNull()
+    fun summary() = tags.filter { it.firstOrNull() == "summary" }.mapNotNull { it.getOrNull(1) }.firstOrNull()
 
-        dTag = tags.filter { it.firstOrNull() == "d" }.mapNotNull { it.getOrNull(1) }.firstOrNull()
-
-        address = tags.filter { it.firstOrNull() == "a" }.mapNotNull { it.getOrNull(1) }.firstOrNull() ?: "$kind:${pubKey.toHexKey()}:$dTag"
-        topics = tags.filter { it.firstOrNull() == "t" }.mapNotNull { it.getOrNull(1) }
-        title = tags.filter { it.firstOrNull() == "title" }.mapNotNull { it.getOrNull(1) }.firstOrNull()
-        image = tags.filter { it.firstOrNull() == "image" }.mapNotNull { it.getOrNull(1) }.firstOrNull()
-        summary = tags.filter { it.firstOrNull() == "summary" }.mapNotNull { it.getOrNull(1) }.firstOrNull()
-        publishedAt = try {
-            tags.filter { it.firstOrNull() == "published_at" }.mapNotNull { it.getOrNull(1) }.firstOrNull()?.toLong()
-        } catch (_: Exception) {
-            null
-        }
+    fun publishedAt() = try {
+        tags.filter { it.firstOrNull() == "published_at" }.mapNotNull { it.getOrNull(1) }.firstOrNull()?.toLong()
+    } catch (_: Exception) {
+        null
     }
 
     companion object {

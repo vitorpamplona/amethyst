@@ -20,7 +20,7 @@ object HomeConversationsFeedFilter: FeedFilter<Note>() {
           && it.author?.let { !HomeNewThreadFeedFilter.account.isHidden(it) } ?: true
           && !it.isNewThread()
       }
-      .sortedBy { it.event?.createdAt }
+      .sortedBy { it.createdAt() }
       .reversed()
   }
 }
