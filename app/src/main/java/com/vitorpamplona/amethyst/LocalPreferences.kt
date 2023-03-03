@@ -19,16 +19,7 @@ class LocalPreferences(context: Context) {
 
   fun clearEncryptedStorage() {
     encryptedPreferences.edit().apply {
-      remove("nostr_privkey")
-      remove("nostr_pubkey")
-      remove("following_channels")
-      remove("hidden_users")
-      remove("relays")
-      remove("dontTranslateFrom")
-      remove("languagePreferences")
-      remove("translateTo")
-      remove("zapAmounts")
-      remove("latestContactList")
+      encryptedPreferences.all.keys.forEach { remove(it) }
     }.apply()
   }
 
