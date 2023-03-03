@@ -241,7 +241,7 @@ fun NoteCompose(
 
                         if (noteEvent is RepostEvent) {
                             Text(
-                                "  boosted",
+                                "  ${stringResource(id = R.string.boosted)}",
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                             )

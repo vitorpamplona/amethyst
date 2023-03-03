@@ -37,6 +37,7 @@
     <string name="zaps">Zaps</string>
     <string name="view_count">Total vistas</string>
     <string name="boost">Impulsar</string>
+    <string name="boosted">boosted</string>
     <string name="quote">Cita</string>
     <string name="new_amount_in_sats">Nueva cantidad en Sats</string>
     <string name="add">Añadir</string>

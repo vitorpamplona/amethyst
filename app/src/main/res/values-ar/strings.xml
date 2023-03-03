@@ -35,6 +35,7 @@
     <string name="zaps">Zaps</string>
     <string name="view_count">مشاهدة العد</string>
     <string name="boost">تعزيز</string>
+    <string name="boosted">معزز</string>
     <string name="quote">إقتباس</string>
     <string name="new_amount_in_sats">مبلغ جديد في Sats</string>
     <string name="add">إضافة</string>
