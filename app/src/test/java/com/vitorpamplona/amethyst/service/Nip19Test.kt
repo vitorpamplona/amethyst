@@ -25,10 +25,10 @@ class Nip19Test {
     Assert.assertEquals(16909060, actual)
   }
 
-  @Ignore("Not implemented yet")
+  @Ignore("Test not implemented yet")
   @Test()
   fun parse_TLV() {
-    // TODO
+    // TODO: I don't know how to test this (?)
   }
 
   @Test()
@@ -69,7 +69,7 @@ class Nip19Test {
     )
   }
 
-  @Ignore("Not implemented yet")
+  @Ignore("Test not implemented yet")
   @Test()
   fun uri_to_route_nprofile() {
     val actual = nip19.uriToRoute("nostr:nprofile")
@@ -78,7 +78,7 @@ class Nip19Test {
     Assert.assertEquals("*", actual?.hex)
   }
 
-  @Ignore("Not implemented yet")
+  @Ignore("Test not implemented yet")
   @Test()
   fun uri_to_route_nevent() {
     val actual = nip19.uriToRoute("nostr:nevent")
@@ -87,7 +87,7 @@ class Nip19Test {
     Assert.assertEquals("*", actual?.hex)
   }
 
-  @Ignore("Not implemented yet")
+  @Ignore("Test not implemented yet")
   @Test()
   fun uri_to_route_nrelay() {
     val actual = nip19.uriToRoute("nostr:nrelay")
@@ -96,7 +96,7 @@ class Nip19Test {
     Assert.assertEquals("*", actual?.hex)
   }
 
-  @Ignore("Not implemented yet")
+  @Ignore("Test not implemented yet")
   @Test()
   fun uri_to_route_naddr() {
     val actual = nip19.uriToRoute("nostr:naddr")

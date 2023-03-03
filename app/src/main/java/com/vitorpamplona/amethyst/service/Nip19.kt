@@ -1,13 +1,9 @@
 package com.vitorpamplona.amethyst.service
 
-import com.vitorpamplona.amethyst.model.toByteArray
 import com.vitorpamplona.amethyst.model.toHexKey
-import com.vitorpamplona.amethyst.service.model.ATag
+import nostr.postr.bechToBytes
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import nostr.postr.Bech32
-import nostr.postr.bechToBytes
-import nostr.postr.toByteArray
 
 class Nip19 {
 
@@ -37,7 +33,6 @@ class Nip19 {
       }
     } catch (e: Throwable) {
       println("Issue trying to Decode NIP19 ${uri}: ${e.message}")
-      //e.printStackTrace()
     }
 
     return null
@@ -52,8 +47,10 @@ class Nip19 {
   }
 
   private fun nprofile(bytes: ByteArray): Return? {
-    val tlv = parseTLV(bytes)
-    val hex = tlv.get(NIP19TLVTypes.SPECIAL.id)?.get(0)?.toHexKey() ?: return null
+    val hex = parseTLV(bytes)
+      .get(NIP19TLVTypes.SPECIAL.id)
+      ?.get(0)
+      ?.toHexKey() ?: return null
 
     return Return(Type.USER, hex)
   }
@@ -78,16 +75,29 @@ class Nip19 {
 
   private fun naddr(bytes: ByteArray): Return? {
     val tlv = parseTLV(bytes)
-    val d = tlv.get(NIP19TLVTypes.SPECIAL.id)?.get(0)?.toString(Charsets.UTF_8) ?: return null
-    val relay = tlv.get(NIP19TLVTypes.RELAY.id)?.get(0)?.toString(Charsets.UTF_8)
-    val author = tlv.get(NIP19TLVTypes.AUTHOR.id)?.get(0)?.toHexKey()
-    val kind = tlv.get(NIP19TLVTypes.KIND.id)?.get(0)?.let { toInt32(it) }
+
+    val d = tlv.get(NIP19TLVTypes.SPECIAL.id)
+      ?.get(0)
+      ?.toString(Charsets.UTF_8) ?: return null
+
+    val relay = tlv.get(NIP19TLVTypes.RELAY.id)
+      ?.get(0)
+      ?.toString(Charsets.UTF_8)
+
+    val author = tlv.get(NIP19TLVTypes.AUTHOR.id)
+      ?.get(0)
+      ?.toHexKey()
+
+    val kind = tlv.get(NIP19TLVTypes.KIND.id)
+      ?.get(0)
+      ?.let { toInt32(it) }
 
     return Return(Type.ADDRESS, "$kind:$author:$d")
   }
 }
 
-enum class NIP19TLVTypes(val id: Byte) { //classes should start with an uppercase letter in kotlin
+// Classes should start with an uppercase letter in kotlin
+enum class NIP19TLVTypes(val id: Byte) {
   SPECIAL(0),
   RELAY(1),
   AUTHOR(2),
