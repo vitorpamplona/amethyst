@@ -173,4 +173,5 @@
     <string name="report_hateful_speech">Denunciar discurso de ódio</string>
     <string name="report_nudity_porn">Denunciar nudez / pornografia</string>
     <string name="others">outros</string>
+    <string name="mark_all_as_read">Mark All As Read</string>
 </resources>
