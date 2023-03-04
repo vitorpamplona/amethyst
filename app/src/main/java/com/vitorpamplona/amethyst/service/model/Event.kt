@@ -41,7 +41,15 @@ open class Event(
             tags,
             content
         )
+
+        // GSON decided to hardcode these replacements.
+        // They break Nostr's hash check.
+        // These lines revert their code.
+        // https://github.com/google/gson/issues/2295
         val rawEventJson = gson.toJson(rawEvent)
+            .replace("\\u2028", "\u2028")
+            .replace("\\u2029", "\u2029")
+
         return sha256.digest(rawEventJson.toByteArray()).toHexKey()
     }
 
