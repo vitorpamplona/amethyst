@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.baha.url.preview.UrlInfoItem
 import com.vitorpamplona.amethyst.R
+import java.net.URL
 
 @Composable
 fun UrlPreviewCard(
@@ -36,8 +37,14 @@ fun UrlPreviewCard(
       .border(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.12f), RoundedCornerShape(15.dp))
   ) {
     Column {
+      // correctly treating relative images
+      val imageUrl = if (previewInfo.image.startsWith("/"))
+        URL(URL(previewInfo.url), previewInfo.image).toString()
+      else
+        previewInfo.image
+
       AsyncImage(
-        model = previewInfo.image,
+        model = imageUrl,
         contentDescription = stringResource(R.string.preview_card_image_for, url),
         contentScale = ContentScale.FillWidth,
         modifier = Modifier.fillMaxWidth()
