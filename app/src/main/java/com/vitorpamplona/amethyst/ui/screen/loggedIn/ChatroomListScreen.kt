@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.DropdownMenu
@@ -64,32 +65,56 @@ fun ChatroomListScreen(accountViewModel: AccountViewModel, navController: NavCon
             Column(
                 modifier = Modifier.padding(vertical = 0.dp)
             ) {
-                TabRow(
-                    backgroundColor = MaterialTheme.colors.background,
-                    selectedTabIndex = pagerState.currentPage,
-                    indicator = { tabPositions ->
-                        TabRowDefaults.Indicator(
-                            Modifier.pagerTabIndicatorOffset(pagerState, tabPositions),
-                            color = MaterialTheme.colors.primary
+                Box(Modifier.fillMaxWidth()) {
+                    TabRow(
+                        backgroundColor = MaterialTheme.colors.background,
+                        selectedTabIndex = pagerState.currentPage,
+                        indicator = { tabPositions ->
+                            TabRowDefaults.Indicator(
+                                Modifier.pagerTabIndicatorOffset(pagerState, tabPositions),
+                                color = MaterialTheme.colors.primary
+                            )
+                        },
+                    ) {
+                        Tab(
+                            selected = pagerState.currentPage == 0,
+                            onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
+                            text = {
+                                Text(text = stringResource(R.string.known))
+                            }
                         )
-                    },
-                ) {
-                    Tab(
-                        selected = pagerState.currentPage == 0,
-                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
-                        text = {
-                            Text(text = stringResource(R.string.known))
-                        }
-                    )
 
-                    Tab(
-                        selected = pagerState.currentPage == 1,
-                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
-                        text = {
-                            Text(text = stringResource(R.string.new_requests))
-                        }
-                    )
+                        Tab(
+                            selected = pagerState.currentPage == 1,
+                            onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
+                            text = {
+                                Text(text = stringResource(R.string.new_requests))
+                            }
+                        )
+                    }
+
+                    IconButton(
+                        modifier = Modifier
+                            .padding(end=5.dp)
+                            .size(40.dp)
+                            .align(Alignment.CenterEnd),
+                        onClick = { moreActionsExpanded = true }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = null,
+                            tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                        )
+
+                        ChatroomTabMenu(
+                            moreActionsExpanded,
+                            { moreActionsExpanded = false },
+                            { markKnownAsRead.value = true },
+                            { markNewAsRead.value = true },
+                        )
+                    }
                 }
+
                 HorizontalPager(count = 2, state = pagerState) {
                     when (pagerState.currentPage) {
                         0 -> TabKnown(accountViewModel, navController, markKnownAsRead,)
@@ -97,26 +122,6 @@ fun ChatroomListScreen(accountViewModel: AccountViewModel, navController: NavCon
                     }
                 }
             }
-        }
-        IconButton(
-            modifier = Modifier
-                .padding(0.dp)
-                .size(30.dp)
-                .align(Alignment.TopEnd),
-            onClick = { moreActionsExpanded = true }
-        ) {
-            Icon(
-                imageVector = Icons.Default.MoreVert,
-                contentDescription = null,
-                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-            )
-
-            ChatroomTabMenu(
-                moreActionsExpanded,
-                { moreActionsExpanded = false },
-                { markKnownAsRead.value = true },
-                { markNewAsRead.value = true },
-            )
         }
     }
 }
