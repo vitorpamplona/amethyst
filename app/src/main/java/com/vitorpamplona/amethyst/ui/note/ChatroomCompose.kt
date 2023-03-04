@@ -82,7 +82,7 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
         channel?.let { channel ->
             var hasNewMessages by remember { mutableStateOf<Boolean>(false) }
 
-            LaunchedEffect(key1 = notificationCache) {
+            LaunchedEffect(key1 = notificationCache, key2 = note) {
                 note.createdAt()?.let {
                     hasNewMessages = it > notificationCache.cache.load("Channel/${channel.idHex}", context)
                 }
@@ -125,7 +125,7 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
         userToComposeOn.let { user ->
             var hasNewMessages by remember { mutableStateOf<Boolean>(false) }
 
-            LaunchedEffect(key1 = notificationCache) {
+            LaunchedEffect(key1 = notificationCache, key2 = note) {
                 noteEvent?.let {
                     hasNewMessages = it.createdAt > notificationCache.cache.load("Room/${userToComposeOn.pubkeyHex}", context)
                 }
