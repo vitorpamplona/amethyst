@@ -63,9 +63,9 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>): ViewModel() {
         val oldNotesState = feedContent.value
         if (oldNotesState is FeedState.Loaded) {
             // Using size as a proxy for has changed.
-            //if (notes != oldNotesState.feed.value) {
+            if (notes != oldNotesState.feed.value) {
                 updateFeed(notes)
-            //}
+            }
         } else {
             updateFeed(notes)
         }
