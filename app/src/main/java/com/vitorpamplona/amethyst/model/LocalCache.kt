@@ -75,6 +75,9 @@ object LocalCache {
   }
 
   fun checkGetOrCreateNote(key: String): Note? {
+    if (key.startsWith("naddr1")) {
+      return checkGetOrCreateAddressableNote(key)
+    }
     return try {
       val checkHex = Hex.decode(key).toNote() // Checks if this is a valid Hex
       getOrCreateNote(key)
@@ -268,15 +271,29 @@ object LocalCache {
   }
 
   private fun replyToWithoutCitations(event: TextNoteEvent): List<String> {
+    val repliesTo = event.replyTos()
+    if (repliesTo.isEmpty()) return repliesTo
+
     val citations = findCitations(event)
 
-    return event.replyTos().filter { it !in citations }
+    return if (citations.isEmpty()) {
+      repliesTo
+    } else {
+      repliesTo.filter { it !in citations }
+    }
   }
 
   private fun replyToWithoutCitations(event: LongTextNoteEvent): List<String> {
+    val repliesTo = event.replyTos()
+    if (repliesTo.isEmpty()) return repliesTo
+
     val citations = findCitations(event)
 
-    return event.replyTos().filter { it !in citations }
+    return if (citations.isEmpty()) {
+      repliesTo
+    } else {
+      repliesTo.filter { it !in citations }
+    }
   }
 
   fun consume(event: RecommendRelayEvent) {
