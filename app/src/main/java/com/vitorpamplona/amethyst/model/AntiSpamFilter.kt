@@ -12,7 +12,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.vitorpamplona.amethyst.service.model.Event
-import nostr.postr.toHex
 
 data class Spammer(val pubkeyHex: HexKey, var duplicatedMessages: Set<HexKey>)
 
@@ -23,9 +22,6 @@ class AntiSpamFilter {
   @Synchronized
   fun isSpam(event: Event): Boolean {
     val idHex = event.id
-
-    // if already processed, ok
-    if (LocalCache.notes[idHex] != null) return false
 
     // if short message, ok
     if (event.content.length < 50) return false

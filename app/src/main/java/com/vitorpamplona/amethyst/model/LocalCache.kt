@@ -39,7 +39,6 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import nostr.postr.toHex
 import nostr.postr.toNpub
 
 
@@ -169,13 +168,6 @@ object LocalCache {
 
 
   fun consume(event: TextNoteEvent, relay: Relay? = null) {
-    if (antiSpam.isSpam(event)) {
-      relay?.let {
-        it.spamCounter++
-      }
-      return
-    }
-
     val note = getOrCreateNote(event.id)
     val author = getOrCreateUser(event.pubKey)
 
@@ -186,6 +178,13 @@ object LocalCache {
 
     // Already processed this event.
     if (note.event != null) return
+
+    if (antiSpam.isSpam(event)) {
+      relay?.let {
+        it.spamCounter++
+      }
+      return
+    }
 
     val mentions = event.mentions().mapNotNull { checkGetOrCreateUser(it) }
     val replyTo = replyToWithoutCitations(event).mapNotNull { checkGetOrCreateNote(it) } +
@@ -215,13 +214,6 @@ object LocalCache {
   }
 
   fun consume(event: LongTextNoteEvent, relay: Relay?) {
-    if (antiSpam.isSpam(event)) {
-      relay?.let {
-        it.spamCounter++
-      }
-      return
-    }
-
     val note = getOrCreateAddressableNote(event.address())
     val author = getOrCreateUser(event.pubKey)
 
@@ -232,6 +224,13 @@ object LocalCache {
 
     // Already processed this event.
     if (note.event?.id == event.id) return
+
+    if (antiSpam.isSpam(event)) {
+      relay?.let {
+        it.spamCounter++
+      }
+      return
+    }
 
     val mentions = event.mentions().mapNotNull { checkGetOrCreateUser(it) }
     val replyTo = replyToWithoutCitations(event).mapNotNull { checkGetOrCreateNote(it) }
@@ -565,12 +564,6 @@ object LocalCache {
     val channelId = event.channel()
 
     if (channelId.isNullOrBlank()) return
-    if (antiSpam.isSpam(event)) {
-      relay?.let {
-        it.spamCounter++
-      }
-      return
-    }
 
     val channel = checkGetOrCreateChannel(channelId) ?: return
 
@@ -586,6 +579,13 @@ object LocalCache {
 
     // Already processed this event.
     if (note.event != null) return
+
+    if (antiSpam.isSpam(event)) {
+      relay?.let {
+        it.spamCounter++
+      }
+      return
+    }
 
     val mentions = event.mentions().mapNotNull { checkGetOrCreateUser(it) }
     val replyTo = event.replyTos()
