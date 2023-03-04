@@ -259,7 +259,7 @@ class User(val pubkeyHex: String) {
         info?.latestMetadata = latestMetadata
         info?.updatedMetadataAt = latestMetadata.createdAt
 
-        if (newUserInfo.lud16.isNullOrBlank() && newUserInfo.lud06?.toLowerCase()?.startsWith("lnurl") == true) {
+        if (newUserInfo.lud16.isNullOrBlank() && newUserInfo.lud06?.lowercase()?.startsWith("lnurl") == true) {
             try {
                 val url = String(Bech32.decodeBytes(newUserInfo.lud06!!, false).second)
 
