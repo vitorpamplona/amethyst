@@ -181,4 +181,6 @@
         \n- **Do** keep a secure backup of your secret key for account recovery. We recommend using a password manager.
     </string>
     <string name="secret_key_copied_to_clipboard">Secret key (nsec) copied to clipboard</string>
+    <string name="copy_my_secret_key">Copy my secret key</string>
+    <string name="biometric_authentication_failed">Authentication failed</string>
 </resources>

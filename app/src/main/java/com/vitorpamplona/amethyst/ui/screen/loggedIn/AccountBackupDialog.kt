@@ -1,6 +1,12 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import android.content.Context
+import android.content.ContextWrapper
 import android.widget.Toast
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
+import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
+import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -24,6 +30,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -31,6 +38,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.fragment.app.FragmentActivity
 import com.halilibo.richtext.markdown.Markdown
 import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.material.MaterialRichText
@@ -38,6 +46,7 @@ import com.halilibo.richtext.ui.resolveDefaults
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import nostr.postr.toNsec
 
@@ -98,16 +107,7 @@ private fun NSecCopyButton(
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
-            account.loggedIn.privKey?.let {
-                clipboardManager.setText(AnnotatedString(it.toNsec()))
-                scope.launch {
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.secret_key_copied_to_clipboard),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
+            authenticatedCopyNSec(context, scope, account, clipboardManager)
         },
         shape = RoundedCornerShape(20.dp), colors = ButtonDefaults.buttonColors(
             backgroundColor = MaterialTheme.colors.primary
@@ -119,5 +119,79 @@ private fun NSecCopyButton(
             contentDescription = stringResource(R.string.copies_the_nsec_id_your_password_to_the_clipboard_for_backup)
         )
         Text("Copy Secret Key", color = MaterialTheme.colors.onPrimary)
+    }
+}
+
+fun Context.getFragmentActivity(): FragmentActivity? {
+    var currentContext = this
+    while (currentContext is ContextWrapper) {
+        if (currentContext is FragmentActivity) {
+            return currentContext
+        }
+        currentContext = currentContext.baseContext
+    }
+    return null
+}
+
+private fun authenticatedCopyNSec(
+    context: Context,
+    scope: CoroutineScope,
+    account: Account,
+    clipboardManager: ClipboardManager,
+) {
+    val fragmentContext = context.getFragmentActivity()!!
+    val authenticators = BIOMETRIC_STRONG or DEVICE_CREDENTIAL
+    val biometricManager = BiometricManager.from(context)
+
+    val promptInfo = BiometricPrompt.PromptInfo.Builder()
+        .setTitle(context.getString(R.string.app_name_release))
+        .setSubtitle(context.getString(R.string.copy_my_secret_key))
+        .setAllowedAuthenticators(authenticators)
+        .build()
+
+    val biometricPrompt = BiometricPrompt(
+        fragmentContext,
+        object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationFailed() {
+                super.onAuthenticationFailed()
+                scope.launch {
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.biometric_authentication_failed),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                super.onAuthenticationSucceeded(result)
+                copyNSec(context, scope, account, clipboardManager)
+            }
+        }
+    )
+
+    val canAuth = biometricManager.canAuthenticate(authenticators)
+    if (canAuth == BiometricManager.BIOMETRIC_SUCCESS) {
+        biometricPrompt.authenticate(promptInfo)
+    } else {
+        copyNSec(context, scope, account, clipboardManager)
+    }
+}
+
+private fun copyNSec(
+    context: Context,
+    scope: CoroutineScope,
+    account: Account,
+    clipboardManager: ClipboardManager,
+) {
+    account.loggedIn.privKey?.let {
+        clipboardManager.setText(AnnotatedString(it.toNsec()))
+        scope.launch {
+            Toast.makeText(
+                context,
+                context.getString(R.string.secret_key_copied_to_clipboard),
+                Toast.LENGTH_SHORT
+            ).show()
+        }
     }
 }
