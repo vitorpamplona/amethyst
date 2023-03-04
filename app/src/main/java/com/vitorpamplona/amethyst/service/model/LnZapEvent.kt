@@ -1,44 +1,37 @@
 package com.vitorpamplona.amethyst.service.model
 
+import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.service.lnurl.LnInvoiceUtil
 import com.vitorpamplona.amethyst.service.relays.Client
-import java.math.BigDecimal
-import nostr.postr.events.Event
 
 class LnZapEvent (
-  id: ByteArray,
-  pubKey: ByteArray,
+  id: HexKey,
+  pubKey: HexKey,
   createdAt: Long,
   tags: List<List<String>>,
   content: String,
-  sig: ByteArray
+  sig: HexKey
 ): Event(id, pubKey, createdAt, kind, tags, content, sig) {
 
-  @Transient val zappedPost: List<String>
-  @Transient val zappedAuthor: List<String>
-  @Transient val containedPost: Event?
-  @Transient val lnInvoice: String?
-  @Transient val preimage: String?
-  @Transient val amount: BigDecimal?
+  fun zappedPost() = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
+  fun zappedAuthor() = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
 
-  init {
-    zappedPost = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
-    zappedAuthor = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
+  fun taggedAddresses() = tags.filter { it.firstOrNull() == "a" }.mapNotNull { it.getOrNull(1) }.mapNotNull { ATag.parse(it) }
 
-    lnInvoice = tags.filter { it.firstOrNull() == "bolt11" }.mapNotNull { it.getOrNull(1) }.firstOrNull()
-    amount = lnInvoice?.let { LnInvoiceUtil.getAmountInSats(lnInvoice) }
-    preimage = tags.filter { it.firstOrNull() == "preimage" }.mapNotNull { it.getOrNull(1) }.firstOrNull()
+  fun lnInvoice() = tags.filter { it.firstOrNull() == "bolt11" }.mapNotNull { it.getOrNull(1) }.firstOrNull()
+  fun preimage() = tags.filter { it.firstOrNull() == "preimage" }.mapNotNull { it.getOrNull(1) }.firstOrNull()
 
-    val description = tags.filter { it.firstOrNull() == "description" }.mapNotNull { it.getOrNull(1) }.firstOrNull()
+  fun description() = tags.filter { it.firstOrNull() == "description" }.mapNotNull { it.getOrNull(1) }.firstOrNull()
 
-    containedPost = try {
-      if (description == null)
-        null
-      else
-        fromJson(description, Client.lenient)
-    } catch (e: Exception) {
-      null
+  // Keeps this as a field because it's a heavier function used everywhere.
+  val amount = lnInvoice()?.let { LnInvoiceUtil.getAmountInSats(it) }
+
+  fun containedPost() = try {
+    description()?.let {
+      fromJson(it, Client.lenient)
     }
+  } catch (e: Exception) {
+    null
   }
 
   companion object {

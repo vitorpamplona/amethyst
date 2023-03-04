@@ -9,12 +9,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.parseDirtyWordForKey
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.*
 import com.vitorpamplona.amethyst.ui.components.isValidURL
 import com.vitorpamplona.amethyst.ui.components.noProtocolUrlValidator
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -46,7 +41,6 @@ class NewPostViewModel: ViewModel() {
                 } else {
                     this.mentions = currentMentions.plus(replyUser)
                 }
-
             }
         }
 
@@ -68,12 +62,12 @@ class NewPostViewModel: ViewModel() {
 
     fun tagIndex(user: User): Int {
         // Postr Events assembles replies before mentions in the tag order
-        return (if (originalNote?.channel != null) 1 else 0) + (replyTos?.size ?: 0) + (mentions?.indexOf(user) ?: 0)
+        return (if (originalNote?.channel() != null) 1 else 0) + (replyTos?.size ?: 0) + (mentions?.indexOf(user) ?: 0)
     }
 
     fun tagIndex(note: Note): Int {
         // Postr Events assembles replies before mentions in the tag order
-        return (if (originalNote?.channel != null) 1 else 0) + (replyTos?.indexOf(note) ?: 0)
+        return (if (originalNote?.channel() != null) 1 else 0) + (replyTos?.indexOf(note) ?: 0)
     }
 
     fun sendPost() {
@@ -108,8 +102,8 @@ class NewPostViewModel: ViewModel() {
             }.joinToString(" ")
         }.joinToString("\n")
 
-        if (originalNote?.channel != null) {
-            account?.sendChannelMeesage(newMessage, originalNote!!.channel!!.idHex, originalNote!!, mentions)
+        if (originalNote?.channel() != null) {
+            account?.sendChannelMessage(newMessage, originalNote!!.channel()!!.idHex, originalNote!!, mentions)
         } else {
             account?.sendPost(newMessage, replyTos, mentions)
         }
@@ -134,10 +128,9 @@ class NewPostViewModel: ViewModel() {
             onError = {
                 isUploadingImage = false
                 viewModelScope.launch {
-                    imageUploadingError.emit(context.getString(R.string.failed_to_upload_the_image))
+                    imageUploadingError.emit("Failed to upload the image")
                 }
-            },
-            context = context
+            }
         )
     }
 

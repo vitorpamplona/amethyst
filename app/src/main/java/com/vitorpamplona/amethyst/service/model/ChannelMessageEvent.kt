@@ -1,33 +1,29 @@
 package com.vitorpamplona.amethyst.service.model
 
+import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.toHexKey
 import java.util.Date
 import nostr.postr.Utils
-import nostr.postr.events.Event
 
 class ChannelMessageEvent (
-  id: ByteArray,
-  pubKey: ByteArray,
+  id: HexKey,
+  pubKey: HexKey,
   createdAt: Long,
   tags: List<List<String>>,
   content: String,
-  sig: ByteArray
+  sig: HexKey
 ): Event(id, pubKey, createdAt, kind, tags, content, sig) {
-  @Transient val channel: String?
-  @Transient val replyTos: List<String>
-  @Transient val mentions: List<String>
 
-  init {
-    channel = tags.firstOrNull { it[0] == "e" && it.size > 3 && it[3] == "root" }?.getOrNull(1) ?: tags.firstOrNull { it.firstOrNull() == "e" }?.getOrNull(1)
-    replyTos = tags.filter { it.getOrNull(1) != channel }.mapNotNull { it.getOrNull(1) }
-    mentions = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
-  }
+  fun channel() = tags.firstOrNull { it[0] == "e" && it.size > 3 && it[3] == "root" }?.getOrNull(1) ?: tags.firstOrNull { it.firstOrNull() == "e" }?.getOrNull(1)
+  fun replyTos() = tags.filter { it.getOrNull(1) != channel() }.mapNotNull { it.getOrNull(1) }
+  fun mentions() = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
 
   companion object {
     const val kind = 42
 
     fun create(message: String, channel: String, replyTos: List<String>? = null, mentions: List<String>? = null, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ChannelMessageEvent {
       val content = message
-      val pubKey = Utils.pubkeyCreate(privateKey)
+      val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
       val tags = mutableListOf(
         listOf("e", channel, "", "root")
       )
@@ -40,7 +36,7 @@ class ChannelMessageEvent (
 
       val id = generateId(pubKey, createdAt, kind, tags, content)
       val sig = Utils.sign(id, privateKey)
-      return ChannelMessageEvent(id, pubKey, createdAt, tags, content, sig)
+      return ChannelMessageEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
     }
   }
 }

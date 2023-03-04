@@ -63,9 +63,9 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>): ViewModel() {
         val oldNotesState = feedContent.value
         if (oldNotesState is FeedState.Loaded) {
             // Using size as a proxy for has changed.
-            //if (notes != oldNotesState.feed.value) {
+            if (notes != oldNotesState.feed.value) {
                 updateFeed(notes)
-            //}
+            }
         } else {
             updateFeed(notes)
         }
@@ -95,7 +95,9 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>): ViewModel() {
         scope.launch {
             try {
                 delay(50)
-                refresh()
+                // adds the time to perform the refresh into this delay
+                // holding off new updates in case of heavy refresh routines.
+                refreshSuspended()
             } finally {
                 withContext(NonCancellable) {
                     handlerWaiting.set(false)

@@ -121,7 +121,6 @@ fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, accoun
         Column(Modifier.fillMaxHeight()) {
             ChannelHeader(
                 channel, account,
-                accountStateViewModel = accountStateViewModel,
                 navController = navController
             )
 
@@ -193,7 +192,7 @@ fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, accoun
                     trailingIcon = {
                         PostButton(
                             onPost = {
-                                account.sendChannelMeesage(newPost.value.text, channel.idHex, replyTo.value, null)
+                                account.sendChannelMessage(newPost.value.text, channel.idHex, replyTo.value, null)
                                 newPost.value = TextFieldValue("")
                                 replyTo.value = null
                                 feedViewModel.refresh() // Don't wait a full second before updating
@@ -213,7 +212,7 @@ fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, accoun
 }
 
 @Composable
-fun ChannelHeader(baseChannel: Channel, account: Account, accountStateViewModel: AccountStateViewModel, navController: NavController) {
+fun ChannelHeader(baseChannel: Channel, account: Account, navController: NavController) {
     val channelState by baseChannel.live.observeAsState()
     val channel = channelState?.channel ?: return
 

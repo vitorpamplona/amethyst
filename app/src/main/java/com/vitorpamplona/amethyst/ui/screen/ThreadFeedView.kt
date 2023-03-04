@@ -243,7 +243,7 @@ fun NoteMaster(baseNote: Note,
                         NoteUsernameDisplay(baseNote, Modifier.weight(1f))
 
                         Text(
-                            timeAgo(noteEvent.createdAt, context = context),
+                            timeAgo(note.createdAt(), context = context),
                             color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                             maxLines = 1
                         )
@@ -268,21 +268,21 @@ fun NoteMaster(baseNote: Note,
             }
 
             if (noteEvent is LongTextNoteEvent) {
-                Row(modifier = Modifier.padding(horizontal = 12.dp)) {
+                Row(modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp)) {
                     Column {
-                        noteEvent.image?.let {
+                        noteEvent.image()?.let {
                             AsyncImage(
-                                model = noteEvent.image,
+                                model = it,
                                 contentDescription = stringResource(
                                     R.string.preview_card_image_for,
-                                    noteEvent.image
+                                    it
                                 ),
                                 contentScale = ContentScale.FillWidth,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
 
-                        noteEvent.title?.let {
+                        noteEvent.title()?.let {
                             Text(
                                 text = it,
                                 fontSize = 30.sp,
@@ -293,9 +293,12 @@ fun NoteMaster(baseNote: Note,
                             )
                         }
 
-                        noteEvent.summary?.let {
+                        noteEvent.summary()?.let {
                             Text(
-                                text = it
+                                text = it,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 10.dp)
                             )
                         }
                     }

@@ -18,8 +18,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import nostr.postr.Bech32
-import nostr.postr.events.ContactListEvent
-import nostr.postr.events.MetadataEvent
+import com.vitorpamplona.amethyst.service.model.ContactListEvent
+import com.vitorpamplona.amethyst.service.model.MetadataEvent
 import nostr.postr.toNpub
 
 val lnurlpPattern = Pattern.compile("(?i:http|https):\\/\\/((.+)\\/)*\\.well-known\\/lnurlp\\/(.*)")
@@ -37,6 +37,7 @@ class User(val pubkeyHex: String) {
 
     var notes = setOf<Note>()
         private set
+
     var taggedPosts = setOf<Note>()
         private set
 
@@ -157,7 +158,7 @@ class User(val pubkeyHex: String) {
             liveSet?.reports?.invalidateData()
         }
 
-        val reportTime = note.event?.createdAt ?: 0
+        val reportTime = note.createdAt() ?: 0
         if (reportTime > latestReportTime) {
             latestReportTime = reportTime
         }
@@ -289,7 +290,7 @@ class User(val pubkeyHex: String) {
 
     fun hasReport(loggedIn: User, type: ReportEvent.ReportType): Boolean {
         return reports[loggedIn]?.firstOrNull() {
-              it.event is ReportEvent && (it.event as ReportEvent).reportedAuthor.any { it.reportType == type }
+              it.event is ReportEvent && (it.event as ReportEvent).reportedAuthor().any { it.reportType == type }
         } != null
     }
 
@@ -341,6 +342,7 @@ data class RelayInfo (
 )
 
 data class Chatroom(var roomMessages: Set<Note>)
+
 
 class UserMetadata {
     var name: String? = null

@@ -3,7 +3,7 @@ package com.vitorpamplona.amethyst.service.relays
 import android.util.Log
 import com.google.gson.JsonElement
 import java.util.Date
-import nostr.postr.events.Event
+import com.vitorpamplona.amethyst.service.model.Event
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -54,7 +54,7 @@ class Relay(
         if (socket != null) return
 
         try {
-            val request = Request.Builder().header("Origin", "amethyst.social").url(url.trim()).build()
+            val request = Request.Builder().url(url.trim()).build()
             val listener = object : WebSocketListener() {
 
                 override fun onOpen(webSocket: WebSocket, response: Response) {

@@ -35,6 +35,7 @@
     <string name="zaps">Zaps</string>
     <string name="view_count">Contagem de visualizações</string>
     <string name="boost">Impulsionar</string>
+    <string name="boosted">boosted</string>
     <string name="quote">Citar</string>
     <string name="new_amount_in_sats">Novo Valor em Sats</string>
     <string name="add">Adicionar</string>
@@ -47,7 +48,7 @@
     <string name="profile">Perfil</string>
     <string name="security_filters">Filtros de segurança</string>
     <string name="log_out">Sair</string>
-    <string name="show_more">Mostar mais</string>
+    <string name="show_more">Mostrar mais</string>
     <string name="lightning_invoice">Fatura Lightning</string>
     <string name="pay">Pagar</string>
     <string name="lightning_tips">Doação Lightning</string>
@@ -59,11 +60,6 @@
     <string name="error_parsing_preview_for">Erro ao analisar a visualização para %1$s: %2$s</string>
     <string name="preview_card_image_for">Visualize a imagem do cartão para %1$s</string>
     <string name="new_channel">Novo Canal</string>
-    <string name="can_t_find_out_the_content_type">Não é possível descobrir o tipo de conteúdo</string>
-    <string name="can_t_insert_the_new_content">Não é possível inserir o novo conteúdo</string>
-    <string name="can_t_open_the_content_output_stream">Não é possível abrir o fluxo de saída de conteúdo</string>
-    <string name="can_t_open_the_image_input_stream">Não é possível abrir o fluxo de entrada de imagem</string>
-    <string name="there_must_be_an_uploaded_image_url_in_the_response">Deve haver um URL de imagem na resposta</string>
     <string name="channel_name">Nome do Canal</string>
     <string name="my_awesome_group">Meu grupo</string>
     <string name="picture_url">Url da foto</string>

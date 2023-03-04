@@ -78,7 +78,7 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, modifier: Modifier = Modifier, r
                                 launchSingleTop = true
                             }
                         } else {
-                            note.channel?.let {
+                            note.channel()?.let {
                                 navController.navigate("Channel/${it.idHex}")
                             }
                         }

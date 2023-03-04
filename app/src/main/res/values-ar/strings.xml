@@ -35,6 +35,7 @@
     <string name="zaps">Zaps</string>
     <string name="view_count">مشاهدة العد</string>
     <string name="boost">تعزيز</string>
+    <string name="boosted">معزز</string>
     <string name="quote">إقتباس</string>
     <string name="new_amount_in_sats">مبلغ جديد في Sats</string>
     <string name="add">إضافة</string>
@@ -59,11 +60,6 @@
     <string name="error_parsing_preview_for">خطأ في تحليل المعاينة لـ %1$s : %2$s</string>
     <string name="preview_card_image_for">معاينة صورة البطاقة لـ %1$s</string>
     <string name="new_channel">قناة جديدة</string>
-    <string name="can_t_find_out_the_content_type">لا يمكن معرفة نوع المحتوى</string>
-    <string name="can_t_insert_the_new_content">لا يمكن إدراج المحتوى الجديد</string>
-    <string name="can_t_open_the_content_output_stream">لا يمكن فتح دفق إخراج المحتوى</string>
-    <string name="can_t_open_the_image_input_stream">لا يمكن فتح دفق إدخال الصورة</string>
-    <string name="there_must_be_an_uploaded_image_url_in_the_response">يجب أن يكون هناك عنوان URL للصورة التي تم تحميلها في الاستجابة</string>
     <string name="channel_name">اسم القناة</string>
     <string name="my_awesome_group">مجموعتي الرائعة</string>
     <string name="picture_url">رابط الصورة</string>

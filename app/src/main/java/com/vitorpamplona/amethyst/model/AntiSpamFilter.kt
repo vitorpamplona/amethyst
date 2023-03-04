@@ -11,7 +11,7 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import nostr.postr.events.Event
+import com.vitorpamplona.amethyst.service.model.Event
 import nostr.postr.toHex
 
 data class Spammer(val pubkeyHex: HexKey, var duplicatedMessages: Set<HexKey>)
@@ -22,7 +22,7 @@ class AntiSpamFilter {
 
   @Synchronized
   fun isSpam(event: Event): Boolean {
-    val idHex = event.id.toHexKey()
+    val idHex = event.id
 
     // if already processed, ok
     if (LocalCache.notes[idHex] != null) return false
@@ -37,15 +37,15 @@ class AntiSpamFilter {
     val hash = (event.content + event.tags.flatten().joinToString(",")).hashCode()
 
     if ((recentMessages[hash] != null && recentMessages[hash] != idHex) || spamMessages[hash] != null) {
-      Log.w("Potential SPAM Message", "${event.id.toHex()} ${recentMessages[hash]} ${spamMessages[hash] != null} ${event.content.replace("\n", " | ")}")
+      Log.w("Potential SPAM Message", "${event.id} ${recentMessages[hash]} ${spamMessages[hash] != null} ${event.content.replace("\n", " | ")}")
 
       // Log down offenders
       if (spamMessages.get(hash) == null) {
-        spamMessages.put(hash, Spammer(event.pubKey.toHexKey(), setOf(recentMessages[hash], event.id.toHex())))
+        spamMessages.put(hash, Spammer(event.pubKey, setOf(recentMessages[hash], event.id)))
         liveSpam.invalidateData()
       } else {
         val spammer = spamMessages.get(hash)
-        spammer.duplicatedMessages = spammer.duplicatedMessages + event.id.toHex()
+        spammer.duplicatedMessages = spammer.duplicatedMessages + event.id
 
         liveSpam.invalidateData()
       }

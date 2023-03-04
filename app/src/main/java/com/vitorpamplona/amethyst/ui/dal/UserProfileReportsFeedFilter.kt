@@ -12,6 +12,6 @@ object UserProfileReportsFeedFilter: FeedFilter<Note>() {
   }
 
   override fun feed(): List<Note> {
-    return user?.reports?.values?.flatten()?.sortedBy { it.event?.createdAt }?.reversed() ?: emptyList()
+    return user?.reports?.values?.flatten()?.sortedBy { it.createdAt() }?.reversed() ?: emptyList()
   }
 }

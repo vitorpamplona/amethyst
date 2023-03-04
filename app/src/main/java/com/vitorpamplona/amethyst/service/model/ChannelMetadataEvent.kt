@@ -1,32 +1,27 @@
 package com.vitorpamplona.amethyst.service.model
 
 import android.util.Log
+import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.toHexKey
 import java.util.Date
 import nostr.postr.Utils
-import nostr.postr.events.Event
-import nostr.postr.events.MetadataEvent
 
 class ChannelMetadataEvent (
-  id: ByteArray,
-  pubKey: ByteArray,
+  id: HexKey,
+  pubKey: HexKey,
   createdAt: Long,
   tags: List<List<String>>,
   content: String,
-  sig: ByteArray
+  sig: HexKey
 ): Event(id, pubKey, createdAt, kind, tags, content, sig) {
-  @Transient val channel: String?
-  @Transient val channelInfo: ChannelCreateEvent.ChannelData
-
-  init {
-    channel = tags.firstOrNull { it.firstOrNull() == "e" }?.getOrNull(1)
-    channelInfo =
-      try {
-        MetadataEvent.gson.fromJson(content, ChannelCreateEvent.ChannelData::class.java)
-      } catch (e: Exception) {
-        Log.e("ChannelMetadataEvent", "Can't parse channel info $content", e)
-        ChannelCreateEvent.ChannelData(null, null, null)
-      }
-  }
+  fun channel() = tags.firstOrNull { it.firstOrNull() == "e" }?.getOrNull(1)
+  fun channelInfo() =
+    try {
+      MetadataEvent.gson.fromJson(content, ChannelCreateEvent.ChannelData::class.java)
+    } catch (e: Exception) {
+      Log.e("ChannelMetadataEvent", "Can't parse channel info $content", e)
+      ChannelCreateEvent.ChannelData(null, null, null)
+    }
 
   companion object {
     const val kind = 41
@@ -38,11 +33,11 @@ class ChannelMetadataEvent (
         else
           ""
 
-      val pubKey = Utils.pubkeyCreate(privateKey)
+      val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
       val tags = listOf( listOf("e", originalChannelIdHex, "", "root") )
       val id = generateId(pubKey, createdAt, kind, tags, content)
       val sig = Utils.sign(id, privateKey)
-      return ChannelMetadataEvent(id, pubKey, createdAt, tags, content, sig)
+      return ChannelMetadataEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
     }
   }
 }

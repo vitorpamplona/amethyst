@@ -10,14 +10,14 @@ abstract class Card() {
 
 class NoteCard(val note: Note): Card() {
     override fun createdAt(): Long {
-        return note.event?.createdAt ?: 0
+        return note.createdAt() ?: 0
     }
 
     override fun id() = note.idHex
 }
 
 class LikeSetCard(val note: Note, val likeEvents: List<Note>): Card() {
-    val createdAt = likeEvents.maxOf { it.event?.createdAt ?: 0 }
+    val createdAt = likeEvents.maxOf { it.createdAt() ?: 0 }
     override fun createdAt(): Long {
         return createdAt
     }
@@ -25,7 +25,7 @@ class LikeSetCard(val note: Note, val likeEvents: List<Note>): Card() {
 }
 
 class ZapSetCard(val note: Note, val zapEvents: Map<Note, Note>): Card() {
-    val createdAt = zapEvents.maxOf { it.value.event?.createdAt ?: 0 }
+    val createdAt = zapEvents.maxOf { it.value.createdAt() ?: 0 }
     override fun createdAt(): Long {
         return createdAt
     }
@@ -34,9 +34,9 @@ class ZapSetCard(val note: Note, val zapEvents: Map<Note, Note>): Card() {
 
 class MultiSetCard(val note: Note, val boostEvents: List<Note>, val likeEvents: List<Note>, val zapEvents: Map<Note, Note>): Card() {
     val createdAt = maxOf(
-        zapEvents.maxOfOrNull { it.value.event?.createdAt ?: 0 } ?: 0 ,
-        likeEvents.maxOfOrNull { it.event?.createdAt ?: 0 } ?: 0 ,
-        boostEvents.maxOfOrNull { it.event?.createdAt ?: 0 } ?: 0
+        zapEvents.maxOfOrNull { it.value.createdAt() ?: 0 } ?: 0 ,
+        likeEvents.maxOfOrNull { it.createdAt() ?: 0 } ?: 0 ,
+        boostEvents.maxOfOrNull { it.createdAt() ?: 0 } ?: 0
     )
 
     override fun createdAt(): Long {
@@ -46,7 +46,7 @@ class MultiSetCard(val note: Note, val boostEvents: List<Note>, val likeEvents: 
 }
 
 class BoostSetCard(val note: Note, val boostEvents: List<Note>): Card() {
-    val createdAt = boostEvents.maxOf { it.event?.createdAt ?: 0 }
+    val createdAt = boostEvents.maxOf { it.createdAt() ?: 0 }
 
     override fun createdAt(): Long {
         return createdAt

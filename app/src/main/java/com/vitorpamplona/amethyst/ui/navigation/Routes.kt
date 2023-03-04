@@ -53,7 +53,7 @@ sealed class Route(
         buildScreen = { acc, accSt, nav -> { _ -> ChatroomListScreen(acc, nav) }}
     )
 
-    object Filters : Route("Filters", R.drawable.ic_dm,
+    object Filters : Route("Filters", R.drawable.ic_security,
         buildScreen = { acc, accSt, nav -> { _ -> FiltersScreen(acc, nav) }}
     )
 
@@ -107,7 +107,7 @@ private fun homeHasNewItems(account: Account, cache: NotificationCache, context:
 
     HomeNewThreadFeedFilter.account = account
 
-    return (HomeNewThreadFeedFilter.feed().firstOrNull { it.event?.createdAt != null }?.event?.createdAt ?: 0) > lastTime
+    return (HomeNewThreadFeedFilter.feed().firstOrNull { it.createdAt() != null }?.createdAt() ?: 0) > lastTime
 }
 
 private fun notificationHasNewItems(account: Account, cache: NotificationCache, context: Context): Boolean {
@@ -115,17 +115,17 @@ private fun notificationHasNewItems(account: Account, cache: NotificationCache, 
 
     NotificationFeedFilter.account = account
 
-    return (NotificationFeedFilter.feed().firstOrNull { it.event?.createdAt != null }?.event?.createdAt ?: 0) > lastTime
+    return (NotificationFeedFilter.feed().firstOrNull { it.createdAt() != null }?.createdAt() ?: 0) > lastTime
 }
 
 private fun messagesHasNewItems(account: Account, cache: NotificationCache, context: Context): Boolean {
     ChatroomListKnownFeedFilter.account = account
 
     val note = ChatroomListKnownFeedFilter.feed().firstOrNull {
-        it.event?.createdAt != null && it.channel == null && it.author != account.userProfile()
+        it.createdAt() != null && it.channel() == null && it.author != account.userProfile()
     } ?: return false
 
     val lastTime = cache.load("Room/${note.author?.pubkeyHex}", context)
 
-    return (note.event?.createdAt ?: 0) > lastTime
+    return (note.createdAt() ?: 0) > lastTime
 }

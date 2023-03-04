@@ -1,33 +1,30 @@
 package com.vitorpamplona.amethyst.service.model
 
+import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.relays.Client
 import java.util.Date
 import nostr.postr.Utils
-import nostr.postr.events.Event
 import nostr.postr.toHex
 
 class RepostEvent (
-  id: ByteArray,
-  pubKey: ByteArray,
+  id: HexKey,
+  pubKey: HexKey,
   createdAt: Long,
   tags: List<List<String>>,
   content: String,
-  sig: ByteArray
+  sig: HexKey
 ): Event(id, pubKey, createdAt, kind, tags, content, sig) {
 
-  @Transient val boostedPost: List<String>
-  @Transient val originalAuthor: List<String>
-  @Transient val containedPost: Event?
 
-  init {
-    boostedPost = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
-    originalAuthor = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
+  fun boostedPost() = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
+  fun originalAuthor() = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
+  fun taggedAddresses() = tags.filter { it.firstOrNull() == "a" }.mapNotNull { it.getOrNull(1) }.mapNotNull { ATag.parse(it) }
 
-    containedPost = try {
-      fromJson(content, Client.lenient)
-    } catch (e: Exception) {
-      null
-    }
+  fun containedPost() = try {
+    fromJson(content, Client.lenient)
+  } catch (e: Exception) {
+    null
   }
 
   companion object {
@@ -36,14 +33,19 @@ class RepostEvent (
     fun create(boostedPost: Event, privateKey: ByteArray, createdAt: Long = Date().time / 1000): RepostEvent {
       val content = boostedPost.toJson()
 
-      val replyToPost = listOf("e", boostedPost.id.toHex())
-      val replyToAuthor = listOf("p", boostedPost.pubKey.toHex())
+      val replyToPost = listOf("e", boostedPost.id)
+      val replyToAuthor = listOf("p", boostedPost.pubKey)
 
-      val pubKey = Utils.pubkeyCreate(privateKey)
-      val tags:List<List<String>> = boostedPost.tags.plus(listOf(replyToPost, replyToAuthor))
+      val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
+      var tags:List<List<String>> = boostedPost.tags.plus(listOf(replyToPost, replyToAuthor))
+
+      if (boostedPost is LongTextNoteEvent) {
+        tags = tags + listOf( listOf("a", boostedPost.address().toTag()) )
+      }
+
       val id = generateId(pubKey, createdAt, kind, tags, content)
       val sig = Utils.sign(id, privateKey)
-      return RepostEvent(id, pubKey, createdAt, tags, content, sig)
+      return RepostEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
     }
   }
 }

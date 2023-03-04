@@ -5,6 +5,7 @@ import androidx.lifecycle.LiveData
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.google.gson.reflect.TypeToken
+import com.vitorpamplona.amethyst.service.model.ATag
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelHideMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
@@ -16,6 +17,13 @@ import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
+import com.vitorpamplona.amethyst.service.model.ContactListEvent
+import com.vitorpamplona.amethyst.service.model.DeletionEvent
+import com.vitorpamplona.amethyst.service.model.Event
+import com.vitorpamplona.amethyst.service.model.MetadataEvent
+import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
+import com.vitorpamplona.amethyst.service.model.RecommendRelayEvent
+import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.service.relays.Relay
 import fr.acinq.secp256k1.Hex
 import java.io.ByteArrayInputStream
@@ -31,13 +39,6 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import nostr.postr.events.ContactListEvent
-import nostr.postr.events.DeletionEvent
-import nostr.postr.events.Event
-import nostr.postr.events.MetadataEvent
-import nostr.postr.events.PrivateDmEvent
-import nostr.postr.events.RecommendRelayEvent
-import nostr.postr.events.TextNoteEvent
 import nostr.postr.toHex
 import nostr.postr.toNpub
 
@@ -52,6 +53,7 @@ object LocalCache {
   val users = ConcurrentHashMap<HexKey, User>()
   val notes = ConcurrentHashMap<HexKey, Note>()
   val channels = ConcurrentHashMap<HexKey, Channel>()
+  val addressables = ConcurrentHashMap<String, AddressableNote>()
 
   fun checkGetOrCreateUser(key: String): User? {
     return try {
@@ -111,10 +113,33 @@ object LocalCache {
     }
   }
 
+  fun checkGetOrCreateAddressableNote(key: String): AddressableNote? {
+    return try {
+      val addr = ATag.parse(key)
+      if (addr != null)
+        getOrCreateAddressableNote(addr)
+      else
+        null
+    } catch (e: IllegalArgumentException) {
+      Log.e("LocalCache", "Invalid Key to create channel: $key", e)
+      null
+    }
+  }
+
+  @Synchronized
+  fun getOrCreateAddressableNote(key: ATag): AddressableNote {
+    return addressables[key.toNAddr()] ?: run {
+      val answer = AddressableNote(key)
+      answer.author = checkGetOrCreateUser(key.pubKeyHex)
+      addressables.put(key.toNAddr(), answer)
+      answer
+    }
+  }
+
 
   fun consume(event: MetadataEvent) {
     // new event
-    val oldUser = getOrCreateUser(event.pubKey.toHexKey())
+    val oldUser = getOrCreateUser(event.pubKey)
     if (oldUser.info == null || event.createdAt > oldUser.info!!.updatedMetadataAt) {
       val newUser = try {
         metadataParser.readValue(
@@ -148,8 +173,8 @@ object LocalCache {
       return
     }
 
-    val note = getOrCreateNote(event.id.toHex())
-    val author = getOrCreateUser(event.pubKey.toHexKey())
+    val note = getOrCreateNote(event.id)
+    val author = getOrCreateUser(event.pubKey)
 
     if (relay != null) {
       author.addRelayBeingUsed(relay, event.createdAt)
@@ -159,8 +184,9 @@ object LocalCache {
     // Already processed this event.
     if (note.event != null) return
 
-    val mentions = event.mentions.mapNotNull { checkGetOrCreateUser(it) }
-    val replyTo = replyToWithoutCitations(event).mapNotNull { checkGetOrCreateNote(it) }
+    val mentions = event.mentions().mapNotNull { checkGetOrCreateUser(it) }
+    val replyTo = replyToWithoutCitations(event).mapNotNull { checkGetOrCreateNote(it) } +
+                  event.taggedAddresses().mapNotNull { getOrCreateAddressableNote(it) }
 
     note.loadEvent(event, author, mentions, replyTo)
 
@@ -193,8 +219,8 @@ object LocalCache {
       return
     }
 
-    val note = getOrCreateNote(event.id.toHex())
-    val author = getOrCreateUser(event.pubKey.toHexKey())
+    val note = getOrCreateAddressableNote(event.address())
+    val author = getOrCreateUser(event.pubKey)
 
     if (relay != null) {
       author.addRelayBeingUsed(relay, event.createdAt)
@@ -202,32 +228,26 @@ object LocalCache {
     }
 
     // Already processed this event.
-    if (note.event != null) return
+    if (note.event?.id == event.id) return
 
-    val mentions = event.mentions.mapNotNull { checkGetOrCreateUser(it) }
+    val mentions = event.mentions().mapNotNull { checkGetOrCreateUser(it) }
     val replyTo = replyToWithoutCitations(event).mapNotNull { checkGetOrCreateNote(it) }
 
-    note.loadEvent(event, author, mentions, replyTo)
+    if (event.createdAt > (note.createdAt() ?: 0)) {
+      note.loadEvent(event, author, mentions, replyTo)
 
-    //Log.d("TN", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${note.event?.content?.take(100)} ${formattedDateTime(event.createdAt)}")
+      author.addNote(note)
 
-    // Prepares user's profile view.
-    author.addNote(note)
+      // Adds notifications to users.
+      mentions.forEach {
+        it.addTaggedPost(note)
+      }
+      replyTo.forEach {
+        it.author?.addTaggedPost(note)
+      }
 
-    // Adds notifications to users.
-    mentions.forEach {
-      it.addTaggedPost(note)
+      refreshObservers()
     }
-    replyTo.forEach {
-      it.author?.addTaggedPost(note)
-    }
-
-    // Counts the replies
-    replyTo.forEach {
-      it.addReply(note)
-    }
-
-    refreshObservers()
   }
 
   private fun findCitations(event: Event): Set<String> {
@@ -250,13 +270,13 @@ object LocalCache {
   private fun replyToWithoutCitations(event: TextNoteEvent): List<String> {
     val citations = findCitations(event)
 
-    return event.replyTos.filter { it !in citations }
+    return event.replyTos().filter { it !in citations }
   }
 
   private fun replyToWithoutCitations(event: LongTextNoteEvent): List<String> {
     val citations = findCitations(event)
 
-    return event.replyTos.filter { it !in citations }
+    return event.replyTos().filter { it !in citations }
   }
 
   fun consume(event: RecommendRelayEvent) {
@@ -264,21 +284,21 @@ object LocalCache {
   }
 
   fun consume(event: ContactListEvent) {
-    val user = getOrCreateUser(event.pubKey.toHexKey())
+    val user = getOrCreateUser(event.pubKey)
+    val follows = event.follows()
 
-    if (event.createdAt > user.updatedFollowsAt && event.follows.isNotEmpty()) {
+    if (event.createdAt > user.updatedFollowsAt && !follows.isNullOrEmpty()) {
       // Saves relay list only if it's a user that is currently been seen
       user.latestContactList = event
 
       user.updateFollows(
-        event.follows.map {
+        follows.map {
           try {
             val pubKey = decodePublicKey(it.pubKeyHex)
             getOrCreateUser(pubKey.toHexKey())
           } catch (e: Exception) {
-            println("Could not parse Hex key: ${it.pubKeyHex}")
-            println("UpdateFollows: " + event.toJson())
-            e.printStackTrace()
+            Log.w("ContactList Parser", "Ignoring: Could not parse Hex key: ${it.pubKeyHex} in ${event.toJson()}")
+            //e.printStackTrace()
             null
           }
         }.filterNotNull().toSet(),
@@ -297,20 +317,17 @@ object LocalCache {
           user.updateRelays(relays)
         }
       } catch (e: Exception) {
-        println("relay import issue")
+        Log.w("Relay List Parser","Relay import issue ${e.message}", e)
         e.printStackTrace()
       }
 
-      Log.d(
-        "CL",
-        "AAA ${user.toBestDisplayName()} ${event.follows.size}"
-      )
+      Log.d("CL", "AAA ${user.toBestDisplayName()} ${follows.size}")
     }
   }
 
   fun consume(event: PrivateDmEvent, relay: Relay?) {
-    val note = getOrCreateNote(event.id.toHex())
-    val author = getOrCreateUser(event.pubKey.toHexKey())
+    val note = getOrCreateNote(event.id)
+    val author = getOrCreateUser(event.pubKey)
 
     if (relay != null) {
       author.addRelayBeingUsed(relay, event.createdAt)
@@ -320,7 +337,7 @@ object LocalCache {
     // Already processed this event.
     if (note.event != null) return
 
-    val recipient = event.recipientPubKey?.let { getOrCreateUser(it.toHexKey()) }
+    val recipient = event.recipientPubKey()?.let { getOrCreateUser(it) }
 
     //Log.d("PM", "${author.toBestDisplayName()} to ${recipient?.toBestDisplayName()}")
 
@@ -340,9 +357,9 @@ object LocalCache {
   fun consume(event: DeletionEvent) {
     var deletedAtLeastOne = false
 
-    event.deleteEvents.mapNotNull { notes[it] }.forEach { deleteNote ->
+    event.deleteEvents().mapNotNull { notes[it] }.forEach { deleteNote ->
       // must be the same author
-      if (deleteNote.author?.pubkeyHex == event.pubKey.toHexKey()) {
+      if (deleteNote.author?.pubkeyHex == event.pubKey) {
         deleteNote.author?.removeNote(deleteNote)
 
         // reverts the add
@@ -376,16 +393,17 @@ object LocalCache {
   }
 
   fun consume(event: RepostEvent) {
-    val note = getOrCreateNote(event.id.toHex())
+    val note = getOrCreateNote(event.id)
 
     // Already processed this event.
     if (note.event != null) return
 
     //Log.d("TN", "New Boost (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${formattedDateTime(event.createdAt)}")
 
-    val author = getOrCreateUser(event.pubKey.toHexKey())
-    val mentions = event.originalAuthor.mapNotNull { checkGetOrCreateUser(it) }
-    val repliesTo = event.boostedPost.mapNotNull { checkGetOrCreateNote(it) }
+    val author = getOrCreateUser(event.pubKey)
+    val mentions = event.originalAuthor().mapNotNull { checkGetOrCreateUser(it) }
+    val repliesTo = event.boostedPost().mapNotNull { checkGetOrCreateNote(it) } +
+                    event.taggedAddresses().mapNotNull { getOrCreateAddressableNote(it) }
 
     note.loadEvent(event, author, mentions, repliesTo)
 
@@ -409,14 +427,15 @@ object LocalCache {
   }
 
   fun consume(event: ReactionEvent) {
-    val note = getOrCreateNote(event.id.toHexKey())
+    val note = getOrCreateNote(event.id)
 
     // Already processed this event.
     if (note.event != null) return
 
-    val author = getOrCreateUser(event.pubKey.toHexKey())
-    val mentions = event.originalAuthor.mapNotNull { checkGetOrCreateUser(it) }
-    val repliesTo = event.originalPost.mapNotNull { checkGetOrCreateNote(it) }
+    val author = getOrCreateUser(event.pubKey)
+    val mentions = event.originalAuthor().mapNotNull { checkGetOrCreateUser(it) }
+    val repliesTo = event.originalPost().mapNotNull { checkGetOrCreateNote(it) } +
+                    event.taggedAddresses().mapNotNull { getOrCreateAddressableNote(it) }
 
     note.loadEvent(event, author, mentions, repliesTo)
 
@@ -454,8 +473,8 @@ object LocalCache {
   }
 
   fun consume(event: ReportEvent, relay: Relay?) {
-    val note = getOrCreateNote(event.id.toHex())
-    val author = getOrCreateUser(event.pubKey.toHexKey())
+    val note = getOrCreateNote(event.id)
+    val author = getOrCreateUser(event.pubKey)
 
     if (relay != null) {
       author.addRelayBeingUsed(relay, event.createdAt)
@@ -465,8 +484,9 @@ object LocalCache {
     // Already processed this event.
     if (note.event != null) return
 
-    val mentions = event.reportedAuthor.mapNotNull { checkGetOrCreateUser(it.key) }
-    val repliesTo = event.reportedPost.mapNotNull { checkGetOrCreateNote(it.key) }
+    val mentions = event.reportedAuthor().mapNotNull { checkGetOrCreateUser(it.key) }
+    val repliesTo = event.reportedPost().mapNotNull { checkGetOrCreateNote(it.key) } +
+                    event.taggedAddresses().mapNotNull { getOrCreateAddressableNote(it) }
 
     note.loadEvent(event, author, mentions, repliesTo)
 
@@ -485,15 +505,14 @@ object LocalCache {
   fun consume(event: ChannelCreateEvent) {
     //Log.d("MT", "New Event ${event.content} ${event.id.toHex()}")
     // new event
-    val oldChannel = getOrCreateChannel(event.id.toHex())
-    val author = getOrCreateUser(event.pubKey.toHexKey())
+    val oldChannel = getOrCreateChannel(event.id)
+    val author = getOrCreateUser(event.pubKey)
     if (event.createdAt > oldChannel.updatedMetadataAt) {
       if (oldChannel.creator == null || oldChannel.creator == author) {
-        oldChannel.updateChannelInfo(author, event.channelInfo, event.createdAt)
+        oldChannel.updateChannelInfo(author, event.channelInfo(), event.createdAt)
 
-        val note = getOrCreateNote(event.id.toHex())
+        val note = getOrCreateNote(event.id)
         oldChannel.addNote(note)
-        note.channel = oldChannel
         note.loadEvent(event, author, emptyList(), emptyList())
 
         refreshObservers()
@@ -503,19 +522,19 @@ object LocalCache {
     }
   }
   fun consume(event: ChannelMetadataEvent) {
+    val channelId = event.channel()
     //Log.d("MT", "New User ${users.size} ${event.contactMetaData.name}")
-    if (event.channel.isNullOrBlank()) return
+    if (channelId.isNullOrBlank()) return
 
     // new event
-    val oldChannel = checkGetOrCreateChannel(event.channel) ?: return
-    val author = getOrCreateUser(event.pubKey.toHexKey())
+    val oldChannel = checkGetOrCreateChannel(channelId) ?: return
+    val author = getOrCreateUser(event.pubKey)
     if (event.createdAt > oldChannel.updatedMetadataAt) {
       if (oldChannel.creator == null || oldChannel.creator == author) {
-        oldChannel.updateChannelInfo(author, event.channelInfo, event.createdAt)
+        oldChannel.updateChannelInfo(author, event.channelInfo(), event.createdAt)
 
-        val note = getOrCreateNote(event.id.toHex())
+        val note = getOrCreateNote(event.id)
         oldChannel.addNote(note)
-        note.channel = oldChannel
         note.loadEvent(event, author, emptyList(), emptyList())
 
         refreshObservers()
@@ -526,7 +545,9 @@ object LocalCache {
   }
 
   fun consume(event: ChannelMessageEvent, relay: Relay?) {
-    if (event.channel.isNullOrBlank()) return
+    val channelId = event.channel()
+
+    if (channelId.isNullOrBlank()) return
     if (antiSpam.isSpam(event)) {
       relay?.let {
         it.spamCounter++
@@ -534,12 +555,12 @@ object LocalCache {
       return
     }
 
-    val channel = checkGetOrCreateChannel(event.channel) ?: return
+    val channel = checkGetOrCreateChannel(channelId) ?: return
 
-    val note = getOrCreateNote(event.id.toHex())
+    val note = getOrCreateNote(event.id)
     channel.addNote(note)
 
-    val author = getOrCreateUser(event.pubKey.toHexKey())
+    val author = getOrCreateUser(event.pubKey)
 
     if (relay != null) {
       author.addRelayBeingUsed(relay, event.createdAt)
@@ -549,12 +570,11 @@ object LocalCache {
     // Already processed this event.
     if (note.event != null) return
 
-    val mentions = event.mentions.mapNotNull { checkGetOrCreateUser(it) }
-    val replyTo = event.replyTos
+    val mentions = event.mentions().mapNotNull { checkGetOrCreateUser(it) }
+    val replyTo = event.replyTos()
       .mapNotNull { checkGetOrCreateNote(it) }
       .filter { it.event !is ChannelCreateEvent }
 
-    note.channel = channel
     note.loadEvent(event, author, mentions, replyTo)
 
     //Log.d("CM", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${note.event?.content} ${formattedDateTime(event.createdAt)}")
@@ -584,18 +604,21 @@ object LocalCache {
   }
 
   fun consume(event: LnZapEvent) {
-    val note = getOrCreateNote(event.id.toHexKey())
+    val note = getOrCreateNote(event.id)
 
     // Already processed this event.
     if (note.event != null) return
 
-    val author = getOrCreateUser(event.pubKey.toHexKey())
-    val mentions = event.zappedAuthor.mapNotNull { checkGetOrCreateUser(it) }
-    val repliesTo = event.zappedPost.mapNotNull { checkGetOrCreateNote(it) }
+    val zapRequest = event.containedPost()?.id?.let { getOrCreateNote(it) }
+
+    val author = getOrCreateUser(event.pubKey)
+    val mentions = event.zappedAuthor().mapNotNull { checkGetOrCreateUser(it) }
+    val repliesTo = event.zappedPost().mapNotNull { checkGetOrCreateNote(it) } +
+                    event.taggedAddresses().map { getOrCreateAddressableNote(it) } +
+                    ((zapRequest?.event as? LnZapRequestEvent)?.taggedAddresses()?.map { getOrCreateAddressableNote(it) } ?: emptySet<Note>())
 
     note.loadEvent(event, author, mentions, repliesTo)
 
-    val zapRequest = event.containedPost?.id?.toHexKey()?.let { getOrCreateNote(it) }
     if (zapRequest == null) {
       Log.e("ZP","Zap Request not found. Unable to process Zap {${event.toJson()}}")
       return
@@ -620,14 +643,15 @@ object LocalCache {
   }
 
   fun consume(event: LnZapRequestEvent) {
-    val note = getOrCreateNote(event.id.toHexKey())
+    val note = getOrCreateNote(event.id)
 
     // Already processed this event.
     if (note.event != null) return
 
-    val author = getOrCreateUser(event.pubKey.toHexKey())
-    val mentions = event.zappedAuthor.mapNotNull { checkGetOrCreateUser(it) }
-    val repliesTo = event.zappedPost.mapNotNull { checkGetOrCreateNote(it) }
+    val author = getOrCreateUser(event.pubKey)
+    val mentions = event.zappedAuthor().mapNotNull { checkGetOrCreateUser(it) }
+    val repliesTo = event.zappedPost().mapNotNull { checkGetOrCreateNote(it) } +
+                    event.taggedAddresses().map { getOrCreateAddressableNote(it) }
 
     note.loadEvent(event, author, mentions, repliesTo)
 
@@ -659,10 +683,15 @@ object LocalCache {
 
   fun findNotesStartingWith(text: String): List<Note> {
     return notes.values.filter {
-      (it.event is TextNoteEvent && it.event?.content?.contains(text, true) ?: false)
+           (it.event is TextNoteEvent && it.event?.content?.contains(text, true) ?: false)
         || (it.event is ChannelMessageEvent && it.event?.content?.contains(text, true) ?: false)
         || it.idHex.startsWith(text, true)
         || it.idNote().startsWith(text, true)
+    } + addressables.values.filter {
+           (it.event as? LongTextNoteEvent)?.content?.contains(text, true) ?: false
+        || (it.event as? LongTextNoteEvent)?.title()?.contains(text, true) ?: false
+        || (it.event as? LongTextNoteEvent)?.summary()?.contains(text, true) ?: false
+        || it.idHex.startsWith(text, true)
     }
   }
 
@@ -746,7 +775,7 @@ object LocalCache {
 
   fun pruneHiddenMessages(account: Account) {
     val toBeRemoved = account.hiddenUsers.map {
-      users[it]?.notes ?: emptySet()
+        (users[it]?.notes ?: emptySet())
     }.flatten()
 
     account.hiddenUsers.forEach {
@@ -799,7 +828,7 @@ class LocalCacheLiveData(val cache: LocalCache): LiveData<LocalCacheState>(Local
     val scope = CoroutineScope(Job() + Dispatchers.Main)
     scope.launch {
       try {
-        delay(500)
+        delay(50)
         refresh()
       } finally {
         withContext(NonCancellable) {

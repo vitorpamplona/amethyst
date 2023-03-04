@@ -15,9 +15,11 @@ object UserProfileNewThreadFeedFilter: FeedFilter<Note>() {
   }
 
   override fun feed(): List<Note> {
-    return user?.notes
+    val longFormNotes = LocalCache.addressables.values.filter { it.author == user }
+
+    return user?.notes?.plus(longFormNotes)
       ?.filter { account?.isAcceptable(it) == true && it.isNewThread() }
-      ?.sortedBy { it.event?.createdAt }
+      ?.sortedBy { it.createdAt() }
       ?.reversed()
       ?: emptyList()
   }

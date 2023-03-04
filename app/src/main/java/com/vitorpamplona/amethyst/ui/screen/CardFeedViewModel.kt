@@ -129,7 +129,7 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>): ViewModel() {
 
     var handlerWaiting = AtomicBoolean()
 
-    private fun invalidateData() {
+    fun invalidateData() {
         if (handlerWaiting.getAndSet(true)) return
 
         val scope = CoroutineScope(Job() + Dispatchers.Default)

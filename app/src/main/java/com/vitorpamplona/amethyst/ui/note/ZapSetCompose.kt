@@ -74,7 +74,7 @@ fun ZapSetCompose(zapSetCard: ZapSetCard, modifier: Modifier = Modifier, isInner
                           launchSingleTop = true
                       }
                   } else {
-                      note.channel?.let {
+                      note.channel()?.let {
                           navController.navigate("Channel/${it.idHex}")
                       }
                   }

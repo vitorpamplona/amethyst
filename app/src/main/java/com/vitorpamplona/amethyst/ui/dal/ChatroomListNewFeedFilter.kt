@@ -17,13 +17,13 @@ object ChatroomListNewFeedFilter: FeedFilter<Note>() {
 
     val privateMessages = messagingWith.mapNotNull {
       privateChatrooms[it]?.roomMessages?.sortedBy {
-        it.event?.createdAt
+        it.createdAt()
       }?.lastOrNull {
         it.event != null
       }
     }
 
-    return privateMessages.sortedBy { it.event?.createdAt }.reversed()
+    return privateMessages.sortedBy { it.createdAt() }.reversed()
   }
 
 }

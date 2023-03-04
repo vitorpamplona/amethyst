@@ -27,6 +27,7 @@ import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.google.accompanist.pager.rememberPagerState
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
 import com.vitorpamplona.amethyst.ui.dal.HomeConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeNewThreadFeedFilter
@@ -54,8 +55,24 @@ fun HomeScreen(accountViewModel: AccountViewModel, navController: NavController)
     LaunchedEffect(accountViewModel) {
         NostrHomeDataSource.resetFilters()
 
-        feedViewModel.invalidateData()
-        feedViewModelReplies.invalidateData()
+        feedViewModel.refresh()
+        feedViewModelReplies.refresh()
+    }
+
+    val lifeCycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(accountViewModel) {
+        val observer = LifecycleEventObserver { source, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                NostrHomeDataSource.resetFilters()
+                feedViewModel.refresh()
+                feedViewModelReplies.refresh()
+            }
+        }
+
+        lifeCycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifeCycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     Column(Modifier.fillMaxHeight()) {

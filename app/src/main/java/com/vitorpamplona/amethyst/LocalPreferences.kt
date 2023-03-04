@@ -8,9 +8,9 @@ import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.model.toByteArray
 import java.util.Locale
 import nostr.postr.Persona
-import nostr.postr.events.ContactListEvent
-import nostr.postr.events.Event
-import nostr.postr.events.Event.Companion.getRefinedEvent
+import com.vitorpamplona.amethyst.service.model.ContactListEvent
+import com.vitorpamplona.amethyst.service.model.Event
+import com.vitorpamplona.amethyst.service.model.Event.Companion.getRefinedEvent
 import nostr.postr.toHex
 
 class LocalPreferences(context: Context) {

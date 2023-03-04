@@ -131,7 +131,22 @@ fun TabKnown(
 
     LaunchedEffect(accountViewModel) {
         NostrChatroomListDataSource.resetFilters()
-        feedViewModel.invalidateData()
+        feedViewModel.refresh()
+    }
+
+    val lifeCycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(accountViewModel) {
+        val observer = LifecycleEventObserver { source, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                NostrChatroomListDataSource.resetFilters()
+                feedViewModel.refresh()
+            }
+        }
+
+        lifeCycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifeCycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     Column(Modifier.fillMaxHeight()) {
@@ -157,7 +172,22 @@ fun TabNew(
 
     LaunchedEffect(accountViewModel) {
         NostrChatroomListDataSource.resetFilters()
-        feedViewModel.invalidateData() // refresh view
+        feedViewModel.refresh()
+    }
+
+    val lifeCycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(accountViewModel) {
+        val observer = LifecycleEventObserver { source, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                NostrChatroomListDataSource.resetFilters()
+                feedViewModel.refresh()
+            }
+        }
+
+        lifeCycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifeCycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     Column(Modifier.fillMaxHeight()) {
