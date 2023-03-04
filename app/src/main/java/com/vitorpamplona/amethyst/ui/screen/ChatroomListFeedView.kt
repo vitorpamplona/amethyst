@@ -104,9 +104,10 @@ private fun FeedLoaded(
             for (note in state.feed.value) {
                 note.event?.let {
                     var route = ""
+                    val channel = note.channel()
 
-                    if (note.channel != null) {
-                        route = "Channel/${note.channel!!.idHex}"
+                    if (channel != null) {
+                        route = "Channel/${channel.idHex}"
                     } else {
                         val replyAuthorBase = note.mentions?.first()
                         var userToComposeOn = note.author!!
