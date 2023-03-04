@@ -73,6 +73,9 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-runtime-ktx:$lifecycle_version"
     implementation "androidx.lifecycle:lifecycle-livedata:$lifecycle_version"
 
+    // Biometrics
+    implementation "androidx.biometric:biometric-ktx:1.2.0-alpha05"
+
     // Swipe Refresh
     implementation 'com.google.accompanist:accompanist-swiperefresh:0.29.1-alpha'
 
