@@ -48,7 +48,7 @@
     <string name="followers">" Followers"</string>
     <string name="profile">Profile</string>
     <string name="security_filters">Security Filters</string>
-    <string name="log_out">Log out</string>
+    <string name="log_out">Logout</string>
     <string name="show_more">Show More</string>
     <string name="lightning_invoice">Lightning Invoice</string>
     <string name="pay">Pay</string>
