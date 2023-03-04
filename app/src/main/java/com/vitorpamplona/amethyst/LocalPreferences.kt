@@ -14,104 +14,109 @@ import com.vitorpamplona.amethyst.service.model.Event.Companion.getRefinedEvent
 import nostr.postr.toHex
 
 class LocalPreferences(context: Context) {
-  val encryptedPreferences = EncryptedStorage().preferences(context)
-  val gson = GsonBuilder().create()
+    private object PrefKeys {
+        const val NOSTR_PRIVKEY = "nostr_privkey"
+        const val NOSTR_PUBKEY = "nostr_pubkey"
+        const val FOLLOWING_CHANNELS = "following_channels"
+        const val HIDDEN_USERS = "hidden_users"
+        const val RELAYS = "relays"
+        const val DONT_TRANSLATE_FROM = "dontTranslateFrom"
+        const val LANGUAGE_PREFS = "languagePreferences"
+        const val TRANSLATE_TO = "translateTo"
+        const val ZAP_AMOUNTS = "zapAmounts"
+        const val LATEST_CONTACT_LIST = "latestContactList"
+        val LAST_READ: (String) -> String = { route -> "last_read_route_${route}" }
+    }
 
-  fun clearEncryptedStorage() {
-    encryptedPreferences.edit().apply {
-      remove("nostr_privkey")
-      remove("nostr_pubkey")
-      remove("following_channels")
-      remove("hidden_users")
-      remove("relays")
-      remove("dontTranslateFrom")
-      remove("languagePreferences")
-      remove("translateTo")
-      remove("zapAmounts")
-      remove("latestContactList")
-    }.apply()
-  }
+    private val encryptedPreferences = EncryptedStorage().preferences(context)
+    private val gson = GsonBuilder().create()
 
-  fun saveToEncryptedStorage(account: Account) {
-    encryptedPreferences.edit().apply {
-      account.loggedIn.privKey?.let { putString("nostr_privkey", it.toHex()) }
-      account.loggedIn.pubKey.let { putString("nostr_pubkey", it.toHex()) }
-      account.followingChannels.let { putStringSet("following_channels", it) }
-      account.hiddenUsers.let { putStringSet("hidden_users", it) }
-      account.localRelays.let { putString("relays", gson.toJson(it)) }
-      account.dontTranslateFrom.let { putStringSet("dontTranslateFrom", it) }
-      account.languagePreferences.let { putString("languagePreferences", gson.toJson(it)) }
-      account.translateTo.let { putString("translateTo", it) }
-      account.zapAmountChoices.let { putString("zapAmounts", gson.toJson(it)) }
-      account.backupContactList.let { putString("latestContactList", Event.gson.toJson(it)) }
-    }.apply()
-  }
+    fun clearEncryptedStorage() {
+        encryptedPreferences.edit().apply {
+            encryptedPreferences.all.keys.forEach { remove(it) }
+        }.apply()
+    }
 
-  fun loadFromEncryptedStorage(): Account? {
-    encryptedPreferences.apply {
-      val privKey = getString("nostr_privkey", null)
-      val pubKey = getString("nostr_pubkey", null)
-      val followingChannels = getStringSet("following_channels", null) ?: setOf()
-      val hiddenUsers = getStringSet("hidden_users", emptySet()) ?: setOf()
-      val localRelays = gson.fromJson(
-        getString("relays", "[]"),
-        object : TypeToken<Set<RelaySetupInfo>>() {}.type
-      ) ?: setOf<RelaySetupInfo>()
+    fun saveToEncryptedStorage(account: Account) {
+        encryptedPreferences.edit().apply {
+            account.loggedIn.privKey?.let { putString(PrefKeys.NOSTR_PRIVKEY, it.toHex()) }
+            account.loggedIn.pubKey.let { putString(PrefKeys.NOSTR_PUBKEY, it.toHex()) }
+            account.followingChannels.let { putStringSet(PrefKeys.FOLLOWING_CHANNELS, it) }
+            account.hiddenUsers.let { putStringSet(PrefKeys.HIDDEN_USERS, it) }
+            account.localRelays.let { putString(PrefKeys.RELAYS, gson.toJson(it)) }
+            account.dontTranslateFrom.let { putStringSet(PrefKeys.DONT_TRANSLATE_FROM, it) }
+            account.languagePreferences.let { putString(PrefKeys.LANGUAGE_PREFS, gson.toJson(it)) }
+            account.translateTo.let { putString(PrefKeys.TRANSLATE_TO, it) }
+            account.zapAmountChoices.let { putString(PrefKeys.ZAP_AMOUNTS, gson.toJson(it)) }
+            account.backupContactList.let { putString(PrefKeys.LATEST_CONTACT_LIST, Event.gson.toJson(it)) }
+        }.apply()
+    }
 
-      val dontTranslateFrom = getStringSet("dontTranslateFrom", null) ?: setOf()
-      val translateTo = getString("translateTo", null) ?: Locale.getDefault().language
+    fun loadFromEncryptedStorage(): Account? {
+        encryptedPreferences.apply {
+            val privKey = getString(PrefKeys.NOSTR_PRIVKEY, null)
+            val pubKey = getString(PrefKeys.NOSTR_PUBKEY, null)
+            val followingChannels = getStringSet(PrefKeys.FOLLOWING_CHANNELS, null) ?: setOf()
+            val hiddenUsers = getStringSet(PrefKeys.HIDDEN_USERS, emptySet()) ?: setOf()
+            val localRelays = gson.fromJson(
+                getString(PrefKeys.RELAYS, "[]"),
+                object : TypeToken<Set<RelaySetupInfo>>() {}.type
+            ) ?: setOf<RelaySetupInfo>()
 
-      val zapAmountChoices = gson.fromJson(
-        getString("zapAmounts", "[]"),
-        object : TypeToken<List<Long>>() {}.type
-      ) ?: listOf(500L, 1000L, 5000L)
+            val dontTranslateFrom = getStringSet(PrefKeys.DONT_TRANSLATE_FROM, null) ?: setOf()
+            val translateTo = getString(PrefKeys.TRANSLATE_TO, null) ?: Locale.getDefault().language
 
-      val latestContactList = try {
-        getString("latestContactList", null)?.let {
-          Event.gson.fromJson(it, Event::class.java).getRefinedEvent(true) as ContactListEvent
+            val zapAmountChoices = gson.fromJson(
+                getString(PrefKeys.ZAP_AMOUNTS, "[]"),
+                object : TypeToken<List<Long>>() {}.type
+            ) ?: listOf(500L, 1000L, 5000L)
+
+            val latestContactList = try {
+                getString(PrefKeys.LATEST_CONTACT_LIST, null)?.let {
+                    Event.gson.fromJson(it, Event::class.java).getRefinedEvent(true) as ContactListEvent
+                }
+            } catch (e: Throwable) {
+                e.printStackTrace()
+                null
+            }
+
+            val languagePreferences = try {
+                getString(PrefKeys.LANGUAGE_PREFS, null)?.let {
+                    gson.fromJson(it, object : TypeToken<Map<String, String>>() {}.type) as Map<String, String>
+                } ?: mapOf<String,String>()
+            } catch (e: Throwable) {
+                e.printStackTrace()
+                mapOf<String,String>()
+            }
+
+            if (pubKey != null) {
+                return Account(
+                    Persona(privKey = privKey?.toByteArray(), pubKey = pubKey.toByteArray()),
+                    followingChannels,
+                    hiddenUsers,
+                    localRelays,
+                    dontTranslateFrom,
+                    languagePreferences,
+                    translateTo,
+                    zapAmountChoices,
+                    latestContactList
+                )
+            } else {
+                return null
+            }
         }
-      } catch (e: Throwable) {
-        e.printStackTrace()
-        null
-      }
-
-      val languagePreferences = try {
-        getString("languagePreferences", null)?.let {
-          gson.fromJson(it, object : TypeToken<Map<String, String>>() {}.type) as Map<String, String>
-        } ?: mapOf<String,String>()
-      } catch (e: Throwable) {
-        e.printStackTrace()
-        mapOf<String,String>()
-      }
-
-      if (pubKey != null) {
-        return Account(
-          Persona(privKey = privKey?.toByteArray(), pubKey = pubKey.toByteArray()),
-          followingChannels,
-          hiddenUsers,
-          localRelays,
-          dontTranslateFrom,
-          languagePreferences,
-          translateTo,
-          zapAmountChoices,
-          latestContactList
-        )
-      } else {
-        return null
-      }
     }
-  }
 
-  fun saveLastRead(route: String, timestampInSecs: Long) {
-    encryptedPreferences.edit().apply {
-      putLong("last_read_route_${route}", timestampInSecs)
-    }.apply()
-  }
-
-  fun loadLastRead(route: String): Long {
-    encryptedPreferences.run {
-      return getLong("last_read_route_${route}", 0)
+    fun saveLastRead(route: String, timestampInSecs: Long) {
+        encryptedPreferences.edit().apply {
+            putLong(PrefKeys.LAST_READ(route), timestampInSecs)
+        }.apply()
     }
-  }
+
+    fun loadLastRead(route: String): Long {
+        encryptedPreferences.run {
+            return getLong(PrefKeys.LAST_READ(route), 0)
+        }
+    }
 
 }

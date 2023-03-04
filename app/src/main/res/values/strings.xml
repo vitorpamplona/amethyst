@@ -48,7 +48,7 @@
     <string name="followers">" Followers"</string>
     <string name="profile">Profile</string>
     <string name="security_filters">Security Filters</string>
-    <string name="log_out">Log out</string>
+    <string name="log_out">Logout</string>
     <string name="show_more">Show More</string>
     <string name="lightning_invoice">Lightning Invoice</string>
     <string name="pay">Pay</string>
@@ -173,6 +173,9 @@
     <string name="report_hateful_speech">Report Hateful speech</string>
     <string name="report_nudity_porn">Report Nudity / Porn</string>
     <string name="others">others</string>
+    <string name="mark_all_known_as_read">Mark all Known as read</string>
+    <string name="mark_all_new_as_read">Mark all New as read</string>
+    <string name="mark_all_as_read">Mark all as read</string>
     <string name="account_backup_tips_md">
         ## Key Backup and Safety Tips
         \n\nYour account is secured by a secret key. The key is long random string starting with **nsec1**. Anyone who has access to your secret key can publish content using your identity.

@@ -254,7 +254,7 @@ fun ListContent(
         Spacer(modifier = Modifier.weight(1f))
 
         IconRow(
-            "Logout",
+            stringResource(R.string.log_out),
             R.drawable.ic_logout,
             MaterialTheme.colors.onBackground,
             onClick = { accountViewModel.logOff() }
