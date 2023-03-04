@@ -201,6 +201,10 @@ class User(val pubkeyHex: String) {
         return reports.keys.filter { it in users }
     }
 
+    fun countReportAuthorsBy(users: Set<User>): Int {
+        return reports.keys.count { it in users }
+    }
+
     fun reportsBy(users: Set<User>): List<Note> {
         return reportAuthorsBy(users).mapNotNull {
             reports[it]

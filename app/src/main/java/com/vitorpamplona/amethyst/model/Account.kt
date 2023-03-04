@@ -479,19 +479,19 @@ class Account(
   fun isAcceptable(user: User): Boolean {
     return !isHidden(user)  // if user hasn't hided this author
         && user.reportsBy( userProfile() ).isEmpty() // if user has not reported this post
-        && user.reportAuthorsBy( userProfile().follows ).size < 5
+        && user.countReportAuthorsBy( userProfile().follows ) < 5
   }
 
   fun isAcceptableDirect(note: Note): Boolean {
     return note.reportsBy( userProfile() ).isEmpty()  // if user has not reported this post
-        && note.reportAuthorsBy( userProfile().follows ).size < 5 // if it has 5 reports by reliable users
+        && note.countReportAuthorsBy( userProfile().follows ) < 5 // if it has 5 reports by reliable users
   }
 
   fun isAcceptable(note: Note): Boolean {
     return note.author?.let { isAcceptable(it) } ?: true // if user hasn't hided this author
         && isAcceptableDirect(note)
         && (note.event !is RepostEvent
-          || (note.event is RepostEvent && note.replyTo?.firstOrNull { isAcceptableDirect(it) } != null)
+        || (note.event is RepostEvent && note.replyTo?.firstOrNull { isAcceptableDirect(it) } != null)
         ) // is not a reaction about a blocked post
   }
 
