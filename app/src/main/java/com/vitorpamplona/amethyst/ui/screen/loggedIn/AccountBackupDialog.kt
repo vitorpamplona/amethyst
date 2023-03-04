@@ -10,6 +10,7 @@ import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -75,7 +76,7 @@ fun AccountBackupDialog(account: Account, onClose: () -> Unit) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = 30.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
@@ -87,7 +88,7 @@ fun AccountBackupDialog(account: Account, onClose: () -> Unit) {
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(15.dp))
+                    Spacer(modifier = Modifier.height(30.dp))
 
                     NSecCopyButton(account)
                 }
@@ -111,14 +112,16 @@ private fun NSecCopyButton(
         },
         shape = RoundedCornerShape(20.dp), colors = ButtonDefaults.buttonColors(
             backgroundColor = MaterialTheme.colors.primary
-        )
+        ),
+        contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
     ) {
         Icon(
             tint = Color.White,
             imageVector = Icons.Default.Key,
-            contentDescription = stringResource(R.string.copies_the_nsec_id_your_password_to_the_clipboard_for_backup)
+            contentDescription = stringResource(R.string.copies_the_nsec_id_your_password_to_the_clipboard_for_backup),
+            modifier = Modifier.padding(end = 5.dp)
         )
-        Text("Copy Secret Key", color = MaterialTheme.colors.onPrimary)
+        Text("Copy Secret Key", color = MaterialTheme.colors.onBackground)
     }
 }
 
