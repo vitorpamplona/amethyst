@@ -99,8 +99,8 @@ private fun FeedLoaded(
     val notificationCache = notificationCacheState.value ?: return
     val context = LocalContext.current.applicationContext
 
-    if (markAsRead.value) {
-        LaunchedEffect(key1 = notificationCache) {
+    LaunchedEffect(key1 = markAsRead.value) {
+        if (markAsRead.value) {
             for (note in state.feed.value) {
                 note.event?.let {
                     var route = ""
