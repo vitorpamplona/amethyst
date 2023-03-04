@@ -40,7 +40,7 @@ sealed class Route(
         hasNewItems = { acc, cache, ctx -> homeHasNewItems(acc, cache, ctx) },
         buildScreen = { acc, accSt, nav -> { _ -> HomeScreen(acc, nav) } }
     )
-    object Search : Route("Search", R.drawable.ic_search,
+    object Search : Route("Search", R.drawable.ic_globe,
         buildScreen = { acc, accSt, nav -> { _ -> SearchScreen(acc, nav) }}
     )
     object Notification : Route("Notification", R.drawable.ic_notifications,
