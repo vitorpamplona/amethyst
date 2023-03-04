@@ -35,9 +35,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.autofill.AutofillNode
+import androidx.compose.ui.autofill.AutofillType
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalAutofill
+import androidx.compose.ui.platform.LocalAutofillTree
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
@@ -55,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun LoginPage(accountViewModel: AccountStateViewModel) {
     val key = remember { mutableStateOf(TextFieldValue("")) }
@@ -95,7 +104,27 @@ fun LoginPage(accountViewModel: AccountStateViewModel) {
                 mutableStateOf(false)
             }
 
+            val autofillNode = AutofillNode(
+                autofillTypes = listOf(AutofillType.Password),
+                onFill = { key.value = TextFieldValue(it) }
+            )
+            val autofill = LocalAutofill.current
+            LocalAutofillTree.current += autofillNode
+
             OutlinedTextField(
+                modifier = Modifier
+                    .onGloballyPositioned { coordinates ->
+                        autofillNode.boundingBox = coordinates.boundsInWindow()
+                    }
+                    .onFocusChanged { focusState ->
+                        autofill?.run {
+                            if (focusState.isFocused) {
+                                requestAutofillForNode(autofillNode)
+                            } else {
+                                cancelAutofillForNode(autofillNode)
+                            }
+                        }
+                    },
                 value = key.value,
                 onValueChange = { key.value = it },
                 keyboardOptions = KeyboardOptions(
