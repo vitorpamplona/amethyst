@@ -89,12 +89,12 @@ dependencies {
         exclude module: 'guava-testlib'
     }
 
-    implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
     // Websockets API
     implementation 'com.squareup.okhttp3:okhttp:5.0.0-alpha.11'
 
-    // Json Serialization
+    // Json Serialization TODO: We might need to converge between gson and Jackson (we are usin both)
     implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.14.2'
+    implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
 
     // Robohash for Avatars
     implementation group: 'com.github.vitorpamplona', name: 'android-robohash', version: 'master-SNAPSHOT', ext: 'aar'
