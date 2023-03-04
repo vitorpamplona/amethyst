@@ -24,7 +24,7 @@ class LightningAddressResolver {
       return "https://${parts[1]}/.well-known/lnurlp/${parts[0]}"
     }
 
-    if (lnaddress.toLowerCase().startsWith("lnurl")) {
+    if (lnaddress.lowercase().startsWith("lnurl")) {
       return try {
         String(Bech32.decodeBytes(lnaddress, false).second)
       } catch (e: Exception) {

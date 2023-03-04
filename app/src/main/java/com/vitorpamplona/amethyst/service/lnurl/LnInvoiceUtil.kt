@@ -128,7 +128,7 @@ object LnInvoiceUtil {
   }
 
   private fun multiplier(multiplier: String): BigDecimal {
-    return when (multiplier.toLowerCase()) {
+    return when (multiplier.lowercase()) {
       "m" -> BigDecimal("0.001")
       "u" -> BigDecimal("0.000001")
       "n" -> BigDecimal("0.000000001")

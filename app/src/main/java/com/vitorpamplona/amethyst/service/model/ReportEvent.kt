@@ -56,8 +56,8 @@ class ReportEvent (
     fun create(reportedPost: Event, type: ReportType, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ReportEvent {
       val content = ""
 
-      val reportPostTag = listOf("e", reportedPost.id, type.name.toLowerCase())
-      val reportAuthorTag = listOf("p", reportedPost.pubKey, type.name.toLowerCase())
+      val reportPostTag = listOf("e", reportedPost.id, type.name.lowercase())
+      val reportAuthorTag = listOf("p", reportedPost.pubKey, type.name.lowercase())
 
       val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
       var tags:List<List<String>> = listOf(reportPostTag, reportAuthorTag)
@@ -74,7 +74,7 @@ class ReportEvent (
     fun create(reportedUser: String, type: ReportType, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ReportEvent {
       val content = ""
 
-      val reportAuthorTag = listOf("p", reportedUser, type.name.toLowerCase())
+      val reportAuthorTag = listOf("p", reportedUser, type.name.lowercase())
 
       val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
       val tags:List<List<String>> = listOf(reportAuthorTag)

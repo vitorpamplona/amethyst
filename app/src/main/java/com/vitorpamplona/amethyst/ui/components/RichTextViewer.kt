@@ -141,7 +141,7 @@ fun RichTextViewer(
               if (lnInvoice != null) {
                 InvoicePreview(lnInvoice)
               } else if (isValidURL(word)) {
-                val removedParamsFromUrl = word.split("?")[0].toLowerCase()
+                val removedParamsFromUrl = word.split("?")[0].lowercase()
                 if (imageExtension.matcher(removedParamsFromUrl).matches()) {
                   ZoomableImageView(word)
                 } else if (videoExtension.matcher(removedParamsFromUrl).matches()) {

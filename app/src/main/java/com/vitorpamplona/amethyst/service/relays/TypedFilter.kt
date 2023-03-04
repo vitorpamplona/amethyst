@@ -22,7 +22,7 @@ class TypedFilter(
   }
 
   fun typesToJson(types: Set<FeedType>): JsonArray {
-    return JsonArray().apply { types.forEach { add(it.name.toLowerCase()) } }
+    return JsonArray().apply { types.forEach { add(it.name.lowercase()) } }
   }
 
   fun filterToJson(filter: JsonFilter): JsonObject {
