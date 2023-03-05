@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.DisplayNip05ProfileStatus
 import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
+import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
 import com.vitorpamplona.amethyst.ui.dal.UserProfileConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowersFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowsFeedFilter
@@ -258,6 +259,7 @@ private fun ProfileHeader(
 ) {
     val ctx = LocalContext.current.applicationContext
     var popupExpanded by remember { mutableStateOf(false) }
+    var zoomImageDialogOpen by remember { mutableStateOf(false) }
 
     val accountUserState by account.userProfile().live().follows.observeAsState()
     val accountUser = accountUserState?.user ?: return
@@ -317,7 +319,9 @@ private fun ProfileHeader(
                         MaterialTheme.colors.background,
                         CircleShape), 
                     onClick =  {
-                        navController.navigate("User/${it.pubkeyHex}")
+                        if (baseUser.profilePicture() != null) {
+                            zoomImageDialogOpen = true
+                        }
                     },
                     onLongClick = {
                         ResizeImage(it.info?.picture, 100.dp).proxyUrl()?.let { it1 ->
@@ -357,6 +361,10 @@ private fun ProfileHeader(
 
             Divider(modifier = Modifier.padding(top = 6.dp))
         }
+    }
+
+    if (zoomImageDialogOpen) {
+        ZoomableImageDialog(baseUser.profilePicture()!!, onDismiss = { zoomImageDialogOpen = false })
     }
 }
 
@@ -455,6 +463,7 @@ private fun DrawBanner(baseUser: User) {
 
     val banner = user.info?.banner
     val clipboardManager = LocalClipboardManager.current
+    var zoomImageDialogOpen by remember { mutableStateOf(false) }
 
     if (banner != null && banner.isNotBlank()) {
         AsyncImageProxy(
@@ -469,7 +478,12 @@ private fun DrawBanner(baseUser: User) {
                         clipboardManager.setText(AnnotatedString(banner))
                     }
                 )
+                .clickable { zoomImageDialogOpen = true }
         )
+
+        if (zoomImageDialogOpen) {
+            ZoomableImageDialog(imageUrl = banner, onDismiss = {zoomImageDialogOpen = false})
+        }
     } else {
         Image(
             painter = painterResource(R.drawable.profile_banner),
