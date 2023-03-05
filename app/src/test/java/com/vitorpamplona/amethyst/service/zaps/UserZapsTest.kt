@@ -42,6 +42,29 @@ class UserZapsTest {
     )
   }
 
+  @Test
+  fun aggregate_zap_amount_group_by_user() {
+    val zaps: Map<Note, Note?> = mapOf(
+      mockk<Note>() to mockZapNoteWith("user-1", amount = 100),
+      mockk<Note>() to mockZapNoteWith("user-1", amount = 200),
+      mockk<Note>() to mockZapNoteWith("user-2", amount = 400),
+    )
+
+    val actual = UserZaps.groupByUser(zaps)
+
+    Assert.assertEquals(2, actual.count())
+
+    Assert.assertEquals(
+      BigDecimal(300),
+      (actual[0].second.event as LnZapEventInterface).amount()
+    )
+
+    Assert.assertEquals(
+      BigDecimal(400),
+      (actual[1].second.event as LnZapEventInterface).amount()
+    )
+  }
+
   private fun mockZapNoteWith(pubkey: HexKey, amount: Int): Note {
 
     val lnZapEvent = mockk<LnZapEventInterface>()
