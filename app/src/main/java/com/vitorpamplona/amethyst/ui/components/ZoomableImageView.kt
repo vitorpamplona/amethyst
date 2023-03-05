@@ -57,29 +57,32 @@ fun ZoomableImageView(word: String) {
   )
 
   if (dialogOpen) {
-    Dialog(
-      onDismissRequest = { dialogOpen = false },
-      properties = DialogProperties(usePlatformDefaultWidth = false)
-    ) {
-      Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background) {
-        Column(
-          modifier = Modifier.padding(10.dp)
+    ZoomableImageDialog(word, onDismiss = { dialogOpen = false })
+  }
+}
+
+@Composable
+fun ZoomableImageDialog(imageUrl: String, onDismiss: () -> Unit) {
+  Dialog(
+    onDismissRequest = onDismiss,
+    properties = DialogProperties(usePlatformDefaultWidth = false)
+  ) {
+    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background) {
+      Column(
+        modifier = Modifier.padding(10.dp)
+      ) {
+        Row(
+          modifier = Modifier
+            .fillMaxWidth(),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically
         ) {
-          Row(
-            modifier = Modifier
-              .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            CloseButton(onCancel = {
-              dialogOpen = false
-            })
+          CloseButton(onCancel = onDismiss)
 
-            SaveToGallery(url = word)
-          }
-
-          ZoomableAsyncImage(word)
+          SaveToGallery(url = imageUrl)
         }
+
+        ZoomableAsyncImage(imageUrl)
       }
     }
   }
