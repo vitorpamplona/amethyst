@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.DisplayNip05ProfileStatus
 import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
+import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
 import com.vitorpamplona.amethyst.ui.dal.UserProfileConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowersFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowsFeedFilter
@@ -256,8 +257,8 @@ private fun ProfileHeader(
     account: Account,
     accountViewModel: AccountViewModel
 ) {
-    val ctx = LocalContext.current.applicationContext
     var popupExpanded by remember { mutableStateOf(false) }
+    var zoomImageDialogOpen by remember { mutableStateOf(false) }
 
     val accountUserState by account.userProfile().live().follows.observeAsState()
     val accountUser = accountUserState?.user ?: return
@@ -317,7 +318,9 @@ private fun ProfileHeader(
                         MaterialTheme.colors.background,
                         CircleShape), 
                     onClick =  {
-                        navController.navigate("User/${it.pubkeyHex}")
+                        if (baseUser.profilePicture() != null) {
+                            zoomImageDialogOpen = true
+                        }
                     },
                     onLongClick = {
                         ResizeImage(it.info?.picture, 100.dp).proxyUrl()?.let { it1 ->
@@ -357,6 +360,10 @@ private fun ProfileHeader(
 
             Divider(modifier = Modifier.padding(top = 6.dp))
         }
+    }
+
+    if (zoomImageDialogOpen) {
+        ZoomableImageDialog(baseUser.profilePicture()!!, onDismiss = { zoomImageDialogOpen = false })
     }
 }
 
@@ -406,7 +413,7 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account) {
         }
     }
 
-    var ZapExpanded by remember { mutableStateOf(false) }
+    var zapExpanded by remember { mutableStateOf(false) }
 
     val lud16 = user.info?.lud16?.trim() ?: user.info?.lud06?.trim()
 
@@ -421,7 +428,7 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account) {
 
             ClickableText(
                 text = AnnotatedString(lud16),
-                onClick = { ZapExpanded = !ZapExpanded },
+                onClick = { zapExpanded = !zapExpanded },
                 style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary),
                 modifier = Modifier
                     .padding(top = 1.dp, bottom = 1.dp, start = 5.dp)
@@ -429,10 +436,10 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account) {
             )
         }
 
-        if (ZapExpanded) {
+        if (zapExpanded) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 5.dp)) {
                 InvoiceRequest(lud16, baseUser.pubkeyHex, account) {
-                    ZapExpanded = false
+                    zapExpanded = false
                 }
             }
         }
@@ -440,7 +447,7 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account) {
 
     user.info?.about?.let {
         Text(
-            "$it",
+            it,
             color = MaterialTheme.colors.onSurface,
             modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)
         )
@@ -455,8 +462,9 @@ private fun DrawBanner(baseUser: User) {
 
     val banner = user.info?.banner
     val clipboardManager = LocalClipboardManager.current
+    var zoomImageDialogOpen by remember { mutableStateOf(false) }
 
-    if (banner != null && banner.isNotBlank()) {
+    if (!banner.isNullOrBlank()) {
         AsyncImageProxy(
             model = ResizeImage(banner, 125.dp),
             contentDescription = stringResource(id = R.string.profile_image),
@@ -469,7 +477,12 @@ private fun DrawBanner(baseUser: User) {
                         clipboardManager.setText(AnnotatedString(banner))
                     }
                 )
+                .clickable { zoomImageDialogOpen = true }
         )
+
+        if (zoomImageDialogOpen) {
+            ZoomableImageDialog(imageUrl = banner, onDismiss = {zoomImageDialogOpen = false})
+        }
     } else {
         Image(
             painter = painterResource(R.drawable.profile_banner),
@@ -803,35 +816,35 @@ fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () ->
             }
             Divider()
             DropdownMenuItem(onClick = {
-                accountViewModel.report(user, ReportEvent.ReportType.SPAM);
+                accountViewModel.report(user, ReportEvent.ReportType.SPAM)
                 user.let { accountViewModel.hide(it, context) }
                 onDismiss()
             }) {
                 Text(stringResource(id = R.string.report_spam_scam))
             }
             DropdownMenuItem(onClick = {
-                accountViewModel.report(user, ReportEvent.ReportType.PROFANITY);
+                accountViewModel.report(user, ReportEvent.ReportType.PROFANITY)
                 user.let { accountViewModel.hide(it, context) }
                 onDismiss()
             }) {
                 Text(stringResource(R.string.report_hateful_speech))
             }
             DropdownMenuItem(onClick = {
-                accountViewModel.report(user, ReportEvent.ReportType.IMPERSONATION);
+                accountViewModel.report(user, ReportEvent.ReportType.IMPERSONATION)
                 user.let { accountViewModel.hide(it, context) }
                 onDismiss()
             }) {
                 Text(stringResource(id = R.string.report_impersonation))
             }
             DropdownMenuItem(onClick = {
-                accountViewModel.report(user, ReportEvent.ReportType.NUDITY);
+                accountViewModel.report(user, ReportEvent.ReportType.NUDITY)
                 user.let { accountViewModel.hide(it, context) }
                 onDismiss()
             }) {
                 Text(stringResource(R.string.report_nudity_porn))
             }
             DropdownMenuItem(onClick = {
-                accountViewModel.report(user, ReportEvent.ReportType.ILLEGAL);
+                accountViewModel.report(user, ReportEvent.ReportType.ILLEGAL)
                 user.let { accountViewModel.hide(it, context) }
                 onDismiss()
             }) {
