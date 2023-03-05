@@ -17,9 +17,9 @@ object ChannelFeedFilter: FeedFilter<Note>() {
   // returns the last Note of each user.
   override fun feed(): List<Note> {
     return channel.notes
-      ?.values
-      ?.filter { account.isAcceptable(it) }
-      ?.sortedBy { it.createdAt() }
-      ?.reversed() ?: emptyList()
+      .values
+      .filter { account.isAcceptable(it) }
+      .sortedBy { it.createdAt() }
+      .reversed()
   }
 }
