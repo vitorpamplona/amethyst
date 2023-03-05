@@ -8,7 +8,7 @@ import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import nostr.postr.JsonFilter
+import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 
 object NostrHomeDataSource: NostrDataSource("HomeFeed") {

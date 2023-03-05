@@ -4,7 +4,10 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
+import com.vitorpamplona.amethyst.service.model.ContactListEvent
+import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.relays.FeedType
+import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,7 +34,15 @@ class NewRelayListViewModel: ViewModel() {
 
     fun clear(ctx: Context) {
         _relays.update {
-            val relayFile = account.userProfile().relays
+            var relayFile = account.userProfile().relays
+
+            // Ugly, but forces nostr.band as the only search-supporting relay today.
+            // TODO: Remove when search becomes more available.
+            if (relayFile?.none { it.key == Constants.forcedRelayForSearch.url } == true) {
+                relayFile = relayFile + Pair(
+                    Constants.forcedRelayForSearch.url, ContactListEvent.ReadWrite(Constants.forcedRelayForSearch.read, Constants.forcedRelayForSearch.write)
+                )
+            }
 
             if (relayFile != null)
                 relayFile.map {
@@ -108,6 +119,13 @@ class NewRelayListViewModel: ViewModel() {
 
     fun toggleGlobal(relay: RelaySetupInfo) {
         val newTypes = togglePresenceInSet(relay.feedTypes, FeedType.GLOBAL)
+        _relays.update {
+            it.updated(relay, relay.copy( feedTypes = newTypes ))
+        }
+    }
+
+    fun toggleSearch(relay: RelaySetupInfo) {
+        val newTypes = togglePresenceInSet(relay.feedTypes, FeedType.SEARCH)
         _relays.update {
             it.updated(relay, relay.copy( feedTypes = newTypes ))
         }

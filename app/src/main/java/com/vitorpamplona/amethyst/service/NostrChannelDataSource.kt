@@ -5,7 +5,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
-import nostr.postr.JsonFilter
+import com.vitorpamplona.amethyst.service.relays.JsonFilter
 
 object NostrChannelDataSource: NostrDataSource("ChatroomFeed") {
   var channel: Channel? = null

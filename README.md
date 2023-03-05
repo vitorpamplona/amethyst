@@ -29,6 +29,7 @@ Amethyst brings the best social network to your Android phone. Just insert your 
 - [x] Identity Verification (NIP-05)
 - [x] Long-form Content (NIP-23)
 - [x] Parameterized Replaceable Events (NIP-33)
+- [x] Online Relay Search (NIP-50)
 - [ ] Local Database 
 - [ ] View Individual Reactions (Like, Boost, Zaps, Reports) per Post
 - [ ] Bookmarks, Pinned Posts, Muted Events (NIP-51)
@@ -38,7 +39,6 @@ Amethyst brings the best social network to your Android phone. Just insert your 
 - [ ] Generic Tags (NIP-12)
 - [ ] Proof of Work in the Phone (NIP-13, NIP-20)
 - [ ] Events with a Subject (NIP-14)
-- [ ] Online Relay Search (NIP-50)
 - [ ] Workspaces
 - [ ] Expiration Support (NIP-40)
 - [ ] Internationalization

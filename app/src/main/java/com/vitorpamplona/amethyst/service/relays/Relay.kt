@@ -11,7 +11,7 @@ import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 
 enum class FeedType {
-    FOLLOWS, PUBLIC_CHATS, PRIVATE_DMS, GLOBAL
+    FOLLOWS, PUBLIC_CHATS, PRIVATE_DMS, GLOBAL, SEARCH
 }
 
 class Relay(

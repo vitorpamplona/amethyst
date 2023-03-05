@@ -3,7 +3,7 @@ package com.vitorpamplona.amethyst.service.relays
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
-import nostr.postr.JsonFilter
+import com.vitorpamplona.amethyst.service.relays.JsonFilter
 
 class TypedFilter(
   val types: Set<FeedType>,

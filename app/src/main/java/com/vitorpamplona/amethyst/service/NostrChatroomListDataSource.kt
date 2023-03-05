@@ -6,7 +6,7 @@ import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
-import nostr.postr.JsonFilter
+import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 
 object NostrChatroomListDataSource: NostrDataSource("MailBoxFeed") {

@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.ui.screen.NostrGlobalFeedViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -150,12 +151,12 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
                 .filter { it.isNotBlank() }
                 .distinctUntilChanged()
                 .debounce(300)
-                .collect {
+                .collectLatest {
                     if (it.removePrefix("npub").removePrefix("note").length >= 4)
-                        onlineSearch.search(it)
+                        onlineSearch.search(it.trim())
 
                     searchResults.value = LocalCache.findUsersStartingWith(it)
-                    searchResultsNotes.value = LocalCache.findNotesStartingWith(it)
+                    searchResultsNotes.value = LocalCache.findNotesStartingWith(it).sortedBy { it.createdAt() }
                     searchResultsChannels.value = LocalCache.findChannelsStartingWith(it)
                 }
         }

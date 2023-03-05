@@ -13,7 +13,7 @@ import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import java.util.Date
-import nostr.postr.JsonFilter
+import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 
 object NostrSingleEventDataSource: NostrDataSource("SingleEventFeed") {

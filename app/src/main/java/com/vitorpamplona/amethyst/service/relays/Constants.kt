@@ -5,6 +5,7 @@ import com.vitorpamplona.amethyst.model.RelaySetupInfo
 object Constants {
   val activeTypes = setOf(FeedType.FOLLOWS, FeedType.PRIVATE_DMS)
   val activeTypesGlobalChats = setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.PRIVATE_DMS, FeedType.GLOBAL)
+  val activeTypesSearch = setOf(FeedType.SEARCH)
 
   fun convertDefaultRelays(): Array<Relay> {
     return defaultRelays.map {
@@ -44,5 +45,10 @@ object Constants {
     RelaySetupInfo("wss://atlas.nostr.land", read = true, write = false, feedTypes = activeTypesGlobalChats),
     RelaySetupInfo("wss://relay.orangepill.dev", read = true, write = false, feedTypes = activeTypesGlobalChats),
     RelaySetupInfo("wss://relay.nostrati.com", read = true, write = false, feedTypes = activeTypesGlobalChats),
+
+    // Supporting NIP-50
+    RelaySetupInfo("wss://relay.nostr.band", read = true, write = false, feedTypes = activeTypesSearch),
   )
+
+  val forcedRelayForSearch = RelaySetupInfo("wss://relay.nostr.band", read = true, write = false, feedTypes = activeTypesSearch)
 }

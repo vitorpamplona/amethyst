@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SyncProblem
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.runtime.Composable
@@ -117,6 +118,7 @@ fun NewRelayListView(onClose: () -> Unit, account: Account, relayToAdd: String =
                                 onTogglePrivateDMs = { postViewModel.toggleMessages(it)  },
                                 onTogglePublicChats = { postViewModel.togglePublicChats(it) },
                                 onToggleGlobal = { postViewModel.toggleGlobal(it)  },
+                                onToggleSearch = { postViewModel.toggleSearch(it)  },
 
                                 onDelete = { postViewModel.deleteRelay(it) }
                             )
@@ -213,6 +215,7 @@ fun ServerConfig(
     onTogglePrivateDMs: (RelaySetupInfo) -> Unit,
     onTogglePublicChats: (RelaySetupInfo) -> Unit,
     onToggleGlobal: (RelaySetupInfo) -> Unit,
+    onToggleSearch: (RelaySetupInfo) -> Unit,
 
     onDelete: (RelaySetupInfo) -> Unit) {
     Column(Modifier.fillMaxWidth()) {
@@ -305,6 +308,22 @@ fun ServerConfig(
                                         .padding(horizontal = 5.dp)
                                         .size(15.dp),
                                     tint = if (item.feedTypes.contains(FeedType.GLOBAL)) Color.Green else MaterialTheme.colors.onSurface.copy(
+                                        alpha = 0.32f
+                                    )
+                                )
+                            }
+
+                            IconButton(
+                                modifier = Modifier.size(30.dp),
+                                onClick = { onToggleSearch(item) }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    stringResource(R.string.search_feed),
+                                    modifier = Modifier
+                                        .padding(horizontal = 5.dp)
+                                        .size(15.dp),
+                                    tint = if (item.feedTypes.contains(FeedType.SEARCH)) Color.Green else MaterialTheme.colors.onSurface.copy(
                                         alpha = 0.32f
                                     )
                                 )

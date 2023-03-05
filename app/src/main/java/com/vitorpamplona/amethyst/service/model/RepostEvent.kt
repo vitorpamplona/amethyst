@@ -5,7 +5,6 @@ import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.relays.Client
 import java.util.Date
 import nostr.postr.Utils
-import nostr.postr.toHex
 
 class RepostEvent (
   id: HexKey,
