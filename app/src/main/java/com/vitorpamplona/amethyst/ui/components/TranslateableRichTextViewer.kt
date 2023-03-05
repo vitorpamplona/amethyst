@@ -206,7 +206,13 @@ fun TranslateableRichTextViewer(
 
               Spacer(modifier = Modifier.size(10.dp))
 
-              Text("${stringResource(id = R.string.show_in)} ${Locale(target).displayName} ${R.string.first}")
+              Text(
+                "${stringResource(R.string.show_in)} ${Locale(target).displayName} ${
+                  stringResource(
+                    R.string.first
+                  )
+                }"
+              )
             }
             Divider()
 
