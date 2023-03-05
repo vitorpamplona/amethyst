@@ -1,0 +1,16 @@
+package com.vitorpamplona.amethyst.service.model.zaps
+
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.model.LnZapEvent
+
+object UserZaps {
+  fun groupByUser(zaps: Map<Note, Note?>?): List<Pair<Note, Note>> {
+    if (zaps == null) return emptyList()
+
+    return (zaps
+      .filter { it.value != null }
+      .toList()
+      .sortedBy { (it.second?.event as? LnZapEvent)?.amount }
+      .reversed()) as List<Pair<Note, Note>>
+  }
+}

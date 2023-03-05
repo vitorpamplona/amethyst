@@ -265,7 +265,7 @@ fun ChatroomMessageCompose(
                                             eventContent,
                                             canPreview,
                                             Modifier,
-                                            note.event?.tags,
+                                            note.event?.tags(),
                                             backgroundBubbleColor,
                                             accountViewModel,
                                             navController
@@ -275,7 +275,7 @@ fun ChatroomMessageCompose(
                                             stringResource(R.string.could_not_decrypt_the_message),
                                             true,
                                             Modifier,
-                                            note.event?.tags,
+                                            note.event?.tags(),
                                             backgroundBubbleColor,
                                             accountViewModel,
                                             navController

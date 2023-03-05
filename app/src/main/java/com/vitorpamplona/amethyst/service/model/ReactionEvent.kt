@@ -22,18 +22,18 @@ class ReactionEvent (
   companion object {
     const val kind = 7
 
-    fun createWarning(originalNote: Event, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ReactionEvent {
+    fun createWarning(originalNote: EventInterface, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ReactionEvent {
       return create("\u26A0\uFE0F", originalNote, privateKey, createdAt)
     }
 
-    fun createLike(originalNote: Event, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ReactionEvent {
+    fun createLike(originalNote: EventInterface, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ReactionEvent {
       return create("+", originalNote, privateKey, createdAt)
     }
 
-    fun create(content: String, originalNote: Event, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ReactionEvent {
+    fun create(content: String, originalNote: EventInterface, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ReactionEvent {
       val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
 
-      var tags = listOf( listOf("e", originalNote.id), listOf("p", originalNote.pubKey))
+      var tags = listOf( listOf("e", originalNote.id()), listOf("p", originalNote.pubKey()))
       if (originalNote is LongTextNoteEvent) {
         tags = tags + listOf( listOf("a", originalNote.address().toTag()) )
       }

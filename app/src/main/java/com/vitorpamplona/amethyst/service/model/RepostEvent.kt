@@ -29,14 +29,14 @@ class RepostEvent (
   companion object {
     const val kind = 6
 
-    fun create(boostedPost: Event, privateKey: ByteArray, createdAt: Long = Date().time / 1000): RepostEvent {
+    fun create(boostedPost: EventInterface, privateKey: ByteArray, createdAt: Long = Date().time / 1000): RepostEvent {
       val content = boostedPost.toJson()
 
-      val replyToPost = listOf("e", boostedPost.id)
-      val replyToAuthor = listOf("p", boostedPost.pubKey)
+      val replyToPost = listOf("e", boostedPost.id())
+      val replyToAuthor = listOf("p", boostedPost.pubKey())
 
       val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
-      var tags:List<List<String>> = boostedPost.tags.plus(listOf(replyToPost, replyToAuthor))
+      var tags:List<List<String>> = boostedPost.tags().plus(listOf(replyToPost, replyToAuthor))
 
       if (boostedPost is LongTextNoteEvent) {
         tags = tags + listOf( listOf("a", boostedPost.address().toTag()) )

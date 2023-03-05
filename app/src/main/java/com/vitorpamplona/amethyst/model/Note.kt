@@ -2,14 +2,7 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
-import com.vitorpamplona.amethyst.service.model.ATag
-import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
-import com.vitorpamplona.amethyst.service.model.LnZapEvent
-import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
-import com.vitorpamplona.amethyst.service.model.ReactionEvent
-import com.vitorpamplona.amethyst.service.model.RepostEvent
+import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import fr.acinq.secp256k1.Hex
@@ -27,7 +20,6 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import com.vitorpamplona.amethyst.service.model.Event
 
 val tagSearch = Pattern.compile("(?:\\s|\\A)\\#\\[([0-9]+)\\]")
 
@@ -36,13 +28,13 @@ class AddressableNote(val address: ATag): Note(address.toNAddr()) {
     override fun idNote() = address.toNAddr()
     override fun idDisplayNote() = idNote().toShortenHex()
     override fun address() = address
-    override fun createdAt() = (event as? LongTextNoteEvent)?.publishedAt() ?: event?.createdAt
+    override fun createdAt() = (event as? LongTextNoteEvent)?.publishedAt() ?: event?.createdAt()
 }
 
 open class Note(val idHex: String) {
     // These fields are only available after the Text Note event is received.
     // They are immutable after that.
-    var event: Event? = null
+    var event: EventInterface? = null
     var author: User? = null
     var mentions: List<User>? = null
     var replyTo: List<Note>? = null
@@ -79,7 +71,7 @@ open class Note(val idHex: String) {
 
     open fun address() = (event as? LongTextNoteEvent)?.address()
 
-    open fun createdAt() = event?.createdAt
+    open fun createdAt() = event?.createdAt()
 
     fun loadEvent(event: Event, author: User, mentions: List<User>, replyTo: List<Note>) {
         this.event = event
@@ -256,11 +248,11 @@ open class Note(val idHex: String) {
     }
 
     fun directlyCiteUsersHex(): Set<HexKey> {
-        val matcher = tagSearch.matcher(event?.content ?: "")
+        val matcher = tagSearch.matcher(event?.content() ?: "")
         val returningList = mutableSetOf<String>()
         while (matcher.find()) {
             try {
-                val tag = matcher.group(1)?.let { event?.tags?.get(it.toInt()) }
+                val tag = matcher.group(1)?.let { event?.tags()?.get(it.toInt()) }
                 if (tag != null && tag[0] == "p") {
                     returningList.add(tag[1])
                 }
@@ -272,11 +264,11 @@ open class Note(val idHex: String) {
     }
 
     fun directlyCiteUsers(): Set<User> {
-        val matcher = tagSearch.matcher(event?.content ?: "")
+        val matcher = tagSearch.matcher(event?.content() ?: "")
         val returningList = mutableSetOf<User>()
         while (matcher.find()) {
             try {
-                val tag = matcher.group(1)?.let { event?.tags?.get(it.toInt()) }
+                val tag = matcher.group(1)?.let { event?.tags()?.get(it.toInt()) }
                 if (tag != null && tag[0] == "p") {
                     LocalCache.checkGetOrCreateUser(tag[1])?.let {
                         returningList.add(it)
@@ -309,7 +301,7 @@ open class Note(val idHex: String) {
     }
 
     fun reactedBy(loggedIn: User, content: String): List<Note> {
-        return reactions.filter { it.author == loggedIn && it.event?.content == content }
+        return reactions.filter { it.author == loggedIn && it.event?.content() == content }
     }
 
     fun hasBoostedInTheLast5Minutes(loggedIn: User): Boolean {

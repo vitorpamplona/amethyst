@@ -5,6 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import com.vitorpamplona.amethyst.service.model.Event
+import com.vitorpamplona.amethyst.service.model.EventInterface
 
 /**
  * The Nostr Client manages multiple personae the user may switch between. Events are received and
@@ -62,7 +63,7 @@ object Client: RelayPool.Listener {
         RelayPool.sendFilterOnlyIfDisconnected()
     }
 
-    fun send(signedEvent: Event) {
+    fun send(signedEvent: EventInterface) {
         RelayPool.send(signedEvent)
     }
 

@@ -1,25 +1,16 @@
 package com.vitorpamplona.amethyst.service.model
 
-import com.google.gson.Gson
-import com.google.gson.GsonBuilder
-import com.google.gson.JsonArray
-import com.google.gson.JsonDeserializationContext
-import com.google.gson.JsonDeserializer
-import com.google.gson.JsonElement
-import com.google.gson.JsonObject
-import com.google.gson.JsonPrimitive
-import com.google.gson.JsonSerializationContext
-import com.google.gson.JsonSerializer
+import com.google.gson.*
 import com.google.gson.annotations.SerializedName
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
 import fr.acinq.secp256k1.Hex
 import fr.acinq.secp256k1.Secp256k1
-import java.lang.reflect.Type
-import java.security.MessageDigest
-import java.util.Date
 import nostr.postr.Utils
 import nostr.postr.toHex
+import java.lang.reflect.Type
+import java.security.MessageDigest
+import java.util.*
 
 open class Event(
     val id: HexKey,
@@ -29,34 +20,27 @@ open class Event(
     val tags: List<List<String>>,
     val content: String,
     val sig: HexKey
-) {
-    fun toJson(): String = gson.toJson(this)
+): EventInterface {
+    override fun id(): HexKey = id
 
-    fun generateId(): String {
-        val rawEvent = listOf(
-            0,
-            pubKey,
-            createdAt,
-            kind,
-            tags,
-            content
-        )
+    override fun pubKey(): HexKey  = pubKey
 
-        // GSON decided to hardcode these replacements.
-        // They break Nostr's hash check.
-        // These lines revert their code.
-        // https://github.com/google/gson/issues/2295
-        val rawEventJson = gson.toJson(rawEvent)
-            .replace("\\u2028", "\u2028")
-            .replace("\\u2029", "\u2029")
+    override fun createdAt(): Long = createdAt
 
-        return sha256.digest(rawEventJson.toByteArray()).toHexKey()
-    }
+    override fun kind(): Int = kind
+
+    override fun tags(): List<List<String>> = tags
+
+    override fun content(): String = content
+
+    override fun sig(): HexKey = sig
+
+    override fun toJson(): String = gson.toJson(this)
 
     /**
      * Checks if the ID is correct and then if the pubKey's secret key signed the event.
      */
-    fun checkSignature() {
+    override fun checkSignature() {
         if (!id.contentEquals(generateId())) {
             throw Exception(
                 """|Unexpected ID.
@@ -70,18 +54,29 @@ open class Event(
         }
     }
 
-    fun hasValidSignature(): Boolean {
+    override fun hasValidSignature(): Boolean {
         if (!id.contentEquals(generateId())) {
             return false
         }
-        if (!Secp256k1.get().verifySchnorr(Hex.decode(sig), Hex.decode(id), Hex.decode(pubKey))) {
-            return false
-        }
 
-        return true
+        return secp256k1.verifySchnorr(Hex.decode(sig), Hex.decode(id), Hex.decode(pubKey))
     }
 
-    class EventDeserializer : JsonDeserializer<Event> {
+    private fun generateId(): String {
+        val rawEvent = listOf(0, pubKey, createdAt, kind, tags, content)
+
+        // GSON decided to hardcode these replacements.
+        // They break Nostr's hash check.
+        // These lines revert their code.
+        // https://github.com/google/gson/issues/2295
+        val rawEventJson = gson.toJson(rawEvent)
+            .replace("\\u2028", "\u2028")
+            .replace("\\u2029", "\u2029")
+
+        return sha256.digest(rawEventJson.toByteArray()).toHexKey()
+    }
+
+    private class EventDeserializer : JsonDeserializer<Event> {
         override fun deserialize(
             json: JsonElement,
             typeOfT: Type?,
@@ -102,7 +97,7 @@ open class Event(
         }
     }
 
-    class EventSerializer : JsonSerializer<Event> {
+    private class EventSerializer : JsonSerializer<Event> {
         override fun serialize(
             src: Event,
             typeOfSrc: Type?,
@@ -128,7 +123,7 @@ open class Event(
         }
     }
 
-    class ByteArrayDeserializer : JsonDeserializer<ByteArray> {
+    private class ByteArrayDeserializer : JsonDeserializer<ByteArray> {
         override fun deserialize(
             json: JsonElement,
             typeOfT: Type?,
@@ -136,7 +131,7 @@ open class Event(
         ): ByteArray = Hex.decode(json.asString)
     }
 
-    class ByteArraySerializer : JsonSerializer<ByteArray> {
+    private class ByteArraySerializer : JsonSerializer<ByteArray> {
         override fun serialize(
             src: ByteArray,
             typeOfSrc: Type?,
