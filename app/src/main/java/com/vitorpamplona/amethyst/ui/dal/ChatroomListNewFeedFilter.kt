@@ -15,15 +15,15 @@ object ChatroomListNewFeedFilter: FeedFilter<Note>() {
       !me.hasSentMessagesTo(it) && account.isAcceptable(it)
     }
 
-    val privateMessages = messagingWith.mapNotNull {
-      privateChatrooms[it]?.roomMessages?.sortedBy {
-        it.createdAt()
-      }?.lastOrNull {
-        it.event != null
-      }
+    val privateMessages = messagingWith.mapNotNull { it ->
+      privateChatrooms[it]
+        ?.roomMessages
+        ?.sortedBy { it.createdAt() }
+        ?.lastOrNull { it.event != null }
     }
 
-    return privateMessages.sortedBy { it.createdAt() }.reversed()
+    return privateMessages
+      .sortedBy { it.createdAt() }
+      .reversed()
   }
-
 }

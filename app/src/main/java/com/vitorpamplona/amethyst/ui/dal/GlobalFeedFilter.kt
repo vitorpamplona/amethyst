@@ -17,8 +17,8 @@ object GlobalFeedFilter: FeedFilter<Note>() {
     }
     .filter {
       // does not show events already in the public chat list
-           (it.channel() == null || it.channel() !in account.followingChannels())
-      // does not show people the user already follows
+      (it.channel() == null || it.channel() !in account.followingChannels())
+        // does not show people the user already follows
         && (it.author !in account.userProfile().follows)
     }
     .filter { account.isAcceptable(it) }

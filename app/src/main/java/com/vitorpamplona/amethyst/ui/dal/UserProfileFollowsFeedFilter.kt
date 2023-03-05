@@ -14,6 +14,8 @@ object UserProfileFollowsFeedFilter: FeedFilter<User>() {
   }
 
   override fun feed(): List<User> {
-    return user?.follows?.filter { account.isAcceptable(it) }?.reversed() ?: emptyList()
+    return user?.follows
+      ?.filter { account.isAcceptable(it) }
+      ?.reversed() ?: emptyList()
   }
 }
