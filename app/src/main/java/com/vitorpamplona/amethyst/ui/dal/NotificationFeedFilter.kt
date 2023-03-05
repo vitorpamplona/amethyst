@@ -19,6 +19,8 @@ object NotificationFeedFilter: FeedFilter<Note>() {
         it.event !is ChannelCreateEvent
           && it.event !is ChannelMetadataEvent
           && it.event !is LnZapRequestEvent
+          && it.event !is BadgeDefinitionEvent
+          && it.event !is BadgeProfilesEvent
       }
       .filter { it ->
         it.event !is TextNoteEvent

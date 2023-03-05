@@ -6,6 +6,9 @@ import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.google.gson.reflect.TypeToken
 import com.vitorpamplona.amethyst.service.model.ATag
+import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
+import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
+import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelHideMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
@@ -138,7 +141,6 @@ object LocalCache {
     }
   }
 
-
   fun consume(event: MetadataEvent) {
     // new event
     val oldUser = getOrCreateUser(event.pubKey)
@@ -250,6 +252,71 @@ object LocalCache {
 
       refreshObservers()
     }
+  }
+
+  fun consume(event: BadgeDefinitionEvent) {
+    val note = getOrCreateAddressableNote(event.address())
+    val author = getOrCreateUser(event.pubKey)
+
+    // Already processed this event.
+    if (note.event?.id == event.id) return
+
+    if (event.createdAt > (note.createdAt() ?: 0)) {
+      note.loadEvent(event, author, emptyList<User>(), emptyList<Note>())
+
+      refreshObservers()
+    }
+  }
+
+  fun consume(event: BadgeProfilesEvent) {
+    val note = getOrCreateAddressableNote(event.address())
+    val author = getOrCreateUser(event.pubKey)
+
+    // Already processed this event.
+    if (note.event?.id == event.id) return
+
+    val replyTo = event.badgeAwardEvents().mapNotNull { checkGetOrCreateNote(it) } +
+      event.badgeAwardDefinitions().mapNotNull { getOrCreateAddressableNote(it) }
+
+    if (event.createdAt > (note.createdAt() ?: 0)) {
+      note.loadEvent(event, author, emptyList(), replyTo)
+
+      author.updateAcceptedBadges(note)
+
+      refreshObservers()
+    }
+  }
+
+  fun consume(event: BadgeAwardEvent) {
+    val note = getOrCreateNote(event.id)
+
+    // Already processed this event.
+    if (note.event != null) return
+
+    //Log.d("TN", "New Boost (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${formattedDateTime(event.createdAt)}")
+
+    val author = getOrCreateUser(event.pubKey)
+    val awardees = event.awardees().mapNotNull { checkGetOrCreateUser(it) }
+    val awardDefinition = event.awardDefinition().map { getOrCreateAddressableNote(it) }
+
+    note.loadEvent(event, author, awardees, awardDefinition)
+
+    // Adds notifications to users.
+    awardees.forEach {
+      it.addTaggedPost(note)
+    }
+
+    // Counts the replies
+    awardees.forEach {
+      it.addBadgeAward(note)
+    }
+
+    // Replies of an Badge Definition are Award Events
+    awardDefinition.forEach {
+      it.addReply(note)
+    }
+
+    refreshObservers()
   }
 
   private fun findCitations(event: Event): Set<String> {
@@ -537,6 +604,7 @@ object LocalCache {
       // older data, does nothing
     }
   }
+
   fun consume(event: ChannelMetadataEvent) {
     val channelId = event.channel()
     //Log.d("MT", "New User ${users.size} ${event.contactMetaData.name}")

@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import com.vitorpamplona.amethyst.ui.note.BadgeCompose
 import com.vitorpamplona.amethyst.ui.note.BoostSetCompose
 import com.vitorpamplona.amethyst.ui.note.LikeSetCompose
 import com.vitorpamplona.amethyst.ui.note.MultiSetCompose
@@ -122,6 +123,12 @@ private fun FeedLoaded(
                     routeForLastRead = routeForLastRead
                 )
                 is MultiSetCard -> MultiSetCompose(
+                    item,
+                    accountViewModel = accountViewModel,
+                    navController = navController,
+                    routeForLastRead = routeForLastRead
+                )
+                is BadgeCard -> BadgeCompose(
                     item,
                     accountViewModel = accountViewModel,
                     navController = navController,

@@ -1,6 +1,8 @@
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
+import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
@@ -38,6 +40,17 @@ object NostrAccountDataSource: NostrDataSource("AccountData") {
     )
   }
 
+  fun createAccountAcceptedAwardsFilter(): TypedFilter {
+    return TypedFilter(
+      types = FeedType.values().toSet(),
+      filter = JsonFilter(
+        kinds = listOf(BadgeProfilesEvent.kind),
+        authors = listOf(account.userProfile().pubkeyHex),
+        limit = 1
+      )
+    )
+  }
+
   fun createAccountReportsFilter(): TypedFilter {
     return TypedFilter(
       types = FeedType.values().toSet(),
@@ -52,7 +65,7 @@ object NostrAccountDataSource: NostrDataSource("AccountData") {
     types = FeedType.values().toSet(),
     filter = JsonFilter(
       kinds = listOf(
-        TextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind, ReportEvent.kind, LnZapEvent.kind, ChannelMessageEvent.kind
+        TextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind, ReportEvent.kind, LnZapEvent.kind, ChannelMessageEvent.kind, BadgeAwardEvent.kind
       ),
       tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
       limit = 200
@@ -67,7 +80,8 @@ object NostrAccountDataSource: NostrDataSource("AccountData") {
       createAccountMetadataFilter(),
       createAccountContactListFilter(),
       createNotificationFilter(),
-      createAccountReportsFilter()
+      createAccountReportsFilter(),
+      createAccountAcceptedAwardsFilter()
     ).ifEmpty { null }
   }
 }

@@ -24,6 +24,8 @@ import nostr.postr.toNpub
 
 val lnurlpPattern = Pattern.compile("(?i:http|https):\\/\\/((.+)\\/)*\\.well-known\\/lnurlp\\/(.*)")
 
+class Badges(val definition: Note, val awardees: Set<Note>)
+
 class User(val pubkeyHex: String) {
     var info: UserMetadata? = null
 
@@ -43,6 +45,7 @@ class User(val pubkeyHex: String) {
 
     var reports = mapOf<User, Set<Note>>()
         private set
+
     var latestReportTime: Long = 0
 
     var zaps = mapOf<Note, Note?>()
@@ -56,6 +59,11 @@ class User(val pubkeyHex: String) {
 
     var privateChatrooms = mapOf<User, Chatroom>()
         private set
+
+    var badgeAwards = setOf<Note>()
+        private set
+
+    var acceptedBadges: AddressableNote? = null
 
     fun pubkey() = Hex.decode(pubkeyHex)
     fun pubkeyNpub() = pubkey().toNpub()
@@ -173,6 +181,23 @@ class User(val pubkeyHex: String) {
                 liveSet?.reports?.invalidateData()
             }
         }
+    }
+
+    fun addBadgeAward(note: Note) {
+        if (note !in badgeAwards) {
+            badgeAwards = badgeAwards + note
+            liveSet?.badges?.invalidateData()
+        }
+    }
+
+    fun removeBadgeAward(deleteNote: Note) {
+        badgeAwards = badgeAwards - deleteNote
+        liveSet?.badges?.invalidateData()
+    }
+
+    fun updateAcceptedBadges(note: AddressableNote) {
+        acceptedBadges = note
+        liveSet?.badges?.invalidateData()
     }
 
     fun addZap(zapRequest: Note, zap: Note?) {
@@ -316,6 +341,8 @@ class User(val pubkeyHex: String) {
             liveSet = null
         }
     }
+
+
 }
 
 class UserLiveSet(u: User) {
@@ -327,6 +354,7 @@ class UserLiveSet(u: User) {
     val relayInfo: UserLiveData = UserLiveData(u)
     val metadata: UserLiveData = UserLiveData(u)
     val zaps: UserLiveData = UserLiveData(u)
+    val badges: UserLiveData = UserLiveData(u)
 
     fun isInUse(): Boolean {
         return follows.hasObservers()
@@ -336,6 +364,7 @@ class UserLiveSet(u: User) {
           || relayInfo.hasObservers()
           || metadata.hasObservers()
           || zaps.hasObservers()
+          || badges.hasObservers()
     }
 }
 

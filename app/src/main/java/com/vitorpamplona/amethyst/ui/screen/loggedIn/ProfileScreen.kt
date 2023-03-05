@@ -17,8 +17,10 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -34,6 +36,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -41,14 +44,20 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.google.accompanist.pager.rememberPagerState
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
+import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
+import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
 import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
@@ -62,6 +71,7 @@ import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileZapsFeedFilter
+import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.screen.FeedView
@@ -356,7 +366,7 @@ private fun ProfileHeader(
                 }
             }
 
-            DrawAdditionalInfo(baseUser, account)
+            DrawAdditionalInfo(baseUser, account, navController)
 
             Divider(modifier = Modifier.padding(top = 6.dp))
         }
@@ -367,10 +377,14 @@ private fun ProfileHeader(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun DrawAdditionalInfo(baseUser: User, account: Account) {
+private fun DrawAdditionalInfo(baseUser: User, account: Account, navController: NavController) {
     val userState by baseUser.live().metadata.observeAsState()
     val user = userState?.user ?: return
+
+    val userBadgeState by baseUser.live().badges.observeAsState()
+    val userBadge = userBadgeState?.user ?: return
 
     val uri = LocalUriHandler.current
 
@@ -445,12 +459,93 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account) {
         }
     }
 
+    userBadge.acceptedBadges?.let { note ->
+        (note.event as? BadgeProfilesEvent)?.let { event ->
+            FlowRow(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 5.dp)) {
+                event.badgeAwardEvents().forEach { badgeAwardEvent ->
+                    val baseNote = LocalCache.notes[badgeAwardEvent]
+                    if (baseNote != null) {
+                        val badgeAwardState by baseNote.live().metadata.observeAsState()
+                        val baseBadgeDefinition = badgeAwardState?.note?.replyTo?.firstOrNull()
+
+                        if (baseBadgeDefinition != null) {
+                            BadgeThumb(baseBadgeDefinition, navController, 50.dp)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     user.info?.about?.let {
         Text(
             it,
             color = MaterialTheme.colors.onSurface,
             modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)
         )
+    }
+}
+
+@Composable
+fun BadgeThumb(
+    note: Note,
+    navController: NavController,
+    size: Dp,
+    pictureModifier: Modifier = Modifier
+) {
+    BadgeThumb(note, size, pictureModifier) {
+        navController.navigate("Note/${it.idHex}")
+    }
+}
+
+
+@Composable
+fun BadgeThumb(
+    baseNote: Note,
+    size: Dp,
+    pictureModifier: Modifier = Modifier,
+    onClick: ((Note) -> Unit)? = null
+) {
+    val noteState by baseNote.live().metadata.observeAsState()
+    val note = noteState?.note ?: return
+
+    val event = (note.event as? BadgeDefinitionEvent)
+    val image = event?.thumb() ?: event?.image()
+
+    val ctx = LocalContext.current.applicationContext
+
+    Box(
+        Modifier
+            .width(size)
+            .height(size)) {
+        if (image == null) {
+            Image(
+                painter = BitmapPainter(RoboHashCache.get(ctx, "ohnothisauthorisnotfound")),
+                contentDescription = stringResource(R.string.unknown_author),
+                modifier = pictureModifier
+                    .fillMaxSize(1f)
+                    .background(MaterialTheme.colors.background)
+            )
+        } else {
+            AsyncImage(
+                model = image,
+                contentDescription = stringResource(id = R.string.profile_image),
+                placeholder = BitmapPainter(RoboHashCache.get(ctx, note.idHex)),
+                fallback = BitmapPainter(RoboHashCache.get(ctx, note.idHex)),
+                error = BitmapPainter(RoboHashCache.get(ctx, note.idHex)),
+                modifier = pictureModifier
+                    .fillMaxSize(1f)
+                    .clip(shape = CircleShape)
+                    .background(MaterialTheme.colors.background)
+                    .run {
+                        if (onClick != null)
+                            this.clickable(onClick = { onClick(note) } )
+                        else
+                            this
+                    }
+
+            )
+        }
     }
 }
 
@@ -471,7 +566,8 @@ private fun DrawBanner(baseUser: User) {
             contentScale = ContentScale.FillWidth,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(125.dp).combinedClickable(
+                .height(125.dp)
+                .combinedClickable(
                     onClick = {},
                     onLongClick = {
                         clipboardManager.setText(AnnotatedString(banner))

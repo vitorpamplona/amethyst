@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -58,7 +59,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
+import com.vitorpamplona.amethyst.ui.note.BadgeDisplay
 
 @Composable
 fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: AccountViewModel, navController: NavController) {
@@ -173,7 +176,7 @@ fun Modifier.drawReplyLevel(level: Int, color: Color, selected: Color): Modifier
 
         repeat(level) {
             this.drawLine(
-                if (it == level-1) selected else color,
+                if (it == level - 1) selected else color,
                 Offset(padding + it * levelWidth, 0f),
                 Offset(padding + it * levelWidth, size.height),
                 strokeWidth = strokeWidth
@@ -267,7 +270,10 @@ fun NoteMaster(baseNote: Note,
                 }
             }
 
-            if (noteEvent is LongTextNoteEvent) {
+            if (noteEvent is BadgeDefinitionEvent) {
+                Spacer(modifier = Modifier.padding(top=10.dp))
+                BadgeDisplay(baseNote = note)
+            } else if (noteEvent is LongTextNoteEvent) {
                 Row(modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp)) {
                     Column {
                         noteEvent.image()?.let {

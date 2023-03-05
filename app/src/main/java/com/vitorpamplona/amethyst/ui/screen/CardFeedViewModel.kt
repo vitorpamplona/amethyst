@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.LocalCacheState
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
@@ -106,7 +107,12 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>): ViewModel() {
             )
         }
 
-        val textNoteCards = notes.filter { it.event !is ReactionEvent && it.event !is RepostEvent  && it.event !is LnZapEvent }.map { NoteCard(it) }
+        val textNoteCards = notes.filter { it.event !is ReactionEvent && it.event !is RepostEvent  && it.event !is LnZapEvent }.map {
+            if (it.event is BadgeAwardEvent)
+                BadgeCard(it)
+            else
+                NoteCard(it)
+        }
 
         return (multiCards + textNoteCards).sortedBy { it.createdAt() }.reversed()
     }

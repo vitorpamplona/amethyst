@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.ui.note
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -26,6 +27,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -38,6 +40,8 @@ import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
+import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
@@ -106,6 +110,8 @@ fun NoteCompose(
         )
     } else if ((noteEvent is ChannelCreateEvent || noteEvent is ChannelMetadataEvent) && baseChannel != null) {
         ChannelHeader(baseChannel = baseChannel, account = account, navController = navController)
+    } else if (noteEvent is BadgeDefinitionEvent) {
+        BadgeDisplay(baseNote = note)
     } else {
         var isNew by remember { mutableStateOf<Boolean>(false) }
 
@@ -358,6 +364,39 @@ fun NoteCompose(
                             modifier = Modifier.padding(top = 10.dp),
                             thickness = 0.25.dp
                         )
+                    } else if (noteEvent is BadgeAwardEvent && !note.replyTo.isNullOrEmpty()) {
+                        Text(text = stringResource(R.string.award_granted_to))
+
+                        FlowRow(modifier = Modifier.padding(top = 5.dp)) {
+                            note.mentions?.forEach {
+                                UserPicture(
+                                    user = it,
+                                    navController = navController,
+                                    userAccount = account.userProfile(),
+                                    size = 35.dp
+                                )
+                            }
+                        }
+
+                        note.replyTo?.firstOrNull()?.let {
+                            NoteCompose(
+                                it,
+                                modifier = Modifier,
+                                isBoostedNote = false,
+                                isQuotedNote = true,
+                                unPackReply = false,
+                                parentBackgroundColor = backgroundColor,
+                                accountViewModel = accountViewModel,
+                                navController = navController
+                            )
+                        }
+
+                        ReactionsRow(note, accountViewModel)
+
+                        Divider(
+                            modifier = Modifier.padding(top = 10.dp),
+                            thickness = 0.25.dp
+                        )
                     } else {
                         val eventContent = accountViewModel.decrypt(note)
 
@@ -388,6 +427,61 @@ fun NoteCompose(
 
                     NoteDropDownMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun BadgeDisplay(baseNote: Note) {
+    val badgeData = baseNote.event as? BadgeDefinitionEvent ?: return
+
+    Row(
+        modifier = Modifier
+            .padding(10.dp)
+            .clip(shape = CutCornerShape(20, 20, 0, 0))
+            .border(
+                5.dp,
+                MaterialTheme.colors.primary.copy(alpha = 0.32f),
+                CutCornerShape(20)
+            )
+    ) {
+        Column {
+            badgeData.image()?.let {
+                AsyncImage(
+                    model = it,
+                    contentDescription = stringResource(
+                        R.string.badge_award_image_for,
+                        it
+                    ),
+                    contentScale = ContentScale.FillWidth,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            badgeData.name()?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.body1,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 10.dp, end = 10.dp, top = 10.dp)
+                )
+            }
+
+            badgeData.description()?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.caption,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
+                    color = Color.Gray,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }

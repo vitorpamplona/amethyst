@@ -1,6 +1,10 @@
 package com.vitorpamplona.amethyst.service
 
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
+import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
+import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
@@ -20,7 +24,7 @@ object NostrSingleEventDataSource: NostrDataSource("SingleEventFeed") {
   private var eventsToWatch = setOf<Note>()
   private var addressesToWatch = setOf<Note>()
 
-  private fun createAddressFilter(): List<TypedFilter>? {
+  private fun createTagToAddressFilter(): List<TypedFilter>? {
     val addressesToWatch = eventsToWatch.filter { it.address() != null } + addressesToWatch
 
     if (addressesToWatch.isEmpty()) {
@@ -38,10 +42,39 @@ object NostrSingleEventDataSource: NostrDataSource("SingleEventFeed") {
           types = FeedType.values().toSet(),
           filter = JsonFilter(
             kinds = listOf(
-              TextNoteEvent.kind, LongTextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind, ReportEvent.kind, LnZapEvent.kind, LnZapRequestEvent.kind
+              TextNoteEvent.kind, LongTextNoteEvent.kind,
+              ReactionEvent.kind, RepostEvent.kind, ReportEvent.kind,
+              LnZapEvent.kind, LnZapRequestEvent.kind,
+              BadgeAwardEvent.kind, BadgeDefinitionEvent.kind, BadgeProfilesEvent.kind
             ),
             tags = mapOf("a" to listOf(aTag.toTag())),
             since = it.lastReactionsDownloadTime
+          )
+        )
+      }
+    }
+  }
+
+  private fun createAddressFilter(): List<TypedFilter>? {
+    val addressesToWatch = addressesToWatch.filter { it.event == null }
+
+    if (addressesToWatch.isEmpty()) {
+      return null
+    }
+
+    val now = Date().time / 1000
+
+    return addressesToWatch.filter {
+      val lastTime = it.lastReactionsDownloadTime
+      lastTime == null || lastTime < (now - 10)
+    }.mapNotNull {
+      it.address()?.let { aTag ->
+        TypedFilter(
+          types = FeedType.values().toSet(),
+          filter = JsonFilter(
+            kinds = listOf(aTag.kind),
+            tags = mapOf("d" to listOf(aTag.dTag)),
+            authors = listOf(aTag.pubKeyHex.substring(0,8))
           )
         )
       }
@@ -81,7 +114,7 @@ object NostrSingleEventDataSource: NostrDataSource("SingleEventFeed") {
     val threadingEventsToLoad = eventsToWatch
       .mapNotNull { it.replyTo }
       .flatten()
-      .filter { it.event == null }
+      .filter { it !is AddressableNote && it.event == null }
 
     val interestedEvents =
       (directEventsToLoad + threadingEventsToLoad)
@@ -98,7 +131,7 @@ object NostrSingleEventDataSource: NostrDataSource("SingleEventFeed") {
         filter = JsonFilter(
           kinds = listOf(
             TextNoteEvent.kind, LongTextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind, LnZapEvent.kind, LnZapRequestEvent.kind,
-            ChannelMessageEvent.kind, ChannelCreateEvent.kind, ChannelMetadataEvent.kind
+            ChannelMessageEvent.kind, ChannelCreateEvent.kind, ChannelMetadataEvent.kind, BadgeDefinitionEvent.kind, BadgeAwardEvent.kind, BadgeProfilesEvent.kind
           ),
           ids = interestedEvents.toList()
         )
@@ -119,8 +152,9 @@ object NostrSingleEventDataSource: NostrDataSource("SingleEventFeed") {
     val reactions = createRepliesAndReactionsFilter()
     val missing = createLoadEventsIfNotLoadedFilter()
     val addresses = createAddressFilter()
+    val addressReactions = createTagToAddressFilter()
 
-    singleEventChannel.typedFilters = listOfNotNull(reactions, missing, addresses).flatten().ifEmpty { null }
+    singleEventChannel.typedFilters = listOfNotNull(reactions, missing, addresses, addressReactions).flatten().ifEmpty { null }
   }
 
   fun add(eventId: Note) {

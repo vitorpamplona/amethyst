@@ -2,6 +2,9 @@ package com.vitorpamplona.amethyst.service
 
 import android.util.Log
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
+import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
+import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelHideMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
@@ -62,6 +65,9 @@ abstract class NostrDataSource(val debugName: String) {
 
         try {
           when (event) {
+            is BadgeAwardEvent -> LocalCache.consume(event)
+            is BadgeDefinitionEvent -> LocalCache.consume(event)
+            is BadgeProfilesEvent -> LocalCache.consume(event)
             is ChannelCreateEvent -> LocalCache.consume(event)
             is ChannelHideMessageEvent -> LocalCache.consume(event)
             is ChannelMessageEvent -> LocalCache.consume(event, relay)
