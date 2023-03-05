@@ -21,8 +21,13 @@ object ChatroomFeedFilter: FeedFilter<Note>() {
 
     if (myAccount == null || myUser == null) return emptyList()
 
-    val messages = myAccount.userProfile().privateChatrooms[myUser] ?: return emptyList()
+    val messages = myAccount
+      .userProfile()
+      .privateChatrooms[myUser] ?: return emptyList()
 
-    return messages.roomMessages.filter { myAccount.isAcceptable(it) }.sortedBy { it.createdAt() }.reversed()
+    return messages.roomMessages
+      .filter { myAccount.isAcceptable(it) }
+      .sortedBy { it.createdAt() }
+      .reversed()
   }
 }

@@ -18,7 +18,6 @@ object UserProfileConversationsFeedFilter: FeedFilter<Note>() {
     return user?.notes
       ?.filter { account?.isAcceptable(it) == true && !it.isNewThread() }
       ?.sortedBy { it.createdAt() }
-      ?.reversed()
-      ?: emptyList()
+      ?.reversed() ?: emptyList()
   }
 }

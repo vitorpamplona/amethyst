@@ -14,7 +14,7 @@ object HomeNewThreadFeedFilter: FeedFilter<Note>() {
     val user = account.userProfile()
 
     val notes = LocalCache.notes.values
-      .filter {
+      .filter { it ->
         (it.event is TextNoteEvent || it.event is RepostEvent || it.event is LongTextNoteEvent)
           && it.author in user.follows
           // && account.isAcceptable(it)  // This filter follows only. No need to check if acceptable
@@ -23,7 +23,7 @@ object HomeNewThreadFeedFilter: FeedFilter<Note>() {
       }
 
     val longFormNotes = LocalCache.addressables.values
-      .filter {
+      .filter { it ->
         (it.event is TextNoteEvent || it.event is RepostEvent || it.event is LongTextNoteEvent)
           && it.author in user.follows
           // && account.isAcceptable(it)  // This filter follows only. No need to check if acceptable
