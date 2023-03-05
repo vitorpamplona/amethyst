@@ -13,6 +13,6 @@ object UserProfileZapsFeedFilter: FeedFilter<Pair<Note, Note>>() {
   }
 
   override fun feed(): List<Pair<Note, Note>> {
-    return UserZaps.groupByUser(user?.zaps)
+    return UserZaps.forProfileFeed(user?.zaps)
   }
 }

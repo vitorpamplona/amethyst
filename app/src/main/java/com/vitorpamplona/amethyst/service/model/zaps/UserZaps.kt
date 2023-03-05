@@ -4,7 +4,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.LnZapEventInterface
 
 object UserZaps {
-  fun groupByUser(zaps: Map<Note, Note?>?): List<Pair<Note, Note>> {
+  fun forProfileFeed(zaps: Map<Note, Note?>?): List<Pair<Note, Note>> {
     if (zaps == null) return emptyList()
 
     return (zaps
