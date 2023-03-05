@@ -1,11 +1,14 @@
 package com.vitorpamplona.amethyst.service.zaps
 
+import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.model.EventInterface
+import com.vitorpamplona.amethyst.service.model.LnZapEventInterface
 import com.vitorpamplona.amethyst.service.model.zaps.UserZaps
-import io.mockk.*
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.Assert
 import org.junit.Test
+import java.math.BigDecimal
 
 class UserZapsTest {
   @Test
@@ -21,36 +24,33 @@ class UserZapsTest {
   }
 
   @Test
-  fun group_by_user_with_just_one_user() {
-    val u1 = mockk<Note>()
-    val z1 = mockk<Note>()
-    val z2 = mockk<Note>()
-    val zaps: Map<Note, Note?> = mapOf(u1 to z1, u1 to z2)
+  fun avoid_duplicates_with_same_zap_request() {
+    val zapRequest = mockk<Note>()
+
+    val zaps: Map<Note, Note?> = mapOf(
+      zapRequest to mockZapNoteWith("user-1", amount = 100),
+      zapRequest to mockZapNoteWith("user-1", amount = 200),
+    )
+
     val actual = UserZaps.groupByUser(zaps)
 
-    Assert.assertEquals(listOf(Pair(u1, z2)), actual)
+    Assert.assertEquals(1, actual.count())
+    Assert.assertEquals(zapRequest, actual.first().first)
+    Assert.assertEquals(
+      BigDecimal(200),
+      (actual.first().second.event as LnZapEventInterface).amount()
+    )
   }
 
-  @Test
-  fun group_by_user() {
-    // FIXME: not working yet...
-//    IDEA:
-//    [ (u1 -> z1) (u1 -> z2) (u2 -> z3) ]
-//    [ (u1 -> z1 + z2) (u2 -> z3)]
-    val u1 = mockk<Note>()
-    val u2 = mockk<Note>()
+  private fun mockZapNoteWith(pubkey: HexKey, amount: Int): Note {
 
-    val z1 = mockk<Note>()
-    val z2 = mockk<Note>()
-    val z3 = mockk<Note>()
-    every { z3.event } returns mockk<EventInterface>()
+    val lnZapEvent = mockk<LnZapEventInterface>()
+    every { lnZapEvent.amount() } returns amount.toBigDecimal()
+    every { lnZapEvent.pubKey() } returns pubkey
 
-    val zaps: Map<Note, Note?> = mapOf(u1 to z1, u1 to z2, u2 to z3)
-    val actual = UserZaps.groupByUser(zaps)
+    val zapNote = mockk<Note>()
+    every { zapNote.event } returns lnZapEvent
 
-    Assert.assertEquals(
-      listOf(Pair(u1, z1), Pair(u1, z2), Pair(u2, z3)),
-      actual
-    )
+    return zapNote
   }
 }
