@@ -11,7 +11,7 @@ abstract class FeedFilter<T>() {
       feed().take(1000)
     }
 
-    Log.d("Time","${this.javaClass.simpleName} Feed in ${elapsed} with ${feed.size} objects")
+    Log.d("Time", "${this.javaClass.simpleName} Feed in ${elapsed} with ${feed.size} objects")
     return feed
   }
 
