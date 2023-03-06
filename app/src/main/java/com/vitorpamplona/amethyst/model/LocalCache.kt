@@ -225,7 +225,7 @@ object LocalCache {
     }
 
     // Already processed this event.
-    if (note.event?.id() == event.id) return
+    if (note.event?.id() == event.id()) return
 
     if (antiSpam.isSpam(event)) {
       relay?.let {
@@ -259,7 +259,7 @@ object LocalCache {
     val author = getOrCreateUser(event.pubKey)
 
     // Already processed this event.
-    if (note.event?.id == event.id) return
+    if (note.event?.id() == event.id()) return
 
     if (event.createdAt > (note.createdAt() ?: 0)) {
       note.loadEvent(event, author, emptyList<User>(), emptyList<Note>())
@@ -273,7 +273,7 @@ object LocalCache {
     val author = getOrCreateUser(event.pubKey)
 
     // Already processed this event.
-    if (note.event?.id == event.id) return
+    if (note.event?.id() == event.id()) return
 
     val replyTo = event.badgeAwardEvents().mapNotNull { checkGetOrCreateNote(it) } +
       event.badgeAwardDefinitions().mapNotNull { getOrCreateAddressableNote(it) }
