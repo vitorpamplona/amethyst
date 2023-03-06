@@ -187,7 +187,7 @@
     <string name="secret_key_copied_to_clipboard">Secret key (nsec) copied to clipboard</string>
     <string name="copy_my_secret_key">Copy my secret key</string>
     <string name="biometric_authentication_failed">Authentication failed</string>
-
+    <string name="biometric_error">Error</string>
     <string name="badge_created_by">"Created by %1$s"</string>
     <string name="badge_award_image_for">"Badge award image for %1$s"</string>
     <string name="new_badge_award_notif">You Received a new Badge Award</string>
