@@ -4,6 +4,7 @@ import android.util.Log
 import com.google.gson.JsonElement
 import java.util.Date
 import com.vitorpamplona.amethyst.service.model.Event
+import com.vitorpamplona.amethyst.service.model.EventInterface
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -193,7 +194,7 @@ class Relay(
         }
     }
 
-    fun send(signedEvent: Event) {
+    fun send(signedEvent: EventInterface) {
         if (write) {
             socket?.send("""["EVENT",${signedEvent.toJson()}]""")
             eventUploadCounter++

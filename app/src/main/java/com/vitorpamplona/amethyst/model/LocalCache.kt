@@ -194,7 +194,7 @@ object LocalCache {
 
     note.loadEvent(event, author, mentions, replyTo)
 
-    //Log.d("TN", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${note.event?.content?.take(100)} ${formattedDateTime(event.createdAt)}")
+    //Log.d("TN", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${note.event?.content()?.take(100)} ${formattedDateTime(event.createdAt)}")
 
     // Prepares user's profile view.
     author.addNote(note)
@@ -225,7 +225,7 @@ object LocalCache {
     }
 
     // Already processed this event.
-    if (note.event?.id == event.id) return
+    if (note.event?.id() == event.id) return
 
     if (antiSpam.isSpam(event)) {
       relay?.let {
@@ -662,7 +662,7 @@ object LocalCache {
 
     note.loadEvent(event, author, mentions, replyTo)
 
-    //Log.d("CM", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${note.event?.content} ${formattedDateTime(event.createdAt)}")
+    //Log.d("CM", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${note.event?.content()} ${formattedDateTime(event.createdAt)}")
 
     // Adds notifications to users.
     mentions.forEach {
@@ -768,8 +768,8 @@ object LocalCache {
 
   fun findNotesStartingWith(text: String): List<Note> {
     return notes.values.filter {
-           (it.event is TextNoteEvent && it.event?.content?.contains(text, true) ?: false)
-        || (it.event is ChannelMessageEvent && it.event?.content?.contains(text, true) ?: false)
+           (it.event is TextNoteEvent && it.event?.content()?.contains(text, true) ?: false)
+        || (it.event is ChannelMessageEvent && it.event?.content()?.contains(text, true) ?: false)
         || it.idHex.startsWith(text, true)
         || it.idNote().startsWith(text, true)
     } + addressables.values.filter {
@@ -838,7 +838,7 @@ object LocalCache {
 
     val toBeRemoved = notes
       .filter {
-        (it.value.author == null || it.value.author!! !in followSet) && it.value.event?.kind == TextNoteEvent.kind && it.value.liveSet?.isInUse() != true
+        (it.value.author == null || it.value.author!! !in followSet) && it.value.event?.kind() == TextNoteEvent.kind && it.value.liveSet?.isInUse() != true
       }
 
     toBeRemoved.forEach {

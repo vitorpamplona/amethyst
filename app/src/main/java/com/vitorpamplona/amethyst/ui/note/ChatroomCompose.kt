@@ -77,7 +77,7 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
         } else if (noteEvent is ChannelMetadataEvent) {
             "${stringResource(R.string.channel_information_changed_to)} "
         } else {
-            noteEvent?.content
+            noteEvent?.content()
         }
         channel?.let { channel ->
             var hasNewMessages by remember { mutableStateOf<Boolean>(false) }
@@ -127,7 +127,7 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
 
             LaunchedEffect(key1 = notificationCache, key2 = note) {
                 noteEvent?.let {
-                    hasNewMessages = it.createdAt > notificationCache.cache.load("Room/${userToComposeOn.pubkeyHex}", context)
+                    hasNewMessages = it.createdAt() > notificationCache.cache.load("Room/${userToComposeOn.pubkeyHex}", context)
                 }
             }
 

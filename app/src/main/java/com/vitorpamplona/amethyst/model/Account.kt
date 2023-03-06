@@ -415,7 +415,7 @@ class Account(
 
       event.plainContent(loggedIn.privKey!!, pubkeyToUse.toByteArray())
     } else {
-      event?.content
+      event?.content()
     }
   }
 

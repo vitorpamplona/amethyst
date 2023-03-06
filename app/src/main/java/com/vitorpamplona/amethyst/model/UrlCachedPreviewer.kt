@@ -54,7 +54,7 @@ object UrlCachedPreviewer {
   }
 
   fun preloadPreviewsFor(note: Note) {
-    note.event?.content?.let {
+    note.event?.content()?.let {
       findUrlsInMessage(it).forEach {
         val removedParamsFromUrl = it.split("?")[0].lowercase()
         if (imageExtension.matcher(removedParamsFromUrl).matches()) {

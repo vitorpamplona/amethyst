@@ -6,6 +6,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import com.vitorpamplona.amethyst.service.model.Event
+import com.vitorpamplona.amethyst.service.model.EventInterface
 
 /**
  * RelayPool manages the connection to multiple Relays and lets consumers deal with simple events.
@@ -54,7 +55,7 @@ object RelayPool: Relay.Listener {
         relays.forEach { it.sendFilterOnlyIfDisconnected() }
     }
 
-    fun send(signedEvent: Event) {
+    fun send(signedEvent: EventInterface) {
         relays.forEach { it.send(signedEvent) }
     }
 

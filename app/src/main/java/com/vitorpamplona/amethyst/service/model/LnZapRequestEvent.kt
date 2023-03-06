@@ -21,12 +21,12 @@ class LnZapRequestEvent (
   companion object {
     const val kind = 9734
 
-    fun create(originalNote: Event, relays: Set<String>, privateKey: ByteArray, createdAt: Long = Date().time / 1000): LnZapRequestEvent {
+    fun create(originalNote: EventInterface, relays: Set<String>, privateKey: ByteArray, createdAt: Long = Date().time / 1000): LnZapRequestEvent {
       val content = ""
       val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
       var tags = listOf(
-        listOf("e", originalNote.id),
-        listOf("p", originalNote.pubKey),
+        listOf("e", originalNote.id()),
+        listOf("p", originalNote.pubKey()),
         listOf("relays") + relays
       )
       if (originalNote is LongTextNoteEvent) {

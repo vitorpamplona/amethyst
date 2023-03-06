@@ -53,11 +53,11 @@ class ReportEvent (
   companion object {
     const val kind = 1984
 
-    fun create(reportedPost: Event, type: ReportType, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ReportEvent {
+    fun create(reportedPost: EventInterface, type: ReportType, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ReportEvent {
       val content = ""
 
-      val reportPostTag = listOf("e", reportedPost.id, type.name.lowercase())
-      val reportAuthorTag = listOf("p", reportedPost.pubKey, type.name.lowercase())
+      val reportPostTag = listOf("e", reportedPost.id(), type.name.lowercase())
+      val reportAuthorTag = listOf("p", reportedPost.pubKey(), type.name.lowercase())
 
       val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
       var tags:List<List<String>> = listOf(reportPostTag, reportAuthorTag)
