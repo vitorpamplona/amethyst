@@ -66,8 +66,8 @@
     <string name="my_awesome_group">Mon groupe spectaculaire</string>
     <string name="picture_url">Url de l\'image</string>
     <string name="description">Description</string>
-    <string name="about_us">"à propos.. "</string>
-    <string name="what_s_on_your_mind">Qu\'es ce qui vous préoccupe ?</string>
+    <string name="about_us">à propos</string>
+    <string name="what_s_on_your_mind">Quoi de neuf ?</string>
     <string name="post">Envoyer</string>
     <string name="save">Sauvegarder</string>
     <string name="create">Créer</string>
@@ -85,7 +85,7 @@
     <string name="my_display_name">Mon nom visible du public</string>
     <string name="username">Nom d\'utilisateur</string>
     <string name="my_username">Mon nom d\'utilisateur</string>
-    <string name="about_me">à propos de moi</string>
+    <string name="about_me">Biographie</string>
     <string name="avatar_url">URL de l\'avatar</string>
     <string name="banner_url">URL de la bannière</string>
     <string name="website_url">URL de site</string>
@@ -94,14 +94,14 @@
     <string name="image_saved_to_the_gallery">Image enregistrée dans la galerie</string>
     <string name="failed_to_save_the_image">Échec de l\'enregistrement de l\'image</string>
     <string name="upload_image">Charger une image</string>
-    <string name="uploading">Chargement en cours...</string>
+    <string name="uploading">Chargement...</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">L\'utilisateur n\'a pas configuré d\'adresse Lightning pour recevoir des sats</string>
     <string name="reply_here">"Répondre ici.. "</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">Copie l\'ID de note dans le presse-papiers pour le partage</string>
     <string name="copy_channel_id_note_to_the_clipboard">Copier l\'ID de la chaîne (Note) dans le presse-papiers</string>
     <string name="edits_the_channel_metadata">Modifie les métadonnées du canal</string>
     <string name="join">Joindre</string>
-    <string name="known">Connu</string>
+    <string name="known">Connus</string>
     <string name="new_requests">Nouvelles demandes</string>
     <string name="blocked_users">Utilisateurs bloqués</string>
     <string name="new_threads">Nouveaux sujets</string>
@@ -131,7 +131,7 @@
     <string name="show_password">Révéler le mot de passe</string>
     <string name="hide_password">Cacher le mot de passe</string>
     <string name="invalid_key">Clé non valide</string>
-    <string name="i_accept_the">"J\accepte le(s) "</string>
+    <string name="i_accept_the">"J\'accepte les "</string>
     <string name="terms_of_use">conditions d\'utilisation</string>
     <string name="acceptance_of_terms_is_required">L\'acceptation des conditions est requise</string>
     <string name="key_is_required">La clé est requise</string>
@@ -159,9 +159,9 @@
     <string name="auto">Auto</string>
     <string name="translated_from">traduit de</string>
     <string name="to">vers</string>
-    <string name="show_in">Montre</string>
-    <string name="first">premier</string>
-    <string name="always_translate_to">Toujours traduire en</string>
+    <string name="show_in">Montre en</string>
+    <string name="first">en premier</string>
+    <string name="always_translate_to">"Toujours traduire en "</string>
     <string name="nip_05" translatable="false">NIP-05</string>
     <string name="lnurl" translatable="false">LNURL...</string>
     <string name="never">jamais</string>
