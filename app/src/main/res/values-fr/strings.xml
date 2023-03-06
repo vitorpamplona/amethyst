@@ -66,7 +66,7 @@
     <string name="my_awesome_group">Mon groupe spectaculaire</string>
     <string name="picture_url">Url de l\'image</string>
     <string name="description">Description</string>
-    <string name="about_us">À propos</string>
+    <string name="about_us">à propos</string>
     <string name="what_s_on_your_mind">Quoi de neuf ?</string>
     <string name="post">Envoyer</string>
     <string name="save">Sauvegarder</string>
@@ -161,7 +161,7 @@
     <string name="to">vers</string>
     <string name="show_in">Montre en</string>
     <string name="first">en premier</string>
-    <string name="always_translate_to">Toujours traduire en </string>
+    <string name="always_translate_to">"Toujours traduire en "</string>
     <string name="nip_05" translatable="false">NIP-05</string>
     <string name="lnurl" translatable="false">LNURL...</string>
     <string name="never">jamais</string>
