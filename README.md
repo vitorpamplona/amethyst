@@ -121,6 +121,11 @@ openssl base64 < <my-release-key.keystore> | tr -d '\n' | tee some_signing_key.j
 7. Add your CHANGE LOG to the description of the new release
 8. Download the `aab` file and upload it to the` PlayStore.
 
+# Privacy on Relays
+Your internet protocol (IP) address is exposed to the relays you connect to. If you want to improve your privacy, consider utilizing a service that masks your IP address (e.g. a VPN) from trackers online. 
+
+The relay also learns which public keys you are requesting, meaning your public key will be tied to your IP address.
+
 # Contributing
 
 [Issues](https://github.com/vitorpamplona/amethyst/issues) and [pull requests](https://github.com/vitorpamplona/amethyst/pulls) are very welcome.
