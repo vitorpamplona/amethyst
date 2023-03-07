@@ -77,7 +77,7 @@ object LocalCache {
   }
 
   fun checkGetOrCreateNote(key: String): Note? {
-    if (key.startsWith("naddr1") || key.contains(":")) {
+    if (ATag.isATag(key)) {
       return checkGetOrCreateAddressableNote(key)
     }
     return try {

@@ -34,6 +34,10 @@ data class ATag(val kind: Int, val pubKeyHex: String, val dTag: String, val rela
     }
 
     companion object {
+        fun isATag(key: String): Boolean {
+            return key.startsWith("naddr1") || key.contains(":")
+        }
+
         fun parse(address: String, relay: String?): ATag? {
             return if (address.startsWith("naddr") || address.startsWith("nostr:naddr"))
                 parseNAddr(address)
