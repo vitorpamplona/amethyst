@@ -16,64 +16,63 @@ import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Constants
 
 object ServiceManager {
-  private var account: Account? = null
+    private var account: Account? = null
 
-  fun start(account: Account) {
-    this.account = account
-    start()
-  }
-
-  fun start() {
-    val myAccount = account
-
-    if (myAccount != null) {
-      Client.connect(myAccount.activeRelays() ?: myAccount.convertLocalRelays())
-
-      // start services
-      NostrAccountDataSource.account = myAccount
-      NostrHomeDataSource.account = myAccount
-      NostrChatroomListDataSource.account = myAccount
-
-      // Notification Elements
-      NostrAccountDataSource.start()
-      NostrHomeDataSource.start()
-      NostrChatroomListDataSource.start()
-
-      // More Info Data Sources
-      NostrSingleEventDataSource.start()
-      NostrSingleChannelDataSource.start()
-      NostrSingleUserDataSource.start()
-    } else {
-      // if not logged in yet, start a basic service wit default relays
-      Client.connect(Constants.convertDefaultRelays())
+    fun start(account: Account) {
+        this.account = account
+        start()
     }
-  }
 
-  fun pause() {
-    NostrAccountDataSource.stop()
-    NostrHomeDataSource.stop()
-    NostrChannelDataSource.stop()
-    NostrChatroomListDataSource.stop()
-    NostrUserProfileDataSource.stop()
+    fun start() {
+        val myAccount = account
 
-    NostrGlobalDataSource.stop()
-    NostrSingleChannelDataSource.stop()
-    NostrSingleEventDataSource.stop()
-    NostrSingleUserDataSource.stop()
-    NostrThreadDataSource.stop()
-    NostrUserProfileDataSource.stop()
+        if (myAccount != null) {
+            Client.connect(myAccount.activeRelays() ?: myAccount.convertLocalRelays())
 
-    Client.disconnect()
-  }
+            // start services
+            NostrAccountDataSource.account = myAccount
+            NostrHomeDataSource.account = myAccount
+            NostrChatroomListDataSource.account = myAccount
 
-  fun cleanUp() {
-    LocalCache.cleanObservers()
+            // Notification Elements
+            NostrAccountDataSource.start()
+            NostrHomeDataSource.start()
+            NostrChatroomListDataSource.start()
 
-    account?.let {
-      LocalCache.pruneOldAndHiddenMessages(it)
-      LocalCache.pruneHiddenMessages(it)
-      //LocalCache.pruneNonFollows(it)
+            // More Info Data Sources
+            NostrSingleEventDataSource.start()
+            NostrSingleChannelDataSource.start()
+            NostrSingleUserDataSource.start()
+        } else {
+            // if not logged in yet, start a basic service wit default relays
+            Client.connect(Constants.convertDefaultRelays())
+        }
     }
-  }
 
+    fun pause() {
+        NostrAccountDataSource.stop()
+        NostrHomeDataSource.stop()
+        NostrChannelDataSource.stop()
+        NostrChatroomListDataSource.stop()
+        NostrUserProfileDataSource.stop()
+
+        NostrGlobalDataSource.stop()
+        NostrSingleChannelDataSource.stop()
+        NostrSingleEventDataSource.stop()
+        NostrSingleUserDataSource.stop()
+        NostrThreadDataSource.stop()
+        NostrUserProfileDataSource.stop()
+
+        Client.disconnect()
+    }
+
+    fun cleanUp() {
+        LocalCache.cleanObservers()
+
+        account?.let {
+            LocalCache.pruneOldAndHiddenMessages(it)
+            LocalCache.pruneHiddenMessages(it)
+            // LocalCache.pruneNonFollows(it)
+        }
+    }
 }

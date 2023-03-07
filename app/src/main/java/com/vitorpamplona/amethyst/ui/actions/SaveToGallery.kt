@@ -31,7 +31,6 @@ fun SaveToGallery(url: String) {
     val localContext = LocalContext.current
     val scope = rememberCoroutineScope()
 
-
     fun saveImage() {
         ImageSaver.saveImage(
             context = localContext,

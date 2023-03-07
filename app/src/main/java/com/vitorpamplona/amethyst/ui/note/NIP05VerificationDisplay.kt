@@ -27,14 +27,14 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.Nip05Verifier
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserMetadata
+import com.vitorpamplona.amethyst.service.Nip05Verifier
 import com.vitorpamplona.amethyst.ui.theme.Nip05
-import java.util.Date
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.util.Date
 
 @Composable
 fun nip05VerificationAsAState(user: UserMetadata, pubkeyHex: String): State<Boolean?> {
@@ -81,8 +81,9 @@ fun ObserveDisplayNip05Status(baseNote: Note) {
     val note = noteState?.note ?: return
 
     val author = note.author
-    if (author != null)
+    if (author != null) {
         ObserveDisplayNip05Status(author)
+    }
 }
 
 @Composable
@@ -94,16 +95,16 @@ fun ObserveDisplayNip05Status(baseUser: User) {
 
     user.nip05()?.let { nip05 ->
         if (nip05.split("@").size == 2) {
-
             val nip05Verified by nip05VerificationAsAState(user.info!!, user.pubkeyHex)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (nip05.split("@")[0] != "_")
+                if (nip05.split("@")[0] != "_") {
                     Text(
                         text = AnnotatedString(nip05.split("@")[0]),
                         color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                }
 
                 if (nip05Verified == null) {
                     Icon(

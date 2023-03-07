@@ -71,7 +71,6 @@ import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileZapsFeedFilter
-import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.screen.FeedView
@@ -144,11 +143,12 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
         val coroutineScope = rememberCoroutineScope()
         val scrollState = rememberScrollState()
 
-        Column(modifier = Modifier
-            .fillMaxSize()
-            .onSizeChanged {
-                columnSize = it
-            }
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .onSizeChanged {
+                    columnSize = it
+                }
         ) {
             Box(
                 modifier = Modifier
@@ -216,7 +216,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                                 val userState by baseUser.live().reports.observeAsState()
                                 val userReports = userState?.user?.reports?.values?.flatten()?.count()
 
-                                Text(text = "${userReports.toString()} ${stringResource(R.string.reports)}")
+                                Text(text = "$userReports ${stringResource(R.string.reports)}")
                             },
                             {
                                 val userState by baseUser.live().relays.observeAsState()
@@ -279,11 +279,12 @@ private fun ProfileHeader(
     Box {
         DrawBanner(baseUser)
 
-        Box(modifier = Modifier
-            .padding(horizontal = 10.dp)
-            .size(40.dp)
-            .align(Alignment.TopEnd)) {
-
+        Box(
+            modifier = Modifier
+                .padding(horizontal = 10.dp)
+                .size(40.dp)
+                .align(Alignment.TopEnd)
+        ) {
             Button(
                 modifier = Modifier
                     .size(30.dp)
@@ -299,12 +300,11 @@ private fun ProfileHeader(
                 Icon(
                     tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                     imageVector = Icons.Default.MoreVert,
-                    contentDescription = stringResource(R.string.more_options),
+                    contentDescription = stringResource(R.string.more_options)
                 )
 
                 UserProfileDropDownMenu(baseUser, popupExpanded, { popupExpanded = false }, accountViewModel)
             }
-
         }
 
         Column(
@@ -313,12 +313,10 @@ private fun ProfileHeader(
                 .padding(horizontal = 10.dp)
                 .padding(top = 75.dp)
         ) {
-
             Row(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Bottom
             ) {
-
                 UserPicture(
                     baseUser = baseUser,
                     baseUserAccount = account.userProfile(),
@@ -326,8 +324,9 @@ private fun ProfileHeader(
                     pictureModifier = Modifier.border(
                         3.dp,
                         MaterialTheme.colors.background,
-                        CircleShape), 
-                    onClick =  {
+                        CircleShape
+                    ),
+                    onClick = {
                         if (baseUser.profilePicture() != null) {
                             zoomImageDialogOpen = true
                         }
@@ -343,9 +342,11 @@ private fun ProfileHeader(
 
                 Spacer(Modifier.weight(1f))
 
-                Row(modifier = Modifier
-                    .height(35.dp)
-                    .padding(bottom = 3.dp)) {
+                Row(
+                    modifier = Modifier
+                        .height(35.dp)
+                        .padding(bottom = 3.dp)
+                ) {
                     MessageButton(baseUser, navController)
 
                     NPubCopyButton(baseUser)
@@ -390,7 +391,8 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, navController: 
 
     Row(verticalAlignment = Alignment.Bottom) {
         user.bestDisplayName()?.let {
-            Text(it,
+            Text(
+                it,
                 modifier = Modifier.padding(top = 7.dp),
                 fontWeight = FontWeight.Bold,
                 fontSize = 25.sp
@@ -498,7 +500,6 @@ fun BadgeThumb(
     }
 }
 
-
 @Composable
 fun BadgeThumb(
     baseNote: Note,
@@ -517,7 +518,8 @@ fun BadgeThumb(
     Box(
         Modifier
             .width(size)
-            .height(size)) {
+            .height(size)
+    ) {
         if (image == null) {
             Image(
                 painter = BitmapPainter(RoboHashCache.get(ctx, "ohnothisauthorisnotfound")),
@@ -538,10 +540,11 @@ fun BadgeThumb(
                     .clip(shape = CircleShape)
                     .background(MaterialTheme.colors.background)
                     .run {
-                        if (onClick != null)
-                            this.clickable(onClick = { onClick(note) } )
-                        else
+                        if (onClick != null) {
+                            this.clickable(onClick = { onClick(note) })
+                        } else {
                             this
+                        }
                     }
 
             )
@@ -577,7 +580,7 @@ private fun DrawBanner(baseUser: User) {
         )
 
         if (zoomImageDialogOpen) {
-            ZoomableImageDialog(imageUrl = banner, onDismiss = {zoomImageDialogOpen = false})
+            ZoomableImageDialog(imageUrl = banner, onDismiss = { zoomImageDialogOpen = false })
         }
     } else {
         Image(
@@ -740,8 +743,6 @@ fun TabRelays(user: User, accountViewModel: AccountViewModel, navController: Nav
     }
 }
 
-
-
 @Composable
 private fun NPubCopyButton(
     user: User
@@ -758,7 +759,7 @@ private fun NPubCopyButton(
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-            ),
+            )
     ) {
         Icon(
             tint = Color.White,
@@ -788,7 +789,7 @@ private fun MessageButton(user: User, navController: NavController) {
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-            ),
+            )
     ) {
         Icon(
             painter = painterResource(R.drawable.ic_dm),
@@ -805,8 +806,9 @@ private fun EditButton(account: Account) {
         mutableStateOf(false)
     }
 
-    if (wantsToEdit)
+    if (wantsToEdit) {
         NewUserMetadataView({ wantsToEdit = false }, account)
+    }
 
     Button(
         modifier = Modifier
@@ -875,7 +877,6 @@ fun ShowUserButton(onClick: () -> Unit) {
     }
 }
 
-
 @Composable
 fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () -> Unit, accountViewModel: AccountViewModel) {
     val clipboardManager = LocalClipboardManager.current
@@ -892,7 +893,7 @@ fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () ->
             Text(stringResource(R.string.copy_user_id))
         }
 
-        if ( account.userProfile() != user) {
+        if (account.userProfile() != user) {
             Divider()
             if (account.isHidden(user)) {
                 DropdownMenuItem(onClick = {

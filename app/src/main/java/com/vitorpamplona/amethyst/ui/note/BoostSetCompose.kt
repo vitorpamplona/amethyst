@@ -68,7 +68,7 @@ fun BoostSetCompose(boostSetCard: BoostSetCard, isInnerNote: Boolean = false, ro
             modifier = Modifier.background(backgroundColor).combinedClickable(
                 onClick = {
                     if (noteEvent !is ChannelMessageEvent) {
-                        navController.navigate("Note/${note.idHex}"){
+                        navController.navigate("Note/${note.idHex}") {
                             launchSingleTop = true
                         }
                     } else {
@@ -80,18 +80,21 @@ fun BoostSetCompose(boostSetCard: BoostSetCard, isInnerNote: Boolean = false, ro
                 onLongClick = { popupExpanded = true }
             )
         ) {
-            Row(modifier = Modifier
-                .padding(
-                    start = if (!isInnerNote) 12.dp else 0.dp,
-                    end = if (!isInnerNote) 12.dp else 0.dp,
-                    top = 10.dp)
+            Row(
+                modifier = Modifier
+                    .padding(
+                        start = if (!isInnerNote) 12.dp else 0.dp,
+                        end = if (!isInnerNote) 12.dp else 0.dp,
+                        top = 10.dp
+                    )
             ) {
-
                 // Draws the like picture outside the boosted card.
                 if (!isInnerNote) {
-                    Box(modifier = Modifier
-                        .width(55.dp)
-                        .padding(0.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .width(55.dp)
+                            .padding(0.dp)
+                    ) {
                         Icon(
                             painter = painterResource(R.drawable.ic_retweeted),
                             null,

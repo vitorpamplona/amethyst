@@ -48,12 +48,13 @@ fun RelayCompose(
             modifier = Modifier
                 .padding(start = 12.dp, end = 12.dp, top = 10.dp)
         ) {
+            // UserPicture(user, navController, account.userProfile(), 55.dp)
 
-            //UserPicture(user, navController, account.userProfile(), 55.dp)
-
-            Column(modifier = Modifier
-                .padding(start = 10.dp)
-                .weight(1f)) {
+            Column(
+                modifier = Modifier
+                    .padding(start = 10.dp)
+                    .weight(1f)
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                     Text(
                         relay.url.trim().removePrefix("wss://"),

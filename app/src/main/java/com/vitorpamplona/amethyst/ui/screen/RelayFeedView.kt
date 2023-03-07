@@ -25,7 +25,6 @@ import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
 import com.vitorpamplona.amethyst.ui.note.RelayCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -36,8 +35,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicBoolean
 
-class RelayFeedViewModel: ViewModel() {
+class RelayFeedViewModel : ViewModel() {
     val order = compareByDescending<RelayInfo> { it.lastEvent }.thenByDescending { it.counter }.thenBy { it.url }
 
     private val _feedContent = MutableStateFlow<List<RelayInfo>>(emptyList())
@@ -112,11 +112,12 @@ fun RelayFeedView(viewModel: RelayFeedViewModel, accountViewModel: AccountViewMo
     val swipeRefreshState = rememberSwipeRefreshState(isRefreshing)
 
     var wantsToAddRelay by remember {
-        mutableStateOf( "")
+        mutableStateOf("")
     }
 
-    if (wantsToAddRelay.isNotEmpty())
+    if (wantsToAddRelay.isNotEmpty()) {
         NewRelayListView({ wantsToAddRelay = "" }, account, wantsToAddRelay)
+    }
 
     LaunchedEffect(isRefreshing) {
         if (isRefreshing) {
@@ -129,7 +130,7 @@ fun RelayFeedView(viewModel: RelayFeedViewModel, accountViewModel: AccountViewMo
         state = swipeRefreshState,
         onRefresh = {
             isRefreshing = true
-        },
+        }
     ) {
         Column() {
             val listState = rememberLazyListState()
@@ -142,7 +143,8 @@ fun RelayFeedView(viewModel: RelayFeedViewModel, accountViewModel: AccountViewMo
                 state = listState
             ) {
                 itemsIndexed(feedState, key = { _, item -> item.url }) { index, item ->
-                    RelayCompose(item,
+                    RelayCompose(
+                        item,
                         accountViewModel = accountViewModel,
                         navController = navController,
                         onAddRelay = { wantsToAddRelay = item.url },

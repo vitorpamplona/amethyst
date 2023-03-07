@@ -1,17 +1,17 @@
 package com.vitorpamplona.amethyst.service.relays
 
 import androidx.lifecycle.LiveData
+import com.vitorpamplona.amethyst.service.model.Event
+import com.vitorpamplona.amethyst.service.model.EventInterface
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import com.vitorpamplona.amethyst.service.model.Event
-import com.vitorpamplona.amethyst.service.model.EventInterface
 
 /**
  * RelayPool manages the connection to multiple Relays and lets consumers deal with simple events.
  */
-object RelayPool: Relay.Listener {
+object RelayPool : Relay.Listener {
 
     val scope = CoroutineScope(Job() + Dispatchers.IO)
 
@@ -30,8 +30,8 @@ object RelayPool: Relay.Listener {
         return relays.firstOrNull() { it.url == url }
     }
 
-    fun loadRelays(relayList: List<Relay>){
-        if (!relayList.isNullOrEmpty()){
+    fun loadRelays(relayList: List<Relay>) {
+        if (!relayList.isNullOrEmpty()) {
             relayList.forEach { addRelay(it) }
         } else {
             Constants.convertDefaultRelays().forEach { addRelay(it) }
@@ -59,7 +59,7 @@ object RelayPool: Relay.Listener {
         relays.forEach { it.send(signedEvent) }
     }
 
-    fun close(subscriptionId: String){
+    fun close(subscriptionId: String) {
         relays.forEach { it.close(subscriptionId) }
     }
 
@@ -123,7 +123,7 @@ object RelayPool: Relay.Listener {
     }
 }
 
-class RelayPoolLiveData(val relays: RelayPool): LiveData<RelayPoolState>(RelayPoolState(relays)) {
+class RelayPoolLiveData(val relays: RelayPool) : LiveData<RelayPoolState>(RelayPoolState(relays)) {
     fun refresh() {
         postValue(RelayPoolState(relays))
     }

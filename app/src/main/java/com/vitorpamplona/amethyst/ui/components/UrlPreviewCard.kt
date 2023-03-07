@@ -25,51 +25,52 @@ import java.net.URL
 
 @Composable
 fun UrlPreviewCard(
-  url: String,
-  previewInfo: UrlInfoItem
+    url: String,
+    previewInfo: UrlInfoItem
 ) {
-  val uri = LocalUriHandler.current
+    val uri = LocalUriHandler.current
 
-  Row(
-    modifier = Modifier
-      .clickable { runCatching { uri.openUri(url) } }
-      .clip(shape = RoundedCornerShape(15.dp))
-      .border(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.12f), RoundedCornerShape(15.dp))
-  ) {
-    Column {
-      // correctly treating relative images
-      val imageUrl = if (previewInfo.image.startsWith("/"))
-        URL(URL(previewInfo.url), previewInfo.image).toString()
-      else
-        previewInfo.image
-
-      AsyncImage(
-        model = imageUrl,
-        contentDescription = stringResource(R.string.preview_card_image_for, url),
-        contentScale = ContentScale.FillWidth,
-        modifier = Modifier.fillMaxWidth()
-      )
-
-      Text(
-        text = previewInfo.title,
-        style = MaterialTheme.typography.body2,
+    Row(
         modifier = Modifier
-          .fillMaxWidth()
-          .padding(start = 10.dp, end = 10.dp, top = 10.dp),
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis
-      )
+            .clickable { runCatching { uri.openUri(url) } }
+            .clip(shape = RoundedCornerShape(15.dp))
+            .border(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.12f), RoundedCornerShape(15.dp))
+    ) {
+        Column {
+            // correctly treating relative images
+            val imageUrl = if (previewInfo.image.startsWith("/")) {
+                URL(URL(previewInfo.url), previewInfo.image).toString()
+            } else {
+                previewInfo.image
+            }
 
-      Text(
-        text = previewInfo.description,
-        style = MaterialTheme.typography.caption,
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
-        color = Color.Gray,
-        maxLines = 3,
-        overflow = TextOverflow.Ellipsis
-      )
+            AsyncImage(
+                model = imageUrl,
+                contentDescription = stringResource(R.string.preview_card_image_for, url),
+                contentScale = ContentScale.FillWidth,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Text(
+                text = previewInfo.title,
+                style = MaterialTheme.typography.body2,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 10.dp, end = 10.dp, top = 10.dp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Text(
+                text = previewInfo.description,
+                style = MaterialTheme.typography.caption,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
+                color = Color.Gray,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
-  }
 }

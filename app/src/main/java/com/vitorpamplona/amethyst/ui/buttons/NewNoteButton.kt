@@ -26,15 +26,16 @@ fun NewNoteButton(account: Account) {
         mutableStateOf(false)
     }
 
-    if (wantsToPost)
+    if (wantsToPost) {
         NewPostView({ wantsToPost = false }, account = account)
+    }
 
     OutlinedButton(
         onClick = { wantsToPost = true },
         modifier = Modifier.size(55.dp),
         shape = CircleShape,
         colors = ButtonDefaults.outlinedButtonColors(backgroundColor = MaterialTheme.colors.primary),
-        contentPadding = PaddingValues(0.dp),
+        contentPadding = PaddingValues(0.dp)
     ) {
         Icon(
             painter = painterResource(R.drawable.ic_compose),

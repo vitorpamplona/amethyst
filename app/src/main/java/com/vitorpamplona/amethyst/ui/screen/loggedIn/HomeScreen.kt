@@ -27,7 +27,6 @@ import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.google.accompanist.pager.rememberPagerState
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
 import com.vitorpamplona.amethyst.ui.dal.HomeConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeNewThreadFeedFilter
@@ -87,7 +86,7 @@ fun HomeScreen(accountViewModel: AccountViewModel, navController: NavController)
                         Modifier.pagerTabIndicatorOffset(pagerState, tabPositions),
                         color = MaterialTheme.colors.primary
                     )
-                },
+                }
             ) {
                 Tab(
                     selected = pagerState.currentPage == 0,

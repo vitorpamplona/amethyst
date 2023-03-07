@@ -7,7 +7,6 @@ import com.vitorpamplona.amethyst.model.LocalCacheState
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileZapsFeedFilter
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -18,10 +17,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicBoolean
 
-class NostrUserProfileZapsFeedViewModel: LnZapFeedViewModel(UserProfileZapsFeedFilter)
+class NostrUserProfileZapsFeedViewModel : LnZapFeedViewModel(UserProfileZapsFeedFilter)
 
-open class LnZapFeedViewModel(val dataSource: FeedFilter<Pair<Note, Note>>): ViewModel() {
+open class LnZapFeedViewModel(val dataSource: FeedFilter<Pair<Note, Note>>) : ViewModel() {
     private val _feedContent = MutableStateFlow<LnZapFeedState>(LnZapFeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
 
@@ -46,7 +46,7 @@ open class LnZapFeedViewModel(val dataSource: FeedFilter<Pair<Note, Note>>): Vie
         }
     }
 
-    private fun updateFeed(notes: List<Pair<Note,Note>>) {
+    private fun updateFeed(notes: List<Pair<Note, Note>>) {
         val scope = CoroutineScope(Job() + Dispatchers.Main)
         scope.launch {
             val currentState = feedContent.value

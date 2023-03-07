@@ -17,7 +17,6 @@ import com.vitorpamplona.amethyst.ui.dal.ThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -28,21 +27,21 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicBoolean
 
-class NostrChannelFeedViewModel: FeedViewModel(ChannelFeedFilter)
-class NostrChatRoomFeedViewModel: FeedViewModel(ChatroomFeedFilter)
-class NostrGlobalFeedViewModel: FeedViewModel(GlobalFeedFilter)
-class NostrThreadFeedViewModel: FeedViewModel(ThreadFeedFilter)
-class NostrUserProfileNewThreadsFeedViewModel: FeedViewModel(UserProfileNewThreadFeedFilter)
-class NostrUserProfileConversationsFeedViewModel: FeedViewModel(UserProfileConversationsFeedFilter)
-class NostrUserProfileReportFeedViewModel: FeedViewModel(UserProfileReportsFeedFilter)
-class NostrChatroomListKnownFeedViewModel: FeedViewModel(ChatroomListKnownFeedFilter)
-class NostrChatroomListNewFeedViewModel: FeedViewModel(ChatroomListNewFeedFilter)
-class NostrHomeFeedViewModel: FeedViewModel(HomeNewThreadFeedFilter)
-class NostrHomeRepliesFeedViewModel: FeedViewModel(HomeConversationsFeedFilter)
+class NostrChannelFeedViewModel : FeedViewModel(ChannelFeedFilter)
+class NostrChatRoomFeedViewModel : FeedViewModel(ChatroomFeedFilter)
+class NostrGlobalFeedViewModel : FeedViewModel(GlobalFeedFilter)
+class NostrThreadFeedViewModel : FeedViewModel(ThreadFeedFilter)
+class NostrUserProfileNewThreadsFeedViewModel : FeedViewModel(UserProfileNewThreadFeedFilter)
+class NostrUserProfileConversationsFeedViewModel : FeedViewModel(UserProfileConversationsFeedFilter)
+class NostrUserProfileReportFeedViewModel : FeedViewModel(UserProfileReportsFeedFilter)
+class NostrChatroomListKnownFeedViewModel : FeedViewModel(ChatroomListKnownFeedFilter)
+class NostrChatroomListNewFeedViewModel : FeedViewModel(ChatroomListNewFeedFilter)
+class NostrHomeFeedViewModel : FeedViewModel(HomeNewThreadFeedFilter)
+class NostrHomeRepliesFeedViewModel : FeedViewModel(HomeConversationsFeedFilter)
 
-
-abstract class FeedViewModel(val localFilter: FeedFilter<Note>): ViewModel() {
+abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
     private val _feedContent = MutableStateFlow<FeedState>(FeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
 

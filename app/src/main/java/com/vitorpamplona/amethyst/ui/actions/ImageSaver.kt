@@ -15,7 +15,6 @@ import okio.IOException
 import okio.sink
 import java.io.File
 
-
 object ImageSaver {
     /**
      * Saves the image to the gallery.
@@ -27,7 +26,7 @@ object ImageSaver {
         url: String,
         context: Context,
         onSuccess: () -> Any?,
-        onError: (Throwable) -> Any?,
+        onError: (Throwable) -> Any?
     ) {
         val client = OkHttpClient.Builder().build()
 
@@ -56,13 +55,13 @@ object ImageSaver {
                             displayName = File(url).nameWithoutExtension,
                             contentType = contentType,
                             contentSource = response.body.source(),
-                            contentResolver = context.contentResolver,
+                            contentResolver = context.contentResolver
                         )
                     } else {
                         saveContentDefault(
                             fileName = File(url).name,
                             contentSource = response.body.source(),
-                            context = context,
+                            context = context
                         )
                     }
                     onSuccess()
@@ -79,7 +78,7 @@ object ImageSaver {
         displayName: String,
         contentType: String,
         contentSource: BufferedSource,
-        contentResolver: ContentResolver,
+        contentResolver: ContentResolver
     ) {
         val contentValues = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
@@ -114,7 +113,7 @@ object ImageSaver {
     private fun saveContentDefault(
         fileName: String,
         contentSource: BufferedSource,
-        context: Context,
+        context: Context
     ) {
         val subdirectory = File(
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),

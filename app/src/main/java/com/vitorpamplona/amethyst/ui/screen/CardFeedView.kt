@@ -44,7 +44,7 @@ fun CardFeedView(viewModel: CardFeedViewModel, accountViewModel: AccountViewMode
         state = swipeRefreshState,
         onRefresh = {
             isRefreshing = true
-        },
+        }
     ) {
         Column() {
             Crossfade(targetState = feedState, animationSpec = tween(durationMillis = 100)) { state ->

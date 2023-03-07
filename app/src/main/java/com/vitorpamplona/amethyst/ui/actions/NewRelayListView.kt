@@ -55,7 +55,6 @@ import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import java.lang.Math.round
 
-
 @Composable
 fun NewRelayListView(onClose: () -> Unit, account: Account, relayToAdd: String = "") {
     val postViewModel: NewRelayListViewModel = viewModel()
@@ -74,8 +73,7 @@ fun NewRelayListView(onClose: () -> Unit, account: Account, relayToAdd: String =
             dismissOnClickOutside = false
         )
     ) {
-        Surface(
-        ) {
+        Surface() {
             Column(
                 modifier = Modifier.padding(10.dp)
             ) {
@@ -105,26 +103,27 @@ fun NewRelayListView(onClose: () -> Unit, account: Account, relayToAdd: String =
                         contentPadding = PaddingValues(
                             top = 10.dp,
                             bottom = 10.dp
-                        ),
+                        )
                     ) {
                         itemsIndexed(feedState, key = { _, item -> item.url }) { index, item ->
-                            if (index == 0)
+                            if (index == 0) {
                                 ServerConfigHeader()
-                            ServerConfig(item,
+                            }
+                            ServerConfig(
+                                item,
                                 onToggleDownload = { postViewModel.toggleDownload(it) },
-                                onToggleUpload = { postViewModel.toggleUpload(it)  },
+                                onToggleUpload = { postViewModel.toggleUpload(it) },
 
                                 onToggleFollows = { postViewModel.toggleFollows(it) },
-                                onTogglePrivateDMs = { postViewModel.toggleMessages(it)  },
+                                onTogglePrivateDMs = { postViewModel.toggleMessages(it) },
                                 onTogglePublicChats = { postViewModel.togglePublicChats(it) },
-                                onToggleGlobal = { postViewModel.toggleGlobal(it)  },
-                                onToggleSearch = { postViewModel.toggleSearch(it)  },
+                                onToggleGlobal = { postViewModel.toggleGlobal(it) },
+                                onToggleSearch = { postViewModel.toggleSearch(it) },
 
                                 onDelete = { postViewModel.deleteRelay(it) }
                             )
                         }
                     }
-
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
@@ -161,7 +160,7 @@ fun ServerConfigHeader() {
                         maxLines = 1,
                         fontSize = 14.sp,
                         modifier = Modifier.weight(1f),
-                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                     )
 
                     Spacer(modifier = Modifier.size(10.dp))
@@ -171,7 +170,7 @@ fun ServerConfigHeader() {
                         maxLines = 1,
                         fontSize = 14.sp,
                         modifier = Modifier.weight(1f),
-                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                     )
 
                     Spacer(modifier = Modifier.size(10.dp))
@@ -181,7 +180,7 @@ fun ServerConfigHeader() {
                         maxLines = 1,
                         fontSize = 14.sp,
                         modifier = Modifier.weight(1f),
-                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                     )
 
                     Spacer(modifier = Modifier.size(5.dp))
@@ -191,7 +190,7 @@ fun ServerConfigHeader() {
                         maxLines = 1,
                         fontSize = 14.sp,
                         modifier = Modifier.weight(1f),
-                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                     )
 
                     Spacer(modifier = Modifier.size(2.dp))
@@ -217,7 +216,8 @@ fun ServerConfig(
     onToggleGlobal: (RelaySetupInfo) -> Unit,
     onToggleSearch: (RelaySetupInfo) -> Unit,
 
-    onDelete: (RelaySetupInfo) -> Unit) {
+    onDelete: (RelaySetupInfo) -> Unit
+) {
     Column(Modifier.fillMaxWidth()) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -262,9 +262,13 @@ fun ServerConfig(
                                     modifier = Modifier
                                         .padding(end = 5.dp)
                                         .size(15.dp),
-                                    tint = if (item.feedTypes.contains(FeedType.FOLLOWS)) Color.Green else MaterialTheme.colors.onSurface.copy(
-                                        alpha = 0.32f
-                                    )
+                                    tint = if (item.feedTypes.contains(FeedType.FOLLOWS)) {
+                                        Color.Green
+                                    } else {
+                                        MaterialTheme.colors.onSurface.copy(
+                                            alpha = 0.32f
+                                        )
+                                    }
                                 )
                             }
                             IconButton(
@@ -277,9 +281,13 @@ fun ServerConfig(
                                     modifier = Modifier
                                         .padding(horizontal = 5.dp)
                                         .size(15.dp),
-                                    tint = if (item.feedTypes.contains(FeedType.PRIVATE_DMS)) Color.Green else MaterialTheme.colors.onSurface.copy(
-                                        alpha = 0.32f
-                                    )
+                                    tint = if (item.feedTypes.contains(FeedType.PRIVATE_DMS)) {
+                                        Color.Green
+                                    } else {
+                                        MaterialTheme.colors.onSurface.copy(
+                                            alpha = 0.32f
+                                        )
+                                    }
                                 )
                             }
                             IconButton(
@@ -292,9 +300,13 @@ fun ServerConfig(
                                     modifier = Modifier
                                         .padding(horizontal = 5.dp)
                                         .size(15.dp),
-                                    tint = if (item.feedTypes.contains(FeedType.PUBLIC_CHATS)) Color.Green else MaterialTheme.colors.onSurface.copy(
-                                        alpha = 0.32f
-                                    )
+                                    tint = if (item.feedTypes.contains(FeedType.PUBLIC_CHATS)) {
+                                        Color.Green
+                                    } else {
+                                        MaterialTheme.colors.onSurface.copy(
+                                            alpha = 0.32f
+                                        )
+                                    }
                                 )
                             }
                             IconButton(
@@ -307,9 +319,13 @@ fun ServerConfig(
                                     modifier = Modifier
                                         .padding(horizontal = 5.dp)
                                         .size(15.dp),
-                                    tint = if (item.feedTypes.contains(FeedType.GLOBAL)) Color.Green else MaterialTheme.colors.onSurface.copy(
-                                        alpha = 0.32f
-                                    )
+                                    tint = if (item.feedTypes.contains(FeedType.GLOBAL)) {
+                                        Color.Green
+                                    } else {
+                                        MaterialTheme.colors.onSurface.copy(
+                                            alpha = 0.32f
+                                        )
+                                    }
                                 )
                             }
 
@@ -323,9 +339,13 @@ fun ServerConfig(
                                     modifier = Modifier
                                         .padding(horizontal = 5.dp)
                                         .size(15.dp),
-                                    tint = if (item.feedTypes.contains(FeedType.SEARCH)) Color.Green else MaterialTheme.colors.onSurface.copy(
-                                        alpha = 0.32f
-                                    )
+                                    tint = if (item.feedTypes.contains(FeedType.SEARCH)) {
+                                        Color.Green
+                                    } else {
+                                        MaterialTheme.colors.onSurface.copy(
+                                            alpha = 0.32f
+                                        )
+                                    }
                                 )
                             }
                         }
@@ -343,9 +363,13 @@ fun ServerConfig(
                                     modifier = Modifier
                                         .padding(horizontal = 5.dp)
                                         .size(15.dp),
-                                    tint = if (item.read) Color.Green else MaterialTheme.colors.onSurface.copy(
-                                        alpha = 0.32f
-                                    )
+                                    tint = if (item.read) {
+                                        Color.Green
+                                    } else {
+                                        MaterialTheme.colors.onSurface.copy(
+                                            alpha = 0.32f
+                                        )
+                                    }
                                 )
                             }
 
@@ -354,7 +378,7 @@ fun ServerConfig(
                                 maxLines = 1,
                                 fontSize = 14.sp,
                                 modifier = Modifier.weight(1f),
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                             )
 
                             IconButton(
@@ -367,9 +391,13 @@ fun ServerConfig(
                                     modifier = Modifier
                                         .padding(horizontal = 5.dp)
                                         .size(15.dp),
-                                    tint = if (item.write) Color.Green else MaterialTheme.colors.onSurface.copy(
-                                        alpha = 0.32f
-                                    )
+                                    tint = if (item.write) {
+                                        Color.Green
+                                    } else {
+                                        MaterialTheme.colors.onSurface.copy(
+                                            alpha = 0.32f
+                                        )
+                                    }
                                 )
                             }
 
@@ -378,7 +406,7 @@ fun ServerConfig(
                                 maxLines = 1,
                                 fontSize = 14.sp,
                                 modifier = Modifier.weight(1f),
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                             )
 
                             Icon(
@@ -395,7 +423,7 @@ fun ServerConfig(
                                 maxLines = 1,
                                 fontSize = 14.sp,
                                 modifier = Modifier.weight(1f),
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                             )
 
                             Icon(
@@ -410,7 +438,7 @@ fun ServerConfig(
                                 maxLines = 1,
                                 fontSize = 14.sp,
                                 modifier = Modifier.weight(1f),
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                             )
                         }
                     }
@@ -433,7 +461,7 @@ fun EditableServerConfig(relayToAdd: String, onNewRelay: (RelaySetupInfo) -> Uni
     Row(verticalAlignment = Alignment.CenterVertically) {
         OutlinedTextField(
             label = { Text(text = stringResource(R.string.add_a_relay)) },
-            modifier =  Modifier.weight(1f),
+            modifier = Modifier.weight(1f),
             value = url,
             onValueChange = { url = it },
             placeholder = {
@@ -487,14 +515,12 @@ fun EditableServerConfig(relayToAdd: String, onNewRelay: (RelaySetupInfo) -> Uni
         ) {
             Text(text = stringResource(id = R.string.add), color = Color.White)
         }
-
     }
 }
 
-
 fun countToHumanReadable(counter: Int) = when {
-    counter >= 1000000000 -> "${round(counter/1000000000f)}G"
-    counter >= 1000000 -> "${round(counter/1000000f)}M"
-    counter >= 1000 -> "${round(counter/1000f)}k"
+    counter >= 1000000000 -> "${round(counter / 1000000000f)}G"
+    counter >= 1000000 -> "${round(counter / 1000000f)}M"
+    counter >= 1000 -> "${round(counter / 1000f)}k"
     else -> "$counter"
 }

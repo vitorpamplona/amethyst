@@ -51,7 +51,7 @@ fun ChatroomListFeedView(
         state = swipeRefreshState,
         onRefresh = {
             isRefreshing = true
-        },
+        }
     ) {
         Column() {
             Crossfade(
@@ -89,7 +89,7 @@ private fun FeedLoaded(
     state: FeedState.Loaded,
     accountViewModel: AccountViewModel,
     navController: NavController,
-    markAsRead: MutableState<Boolean>,
+    markAsRead: MutableState<Boolean>
 ) {
     val listState = rememberLazyListState()
 
@@ -135,7 +135,8 @@ private fun FeedLoaded(
     ) {
         itemsIndexed(
             state.feed.value,
-            key = { index, item -> if (index == 0) index else item.idHex }) { index, item ->
+            key = { index, item -> if (index == 0) index else item.idHex }
+        ) { index, item ->
             ChatroomCompose(
                 item,
                 accountViewModel = accountViewModel,

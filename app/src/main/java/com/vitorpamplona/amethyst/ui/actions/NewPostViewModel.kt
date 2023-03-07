@@ -15,7 +15,7 @@ import com.vitorpamplona.amethyst.ui.components.noProtocolUrlValidator
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 
-class NewPostViewModel: ViewModel() {
+class NewPostViewModel : ViewModel() {
     private var account: Account? = null
     private var originalNote: Note? = null
 

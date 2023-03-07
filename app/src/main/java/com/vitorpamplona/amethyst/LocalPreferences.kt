@@ -6,12 +6,12 @@ import com.google.gson.reflect.TypeToken
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.model.toByteArray
-import java.util.Locale
-import nostr.postr.Persona
 import com.vitorpamplona.amethyst.service.model.ContactListEvent
 import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.Event.Companion.getRefinedEvent
+import nostr.postr.Persona
 import nostr.postr.toHex
+import java.util.Locale
 
 class LocalPreferences(context: Context) {
     private object PrefKeys {
@@ -25,7 +25,7 @@ class LocalPreferences(context: Context) {
         const val TRANSLATE_TO = "translateTo"
         const val ZAP_AMOUNTS = "zapAmounts"
         const val LATEST_CONTACT_LIST = "latestContactList"
-        val LAST_READ: (String) -> String = { route -> "last_read_route_${route}" }
+        val LAST_READ: (String) -> String = { route -> "last_read_route_$route" }
     }
 
     private val encryptedPreferences = EncryptedStorage().preferences(context)
@@ -83,10 +83,10 @@ class LocalPreferences(context: Context) {
             val languagePreferences = try {
                 getString(PrefKeys.LANGUAGE_PREFS, null)?.let {
                     gson.fromJson(it, object : TypeToken<Map<String, String>>() {}.type) as Map<String, String>
-                } ?: mapOf<String,String>()
+                } ?: mapOf<String, String>()
             } catch (e: Throwable) {
                 e.printStackTrace()
-                mapOf<String,String>()
+                mapOf<String, String>()
             }
 
             if (pubKey != null) {
@@ -118,5 +118,4 @@ class LocalPreferences(context: Context) {
             return getLong(PrefKeys.LAST_READ(route), 0)
         }
     }
-
 }

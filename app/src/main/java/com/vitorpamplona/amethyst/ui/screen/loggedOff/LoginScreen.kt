@@ -88,9 +88,8 @@ fun LoginPage(accountViewModel: AccountStateViewModel) {
             modifier = Modifier
                 .padding(20.dp)
                 .fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
             Image(
                 painterResource(id = R.drawable.amethyst),
                 contentDescription = stringResource(R.string.app_logo),
@@ -142,8 +141,13 @@ fun LoginPage(accountViewModel: AccountStateViewModel) {
                     IconButton(onClick = { showPassword = !showPassword }) {
                         Icon(
                             imageVector = if (showPassword) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                            contentDescription = if (showPassword) stringResource(R.string.show_password) else stringResource(
-                                                            R.string.hide_password)
+                            contentDescription = if (showPassword) {
+                                stringResource(R.string.show_password)
+                            } else {
+                                stringResource(
+                                    R.string.hide_password
+                                )
+                            }
                         )
                     }
                 },
@@ -179,7 +183,7 @@ fun LoginPage(accountViewModel: AccountStateViewModel) {
                 ClickableText(
                     text = AnnotatedString(stringResource(R.string.terms_of_use)),
                     onClick = { runCatching { uri.openUri("https://github.com/vitorpamplona/amethyst/blob/main/PRIVACY.md") } },
-                    style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary),
+                    style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary)
                 )
             }
 

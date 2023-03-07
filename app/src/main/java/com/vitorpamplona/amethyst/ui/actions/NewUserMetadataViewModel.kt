@@ -8,7 +8,7 @@ import com.vitorpamplona.amethyst.model.Account
 import java.io.ByteArrayInputStream
 import java.io.StringWriter
 
-class NewUserMetadataViewModel: ViewModel() {
+class NewUserMetadataViewModel : ViewModel() {
     private lateinit var account: Account
 
     val userName = mutableStateOf("")

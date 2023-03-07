@@ -2,9 +2,9 @@ package com.vitorpamplona.amethyst.service.model
 
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
+import nostr.postr.Utils
 import java.net.URI
 import java.util.Date
-import nostr.postr.Utils
 
 class RecommendRelayEvent(
     id: HexKey,
@@ -14,13 +14,13 @@ class RecommendRelayEvent(
     content: String,
     sig: HexKey,
     val lenient: Boolean = false
-): Event(id, pubKey, createdAt, kind, tags, content, sig) {
+) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
 
-    fun relay() = if (lenient)
+    fun relay() = if (lenient) {
         URI.create(content.trim())
-    else
+    } else {
         URI.create(content)
-
+    }
 
     companion object {
         const val kind = 2

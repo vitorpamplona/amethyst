@@ -11,46 +11,45 @@ import org.junit.Test
 import java.math.BigDecimal
 
 class UserZapsTest {
-  @Test
-  fun nothing() {
-    Assert.assertEquals(1, 1)
-  }
+    @Test
+    fun nothing() {
+        Assert.assertEquals(1, 1)
+    }
 
-  @Test
-  fun user_without_zaps() {
-    val actual = UserZaps.forProfileFeed(zaps = null)
+    @Test
+    fun user_without_zaps() {
+        val actual = UserZaps.forProfileFeed(zaps = null)
 
-    Assert.assertEquals(emptyList<Pair<Note, Note>>(), actual)
-  }
+        Assert.assertEquals(emptyList<Pair<Note, Note>>(), actual)
+    }
 
-  @Test
-  fun avoid_duplicates_with_same_zap_request() {
-    val zapRequest = mockk<Note>()
+    @Test
+    fun avoid_duplicates_with_same_zap_request() {
+        val zapRequest = mockk<Note>()
 
-    val zaps: Map<Note, Note?> = mapOf(
-      zapRequest to mockZapNoteWith("user-1", amount = 100),
-      zapRequest to mockZapNoteWith("user-1", amount = 200),
-    )
+        val zaps: Map<Note, Note?> = mapOf(
+            zapRequest to mockZapNoteWith("user-1", amount = 100),
+            zapRequest to mockZapNoteWith("user-1", amount = 200)
+        )
 
-    val actual = UserZaps.forProfileFeed(zaps)
+        val actual = UserZaps.forProfileFeed(zaps)
 
-    Assert.assertEquals(1, actual.count())
-    Assert.assertEquals(zapRequest, actual.first().first)
-    Assert.assertEquals(
-      BigDecimal(200),
-      (actual.first().second.event as LnZapEventInterface).amount()
-    )
-  }
+        Assert.assertEquals(1, actual.count())
+        Assert.assertEquals(zapRequest, actual.first().first)
+        Assert.assertEquals(
+            BigDecimal(200),
+            (actual.first().second.event as LnZapEventInterface).amount()
+        )
+    }
 
-  private fun mockZapNoteWith(pubkey: HexKey, amount: Int): Note {
+    private fun mockZapNoteWith(pubkey: HexKey, amount: Int): Note {
+        val lnZapEvent = mockk<LnZapEventInterface>()
+        every { lnZapEvent.amount() } returns amount.toBigDecimal()
+        every { lnZapEvent.pubKey() } returns pubkey
 
-    val lnZapEvent = mockk<LnZapEventInterface>()
-    every { lnZapEvent.amount() } returns amount.toBigDecimal()
-    every { lnZapEvent.pubKey() } returns pubkey
+        val zapNote = mockk<Note>()
+        every { zapNote.event } returns lnZapEvent
 
-    val zapNote = mockk<Note>()
-    every { zapNote.event } returns lnZapEvent
-
-    return zapNote
-  }
+        return zapNote
+    }
 }
