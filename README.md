@@ -97,6 +97,12 @@ Build the app:
 ./gradlew connectedAndroidTest
 ```
 
+## Linting
+```bash
+./gradlew ktlintCheck
+./gradlew ktlintFormat
+```
+
 ## Installing on device
 ```bash
 ./gradlew installDebug
