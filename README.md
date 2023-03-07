@@ -128,6 +128,17 @@ The relay also learns which public keys you are requesting, meaning your public 
 
 Relays have all your data in raw text. They know your IP, your name, your location (guessed from IP), your pub key, all your contacts, and other relays, and can read every action you do (post, like, boost, quote, report, etc) with the exception of Private Zaps and Private DMs.
 
+# DM Privacy #
+While the content of direct messages (DMs) is only visible to you, and your DM nostr counterparty, everyone can see that and when you and your counterparty are DM-ing each other.
+
+# Visibility & Permanence of Your Content on nostr
+## Information Visibility ##
+Content that you share can be shared to other relays. 
+Information that you share is publicly visible to anyone reading from relays that have your information. Your information may also be visible to nostr users who do not share relays with you.
+
+## Information Permanence ##
+Information shared on nostr should be assumed permanent for privacy purposes. There is no way to guarantee deleting or editing any content once posted. 
+
 # Contributing
 
 [Issues](https://github.com/vitorpamplona/amethyst/issues) and [pull requests](https://github.com/vitorpamplona/amethyst/pulls) are very welcome.
