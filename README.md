@@ -108,6 +108,14 @@ Build the app:
 ./gradlew installDebug
 ```
 
+## Git Hooks
+
+You can add the git hook running the following bash script:
+
+```bash
+./tools/git-hooks/init.sh
+```
+
 ## How to Deploy
 
 1. Generate a new signing key
