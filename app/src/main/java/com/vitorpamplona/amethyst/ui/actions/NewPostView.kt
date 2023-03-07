@@ -37,7 +37,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.*
-import com.vitorpamplona.amethyst.ui.navigation.UploadFromGallery
 import com.vitorpamplona.amethyst.ui.note.ReplyInformation
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.UserLine
 import kotlinx.coroutines.delay
@@ -75,9 +74,16 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
             decorFitsSystemWindows = false
         )
     ) {
-        Surface(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
-            Column(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
-                Column(modifier = Modifier.padding(10.dp).imePadding().weight(1f)) {
+        Surface(modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight()) {
+            Column(modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight()) {
+                Column(modifier = Modifier
+                    .padding(start = 10.dp, end = 10.dp, top = 10.dp)
+                    .imePadding()
+                    .weight(1f)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -87,12 +93,6 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                             postViewModel.cancel()
                             onClose()
                         })
-
-                        UploadFromGallery(
-                            isUploading = postViewModel.isUploadingImage,
-                        ) {
-                            postViewModel.upload(it, context)
-                        }
 
                         PostButton(
                             onPost = {
@@ -105,9 +105,13 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                     }
 
                     Row(
-                        modifier = Modifier.fillMaxWidth().weight(1f)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
                     ) {
-                        Column(modifier = Modifier.fillMaxWidth().verticalScroll(scroolState)) {
+                        Column(modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(scroolState)) {
                             if (postViewModel.replyTos != null && baseReplyTo?.event is TextNoteEvent) {
                                 ReplyInformation(postViewModel.replyTos, postViewModel.mentions, account, "✖ ") {
                                     postViewModel.removeFromReplyList(it)
@@ -204,6 +208,14 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                             }
                         }
                     }
+
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        UploadFromGallery(
+                            isUploading = postViewModel.isUploadingImage,
+                        ) {
+                            postViewModel.upload(it, context)
+                        }
+                    }
                 }
             }
         }
@@ -222,7 +234,12 @@ fun CloseButton(onCancel: () -> Unit) {
                 backgroundColor = Color.Gray
             )
     ) {
-        Text(text = stringResource(R.string.cancel), color = Color.White)
+        Icon(
+            painter = painterResource(id = R.drawable.ic_close),
+            contentDescription = stringResource(id = R.string.cancel),
+            modifier = Modifier.size(20.dp),
+            tint = Color.White
+        )
     }
 }
 

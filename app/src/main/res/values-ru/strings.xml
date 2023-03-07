@@ -92,7 +92,7 @@
     <string name="ln_url_outdated">LN URL (устаревш.)</string>
     <string name="image_saved_to_the_gallery">Фото сохранено в галерею</string>
     <string name="failed_to_save_the_image">Не удалось сохранить фото</string>
-    <string name="upload_image">Загрузить\nфото</string>
+    <string name="upload_image">Загрузить фото</string>
     <string name="uploading">Загрузка…</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Пользователь не установил Lightning адрес для получения чаевых</string>
     <string name="reply_here">"ответить.. "</string>

@@ -1,17 +1,15 @@
-package com.vitorpamplona.amethyst.ui.navigation
+package com.vitorpamplona.amethyst.ui.actions
 
 import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.Button
-import androidx.compose.material.Text
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -46,15 +44,23 @@ fun UploadFromGallery(
             )
         } else {
             Box() {
-                Button(
+                TextButton(
                     modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(4.dp),
+                        .align(Alignment.TopCenter),
                     enabled = !isUploading,
                     onClick = {
                         showGallerySelect = true
                     }
                 ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_add_photo),
+                        contentDescription = stringResource(id = R.string.upload_image),
+                        modifier = Modifier
+                            .height(20.dp)
+                            .padding(end = 8.dp),
+                        tint = MaterialTheme.colors.primary
+                    )
+
                     if (!isUploading) {
                         Text(stringResource(R.string.upload_image))
                     } else {
