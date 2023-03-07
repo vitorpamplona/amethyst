@@ -53,7 +53,7 @@ import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
-import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
+import com.vitorpamplona.amethyst.ui.components.AsyncUserImageProxy
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
@@ -217,11 +217,12 @@ fun NoteCompose(
                                             .height(30.dp)
                                             .align(Alignment.BottomEnd)
                                     ) {
-                                        AsyncImageProxy(
+                                        AsyncUserImageProxy(
+                                            pubkeyHex = channel.idHex,
                                             model = ResizeImage(channel.profilePicture(), 30.dp),
-                                            placeholder = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
-                                            fallback = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
-                                            error = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
+//                                            placeholder = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
+//                                            fallback = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
+//                                            error = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
                                             contentDescription = stringResource(R.string.group_picture),
                                             modifier = Modifier
                                                 .width(30.dp)
@@ -723,12 +724,10 @@ fun UserPicture(
             .width(size)
             .height(size)
     ) {
-        AsyncImageProxy(
+        AsyncUserImageProxy(
+            pubkeyHex = user.pubkeyHex,
             model = ResizeImage(user.profilePicture(), size),
             contentDescription = stringResource(id = R.string.profile_image),
-            placeholder = BitmapPainter(RoboHashCache.get(ctx, user.pubkeyHex)),
-            fallback = BitmapPainter(RoboHashCache.get(ctx, user.pubkeyHex)),
-            error = BitmapPainter(RoboHashCache.get(ctx, user.pubkeyHex)),
             modifier = pictureModifier
                 .fillMaxSize(1f)
                 .clip(shape = CircleShape)

@@ -43,7 +43,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -61,14 +60,13 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
 import com.vitorpamplona.amethyst.ui.actions.PostButton
-import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
+import com.vitorpamplona.amethyst.ui.components.AsyncUserImageProxy
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.dal.ChannelFeedFilter
 import com.vitorpamplona.amethyst.ui.navigation.Route
@@ -228,11 +226,9 @@ fun ChannelHeader(baseChannel: Channel, account: Account, navController: NavCont
     Column() {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                AsyncImageProxy(
+                AsyncUserImageProxy(
+                    pubkeyHex = channel.idHex,
                     model = ResizeImage(channel.profilePicture(), 35.dp),
-                    placeholder = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
-                    fallback = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
-                    error = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
                     contentDescription = context.getString(R.string.profile_image),
                     modifier = Modifier
                         .width(35.dp)

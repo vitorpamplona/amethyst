@@ -35,7 +35,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -48,10 +47,9 @@ import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
+import com.vitorpamplona.amethyst.ui.components.AsyncUserImageProxy
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountBackupDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -137,12 +135,13 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
         }
 
         Column(modifier = modifier) {
-            AsyncImageProxy(
+            AsyncUserImageProxy(
+                pubkeyHex = accountUser.pubkeyHex,
                 model = ResizeImage(accountUser.profilePicture(), 100.dp),
                 contentDescription = stringResource(id = R.string.profile_image),
-                placeholder = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
-                fallback = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
-                error = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
+//                placeholder = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
+//                fallback = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
+//                error = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
                 modifier = Modifier
                     .width(100.dp)
                     .height(100.dp)

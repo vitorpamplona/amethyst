@@ -60,7 +60,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
-import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
+import com.vitorpamplona.amethyst.ui.components.AsyncUserImageProxy
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -195,11 +195,12 @@ fun ChatroomMessageCompose(
                                     horizontalArrangement = alignment,
                                     modifier = Modifier.padding(top = 5.dp)
                                 ) {
-                                    AsyncImageProxy(
+                                    AsyncUserImageProxy(
+                                        pubkeyHex = author.pubkeyHex,
                                         model = ResizeImage(author.profilePicture(), 25.dp),
-                                        placeholder = BitmapPainter(RoboHashCache.get(context, author.pubkeyHex)),
-                                        fallback = BitmapPainter(RoboHashCache.get(context, author.pubkeyHex)),
-                                        error = BitmapPainter(RoboHashCache.get(context, author.pubkeyHex)),
+//                                        placeholder = BitmapPainter(RoboHashCache.get(context, author.pubkeyHex)),
+//                                        fallback = BitmapPainter(RoboHashCache.get(context, author.pubkeyHex)),
+//                                        error = BitmapPainter(RoboHashCache.get(context, author.pubkeyHex)),
                                         contentDescription = stringResource(id = R.string.profile_image),
                                         modifier = Modifier
                                             .width(25.dp)

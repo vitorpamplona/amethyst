@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.components
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,45 +32,47 @@ data class ResizeImage(val url: String?, val size: Dp) {
 }
 
 @Composable fun AsyncUserImageProxy(
-  pubkeyHex: String,
-  model: ResizeImage,
-  contentDescription: String?,
-  modifier: Modifier = Modifier,
-  alignment: Alignment = Alignment.Center,
-  contentScale: ContentScale = ContentScale.Fit,
-  alpha: Float = DefaultAlpha,
-  colorFilter: ColorFilter? = null,
-  filterQuality: FilterQuality = DrawScope.DefaultFilterQuality,
+    pubkeyHex: String,
+    model: ResizeImage,
+    contentDescription: String?,
+    modifier: Modifier = Modifier,
+    alignment: Alignment = Alignment.Center,
+    contentScale: ContentScale = ContentScale.Fit,
+    alpha: Float = DefaultAlpha,
+    colorFilter: ColorFilter? = null,
+    filterQuality: FilterQuality = DrawScope.DefaultFilterQuality
 ) {
-  var loading by remember { mutableStateOf(false) }
-  var error by remember { mutableStateOf(false) }
+    var loading by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf(false) }
 
-  if (model.url == null || loading || error) {
-    RoboHashAsyncImage(
-      message = pubkeyHex,
-      contentDescription = contentDescription,
-      modifier = modifier,
-      alignment = alignment,
-      contentScale = contentScale,
-      alpha = alpha,
-      colorFilter = colorFilter,
-      filterQuality = filterQuality,
-    )
-  } else {
-    AsyncImage(
-      model = model.proxyUrl(),
-      contentDescription = contentDescription,
-      modifier = modifier,
-      onLoading = { loading = true },
-      onSuccess = { loading = false; error = false },
-      onError = { loading = false; error = true },
-      alignment = alignment,
-      contentScale = contentScale,
-      alpha = alpha,
-      colorFilter = colorFilter,
-      filterQuality = filterQuality
-    )
-  }
+    Box() {
+        AsyncImage(
+            model = model.proxyUrl(),
+            contentDescription = contentDescription,
+            modifier = modifier,
+            onLoading = { loading = true },
+            onSuccess = { loading = false; error = false },
+            onError = { loading = false; error = true },
+            alignment = alignment,
+            contentScale = contentScale,
+            alpha = alpha,
+            colorFilter = colorFilter,
+            filterQuality = filterQuality
+        )
+
+        if (model.url == null || loading || error) {
+            RoboHashAsyncImage(
+                message = pubkeyHex,
+                contentDescription = contentDescription,
+                modifier = modifier,
+                alignment = alignment,
+                contentScale = contentScale,
+                alpha = alpha,
+                colorFilter = colorFilter,
+                filterQuality = filterQuality
+            )
+        }
+    }
 }
 
 @Composable
