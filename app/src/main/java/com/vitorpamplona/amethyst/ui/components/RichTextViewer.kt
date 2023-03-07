@@ -200,11 +200,13 @@ private fun isArabic(text: String): Boolean {
 fun isBechLink(word: String): Boolean {
   return word.startsWith("nostr:", true)
     || word.startsWith("npub1", true)
+    || word.startsWith("naddr1", true)
     || word.startsWith("note1", true)
     || word.startsWith("nprofile1", true)
     || word.startsWith("nevent1", true)
     || word.startsWith("@npub1", true)
     || word.startsWith("@note1", true)
+    || word.startsWith("@addr1", true)
     || word.startsWith("@nprofile1", true)
     || word.startsWith("@nevent1", true)
 }

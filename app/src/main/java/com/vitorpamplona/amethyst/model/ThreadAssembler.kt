@@ -35,8 +35,8 @@ class ThreadAssembler {
   @OptIn(ExperimentalTime::class)
   fun findThreadFor(noteId: String): Set<Note> {
     val (result, elapsed) = measureTimedValue {
-      val note = if (noteId.startsWith("naddr")) {
-        val aTag = ATag.parse(noteId)
+      val note = if (noteId.contains(":")) {
+        val aTag = ATag.parse(noteId, null)
         if (aTag != null)
           LocalCache.getOrCreateAddressableNote(aTag)
         else

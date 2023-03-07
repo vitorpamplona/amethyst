@@ -11,7 +11,7 @@ class Nip19 {
     USER, NOTE, RELAY, ADDRESS
   }
 
-  data class Return(val type: Type, val hex: String)
+  data class Return(val type: Type, val hex: String, val relay: String?)
 
   fun uriToRoute(uri: String?): Return? {
     try {
@@ -39,29 +39,39 @@ class Nip19 {
   }
 
   private fun npub(bytes: ByteArray): Return {
-    return Return(Type.USER, bytes.toHexKey())
+    return Return(Type.USER, bytes.toHexKey(), null)
   }
 
   private fun note(bytes: ByteArray): Return {
-    return Return(Type.NOTE, bytes.toHexKey());
+    return Return(Type.NOTE, bytes.toHexKey(), null);
   }
 
   private fun nprofile(bytes: ByteArray): Return? {
-    val hex = parseTLV(bytes)
-      .get(NIP19TLVTypes.SPECIAL.id)
+    val tlv = parseTLV(bytes)
+
+    val hex = tlv.get(NIP19TLVTypes.SPECIAL.id)
       ?.get(0)
       ?.toHexKey() ?: return null
 
-    return Return(Type.USER, hex)
+    val relay = tlv.get(NIP19TLVTypes.RELAY.id)
+      ?.get(0)
+      ?.toString(Charsets.UTF_8)
+
+    return Return(Type.USER, hex, relay)
   }
 
   private fun nevent(bytes: ByteArray): Return? {
-    val hex = parseTLV(bytes)
-      .get(NIP19TLVTypes.SPECIAL.id)
+    val tlv = parseTLV(bytes)
+
+    val hex = tlv.get(NIP19TLVTypes.SPECIAL.id)
       ?.get(0)
       ?.toHexKey() ?: return null
 
-    return Return(Type.USER, hex)
+    val relay = tlv.get(NIP19TLVTypes.RELAY.id)
+      ?.get(0)
+      ?.toString(Charsets.UTF_8)
+
+    return Return(Type.USER, hex, relay)
   }
 
   private fun nrelay(bytes: ByteArray): Return? {
@@ -70,7 +80,7 @@ class Nip19 {
       ?.get(0)
       ?.toString(Charsets.UTF_8) ?: return null
 
-    return Return(Type.RELAY, relayUrl)
+    return Return(Type.RELAY, relayUrl, null)
   }
 
   private fun naddr(bytes: ByteArray): Return? {
@@ -92,7 +102,7 @@ class Nip19 {
       ?.get(0)
       ?.let { toInt32(it) }
 
-    return Return(Type.ADDRESS, "$kind:$author:$d")
+    return Return(Type.ADDRESS, "$kind:$author:$d", relay)
   }
 }
 

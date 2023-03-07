@@ -77,7 +77,7 @@ object LocalCache {
   }
 
   fun checkGetOrCreateNote(key: String): Note? {
-    if (key.startsWith("naddr1")) {
+    if (key.startsWith("naddr1") || key.contains(":")) {
       return checkGetOrCreateAddressableNote(key)
     }
     return try {
@@ -120,7 +120,7 @@ object LocalCache {
 
   fun checkGetOrCreateAddressableNote(key: String): AddressableNote? {
     return try {
-      val addr = ATag.parse(key)
+      val addr = ATag.parse(key, null) // relay doesn't matter for the index.
       if (addr != null)
         getOrCreateAddressableNote(addr)
       else
@@ -133,10 +133,12 @@ object LocalCache {
 
   @Synchronized
   fun getOrCreateAddressableNote(key: ATag): AddressableNote {
-    return addressables[key.toNAddr()] ?: run {
+    // we can't use naddr here because naddr might include relay info and
+    // the preferred relay should not be part of the index.
+    return addressables[key.toTag()] ?: run {
       val answer = AddressableNote(key)
       answer.author = checkGetOrCreateUser(key.pubKeyHex)
-      addressables.put(key.toNAddr(), answer)
+      addressables.put(key.toTag(), answer)
       answer
     }
   }

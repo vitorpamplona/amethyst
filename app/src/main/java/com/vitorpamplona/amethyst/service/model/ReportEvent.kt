@@ -48,7 +48,12 @@ class ReportEvent (
       )
     }
 
-  fun taggedAddresses() = tags.filter { it.firstOrNull() == "a" }.mapNotNull { it.getOrNull(1) }.mapNotNull { ATag.parse(it) }
+  fun taggedAddresses() = tags.filter { it.firstOrNull() == "a" }.mapNotNull {
+    val aTagValue = it.getOrNull(1)
+    val relay = it.getOrNull(2)
+
+    if (aTagValue != null) ATag.parse(aTagValue, relay) else null
+  }
 
   companion object {
     const val kind = 1984

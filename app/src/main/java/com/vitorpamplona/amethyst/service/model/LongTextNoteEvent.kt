@@ -17,7 +17,7 @@ class LongTextNoteEvent(
     fun mentions() = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
 
     fun dTag() = tags.filter { it.firstOrNull() == "d" }.mapNotNull { it.getOrNull(1) }.firstOrNull() ?: ""
-    fun address() = ATag(kind, pubKey, dTag())
+    fun address() = ATag(kind, pubKey, dTag(), null)
 
     fun topics() = tags.filter { it.firstOrNull() == "t" }.mapNotNull { it.getOrNull(1) }
     fun title() = tags.filter { it.firstOrNull() == "title" }.mapNotNull { it.getOrNull(1) }.firstOrNull()

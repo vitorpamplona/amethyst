@@ -24,7 +24,7 @@ import kotlinx.coroutines.withContext
 val tagSearch = Pattern.compile("(?:\\s|\\A)\\#\\[([0-9]+)\\]")
 
 
-class AddressableNote(val address: ATag): Note(address.toNAddr()) {
+class AddressableNote(val address: ATag): Note(address.toTag()) {
     override fun idNote() = address.toNAddr()
     override fun idDisplayNote() = idNote().toShortenHex()
     override fun address() = address

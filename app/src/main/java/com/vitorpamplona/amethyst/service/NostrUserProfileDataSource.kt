@@ -84,7 +84,7 @@ object NostrUserProfileDataSource: NostrDataSource("UserProfileFeed") {
       types = FeedType.values().toSet(),
       filter = JsonFilter(
         kinds = listOf(BadgeProfilesEvent.kind),
-        tags = mapOf("p" to listOf(it.pubkeyHex)),
+        authors = listOf(it.pubkeyHex),
         limit = 1
       )
     )

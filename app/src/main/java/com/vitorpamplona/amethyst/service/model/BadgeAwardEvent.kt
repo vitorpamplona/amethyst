@@ -14,7 +14,12 @@ class BadgeAwardEvent(
     sig: HexKey
 ): Event(id, pubKey, createdAt, kind, tags, content, sig) {
     fun awardees() = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
-    fun awardDefinition() = tags.filter { it.firstOrNull() == "a" }.mapNotNull { it.getOrNull(1) }.mapNotNull { ATag.parse(it) }
+    fun awardDefinition() = tags.filter { it.firstOrNull() == "a" }.mapNotNull {
+        val aTagValue = it.getOrNull(1)
+        val relay = it.getOrNull(2)
+
+        if (aTagValue != null) ATag.parse(aTagValue, relay) else null
+    }
 
     companion object {
         const val kind = 8

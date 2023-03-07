@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.ui.components
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -31,7 +32,24 @@ fun ClickableRoute(
       onClick = { navController.navigate(route) },
       style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary)
     )
-  } else {
+  } else if (nip19.type == Nip19.Type.ADDRESS) {
+    val noteBase = LocalCache.checkGetOrCreateAddressableNote(nip19.hex)
+
+    if (noteBase == null) {
+      Text(
+        "@${nip19.hex} "
+      )
+    } else {
+      val noteState by noteBase.live().metadata.observeAsState()
+      val note = noteState?.note ?: return
+
+      ClickableText(
+        text = AnnotatedString("@${note.idDisplayNote()} "),
+        onClick = { navController.navigate("Note/${nip19.hex}") },
+        style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary)
+      )
+    }
+  } else if (nip19.type == Nip19.Type.NOTE) {
     val noteBase = LocalCache.getOrCreateNote(nip19.hex)
     val noteState by noteBase.live().metadata.observeAsState()
     val note = noteState?.note ?: return
@@ -55,5 +73,9 @@ fun ClickableRoute(
         style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary)
       )
     }
+  } else {
+    Text(
+      "@${nip19.hex} "
+    )
   }
 }
