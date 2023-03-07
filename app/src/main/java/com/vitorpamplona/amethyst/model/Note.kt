@@ -6,13 +6,6 @@ import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import fr.acinq.secp256k1.Hex
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.ZoneId
@@ -20,10 +13,18 @@ import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.regex.Pattern
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 val tagSearch = Pattern.compile("(?:\\s|\\A)\\#\\[([0-9]+)\\]")
 
-class AddressableNote(val address: ATag) : Note(address.toNAddr()) {
+
+class AddressableNote(val address: ATag): Note(address.toTag()) {
     override fun idNote() = address.toNAddr()
     override fun idDisplayNote() = idNote().toShortenHex()
     override fun address() = address
@@ -61,9 +62,9 @@ open class Note(val idHex: String) {
 
     fun channel(): Channel? {
         val channelHex =
-            (event as? ChannelMessageEvent)?.channel()
-                ?: (event as? ChannelMetadataEvent)?.channel()
-                ?: (event as? ChannelCreateEvent)?.let { it.id }
+            (event as? ChannelMessageEvent)?.channel() ?:
+            (event as? ChannelMetadataEvent)?.channel() ?:
+            (event as? ChannelCreateEvent)?.let { it.id }
 
         return channelHex?.let { LocalCache.checkGetOrCreateChannel(it) }
     }
@@ -136,7 +137,7 @@ open class Note(val idHex: String) {
     fun removeReport(deleteNote: Note) {
         val author = deleteNote.author ?: return
 
-        if (author in reports.keys && reports[author]?.contains(deleteNote) == true) {
+        if (author in reports.keys && reports[author]?.contains(deleteNote) == true ) {
             reports[author]?.let {
                 reports = reports + Pair(author, it.minus(deleteNote))
                 liveSet?.reports?.invalidateData()
@@ -154,6 +155,7 @@ open class Note(val idHex: String) {
             liveSet?.zaps?.invalidateData()
         }
     }
+
 
     fun addBoost(note: Note) {
         if (note !in boosts) {
@@ -238,13 +240,11 @@ open class Note(val idHex: String) {
     }
 
     fun hasAnyReports(): Boolean {
-        val dayAgo = Date().time / 1000 - 24 * 60 * 60
+        val dayAgo = Date().time / 1000 - 24*60*60
         return reports.isNotEmpty() ||
-            (
-                author?.reports?.values?.filter {
-                    it.firstOrNull { (it.createdAt() ?: 0) > dayAgo } != null
-                }?.isNotEmpty() ?: false
-                )
+          (author?.reports?.values?.filter {
+              it.firstOrNull { ( it.createdAt() ?: 0 ) > dayAgo } != null
+          }?.isNotEmpty() ?: false)
     }
 
     fun directlyCiteUsersHex(): Set<HexKey> {
@@ -257,6 +257,7 @@ open class Note(val idHex: String) {
                     returningList.add(tag[1])
                 }
             } catch (e: Exception) {
+
             }
         }
         return returningList
@@ -273,17 +274,18 @@ open class Note(val idHex: String) {
                         returningList.add(it)
                     }
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+
             }
         }
         return returningList
     }
 
     fun directlyCites(userProfile: User): Boolean {
-        return author == userProfile ||
-            (userProfile in directlyCiteUsers()) ||
-            (event is ReactionEvent && replyTo?.lastOrNull()?.directlyCites(userProfile) == true) ||
-            (event is RepostEvent && replyTo?.lastOrNull()?.directlyCites(userProfile) == true)
+        return author == userProfile
+          || (userProfile in directlyCiteUsers())
+          || (event is ReactionEvent && replyTo?.lastOrNull()?.directlyCites(userProfile) == true)
+          || (event is RepostEvent && replyTo?.lastOrNull()?.directlyCites(userProfile) == true)
     }
 
     fun isNewThread(): Boolean {
@@ -304,7 +306,7 @@ open class Note(val idHex: String) {
 
     fun hasBoostedInTheLast5Minutes(loggedIn: User): Boolean {
         val currentTime = Date().time / 1000
-        return boosts.firstOrNull { it.author == loggedIn && (it.createdAt() ?: 0) > currentTime - (60 * 5) } != null // 5 minute protection
+        return boosts.firstOrNull { it.author == loggedIn && (it.createdAt() ?: 0) > currentTime - (60 * 5)} != null // 5 minute protection
     }
 
     fun boostedBy(loggedIn: User): List<Note> {
@@ -327,6 +329,7 @@ open class Note(val idHex: String) {
     }
 }
 
+
 class NoteLiveSet(u: Note) {
     // Observers line up here.
     val metadata: NoteLiveData = NoteLiveData(u)
@@ -339,17 +342,17 @@ class NoteLiveSet(u: Note) {
     val zaps: NoteLiveData = NoteLiveData(u)
 
     fun isInUse(): Boolean {
-        return metadata.hasObservers() ||
-            reactions.hasObservers() ||
-            boosts.hasObservers() ||
-            replies.hasObservers() ||
-            reports.hasObservers() ||
-            relays.hasObservers() ||
-            zaps.hasObservers()
+        return metadata.hasObservers()
+          || reactions.hasObservers()
+          || boosts.hasObservers()
+          || replies.hasObservers()
+          || reports.hasObservers()
+          || relays.hasObservers()
+          || zaps.hasObservers()
     }
 }
 
-class NoteLiveData(val note: Note) : LiveData<NoteState>(NoteState(note)) {
+class NoteLiveData(val note: Note): LiveData<NoteState>(NoteState(note)) {
     // Refreshes observers in batches.
     var handlerWaiting = AtomicBoolean()
 
@@ -381,6 +384,7 @@ class NoteLiveData(val note: Note) : LiveData<NoteState>(NoteState(note)) {
         } else {
             NostrSingleEventDataSource.add(note)
         }
+
     }
 
     override fun onInactive() {
