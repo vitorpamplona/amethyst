@@ -151,7 +151,7 @@ fun LoginPage(accountViewModel: AccountStateViewModel) {
                 )
 
                 val clickableTextStyle =
-                    SpanStyle(color = MaterialTheme.colors.primary.copy(alpha = 0.52f))
+                    SpanStyle(color = MaterialTheme.colors.primary)
 
                 val annotatedTermsString = buildAnnotatedString {
                     append(stringResource(R.string.i_accept_the))
