@@ -9,7 +9,7 @@ import com.vitorpamplona.amethyst.model.UserMetadata
 import com.vitorpamplona.amethyst.model.decodePublicKey
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.ui.actions.buildAnnotatedStringWithUrlHighlighting
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -33,7 +33,7 @@ class UrlUserTagTransformationTest {
         user.info = UserMetadata()
         user.info?.displayName = "Vitor Pamplona"
 
-        var transformedText = buildAnnotatedStringWithUrlHighlighting(
+        val transformedText = buildAnnotatedStringWithUrlHighlighting(
             AnnotatedString("New Hey @npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z"),
             Color.Red
         )
@@ -67,7 +67,7 @@ class UrlUserTagTransformationTest {
         user.info = UserMetadata()
         user.info?.displayName = "Vitor Pamplona"
 
-        var transformedText = buildAnnotatedStringWithUrlHighlighting(
+        val transformedText = buildAnnotatedStringWithUrlHighlighting(
             AnnotatedString("New Hey @npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z and @npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z"),
             Color.Red
         )
