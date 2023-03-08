@@ -25,7 +25,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -431,7 +430,7 @@ fun NoteCompose(
                         )
                     }
 
-                    NoteDropDownMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
+                    NoteQuickActionMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
                 }
             }
         }
@@ -756,16 +755,6 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
             }
             Divider()
         }
-        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(accountViewModel.decrypt(note) ?: "")); onDismiss() }) {
-            Text(stringResource(R.string.copy_text))
-        }
-        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(note.author?.pubkeyNpub() ?: "")); onDismiss() }) {
-            Text(stringResource(R.string.copy_user_pubkey))
-        }
-        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(note.idNote())); onDismiss() }) {
-            Text(stringResource(R.string.copy_note_id))
-        }
-        Divider()
         DropdownMenuItem(onClick = { accountViewModel.broadcast(note); onDismiss() }) {
             Text(stringResource(R.string.broadcast))
         }

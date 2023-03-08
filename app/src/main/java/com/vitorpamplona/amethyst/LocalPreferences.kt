@@ -25,6 +25,7 @@ class LocalPreferences(context: Context) {
         const val TRANSLATE_TO = "translateTo"
         const val ZAP_AMOUNTS = "zapAmounts"
         const val LATEST_CONTACT_LIST = "latestContactList"
+        const val HIDE_DELETE_REQUEST_INFO = "hideDeleteRequestInfo"
         val LAST_READ: (String) -> String = { route -> "last_read_route_$route" }
     }
 
@@ -49,6 +50,7 @@ class LocalPreferences(context: Context) {
             account.translateTo.let { putString(PrefKeys.TRANSLATE_TO, it) }
             account.zapAmountChoices.let { putString(PrefKeys.ZAP_AMOUNTS, gson.toJson(it)) }
             account.backupContactList.let { putString(PrefKeys.LATEST_CONTACT_LIST, Event.gson.toJson(it)) }
+            putBoolean(PrefKeys.HIDE_DELETE_REQUEST_INFO, account.hideDeleteRequestInfo)
         }.apply()
     }
 
@@ -89,6 +91,8 @@ class LocalPreferences(context: Context) {
                 mapOf<String, String>()
             }
 
+            val hideDeleteRequestInfo = getBoolean(PrefKeys.HIDE_DELETE_REQUEST_INFO, false)
+
             if (pubKey != null) {
                 return Account(
                     Persona(privKey = privKey?.toByteArray(), pubKey = pubKey.toByteArray()),
@@ -99,6 +103,7 @@ class LocalPreferences(context: Context) {
                     languagePreferences,
                     translateTo,
                     zapAmountChoices,
+                    hideDeleteRequestInfo,
                     latestContactList
                 )
             } else {
