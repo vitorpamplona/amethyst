@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.service.model
 
+import android.util.Log
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.service.lnurl.LnInvoiceUtil
 import com.vitorpamplona.amethyst.service.relays.Client
@@ -45,6 +46,7 @@ class LnZapEvent(
       fromJson(it, Client.lenient)
     }
   } catch (e: Exception) {
+    Log.e("LnZapEvent", "Failed to Parse Contained Post ${description()}", e)
     null
   }
 
