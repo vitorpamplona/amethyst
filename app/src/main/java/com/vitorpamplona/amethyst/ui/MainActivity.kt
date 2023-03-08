@@ -16,7 +16,7 @@ import coil.decode.ImageDecoderDecoder
 import coil.decode.SvgDecoder
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
-import com.vitorpamplona.amethyst.service.Nip19
+import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.screen.AccountScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
@@ -26,7 +26,7 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val nip19 = Nip19().uriToRoute(intent?.data?.toString())
+        val nip19 = Nip19.uriToRoute(intent?.data?.toString())
         val startingPage = when (nip19?.type) {
             Nip19.Type.USER -> "User/${nip19.hex}"
             Nip19.Type.NOTE -> "Note/${nip19.hex}"

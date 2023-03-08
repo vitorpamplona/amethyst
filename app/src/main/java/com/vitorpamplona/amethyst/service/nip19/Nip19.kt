@@ -1,17 +1,14 @@
-package com.vitorpamplona.amethyst.service
+package com.vitorpamplona.amethyst.service.nip19
 
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.bechToBytes
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 
-class Nip19 {
-
+object Nip19 {
     enum class Type {
         USER, NOTE, RELAY, ADDRESS
     }
 
-    data class Return(val type: Type, val hex: String, val relay: String?)
+    data class Return(val type: Type, val hex: String, val relay: String? = null)
 
     fun uriToRoute(uri: String?): Return? {
         try {
@@ -39,21 +36,21 @@ class Nip19 {
     }
 
     private fun npub(bytes: ByteArray): Return {
-        return Return(Type.USER, bytes.toHexKey(), null)
+        return Return(Type.USER, bytes.toHexKey())
     }
 
     private fun note(bytes: ByteArray): Return {
-        return Return(Type.NOTE, bytes.toHexKey(), null)
+        return Return(Type.NOTE, bytes.toHexKey())
     }
 
     private fun nprofile(bytes: ByteArray): Return? {
-        val tlv = parseTLV(bytes)
+        val tlv = Tlv.parse(bytes)
 
-        val hex = tlv.get(NIP19TLVTypes.SPECIAL.id)
+        val hex = tlv.get(Tlv.Type.SPECIAL.id)
             ?.get(0)
             ?.toHexKey() ?: return null
 
-        val relay = tlv.get(NIP19TLVTypes.RELAY.id)
+        val relay = tlv.get(Tlv.Type.RELAY.id)
             ?.get(0)
             ?.toString(Charsets.UTF_8)
 
@@ -61,13 +58,13 @@ class Nip19 {
     }
 
     private fun nevent(bytes: ByteArray): Return? {
-        val tlv = parseTLV(bytes)
+        val tlv = Tlv.parse(bytes)
 
-        val hex = tlv.get(NIP19TLVTypes.SPECIAL.id)
+        val hex = tlv.get(Tlv.Type.SPECIAL.id)
             ?.get(0)
             ?.toHexKey() ?: return null
 
-        val relay = tlv.get(NIP19TLVTypes.RELAY.id)
+        val relay = tlv.get(Tlv.Type.RELAY.id)
             ?.get(0)
             ?.toString(Charsets.UTF_8)
 
@@ -75,64 +72,33 @@ class Nip19 {
     }
 
     private fun nrelay(bytes: ByteArray): Return? {
-        val relayUrl = parseTLV(bytes)
-            .get(NIP19TLVTypes.SPECIAL.id)
+        val relayUrl = Tlv.parse(bytes)
+            .get(Tlv.Type.SPECIAL.id)
             ?.get(0)
             ?.toString(Charsets.UTF_8) ?: return null
 
-        return Return(Type.RELAY, relayUrl, null)
+        return Return(Type.RELAY, relayUrl)
     }
 
     private fun naddr(bytes: ByteArray): Return? {
-        val tlv = parseTLV(bytes)
+        val tlv = Tlv.parse(bytes)
 
-        val d = tlv.get(NIP19TLVTypes.SPECIAL.id)
+        val d = tlv.get(Tlv.Type.SPECIAL.id)
             ?.get(0)
             ?.toString(Charsets.UTF_8) ?: return null
 
-        val relay = tlv.get(NIP19TLVTypes.RELAY.id)
+        val relay = tlv.get(Tlv.Type.RELAY.id)
             ?.get(0)
             ?.toString(Charsets.UTF_8)
 
-        val author = tlv.get(NIP19TLVTypes.AUTHOR.id)
+        val author = tlv.get(Tlv.Type.AUTHOR.id)
             ?.get(0)
             ?.toHexKey()
 
-        val kind = tlv.get(NIP19TLVTypes.KIND.id)
+        val kind = tlv.get(Tlv.Type.KIND.id)
             ?.get(0)
-            ?.let { toInt32(it) }
+            ?.let { Tlv.toInt32(it) }
 
         return Return(Type.ADDRESS, "$kind:$author:$d", relay)
     }
-}
-
-// Classes should start with an uppercase letter in kotlin
-enum class NIP19TLVTypes(val id: Byte) {
-    SPECIAL(0),
-    RELAY(1),
-    AUTHOR(2),
-    KIND(3);
-}
-
-fun toInt32(bytes: ByteArray): Int {
-    require(bytes.size == 4) { "length must be 4, got: ${bytes.size}" }
-    return ByteBuffer.wrap(bytes, 0, 4).order(ByteOrder.BIG_ENDIAN).int
-}
-
-fun parseTLV(data: ByteArray): Map<Byte, List<ByteArray>> {
-    val result = mutableMapOf<Byte, MutableList<ByteArray>>()
-    var rest = data
-    while (rest.isNotEmpty()) {
-        val t = rest[0]
-        val l = rest[1]
-        val v = rest.sliceArray(IntRange(2, (2 + l) - 1))
-        rest = rest.sliceArray(IntRange(2 + l, rest.size - 1))
-        if (v.size < l) continue
-
-        if (!result.containsKey(t)) {
-            result[t] = mutableListOf()
-        }
-        result[t]?.add(v)
-    }
-    return result
 }
