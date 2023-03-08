@@ -128,4 +128,12 @@ class AccountViewModel(private val account: Account) : ViewModel() {
     fun isFollowing(user: User): Boolean {
         return account.userProfile().isFollowing(user)
     }
+
+    fun hideDeleteRequestInfo(): Boolean {
+        return account.hideDeleteRequestInfo
+    }
+
+    fun setHideDeleteRequestInfo() {
+        account.setHideDeleteRequestInfo()
+    }
 }

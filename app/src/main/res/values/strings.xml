@@ -205,4 +205,6 @@
     <string name="quick_action_delete">Delete</string>
     <string name="quick_action_unfollow">Unfollow</string>
     <string name="quick_action_follow">Follow</string>
+    <string name="quick_action_request_deletion_alert_title">Request Deletion</string>
+    <string name="quick_action_request_deletion_alert_body">Amethyst will request that your note be deleted from the relays you are currently connected to. There is no guarantee that your note will be permanently deleted from those relays, or from other relays where it may be stored.</string>
 </resources>

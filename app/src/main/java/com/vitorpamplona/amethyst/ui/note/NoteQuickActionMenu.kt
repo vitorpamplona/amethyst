@@ -10,14 +10,18 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.AlertDialog
+import androidx.compose.material.Button
 import androidx.compose.material.Card
 import androidx.compose.material.Divider
 import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
+import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AlternateEmail
 import androidx.compose.material.icons.filled.ContentCopy
@@ -82,6 +86,7 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
     val clipboardManager = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
     var showSelectTextDialog by remember { mutableStateOf(false) }
+    var showDeleteAlertDialog by remember { mutableStateOf(false) }
     val isOwnNote = note.author == accountViewModel.userProfile()
     val isFollowingUser = !isOwnNote && accountViewModel.isFollowing(note.author!!)
 
@@ -138,8 +143,12 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
                     Row(modifier = Modifier.height(IntrinsicSize.Min)) {
                         if (isOwnNote) {
                             NoteQuickActionItem(Icons.Default.Delete, stringResource(R.string.quick_action_delete)) {
-                                accountViewModel.delete(note)
-                                onDismiss()
+                                if (accountViewModel.hideDeleteRequestInfo()) {
+                                    accountViewModel.delete(note)
+                                    onDismiss()
+                                } else {
+                                    showDeleteAlertDialog = true
+                                }
                             }
                         } else if (isFollowingUser) {
                             NoteQuickActionItem(Icons.Default.PersonRemove, stringResource(R.string.quick_action_unfollow)) {
@@ -188,6 +197,39 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
         accountViewModel.decrypt(note)?.let {
             SelectTextDialog(it) { showSelectTextDialog = false }
         }
+    }
+
+    if (showDeleteAlertDialog) {
+        AlertDialog(
+            onDismissRequest = { onDismiss() },
+            title = {
+                Text(text = stringResource(R.string.quick_action_request_deletion_alert_title))
+            },
+            text = {
+                Text(text = stringResource(R.string.quick_action_request_deletion_alert_body))
+            },
+            buttons = {
+                Row(
+                    modifier = Modifier.padding(all = 8.dp).fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    TextButton(
+                        onClick = {
+                            accountViewModel.setHideDeleteRequestInfo()
+                            accountViewModel.delete(note)
+                            onDismiss()
+                        }
+                    ) {
+                        Text("Don't show again")
+                    }
+                    Button(
+                        onClick = { accountViewModel.delete(note); onDismiss() }
+                    ) {
+                        Text("Delete")
+                    }
+                }
+            }
+        )
     }
 }
 
