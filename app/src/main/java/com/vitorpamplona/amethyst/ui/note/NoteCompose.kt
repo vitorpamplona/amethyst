@@ -54,8 +54,8 @@ import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
 import com.vitorpamplona.amethyst.ui.theme.Following
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -431,7 +431,7 @@ fun NoteCompose(
                         )
                     }
 
-                    NoteDropDownMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
+                    NoteQuickActionMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
                 }
             }
         }
@@ -756,14 +756,8 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
             }
             Divider()
         }
-        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(accountViewModel.decrypt(note) ?: "")); onDismiss() }) {
-            Text(stringResource(R.string.copy_text))
-        }
-        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(note.author?.pubkeyNpub() ?: "")); onDismiss() }) {
+        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString("@${note.author?.pubkeyNpub()}" ?: "")); onDismiss() }) {
             Text(stringResource(R.string.copy_user_pubkey))
-        }
-        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(note.idNote())); onDismiss() }) {
-            Text(stringResource(R.string.copy_note_id))
         }
         Divider()
         DropdownMenuItem(onClick = { accountViewModel.broadcast(note); onDismiss() }) {
