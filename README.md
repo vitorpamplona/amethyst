@@ -97,9 +97,23 @@ Build the app:
 ./gradlew connectedAndroidTest
 ```
 
+## Linting
+```bash
+./gradlew ktlintCheck
+./gradlew ktlintFormat
+```
+
 ## Installing on device
 ```bash
 ./gradlew installDebug
+```
+
+## Git Hooks
+
+You can add the git hook running the following bash script:
+
+```bash
+./tools/git-hooks/init.sh
 ```
 
 ## How to Deploy
