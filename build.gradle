@@ -16,7 +16,8 @@ plugins {
 }
 
 task installGitHook(type: Copy) {
-    from new File(rootProject.rootDir, 'pre-commit')
+    from new File(rootProject.rootDir, 'git-hooks/pre-commit')
+    from new File(rootProject.rootDir, 'git-hooks/pre-push')
     into { new File(rootProject.rootDir, '.git/hooks') }
     fileMode 0777
 }
