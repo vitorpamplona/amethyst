@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.service.model
 import android.util.Log
 import com.google.gson.reflect.TypeToken
 import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.decodePublicKey
 import com.vitorpamplona.amethyst.model.toHexKey
 import java.util.Date
 import nostr.postr.Utils
@@ -17,20 +18,38 @@ class ContactListEvent(
     content: String,
     sig: HexKey
 ): Event(id, pubKey, createdAt, kind, tags, content, sig) {
-    fun follows() = try {
-        tags.filter { it[0] == "p" }.map { Contact(it[1], it.getOrNull(2)) }
-    } catch (e: Exception) {
-        Log.e("ContactListEvent", "can't parse tags as follows: $tags", e)
-        null
+    // This function is only used by the user logged in
+    // But it is used all the time.
+    val verifiedFollowKeySet: Set<HexKey> by lazy {
+        tags.filter { it[0] == "p" }.mapNotNull {
+            it.getOrNull(1)?.let { unverifiedHex: String ->
+                decodePublicKey(unverifiedHex).toHexKey()
+            }
+        }.toSet()
     }
 
-    fun relayUse() = try {
+    val verifiedFollowKeySetAndMe: Set<HexKey> by lazy {
+        verifiedFollowKeySet + pubKey
+    }
+
+    fun unverifiedFollowKeySet() = tags.filter { it[0] == "p" }.mapNotNull { it.getOrNull(1) }
+
+    fun follows() = tags.filter { it[0] == "p" }.mapNotNull {
+        try {
+            Contact(decodePublicKey(it[1]).toHexKey(), it.getOrNull(2))
+        } catch (e: Exception) {
+            Log.w("ContactListEvent", "Can't parse tags as a follows: ${it[1]}", e)
+            null
+        }
+    }
+
+    fun relays(): Map<String, ReadWrite>? = try {
         if (content.isNotEmpty())
-            gson.fromJson(content, object: TypeToken<Map<String, ReadWrite>>() {}.type)
+            gson.fromJson(content, object: TypeToken<Map<String, ReadWrite>>() {}.type) as Map<String, ReadWrite>
         else
             null
     } catch (e: Exception) {
-        Log.e("ContactListEvent", "can't parse content as relay lists: $tags", e)
+        Log.w("ContactListEvent", "Can't parse content as relay lists: $content", e)
         null
     }
 

@@ -14,7 +14,8 @@ object UserProfileFollowersFeedFilter: FeedFilter<User>() {
   }
 
   override fun feed(): List<User> {
-    return user?.followers
-      ?.filter { account.isAcceptable(it) } ?: emptyList()
+    return user?.let { myUser ->
+      LocalCache.users.values.filter { it.isFollowing(myUser) && account.isAcceptable(it) }
+    }?: emptyList()
   }
 }

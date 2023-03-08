@@ -24,23 +24,12 @@ import nostr.postr.toNpub
 
 val lnurlpPattern = Pattern.compile("(?i:http|https):\\/\\/((.+)\\/)*\\.well-known\\/lnurlp\\/(.*)")
 
-class Badges(val definition: Note, val awardees: Set<Note>)
-
 class User(val pubkeyHex: String) {
     var info: UserMetadata? = null
 
-    var updatedFollowsAt: Long = 0;
     var latestContactList: ContactListEvent? = null
 
-    var follows = setOf<User>()
-        private set
-    var followers = setOf<User>()
-        private set
-
     var notes = setOf<Note>()
-        private set
-
-    var taggedPosts = setOf<Note>()
         private set
 
     var reports = mapOf<User, Set<Note>>()
@@ -49,9 +38,6 @@ class User(val pubkeyHex: String) {
     var latestReportTime: Long = 0
 
     var zaps = mapOf<Note, Note?>()
-        private set
-
-    var relays: Map<String, ContactListEvent.ReadWrite>? = null
         private set
 
     var relaysBeingUsed = mapOf<String, RelayInfo>()
@@ -92,54 +78,25 @@ class User(val pubkeyHex: String) {
         return info?.picture
     }
 
-    fun follow(user: User, followedAt: Long) {
-        follows = follows + user
-        user.followers = user.followers + this
+    fun updateContactList(event: ContactListEvent) {
+        if (event.id == latestContactList?.id) return
 
+        val oldContactListEvent = latestContactList
+        latestContactList = event
+
+        // Update following of the current user
         liveSet?.follows?.invalidateData()
-        user.liveSet?.follows?.invalidateData()
-    }
 
-    fun unfollow(user: User) {
-        follows = follows - user
-        user.followers = user.followers - this
-
-        liveSet?.follows?.invalidateData()
-        user.liveSet?.follows?.invalidateData()
-    }
-
-    fun follow(users: Set<User>, followedAt: Long) {
-        follows = follows + users
-        users.forEach {
-            if (this !in it.followers && it.liveSet?.isInUse() == true) {
-                it.followers = it.followers + this
-                it.liveSet?.follows?.invalidateData()
-            }
+        // Update Followers of the past user list
+        // Update Followers of the new contact list
+        (oldContactListEvent)?.unverifiedFollowKeySet()?.forEach {
+            LocalCache.users[it]?.liveSet?.follows?.invalidateData()
+        }
+        (latestContactList)?.unverifiedFollowKeySet()?.forEach {
+            LocalCache.users[it]?.liveSet?.follows?.invalidateData()
         }
 
-        liveSet?.follows?.invalidateData()
-    }
-
-    fun unfollow(users: Set<User>) {
-        follows = follows - users
-        users.forEach {
-            if (this in it.followers && it.liveSet?.isInUse() == true) {
-                it.followers = it.followers - this
-                it.liveSet?.follows?.invalidateData()
-            }
-        }
-        liveSet?.follows?.invalidateData()
-    }
-
-    fun addTaggedPost(note: Note) {
-        if (note !in taggedPosts) {
-            taggedPosts = taggedPosts + note
-            // No need for Listener yet
-        }
-    }
-
-    fun removeTaggedPost(note: Note) {
-        taggedPosts = taggedPosts - note
+        liveSet?.relays?.invalidateData()
     }
 
     fun addNote(note: Note) {
@@ -224,15 +181,15 @@ class User(val pubkeyHex: String) {
         return reports[user] ?: emptySet()
     }
 
-    fun reportAuthorsBy(users: Set<User>): List<User> {
-        return reports.keys.filter { it in users }
+    fun reportAuthorsBy(users: Set<HexKey>): List<User> {
+        return reports.keys.filter { it.pubkeyHex in users }
     }
 
-    fun countReportAuthorsBy(users: Set<User>): Int {
-        return reports.keys.count { it in users }
+    fun countReportAuthorsBy(users: Set<HexKey>): Int {
+        return reports.keys.count { it.pubkeyHex in users }
     }
 
-    fun reportsBy(users: Set<User>): List<Note> {
+    fun reportsBy(users: Set<HexKey>): List<Note> {
         return reportAuthorsBy(users).mapNotNull {
             reports[it]
         }.flatten()
@@ -268,22 +225,6 @@ class User(val pubkeyHex: String) {
 
         liveSet?.relayInfo?.invalidateData()
     }
-    
-    fun updateFollows(newFollows: Set<User>, updateAt: Long) {
-        val toBeAdded = newFollows - follows
-        val toBeRemoved = follows - newFollows
-
-        follow(toBeAdded, updateAt)
-        unfollow(toBeRemoved)
-
-        updatedFollowsAt = updateAt
-    }
-
-    fun updateRelays(relayUse: Map<String, ContactListEvent.ReadWrite>) {
-        // no need to test if relays are different. The Account will check for us.
-        relays = relayUse
-        liveSet?.relays?.invalidateData()
-    }
 
     fun updateUserInfo(newUserInfo: UserMetadata, latestMetadata: MetadataEvent) {
         info = newUserInfo
@@ -310,7 +251,29 @@ class User(val pubkeyHex: String) {
     }
 
     fun isFollowing(user: User): Boolean {
-        return follows.contains(user)
+        return (latestContactList)?.unverifiedFollowKeySet()?.toSet()?.let {
+            return user.pubkeyHex in it
+        } ?: false
+    }
+
+    fun transientFollowCount(): Int? {
+        return latestContactList?.unverifiedFollowKeySet()?.size
+    }
+
+    fun transientFollowerCount(): Int {
+        return LocalCache.users.values.count { it.latestContactList?.let { pubkeyHex in it.unverifiedFollowKeySet() } ?: false }
+    }
+
+    fun cachedFollowingKeySet(): Set<HexKey> {
+        return latestContactList?.verifiedFollowKeySet ?: emptySet()
+    }
+
+    fun cachedFollowCount(): Int? {
+        return latestContactList?.verifiedFollowKeySet?.size
+    }
+
+    fun cachedFollowerCount(): Int {
+        return LocalCache.users.values.count { it.latestContactList?.let { pubkeyHex in it.unverifiedFollowKeySet() } ?: false }
     }
 
     fun hasSentMessagesTo(user: User?): Boolean {

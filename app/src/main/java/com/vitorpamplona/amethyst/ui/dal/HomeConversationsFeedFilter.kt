@@ -15,7 +15,7 @@ object HomeConversationsFeedFilter: FeedFilter<Note>() {
     return LocalCache.notes.values
       .filter {
         (it.event is TextNoteEvent || it.event is RepostEvent)
-          && it.author in user.follows
+          && it.author?.pubkeyHex in user.cachedFollowingKeySet()
           // && account.isAcceptable(it)  // This filter follows only. No need to check if acceptable
           && it.author?.let { !HomeNewThreadFeedFilter.account.isHidden(it) } ?: true
           && !it.isNewThread()

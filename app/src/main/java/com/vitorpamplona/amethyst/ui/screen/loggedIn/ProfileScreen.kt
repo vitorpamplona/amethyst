@@ -196,13 +196,13 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                             },
                             {
                                 val userState by baseUser.live().follows.observeAsState()
-                                val userFollows = userState?.user?.follows?.size ?: "--"
+                                val userFollows = userState?.user?.transientFollowCount() ?: "--"
 
                                 Text(text = "$userFollows ${stringResource(R.string.follows)}")
                             },
                             {
                                 val userState by baseUser.live().follows.observeAsState()
-                                val userFollowers = userState?.user?.followers?.size ?: "--"
+                                val userFollowers = userState?.user?.transientFollowerCount() ?: "--"
 
                                 Text(text = "$userFollowers ${stringResource(id = R.string.followers)}")
                             },
@@ -223,7 +223,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                                 val userRelaysBeingUsed = userState?.user?.relaysBeingUsed?.size ?: "--"
 
                                 val userStateRelayInfo by baseUser.live().relayInfo.observeAsState()
-                                val userRelays = userStateRelayInfo?.user?.relays?.size ?: "--"
+                                val userRelays = userStateRelayInfo?.user?.latestContactList?.relays()?.size ?: "--"
 
                                 Text(text = "$userRelaysBeingUsed / $userRelays ${stringResource(R.string.relays)}")
                             }

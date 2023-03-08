@@ -12,10 +12,7 @@ class LongTextNoteEvent(
     tags: List<List<String>>,
     content: String,
     sig: HexKey
-): Event(id, pubKey, createdAt, kind, tags, content, sig) {
-    fun replyTos() = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
-    fun mentions() = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
-
+): BaseTextNoteEvent(id, pubKey, createdAt, kind, tags, content, sig) {
     fun dTag() = tags.filter { it.firstOrNull() == "d" }.mapNotNull { it.getOrNull(1) }.firstOrNull() ?: ""
     fun address() = ATag(kind, pubKey, dTag(), null)
 

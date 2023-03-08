@@ -4,7 +4,6 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.google.gson.reflect.TypeToken
 import com.vitorpamplona.amethyst.service.model.ATag
 import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
 import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
@@ -190,24 +189,15 @@ object LocalCache {
       return
     }
 
-    val mentions = event.mentions().mapNotNull { checkGetOrCreateUser(it) }
-    val replyTo = replyToWithoutCitations(event).mapNotNull { checkGetOrCreateNote(it) } +
+    val replyTo = event.replyToWithoutCitations().mapNotNull { checkGetOrCreateNote(it) } +
                   event.taggedAddresses().mapNotNull { getOrCreateAddressableNote(it) }
 
-    note.loadEvent(event, author, mentions, replyTo)
+    note.loadEvent(event, author, replyTo)
 
     //Log.d("TN", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${note.event?.content()?.take(100)} ${formattedDateTime(event.createdAt)}")
 
     // Prepares user's profile view.
     author.addNote(note)
-
-    // Adds notifications to users.
-    mentions.forEach {
-      it.addTaggedPost(note)
-    }
-    replyTo.forEach {
-      it.author?.addTaggedPost(note)
-    }
 
     // Counts the replies
     replyTo.forEach {
@@ -236,21 +226,12 @@ object LocalCache {
       return
     }
 
-    val mentions = event.mentions().mapNotNull { checkGetOrCreateUser(it) }
-    val replyTo = replyToWithoutCitations(event).mapNotNull { checkGetOrCreateNote(it) }
+    val replyTo = event.replyToWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
 
     if (event.createdAt > (note.createdAt() ?: 0)) {
-      note.loadEvent(event, author, mentions, replyTo)
+      note.loadEvent(event, author, replyTo)
 
       author.addNote(note)
-
-      // Adds notifications to users.
-      mentions.forEach {
-        it.addTaggedPost(note)
-      }
-      replyTo.forEach {
-        it.author?.addTaggedPost(note)
-      }
 
       refreshObservers()
     }
@@ -264,7 +245,7 @@ object LocalCache {
     if (note.event?.id() == event.id()) return
 
     if (event.createdAt > (note.createdAt() ?: 0)) {
-      note.loadEvent(event, author, emptyList<User>(), emptyList<Note>())
+      note.loadEvent(event, author, emptyList<Note>())
 
       refreshObservers()
     }
@@ -281,7 +262,7 @@ object LocalCache {
       event.badgeAwardDefinitions().mapNotNull { getOrCreateAddressableNote(it) }
 
     if (event.createdAt > (note.createdAt() ?: 0)) {
-      note.loadEvent(event, author, emptyList(), replyTo)
+      note.loadEvent(event, author, replyTo)
 
       author.updateAcceptedBadges(note)
 
@@ -301,12 +282,7 @@ object LocalCache {
     val awardees = event.awardees().mapNotNull { checkGetOrCreateUser(it) }
     val awardDefinition = event.awardDefinition().map { getOrCreateAddressableNote(it) }
 
-    note.loadEvent(event, author, awardees, awardDefinition)
-
-    // Adds notifications to users.
-    awardees.forEach {
-      it.addTaggedPost(note)
-    }
+    note.loadEvent(event, author, awardDefinition)
 
     // Counts the replies
     awardees.forEach {
@@ -321,90 +297,17 @@ object LocalCache {
     refreshObservers()
   }
 
-  private fun findCitations(event: Event): Set<String> {
-    var citations = mutableSetOf<String>()
-    // Removes citations from replies:
-    val matcher = tagSearch.matcher(event.content)
-    while (matcher.find()) {
-      try {
-        val tag = matcher.group(1)?.let { event.tags[it.toInt()] }
-        if (tag != null && tag[0] == "e") {
-          citations.add(tag[1])
-        }
-      } catch (e: Exception) {
-
-      }
-    }
-    return citations
-  }
-
-  private fun replyToWithoutCitations(event: TextNoteEvent): List<String> {
-    val repliesTo = event.replyTos()
-    if (repliesTo.isEmpty()) return repliesTo
-
-    val citations = findCitations(event)
-
-    return if (citations.isEmpty()) {
-      repliesTo
-    } else {
-      repliesTo.filter { it !in citations }
-    }
-  }
-
-  private fun replyToWithoutCitations(event: LongTextNoteEvent): List<String> {
-    val repliesTo = event.replyTos()
-    if (repliesTo.isEmpty()) return repliesTo
-
-    val citations = findCitations(event)
-
-    return if (citations.isEmpty()) {
-      repliesTo
-    } else {
-      repliesTo.filter { it !in citations }
-    }
-  }
-
   fun consume(event: RecommendRelayEvent) {
     //Log.d("RR", event.toJson())
   }
 
   fun consume(event: ContactListEvent) {
     val user = getOrCreateUser(event.pubKey)
-    val follows = event.follows()
+    val follows = event.unverifiedFollowKeySet()
 
-    if (event.createdAt > user.updatedFollowsAt && !follows.isNullOrEmpty()) {
+    if (event.createdAt > (user.latestContactList?.createdAt ?: 0) && !follows.isNullOrEmpty()) {
       // Saves relay list only if it's a user that is currently been seen
-      user.latestContactList = event
-
-      user.updateFollows(
-        follows.map {
-          try {
-            val pubKey = decodePublicKey(it.pubKeyHex)
-            getOrCreateUser(pubKey.toHexKey())
-          } catch (e: Exception) {
-            Log.w("ContactList Parser", "Ignoring: Could not parse Hex key: ${it.pubKeyHex} in ${event.toJson()}")
-            //e.printStackTrace()
-            null
-          }
-        }.filterNotNull().toSet(),
-        event.createdAt
-      )
-
-      // Saves relay list only if it's a user that is currently been seen
-      try {
-        if (event.content.isNotEmpty()) {
-          val relays: Map<String, ContactListEvent.ReadWrite> =
-            Event.gson.fromJson(
-              event.content,
-              object : TypeToken<Map<String, ContactListEvent.ReadWrite>>() {}.type
-            )
-
-          user.updateRelays(relays)
-        }
-      } catch (e: Exception) {
-        Log.w("Relay List Parser","Relay import issue ${e.message}", e)
-        e.printStackTrace()
-      }
+      user.updateContactList(event)
 
       Log.d("CL", "AAA ${user.toBestDisplayName()} ${follows.size}")
     }
@@ -427,9 +330,8 @@ object LocalCache {
     //Log.d("PM", "${author.toBestDisplayName()} to ${recipient?.toBestDisplayName()}")
 
     val repliesTo = event.tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }.mapNotNull { checkGetOrCreateNote(it) }
-    val mentions = event.tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }.mapNotNull { checkGetOrCreateUser(it) }
 
-    note.loadEvent(event, author, mentions, repliesTo)
+    note.loadEvent(event, author, repliesTo)
 
     if (recipient != null) {
       author.addMessage(recipient, note)
@@ -448,13 +350,10 @@ object LocalCache {
         deleteNote.author?.removeNote(deleteNote)
 
         // reverts the add
-        deleteNote.mentions?.forEach { user ->
-          user.removeTaggedPost(deleteNote)
-          user.removeReport(deleteNote)
-        }
+        val mentions = deleteNote.event?.tags()?.filter { it.firstOrNull() == "p" }?.mapNotNull { it.getOrNull(1) }?.mapNotNull { checkGetOrCreateUser(it) }
 
-        deleteNote.replyTo?.forEach { replyingNote ->
-          replyingNote.author?.removeTaggedPost(deleteNote)
+        mentions?.forEach { user ->
+          user.removeReport(deleteNote)
         }
 
         // Counts the replies
@@ -486,22 +385,13 @@ object LocalCache {
     //Log.d("TN", "New Boost (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${formattedDateTime(event.createdAt)}")
 
     val author = getOrCreateUser(event.pubKey)
-    val mentions = event.originalAuthor().mapNotNull { checkGetOrCreateUser(it) }
     val repliesTo = event.boostedPost().mapNotNull { checkGetOrCreateNote(it) } +
                     event.taggedAddresses().mapNotNull { getOrCreateAddressableNote(it) }
 
-    note.loadEvent(event, author, mentions, repliesTo)
+    note.loadEvent(event, author, repliesTo)
 
     // Prepares user's profile view.
     author.addNote(note)
-
-    // Adds notifications to users.
-    mentions.forEach {
-      it.addTaggedPost(note)
-    }
-    repliesTo.forEach {
-      it.author?.addTaggedPost(note)
-    }
 
     // Counts the replies
     repliesTo.forEach {
@@ -522,17 +412,9 @@ object LocalCache {
     val repliesTo = event.originalPost().mapNotNull { checkGetOrCreateNote(it) } +
                     event.taggedAddresses().mapNotNull { getOrCreateAddressableNote(it) }
 
-    note.loadEvent(event, author, mentions, repliesTo)
+    note.loadEvent(event, author, repliesTo)
 
     //Log.d("RE", "New Reaction ${event.content} (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${formattedDateTime(event.createdAt)}")
-
-    // Adds notifications to users.
-    mentions.forEach {
-      it.addTaggedPost(note)
-    }
-    repliesTo.forEach {
-      it.author?.addTaggedPost(note)
-    }
 
     if (
       event.content == "" ||
@@ -573,7 +455,7 @@ object LocalCache {
     val repliesTo = event.reportedPost().mapNotNull { checkGetOrCreateNote(it.key) } +
                     event.taggedAddresses().mapNotNull { getOrCreateAddressableNote(it) }
 
-    note.loadEvent(event, author, mentions, repliesTo)
+    note.loadEvent(event, author, repliesTo)
 
     //Log.d("RP", "New Report ${event.content} by ${note.author?.toBestDisplayName()} ${formattedDateTime(event.createdAt)}")
     // Adds notifications to users.
@@ -598,7 +480,7 @@ object LocalCache {
 
         val note = getOrCreateNote(event.id)
         oldChannel.addNote(note)
-        note.loadEvent(event, author, emptyList(), emptyList())
+        note.loadEvent(event, author, emptyList())
 
         refreshObservers()
       }
@@ -621,7 +503,7 @@ object LocalCache {
 
         val note = getOrCreateNote(event.id)
         oldChannel.addNote(note)
-        note.loadEvent(event, author, emptyList(), emptyList())
+        note.loadEvent(event, author, emptyList())
 
         refreshObservers()
       }
@@ -662,17 +544,9 @@ object LocalCache {
       .mapNotNull { checkGetOrCreateNote(it) }
       .filter { it.event !is ChannelCreateEvent }
 
-    note.loadEvent(event, author, mentions, replyTo)
+    note.loadEvent(event, author, replyTo)
 
     //Log.d("CM", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${note.event?.content()} ${formattedDateTime(event.createdAt)}")
-
-    // Adds notifications to users.
-    mentions.forEach {
-      it.addTaggedPost(note)
-    }
-    replyTo.forEach {
-      it.author?.addTaggedPost(note)
-    }
 
     // Counts the replies
     replyTo.forEach {
@@ -704,7 +578,7 @@ object LocalCache {
                     event.taggedAddresses().map { getOrCreateAddressableNote(it) } +
                     ((zapRequest?.event as? LnZapRequestEvent)?.taggedAddresses()?.map { getOrCreateAddressableNote(it) } ?: emptySet<Note>())
 
-    note.loadEvent(event, author, mentions, repliesTo)
+    note.loadEvent(event, author, repliesTo)
 
     if (zapRequest == null) {
       Log.e("ZP","Zap Request not found. Unable to process Zap {${event.toJson()}}")
@@ -712,14 +586,6 @@ object LocalCache {
     }
 
     //Log.d("ZP", "New ZapEvent ${event.content} (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${formattedDateTime(event.createdAt)}")
-
-    // Adds notifications to users.
-    mentions.forEach {
-      it.addTaggedPost(note)
-    }
-    repliesTo.forEach {
-      it.author?.addTaggedPost(note)
-    }
 
     repliesTo.forEach {
       it.addZap(zapRequest, note)
@@ -740,17 +606,9 @@ object LocalCache {
     val repliesTo = event.zappedPost().mapNotNull { checkGetOrCreateNote(it) } +
                     event.taggedAddresses().map { getOrCreateAddressableNote(it) }
 
-    note.loadEvent(event, author, mentions, repliesTo)
+    note.loadEvent(event, author, repliesTo)
 
     //Log.d("ZP", "New Zap Request ${event.content} (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${formattedDateTime(event.createdAt)}")
-
-    // Adds notifications to users.
-    mentions.forEach {
-      it.addTaggedPost(note)
-    }
-    repliesTo.forEach {
-      it.author?.addTaggedPost(note)
-    }
 
     repliesTo.forEach {
       it.addZap(note, null)
@@ -809,12 +667,7 @@ object LocalCache {
         // Doesn't need to clean up the replies and mentions.. Too small to matter.
 
         // reverts the add
-        it.mentions?.forEach { user ->
-          user.removeTaggedPost(it)
-        }
-        it.replyTo?.forEach { replyingNote ->
-          replyingNote.author?.removeTaggedPost(it)
-        }
+        val mentions = it.event?.tags()?.filter { it.firstOrNull() == "p" }?.mapNotNull { it.getOrNull(1) }?.mapNotNull { checkGetOrCreateUser(it) }
 
         // Counts the replies
         it.replyTo?.forEach { replyingNote ->
@@ -824,40 +677,6 @@ object LocalCache {
 
       println("PRUNE: ${toBeRemoved.size} messages removed from ${it.value.info.name}")
     }
-  }
-
-  fun pruneNonFollows(account: Account) {
-    val follows = account.userProfile().follows
-    val knownPMs = account.userProfile().privateChatrooms.filter {
-      account.userProfile().hasSentMessagesTo(it.key) && account.isAcceptable(it.key)
-    }
-
-    val followsFollow = follows.map {
-      it.follows
-    }.flatten()
-
-    val followSet = follows.plus(knownPMs).plus(account.userProfile()).plus(followsFollow)
-
-    val toBeRemoved = notes
-      .filter {
-        (it.value.author == null || it.value.author!! !in followSet) && it.value.event?.kind() == TextNoteEvent.kind && it.value.liveSet?.isInUse() != true
-      }
-
-    toBeRemoved.forEach {
-      notes.remove(it.key)
-    }
-
-    val toBeRemovedUsers = users
-      .filter {
-        (it.value !in followSet) && it.value.liveSet?.isInUse() != true
-      }
-
-    toBeRemovedUsers.forEach {
-      users.remove(it.key)
-    }
-
-    println("PRUNE: ${toBeRemoved.size} messages removed because they came from NonFollows")
-    println("PRUNE: ${toBeRemovedUsers.size} users removed because are NonFollows")
   }
 
   fun pruneHiddenMessages(account: Account) {
@@ -871,14 +690,6 @@ object LocalCache {
 
     toBeRemoved.forEach {
       it.author?.removeNote(it)
-
-      // reverts the add
-      it.mentions?.forEach { user ->
-        user.removeTaggedPost(it)
-      }
-      it.replyTo?.forEach { replyingNote ->
-        replyingNote.author?.removeTaggedPost(it)
-      }
 
       // Counts the replies
       it.replyTo?.forEach { masterNote ->

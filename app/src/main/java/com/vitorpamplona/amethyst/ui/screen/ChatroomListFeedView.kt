@@ -23,6 +23,8 @@ import androidx.navigation.NavController
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.vitorpamplona.amethyst.NotificationCache
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.ui.note.ChatroomCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -109,7 +111,11 @@ private fun FeedLoaded(
                     if (channel != null) {
                         route = "Channel/${channel.idHex}"
                     } else {
-                        val replyAuthorBase = note.mentions?.first()
+                        val replyAuthorBase =
+                            (note.event as? PrivateDmEvent)
+                                ?.recipientPubKey()
+                                ?.let { LocalCache.getOrCreateUser(it) }
+
                         var userToComposeOn = note.author!!
                         if (replyAuthorBase != null) {
                             if (note.author == account.userProfile()) {

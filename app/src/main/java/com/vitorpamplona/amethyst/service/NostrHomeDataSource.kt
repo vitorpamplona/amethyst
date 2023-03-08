@@ -37,10 +37,10 @@ object NostrHomeDataSource: NostrDataSource("HomeFeed") {
   }
 
   fun createFollowAccountsFilter(): TypedFilter {
-    val follows = account.userProfile().follows
+    val follows = account.followingKeySet()
 
     val followKeys = follows.map {
-      it.pubkeyHex.substring(0, 6)
+      it.substring(0, 6)
     }
 
     val followSet = followKeys.plus(account.userProfile().pubkeyHex.substring(0, 6))

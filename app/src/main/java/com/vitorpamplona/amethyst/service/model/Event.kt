@@ -37,6 +37,11 @@ open class Event(
 
     override fun toJson(): String = gson.toJson(this)
 
+    fun taggedUsers() = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
+
+    override fun isTaggedUser(idHex: String) = tags.any { it.getOrNull(0) == "p" && it.getOrNull(1) == idHex }
+
+
     /**
      * Checks if the ID is correct and then if the pubKey's secret key signed the event.
      */

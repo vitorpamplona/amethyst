@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.*
 
@@ -8,12 +9,11 @@ object NotificationFeedFilter: FeedFilter<Note>() {
   lateinit var account: Account
 
   override fun feed(): List<Note> {
-    return account.userProfile()
-      .taggedPosts
-      .asSequence()
+    val loggedInUser = account.userProfile().pubkeyHex
+    return LocalCache.notes.values
+      .filter { it.event?.isTaggedUser(loggedInUser) ?: false }
       .filter {
-        it.author == null
-          || (!account.isHidden(it.author!!) && it.author != account.userProfile())
+        it.author == null || (!account.isHidden(it.author!!) && it.author != account.userProfile())
       }
       .filter {
         it.event !is ChannelCreateEvent
