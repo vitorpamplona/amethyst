@@ -14,13 +14,6 @@ class TextNoteEvent(
     sig: HexKey
 ) : BaseTextNoteEvent(id, pubKey, createdAt, kind, tags, content, sig) {
 
-    fun taggedAddresses() = tags.filter { it.firstOrNull() == "a" }.mapNotNull {
-        val aTagValue = it.getOrNull(1)
-        val relay = it.getOrNull(2)
-
-        if (aTagValue != null) ATag.parse(aTagValue, relay) else null
-    }
-
     companion object {
         const val kind = 1
 

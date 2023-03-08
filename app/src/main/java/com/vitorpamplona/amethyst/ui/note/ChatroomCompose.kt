@@ -31,10 +31,13 @@ import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -51,7 +54,11 @@ import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navController: NavController) {
+fun ChatroomCompose(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    navController: NavController
+) {
     val noteState by baseNote.live().metadata.observeAsState()
     val note = noteState?.note
 
@@ -86,23 +93,42 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
 
             LaunchedEffect(key1 = notificationCache, key2 = note) {
                 note.createdAt()?.let {
-                    hasNewMessages = it > notificationCache.cache.load("Channel/${channel.idHex}", context)
+                    hasNewMessages =
+                        it > notificationCache.cache.load("Channel/${channel.idHex}", context)
                 }
             }
 
             ChannelName(
                 channelPicture = channel.profilePicture(),
-                channelPicturePlaceholder = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
+                channelPicturePlaceholder = BitmapPainter(
+                    RoboHashCache.get(
+                        context,
+                        channel.idHex
+                    )
+                ),
                 channelTitle = {
                     Text(
-                        "${channel.info.name}",
+                        text = buildAnnotatedString {
+                            withStyle(
+                                SpanStyle(
+                                    fontWeight = FontWeight.Bold
+                                )
+                            ) {
+                                append(channel.info.name)
+                            }
+
+                            withStyle(
+                                SpanStyle(
+                                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                                    fontWeight = FontWeight.Normal
+                                )
+                            ) {
+                                append(" ${stringResource(id = R.string.public_chat)}")
+                            }
+                        },
                         fontWeight = FontWeight.Bold,
                         modifier = it,
                         style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-                    )
-                    Text(
-                        " ${stringResource(R.string.public_chat)}",
-                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                     )
                 },
                 channelLastTime = note.createdAt(),
@@ -132,12 +158,21 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
 
             LaunchedEffect(key1 = notificationCache, key2 = note) {
                 noteEvent?.let {
-                    hasNewMessages = it.createdAt() > notificationCache.cache.load("Room/${userToComposeOn.pubkeyHex}", context)
+                    hasNewMessages = it.createdAt() > notificationCache.cache.load(
+                        "Room/${userToComposeOn.pubkeyHex}",
+                        context
+                    )
                 }
             }
 
             ChannelName(
-                channelPicture = { UserPicture(userToComposeOn, account.userProfile(), size = 55.dp) },
+                channelPicture = {
+                    UserPicture(
+                        userToComposeOn,
+                        account.userProfile(),
+                        size = 55.dp
+                    )
+                },
                 channelTitle = { UsernameDisplay(userToComposeOn, it) },
                 channelLastTime = note.createdAt(),
                 channelLastContent = accountViewModel.decrypt(note),
@@ -214,7 +249,10 @@ fun ChannelName(
                     }
                 }
 
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     if (channelLastContent != null) {
                         Text(
                             channelLastContent,

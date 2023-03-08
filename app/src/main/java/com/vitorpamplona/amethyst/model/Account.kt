@@ -56,6 +56,7 @@ class Account(
     var languagePreferences: Map<String, String> = mapOf(),
     var translateTo: String = Locale.getDefault().language,
     var zapAmountChoices: List<Long> = listOf(500L, 1000L, 5000L),
+    var hideDeleteRequestInfo: Boolean = false,
     var backupContactList: ContactListEvent? = null
 ) {
     var transientHiddenUsers: Set<String> = setOf()
@@ -546,6 +547,11 @@ class Account(
         localRelays = value.toSet()
         sendNewRelayList(value.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) })
 
+        saveable.invalidateData()
+    }
+
+    fun setHideDeleteRequestInfo() {
+        hideDeleteRequestInfo = true
         saveable.invalidateData()
     }
 

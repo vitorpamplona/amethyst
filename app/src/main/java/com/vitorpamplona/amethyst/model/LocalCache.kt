@@ -186,8 +186,7 @@ object LocalCache {
             return
         }
 
-        val replyTo = event.replyToWithoutCitations().mapNotNull { checkGetOrCreateNote(it) } +
-            event.taggedAddresses().mapNotNull { getOrCreateAddressableNote(it) }
+        val replyTo = event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
 
         note.loadEvent(event, author, replyTo)
 
@@ -223,7 +222,7 @@ object LocalCache {
             return
         }
 
-        val replyTo = event.replyToWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+        val replyTo = event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
 
         if (event.createdAt > (note.createdAt() ?: 0)) {
             note.loadEvent(event, author, replyTo)

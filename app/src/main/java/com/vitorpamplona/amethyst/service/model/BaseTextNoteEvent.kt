@@ -15,6 +15,13 @@ open class BaseTextNoteEvent(
     fun mentions() = taggedUsers()
     fun replyTos() = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
 
+    fun taggedAddresses() = tags.filter { it.firstOrNull() == "a" }.mapNotNull {
+        val aTagValue = it.getOrNull(1)
+        val relay = it.getOrNull(2)
+
+        if (aTagValue != null) ATag.parse(aTagValue, relay) else null
+    }
+
     fun findCitations(): Set<String> {
         var citations = mutableSetOf<String>()
         // Removes citations from replies:
@@ -25,20 +32,24 @@ open class BaseTextNoteEvent(
                 if (tag != null && tag[0] == "e") {
                     citations.add(tag[1])
                 }
+                if (tag != null && tag[0] == "a") {
+                    citations.add(tag[1])
+                }
             } catch (e: Exception) {
             }
         }
         return citations
     }
 
-    fun replyToWithoutCitations(): List<String> {
+    fun tagsWithoutCitations(): List<String> {
         val repliesTo = replyTos()
-        if (repliesTo.isEmpty()) return repliesTo
+        val tagAddresses = taggedAddresses().map { it.toTag() }
+        if (repliesTo.isEmpty() && tagAddresses.isEmpty()) return emptyList()
 
         val citations = findCitations()
 
         return if (citations.isEmpty()) {
-            repliesTo
+            repliesTo + tagAddresses
         } else {
             repliesTo.filter { it !in citations }
         }
