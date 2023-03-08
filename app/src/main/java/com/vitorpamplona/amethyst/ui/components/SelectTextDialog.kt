@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.R
 @Composable
 fun SelectTextDialog(text: String, onDismiss: () -> Unit) {
     Dialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = onDismiss
     ) {
         Card {
             Column {

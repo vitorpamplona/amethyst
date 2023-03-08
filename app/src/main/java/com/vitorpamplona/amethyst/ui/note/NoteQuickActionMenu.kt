@@ -65,7 +65,8 @@ val externalLinkForNote = { note: Note -> "https://snort.social/e/${note.idNote(
 @Composable
 fun VerticalDivider(color: Color) =
     Divider(
-        color = color, modifier = Modifier
+        color = color,
+        modifier = Modifier
             .fillMaxHeight()
             .width(1.dp)
     )
@@ -94,7 +95,7 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
             Card(
                 modifier = Modifier.shadow(elevation = 6.dp, shape = cardShape),
                 shape = cardShape,
-                backgroundColor = MaterialTheme.colors.primary,
+                backgroundColor = MaterialTheme.colors.primary
             ) {
                 Column(modifier = Modifier.width(IntrinsicSize.Min)) {
                     Row(modifier = Modifier.height(IntrinsicSize.Min)) {
@@ -169,13 +170,13 @@ fun NoteQuickActionItem(icon: ImageVector, label: String, onClick: () -> Unit) {
             .size(64.dp)
             .clickable { onClick() },
         verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
             modifier = Modifier.size(24.dp),
-            tint = MaterialTheme.colors.onPrimary,
+            tint = MaterialTheme.colors.onPrimary
         )
         Text(text = label, fontSize = 12.sp)
     }
