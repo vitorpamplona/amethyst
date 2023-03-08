@@ -1,0 +1,23 @@
+#!/bin/bash
+
+GREEN='\033[0;32m'
+NO_COLOR='\033[0m'
+
+echo "*********************************************************"
+echo "Running git pre-push hook. Running test... "
+echo "*********************************************************"
+
+./gradlew test
+
+status=$?
+
+if [ "$status" = 0 ] ; then
+    echo "All test passed."
+    exit 0
+else
+    echo "*********************************************************"
+    echo 1>&2 "Failing test"
+    printf "Run ${GREEN}./gradlew test${NO_COLOR} to make sure you have all tests green before pushing...\n"
+    echo "*********************************************************"
+    exit 1
+fi
