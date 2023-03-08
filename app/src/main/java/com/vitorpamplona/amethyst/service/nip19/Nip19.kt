@@ -44,13 +44,13 @@ object Nip19 {
     }
 
     private fun nprofile(bytes: ByteArray): Return? {
-        val tlv = parseTLV(bytes)
+        val tlv = Tlv.parse(bytes)
 
-        val hex = tlv.get(TlvTypes.SPECIAL.id)
+        val hex = tlv.get(Tlv.Type.SPECIAL.id)
             ?.get(0)
             ?.toHexKey() ?: return null
 
-        val relay = tlv.get(TlvTypes.RELAY.id)
+        val relay = tlv.get(Tlv.Type.RELAY.id)
             ?.get(0)
             ?.toString(Charsets.UTF_8)
 
@@ -58,13 +58,13 @@ object Nip19 {
     }
 
     private fun nevent(bytes: ByteArray): Return? {
-        val tlv = parseTLV(bytes)
+        val tlv = Tlv.parse(bytes)
 
-        val hex = tlv.get(TlvTypes.SPECIAL.id)
+        val hex = tlv.get(Tlv.Type.SPECIAL.id)
             ?.get(0)
             ?.toHexKey() ?: return null
 
-        val relay = tlv.get(TlvTypes.RELAY.id)
+        val relay = tlv.get(Tlv.Type.RELAY.id)
             ?.get(0)
             ?.toString(Charsets.UTF_8)
 
@@ -72,8 +72,8 @@ object Nip19 {
     }
 
     private fun nrelay(bytes: ByteArray): Return? {
-        val relayUrl = parseTLV(bytes)
-            .get(TlvTypes.SPECIAL.id)
+        val relayUrl = Tlv.parse(bytes)
+            .get(Tlv.Type.SPECIAL.id)
             ?.get(0)
             ?.toString(Charsets.UTF_8) ?: return null
 
@@ -81,23 +81,23 @@ object Nip19 {
     }
 
     private fun naddr(bytes: ByteArray): Return? {
-        val tlv = parseTLV(bytes)
+        val tlv = Tlv.parse(bytes)
 
-        val d = tlv.get(TlvTypes.SPECIAL.id)
+        val d = tlv.get(Tlv.Type.SPECIAL.id)
             ?.get(0)
             ?.toString(Charsets.UTF_8) ?: return null
 
-        val relay = tlv.get(TlvTypes.RELAY.id)
+        val relay = tlv.get(Tlv.Type.RELAY.id)
             ?.get(0)
             ?.toString(Charsets.UTF_8)
 
-        val author = tlv.get(TlvTypes.AUTHOR.id)
+        val author = tlv.get(Tlv.Type.AUTHOR.id)
             ?.get(0)
             ?.toHexKey()
 
-        val kind = tlv.get(TlvTypes.KIND.id)
+        val kind = tlv.get(Tlv.Type.KIND.id)
             ?.get(0)
-            ?.let { toInt32(it) }
+            ?.let { Tlv.toInt32(it) }
 
         return Return(Type.ADDRESS, "$kind:$author:$d", relay)
     }
