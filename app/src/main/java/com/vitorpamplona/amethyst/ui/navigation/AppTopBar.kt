@@ -68,11 +68,10 @@ import kotlinx.coroutines.launch
 @Composable
 fun AppTopBar(navController: NavHostController, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
     when (currentRoute(navController)) {
-        //Route.Profile.route -> TopBarWithBackButton(navController)
+        // Route.Profile.route -> TopBarWithBackButton(navController)
         else -> MainTopBar(scaffoldState, accountViewModel)
     }
 }
-
 
 @Composable
 fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
@@ -95,8 +94,9 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
         mutableStateOf(false)
     }
 
-    if (wantsToEditRelays)
+    if (wantsToEditRelays) {
         NewRelayListView({ wantsToEditRelays = false }, account)
+    }
 
     Column() {
         TopAppBar(
@@ -119,9 +119,9 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
                             IconButton(
                                 onClick = {
                                     Client.allSubscriptions().map {
-                                        "${it} ${
-                                            Client.getSubscriptionFilters(it)
-                                                .joinToString { it.filter.toJson() }
+                                        "$it ${
+                                        Client.getSubscriptionFilters(it)
+                                            .joinToString { it.filter.toJson() }
                                         }"
                                     }.forEach {
                                         Log.d("CURRENT FILTERS", it)
@@ -146,11 +146,11 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
                                     println("Connected Relays: " + RelayPool.connectedRelays())
 
                                     val imageLoader = Coil.imageLoader(context)
-                                    println("Image Disk Cache ${(imageLoader.diskCache?.size ?: 0)/(1024*1024)}/${(imageLoader.diskCache?.maxSize ?: 0)/(1024*1024)} MB")
-                                    println("Image Memory Cache ${(imageLoader.memoryCache?.size ?: 0)/(1024*1024)}/${(imageLoader.memoryCache?.maxSize ?: 0)/(1024*1024)} MB")
+                                    println("Image Disk Cache ${(imageLoader.diskCache?.size ?: 0) / (1024 * 1024)}/${(imageLoader.diskCache?.maxSize ?: 0) / (1024 * 1024)} MB")
+                                    println("Image Memory Cache ${(imageLoader.memoryCache?.size ?: 0) / (1024 * 1024)}/${(imageLoader.memoryCache?.maxSize ?: 0) / (1024 * 1024)} MB")
 
-                                    println("Notes: " + LocalCache.notes.filter { it.value.event != null }.size +"/"+ LocalCache.notes.size)
-                                    println("Users: " + LocalCache.users.filter { it.value.info?.latestMetadata != null }.size +"/"+ LocalCache.users.size)
+                                    println("Notes: " + LocalCache.notes.filter { it.value.event != null }.size + "/" + LocalCache.notes.size)
+                                    println("Users: " + LocalCache.users.filter { it.value.info?.latestMetadata != null }.size + "/" + LocalCache.users.size)
                                 }
                             ) {
                                 Icon(
@@ -166,7 +166,7 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .fillMaxHeight(),
-                            horizontalAlignment = Alignment.End,
+                            horizontalAlignment = Alignment.End
 
                         ) {
                             Row(
@@ -206,13 +206,14 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
                         modifier = Modifier
                             .width(34.dp)
                             .height(34.dp)
-                            .clip(shape = CircleShape),
+                            .clip(shape = CircleShape)
                     )
                 }
             },
             actions = {
                 IconButton(
-                    onClick = { wantsToEditRelays = true }, modifier = Modifier
+                    onClick = { wantsToEditRelays = true },
+                    modifier = Modifier
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.ic_trends),

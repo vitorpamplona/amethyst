@@ -68,7 +68,6 @@ import com.vitorpamplona.amethyst.ui.screen.FeedView
 import com.vitorpamplona.amethyst.ui.screen.NostrGlobalFeedViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -146,21 +145,21 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
 
     LaunchedEffect(Unit) {
         // Wait for text changes to stop for 300 ms before firing off search.
-        withContext(Dispatchers.IO){
+        withContext(Dispatchers.IO) {
             searchTextChanges.receiveAsFlow()
                 .filter { it.isNotBlank() }
                 .distinctUntilChanged()
                 .debounce(300)
                 .collectLatest {
-                    if (it.removePrefix("npub").removePrefix("note").length >= 4)
+                    if (it.removePrefix("npub").removePrefix("note").length >= 4) {
                         onlineSearch.search(it.trim())
+                    }
 
                     searchResults.value = LocalCache.findUsersStartingWith(it)
                     searchResultsNotes.value = LocalCache.findNotesStartingWith(it).sortedBy { it.createdAt() }.reversed()
                     searchResultsChannels.value = LocalCache.findChannelsStartingWith(it)
                 }
         }
-
     }
 
     DisposableEffect(Unit) {
@@ -169,7 +168,7 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
         }
     }
 
-    //LAST ROW
+    // LAST ROW
     Row(
         modifier = Modifier
             .padding(10.dp)
@@ -233,7 +232,6 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
         )
     }
 
-
     if (searchValue.isNotBlank()) {
         LazyColumn(
             modifier = Modifier.fillMaxHeight(),
@@ -242,11 +240,11 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
                 bottom = 10.dp
             )
         ) {
-            itemsIndexed(searchResults.value, key = { _, item -> "u"+item.pubkeyHex }) { index, item ->
+            itemsIndexed(searchResults.value, key = { _, item -> "u" + item.pubkeyHex }) { index, item ->
                 UserCompose(item, accountViewModel = accountViewModel, navController = navController)
             }
 
-            itemsIndexed(searchResultsChannels.value, key = { _, item -> "c"+item.idHex }) { index, item ->
+            itemsIndexed(searchResultsChannels.value, key = { _, item -> "c" + item.idHex }) { index, item ->
                 ChannelName(
                     channelPicture = item.profilePicture(),
                     channelPicturePlaceholder = BitmapPainter(RoboHashCache.get(ctx, item.idHex)),
@@ -259,10 +257,11 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
                     channelLastTime = null,
                     channelLastContent = item.info.about,
                     false,
-                    onClick = { navController.navigate("Channel/${item.idHex}") })
+                    onClick = { navController.navigate("Channel/${item.idHex}") }
+                )
             }
 
-            itemsIndexed(searchResultsNotes.value, key = { _, item -> "n"+item.idHex }) { index, item ->
+            itemsIndexed(searchResultsNotes.value, key = { _, item -> "n" + item.idHex }) { index, item ->
                 NoteCompose(item, accountViewModel = accountViewModel, navController = navController)
             }
         }
@@ -275,9 +274,10 @@ fun UserLine(
     account: Account,
     onClick: () -> Unit
 ) {
-    Column(modifier = Modifier
-        .fillMaxWidth()
-        .clickable(onClick = onClick)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
     ) {
         Row(
             modifier = Modifier
@@ -287,7 +287,6 @@ fun UserLine(
                     top = 10.dp
                 )
         ) {
-
             UserPicture(baseUser, account.userProfile(), 55.dp, Modifier, null)
 
             Column(

@@ -13,7 +13,6 @@ import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -24,10 +23,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicBoolean
 
-class NotificationViewModel: CardFeedViewModel(NotificationFeedFilter)
+class NotificationViewModel : CardFeedViewModel(NotificationFeedFilter)
 
-open class CardFeedViewModel(val dataSource: FeedFilter<Note>): ViewModel() {
+open class CardFeedViewModel(val dataSource: FeedFilter<Note>) : ViewModel() {
     private val _feedContent = MutableStateFlow<CardFeedState>(CardFeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
 
@@ -63,18 +63,19 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>): ViewModel() {
     private fun convertToCard(notes: List<Note>): List<Card> {
         val reactionsPerEvent = mutableMapOf<Note, MutableList<Note>>()
         notes
-            .filter { it.event is ReactionEvent}
+            .filter { it.event is ReactionEvent }
             .forEach {
                 val reactedPost = it.replyTo?.lastOrNull() { it.event !is ChannelMetadataEvent && it.event !is ChannelCreateEvent }
-                if (reactedPost != null)
+                if (reactedPost != null) {
                     reactionsPerEvent.getOrPut(reactedPost, { mutableListOf() }).add(it)
+                }
             }
 
-        //val reactionCards = reactionsPerEvent.map { LikeSetCard(it.key, it.value) }
+        // val reactionCards = reactionsPerEvent.map { LikeSetCard(it.key, it.value) }
 
         val zapsPerEvent = mutableMapOf<Note, MutableMap<Note, Note>>()
         notes
-            .filter { it.event is LnZapEvent}
+            .filter { it.event is LnZapEvent }
             .forEach { zapEvent ->
                 val zappedPost = zapEvent.replyTo?.lastOrNull() { it.event !is ChannelMetadataEvent && it.event !is ChannelCreateEvent }
                 if (zappedPost != null) {
@@ -85,33 +86,36 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>): ViewModel() {
                 }
             }
 
-        //val zapCards = zapsPerEvent.map { ZapSetCard(it.key, it.value) }
+        // val zapCards = zapsPerEvent.map { ZapSetCard(it.key, it.value) }
 
         val boostsPerEvent = mutableMapOf<Note, MutableList<Note>>()
         notes
             .filter { it.event is RepostEvent }
             .forEach {
                 val boostedPost = it.replyTo?.lastOrNull() { it.event !is ChannelMetadataEvent && it.event !is ChannelCreateEvent }
-                if (boostedPost != null)
+                if (boostedPost != null) {
                     boostsPerEvent.getOrPut(boostedPost, { mutableListOf() }).add(it)
+                }
             }
 
-        //val boostCards = boostsPerEvent.map { BoostSetCard(it.key, it.value) }
+        // val boostCards = boostsPerEvent.map { BoostSetCard(it.key, it.value) }
 
         val allBaseNotes = zapsPerEvent.keys + boostsPerEvent.keys + reactionsPerEvent.keys
         val multiCards = allBaseNotes.map {
-            MultiSetCard(it,
+            MultiSetCard(
+                it,
                 boostsPerEvent.get(it) ?: emptyList(),
                 reactionsPerEvent.get(it) ?: emptyList(),
                 zapsPerEvent.get(it) ?: emptyMap()
             )
         }
 
-        val textNoteCards = notes.filter { it.event !is ReactionEvent && it.event !is RepostEvent  && it.event !is LnZapEvent }.map {
-            if (it.event is BadgeAwardEvent)
+        val textNoteCards = notes.filter { it.event !is ReactionEvent && it.event !is RepostEvent && it.event !is LnZapEvent }.map {
+            if (it.event is BadgeAwardEvent) {
                 BadgeCard(it)
-            else
+            } else {
                 NoteCard(it)
+            }
         }
 
         return (multiCards + textNoteCards).sortedBy { it.createdAt() }.reversed()

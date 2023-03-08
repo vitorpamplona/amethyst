@@ -11,15 +11,15 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 
 private val DarkColorPalette = darkColors(
-  primary = Purple200,
-  primaryVariant = Purple700,
-  secondary = Teal200,
+    primary = Purple200,
+    primaryVariant = Purple700,
+    secondary = Teal200
 )
 
 private val LightColorPalette = lightColors(
-  primary = Purple500,
-  primaryVariant = Purple700,
-  secondary = Teal200,
+    primary = Purple500,
+    primaryVariant = Purple700,
+    secondary = Teal200
 
   /* Other default colors to override
     background = Color.White,
@@ -33,24 +33,24 @@ private val LightColorPalette = lightColors(
 
 @Composable
 fun AmethystTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
-  val colors = if (darkTheme) {
-    DarkColorPalette
-  } else {
-    LightColorPalette
-  }
-
-  MaterialTheme(
-    colors = colors,
-    typography = Typography,
-    shapes = Shapes,
-    content = content
-  )
-
-  val view = LocalView.current
-  if (!view.isInEditMode && darkTheme) {
-    SideEffect {
-      val window = (view.context as Activity).window
-      window.statusBarColor = colors.background.toArgb()
+    val colors = if (darkTheme) {
+        DarkColorPalette
+    } else {
+        LightColorPalette
     }
-  }
+
+    MaterialTheme(
+        colors = colors,
+        typography = Typography,
+        shapes = Shapes,
+        content = content
+    )
+
+    val view = LocalView.current
+    if (!view.isInEditMode && darkTheme) {
+        SideEffect {
+            val window = (view.context as Activity).window
+            window.statusBarColor = colors.background.toArgb()
+        }
+    }
 }

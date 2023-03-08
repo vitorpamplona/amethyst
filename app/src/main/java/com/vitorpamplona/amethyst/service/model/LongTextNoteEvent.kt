@@ -2,8 +2,8 @@ package com.vitorpamplona.amethyst.service.model
 
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
-import java.util.Date
 import nostr.postr.Utils
+import java.util.Date
 
 class LongTextNoteEvent(
     id: HexKey,
@@ -12,7 +12,7 @@ class LongTextNoteEvent(
     tags: List<List<String>>,
     content: String,
     sig: HexKey
-): Event(id, pubKey, createdAt, kind, tags, content, sig) {
+) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
     fun replyTos() = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
     fun mentions() = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
 

@@ -9,7 +9,6 @@ import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HiddenAccountsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowersFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowsFeedFilter
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -20,12 +19,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicBoolean
 
-class NostrUserProfileFollowsUserFeedViewModel: UserFeedViewModel(UserProfileFollowsFeedFilter)
-class NostrUserProfileFollowersUserFeedViewModel: UserFeedViewModel(UserProfileFollowersFeedFilter)
-class NostrHiddenAccountsFeedViewModel: UserFeedViewModel(HiddenAccountsFeedFilter)
+class NostrUserProfileFollowsUserFeedViewModel : UserFeedViewModel(UserProfileFollowsFeedFilter)
+class NostrUserProfileFollowersUserFeedViewModel : UserFeedViewModel(UserProfileFollowersFeedFilter)
+class NostrHiddenAccountsFeedViewModel : UserFeedViewModel(HiddenAccountsFeedFilter)
 
-open class UserFeedViewModel(val dataSource: FeedFilter<User>): ViewModel() {
+open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel() {
     private val _feedContent = MutableStateFlow<UserFeedState>(UserFeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
 

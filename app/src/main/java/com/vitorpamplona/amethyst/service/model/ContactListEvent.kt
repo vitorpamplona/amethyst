@@ -4,8 +4,8 @@ import android.util.Log
 import com.google.gson.reflect.TypeToken
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
-import java.util.Date
 import nostr.postr.Utils
+import java.util.Date
 
 data class Contact(val pubKeyHex: String, val relayUri: String?)
 
@@ -16,7 +16,7 @@ class ContactListEvent(
     tags: List<List<String>>,
     content: String,
     sig: HexKey
-): Event(id, pubKey, createdAt, kind, tags, content, sig) {
+) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
     fun follows() = try {
         tags.filter { it[0] == "p" }.map { Contact(it[1], it.getOrNull(2)) }
     } catch (e: Exception) {
@@ -25,10 +25,11 @@ class ContactListEvent(
     }
 
     fun relayUse() = try {
-        if (content.isNotEmpty())
-            gson.fromJson(content, object: TypeToken<Map<String, ReadWrite>>() {}.type)
-        else
+        if (content.isNotEmpty()) {
+            gson.fromJson(content, object : TypeToken<Map<String, ReadWrite>>() {}.type)
+        } else {
             null
+        }
     } catch (e: Exception) {
         Log.e("ContactListEvent", "can't parse content as relay lists: $tags", e)
         null
@@ -38,16 +39,18 @@ class ContactListEvent(
         const val kind = 3
 
         fun create(follows: List<Contact>, relayUse: Map<String, ReadWrite>?, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ContactListEvent {
-            val content = if (relayUse != null)
+            val content = if (relayUse != null) {
                 gson.toJson(relayUse)
-            else
+            } else {
                 ""
+            }
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             val tags = follows.map {
-                if (it.relayUri != null)
+                if (it.relayUri != null) {
                     listOf("p", it.pubKeyHex, it.relayUri)
-                else
+                } else {
                     listOf("p", it.pubKeyHex)
+                }
             }
             val id = generateId(pubKey, createdAt, kind, tags, content)
             val sig = Utils.sign(id, privateKey)

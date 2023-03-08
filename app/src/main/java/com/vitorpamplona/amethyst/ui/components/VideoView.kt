@@ -20,35 +20,36 @@ import com.vitorpamplona.amethyst.VideoCache
 
 @Composable
 fun VideoView(videoUri: String) {
-  val context = LocalContext.current
+    val context = LocalContext.current
 
-  val exoPlayer = remember {
-    ExoPlayer.Builder(context).build().apply {
-      repeatMode = Player.REPEAT_MODE_ALL
-      videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+    val exoPlayer = remember {
+        ExoPlayer.Builder(context).build().apply {
+            repeatMode = Player.REPEAT_MODE_ALL
+            videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+        }
     }
-  }
 
-  DisposableEffect(exoPlayer) {
-    exoPlayer.setMediaSource(
-      ProgressiveMediaSource.Factory(VideoCache.get(context.applicationContext)).createMediaSource(MediaItem.fromUri(videoUri))
-    )
-    exoPlayer.prepare()
-    onDispose {
-      exoPlayer.release()
-    }
-  }
-
-  AndroidView(
-    modifier = Modifier.fillMaxWidth(),
-    factory = {
-      StyledPlayerView(context).apply {
-        player = exoPlayer
-        layoutParams = FrameLayout.LayoutParams(
-          ViewGroup.LayoutParams.MATCH_PARENT,
-          ViewGroup.LayoutParams.WRAP_CONTENT
+    DisposableEffect(exoPlayer) {
+        exoPlayer.setMediaSource(
+            ProgressiveMediaSource.Factory(VideoCache.get(context.applicationContext)).createMediaSource(MediaItem.fromUri(videoUri))
         )
-        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
-      }
-    })
+        exoPlayer.prepare()
+        onDispose {
+            exoPlayer.release()
+        }
+    }
+
+    AndroidView(
+        modifier = Modifier.fillMaxWidth(),
+        factory = {
+            StyledPlayerView(context).apply {
+                player = exoPlayer
+                layoutParams = FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
+            }
+        }
+    )
 }

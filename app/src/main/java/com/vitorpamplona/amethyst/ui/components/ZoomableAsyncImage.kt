@@ -57,7 +57,7 @@ fun ZoomableAsyncImage(imageUrl: String) {
                     scaleY = scale,
                     translationX = offsetX,
                     translationY = offsetY
-                ),
+                )
         )
     }
 }

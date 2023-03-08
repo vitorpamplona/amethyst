@@ -31,7 +31,7 @@ fun QrCodeScanner(onScan: (String) -> Unit) {
     val lifecycleOwner = LocalLifecycleOwner.current
     val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
 
-    val cameraExecutor= Executors.newSingleThreadExecutor()
+    val cameraExecutor = Executors.newSingleThreadExecutor()
 
     var hasCameraPermission by remember {
         mutableStateOf(

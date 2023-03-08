@@ -116,7 +116,7 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
                     .padding(vertical = 0.dp)
                     .weight(1f, true)
             ) {
-                ChatroomFeedView(feedViewModel, accountViewModel, navController, "Room/${userId}") {
+                ChatroomFeedView(feedViewModel, accountViewModel, navController, "Room/$userId") {
                     replyTo.value = it
                 }
             }
@@ -155,9 +155,10 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
                 }
             }
 
-            //LAST ROW
-            Row(modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp, top = 5.dp)
-                .fillMaxWidth(),
+            // LAST ROW
+            Row(
+                modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp, top = 5.dp)
+                    .fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -198,18 +199,17 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
     }
 }
 
-
 @Composable
 fun ChatroomHeader(baseUser: User, accountViewModel: AccountViewModel, navController: NavController) {
     val ctx = LocalContext.current.applicationContext
 
-    Column(modifier = Modifier.clickable(
+    Column(
+        modifier = Modifier.clickable(
             onClick = { navController.navigate("User/${baseUser.pubkeyHex}") }
         )
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-
                 val authorState by baseUser.live().metadata.observeAsState()
                 val author = authorState?.user!!
 

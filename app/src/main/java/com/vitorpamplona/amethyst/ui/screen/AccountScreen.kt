@@ -11,22 +11,21 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.MainScreen
 
 @Composable
 fun AccountScreen(accountStateViewModel: AccountStateViewModel, startingPage: String?) {
-  val accountState by accountStateViewModel.accountContent.collectAsState()
+    val accountState by accountStateViewModel.accountContent.collectAsState()
 
-  Column() {
-    Crossfade(targetState = accountState, animationSpec = tween(durationMillis = 100)) { state ->
-      when (state) {
-        is AccountState.LoggedOff -> {
-          LoginPage(accountStateViewModel)
+    Column() {
+        Crossfade(targetState = accountState, animationSpec = tween(durationMillis = 100)) { state ->
+            when (state) {
+                is AccountState.LoggedOff -> {
+                    LoginPage(accountStateViewModel)
+                }
+                is AccountState.LoggedIn -> {
+                    MainScreen(AccountViewModel(state.account), accountStateViewModel, startingPage)
+                }
+                is AccountState.LoggedInViewOnly -> {
+                    MainScreen(AccountViewModel(state.account), accountStateViewModel, startingPage)
+                }
+            }
         }
-        is AccountState.LoggedIn -> {
-          MainScreen(AccountViewModel(state.account), accountStateViewModel, startingPage)
-        }
-        is AccountState.LoggedInViewOnly -> {
-          MainScreen(AccountViewModel(state.account), accountStateViewModel, startingPage)
-        }
-      }
     }
-  }
 }
-

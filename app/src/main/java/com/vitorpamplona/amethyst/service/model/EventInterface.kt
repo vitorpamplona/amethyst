@@ -3,23 +3,23 @@ package com.vitorpamplona.amethyst.service.model
 import com.vitorpamplona.amethyst.model.HexKey
 
 interface EventInterface {
-  fun id(): HexKey
+    fun id(): HexKey
 
-  fun pubKey(): HexKey
+    fun pubKey(): HexKey
 
-  fun createdAt(): Long
+    fun createdAt(): Long
 
-  fun kind(): Int
+    fun kind(): Int
 
-  fun tags(): List<List<String>>
+    fun tags(): List<List<String>>
 
-  fun content(): String
+    fun content(): String
 
-  fun sig(): HexKey
+    fun sig(): HexKey
 
-  fun toJson(): String
+    fun toJson(): String
 
-  fun checkSignature()
+    fun checkSignature()
 
-  fun hasValidSignature(): Boolean
+    fun hasValidSignature(): Boolean
 }

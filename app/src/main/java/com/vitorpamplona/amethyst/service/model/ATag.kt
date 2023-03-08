@@ -23,8 +23,9 @@ data class ATag(val kind: Int, val pubKeyHex: String, val dTag: String, val rela
         var fullArray =
             byteArrayOf(NIP19TLVTypes.SPECIAL.id, dTag.size.toByte()) + dTag
 
-        if (relay != null)
+        if (relay != null) {
             fullArray = fullArray + byteArrayOf(NIP19TLVTypes.RELAY.id, relay.size.toByte()) + relay
+        }
 
         fullArray = fullArray +
             byteArrayOf(NIP19TLVTypes.AUTHOR.id, author.size.toByte()) + author +
@@ -39,19 +40,20 @@ data class ATag(val kind: Int, val pubKeyHex: String, val dTag: String, val rela
         }
 
         fun parse(address: String, relay: String?): ATag? {
-            return if (address.startsWith("naddr") || address.startsWith("nostr:naddr"))
+            return if (address.startsWith("naddr") || address.startsWith("nostr:naddr")) {
                 parseNAddr(address)
-            else
+            } else {
                 parseAtag(address, relay)
+            }
         }
 
         fun parseAtag(atag: String, relay: String?): ATag? {
             return try {
                 val parts = atag.split(":")
-              Hex.decode(parts[1])
-              ATag(parts[0].toInt(), parts[1], parts[2], relay)
+                Hex.decode(parts[1])
+                ATag(parts[0].toInt(), parts[1], parts[2], relay)
             } catch (t: Throwable) {
-              Log.w("ATag",  "Error parsing A Tag: ${atag}: ${t.message}")
+                Log.w("ATag", "Error parsing A Tag: $atag: ${t.message}")
                 null
             }
         }
@@ -67,13 +69,13 @@ data class ATag(val kind: Int, val pubKeyHex: String, val dTag: String, val rela
                     val author = tlv.get(NIP19TLVTypes.AUTHOR.id)?.get(0)?.toHexKey()
                     val kind = tlv.get(NIP19TLVTypes.KIND.id)?.get(0)?.let { toInt32(it) }
 
-                    if (kind != null && author != null)
+                    if (kind != null && author != null) {
                         return ATag(kind, author, d, relay)
+                    }
                 }
-
             } catch (e: Throwable) {
-                Log.w( "ATag", "Issue trying to Decode NIP19 ${this}: ${e.message}")
-                //e.printStackTrace()
+                Log.w("ATag", "Issue trying to Decode NIP19 $this: ${e.message}")
+                // e.printStackTrace()
             }
 
             return null
