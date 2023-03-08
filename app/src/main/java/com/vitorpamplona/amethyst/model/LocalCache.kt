@@ -326,7 +326,8 @@ object LocalCache {
 
         // Log.d("PM", "${author.toBestDisplayName()} to ${recipient?.toBestDisplayName()}")
 
-        val repliesTo = event.tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }.mapNotNull { checkGetOrCreateNote(it) }
+        val repliesTo = event.tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
+            .mapNotNull { checkGetOrCreateNote(it) }
 
         note.loadEvent(event, author, repliesTo)
 
@@ -347,7 +348,8 @@ object LocalCache {
                 deleteNote.author?.removeNote(deleteNote)
 
                 // reverts the add
-                val mentions = deleteNote.event?.tags()?.filter { it.firstOrNull() == "p" }?.mapNotNull { it.getOrNull(1) }?.mapNotNull { checkGetOrCreateUser(it) }
+                val mentions = deleteNote.event?.tags()?.filter { it.firstOrNull() == "p" }
+                    ?.mapNotNull { it.getOrNull(1) }?.mapNotNull { checkGetOrCreateUser(it) }
 
                 mentions?.forEach { user ->
                     user.removeReport(deleteNote)
@@ -571,7 +573,10 @@ object LocalCache {
         val mentions = event.zappedAuthor().mapNotNull { checkGetOrCreateUser(it) }
         val repliesTo = event.zappedPost().mapNotNull { checkGetOrCreateNote(it) } +
             event.taggedAddresses().map { getOrCreateAddressableNote(it) } +
-            ((zapRequest?.event as? LnZapRequestEvent)?.taggedAddresses()?.map { getOrCreateAddressableNote(it) } ?: emptySet<Note>())
+            (
+                (zapRequest?.event as? LnZapRequestEvent)?.taggedAddresses()
+                    ?.map { getOrCreateAddressableNote(it) } ?: emptySet<Note>()
+                )
 
         note.loadEvent(event, author, repliesTo)
 
@@ -662,7 +667,9 @@ object LocalCache {
                 // Doesn't need to clean up the replies and mentions.. Too small to matter.
 
                 // reverts the add
-                val mentions = it.event?.tags()?.filter { it.firstOrNull() == "p" }?.mapNotNull { it.getOrNull(1) }?.mapNotNull { checkGetOrCreateUser(it) }
+                val mentions =
+                    it.event?.tags()?.filter { it.firstOrNull() == "p" }?.mapNotNull { it.getOrNull(1) }
+                        ?.mapNotNull { checkGetOrCreateUser(it) }
 
                 // Counts the replies
                 it.replyTo?.forEach { replyingNote ->
@@ -709,7 +716,8 @@ object LocalCache {
     }
 }
 
-class LocalCacheLiveData(val cache: LocalCache) : LiveData<LocalCacheState>(LocalCacheState(cache)) {
+class LocalCacheLiveData(val cache: LocalCache) :
+    LiveData<LocalCacheState>(LocalCacheState(cache)) {
 
     // Refreshes observers in batches.
     var handlerWaiting = AtomicBoolean()
