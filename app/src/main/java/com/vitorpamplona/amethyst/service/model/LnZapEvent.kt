@@ -36,7 +36,9 @@ class LnZapEvent(
   }
 
   // Keeps this as a field because it's a heavier function used everywhere.
-  val amount = lnInvoice()?.let { LnInvoiceUtil.getAmountInSats(it) }
+  val amount by lazy {
+    lnInvoice()?.let { LnInvoiceUtil.getAmountInSats(it) }
+  }
 
   override fun containedPost(): Event? = try {
     description()?.let {
