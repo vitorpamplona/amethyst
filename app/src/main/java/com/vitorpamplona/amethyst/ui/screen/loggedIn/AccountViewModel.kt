@@ -120,4 +120,12 @@ class AccountViewModel(private val account: Account) : ViewModel() {
     fun follow(user: User) {
         account.follow(user)
     }
+
+    fun unfollow(user: User) {
+        account.unfollow(user)
+    }
+
+    fun isFollowing(user: User): Boolean {
+        return account.userProfile().isFollowing(user)
+    }
 }

@@ -21,7 +21,10 @@ import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AlternateEmail
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FormatQuote
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -79,6 +82,8 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
     val clipboardManager = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
     var showSelectTextDialog by remember { mutableStateOf(false) }
+    val isOwnNote = note.author == accountViewModel.userProfile()
+    val isFollowingUser = !isOwnNote && accountViewModel.isFollowing(note.author!!)
 
     val showToast = { stringResource: Int ->
         scope.launch {
@@ -124,8 +129,31 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
                             onDismiss()
                         }
                     }
-                    Divider(color = primaryLight, modifier = Modifier.fillMaxWidth().width(1.dp))
+                    Divider(
+                        color = primaryLight,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .width(1.dp)
+                    )
                     Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+                        if (isOwnNote) {
+                            NoteQuickActionItem(Icons.Default.Delete, stringResource(R.string.quick_action_delete)) {
+                                accountViewModel.delete(note)
+                                onDismiss()
+                            }
+                        } else if (isFollowingUser) {
+                            NoteQuickActionItem(Icons.Default.PersonRemove, stringResource(R.string.quick_action_unfollow)) {
+                                accountViewModel.unfollow(note.author!!)
+                                onDismiss()
+                            }
+                        } else {
+                            NoteQuickActionItem(Icons.Default.PersonAdd, stringResource(R.string.quick_action_follow)) {
+                                accountViewModel.follow(note.author!!)
+                                onDismiss()
+                            }
+                        }
+
+                        VerticalDivider(primaryLight)
                         NoteQuickActionItem(
                             icon = ImageVector.vectorResource(id = R.drawable.text_select_move_forward_character),
                             label = stringResource(R.string.quick_action_select)
