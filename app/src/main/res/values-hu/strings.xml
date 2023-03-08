@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name_release" translatable="false">Amethyst</string>
     <string name="app_name_debug" translatable="false">Amethyst Debug</string>
@@ -10,7 +11,7 @@
     <string name="post_not_found">Bejegyzés nem található</string>
     <string name="channel_image">Csatorna Kép</string>
     <string name="referenced_event_not_found">A hivatkozott esemény nem található</string>
-    <string name="could_not_decrypt_the_message">Az üzenet dekódolása sikertelen/string>
+    <string name="could_not_decrypt_the_message">Az üzenet dekódolása sikertelen</string>
     <string name="group_picture">Csoport Kép</string>
     <string name="explicit_content">Szókimondó tartalom</string>
     <string name="spam">Spam</string>
@@ -27,7 +28,7 @@
     <string name="report_spam_scam">Spam / Csalás bejelentés</string>
     <string name="report_impersonation">Megszemélyesítés bejelentés</string>
     <string name="report_explicit_content">Szókimondó tartalom bejelentés</string>
-    <string name="report_illegal_behaviour">Illegális viselkedés bejelentés/string>
+    <string name="report_illegal_behaviour">Illegális viselkedés bejelentés</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">Jelentkezzen be privát kulccsal, hogy válaszolni tudjon</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Jelentkezzen be privát kulccsal a bejegyzések megosztásához</string>
     <string name="login_with_a_private_key_to_like_posts">Jelentkezzen be privát kulccsal a bejegyzések kedveléséhez</string>
@@ -137,7 +138,7 @@
     <string name="key_is_required">Kulcs szükséges</string>
     <string name="login">Bejelentkezés</string>
     <string name="generate_a_new_key">Új kulcs létrehozása</string>
-    <string name="loading_feed">Lista betöltése/string>
+    <string name="loading_feed">Lista betöltése</string>
     <string name="error_loading_replies">"Hiba a válaszok betöltésekor: "</string>
     <string name="try_again">Próbáld újra</string>
     <string name="feed_is_empty">A lista üres.</string>
