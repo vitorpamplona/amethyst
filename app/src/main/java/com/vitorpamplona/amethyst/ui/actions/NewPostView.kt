@@ -36,12 +36,11 @@ import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.ui.components.*
 import com.vitorpamplona.amethyst.ui.note.ReplyInformation
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.UserLine
 import kotlinx.coroutines.delay
-import com.vitorpamplona.amethyst.service.model.TextNoteEvent
-
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -74,16 +73,22 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
             decorFitsSystemWindows = false
         )
     ) {
-        Surface(modifier = Modifier
-            .fillMaxWidth()
-            .fillMaxHeight()) {
-            Column(modifier = Modifier
+        Surface(
+            modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight()) {
-                Column(modifier = Modifier
-                    .padding(start = 10.dp, end = 10.dp, top = 10.dp)
-                    .imePadding()
-                    .weight(1f)) {
+                .fillMaxHeight()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .padding(start = 10.dp, end = 10.dp, top = 10.dp)
+                        .imePadding()
+                        .weight(1f)
+                ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -99,8 +104,8 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                 postViewModel.sendPost()
                                 onClose()
                             },
-                            isActive = postViewModel.message.text.isNotBlank()
-                              && !postViewModel.isUploadingImage
+                            isActive = postViewModel.message.text.isNotBlank() &&
+                                !postViewModel.isUploadingImage
                         )
                     }
 
@@ -109,9 +114,11 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                             .fillMaxWidth()
                             .weight(1f)
                     ) {
-                        Column(modifier = Modifier
-                            .fillMaxWidth()
-                            .verticalScroll(scroolState)) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .verticalScroll(scroolState)
+                        ) {
                             if (postViewModel.replyTos != null && baseReplyTo?.event is TextNoteEvent) {
                                 ReplyInformation(postViewModel.replyTos, postViewModel.mentions, account, "✖ ") {
                                     postViewModel.removeFromReplyList(it)
@@ -176,7 +183,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                                     )
                                             )
                                         } else if (videoExtension.matcher(removedParamsFromUrl)
-                                                .matches()
+                                            .matches()
                                         ) {
                                             VideoView(myUrlPreview)
                                         } else {
@@ -188,7 +195,6 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                 }
                             }
                         }
-
                     }
 
                     val userSuggestions = postViewModel.userSuggestions
@@ -201,7 +207,8 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                         ) {
                             itemsIndexed(
                                 userSuggestions,
-                                key = { _, item -> item.pubkeyHex }) { index, item ->
+                                key = { _, item -> item.pubkeyHex }
+                            ) { index, item ->
                                 UserLine(item, account) {
                                     postViewModel.autocompleteWithUser(item)
                                 }
@@ -211,7 +218,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
 
                     Row(modifier = Modifier.fillMaxWidth()) {
                         UploadFromGallery(
-                            isUploading = postViewModel.isUploadingImage,
+                            isUploading = postViewModel.isUploadingImage
                         ) {
                             postViewModel.upload(it, context)
                         }
