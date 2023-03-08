@@ -26,7 +26,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.service.lnurl.LnInvoiceUtil
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+
+const val SHORT_TEXT_LENGTH = 350
 
 @Composable
 fun ExpandableRichTextViewer(
@@ -40,7 +43,16 @@ fun ExpandableRichTextViewer(
 ) {
     var showFullText by remember { mutableStateOf(false) }
 
-    val text = if (showFullText) content else content.take(350)
+    val text = if (showFullText) {
+        content
+    } else {
+        val (lnStart, lnEnd) = LnInvoiceUtil.locateInvoice(content)
+        if (lnStart < SHORT_TEXT_LENGTH && lnEnd > 0) {
+            content.take(lnEnd)
+        } else {
+            content.take(SHORT_TEXT_LENGTH)
+        }
+    }
 
     Box(contentAlignment = Alignment.BottomCenter) {
         // CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {

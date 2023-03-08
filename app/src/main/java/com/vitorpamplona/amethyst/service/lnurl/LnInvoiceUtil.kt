@@ -152,4 +152,22 @@ object LnInvoiceUtil {
             null
         }
     }
+
+    /**
+     * If the string contains an LN invoice, returns a Pair of the start and end
+     * positions of the invoice in the string. Otherwise, returns (0, 0). This is
+     * used to ensure we don't accidentally cut an invoice in the middle when taking
+     * only a portion of the available text.
+     */
+    fun locateInvoice(input: String?): Pair<Int, Int> {
+        if (input == null) {
+            return Pair(0, 0)
+        }
+        val matcher = invoicePattern.matcher(input)
+        return if (matcher.find()) {
+            Pair(matcher.start(), matcher.end())
+        } else {
+            Pair(0, 0)
+        }
+    }
 }
