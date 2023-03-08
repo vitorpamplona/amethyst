@@ -189,8 +189,7 @@ object LocalCache {
         }
 
         val mentions = event.mentions().mapNotNull { checkGetOrCreateUser(it) }
-        val replyTo = replyToWithoutCitations(event).mapNotNull { checkGetOrCreateNote(it) } +
-            event.taggedAddresses().mapNotNull { getOrCreateAddressableNote(it) }
+        val replyTo = tagsWithoutCitations(event).mapNotNull { checkGetOrCreateNote(it) }
 
         note.loadEvent(event, author, mentions, replyTo)
 
@@ -235,7 +234,7 @@ object LocalCache {
         }
 
         val mentions = event.mentions().mapNotNull { checkGetOrCreateUser(it) }
-        val replyTo = replyToWithoutCitations(event).mapNotNull { checkGetOrCreateNote(it) }
+        val replyTo = tagsWithoutCitations(event).mapNotNull { checkGetOrCreateNote(it) }
 
         if (event.createdAt > (note.createdAt() ?: 0)) {
             note.loadEvent(event, author, mentions, replyTo)
@@ -329,33 +328,38 @@ object LocalCache {
                 if (tag != null && tag[0] == "e") {
                     citations.add(tag[1])
                 }
+                if (tag != null && tag[0] == "a") {
+                    citations.add(tag[1])
+                }
             } catch (e: Exception) {
             }
         }
         return citations
     }
 
-    private fun replyToWithoutCitations(event: TextNoteEvent): List<String> {
+    private fun tagsWithoutCitations(event: TextNoteEvent): List<String> {
         val repliesTo = event.replyTos()
-        if (repliesTo.isEmpty()) return repliesTo
+        val tagAddresses = event.taggedAddresses().map { it.toTag() }
+        if (repliesTo.isEmpty() && tagAddresses.isEmpty()) return emptyList()
 
         val citations = findCitations(event)
 
         return if (citations.isEmpty()) {
-            repliesTo
+            repliesTo + tagAddresses
         } else {
             repliesTo.filter { it !in citations }
         }
     }
 
-    private fun replyToWithoutCitations(event: LongTextNoteEvent): List<String> {
+    private fun tagsWithoutCitations(event: LongTextNoteEvent): List<String> {
         val repliesTo = event.replyTos()
-        if (repliesTo.isEmpty()) return repliesTo
+        val tagAddresses = event.taggedAddresses().map { it.toTag() }
+        if (repliesTo.isEmpty() && tagAddresses.isEmpty()) return emptyList()
 
         val citations = findCitations(event)
 
         return if (citations.isEmpty()) {
-            repliesTo
+            repliesTo + tagAddresses
         } else {
             repliesTo.filter { it !in citations }
         }

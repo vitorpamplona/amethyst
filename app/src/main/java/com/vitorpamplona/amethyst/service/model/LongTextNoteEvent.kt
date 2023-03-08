@@ -15,6 +15,12 @@ class LongTextNoteEvent(
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
     fun replyTos() = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
     fun mentions() = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
+    fun taggedAddresses() = tags.filter { it.firstOrNull() == "a" }.mapNotNull {
+        val aTagValue = it.getOrNull(1)
+        val relay = it.getOrNull(2)
+
+        if (aTagValue != null) ATag.parse(aTagValue, relay) else null
+    }
 
     fun dTag() = tags.filter { it.firstOrNull() == "d" }.mapNotNull { it.getOrNull(1) }.firstOrNull() ?: ""
     fun address() = ATag(kind, pubKey, dTag(), null)
