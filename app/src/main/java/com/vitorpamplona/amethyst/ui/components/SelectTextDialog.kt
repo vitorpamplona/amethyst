@@ -43,7 +43,7 @@ fun SelectTextDialog(text: String, onDismiss: () -> Unit) {
                             tint = MaterialTheme.colors.primary
                         )
                     }
-                    Text(text = stringResource(R.string.select_text))
+                    Text(text = stringResource(R.string.select_text_dialog_top))
                 }
                 Divider()
                 Row(modifier = Modifier.padding(16.dp)) {

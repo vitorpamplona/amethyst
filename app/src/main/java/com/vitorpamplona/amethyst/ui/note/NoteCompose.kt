@@ -25,7 +25,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -54,8 +53,8 @@ import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.Following
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
+import com.vitorpamplona.amethyst.ui.theme.Following
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -756,10 +755,6 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
             }
             Divider()
         }
-        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString("@${note.author?.pubkeyNpub()}" ?: "")); onDismiss() }) {
-            Text(stringResource(R.string.copy_user_pubkey))
-        }
-        Divider()
         DropdownMenuItem(onClick = { accountViewModel.broadcast(note); onDismiss() }) {
             Text(stringResource(R.string.broadcast))
         }

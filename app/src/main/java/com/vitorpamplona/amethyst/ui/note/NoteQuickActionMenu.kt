@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -20,6 +21,7 @@ import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AlternateEmail
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.FormatQuote
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -109,12 +111,20 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
                             onDismiss()
                         }
                         VerticalDivider(primaryLight)
-                        NoteQuickActionItem(Icons.Default.AlternateEmail, stringResource(R.string.quick_action_copy_note_id)) {
+                        NoteQuickActionItem(Icons.Default.AlternateEmail, stringResource(R.string.quick_action_copy_user_id)) {
+                            clipboardManager.setText(AnnotatedString("@${note.author?.pubkeyNpub()}" ?: ""))
+                            showToast(R.string.copied_user_id_to_clipboard)
+                            onDismiss()
+                        }
+                        VerticalDivider(primaryLight)
+                        NoteQuickActionItem(Icons.Default.FormatQuote, stringResource(R.string.quick_action_copy_note_id)) {
                             clipboardManager.setText(AnnotatedString("@${note.idNote()}"))
                             showToast(R.string.copied_note_id_to_clipboard)
                             onDismiss()
                         }
-                        VerticalDivider(primaryLight)
+                    }
+                    Divider(color = primaryLight, modifier = Modifier.fillMaxWidth().width(1.dp))
+                    Row(modifier = Modifier.height(IntrinsicSize.Min)) {
                         NoteQuickActionItem(
                             icon = ImageVector.vectorResource(id = R.drawable.text_select_move_forward_character),
                             label = stringResource(R.string.quick_action_select)
@@ -138,6 +148,7 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
                             ContextCompat.startActivity(context, shareIntent, null)
                             onDismiss()
                         }
+                        VerticalDivider(primaryLight)
                     }
                 }
             }
@@ -163,7 +174,7 @@ fun NoteQuickActionItem(icon: ImageVector, label: String, onClick: () -> Unit) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            modifier = Modifier.size(20.dp),
+            modifier = Modifier.size(24.dp),
             tint = MaterialTheme.colors.onPrimary,
         )
         Text(text = label, fontSize = 12.sp)

@@ -193,11 +193,13 @@
     <string name="new_badge_award_notif">You Received a new Badge Award</string>
     <string name="award_granted_to">Badge award granted to</string>
     <string name="copied_note_text_to_clipboard">Copied note text to clipboard</string>
+    <string name="copied_user_id_to_clipboard" tools:ignore="Typos">Copied author’s @npub to clipboard</string>
     <string name="copied_note_id_to_clipboard" tools:ignore="Typos">Copied note ID (@note1) to clipboard</string>
-    <string name="select_text">Select Text</string>
+    <string name="select_text_dialog_top">Select Text</string>
     <string name="quick_action_select">Select</string>
     <string name="quick_action_share_browser_link">Share Browser Link</string>
     <string name="quick_action_share">Share</string>
-    <string name="quick_action_copy_note_id">Copy ID</string>
-    <string name="quick_action_copy_text">Copy Text</string>
+    <string name="quick_action_copy_user_id">Mention</string>
+    <string name="quick_action_copy_note_id">Quote</string>
+    <string name="quick_action_copy_text">Copy</string>
 </resources>
