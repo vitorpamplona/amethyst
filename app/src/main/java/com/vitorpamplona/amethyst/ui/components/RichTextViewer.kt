@@ -184,17 +184,9 @@ private fun isArabic(text: String): Boolean {
 }
 
 fun isBechLink(word: String): Boolean {
-    return word.startsWith("nostr:", true) ||
-        word.startsWith("npub1", true) ||
-        word.startsWith("naddr1", true) ||
-        word.startsWith("note1", true) ||
-        word.startsWith("nprofile1", true) ||
-        word.startsWith("nevent1", true) ||
-        word.startsWith("@npub1", true) ||
-        word.startsWith("@note1", true) ||
-        word.startsWith("@addr1", true) ||
-        word.startsWith("@nprofile1", true) ||
-        word.startsWith("@nevent1", true)
+    val cleaned = word.removePrefix("@").removePrefix("nostr:").removePrefix("@")
+
+    return listOf("npub1", "naddr1", "note1", "nprofile1", "nevent1").any { cleaned.startsWith(it, true) }
 }
 
 @Composable
