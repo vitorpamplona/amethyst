@@ -12,9 +12,7 @@ import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -34,8 +32,8 @@ import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.material.MaterialRichText
 import com.halilibo.richtext.ui.resolveDefaults
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.Nip19
 import com.vitorpamplona.amethyst.service.lnurl.LnInvoiceUtil
+import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import java.net.MalformedURLException
@@ -210,7 +208,7 @@ fun BechLink(word: String, navController: NavController) {
     }
 
     val nip19Route = try {
-        Nip19().uriToRoute(uri)
+        Nip19.uriToRoute(uri)
     } catch (e: Exception) {
         null
     }

@@ -1,13 +1,9 @@
-package com.vitorpamplona.amethyst.service
+package com.vitorpamplona.amethyst.service.nip19
 
 import com.vitorpamplona.amethyst.model.toHexKey
-import com.vitorpamplona.amethyst.service.nip19.TlvTypes
-import com.vitorpamplona.amethyst.service.nip19.parseTLV
-import com.vitorpamplona.amethyst.service.nip19.toInt32
 import nostr.postr.bechToBytes
 
-class Nip19 {
-
+object Nip19 {
     enum class Type {
         USER, NOTE, RELAY, ADDRESS
     }

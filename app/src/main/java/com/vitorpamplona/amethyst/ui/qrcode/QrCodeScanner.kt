@@ -21,7 +21,7 @@ import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
-import com.vitorpamplona.amethyst.service.Nip19
+import com.vitorpamplona.amethyst.service.nip19.Nip19
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -52,7 +52,7 @@ fun QrCodeScanner(onScan: (String) -> Unit) {
     val analyzer = QRCodeAnalyzer { result ->
         result?.let {
             try {
-                val nip19 = Nip19().uriToRoute(it)
+                val nip19 = Nip19.uriToRoute(it)
                 val startingPage = when (nip19?.type) {
                     Nip19.Type.USER -> "User/${nip19.hex}"
                     Nip19.Type.NOTE -> "Note/${nip19.hex}"

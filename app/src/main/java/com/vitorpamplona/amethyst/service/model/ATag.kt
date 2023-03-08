@@ -20,8 +20,7 @@ data class ATag(val kind: Int, val pubKeyHex: String, val dTag: String, val rela
         val dTag = dTag.toByteArray(Charsets.UTF_8)
         val relay = relay?.toByteArray(Charsets.UTF_8)
 
-        var fullArray =
-            byteArrayOf(TlvTypes.SPECIAL.id, dTag.size.toByte()) + dTag
+        var fullArray = byteArrayOf(TlvTypes.SPECIAL.id, dTag.size.toByte()) + dTag
 
         if (relay != null) {
             fullArray = fullArray + byteArrayOf(TlvTypes.RELAY.id, relay.size.toByte()) + relay
