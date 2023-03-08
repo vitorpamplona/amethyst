@@ -2,14 +2,13 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
+import com.vitorpamplona.amethyst.service.model.ContactListEvent
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
+import com.vitorpamplona.amethyst.service.model.MetadataEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import fr.acinq.secp256k1.Hex
-import java.math.BigDecimal
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.regex.Pattern
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -18,9 +17,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import nostr.postr.Bech32
-import com.vitorpamplona.amethyst.service.model.ContactListEvent
-import com.vitorpamplona.amethyst.service.model.MetadataEvent
 import nostr.postr.toNpub
+import java.math.BigDecimal
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.regex.Pattern
 
 val lnurlpPattern = Pattern.compile("(?i:http|https):\\/\\/((.+)\\/)*\\.well-known\\/lnurlp\\/(.*)")
 
@@ -134,7 +134,7 @@ class User(val pubkeyHex: String) {
     fun removeReport(deleteNote: Note) {
         val author = deleteNote.author ?: return
 
-        if (author in reports.keys && reports[author]?.contains(deleteNote) == true ) {
+        if (author in reports.keys && reports[author]?.contains(deleteNote) == true) {
             reports[author]?.let {
                 reports = reports + Pair(author, it.minus(deleteNote))
                 liveSet?.reports?.invalidateData()
@@ -284,7 +284,7 @@ class User(val pubkeyHex: String) {
 
     fun hasReport(loggedIn: User, type: ReportEvent.ReportType): Boolean {
         return reports[loggedIn]?.firstOrNull() {
-              it.event is ReportEvent && (it.event as ReportEvent).reportedAuthor().any { it.reportType == type }
+            it.event is ReportEvent && (it.event as ReportEvent).reportedAuthor().any { it.reportType == type }
         } != null
     }
 
@@ -306,8 +306,6 @@ class User(val pubkeyHex: String) {
             liveSet = null
         }
     }
-
-
 }
 
 class UserLiveSet(u: User) {
@@ -322,25 +320,24 @@ class UserLiveSet(u: User) {
     val badges: UserLiveData = UserLiveData(u)
 
     fun isInUse(): Boolean {
-        return follows.hasObservers()
-          || reports.hasObservers()
-          || messages.hasObservers()
-          || relays.hasObservers()
-          || relayInfo.hasObservers()
-          || metadata.hasObservers()
-          || zaps.hasObservers()
-          || badges.hasObservers()
+        return follows.hasObservers() ||
+            reports.hasObservers() ||
+            messages.hasObservers() ||
+            relays.hasObservers() ||
+            relayInfo.hasObservers() ||
+            metadata.hasObservers() ||
+            zaps.hasObservers() ||
+            badges.hasObservers()
     }
 }
 
-data class RelayInfo (
+data class RelayInfo(
     val url: String,
     var lastEvent: Long,
     var counter: Long
 )
 
 data class Chatroom(var roomMessages: Set<Note>)
-
 
 class UserMetadata {
     var name: String? = null
@@ -365,16 +362,16 @@ class UserMetadata {
     var main_relay: String? = null
     var twitter: String? = null
 
-    var updatedMetadataAt: Long = 0;
+    var updatedMetadataAt: Long = 0
     var latestMetadata: MetadataEvent? = null
 
     fun anyNameStartsWith(prefix: String): Boolean {
         return listOfNotNull(name, username, display_name, displayName, nip05, lud06, lud16)
-              .any { it.startsWith(prefix, true) }
+            .any { it.startsWith(prefix, true) }
     }
 }
 
-class UserLiveData(val user: User): LiveData<UserState>(UserState(user)) {
+class UserLiveData(val user: User) : LiveData<UserState>(UserState(user)) {
 
     // Refreshes observers in batches.
     var handlerWaiting = AtomicBoolean()
@@ -411,4 +408,3 @@ class UserLiveData(val user: User): LiveData<UserState>(UserState(user)) {
 }
 
 class UserState(val user: User)
-

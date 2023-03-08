@@ -34,56 +34,56 @@ import com.vitorpamplona.amethyst.ui.actions.SaveToGallery
 @Composable
 @OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
 fun ZoomableImageView(word: String) {
-  val clipboardManager = LocalClipboardManager.current
+    val clipboardManager = LocalClipboardManager.current
 
-  // store the dialog open or close state
-  var dialogOpen by remember {
-    mutableStateOf(false)
-  }
+    // store the dialog open or close state
+    var dialogOpen by remember {
+        mutableStateOf(false)
+    }
 
-  AsyncImage(
-    model = word,
-    contentDescription = word,
-    contentScale = ContentScale.FillWidth,
-    modifier = Modifier
-      .padding(top = 4.dp)
-      .fillMaxWidth()
-      .clip(shape = RoundedCornerShape(15.dp))
-      .border(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.12f), RoundedCornerShape(15.dp))
-      .combinedClickable(
-        onClick = { dialogOpen = true },
-        onLongClick = { clipboardManager.setText(AnnotatedString(word)) },
-      )
-  )
+    AsyncImage(
+        model = word,
+        contentDescription = word,
+        contentScale = ContentScale.FillWidth,
+        modifier = Modifier
+            .padding(top = 4.dp)
+            .fillMaxWidth()
+            .clip(shape = RoundedCornerShape(15.dp))
+            .border(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.12f), RoundedCornerShape(15.dp))
+            .combinedClickable(
+                onClick = { dialogOpen = true },
+                onLongClick = { clipboardManager.setText(AnnotatedString(word)) }
+            )
+    )
 
-  if (dialogOpen) {
-    ZoomableImageDialog(word, onDismiss = { dialogOpen = false })
-  }
+    if (dialogOpen) {
+        ZoomableImageDialog(word, onDismiss = { dialogOpen = false })
+    }
 }
 
 @Composable
 fun ZoomableImageDialog(imageUrl: String, onDismiss: () -> Unit) {
-  Dialog(
-    onDismissRequest = onDismiss,
-    properties = DialogProperties(usePlatformDefaultWidth = false)
-  ) {
-    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background) {
-      Column(
-        modifier = Modifier.padding(10.dp)
-      ) {
-        Row(
-          modifier = Modifier
-            .fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          CloseButton(onCancel = onDismiss)
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background) {
+            Column(
+                modifier = Modifier.padding(10.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CloseButton(onCancel = onDismiss)
 
-          SaveToGallery(url = imageUrl)
+                    SaveToGallery(url = imageUrl)
+                }
+
+                ZoomableAsyncImage(imageUrl)
+            }
         }
-
-        ZoomableAsyncImage(imageUrl)
-      }
     }
-  }
 }

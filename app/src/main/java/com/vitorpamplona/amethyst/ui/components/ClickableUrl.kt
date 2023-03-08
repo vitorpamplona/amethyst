@@ -9,11 +9,11 @@ import androidx.compose.ui.text.AnnotatedString
 
 @Composable
 fun ClickableUrl(urlText: String, url: String) {
-  val uri = LocalUriHandler.current
+    val uri = LocalUriHandler.current
 
-  ClickableText(
-    text = AnnotatedString("$urlText "),
-    onClick = { runCatching { uri.openUri(url) } },
-    style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary),
-  )
+    ClickableText(
+        text = AnnotatedString("$urlText "),
+        onClick = { runCatching { uri.openUri(url) } },
+        style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary)
+    )
 }

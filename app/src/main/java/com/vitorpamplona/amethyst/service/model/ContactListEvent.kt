@@ -5,8 +5,8 @@ import com.google.gson.reflect.TypeToken
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.decodePublicKey
 import com.vitorpamplona.amethyst.model.toHexKey
-import java.util.Date
 import nostr.postr.Utils
+import java.util.Date
 
 data class Contact(val pubKeyHex: String, val relayUri: String?)
 
@@ -17,7 +17,7 @@ class ContactListEvent(
     tags: List<List<String>>,
     content: String,
     sig: HexKey
-): Event(id, pubKey, createdAt, kind, tags, content, sig) {
+) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
     // This function is only used by the user logged in
     // But it is used all the time.
     val verifiedFollowKeySet: Set<HexKey> by lazy {
@@ -44,10 +44,11 @@ class ContactListEvent(
     }
 
     fun relays(): Map<String, ReadWrite>? = try {
-        if (content.isNotEmpty())
-            gson.fromJson(content, object: TypeToken<Map<String, ReadWrite>>() {}.type) as Map<String, ReadWrite>
-        else
+        if (content.isNotEmpty()) {
+            gson.fromJson(content, object : TypeToken<Map<String, ReadWrite>>() {}.type) as Map<String, ReadWrite>
+        } else {
             null
+        }
     } catch (e: Exception) {
         Log.w("ContactListEvent", "Can't parse content as relay lists: $content", e)
         null
@@ -57,16 +58,18 @@ class ContactListEvent(
         const val kind = 3
 
         fun create(follows: List<Contact>, relayUse: Map<String, ReadWrite>?, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ContactListEvent {
-            val content = if (relayUse != null)
+            val content = if (relayUse != null) {
                 gson.toJson(relayUse)
-            else
+            } else {
                 ""
+            }
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             val tags = follows.map {
-                if (it.relayUri != null)
+                if (it.relayUri != null) {
                     listOf("p", it.pubKeyHex, it.relayUri)
-                else
+                } else {
                     listOf("p", it.pubKeyHex)
+                }
             }
             val id = generateId(pubKey, createdAt, kind, tags, content)
             val sig = Utils.sign(id, privateKey)

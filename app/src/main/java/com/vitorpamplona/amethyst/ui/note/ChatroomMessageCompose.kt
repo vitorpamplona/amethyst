@@ -79,7 +79,6 @@ fun ChatroomMessageCompose(
     navController: NavController,
     onWantsToReply: (Note) -> Unit
 ) {
-
     val noteState by baseNote.live().metadata.observeAsState()
     val note = noteState?.note
 
@@ -143,12 +142,16 @@ fun ChatroomMessageCompose(
         }
 
         Column() {
-            val modif = if (innerQuote) Modifier.padding(top = 10.dp, end = 5.dp) else Modifier.fillMaxWidth(1f).padding(
-                start = 12.dp,
-                end = 12.dp,
-                top = 5.dp,
-                bottom = 5.dp
-            )
+            val modif = if (innerQuote) {
+                Modifier.padding(top = 10.dp, end = 5.dp)
+            } else {
+                Modifier.fillMaxWidth(1f).padding(
+                    start = 12.dp,
+                    end = 12.dp,
+                    top = 5.dp,
+                    bottom = 5.dp
+                )
+            }
 
             Row(
                 modifier = modif,
@@ -161,9 +164,8 @@ fun ChatroomMessageCompose(
                     horizontalArrangement = alignment,
                     modifier = modif2.onSizeChanged {
                         availableBubbleSize = it
-                    },
+                    }
                 ) {
-
                     Surface(
                         color = backgroundBubbleColor,
                         shape = shape,
@@ -178,9 +180,8 @@ fun ChatroomMessageCompose(
                         Column(
                             modifier = Modifier.padding(start = 10.dp, end = 5.dp, bottom = 5.dp).onSizeChanged {
                                 bubbleSize = it
-                            },
+                            }
                         ) {
-
                             val authorState by note.author!!.live().metadata.observeAsState()
                             val author = authorState?.user!!
 
@@ -211,10 +212,10 @@ fun ChatroomMessageCompose(
                                         "  ${author?.toBestDisplayName()}",
                                         fontWeight = FontWeight.Bold,
                                         modifier = Modifier.clickable(onClick = {
-                                                author?.let {
-                                                    navController.navigate("User/${it.pubkeyHex}")
-                                                }
-                                            })
+                                            author?.let {
+                                                navController.navigate("User/${it.pubkeyHex}")
+                                            }
+                                        })
                                     )
                                 }
                             }
@@ -223,7 +224,7 @@ fun ChatroomMessageCompose(
                             if (!innerQuote && replyTo != null && replyTo.isNotEmpty()) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     replyTo.toSet().mapIndexed { index, note ->
-                                        if (note.event != null)
+                                        if (note.event != null) {
                                             ChatroomMessageCompose(
                                                 note,
                                                 null,
@@ -233,6 +234,7 @@ fun ChatroomMessageCompose(
                                                 navController = navController,
                                                 onWantsToReply = onWantsToReply
                                             )
+                                        }
                                     }
                                 }
                             }
@@ -240,25 +242,39 @@ fun ChatroomMessageCompose(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 val event = note.event
                                 if (event is ChannelCreateEvent) {
-                                    Text(text = note.author?.toBestDisplayName()
-                                        .toString() + " ${stringResource(R.string.created)} " + (event.channelInfo().name
-                                        ?: "") +" ${stringResource(R.string.with_description_of)} '" + (event.channelInfo().about
-                                        ?: "") + "', ${stringResource(R.string.and_picture)} '" + (event.channelInfo().picture
-                                        ?: "") + "'"
+                                    Text(
+                                        text = note.author?.toBestDisplayName()
+                                            .toString() + " ${stringResource(R.string.created)} " + (
+                                            event.channelInfo().name
+                                                ?: ""
+                                            ) + " ${stringResource(R.string.with_description_of)} '" + (
+                                            event.channelInfo().about
+                                                ?: ""
+                                            ) + "', ${stringResource(R.string.and_picture)} '" + (
+                                            event.channelInfo().picture
+                                                ?: ""
+                                            ) + "'"
                                     )
                                 } else if (event is ChannelMetadataEvent) {
-                                    Text(text = note.author?.toBestDisplayName()
-                                        .toString() + " ${stringResource(R.string.changed_chat_name_to)} '" + (event.channelInfo().name
-                                        ?: "") + "$', {stringResource(R.string.description_to)} '" + (event.channelInfo().about
-                                        ?: "") + "', ${stringResource(R.string.and_picture_to)} '" + (event.channelInfo().picture
-                                        ?: "") + "'"
+                                    Text(
+                                        text = note.author?.toBestDisplayName()
+                                            .toString() + " ${stringResource(R.string.changed_chat_name_to)} '" + (
+                                            event.channelInfo().name
+                                                ?: ""
+                                            ) + "$', {stringResource(R.string.description_to)} '" + (
+                                            event.channelInfo().about
+                                                ?: ""
+                                            ) + "', ${stringResource(R.string.and_picture_to)} '" + (
+                                            event.channelInfo().picture
+                                                ?: ""
+                                            ) + "'"
                                     )
                                 } else {
                                     val eventContent = accountViewModel.decrypt(note)
 
-                                    val canPreview = note.author == accountUser
-                                          || (note.author?.let { accountUser.isFollowing(it) } ?: true )
-                                          || !noteForReports.hasAnyReports()
+                                    val canPreview = note.author == accountUser ||
+                                        (note.author?.let { accountUser.isFollowing(it) } ?: true) ||
+                                        !noteForReports.hasAnyReports()
 
                                     if (eventContent != null) {
                                         TranslateableRichTextViewer(
@@ -343,9 +359,10 @@ private fun RelayBadges(baseNote: Note) {
             Box(
                 Modifier
                     .size(15.dp)
-                    .padding(1.dp)) {
+                    .padding(1.dp)
+            ) {
                 AsyncImage(
-                    model = "https://${url}/favicon.ico",
+                    model = "https://$url/favicon.ico",
                     placeholder = BitmapPainter(RoboHashCache.get(ctx, url)),
                     fallback = BitmapPainter(RoboHashCache.get(ctx, url)),
                     error = BitmapPainter(RoboHashCache.get(ctx, url)),
@@ -369,7 +386,7 @@ private fun RelayBadges(baseNote: Note) {
                     imageVector = Icons.Default.ChevronRight,
                     null,
                     modifier = Modifier.size(15.dp),
-                    tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                    tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                 )
             }
         }

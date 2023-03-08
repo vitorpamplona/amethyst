@@ -6,21 +6,21 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 
-object HomeConversationsFeedFilter: FeedFilter<Note>() {
-  lateinit var account: Account
+object HomeConversationsFeedFilter : FeedFilter<Note>() {
+    lateinit var account: Account
 
-  override fun feed(): List<Note> {
-    val user = account.userProfile()
+    override fun feed(): List<Note> {
+        val user = account.userProfile()
 
-    return LocalCache.notes.values
-      .filter {
-        (it.event is TextNoteEvent || it.event is RepostEvent)
-          && it.author?.pubkeyHex in user.cachedFollowingKeySet()
-          // && account.isAcceptable(it)  // This filter follows only. No need to check if acceptable
-          && it.author?.let { !HomeNewThreadFeedFilter.account.isHidden(it) } ?: true
-          && !it.isNewThread()
-      }
-      .sortedBy { it.createdAt() }
-      .reversed()
-  }
+        return LocalCache.notes.values
+            .filter {
+                (it.event is TextNoteEvent || it.event is RepostEvent) &&
+                    it.author?.pubkeyHex in user.cachedFollowingKeySet() &&
+                    // && account.isAcceptable(it)  // This filter follows only. No need to check if acceptable
+                    it.author?.let { !HomeNewThreadFeedFilter.account.isHidden(it) } ?: true &&
+                    !it.isNewThread()
+            }
+            .sortedBy { it.createdAt() }
+            .reversed()
+    }
 }

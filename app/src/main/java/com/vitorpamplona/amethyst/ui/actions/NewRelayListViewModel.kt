@@ -7,13 +7,12 @@ import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.service.model.ContactListEvent
 import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.relays.FeedType
-import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
-class NewRelayListViewModel: ViewModel() {
+class NewRelayListViewModel : ViewModel() {
     private lateinit var account: Account
 
     private val _relays = MutableStateFlow<List<RelaySetupInfo>>(emptyList())
@@ -40,11 +39,12 @@ class NewRelayListViewModel: ViewModel() {
             // TODO: Remove when search becomes more available.
             if (relayFile?.none { it.key == Constants.forcedRelayForSearch.url } == true) {
                 relayFile = relayFile + Pair(
-                    Constants.forcedRelayForSearch.url, ContactListEvent.ReadWrite(Constants.forcedRelayForSearch.read, Constants.forcedRelayForSearch.write)
+                    Constants.forcedRelayForSearch.url,
+                    ContactListEvent.ReadWrite(Constants.forcedRelayForSearch.read, Constants.forcedRelayForSearch.write)
                 )
             }
 
-            if (relayFile != null)
+            if (relayFile != null) {
                 relayFile.map {
                     val liveRelay = RelayPool.getRelay(it.key)
                     val localInfoFeedTypes = account.localRelays.filter { localRelay -> localRelay.url == it.key }.firstOrNull()?.feedTypes ?: FeedType.values().toSet()
@@ -56,7 +56,7 @@ class NewRelayListViewModel: ViewModel() {
 
                     RelaySetupInfo(it.key, it.value.read, it.value.write, errorCounter, eventDownloadCounter, eventUploadCounter, spamCounter, localInfoFeedTypes)
                 }.sortedBy { it.downloadCount }.reversed()
-            else
+            } else {
                 account.localRelays.map {
                     val liveRelay = RelayPool.getRelay(it.url)
 
@@ -67,6 +67,7 @@ class NewRelayListViewModel: ViewModel() {
 
                     RelaySetupInfo(it.url, it.read, it.write, errorCounter, eventDownloadCounter, eventUploadCounter, spamCounter, it.feedTypes)
                 }.sortedBy { it.downloadCount }.reversed()
+            }
         }
     }
 
@@ -120,14 +121,14 @@ class NewRelayListViewModel: ViewModel() {
     fun toggleGlobal(relay: RelaySetupInfo) {
         val newTypes = togglePresenceInSet(relay.feedTypes, FeedType.GLOBAL)
         _relays.update {
-            it.updated(relay, relay.copy( feedTypes = newTypes ))
+            it.updated(relay, relay.copy(feedTypes = newTypes))
         }
     }
 
     fun toggleSearch(relay: RelaySetupInfo) {
         val newTypes = togglePresenceInSet(relay.feedTypes, FeedType.SEARCH)
         _relays.update {
-            it.updated(relay, relay.copy( feedTypes = newTypes ))
+            it.updated(relay, relay.copy(feedTypes = newTypes))
         }
     }
 }

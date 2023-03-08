@@ -21,7 +21,7 @@ import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun ChatroomFeedView(viewModel: FeedViewModel, accountViewModel: AccountViewModel, navController: NavController, routeForLastRead: String?, onWantsToReply: (Note) -> Unit ) {
+fun ChatroomFeedView(viewModel: FeedViewModel, accountViewModel: AccountViewModel, navController: NavController, routeForLastRead: String?, onWantsToReply: (Note) -> Unit) {
     val feedState by viewModel.feedContent.collectAsState()
 
     var isRefreshing by remember { mutableStateOf(false) }
@@ -50,8 +50,9 @@ fun ChatroomFeedView(viewModel: FeedViewModel, accountViewModel: AccountViewMode
                 }
                 is FeedState.Loaded -> {
                     LaunchedEffect(state.feed.value.firstOrNull()) {
-                        if (listState.firstVisibleItemIndex <= 1)
+                        if (listState.firstVisibleItemIndex <= 1) {
                             listState.animateScrollToItem(0)
+                        }
                     }
 
                     LazyColumn(

@@ -2,7 +2,6 @@ package com.vitorpamplona.amethyst.service.relays
 
 import android.util.Log
 import com.google.gson.JsonElement
-import java.util.Date
 import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.EventInterface
 import okhttp3.OkHttpClient
@@ -10,6 +9,7 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
+import java.util.Date
 
 enum class FeedType {
     FOLLOWS, PUBLIC_CHATS, PRIVATE_DMS, GLOBAL, SEARCH
@@ -19,12 +19,12 @@ class Relay(
     var url: String,
     var read: Boolean = true,
     var write: Boolean = true,
-    var activeTypes: Set<FeedType> = FeedType.values().toSet(),
+    var activeTypes: Set<FeedType> = FeedType.values().toSet()
 ) {
     private val httpClient = OkHttpClient.Builder()
         .followRedirects(true)
         .followSslRedirects(true)
-        .build();
+        .build()
 
     private var listeners = setOf<Listener>()
     private var socket: WebSocket? = null
@@ -77,26 +77,26 @@ class Relay(
                         val channel = msg[1].asString
                         when (type) {
                             "EVENT" -> {
-                                //Log.w("Relay", "Relay onEVENT $url, $channel")
+                                // Log.w("Relay", "Relay onEVENT $url, $channel")
                                 eventDownloadCounter++
                                 val event = Event.fromJson(msg[2], Client.lenient)
                                 listeners.forEach { it.onEvent(this@Relay, channel, event) }
                             }
                             "EOSE" -> listeners.forEach {
-                                //Log.w("Relay", "Relay onEOSE $url, $channel")
+                                // Log.w("Relay", "Relay onEOSE $url, $channel")
                                 it.onRelayStateChange(this@Relay, Type.EOSE, channel)
                             }
                             "NOTICE" -> listeners.forEach {
-                                //Log.w("Relay", "Relay onNotice $url, $channel")
+                                // Log.w("Relay", "Relay onNotice $url, $channel")
                                 // "channel" being the second string in the string array ...
                                 it.onError(this@Relay, channel, Error("Relay sent notice: " + channel))
                             }
                             "OK" -> listeners.forEach {
-                                //Log.w("Relay", "Relay onOK $url, $channel")
+                                // Log.w("Relay", "Relay onOK $url, $channel")
                                 it.onSendResponse(this@Relay, msg[1].asString, msg[2].asBoolean, msg[3].asString)
                             }
                             else -> listeners.forEach {
-                                //Log.w("Relay", "Relay something else $url, $channel")
+                                // Log.w("Relay", "Relay something else $url, $channel")
                                 it.onError(
                                     this@Relay,
                                     channel,
@@ -113,11 +113,13 @@ class Relay(
                 }
 
                 override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
-                    listeners.forEach { it.onRelayStateChange(
-                        this@Relay,
-                        Type.DISCONNECTING,
-                        null
-                    ) }
+                    listeners.forEach {
+                        it.onRelayStateChange(
+                            this@Relay,
+                            Type.DISCONNECTING,
+                            null
+                        )
+                    }
                 }
 
                 override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
@@ -136,10 +138,10 @@ class Relay(
                     isReady = false
                     closingTime = Date().time / 1000
 
-                    Log.w("Relay", "Relay onFailure $url, ${response?.message} ${response}")
+                    Log.w("Relay", "Relay onFailure $url, ${response?.message} $response")
                     t.printStackTrace()
                     listeners.forEach {
-                        it.onError(this@Relay, "", Error("WebSocket Failure. Response: ${response}. Exception: ${t.message}", t))
+                        it.onError(this@Relay, "", Error("WebSocket Failure. Response: $response. Exception: ${t.message}", t))
                     }
                 }
             }
@@ -155,7 +157,7 @@ class Relay(
     }
 
     fun disconnect() {
-        //httpClient.dispatcher.executorService.shutdown()
+        // httpClient.dispatcher.executorService.shutdown()
         closingTime = Date().time / 1000
         socket?.close(1000, "Normal close")
         socket = null
@@ -170,7 +172,7 @@ class Relay(
                     if (filters.isNotEmpty()) {
                         val request =
                             """["REQ","$requestId",${filters.take(10).joinToString(",") { it.filter.toJson() }}]"""
-                        //println("FILTERSSENT ${url} ${request}")
+                        // println("FILTERSSENT ${url} ${request}")
                         socket?.send(request)
                     }
                 }
@@ -188,7 +190,7 @@ class Relay(
         if (socket == null) {
             // waits 60 seconds to reconnect after disconnected.
             if (Date().time / 1000 > closingTime + 60) {
-                //println("sendfilter Only if Disconnected ${url} ")
+                // println("sendfilter Only if Disconnected ${url} ")
                 requestAndWatch()
             }
         }
@@ -201,24 +203,27 @@ class Relay(
         }
     }
 
-    fun close(subscriptionId: String){
+    fun close(subscriptionId: String) {
         socket?.send("""["CLOSE","$subscriptionId"]""")
     }
 
     fun isSameRelayConfig(other: Relay): Boolean {
-        return url == other.url
-            && write == other.write
-            && read == other.read
-            && activeTypes == other.activeTypes
+        return url == other.url &&
+            write == other.write &&
+            read == other.read &&
+            activeTypes == other.activeTypes
     }
 
     enum class Type {
         // Websocket connected
         CONNECT,
+
         // Websocket disconnecting
         DISCONNECTING,
+
         // Websocket disconnected
         DISCONNECT,
+
         // End Of Stored Events
         EOSE
     }
@@ -232,6 +237,7 @@ class Relay(
         fun onError(relay: Relay, subscriptionId: String, error: Error)
 
         fun onSendResponse(relay: Relay, eventId: String, success: Boolean, message: String)
+
         /**
          * Connected to or disconnected from a relay
          *

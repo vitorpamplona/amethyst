@@ -56,11 +56,12 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.launch
 
 @Composable
-fun DrawerContent(navController: NavHostController,
-                  scaffoldState: ScaffoldState,
-                  accountViewModel: AccountViewModel,
-                  accountStateViewModel: AccountStateViewModel) {
-
+fun DrawerContent(
+    navController: NavHostController,
+    scaffoldState: ScaffoldState,
+    accountViewModel: AccountViewModel,
+    accountStateViewModel: AccountStateViewModel
+) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
@@ -90,7 +91,7 @@ fun DrawerContent(navController: NavHostController,
                     .fillMaxWidth()
                     .weight(1F),
                 accountStateViewModel,
-                account,
+                account
             )
 
             BottomContent(account.userProfile(), scaffoldState, navController)
@@ -172,7 +173,9 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
                 )
             }
             if (accountUser.bestUsername() != null) {
-                Text(" @${accountUser.bestUsername()}", color = Color.LightGray,
+                Text(
+                    " @${accountUser.bestUsername()}",
+                    color = Color.LightGray,
                     modifier = Modifier
                         .padding(top = 15.dp)
                         .clickable(onClick = {
@@ -185,16 +188,18 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
                         })
                 )
             }
-            Row(modifier = Modifier
-                .padding(top = 15.dp)
-                .clickable(onClick = {
-                    accountUser.let {
-                        navController.navigate("User/${it.pubkeyHex}")
-                    }
-                    coroutineScope.launch {
-                        scaffoldState.drawerState.close()
-                    }
-                })) {
+            Row(
+                modifier = Modifier
+                    .padding(top = 15.dp)
+                    .clickable(onClick = {
+                        accountUser.let {
+                            navController.navigate("User/${it.pubkeyHex}")
+                        }
+                        coroutineScope.launch {
+                            scaffoldState.drawerState.close()
+                        }
+                    })
+            ) {
                 Row() {
                     Text("${accountUserFollows.cachedFollowCount() ?: "--"}", fontWeight = FontWeight.Bold)
                     Text(stringResource(R.string.following))
@@ -215,20 +220,21 @@ fun ListContent(
     scaffoldState: ScaffoldState,
     modifier: Modifier,
     accountViewModel: AccountStateViewModel,
-    account: Account,
+    account: Account
 ) {
     var backupDialogOpen by remember { mutableStateOf(false) }
 
     Column(modifier = modifier.fillMaxHeight()) {
-        if (accountUser != null)
+        if (accountUser != null) {
             NavigationRow(
                 title = stringResource(R.string.profile),
                 icon = Route.Profile.icon,
                 tint = MaterialTheme.colors.primary,
                 navController = navController,
                 scaffoldState = scaffoldState,
-                route = "User/${accountUser.pubkeyHex}",
+                route = "User/${accountUser.pubkeyHex}"
             )
+        }
 
         Divider(thickness = 0.25.dp)
 
@@ -238,7 +244,7 @@ fun ListContent(
             tint = MaterialTheme.colors.onBackground,
             navController = navController,
             scaffoldState = scaffoldState,
-            route = Route.Filters.route,
+            route = Route.Filters.route
         )
 
         Divider(thickness = 0.25.dp)
@@ -272,7 +278,7 @@ fun NavigationRow(
     tint: Color,
     navController: NavHostController,
     scaffoldState: ScaffoldState,
-    route: String,
+    route: String
 ) {
     val coroutineScope = rememberCoroutineScope()
     val currentRoute = currentRoute(navController)
@@ -288,9 +294,10 @@ fun NavigationRow(
 
 @Composable
 fun IconRow(title: String, icon: Int, tint: Color, onClick: () -> Unit) {
-    Row(modifier = Modifier
-        .fillMaxWidth()
-        .clickable(onClick = onClick)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
     ) {
         Row(
             modifier = Modifier
@@ -299,14 +306,15 @@ fun IconRow(title: String, icon: Int, tint: Color, onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                painter = painterResource(icon), null,
+                painter = painterResource(icon),
+                null,
                 modifier = Modifier.size(22.dp),
                 tint = tint
             )
             Text(
                 modifier = Modifier.padding(start = 16.dp),
                 text = title,
-                fontSize = 18.sp,
+                fontSize = 18.sp
             )
         }
     }
@@ -334,9 +342,9 @@ fun BottomContent(user: User, scaffoldState: ScaffoldState, navController: NavCo
         ) {
             Text(
                 modifier = Modifier.padding(start = 16.dp),
-                text = "v"+BuildConfig.VERSION_NAME,
+                text = "v" + BuildConfig.VERSION_NAME,
                 fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.Bold
             )
             /*
             IconButton(
@@ -373,7 +381,8 @@ fun BottomContent(user: User, scaffoldState: ScaffoldState, navController: NavCo
     }
 
     if (dialogOpen) {
-        ShowQRDialog(user,
+        ShowQRDialog(
+            user,
             onScan = {
                 dialogOpen = false
                 coroutineScope.launch {
@@ -385,5 +394,3 @@ fun BottomContent(user: User, scaffoldState: ScaffoldState, navController: NavCo
         )
     }
 }
-
-

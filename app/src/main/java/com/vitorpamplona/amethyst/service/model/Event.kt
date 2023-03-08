@@ -20,10 +20,10 @@ open class Event(
     val tags: List<List<String>>,
     val content: String,
     val sig: HexKey
-): EventInterface {
+) : EventInterface {
     override fun id(): HexKey = id
 
-    override fun pubKey(): HexKey  = pubKey
+    override fun pubKey(): HexKey = pubKey
 
     override fun createdAt(): Long = createdAt
 
@@ -41,7 +41,6 @@ open class Event(
 
     override fun isTaggedUser(idHex: String) = tags.any { it.getOrNull(0) == "p" && it.getOrNull(1) == idHex }
 
-
     /**
      * Checks if the ID is correct and then if the pubKey's secret key signed the event.
      */
@@ -50,8 +49,9 @@ open class Event(
             throw Exception(
                 """|Unexpected ID.
                    |  Event: ${toJson()}
-                   |  Actual ID: ${id}
-                   |  Generated: ${generateId()}""".trimIndent()
+                   |  Actual ID: $id
+                   |  Generated: ${generateId()}
+                """.trimIndent()
             )
         }
         if (!secp256k1.verifySchnorr(Hex.decode(sig), Hex.decode(id), Hex.decode(pubKey))) {
@@ -113,15 +113,20 @@ open class Event(
                 addProperty("pubkey", src.pubKey)
                 addProperty("created_at", src.createdAt)
                 addProperty("kind", src.kind)
-                add("tags", JsonArray().also { jsonTags ->
-                    src.tags.forEach { tag ->
-                        jsonTags.add(JsonArray().also { jsonTagElement ->
-                            tag.forEach { tagElement ->
-                                jsonTagElement.add(tagElement)
-                            }
-                        })
+                add(
+                    "tags",
+                    JsonArray().also { jsonTags ->
+                        src.tags.forEach { tag ->
+                            jsonTags.add(
+                                JsonArray().also { jsonTagElement ->
+                                    tag.forEach { tagElement ->
+                                        jsonTagElement.add(tagElement)
+                                    }
+                                }
+                            )
+                        }
                     }
-                })
+                )
                 addProperty("content", src.content)
                 addProperty("sig", src.sig)
             }

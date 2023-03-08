@@ -120,7 +120,8 @@ fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, accoun
 
         Column(Modifier.fillMaxHeight()) {
             ChannelHeader(
-                channel, account,
+                channel,
+                account,
                 navController = navController
             )
 
@@ -130,7 +131,7 @@ fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, accoun
                     .padding(vertical = 0.dp)
                     .weight(1f, true)
             ) {
-                ChatroomFeedView(feedViewModel, accountViewModel, navController, "Channel/${channelId}") {
+                ChatroomFeedView(feedViewModel, accountViewModel, navController, "Channel/$channelId") {
                     replyTo.value = it
                 }
             }
@@ -169,8 +170,9 @@ fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, accoun
                 }
             }
 
-            //LAST ROW
-            Row(modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp, top= 5.dp).fillMaxWidth(),
+            // LAST ROW
+            Row(
+                modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp, top = 5.dp).fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -221,7 +223,6 @@ fun ChannelHeader(baseChannel: Channel, account: Account, navController: NavCont
     Column() {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-
                 AsyncImageProxy(
                     model = ResizeImage(channel.profilePicture(), 35.dp),
                     placeholder = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
@@ -234,13 +235,15 @@ fun ChannelHeader(baseChannel: Channel, account: Account, navController: NavCont
                         .clip(shape = CircleShape)
                 )
 
-                Column(modifier = Modifier
-                    .padding(start = 10.dp)
-                    .weight(1f)) {
+                Column(
+                    modifier = Modifier
+                        .padding(start = 10.dp)
+                        .weight(1f)
+                ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             "${channel.info.name}",
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.Bold
                         )
                     }
 
@@ -255,9 +258,11 @@ fun ChannelHeader(baseChannel: Channel, account: Account, navController: NavCont
                     }
                 }
 
-                Row(modifier = Modifier
-                    .height(35.dp)
-                    .padding(bottom = 3.dp)) {
+                Row(
+                    modifier = Modifier
+                        .height(35.dp)
+                        .padding(bottom = 3.dp)
+                ) {
                     NoteCopyButton(channel)
 
                     if (channel.creator == account.userProfile()) {
@@ -269,7 +274,6 @@ fun ChannelHeader(baseChannel: Channel, account: Account, navController: NavCont
                     } else {
                         JoinButton(account, channel, navController)
                     }
-
                 }
             }
         }
@@ -280,7 +284,6 @@ fun ChannelHeader(baseChannel: Channel, account: Account, navController: NavCont
         )
     }
 }
-
 
 @Composable
 private fun NoteCopyButton(
@@ -298,7 +301,7 @@ private fun NoteCopyButton(
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-            ),
+            )
     ) {
         Icon(
             tint = Color.White,
@@ -323,8 +326,9 @@ private fun EditButton(account: Account, channel: Channel) {
         mutableStateOf(false)
     }
 
-    if (wantsToPost)
+    if (wantsToPost) {
         NewChannelView({ wantsToPost = false }, account = account, channel)
+    }
 
     Button(
         modifier = Modifier

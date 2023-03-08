@@ -1,18 +1,18 @@
 package com.vitorpamplona.amethyst.service.relays
 
-import java.util.UUID
+import com.vitorpamplona.amethyst.service.model.Event
+import com.vitorpamplona.amethyst.service.model.EventInterface
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import com.vitorpamplona.amethyst.service.model.Event
-import com.vitorpamplona.amethyst.service.model.EventInterface
+import java.util.UUID
 
 /**
  * The Nostr Client manages multiple personae the user may switch between. Events are received and
  * published through multiple relays.
  * Events are stored with their respective persona.
  */
-object Client: RelayPool.Listener {
+object Client : RelayPool.Listener {
     /**
      * Lenient mode:
      *

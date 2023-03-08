@@ -7,113 +7,117 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.map
-import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountState
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import java.util.Locale
 
-class AccountViewModel(private val account: Account): ViewModel() {
-  val accountLiveData: LiveData<AccountState> = account.live.map { it }
-  val accountLanguagesLiveData: LiveData<AccountState> = account.liveLanguages.map { it }
+class AccountViewModel(private val account: Account) : ViewModel() {
+    val accountLiveData: LiveData<AccountState> = account.live.map { it }
+    val accountLanguagesLiveData: LiveData<AccountState> = account.liveLanguages.map { it }
 
-  fun isWriteable(): Boolean {
-    return account.isWriteable()
-  }
-
-  fun userProfile(): User {
-    return account.userProfile()
-  }
-
-  fun reactTo(note: Note) {
-    account.reactTo(note)
-  }
-
-  fun hasReactedTo(baseNote: Note): Boolean {
-    return account.hasReacted(baseNote)
-  }
-
-  fun deleteReactionTo(note: Note) {
-    account.delete(account.reactionTo(note))
-  }
-
-  fun hasBoosted(baseNote: Note): Boolean {
-    return account.hasBoosted(baseNote)
-  }
-
-  fun deleteBoostsTo(note: Note) {
-    account.delete(account.boostsTo(note))
-  }
-
-  fun zap(note: Note, amount: Long, message: String, context: Context, onError: (String) -> Unit) {
-    val lud16 = note.author?.info?.lud16?.trim() ?: note.author?.info?.lud06?.trim()
-
-    if (lud16.isNullOrBlank()) {
-      onError(context.getString(R.string.user_does_not_have_a_lightning_address_setup_to_receive_sats))
-      return
+    fun isWriteable(): Boolean {
+        return account.isWriteable()
     }
 
-    val zapRequest = account.createZapRequestFor(note)
+    fun userProfile(): User {
+        return account.userProfile()
+    }
 
-    LightningAddressResolver().lnAddressInvoice(lud16, amount, message, zapRequest?.toJson(),
-      onSuccess = {
-        runCatching {
-          val intent = Intent(Intent.ACTION_VIEW, Uri.parse("lightning:$it"))
-          ContextCompat.startActivity(context, intent, null)
+    fun reactTo(note: Note) {
+        account.reactTo(note)
+    }
+
+    fun hasReactedTo(baseNote: Note): Boolean {
+        return account.hasReacted(baseNote)
+    }
+
+    fun deleteReactionTo(note: Note) {
+        account.delete(account.reactionTo(note))
+    }
+
+    fun hasBoosted(baseNote: Note): Boolean {
+        return account.hasBoosted(baseNote)
+    }
+
+    fun deleteBoostsTo(note: Note) {
+        account.delete(account.boostsTo(note))
+    }
+
+    fun zap(note: Note, amount: Long, message: String, context: Context, onError: (String) -> Unit) {
+        val lud16 = note.author?.info?.lud16?.trim() ?: note.author?.info?.lud06?.trim()
+
+        if (lud16.isNullOrBlank()) {
+            onError(context.getString(R.string.user_does_not_have_a_lightning_address_setup_to_receive_sats))
+            return
         }
-      },
-      onError = onError
-    )
-  }
 
-  fun report(note: Note, type: ReportEvent.ReportType) {
-    account.report(note, type)
-  }
+        val zapRequest = account.createZapRequestFor(note)
 
-  fun report(user: User, type: ReportEvent.ReportType) {
-    account.report(user, type)
-  }
+        LightningAddressResolver().lnAddressInvoice(
+            lud16,
+            amount,
+            message,
+            zapRequest?.toJson(),
+            onSuccess = {
+                runCatching {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("lightning:$it"))
+                    ContextCompat.startActivity(context, intent, null)
+                }
+            },
+            onError = onError
+        )
+    }
 
-  fun boost(note: Note) {
-    account.boost(note)
-  }
+    fun report(note: Note, type: ReportEvent.ReportType) {
+        account.report(note, type)
+    }
 
-  fun broadcast(note: Note) {
-    account.broadcast(note)
-  }
+    fun report(user: User, type: ReportEvent.ReportType) {
+        account.report(user, type)
+    }
 
-  fun delete(note: Note) {
-    account.delete(note)
-  }
+    fun boost(note: Note) {
+        account.boost(note)
+    }
 
-  fun decrypt(note: Note): String? {
-    return account.decryptContent(note)
-  }
+    fun broadcast(note: Note) {
+        account.broadcast(note)
+    }
 
-  fun hide(user: User, ctx: Context) {
-    account.hideUser(user.pubkeyHex)
-  }
+    fun delete(note: Note) {
+        account.delete(note)
+    }
 
-  fun show(user: User, ctx: Context) {
-    account.showUser(user.pubkeyHex)
-  }
+    fun decrypt(note: Note): String? {
+        return account.decryptContent(note)
+    }
 
-  fun translateTo(lang: Locale, ctx: Context) {
-    account.updateTranslateTo(lang.language)
-  }
+    fun hide(user: User, ctx: Context) {
+        account.hideUser(user.pubkeyHex)
+    }
 
-  fun dontTranslateFrom(lang: String, ctx: Context) {
-    account.addDontTranslateFrom(lang)
-  }
+    fun show(user: User, ctx: Context) {
+        account.showUser(user.pubkeyHex)
+    }
 
-  fun prefer(source: String, target: String, preference: String) {
-    account.prefer(source, target, preference)
-  }
+    fun translateTo(lang: Locale, ctx: Context) {
+        account.updateTranslateTo(lang.language)
+    }
 
-  fun follow(user: User) {
-    account.follow(user)
-  }
+    fun dontTranslateFrom(lang: String, ctx: Context) {
+        account.addDontTranslateFrom(lang)
+    }
+
+    fun prefer(source: String, target: String, preference: String) {
+        account.prefer(source, target, preference)
+    }
+
+    fun follow(user: User) {
+        account.follow(user)
+    }
 }

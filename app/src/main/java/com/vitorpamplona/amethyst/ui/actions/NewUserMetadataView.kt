@@ -42,8 +42,7 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
             dismissOnClickOutside = false
         )
     ) {
-        Surface(
-        ) {
+        Surface() {
             Column(
                 modifier = Modifier.padding(10.dp)
             ) {
@@ -72,7 +71,7 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                 Row(modifier = Modifier.fillMaxWidth(1f), verticalAlignment = Alignment.CenterVertically) {
                     OutlinedTextField(
                         label = { Text(text = stringResource(R.string.display_name)) },
-                        modifier =  Modifier.weight(1f),
+                        modifier = Modifier.weight(1f),
                         value = postViewModel.displayName.value,
                         onValueChange = { postViewModel.displayName.value = it },
                         placeholder = {
@@ -219,7 +218,6 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                     },
                     singleLine = true
                 )
-
             }
         }
     }

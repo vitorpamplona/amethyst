@@ -1,9 +1,6 @@
 package com.vitorpamplona.amethyst.service.model
 
 import com.vitorpamplona.amethyst.model.HexKey
-import com.vitorpamplona.amethyst.model.toHexKey
-import java.util.Date
-import nostr.postr.Utils
 
 class BadgeDefinitionEvent(
     id: HexKey,
@@ -12,7 +9,7 @@ class BadgeDefinitionEvent(
     tags: List<List<String>>,
     content: String,
     sig: HexKey
-): Event(id, pubKey, createdAt, kind, tags, content, sig) {
+) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
     fun dTag() = tags.filter { it.firstOrNull() == "d" }.mapNotNull { it.getOrNull(1) }.firstOrNull() ?: ""
     fun address() = ATag(kind, pubKey, dTag(), null)
 

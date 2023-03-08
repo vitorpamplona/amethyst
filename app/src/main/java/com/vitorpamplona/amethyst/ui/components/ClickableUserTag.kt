@@ -12,13 +12,13 @@ import com.vitorpamplona.amethyst.model.User
 
 @Composable
 fun ClickableUserTag(
-  user: User,
-  navController: NavController
+    user: User,
+    navController: NavController
 ) {
-  val innerUserState by user.live().metadata.observeAsState()
-  ClickableText(
-    text = AnnotatedString("@${innerUserState?.user?.toBestDisplayName()} "),
-    onClick = { navController.navigate("User/${innerUserState?.user?.pubkeyHex}") },
-    style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary)
-  )
+    val innerUserState by user.live().metadata.observeAsState()
+    ClickableText(
+        text = AnnotatedString("@${innerUserState?.user?.toBestDisplayName()} "),
+        onClick = { navController.navigate("User/${innerUserState?.user?.pubkeyHex}") },
+        style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary)
+    )
 }

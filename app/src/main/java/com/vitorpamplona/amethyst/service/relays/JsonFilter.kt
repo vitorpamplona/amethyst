@@ -21,7 +21,7 @@ class JsonFilter(
     val since: Long? = null,
     val until: Long? = null,
     val limit: Int? = null,
-    val search: String? = null,
+    val search: String? = null
 ) : Filter, Serializable {
     fun toJson(): String {
         val jsonObject = JsonObject()
@@ -61,8 +61,9 @@ class JsonFilter(
         tags?.forEach { tag ->
             if (!event.tags.any { it.first() == tag.key && it[1] in tag.value }) return false
         }
-        if (event.createdAt !in (since ?: Long.MIN_VALUE)..(until ?: Long.MAX_VALUE))
+        if (event.createdAt !in (since ?: Long.MIN_VALUE)..(until ?: Long.MAX_VALUE)) {
             return false
+        }
         return true
     }
 
@@ -113,10 +114,18 @@ class JsonFilter(
             }
             return JsonFilter(
                 ids = if (json.has("ids")) json.getAsJsonArray("ids").map { it.asString } else null,
-                authors = if (json.has("authors")) json.getAsJsonArray("authors")
-                    .map { it.asString } else null,
-                kinds = if (json.has("kinds")) json.getAsJsonArray("kinds")
-                    .map { it.asInt } else null,
+                authors = if (json.has("authors")) {
+                    json.getAsJsonArray("authors")
+                        .map { it.asString }
+                } else {
+                    null
+                },
+                kinds = if (json.has("kinds")) {
+                    json.getAsJsonArray("kinds")
+                        .map { it.asInt }
+                } else {
+                    null
+                },
                 tags = json
                     .entrySet()
                     .filter { it.key.startsWith("#") }

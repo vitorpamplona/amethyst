@@ -30,7 +30,6 @@ import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import kotlinx.coroutines.delay
 
 @Composable
 fun FeedView(
@@ -55,9 +54,8 @@ fun FeedView(
         state = swipeRefreshState,
         onRefresh = {
             isRefreshing = true
-        },
+        }
     ) {
-
         Column() {
             Crossfade(targetState = feedState, animationSpec = tween(durationMillis = 100)) { state ->
                 when (state) {
@@ -123,7 +121,7 @@ fun LoadingFeed() {
             .fillMaxHeight()
             .fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.Center
     ) {
         Text(stringResource(R.string.loading_feed))
     }
@@ -136,7 +134,7 @@ fun FeedError(errorMessage: String, onRefresh: () -> Unit) {
             .fillMaxHeight()
             .fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.Center
     ) {
         Text("${stringResource(R.string.error_loading_replies)} $errorMessage")
         Button(
@@ -155,7 +153,7 @@ fun FeedEmpty(onRefresh: () -> Unit) {
             .fillMaxHeight()
             .fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.Center
     ) {
         Text(stringResource(R.string.feed_is_empty))
         OutlinedButton(onClick = onRefresh) {

@@ -39,7 +39,7 @@ fun LnZapFeedView(viewModel: LnZapFeedViewModel, accountViewModel: AccountViewMo
         state = swipeRefreshState,
         onRefresh = {
             isRefreshing = true
-        },
+        }
     ) {
         Column() {
             Crossfade(targetState = feedState, animationSpec = tween(durationMillis = 100)) { state ->

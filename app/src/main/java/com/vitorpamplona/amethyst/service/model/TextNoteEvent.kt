@@ -2,8 +2,8 @@ package com.vitorpamplona.amethyst.service.model
 
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
-import java.util.Date
 import nostr.postr.Utils
+import java.util.Date
 
 class TextNoteEvent(
     id: HexKey,
@@ -12,7 +12,7 @@ class TextNoteEvent(
     tags: List<List<String>>,
     content: String,
     sig: HexKey
-): BaseTextNoteEvent(id, pubKey, createdAt, kind, tags, content, sig) {
+) : BaseTextNoteEvent(id, pubKey, createdAt, kind, tags, content, sig) {
 
     fun taggedAddresses() = tags.filter { it.firstOrNull() == "a" }.mapNotNull {
         val aTagValue = it.getOrNull(1)

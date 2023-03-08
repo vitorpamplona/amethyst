@@ -74,7 +74,7 @@ fun ChatroomListScreen(accountViewModel: AccountViewModel, navController: NavCon
                                 Modifier.pagerTabIndicatorOffset(pagerState, tabPositions),
                                 color = MaterialTheme.colors.primary
                             )
-                        },
+                        }
                     ) {
                         Tab(
                             selected = pagerState.currentPage == 0,
@@ -95,7 +95,7 @@ fun ChatroomListScreen(accountViewModel: AccountViewModel, navController: NavCon
 
                     IconButton(
                         modifier = Modifier
-                            .padding(end=5.dp)
+                            .padding(end = 5.dp)
                             .size(40.dp)
                             .align(Alignment.CenterEnd),
                         onClick = { moreActionsExpanded = true }
@@ -103,21 +103,21 @@ fun ChatroomListScreen(accountViewModel: AccountViewModel, navController: NavCon
                         Icon(
                             imageVector = Icons.Default.MoreVert,
                             contentDescription = null,
-                            tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                            tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                         )
 
                         ChatroomTabMenu(
                             moreActionsExpanded,
                             { moreActionsExpanded = false },
                             { markKnownAsRead.value = true },
-                            { markNewAsRead.value = true },
+                            { markNewAsRead.value = true }
                         )
                     }
                 }
 
                 HorizontalPager(count = 2, state = pagerState) {
                     when (pagerState.currentPage) {
-                        0 -> TabKnown(accountViewModel, navController, markKnownAsRead,)
+                        0 -> TabKnown(accountViewModel, navController, markKnownAsRead)
                         1 -> TabNew(accountViewModel, navController, markNewAsRead)
                     }
                 }
@@ -130,7 +130,7 @@ fun ChatroomListScreen(accountViewModel: AccountViewModel, navController: NavCon
 fun TabKnown(
     accountViewModel: AccountViewModel,
     navController: NavController,
-    markAsRead: MutableState<Boolean>,
+    markAsRead: MutableState<Boolean>
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
@@ -213,7 +213,7 @@ fun ChatroomTabMenu(
     expanded: Boolean,
     onDismiss: () -> Unit,
     onMarkKnownAsRead: () -> Unit,
-    onMarkNewAsRead: () -> Unit,
+    onMarkNewAsRead: () -> Unit
 ) {
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
         DropdownMenuItem(onClick = {

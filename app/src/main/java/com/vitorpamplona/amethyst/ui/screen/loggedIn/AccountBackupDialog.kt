@@ -63,13 +63,13 @@ import nostr.postr.toNsec
 fun AccountBackupDialog(account: Account, onClose: () -> Unit) {
     Dialog(
         onDismissRequest = onClose,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+        properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Surface(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
                     .background(MaterialTheme.colors.background)
-                    .fillMaxSize(),
+                    .fillMaxSize()
             ) {
                 Row(
                     modifier = Modifier
@@ -86,13 +86,13 @@ fun AccountBackupDialog(account: Account, onClose: () -> Unit) {
                         .fillMaxSize()
                         .padding(horizontal = 30.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
+                    verticalArrangement = Arrangement.Center
                 ) {
                     MaterialRichText(
-                        style = RichTextStyle().resolveDefaults(),
+                        style = RichTextStyle().resolveDefaults()
                     ) {
                         Markdown(
-                            content = stringResource(R.string.account_backup_tips_md),
+                            content = stringResource(R.string.account_backup_tips_md)
                         )
                     }
 
@@ -125,7 +125,8 @@ private fun NSecCopyButton(
         onClick = {
             authenticatedCopyNSec(context, scope, account, clipboardManager, keyguardLauncher)
         },
-        shape = RoundedCornerShape(20.dp), colors = ButtonDefaults.buttonColors(
+        shape = RoundedCornerShape(20.dp),
+        colors = ButtonDefaults.buttonColors(
             backgroundColor = MaterialTheme.colors.primary
         ),
         contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
@@ -170,7 +171,7 @@ private fun authenticatedCopyNSec(
     fun keyguardPrompt() {
         val intent = keyguardManager.createConfirmDeviceCredentialIntent(
             context.getString(R.string.app_name_release),
-            context.getString(R.string.copy_my_secret_key),
+            context.getString(R.string.copy_my_secret_key)
         )
 
         keyguardLauncher.launch(intent)
@@ -238,7 +239,7 @@ private fun copyNSec(
     context: Context,
     scope: CoroutineScope,
     account: Account,
-    clipboardManager: ClipboardManager,
+    clipboardManager: ClipboardManager
 ) {
     account.loggedIn.privKey?.let {
         clipboardManager.setText(AnnotatedString(it.toNsec()))

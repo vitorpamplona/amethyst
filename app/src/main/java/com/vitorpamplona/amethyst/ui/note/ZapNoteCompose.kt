@@ -21,7 +21,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
@@ -55,7 +54,8 @@ fun ZapNoteCompose(baseNote: Pair<Note, Note>, accountViewModel: AccountViewMode
     if (baseAuthor == null) {
         BlankNote()
     } else {
-        Column(modifier =
+        Column(
+            modifier =
             Modifier.clickable(
                 onClick = { navController.navigate("User/${baseAuthor.pubkeyHex}") }
             ),
@@ -70,7 +70,6 @@ fun ZapNoteCompose(baseNote: Pair<Note, Note>, accountViewModel: AccountViewMode
                     ),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-
                 UserPicture(baseAuthor, navController, account.userProfile(), 55.dp)
 
                 Column(modifier = Modifier.padding(start = 10.dp).weight(1f)) {
@@ -100,7 +99,7 @@ fun ZapNoteCompose(baseNote: Pair<Note, Note>, accountViewModel: AccountViewMode
                         "${showAmount(amount)} ${stringResource(R.string.sats)}",
                         color = BitcoinOrange,
                         fontSize = 20.sp,
-                        fontWeight = FontWeight.W500,
+                        fontWeight = FontWeight.W500
                     )
                 }
 

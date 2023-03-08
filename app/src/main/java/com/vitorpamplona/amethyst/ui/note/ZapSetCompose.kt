@@ -69,31 +69,34 @@ fun ZapSetCompose(zapSetCard: ZapSetCard, modifier: Modifier = Modifier, isInner
         Column(
             modifier = Modifier.background(backgroundColor).combinedClickable(
                 onClick = {
-                  if (noteEvent !is ChannelMessageEvent) {
-                      navController.navigate("Note/${note.idHex}"){
-                          launchSingleTop = true
-                      }
-                  } else {
-                      note.channel()?.let {
-                          navController.navigate("Channel/${it.idHex}")
-                      }
-                  }
+                    if (noteEvent !is ChannelMessageEvent) {
+                        navController.navigate("Note/${note.idHex}") {
+                            launchSingleTop = true
+                        }
+                    } else {
+                        note.channel()?.let {
+                            navController.navigate("Channel/${it.idHex}")
+                        }
+                    }
                 },
                 onLongClick = { popupExpanded = true }
             )
         ) {
-            Row(modifier = Modifier
-                .padding(
-                    start = if (!isInnerNote) 12.dp else 0.dp,
-                    end = if (!isInnerNote) 12.dp else 0.dp,
-                    top = 10.dp)
+            Row(
+                modifier = Modifier
+                    .padding(
+                        start = if (!isInnerNote) 12.dp else 0.dp,
+                        end = if (!isInnerNote) 12.dp else 0.dp,
+                        top = 10.dp
+                    )
             ) {
-
                 // Draws the like picture outside the boosted card.
                 if (!isInnerNote) {
-                    Box(modifier = Modifier
-                        .width(55.dp)
-                        .padding(0.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .width(55.dp)
+                            .padding(0.dp)
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Bolt,
                             contentDescription = stringResource(id = R.string.zaps),
