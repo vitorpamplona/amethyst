@@ -103,7 +103,7 @@ fun AppBottomBar(navController: NavHostController, accountViewModel: AccountView
                         onClick = {
                             coroutineScope.launch {
                                 if (currentRoute != item.route) {
-                                    navController.navigate(item.route){
+                                    navController.navigate(item.route) {
                                         navController.graph.startDestinationRoute?.let { start ->
                                             popUpTo(start)
                                             restoreState = true
@@ -113,7 +113,7 @@ fun AppBottomBar(navController: NavHostController, accountViewModel: AccountView
                                     }
                                 } else {
                                     // TODO: Make it scrool to the top
-                                    navController.navigate(item.route){
+                                    navController.navigate(item.route) {
                                         navController.graph.startDestinationRoute?.let { start ->
                                             popUpTo(start) { inclusive = item.route == Route.Home.route }
                                             restoreState = true

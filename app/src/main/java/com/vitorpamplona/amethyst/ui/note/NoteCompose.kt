@@ -25,7 +25,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -37,7 +36,6 @@ import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.RoboHashCache
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
@@ -49,17 +47,14 @@ import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
+import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
-import com.vitorpamplona.amethyst.ui.components.UrlPreviewCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.Following
-import kotlin.time.ExperimentalTime
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
-import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
+import com.vitorpamplona.amethyst.ui.theme.Following
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -95,10 +90,13 @@ fun NoteCompose(
     val baseChannel = note?.channel()
 
     if (noteEvent == null) {
-        BlankNote(modifier.combinedClickable(
-            onClick = {  },
-            onLongClick = { popupExpanded = true },
-        ), isBoostedNote)
+        BlankNote(
+            modifier.combinedClickable(
+                onClick = { },
+                onLongClick = { popupExpanded = true }
+            ),
+            isBoostedNote
+        )
     } else if (!account.isAcceptable(noteForReports) && !showHiddenNote) {
         HiddenNote(
             account.getRelevantReports(noteForReports),
@@ -134,45 +132,46 @@ fun NoteCompose(
             } else {
                 newColor.compositeOver(MaterialTheme.colors.background)
             }
-          } else {
+        } else {
             parentBackgroundColor ?: MaterialTheme.colors.background
-          }
+        }
 
-        Column(modifier = modifier
-            .combinedClickable(
-                onClick = {
-                    if (noteEvent !is ChannelMessageEvent) {
-                        navController.navigate("Note/${note.idHex}") {
-                            launchSingleTop = true
-                        }
-                    } else {
-                        note
-                            .channel()
-                            ?.let {
-                                navController.navigate("Channel/${it.idHex}")
+        Column(
+            modifier = modifier
+                .combinedClickable(
+                    onClick = {
+                        if (noteEvent !is ChannelMessageEvent) {
+                            navController.navigate("Note/${note.idHex}") {
+                                launchSingleTop = true
                             }
-                    }
-                },
-                onLongClick = { popupExpanded = true }
-            )
-            .background(backgroundColor)
+                        } else {
+                            note
+                                .channel()
+                                ?.let {
+                                    navController.navigate("Channel/${it.idHex}")
+                                }
+                        }
+                    },
+                    onLongClick = { popupExpanded = true }
+                )
+                .background(backgroundColor)
         ) {
-
             Row(
                 modifier = Modifier
                     .padding(
                         start = if (!isBoostedNote) 12.dp else 0.dp,
                         end = if (!isBoostedNote) 12.dp else 0.dp,
-                        top = 10.dp)
+                        top = 10.dp
+                    )
             ) {
-
                 if (!isBoostedNote && !isQuotedNote) {
                     Column(Modifier.width(55.dp)) {
-                    // Draws the boosted picture outside the boosted card.
-                        Box(modifier = Modifier
-                            .width(55.dp)
-                            .padding(0.dp)) {
-
+                        // Draws the boosted picture outside the boosted card.
+                        Box(
+                            modifier = Modifier
+                                .width(55.dp)
+                                .padding(0.dp)
+                        ) {
                             NoteAuthorPicture(note, navController, account.userProfile(), 55.dp)
 
                             if (noteEvent is RepostEvent) {
@@ -181,8 +180,13 @@ fun NoteCompose(
                                         Modifier
                                             .width(30.dp)
                                             .height(30.dp)
-                                            .align(Alignment.BottomEnd)) {
-                                        NoteAuthorPicture(it, navController, account.userProfile(), 35.dp,
+                                            .align(Alignment.BottomEnd)
+                                    ) {
+                                        NoteAuthorPicture(
+                                            it,
+                                            navController,
+                                            account.userProfile(),
+                                            35.dp,
                                             pictureModifier = Modifier.border(2.dp, MaterialTheme.colors.background, CircleShape)
                                         )
                                     }
@@ -199,7 +203,8 @@ fun NoteCompose(
                                         Modifier
                                             .width(30.dp)
                                             .height(30.dp)
-                                            .align(Alignment.BottomEnd)) {
+                                            .align(Alignment.BottomEnd)
+                                    ) {
                                         AsyncImageProxy(
                                             model = ResizeImage(channel.profilePicture(), 30.dp),
                                             placeholder = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
@@ -244,7 +249,6 @@ fun NoteCompose(
                             NoteUsernameDisplay(note, Modifier.weight(1f))
                         }
 
-
                         if (noteEvent is RepostEvent) {
                             Text(
                                 "  ${stringResource(id = R.string.boosted)}",
@@ -267,7 +271,7 @@ fun NoteCompose(
                                 imageVector = Icons.Default.MoreVert,
                                 null,
                                 modifier = Modifier.size(15.dp),
-                                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                             )
 
                             NoteDropDownMenu(baseNote, moreActionsExpanded, { moreActionsExpanded = false }, accountViewModel)
@@ -400,24 +404,25 @@ fun NoteCompose(
                     } else {
                         val eventContent = accountViewModel.decrypt(note)
 
-                        val canPreview = note.author == account.userProfile()
-                          || (note.author?.let { account.userProfile().isFollowing(it) } ?: true )
-                          || !noteForReports.hasAnyReports()
+                        val canPreview = note.author == account.userProfile() ||
+                            (note.author?.let { account.userProfile().isFollowing(it) } ?: true) ||
+                            !noteForReports.hasAnyReports()
 
                         if (eventContent != null) {
                             TranslateableRichTextViewer(
                                 eventContent,
                                 canPreview = canPreview && !makeItShort,
                                 Modifier.fillMaxWidth(),
-                                noteEvent.tags,
+                                noteEvent.tags(),
                                 backgroundColor,
                                 accountViewModel,
                                 navController
                             )
                         }
 
-                        if (!makeItShort)
+                        if (!makeItShort) {
                             ReactionsRow(note, accountViewModel)
+                        }
 
                         Divider(
                             modifier = Modifier.padding(top = 10.dp),
@@ -425,7 +430,7 @@ fun NoteCompose(
                         )
                     }
 
-                    NoteDropDownMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
+                    NoteQuickActionMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
                 }
             }
         }
@@ -555,9 +560,10 @@ private fun RelayBadges(baseNote: Note) {
             Box(
                 Modifier
                     .size(15.dp)
-                    .padding(1.dp)) {
+                    .padding(1.dp)
+            ) {
                 AsyncImage(
-                    model = "https://${url}/favicon.ico",
+                    model = "https://$url/favicon.ico",
                     placeholder = BitmapPainter(RoboHashCache.get(ctx, url)),
                     fallback = BitmapPainter(RoboHashCache.get(ctx, url)),
                     error = BitmapPainter(RoboHashCache.get(ctx, url)),
@@ -577,7 +583,10 @@ private fun RelayBadges(baseNote: Note) {
         Row(
             Modifier
                 .fillMaxWidth()
-                .height(25.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.Top) {
+                .height(25.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.Top
+        ) {
             IconButton(
                 modifier = Modifier.then(Modifier.size(24.dp)),
                 onClick = { expanded = true }
@@ -586,13 +595,12 @@ private fun RelayBadges(baseNote: Note) {
                     imageVector = Icons.Default.ExpandMore,
                     null,
                     modifier = Modifier.size(15.dp),
-                    tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                    tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                 )
             }
         }
     }
 }
-
 
 @Composable
 fun NoteAuthorPicture(
@@ -606,7 +614,6 @@ fun NoteAuthorPicture(
         navController.navigate("User/${it.pubkeyHex}")
     }
 }
-
 
 @Composable
 fun NoteAuthorPicture(
@@ -626,7 +633,8 @@ fun NoteAuthorPicture(
     Box(
         Modifier
             .width(size)
-            .height(size)) {
+            .height(size)
+    ) {
         if (author == null) {
             Image(
                 painter = BitmapPainter(RoboHashCache.get(ctx, "ohnothisauthorisnotfound")),
@@ -673,8 +681,8 @@ fun UserPicture(
     Box(
         Modifier
             .width(size)
-            .height(size)) {
-
+            .height(size)
+    ) {
         AsyncImageProxy(
             model = ResizeImage(user.profilePicture(), size),
             contentDescription = stringResource(id = R.string.profile_image),
@@ -686,12 +694,13 @@ fun UserPicture(
                 .clip(shape = CircleShape)
                 .background(MaterialTheme.colors.background)
                 .run {
-                    if (onClick != null && onLongClick != null)
-                        this.combinedClickable(onClick = { onClick(user) }, onLongClick = { onLongClick(user) } )
-                    else if (onClick != null)
-                        this.clickable(onClick = { onClick(user) } )
-                    else
+                    if (onClick != null && onLongClick != null) {
+                        this.combinedClickable(onClick = { onClick(user) }, onLongClick = { onLongClick(user) })
+                    } else if (onClick != null) {
+                        this.clickable(onClick = { onClick(user) })
+                    } else {
                         this
+                    }
                 }
 
         )
@@ -724,7 +733,6 @@ fun UserPicture(
                 )
             }
         }
-
     }
 }
 
@@ -737,9 +745,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
         expanded = popupExpanded,
         onDismissRequest = onDismiss
     ) {
-        if (note.author != accountViewModel.accountLiveData.value?.account?.userProfile() && !accountViewModel.accountLiveData.value?.account?.userProfile()
-                !!.isFollowing(note.author!!)) {
-
+        if (note.author != accountViewModel.accountLiveData.value?.account?.userProfile() && !accountViewModel.accountLiveData.value?.account?.userProfile()!!.isFollowing(note.author!!)) {
             DropdownMenuItem(onClick = {
                 accountViewModel.follow(
                     note.author ?: return@DropdownMenuItem
@@ -749,16 +755,6 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
             }
             Divider()
         }
-        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(accountViewModel.decrypt(note) ?: "")); onDismiss() }) {
-            Text(stringResource(R.string.copy_text))
-        }
-        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(note.author?.pubkeyNpub() ?: "")); onDismiss() }) {
-            Text(stringResource(R.string.copy_user_pubkey))
-        }
-        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(note.idNote())); onDismiss() }) {
-            Text(stringResource(R.string.copy_note_id))
-        }
-        Divider()
         DropdownMenuItem(onClick = { accountViewModel.broadcast(note); onDismiss() }) {
             Text(stringResource(R.string.broadcast))
         }
@@ -782,35 +778,35 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
             }
             Divider()
             DropdownMenuItem(onClick = {
-                accountViewModel.report(note, ReportEvent.ReportType.SPAM);
+                accountViewModel.report(note, ReportEvent.ReportType.SPAM)
                 note.author?.let { accountViewModel.hide(it, context) }
                 onDismiss()
             }) {
                 Text(stringResource(R.string.report_spam_scam))
             }
             DropdownMenuItem(onClick = {
-                accountViewModel.report(note, ReportEvent.ReportType.PROFANITY);
+                accountViewModel.report(note, ReportEvent.ReportType.PROFANITY)
                 note.author?.let { accountViewModel.hide(it, context) }
                 onDismiss()
             }) {
                 Text(stringResource(R.string.report_hateful_speech))
             }
             DropdownMenuItem(onClick = {
-                accountViewModel.report(note, ReportEvent.ReportType.IMPERSONATION);
+                accountViewModel.report(note, ReportEvent.ReportType.IMPERSONATION)
                 note.author?.let { accountViewModel.hide(it, context) }
                 onDismiss()
             }) {
                 Text(stringResource(R.string.report_impersonation))
             }
             DropdownMenuItem(onClick = {
-                accountViewModel.report(note, ReportEvent.ReportType.NUDITY);
+                accountViewModel.report(note, ReportEvent.ReportType.NUDITY)
                 note.author?.let { accountViewModel.hide(it, context) }
                 onDismiss()
             }) {
                 Text(stringResource(R.string.report_nudity_porn))
             }
             DropdownMenuItem(onClick = {
-                accountViewModel.report(note, ReportEvent.ReportType.ILLEGAL);
+                accountViewModel.report(note, ReportEvent.ReportType.ILLEGAL)
                 note.author?.let { accountViewModel.hide(it, context) }
                 onDismiss()
             }) {

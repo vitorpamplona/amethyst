@@ -21,7 +21,7 @@ import com.vitorpamplona.amethyst.R
 @Composable
 fun UploadFromGallery(
     isUploading: Boolean,
-    onImageChosen: (Uri) -> Unit,
+    onImageChosen: (Uri) -> Unit
 ) {
     val cameraPermissionState =
         rememberPermissionState(
@@ -38,8 +38,9 @@ fun UploadFromGallery(
             GallerySelect(
                 onImageUri = { uri ->
                     showGallerySelect = false
-                    if (uri != null)
+                    if (uri != null) {
                         onImageChosen(uri)
+                    }
                 }
             )
         } else {
@@ -73,7 +74,7 @@ fun UploadFromGallery(
         Column {
             Button(
                 onClick = { cameraPermissionState.launchPermissionRequest() },
-                enabled = !isUploading,
+                enabled = !isUploading
             ) {
                 if (!isUploading) {
                     Text(stringResource(R.string.upload_image))
@@ -84,7 +85,6 @@ fun UploadFromGallery(
         }
     }
 }
-
 
 @Composable
 fun GallerySelect(

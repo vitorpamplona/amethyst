@@ -1,25 +1,16 @@
 package com.vitorpamplona.amethyst.service.model
 
-import com.google.gson.Gson
-import com.google.gson.GsonBuilder
-import com.google.gson.JsonArray
-import com.google.gson.JsonDeserializationContext
-import com.google.gson.JsonDeserializer
-import com.google.gson.JsonElement
-import com.google.gson.JsonObject
-import com.google.gson.JsonPrimitive
-import com.google.gson.JsonSerializationContext
-import com.google.gson.JsonSerializer
+import com.google.gson.*
 import com.google.gson.annotations.SerializedName
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
 import fr.acinq.secp256k1.Hex
 import fr.acinq.secp256k1.Secp256k1
-import java.lang.reflect.Type
-import java.security.MessageDigest
-import java.util.Date
 import nostr.postr.Utils
 import nostr.postr.toHex
+import java.lang.reflect.Type
+import java.security.MessageDigest
+import java.util.*
 
 open class Event(
     val id: HexKey,
@@ -29,18 +20,51 @@ open class Event(
     val tags: List<List<String>>,
     val content: String,
     val sig: HexKey
-) {
-    fun toJson(): String = gson.toJson(this)
+) : EventInterface {
+    override fun id(): HexKey = id
 
-    fun generateId(): String {
-        val rawEvent = listOf(
-            0,
-            pubKey,
-            createdAt,
-            kind,
-            tags,
-            content
-        )
+    override fun pubKey(): HexKey = pubKey
+
+    override fun createdAt(): Long = createdAt
+
+    override fun kind(): Int = kind
+
+    override fun tags(): List<List<String>> = tags
+
+    override fun content(): String = content
+
+    override fun sig(): HexKey = sig
+
+    override fun toJson(): String = gson.toJson(this)
+
+    /**
+     * Checks if the ID is correct and then if the pubKey's secret key signed the event.
+     */
+    override fun checkSignature() {
+        if (!id.contentEquals(generateId())) {
+            throw Exception(
+                """|Unexpected ID.
+                   |  Event: ${toJson()}
+                   |  Actual ID: $id
+                   |  Generated: ${generateId()}
+                """.trimIndent()
+            )
+        }
+        if (!secp256k1.verifySchnorr(Hex.decode(sig), Hex.decode(id), Hex.decode(pubKey))) {
+            throw Exception("""Bad signature!""")
+        }
+    }
+
+    override fun hasValidSignature(): Boolean {
+        if (!id.contentEquals(generateId())) {
+            return false
+        }
+
+        return secp256k1.verifySchnorr(Hex.decode(sig), Hex.decode(id), Hex.decode(pubKey))
+    }
+
+    private fun generateId(): String {
+        val rawEvent = listOf(0, pubKey, createdAt, kind, tags, content)
 
         // GSON decided to hardcode these replacements.
         // They break Nostr's hash check.
@@ -53,35 +77,7 @@ open class Event(
         return sha256.digest(rawEventJson.toByteArray()).toHexKey()
     }
 
-    /**
-     * Checks if the ID is correct and then if the pubKey's secret key signed the event.
-     */
-    fun checkSignature() {
-        if (!id.contentEquals(generateId())) {
-            throw Exception(
-                """|Unexpected ID.
-                   |  Event: ${toJson()}
-                   |  Actual ID: ${id}
-                   |  Generated: ${generateId()}""".trimIndent()
-            )
-        }
-        if (!secp256k1.verifySchnorr(Hex.decode(sig), Hex.decode(id), Hex.decode(pubKey))) {
-            throw Exception("""Bad signature!""")
-        }
-    }
-
-    fun hasValidSignature(): Boolean {
-        if (!id.contentEquals(generateId())) {
-            return false
-        }
-        if (!Secp256k1.get().verifySchnorr(Hex.decode(sig), Hex.decode(id), Hex.decode(pubKey))) {
-            return false
-        }
-
-        return true
-    }
-
-    class EventDeserializer : JsonDeserializer<Event> {
+    private class EventDeserializer : JsonDeserializer<Event> {
         override fun deserialize(
             json: JsonElement,
             typeOfT: Type?,
@@ -94,7 +90,7 @@ open class Event(
                 createdAt = jsonObject.get("created_at").asLong,
                 kind = jsonObject.get("kind").asInt,
                 tags = jsonObject.get("tags").asJsonArray.map {
-                    it.asJsonArray.map { s -> s.asString }
+                    it.asJsonArray.mapNotNull { s -> if (s.isJsonNull) null else s.asString }
                 },
                 content = jsonObject.get("content").asString,
                 sig = jsonObject.get("sig").asString
@@ -102,7 +98,7 @@ open class Event(
         }
     }
 
-    class EventSerializer : JsonSerializer<Event> {
+    private class EventSerializer : JsonSerializer<Event> {
         override fun serialize(
             src: Event,
             typeOfSrc: Type?,
@@ -113,22 +109,27 @@ open class Event(
                 addProperty("pubkey", src.pubKey)
                 addProperty("created_at", src.createdAt)
                 addProperty("kind", src.kind)
-                add("tags", JsonArray().also { jsonTags ->
-                    src.tags.forEach { tag ->
-                        jsonTags.add(JsonArray().also { jsonTagElement ->
-                            tag.forEach { tagElement ->
-                                jsonTagElement.add(tagElement)
-                            }
-                        })
+                add(
+                    "tags",
+                    JsonArray().also { jsonTags ->
+                        src.tags.forEach { tag ->
+                            jsonTags.add(
+                                JsonArray().also { jsonTagElement ->
+                                    tag.forEach { tagElement ->
+                                        jsonTagElement.add(tagElement)
+                                    }
+                                }
+                            )
+                        }
                     }
-                })
+                )
                 addProperty("content", src.content)
                 addProperty("sig", src.sig)
             }
         }
     }
 
-    class ByteArrayDeserializer : JsonDeserializer<ByteArray> {
+    private class ByteArrayDeserializer : JsonDeserializer<ByteArray> {
         override fun deserialize(
             json: JsonElement,
             typeOfT: Type?,
@@ -136,7 +137,7 @@ open class Event(
         ): ByteArray = Hex.decode(json.asString)
     }
 
-    class ByteArraySerializer : JsonSerializer<ByteArray> {
+    private class ByteArraySerializer : JsonSerializer<ByteArray> {
         override fun serialize(
             src: ByteArray,
             typeOfSrc: Type?,

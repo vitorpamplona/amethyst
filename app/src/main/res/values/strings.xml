@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name_release" translatable="false">Amethyst</string>
     <string name="app_name_debug" translatable="false">Amethyst Debug</string>
     <string name="point_to_the_qr_code">Point to the QR Code</string>
@@ -20,7 +20,7 @@
     <string name="relay_icon">Relay Icon</string>
     <string name="unknown_author">Unknown Author</string>
     <string name="copy_text">Copy Text</string>
-    <string name="copy_user_pubkey">Copy User PubKey</string>
+    <string name="copy_user_pubkey">Copy Author @npub</string>
     <string name="copy_note_id">Copy Note ID</string>
     <string name="broadcast">Broadcast</string>
     <string name="block_hide_user"><![CDATA[Block & Hide User]]></string>
@@ -177,7 +177,7 @@
     <string name="mark_all_known_as_read">Mark all Known as read</string>
     <string name="mark_all_new_as_read">Mark all New as read</string>
     <string name="mark_all_as_read">Mark all as read</string>
-    <string name="account_backup_tips_md">
+    <string name="account_backup_tips_md" tools:ignore="Typos">
         ## Key Backup and Safety Tips
         \n\nYour account is secured by a secret key. The key is long random string starting with **nsec1**. Anyone who has access to your secret key can publish content using your identity.
         \n\n- Do **not** put your secret key in any website or software you do not trust.
@@ -187,9 +187,24 @@
     <string name="secret_key_copied_to_clipboard">Secret key (nsec) copied to clipboard</string>
     <string name="copy_my_secret_key">Copy my secret key</string>
     <string name="biometric_authentication_failed">Authentication failed</string>
-
+    <string name="biometric_error">Error</string>
     <string name="badge_created_by">"Created by %1$s"</string>
     <string name="badge_award_image_for">"Badge award image for %1$s"</string>
     <string name="new_badge_award_notif">You Received a new Badge Award</string>
     <string name="award_granted_to">Badge award granted to</string>
+    <string name="copied_note_text_to_clipboard">Copied note text to clipboard</string>
+    <string name="copied_user_id_to_clipboard" tools:ignore="Typos">Copied author’s @npub to clipboard</string>
+    <string name="copied_note_id_to_clipboard" tools:ignore="Typos">Copied note ID (@note1) to clipboard</string>
+    <string name="select_text_dialog_top">Select Text</string>
+    <string name="quick_action_select">Select</string>
+    <string name="quick_action_share_browser_link">Share Browser Link</string>
+    <string name="quick_action_share">Share</string>
+    <string name="quick_action_copy_user_id">Mention</string>
+    <string name="quick_action_copy_note_id">Quote</string>
+    <string name="quick_action_copy_text">Copy</string>
+    <string name="quick_action_delete">Delete</string>
+    <string name="quick_action_unfollow">Unfollow</string>
+    <string name="quick_action_follow">Follow</string>
+    <string name="quick_action_request_deletion_alert_title">Request Deletion</string>
+    <string name="quick_action_request_deletion_alert_body">Amethyst will request that your note be deleted from the relays you are currently connected to. There is no guarantee that your note will be permanently deleted from those relays, or from other relays where it may be stored.</string>
 </resources>

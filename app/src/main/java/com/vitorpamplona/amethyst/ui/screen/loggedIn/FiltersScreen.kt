@@ -51,7 +51,7 @@ fun FiltersScreen(accountViewModel: AccountViewModel, navController: NavControll
                             Modifier.pagerTabIndicatorOffset(pagerState, tabPositions),
                             color = MaterialTheme.colors.primary
                         )
-                    },
+                    }
                 ) {
                     Tab(
                         selected = pagerState.currentPage == 0,

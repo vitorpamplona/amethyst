@@ -11,7 +11,7 @@ class Channel(val idHex: String) {
     var creator: User? = null
     var info = ChannelCreateEvent.ChannelData(null, null, null)
 
-    var updatedMetadataAt: Long = 0;
+    var updatedMetadataAt: Long = 0
 
     val notes = ConcurrentHashMap<HexKey, Note>()
 
@@ -66,8 +66,7 @@ class Channel(val idHex: String) {
     }
 }
 
-
-class ChannelLiveData(val channel: Channel): LiveData<ChannelState>(ChannelState(channel)) {
+class ChannelLiveData(val channel: Channel) : LiveData<ChannelState>(ChannelState(channel)) {
     fun refresh() {
         postValue(ChannelState(channel))
     }

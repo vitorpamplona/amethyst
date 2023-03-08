@@ -14,8 +14,6 @@ import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Badge
-import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.MilitaryTech
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -26,20 +24,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.ui.screen.BadgeCard
-import com.vitorpamplona.amethyst.ui.screen.LikeSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -77,7 +71,7 @@ fun BadgeCompose(likeSetCard: BadgeCard, modifier: Modifier = Modifier, isInnerN
             modifier = Modifier.background(backgroundColor).combinedClickable(
                 onClick = {
                     if (noteEvent !is ChannelMessageEvent) {
-                        navController.navigate("Note/${note.idHex}"){
+                        navController.navigate("Note/${note.idHex}") {
                             launchSingleTop = true
                         }
                     } else {
@@ -89,18 +83,21 @@ fun BadgeCompose(likeSetCard: BadgeCard, modifier: Modifier = Modifier, isInnerN
                 onLongClick = { popupExpanded = true }
             )
         ) {
-            Row(modifier = Modifier
-                .padding(
-                    start = if (!isInnerNote) 12.dp else 0.dp,
-                    end = if (!isInnerNote) 12.dp else 0.dp,
-                    top = 10.dp)
+            Row(
+                modifier = Modifier
+                    .padding(
+                        start = if (!isInnerNote) 12.dp else 0.dp,
+                        end = if (!isInnerNote) 12.dp else 0.dp,
+                        top = 10.dp
+                    )
             ) {
-
                 // Draws the like picture outside the boosted card.
                 if (!isInnerNote) {
-                    Box(modifier = Modifier
-                        .width(55.dp)
-                        .padding(0.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .width(55.dp)
+                            .padding(0.dp)
+                    ) {
                         Icon(
                             imageVector = Icons.Default.MilitaryTech,
                             null,

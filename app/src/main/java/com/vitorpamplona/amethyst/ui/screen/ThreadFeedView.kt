@@ -35,13 +35,22 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
+import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
+import com.vitorpamplona.amethyst.ui.note.BadgeDisplay
 import com.vitorpamplona.amethyst.ui.note.BlankNote
 import com.vitorpamplona.amethyst.ui.note.HiddenNote
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
@@ -52,16 +61,6 @@ import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.delay
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
-import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
-import com.vitorpamplona.amethyst.ui.note.BadgeDisplay
 
 @Composable
 fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: AccountViewModel, navController: NavController) {
@@ -83,7 +82,7 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
         state = swipeRefreshState,
         onRefresh = {
             isRefreshing = true
-        },
+        }
     ) {
         Column() {
             Crossfade(targetState = feedState, animationSpec = tween(durationMillis = 100)) { state ->
@@ -102,12 +101,12 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
                         LaunchedEffect(noteId) {
                             // waits to load the thread to scroll to item.
                             delay(100)
-                            val noteForPosition = state.feed.value.filter { it.idHex == noteId}.firstOrNull()
+                            val noteForPosition = state.feed.value.filter { it.idHex == noteId }.firstOrNull()
                             var position = state.feed.value.indexOf(noteForPosition)
 
                             if (position >= 0) {
                                 if (position >= 1 && position < state.feed.value.size - 1) {
-                                    position -- // show the replying note
+                                    position-- // show the replying note
                                 }
 
                                 listState.animateScrollToItem(position)
@@ -122,8 +121,9 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
                             state = listState
                         ) {
                             itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { index, item ->
-                                if (index == 0)
-                                    NoteMaster(item,
+                                if (index == 0) {
+                                    NoteMaster(
+                                        item,
                                         modifier = Modifier.drawReplyLevel(
                                             item.replyLevel(),
                                             MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
@@ -132,7 +132,7 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
                                         accountViewModel = accountViewModel,
                                         navController = navController
                                     )
-                                else {
+                                } else {
                                     Column() {
                                         Row() {
                                             NoteCompose(
@@ -146,7 +146,7 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
                                                 isBoostedNote = false,
                                                 unPackReply = false,
                                                 accountViewModel = accountViewModel,
-                                                navController = navController,
+                                                navController = navController
                                             )
                                         }
                                     }
@@ -188,10 +188,11 @@ fun Modifier.drawReplyLevel(level: Int, color: Color, selected: Color): Modifier
     .padding(start = (2 + (level * 3)).dp)
 
 @Composable
-fun NoteMaster(baseNote: Note,
-               modifier: Modifier = Modifier,
-               accountViewModel: AccountViewModel,
-               navController: NavController
+fun NoteMaster(
+    baseNote: Note,
+    modifier: Modifier = Modifier,
+    accountViewModel: AccountViewModel,
+    navController: NavController
 ) {
     val noteState by baseNote.live().metadata.observeAsState()
     val note = noteState?.note
@@ -225,14 +226,16 @@ fun NoteMaster(baseNote: Note,
         Column(
             modifier
                 .fillMaxWidth()
-                .padding(top = 10.dp)) {
-            Row(modifier = Modifier
-                .padding(start = 12.dp, end = 12.dp)
-                .clickable(onClick = {
-                    note.author?.let {
-                        navController.navigate("User/${it.pubkeyHex}")
-                    }
-                })
+                .padding(top = 10.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .padding(start = 12.dp, end = 12.dp)
+                    .clickable(onClick = {
+                        note.author?.let {
+                            navController.navigate("User/${it.pubkeyHex}")
+                        }
+                    })
             ) {
                 NoteAuthorPicture(
                     note = baseNote,
@@ -259,7 +262,7 @@ fun NoteMaster(baseNote: Note,
                                 imageVector = Icons.Default.MoreVert,
                                 null,
                                 modifier = Modifier.size(15.dp),
-                                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                             )
 
                             NoteDropDownMenu(baseNote, moreActionsExpanded, { moreActionsExpanded = false }, accountViewModel)
@@ -271,7 +274,7 @@ fun NoteMaster(baseNote: Note,
             }
 
             if (noteEvent is BadgeDefinitionEvent) {
-                Spacer(modifier = Modifier.padding(top=10.dp))
+                Spacer(modifier = Modifier.padding(top = 10.dp))
                 BadgeDisplay(baseNote = note)
             } else if (noteEvent is LongTextNoteEvent) {
                 Row(modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp)) {
@@ -313,18 +316,18 @@ fun NoteMaster(baseNote: Note,
 
             Row(modifier = Modifier.padding(horizontal = 12.dp)) {
                 Column() {
-                    val eventContent = note.event?.content
+                    val eventContent = note.event?.content()
 
-                    val canPreview = note.author == account.userProfile()
-                      || (note.author?.let { account.userProfile().isFollowing(it) } ?: true )
-                      || !noteForReports.hasAnyReports()
+                    val canPreview = note.author == account.userProfile() ||
+                        (note.author?.let { account.userProfile().isFollowing(it) } ?: true) ||
+                        !noteForReports.hasAnyReports()
 
                     if (eventContent != null) {
                         TranslateableRichTextViewer(
                             eventContent,
                             canPreview,
                             Modifier.fillMaxWidth(),
-                            note.event?.tags,
+                            note.event?.tags(),
                             MaterialTheme.colors.background,
                             accountViewModel,
                             navController

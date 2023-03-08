@@ -4,14 +4,15 @@ import android.util.Log
 import com.google.gson.Gson
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
-import java.util.Date
 import nostr.postr.Utils
+import java.util.Date
 
 data class ContactMetaData(
     val name: String,
     val picture: String,
     val about: String,
-    val nip05: String?)
+    val nip05: String?
+)
 
 class MetadataEvent(
     id: HexKey,
@@ -20,7 +21,7 @@ class MetadataEvent(
     tags: List<List<String>>,
     content: String,
     sig: HexKey
-): Event(id, pubKey, createdAt, kind, tags, content, sig) {
+) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
     fun contactMetaData() = try {
         gson.fromJson(content, ContactMetaData::class.java)
     } catch (e: Exception) {

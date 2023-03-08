@@ -86,14 +86,15 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, modifier: Modifier = Modifier, r
                     onLongClick = { popupExpanded = true }
                 )
         ) {
-            Row(modifier = Modifier
-                .padding(
-                    start = 12.dp,
-                    end = 12.dp,
-                    top = 10.dp)
+            Row(
+                modifier = Modifier
+                    .padding(
+                        start = 12.dp,
+                        end = 12.dp,
+                        top = 10.dp
+                    )
             ) {
                 Column(Modifier.fillMaxWidth()) {
-
                     if (multiSetCard.zapEvents.isNotEmpty()) {
                         Row(Modifier.fillMaxWidth()) {
                             // Draws the like picture outside the boosted card.
@@ -192,9 +193,11 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, modifier: Modifier = Modifier, r
                     }
 
                     Row(Modifier.fillMaxWidth()) {
-                        Box(modifier = Modifier
-                            .width(65.dp)
-                            .padding(0.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .width(65.dp)
+                                .padding(0.dp)
+                        ) {
                         }
 
                         NoteCompose(

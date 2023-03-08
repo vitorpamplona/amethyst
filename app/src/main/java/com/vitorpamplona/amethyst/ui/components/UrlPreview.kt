@@ -16,56 +16,57 @@ import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-
 @Composable
 fun UrlPreview(url: String, urlText: String) {
-  val default = UrlCachedPreviewer.cache[url]?.let {
-    if (it.url == url)
-      UrlPreviewState.Loaded(it)
-    else
-      UrlPreviewState.Empty
+    val default = UrlCachedPreviewer.cache[url]?.let {
+        if (it.url == url) {
+            UrlPreviewState.Loaded(it)
+        } else {
+            UrlPreviewState.Empty
+        }
+    } ?: UrlPreviewState.Loading
+    var context = LocalContext.current
 
-  } ?: UrlPreviewState.Loading
-  var context = LocalContext.current
+    var urlPreviewState by remember { mutableStateOf<UrlPreviewState>(UrlPreviewState.Loading) }
 
-  var urlPreviewState by remember { mutableStateOf<UrlPreviewState>(UrlPreviewState.Loading) }
+    // Doesn't use a viewModel because of viewModel reusing issues (too many UrlPreview are created).
+    LaunchedEffect(url) {
+        if (urlPreviewState == UrlPreviewState.Loading) {
+            withContext(Dispatchers.IO) {
+                UrlCachedPreviewer.previewInfo(
+                    url,
+                    object : IUrlPreviewCallback {
+                        override fun onComplete(urlInfo: UrlInfoItem) {
+                            if (urlInfo.allFetchComplete() && urlInfo.url == url) {
+                                urlPreviewState = UrlPreviewState.Loaded(urlInfo)
+                            } else {
+                                urlPreviewState = UrlPreviewState.Empty
+                            }
+                        }
 
-  // Doesn't use a viewModel because of viewModel reusing issues (too many UrlPreview are created).
-  LaunchedEffect(url) {
-    if (urlPreviewState == UrlPreviewState.Loading) {
-      withContext(Dispatchers.IO) {
-        UrlCachedPreviewer.previewInfo(url, object : IUrlPreviewCallback {
-          override fun onComplete(urlInfo: UrlInfoItem) {
-            if (urlInfo.allFetchComplete() && urlInfo.url == url)
-              urlPreviewState = UrlPreviewState.Loaded(urlInfo)
-            else
-              urlPreviewState = UrlPreviewState.Empty
-          }
-
-          override fun onFailed(throwable: Throwable) {
-            urlPreviewState = UrlPreviewState.Error(
-              context.getString(
-                R.string.error_parsing_preview_for,
-                url,
-                throwable.message
-              )
-            )
-          }
-        })
-      }
+                        override fun onFailed(throwable: Throwable) {
+                            urlPreviewState = UrlPreviewState.Error(
+                                context.getString(
+                                    R.string.error_parsing_preview_for,
+                                    url,
+                                    throwable.message
+                                )
+                            )
+                        }
+                    }
+                )
+            }
+        }
     }
-  }
 
-  Crossfade(targetState = urlPreviewState, animationSpec = tween(durationMillis = 100)) { state ->
-    when (state) {
-      is UrlPreviewState.Loaded -> {
-        UrlPreviewCard(url, state.previewInfo)
-      }
-      else -> {
-        ClickableUrl(urlText, url)
-      }
+    Crossfade(targetState = urlPreviewState, animationSpec = tween(durationMillis = 100)) { state ->
+        when (state) {
+            is UrlPreviewState.Loaded -> {
+                UrlPreviewCard(url, state.previewInfo)
+            }
+            else -> {
+                ClickableUrl(urlText, url)
+            }
+        }
     }
-  }
-
 }
-

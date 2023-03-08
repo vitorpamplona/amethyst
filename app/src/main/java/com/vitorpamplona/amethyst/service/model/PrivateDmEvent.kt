@@ -4,9 +4,9 @@ import android.util.Log
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
 import fr.acinq.secp256k1.Hex
-import java.util.Date
 import nostr.postr.Utils
 import nostr.postr.toHex
+import java.util.Date
 
 class PrivateDmEvent(
     id: HexKey,
@@ -48,7 +48,6 @@ class PrivateDmEvent(
         }
     }
 
-
     companion object {
         const val kind = 4
 
@@ -57,7 +56,8 @@ class PrivateDmEvent(
         fun create(
             recipientPubKey: ByteArray,
             msg: String,
-            replyTos: List<String>? = null, mentions: List<String>? = null,
+            replyTos: List<String>? = null,
+            mentions: List<String>? = null,
             privateKey: ByteArray,
             createdAt: Long = Date().time / 1000,
             publishedRecipientPubKey: ByteArray? = null,
@@ -66,7 +66,8 @@ class PrivateDmEvent(
             val content = Utils.encrypt(
                 if (advertiseNip18) { nip18Advertisement } else { "" } + msg,
                 privateKey,
-                recipientPubKey)
+                recipientPubKey
+            )
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf<List<String>>()
             publishedRecipientPubKey?.let {

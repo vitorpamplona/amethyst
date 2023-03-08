@@ -77,7 +77,7 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
         } else if (noteEvent is ChannelMetadataEvent) {
             "${stringResource(R.string.channel_information_changed_to)} "
         } else {
-            noteEvent?.content
+            noteEvent?.content()
         }
         channel?.let { channel ->
             var hasNewMessages by remember { mutableStateOf<Boolean>(false) }
@@ -99,16 +99,16 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
                         style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
                     )
                     Text(
-                       " ${stringResource(R.string.public_chat)}",
+                        " ${stringResource(R.string.public_chat)}",
                         color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                     )
                 },
                 channelLastTime = note.createdAt(),
                 channelLastContent = "${author?.toBestDisplayName()}: " + description,
                 hasNewMessages = hasNewMessages,
-                onClick = { navController.navigate("Channel/${channel.idHex}") })
+                onClick = { navController.navigate("Channel/${channel.idHex}") }
+            )
         }
-
     } else {
         val replyAuthorBase = note.mentions?.first()
 
@@ -127,7 +127,7 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
 
             LaunchedEffect(key1 = notificationCache, key2 = note) {
                 noteEvent?.let {
-                    hasNewMessages = it.createdAt > notificationCache.cache.load("Room/${userToComposeOn.pubkeyHex}", context)
+                    hasNewMessages = it.createdAt() > notificationCache.cache.load("Room/${userToComposeOn.pubkeyHex}", context)
                 }
             }
 
@@ -137,10 +137,10 @@ fun ChatroomCompose(baseNote: Note, accountViewModel: AccountViewModel, navContr
                 channelLastTime = note.createdAt(),
                 channelLastContent = accountViewModel.decrypt(note),
                 hasNewMessages = hasNewMessages,
-                onClick = { navController.navigate("Room/${user.pubkeyHex}") })
+                onClick = { navController.navigate("Room/${user.pubkeyHex}") }
+            )
         }
     }
-
 }
 
 @Composable
@@ -184,16 +184,17 @@ fun ChannelName(
     hasNewMessages: Boolean,
     onClick: () -> Unit
 ) {
-
     val context = LocalContext.current
-    Column(modifier = Modifier.clickable(onClick = onClick) ) {
+    Column(modifier = Modifier.clickable(onClick = onClick)) {
         Row(
             modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp)
         ) {
             channelPicture()
 
-            Column(modifier = Modifier.padding(start = 10.dp),
-            verticalArrangement = Arrangement.SpaceAround) {
+            Column(
+                modifier = Modifier.padding(start = 10.dp),
+                verticalArrangement = Arrangement.SpaceAround
+            ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(bottom = 4.dp)
@@ -206,11 +207,10 @@ fun ChannelName(
                             color = MaterialTheme.colors.onSurface.copy(alpha = 0.52f)
                         )
                     }
-
                 }
 
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    if (channelLastContent != null)
+                    if (channelLastContent != null) {
                         Text(
                             channelLastContent,
                             color = MaterialTheme.colors.onSurface.copy(alpha = 0.52f),
@@ -219,7 +219,7 @@ fun ChannelName(
                             style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
                             modifier = Modifier.weight(1f)
                         )
-                    else
+                    } else {
                         Text(
                             stringResource(R.string.referenced_event_not_found),
                             color = MaterialTheme.colors.onSurface.copy(alpha = 0.52f),
@@ -227,6 +227,7 @@ fun ChannelName(
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f)
                         )
+                    }
 
                     if (hasNewMessages) {
                         NewItemsBubble()

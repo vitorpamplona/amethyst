@@ -10,12 +10,13 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.*
+import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.ui.components.isValidURL
 import com.vitorpamplona.amethyst.ui.components.noProtocolUrlValidator
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 
-class NewPostViewModel: ViewModel() {
+class NewPostViewModel : ViewModel() {
     private var account: Account? = null
     private var originalNote: Note? = null
 
@@ -76,10 +77,15 @@ class NewPostViewModel: ViewModel() {
             paragraph.split(' ').forEach { word: String ->
                 val results = parseDirtyWordForKey(word)
 
-                if (results?.type == "npub") {
-                    addUserToMentions(LocalCache.getOrCreateUser(results.keyHex))
-                } else if (results?.type == "note") {
-                    addNoteToReplyTos(LocalCache.getOrCreateNote(results.keyHex))
+                if (results?.key?.type == Nip19.Type.USER) {
+                    addUserToMentions(LocalCache.getOrCreateUser(results.key.hex))
+                } else if (results?.key?.type == Nip19.Type.NOTE) {
+                    addNoteToReplyTos(LocalCache.getOrCreateNote(results.key.hex))
+                } else if (results?.key?.type == Nip19.Type.ADDRESS) {
+                    val note = LocalCache.checkGetOrCreateAddressableNote(results.key.hex)
+                    if (note != null) {
+                        addNoteToReplyTos(note)
+                    }
                 }
             }
         }
@@ -88,14 +94,21 @@ class NewPostViewModel: ViewModel() {
         val newMessage = message.text.split('\n').map { paragraph: String ->
             paragraph.split(' ').map { word: String ->
                 val results = parseDirtyWordForKey(word)
-                if (results?.type == "npub") {
-                    val user = LocalCache.getOrCreateUser(results.keyHex)
+                if (results?.key?.type == Nip19.Type.USER) {
+                    val user = LocalCache.getOrCreateUser(results.key.hex)
 
                     "#[${tagIndex(user)}]${results.restOfWord}"
-                } else if (results?.type == "note") {
-                    val note = LocalCache.getOrCreateNote(results.keyHex)
+                } else if (results?.key?.type == Nip19.Type.NOTE) {
+                    val note = LocalCache.getOrCreateNote(results.key.hex)
 
                     "#[${tagIndex(note)}]${results.restOfWord}"
+                } else if (results?.key?.type == Nip19.Type.ADDRESS) {
+                    val note = LocalCache.checkGetOrCreateAddressableNote(results.key.hex)
+                    if (note != null) {
+                        "#[${tagIndex(note)}]${results.restOfWord}"
+                    } else {
+                        word
+                    }
                 } else {
                     word
                 }

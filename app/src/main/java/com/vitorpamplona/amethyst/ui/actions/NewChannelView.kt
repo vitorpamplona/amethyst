@@ -18,7 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
@@ -42,8 +41,7 @@ fun NewChannelView(onClose: () -> Unit, account: Account, channel: Channel? = nu
             dismissOnClickOutside = false
         )
     ) {
-        Surface(
-        ) {
+        Surface() {
             Column(
                 modifier = Modifier.padding(10.dp)
             ) {
@@ -124,7 +122,4 @@ fun NewChannelView(onClose: () -> Unit, account: Account, channel: Channel? = nu
             }
         }
     }
-
-
-
 }
