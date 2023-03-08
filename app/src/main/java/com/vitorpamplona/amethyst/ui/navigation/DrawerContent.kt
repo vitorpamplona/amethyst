@@ -222,7 +222,6 @@ fun ListContent(
     accountViewModel: AccountStateViewModel,
     account: Account
 ) {
-    val coroutineScope = rememberCoroutineScope()
     var backupDialogOpen by remember { mutableStateOf(false) }
 
     Column(modifier = modifier.fillMaxHeight()) {

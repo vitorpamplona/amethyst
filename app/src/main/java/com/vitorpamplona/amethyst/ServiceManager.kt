@@ -54,7 +54,6 @@ object ServiceManager {
         NostrHomeDataSource.stop()
         NostrChannelDataSource.stop()
         NostrChatroomListDataSource.stop()
-        NostrUserProfileDataSource.stop()
 
         NostrGlobalDataSource.stop()
         NostrSingleChannelDataSource.stop()

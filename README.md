@@ -127,6 +127,24 @@ openssl base64 < <my-release-key.keystore> | tr -d '\n' | tee some_signing_key.j
 7. Add your CHANGE LOG to the description of the new release
 8. Download the `aab` file and upload it to the` PlayStore.
 
+# Privacy on Relays & nostr
+Your internet protocol (IP) address is exposed to the relays you connect to. If you want to improve your privacy, consider utilizing a service that masks your IP address (e.g. a VPN) from trackers online. 
+
+The relay also learns which public keys you are requesting, meaning your public key will be tied to your IP address.
+
+Relays have all your data in raw text. They know your IP, your name, your location (guessed from IP), your pub key, all your contacts, and other relays, and can read every action you do (post, like, boost, quote, report, etc) with the exception of Private Zaps and Private DMs.
+
+# DM Privacy #
+While the content of direct messages (DMs) is only visible to you, and your DM nostr counterparty, everyone can see that and when you and your counterparty are DM-ing each other.
+
+# Visibility & Permanence of Your Content on nostr
+## Information Visibility ##
+Content that you share can be shared to other relays. 
+Information that you share is publicly visible to anyone reading from relays that have your information. Your information may also be visible to nostr users who do not share relays with you.
+
+## Information Permanence ##
+Information shared on nostr should be assumed permanent for privacy purposes. There is no way to guarantee deleting or editing any content once posted. 
+
 # Contributing
 
 [Issues](https://github.com/vitorpamplona/amethyst/issues) and [pull requests](https://github.com/vitorpamplona/amethyst/pulls) are very welcome.

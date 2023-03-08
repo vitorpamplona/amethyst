@@ -90,7 +90,7 @@ open class Event(
                 createdAt = jsonObject.get("created_at").asLong,
                 kind = jsonObject.get("kind").asInt,
                 tags = jsonObject.get("tags").asJsonArray.map {
-                    it.asJsonArray.map { s -> s.asString }
+                    it.asJsonArray.mapNotNull { s -> if (s.isJsonNull) null else s.asString }
                 },
                 content = jsonObject.get("content").asString,
                 sig = jsonObject.get("sig").asString

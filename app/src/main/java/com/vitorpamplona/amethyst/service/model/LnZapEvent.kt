@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.service.model
 
+import android.util.Log
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.service.lnurl.LnInvoiceUtil
 import com.vitorpamplona.amethyst.service.relays.Client
@@ -36,13 +37,16 @@ class LnZapEvent(
     }
 
     // Keeps this as a field because it's a heavier function used everywhere.
-    val amount = lnInvoice()?.let { LnInvoiceUtil.getAmountInSats(it) }
+    val amount by lazy {
+        lnInvoice()?.let { LnInvoiceUtil.getAmountInSats(it) }
+    }
 
     override fun containedPost(): Event? = try {
         description()?.let {
             fromJson(it, Client.lenient)
         }
     } catch (e: Exception) {
+        Log.e("LnZapEvent", "Failed to Parse Contained Post ${description()}", e)
         null
     }
 
