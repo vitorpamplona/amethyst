@@ -4,8 +4,8 @@ import android.util.Log
 import com.vitorpamplona.amethyst.model.toByteArray
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.nip19.TlvTypes
-import com.vitorpamplona.amethyst.service.parseTLV
-import com.vitorpamplona.amethyst.service.toInt32
+import com.vitorpamplona.amethyst.service.nip19.parseTLV
+import com.vitorpamplona.amethyst.service.nip19.toInt32
 import fr.acinq.secp256k1.Hex
 import nostr.postr.Bech32
 import nostr.postr.bechToBytes
