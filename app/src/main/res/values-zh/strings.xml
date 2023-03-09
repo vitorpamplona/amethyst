@@ -202,5 +202,5 @@
     <string name="quick_action_unfollow">取关</string>
     <string name="quick_action_follow">关注</string>
     <string name="quick_action_request_deletion_alert_title">请求删贴</string>
-    <string name="quick_action_request_deletion_alert_body">紫水晶将请求您的记录从当前连接的中继器中删除。不能保证您发布的笔记将被永久从那些中继器或其他存储笔记的中继器中删除。</string>
+    <string name="quick_action_request_deletion_alert_body">Amethyst 将请求您的记录从当前连接的中继器中删除。不能保证您发布的笔记将被永久从那些中继器或其他存储笔记的中继器中删除。</string>
 </resources>
