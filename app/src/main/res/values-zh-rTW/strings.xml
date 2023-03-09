@@ -154,7 +154,6 @@
     <string name="public_chat">公共聊天</string>
     <string name="posts_received">收到文章</string>
     <string name="remove">移除</string>
-    <string name="sats" translatable="false">sats</string>
     <string name="auto">自動</string>
     <string name="translated_from">從</string>
     <string name="to">更改為</string>

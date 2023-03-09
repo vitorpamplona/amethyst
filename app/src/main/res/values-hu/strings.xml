@@ -156,7 +156,6 @@
     <string name="public_chat">Publikus Chat</string>
     <string name="posts_received">beérkezett hozzászólások</string>
     <string name="remove">Eltávolítás</string>
-    <string name="sats" translatable="false">sats</string>
     <string name="auto">Automatikus</string>
     <string name="translated_from">fordítás erről</string>
     <string name="to">erre</string>

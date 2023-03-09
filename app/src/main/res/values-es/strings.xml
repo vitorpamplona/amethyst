@@ -155,7 +155,6 @@
     <string name="public_chat">Chat público</string>
     <string name="posts_received">publicaciones recibidas</string>
     <string name="remove">Eliminar</string>
-    <string name="sats" translatable="false">sats</string>
     <string name="auto">Auto</string>
     <string name="translated_from">traducido de</string>
     <string name="to">a</string>
