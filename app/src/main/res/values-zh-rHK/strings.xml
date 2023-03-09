@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="point_to_the_qr_code">對準二維碼</string>
     <string name="show_qr">顯示二維碼</string>
     <string name="profile_image">頭像圖片</string>
