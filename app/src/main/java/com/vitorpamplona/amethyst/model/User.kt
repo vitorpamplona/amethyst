@@ -46,9 +46,6 @@ class User(val pubkeyHex: String) {
     var privateChatrooms = mapOf<User, Chatroom>()
         private set
 
-    var badgeAwards = setOf<Note>()
-        private set
-
     var acceptedBadges: AddressableNote? = null
 
     fun pubkey() = Hex.decode(pubkeyHex)
@@ -140,18 +137,6 @@ class User(val pubkeyHex: String) {
                 liveSet?.reports?.invalidateData()
             }
         }
-    }
-
-    fun addBadgeAward(note: Note) {
-        if (note !in badgeAwards) {
-            badgeAwards = badgeAwards + note
-            liveSet?.badges?.invalidateData()
-        }
-    }
-
-    fun removeBadgeAward(deleteNote: Note) {
-        badgeAwards = badgeAwards - deleteNote
-        liveSet?.badges?.invalidateData()
     }
 
     fun updateAcceptedBadges(note: AddressableNote) {

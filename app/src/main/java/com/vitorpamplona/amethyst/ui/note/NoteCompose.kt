@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
+import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
@@ -141,16 +142,18 @@ fun NoteCompose(
             modifier = modifier
                 .combinedClickable(
                     onClick = {
-                        if (noteEvent !is ChannelMessageEvent) {
-                            navController.navigate("Note/${note.idHex}") {
+                        if (noteEvent is ChannelMessageEvent) {
+                            baseChannel?.let {
+                                navController.navigate("Channel/${it.idHex}")
+                            }
+                        } else if (noteEvent is PrivateDmEvent) {
+                            navController.navigate("Room/${note.author?.pubkeyHex}") {
                                 launchSingleTop = true
                             }
                         } else {
-                            note
-                                .channel()
-                                ?.let {
-                                    navController.navigate("Channel/${it.idHex}")
-                                }
+                            navController.navigate("Note/${note.idHex}") {
+                                launchSingleTop = true
+                            }
                         }
                     },
                     onLongClick = { popupExpanded = true }

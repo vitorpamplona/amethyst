@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name_release" translatable="false">Amethyst</string>
     <string name="app_name_debug" translatable="false">Amethyst Debug</string>
     <string name="point_to_the_qr_code">Наведіть на QR код</string>
@@ -17,7 +17,7 @@
     <string name="impersonation">Видача себе за іншу особу</string>
     <string name="illegal_behavior">Незаконні дії</string>
     <string name="unknown">Невідомо</string>
-    <string name="relay_icon">Іконка рілею</string>
+    <string name="relay_icon">Іконка релею</string>
     <string name="unknown_author">Невідомий автор</string>
     <string name="copy_text">Скопіювати текст</string>
     <string name="copy_user_pubkey">Скопіювати ключ користувача</string>
@@ -72,14 +72,14 @@
     <string name="create">Створити</string>
     <string name="cancel">Скасувати</string>
     <string name="failed_to_upload_the_image">Не вдалося завантажити фото</string>
-    <string name="relay_address">Адреса рілея</string>
+    <string name="relay_address">Адреса релея</string>
     <string name="posts">Дописи</string>
     <string name="errors">Помилки</string>
     <string name="home_feed">Домашня стрічка</string>
     <string name="private_message_feed">Стрічка персональних повідомлень</string>
     <string name="public_chat_feed">Стрічка чатів</string>
     <string name="global_feed">Глобальна стрічка</string>
-    <string name="add_a_relay">Додати рілей</string>
+    <string name="add_a_relay">Додати релей</string>
     <string name="display_name">Видиме ім\'я</string>
     <string name="my_display_name">Моє видиме ім\'я</string>
     <string name="username">Нікнейм</string>
@@ -110,7 +110,7 @@
     <string name="follows">"Підписок"</string>
     <string name="reports">"Скарг"</string>
     <string name="more_options">Більше опцій</string>
-    <string name="relays">" Рілеїв"</string>
+    <string name="relays">" Релеїв"</string>
     <string name="website">Сайт</string>
     <string name="lightning_address">Lightning адреса</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Копіює Nsec ID (ваш пароль) для резервного копіювання</string>
@@ -172,4 +172,39 @@
     <string name="report_hateful_speech">Повідомити про образи</string>
     <string name="report_nudity_porn">Повідомити про наготу / порно</string>
     <string name="others">інших</string>
+    <string name="search_feed">Пошук</string>
+    <string name="mark_all_known_as_read">Позначити всі відомі прочитаними</string>
+    <string name="mark_all_new_as_read">Позначити всі нові прочитаними</string>
+    <string name="mark_all_as_read">Позначити все прочитаним</string>
+    <string name="backup_keys">Резервне копіювання</string>
+    <string name="account_backup_tips_md" tools:ignore="Typos">
+        ## Резервне копіювання та поради з безпеки
+        \n\nВаш акаунт захищений приватним ключем. Цей ключ – довгий випадковий рядок із приставкою **nsec1**. Той, хто володіє вашим приватним ключем, може писати від вашого імені.
+        \n\n- **Ніколи** не вставляйте ваш приватний ключ на сайтах або в додатках, яким ви не довіряєте.
+        \n- Розробники Amethyst **ніколи** не спитають ваш приватний ключ.
+        \n- **Збережіть** резервну копію приватного ключа, щоб мати можливість відновити акаунт. Радимо використовувати менеджер паролів.
+    </string>
+    <string name="secret_key_copied_to_clipboard">Приватний ключ (nsec) скопійовано</string>
+    <string name="copy_my_secret_key">Скопіювати мій приватний ключ</string>
+    <string name="biometric_authentication_failed">Помилка входу</string>
+    <string name="biometric_error">Помилка</string>
+    <string name="badge_created_by">"Створено %1$s"</string>
+    <string name="badge_award_image_for">"Картинка значка-нагороди %1$s"</string>
+    <string name="new_badge_award_notif">Ви отримали в нагороду новий значок</string>
+    <string name="award_granted_to">Значок-нагороду видано</string>
+    <string name="copied_note_text_to_clipboard">Скопіювати текст</string>
+    <string name="copied_user_id_to_clipboard" tools:ignore="Typos">ID (npub) автора скопійовано</string>
+    <string name="copied_note_id_to_clipboard" tools:ignore="Typos">ID запису (note1) скопійовано</string>
+    <string name="select_text_dialog_top">Виділити текст</string>
+    <string name="quick_action_select">Виділити</string>
+    <string name="quick_action_share_browser_link">Поділитися посиланням</string>
+    <string name="quick_action_share">Поділитися</string>
+    <string name="quick_action_copy_user_id">Скопіювати ID автора</string>
+    <string name="quick_action_copy_note_id">Скопіювати ID запису</string>
+    <string name="quick_action_copy_text">Скопіювати текст</string>
+    <string name="quick_action_delete">Видалити</string>
+    <string name="quick_action_unfollow">@string/unfollow</string>
+    <string name="quick_action_follow">@string/follow</string>
+    <string name="quick_action_request_deletion_alert_title">Запросити видалення</string>
+    <string name="quick_action_request_deletion_alert_body">Amethyst попросить релеї, до яких ви зараз підключені, видалити цей запис. Однак немає гарантії, що запис буде назавжди видалено цими релеями, або іншими, які вже його зберегли.</string>
 </resources>
