@@ -186,7 +186,6 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
                             ContextCompat.startActivity(context, shareIntent, null)
                             onDismiss()
                         }
-                        VerticalDivider(primaryLight)
                     }
                 }
             }
