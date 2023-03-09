@@ -45,7 +45,7 @@ abstract class NostrDataSource(val debugName: String) {
 
     fun printCounter() {
         eventCounter.forEach {
-            println("AAA Count ${it.key}: ${it.value.counter}")
+            Log.d("STATE DUMP", "Received Events ${it.key}: ${it.value.counter}")
         }
     }
 

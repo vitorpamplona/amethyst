@@ -124,7 +124,7 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
                                             .joinToString { it.filter.toJson() }
                                         }"
                                     }.forEach {
-                                        Log.d("CURRENT FILTERS", it)
+                                        Log.d("STATE DUMP", it)
                                     }
 
                                     NostrAccountDataSource.printCounter()
@@ -143,14 +143,14 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
 
                                     NostrUserProfileDataSource.printCounter()
 
-                                    println("Connected Relays: " + RelayPool.connectedRelays())
+                                    Log.d("STATE DUMP", "Connected Relays: " + RelayPool.connectedRelays())
 
                                     val imageLoader = Coil.imageLoader(context)
-                                    println("Image Disk Cache ${(imageLoader.diskCache?.size ?: 0) / (1024 * 1024)}/${(imageLoader.diskCache?.maxSize ?: 0) / (1024 * 1024)} MB")
-                                    println("Image Memory Cache ${(imageLoader.memoryCache?.size ?: 0) / (1024 * 1024)}/${(imageLoader.memoryCache?.maxSize ?: 0) / (1024 * 1024)} MB")
+                                    Log.d("STATE DUMP", "Image Disk Cache ${(imageLoader.diskCache?.size ?: 0) / (1024 * 1024)}/${(imageLoader.diskCache?.maxSize ?: 0) / (1024 * 1024)} MB")
+                                    Log.d("STATE DUMP", "Image Memory Cache ${(imageLoader.memoryCache?.size ?: 0) / (1024 * 1024)}/${(imageLoader.memoryCache?.maxSize ?: 0) / (1024 * 1024)} MB")
 
-                                    println("Notes: " + LocalCache.notes.filter { it.value.event != null }.size + "/" + LocalCache.notes.size)
-                                    println("Users: " + LocalCache.users.filter { it.value.info?.latestMetadata != null }.size + "/" + LocalCache.users.size)
+                                    Log.d("STATE DUMP", "Notes: " + LocalCache.notes.filter { it.value.event != null }.size + "/" + LocalCache.notes.size)
+                                    Log.d("STATE DUMP", "Users: " + LocalCache.users.filter { it.value.info?.latestMetadata != null }.size + "/" + LocalCache.users.size)
                                 }
                             ) {
                                 Icon(
