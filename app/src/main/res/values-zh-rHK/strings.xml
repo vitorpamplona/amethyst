@@ -203,5 +203,5 @@
     <string name="quick_action_unfollow">取關</string>
     <string name="quick_action_follow">關注</string>
     <string name="quick_action_request_deletion_alert_title">請求刪貼</string>
-    <string name="quick_action_request_deletion_alert_body">紫水晶將請求您的記錄從當前連接的中繼器中刪除。不能保證您發佈的筆記將被永久從那些中繼器或其他存儲筆記的中繼器中刪除。</string>
+    <string name="quick_action_request_deletion_alert_body">Amethyst 將請求您的記錄從當前連接的中繼器中刪除。不能保證您發佈的筆記將被永久從那些中繼器或其他存儲筆記的中繼器中刪除。</string>
 </resources>
