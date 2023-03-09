@@ -39,6 +39,7 @@ import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.RoboHashCache
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
@@ -70,6 +71,7 @@ fun NoteCompose(
     isQuotedNote: Boolean = false,
     unPackReply: Boolean = true,
     makeItShort: Boolean = false,
+    addMarginTop: Boolean = true,
     parentBackgroundColor: Color? = null,
     accountViewModel: AccountViewModel,
     navController: NavController
@@ -167,7 +169,7 @@ fun NoteCompose(
                     .padding(
                         start = if (!isBoostedNote) 12.dp else 0.dp,
                         end = if (!isBoostedNote) 12.dp else 0.dp,
-                        top = 10.dp
+                        top = if (addMarginTop) 10.dp else 0.dp
                     )
             ) {
                 if (!isBoostedNote && !isQuotedNote) {
@@ -402,6 +404,34 @@ fun NoteCompose(
                         }
 
                         ReactionsRow(note, accountViewModel)
+
+                        Divider(
+                            modifier = Modifier.padding(top = 10.dp),
+                            thickness = 0.25.dp
+                        )
+                    } else if (noteEvent is PrivateDmEvent &&
+                        noteEvent.recipientPubKey() != account.userProfile().pubkeyHex &&
+                        note.author != account.userProfile()
+                    ) {
+                        val recepient = noteEvent.recipientPubKey()?.let { LocalCache.checkGetOrCreateUser(it) }
+
+                        TranslateableRichTextViewer(
+                            stringResource(
+                                id = R.string.private_conversation_notification,
+                                "@${note.author?.pubkeyNpub()}",
+                                "@${recepient?.pubkeyNpub()}"
+                            ),
+                            canPreview = !makeItShort,
+                            Modifier.fillMaxWidth(),
+                            noteEvent.tags(),
+                            backgroundColor,
+                            accountViewModel,
+                            navController
+                        )
+
+                        if (!makeItShort) {
+                            ReactionsRow(note, accountViewModel)
+                        }
 
                         Divider(
                             modifier = Modifier.padding(top = 10.dp),

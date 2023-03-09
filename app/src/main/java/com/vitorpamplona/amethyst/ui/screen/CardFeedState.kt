@@ -63,6 +63,14 @@ class BoostSetCard(val note: Note, val boostEvents: List<Note>) : Card() {
     override fun id() = note.idHex + "B" + createdAt
 }
 
+class MessageSetCard(val note: Note) : Card() {
+    override fun createdAt(): Long {
+        return note.createdAt() ?: 0
+    }
+
+    override fun id() = note.idHex
+}
+
 sealed class CardFeedState {
     object Loading : CardFeedState()
     class Loaded(val feed: MutableState<List<Card>>) : CardFeedState()

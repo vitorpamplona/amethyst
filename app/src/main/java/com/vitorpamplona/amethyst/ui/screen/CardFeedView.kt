@@ -21,6 +21,7 @@ import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.vitorpamplona.amethyst.ui.note.BadgeCompose
 import com.vitorpamplona.amethyst.ui.note.BoostSetCompose
 import com.vitorpamplona.amethyst.ui.note.LikeSetCompose
+import com.vitorpamplona.amethyst.ui.note.MessageSetCompose
 import com.vitorpamplona.amethyst.ui.note.MultiSetCompose
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.ZapSetCompose
@@ -133,6 +134,12 @@ private fun FeedLoaded(
                     accountViewModel = accountViewModel,
                     navController = navController,
                     routeForLastRead = routeForLastRead
+                )
+                is MessageSetCard -> MessageSetCompose(
+                    messageSetCard = item,
+                    routeForLastRead = routeForLastRead,
+                    accountViewModel = accountViewModel,
+                    navController = navController
                 )
             }
         }
