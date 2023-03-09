@@ -1,7 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name_release" translatable="false">Amethyst</string>
-    <string name="app_name_debug" translatable="false">Amethyst Debug</string>
+    <string name="mark_all_known_as_read">Marcar los conocidos como leídos</string>
+    <string name="mark_all_new_as_read">Marcar los nuevos como leídos</string>
+    <string name="mark_all_as_read">Marcar todos como leídos</string>
+    <string name="secret_key_copied_to_clipboard">Clave secreta (nsec) copiada al portapapeles</string>
+    <string name="copy_my_secret_key">Copiar mi clave secreta</string>
+    <string name="biometric_authentication_failed">Autenticación fallida</string>
+    <string name="biometric_error">Error</string>
+    <string name="badge_created_by">Credo por %1$s</string>
+    <string name="badge_award_image_for">Imagen del Badge para %1$s</string>
+    <string name="new_badge_award_notif">Has recibido un nuevo Badge</string>
+    <string name="award_granted_to">Badge otorgado a</string>
+    <string name="copied_note_text_to_clipboard">Texto de nota copiado al portapapeles</string>
+    <string name="copied_user_id_to_clipboard">\@npub del autor copiado al portapapeles</string>
+    <string name="copied_note_id_to_clipboard">ID de nota copiada (@note1) al portapapeles</string>
+    <string name="select_text_dialog_top">Seleccionar texto</string>
     <string name="point_to_the_qr_code">Apunta al código QR</string>
     <string name="show_qr">Mostrar el QR</string>
     <string name="profile_image">Imagen de Perfil</string>
@@ -161,8 +174,6 @@
     <string name="show_in">Mostrar en</string>
     <string name="first">primero</string>
     <string name="always_translate_to">"Traducir siempre a "</string>
-    <string name="nip_05" translatable="false">NIP-05</string>
-    <string name="lnurl" translatable="false">LNURL...</string>
     <string name="never">nunca</string>
     <string name="now">ahora</string>
     <string name="h">h</string>
@@ -173,4 +184,16 @@
     <string name="report_hateful_speech">Denuncia discurso de odio</string>
     <string name="report_nudity_porn">Reportar desnudos / Porno</string>
     <string name="others">otros</string>
+    <string name="quick_action_select">Selecciona</string>
+    <string name="quick_action_share_browser_link">Compartir enlace del navegador</string>
+    <string name="quick_action_share">Compartir</string>
+    <string name="quick_action_copy_user_id">ID del autor</string>
+    <string name="quick_action_copy_note_id">ID de la nota</string>
+    <string name="quick_action_copy_text">Copiar texto</string>
+    <string name="quick_action_delete">Eliminar</string>
+    <string name="quick_action_unfollow">Dejar de seguir</string>
+    <string name="quick_action_follow">Seguir</string>
+    <string name="quick_action_request_deletion_alert_title">Solicitar eliminación</string>
+    <string name="quick_action_request_deletion_alert_body">Amethyst solicitará que se elimine su nota de los relays a los que está conectado actualmente. No hay garantía de que su nota se elimine permanentemente de esos relays, o de otros relays donde pueda almacenarse.</string>
+    <string name="backup_keys">Claves de respaldo</string>
 </resources>
