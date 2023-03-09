@@ -29,7 +29,7 @@ class LocalPreferences(context: Context) {
         val LAST_READ: (String) -> String = { route -> "last_read_route_$route" }
     }
 
-    private val encryptedPreferences = EncryptedStorage().preferences(context)
+    private val encryptedPreferences = EncryptedStorage.preferences(context)
     private val gson = GsonBuilder().create()
 
     fun clearEncryptedStorage() {
