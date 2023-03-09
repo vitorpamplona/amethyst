@@ -7,7 +7,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Surface
@@ -15,7 +17,6 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -26,7 +27,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
     val postViewModel: NewUserMetadataViewModel = viewModel()
@@ -66,158 +66,207 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                     )
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Column(
+                    modifier = Modifier.padding(10.dp).verticalScroll(rememberScrollState())
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(1f),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            label = { Text(text = stringResource(R.string.display_name)) },
+                            modifier = Modifier.weight(1f),
+                            value = postViewModel.displayName.value,
+                            onValueChange = { postViewModel.displayName.value = it },
+                            placeholder = {
+                                Text(
+                                    text = stringResource(R.string.my_display_name),
+                                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                )
+                            },
+                            keyboardOptions = KeyboardOptions.Default.copy(
+                                capitalization = KeyboardCapitalization.Sentences
+                            ),
+                            singleLine = true
+                        )
 
-                Row(modifier = Modifier.fillMaxWidth(1f), verticalAlignment = Alignment.CenterVertically) {
+                        Text("@", Modifier.padding(5.dp))
+
+                        OutlinedTextField(
+                            label = { Text(text = stringResource(R.string.username)) },
+                            modifier = Modifier.weight(1f),
+                            value = postViewModel.userName.value,
+                            onValueChange = { postViewModel.userName.value = it },
+                            placeholder = {
+                                Text(
+                                    text = stringResource(R.string.my_username),
+                                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                )
+                            },
+                            singleLine = true
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
                     OutlinedTextField(
-                        label = { Text(text = stringResource(R.string.display_name)) },
-                        modifier = Modifier.weight(1f),
-                        value = postViewModel.displayName.value,
-                        onValueChange = { postViewModel.displayName.value = it },
+                        label = { Text(text = stringResource(R.string.about_me)) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(100.dp),
+                        value = postViewModel.about.value,
+                        onValueChange = { postViewModel.about.value = it },
                         placeholder = {
                             Text(
-                                text = stringResource(R.string.my_display_name),
+                                text = stringResource(id = R.string.about_me),
                                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                             )
                         },
                         keyboardOptions = KeyboardOptions.Default.copy(
                             capitalization = KeyboardCapitalization.Sentences
                         ),
-                        singleLine = true
+                        maxLines = 10
                     )
 
-                    Text("@", Modifier.padding(5.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     OutlinedTextField(
-                        label = { Text(text = stringResource(R.string.username)) },
-                        modifier = Modifier.weight(1f),
-                        value = postViewModel.userName.value,
-                        onValueChange = { postViewModel.userName.value = it },
+                        label = { Text(text = stringResource(R.string.avatar_url)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        value = postViewModel.picture.value,
+                        onValueChange = { postViewModel.picture.value = it },
                         placeholder = {
                             Text(
-                                text = stringResource(R.string.my_username),
+                                text = "https://mywebsite.com/me.jpg",
                                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                             )
                         },
                         singleLine = true
                     )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    OutlinedTextField(
+                        label = { Text(text = stringResource(R.string.banner_url)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        value = postViewModel.banner.value,
+                        onValueChange = { postViewModel.banner.value = it },
+                        placeholder = {
+                            Text(
+                                text = "https://mywebsite.com/mybanner.jpg",
+                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                            )
+                        },
+                        singleLine = true
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    OutlinedTextField(
+                        label = { Text(text = stringResource(R.string.website_url)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        value = postViewModel.website.value,
+                        onValueChange = { postViewModel.website.value = it },
+                        placeholder = {
+                            Text(
+                                text = "https://mywebsite.com",
+                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                            )
+                        },
+                        singleLine = true
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    OutlinedTextField(
+                        label = { Text(text = stringResource(R.string.nip_05)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        value = postViewModel.nip05.value,
+                        onValueChange = { postViewModel.nip05.value = it },
+                        placeholder = {
+                            Text(
+                                text = "_@mywebsite.com",
+                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                            )
+                        },
+                        singleLine = true
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    OutlinedTextField(
+                        label = { Text(text = stringResource(R.string.ln_address)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        value = postViewModel.lnAddress.value,
+                        onValueChange = { postViewModel.lnAddress.value = it },
+                        placeholder = {
+                            Text(
+                                text = "me@mylightiningnode.com",
+                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                            )
+                        },
+                        singleLine = true
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    OutlinedTextField(
+                        label = { Text(text = stringResource(R.string.ln_url_outdated)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        value = postViewModel.lnURL.value,
+                        onValueChange = { postViewModel.lnURL.value = it },
+                        placeholder = {
+                            Text(
+                                text = stringResource(R.string.lnurl),
+                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                            )
+                        }
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    OutlinedTextField(
+                        label = { Text(text = stringResource(R.string.twitter)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        value = postViewModel.twitter.value,
+                        onValueChange = { postViewModel.twitter.value = it },
+                        placeholder = {
+                            Text(
+                                text = stringResource(R.string.twitter_proof_url_template),
+                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                            )
+                        }
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    OutlinedTextField(
+                        label = { Text(text = stringResource(R.string.mastodon)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        value = postViewModel.mastodon.value,
+                        onValueChange = { postViewModel.mastodon.value = it },
+                        placeholder = {
+                            Text(
+                                text = stringResource(R.string.mastodon_proof_url_template),
+                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                            )
+                        }
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    OutlinedTextField(
+                        label = { Text(text = stringResource(R.string.github)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        value = postViewModel.github.value,
+                        onValueChange = { postViewModel.github.value = it },
+                        placeholder = {
+                            Text(
+                                text = stringResource(R.string.github_proof_url_template),
+                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                            )
+                        }
+                    )
                 }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                OutlinedTextField(
-                    label = { Text(text = stringResource(R.string.about_me)) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(100.dp),
-                    value = postViewModel.about.value,
-                    onValueChange = { postViewModel.about.value = it },
-                    placeholder = {
-                        Text(
-                            text = stringResource(id = R.string.about_me),
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                        )
-                    },
-                    keyboardOptions = KeyboardOptions.Default.copy(
-                        capitalization = KeyboardCapitalization.Sentences
-                    ),
-                    maxLines = 10
-                )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                OutlinedTextField(
-                    label = { Text(text = stringResource(R.string.avatar_url)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    value = postViewModel.picture.value,
-                    onValueChange = { postViewModel.picture.value = it },
-                    placeholder = {
-                        Text(
-                            text = "https://mywebsite.com/me.jpg",
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                        )
-                    },
-                    singleLine = true
-                )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                OutlinedTextField(
-                    label = { Text(text = stringResource(R.string.banner_url)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    value = postViewModel.banner.value,
-                    onValueChange = { postViewModel.banner.value = it },
-                    placeholder = {
-                        Text(
-                            text = "https://mywebsite.com/mybanner.jpg",
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                        )
-                    },
-                    singleLine = true
-                )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                OutlinedTextField(
-                    label = { Text(text = stringResource(R.string.website_url)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    value = postViewModel.website.value,
-                    onValueChange = { postViewModel.website.value = it },
-                    placeholder = {
-                        Text(
-                            text = "https://mywebsite.com",
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                        )
-                    },
-                    singleLine = true
-                )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                OutlinedTextField(
-                    label = { Text(text = stringResource(R.string.nip_05)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    value = postViewModel.nip05.value,
-                    onValueChange = { postViewModel.nip05.value = it },
-                    placeholder = {
-                        Text(
-                            text = "_@mywebsite.com",
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                        )
-                    },
-                    singleLine = true
-                )
-
-                Spacer(modifier = Modifier.height(10.dp))
-                OutlinedTextField(
-                    label = { Text(text = stringResource(R.string.ln_address)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    value = postViewModel.lnAddress.value,
-                    onValueChange = { postViewModel.lnAddress.value = it },
-                    placeholder = {
-                        Text(
-                            text = "me@mylightiningnode.com",
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                        )
-                    },
-                    singleLine = true
-                )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                OutlinedTextField(
-                    label = { Text(text = stringResource(R.string.ln_url_outdated)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    value = postViewModel.lnURL.value,
-                    onValueChange = { postViewModel.lnURL.value = it },
-                    placeholder = {
-                        Text(
-                            text = stringResource(R.string.lnurl),
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                        )
-                    },
-                    singleLine = true
-                )
             }
         }
     }

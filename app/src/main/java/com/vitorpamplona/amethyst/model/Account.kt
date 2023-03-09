@@ -9,6 +9,7 @@ import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.Contact
 import com.vitorpamplona.amethyst.service.model.ContactListEvent
 import com.vitorpamplona.amethyst.service.model.DeletionEvent
+import com.vitorpamplona.amethyst.service.model.IdentityClaim
 import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
 import com.vitorpamplona.amethyst.service.model.MetadataEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
@@ -106,11 +107,11 @@ class Account(
         }
     }
 
-    fun sendNewUserMetadata(toString: String) {
+    fun sendNewUserMetadata(toString: String, identities: List<IdentityClaim>) {
         if (!isWriteable()) return
 
         loggedIn.privKey?.let {
-            val event = MetadataEvent.create(toString, loggedIn.privKey!!)
+            val event = MetadataEvent.create(toString, identities, loggedIn.privKey!!)
             Client.send(event)
             LocalCache.consume(event)
         }

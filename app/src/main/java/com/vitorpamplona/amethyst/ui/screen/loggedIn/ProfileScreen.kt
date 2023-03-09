@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
+import com.vitorpamplona.amethyst.service.model.IdentityClaim
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
 import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
@@ -431,6 +432,24 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, navController: 
         }
     }
 
+    userBadge.acceptedBadges?.let { note ->
+        (note.event as? BadgeProfilesEvent)?.let { event ->
+            FlowRow(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 5.dp)) {
+                event.badgeAwardEvents().forEach { badgeAwardEvent ->
+                    val baseNote = LocalCache.notes[badgeAwardEvent]
+                    if (baseNote != null) {
+                        val badgeAwardState by baseNote.live().metadata.observeAsState()
+                        val baseBadgeDefinition = badgeAwardState?.note?.replyTo?.firstOrNull()
+
+                        if (baseBadgeDefinition != null) {
+                            BadgeThumb(baseBadgeDefinition, navController, 50.dp)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     DisplayNip05ProfileStatus(user)
 
     val website = user.info?.website
@@ -484,20 +503,25 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, navController: 
         }
     }
 
-    userBadge.acceptedBadges?.let { note ->
-        (note.event as? BadgeProfilesEvent)?.let { event ->
-            FlowRow(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 5.dp)) {
-                event.badgeAwardEvents().forEach { badgeAwardEvent ->
-                    val baseNote = LocalCache.notes[badgeAwardEvent]
-                    if (baseNote != null) {
-                        val badgeAwardState by baseNote.live().metadata.observeAsState()
-                        val baseBadgeDefinition = badgeAwardState?.note?.replyTo?.firstOrNull()
+    val identities = user.info?.latestMetadata?.identityClaims()
+    if (!identities.isNullOrEmpty()) {
+        identities.forEach { identity: IdentityClaim ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    tint = Color.Unspecified,
+                    painter = painterResource(id = identity.toIcon()),
+                    contentDescription = stringResource(identity.toDescriptor()),
+                    modifier = Modifier.size(16.dp)
+                )
 
-                        if (baseBadgeDefinition != null) {
-                            BadgeThumb(baseBadgeDefinition, navController, 50.dp)
-                        }
-                    }
-                }
+                ClickableText(
+                    text = AnnotatedString(identity.identity),
+                    onClick = { runCatching { uri.openUri(identity.toProofUrl()) } },
+                    style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary),
+                    modifier = Modifier
+                        .padding(top = 1.dp, bottom = 1.dp, start = 5.dp)
+                        .weight(1f)
+                )
             }
         }
     }
