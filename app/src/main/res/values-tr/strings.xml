@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name_release">Amethyst</string>
-    <string name="app_name_debug">Amethyst Debug</string>
     <string name="point_to_the_qr_code">QR Code\'a yönlendir</string>
     <string name="show_qr">QR Göster</string>
     <string name="profile_image">Profil Resmi</string>
@@ -154,15 +152,12 @@
     <string name="public_chat">Herkese Açık Chat</string>
     <string name="posts_received">alınan gönderiler</string>
     <string name="remove">Kaldır</string>
-    <string name="sats">satlar</string>
     <string name="auto">Otomatik</string>
     <string name="translated_from">şundan çevirildi</string>
     <string name="to">şuna</string>
     <string name="show_in">Şunda göster</string>
     <string name="first">ilk</string>
     <string name="always_translate_to">Her zaman şuna çevir</string>
-    <string name="nip_05">NIP-05</string>
-    <string name="lnurl">LNURL</string>
     <string name="never">asla</string>
     <string name="now">şimdi</string>
     <string name="h">h</string>

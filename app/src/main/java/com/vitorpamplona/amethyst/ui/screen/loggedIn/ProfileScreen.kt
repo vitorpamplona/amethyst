@@ -9,6 +9,7 @@ import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
@@ -58,6 +59,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
+import com.vitorpamplona.amethyst.service.model.IdentityClaim
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
 import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
@@ -349,20 +351,21 @@ private fun ProfileHeader(
                 ) {
                     MessageButton(baseUser, navController)
 
-                    NPubCopyButton(baseUser)
+                    // No need for this button anymore
+                    // NPubCopyButton(baseUser)
 
                     if (accountUser == baseUser) {
                         EditButton(account)
-                    } else {
-                        if (account.isHidden(baseUser)) {
-                            ShowUserButton {
-                                account.showUser(baseUser.pubkeyHex)
-                            }
-                        } else if (accountUser.isFollowing(baseUser)) {
-                            UnfollowButton { coroutineScope.launch(Dispatchers.IO) { account.unfollow(baseUser) } }
-                        } else {
-                            FollowButton { coroutineScope.launch(Dispatchers.IO) { account.follow(baseUser) } }
+                    }
+
+                    if (account.isHidden(baseUser)) {
+                        ShowUserButton {
+                            account.showUser(baseUser.pubkeyHex)
                         }
+                    } else if (accountUser.isFollowing(baseUser)) {
+                        UnfollowButton { coroutineScope.launch(Dispatchers.IO) { account.unfollow(baseUser) } }
+                    } else {
+                        FollowButton { coroutineScope.launch(Dispatchers.IO) { account.follow(baseUser) } }
                     }
                 }
             }
@@ -388,6 +391,7 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, navController: 
     val userBadge = userBadgeState?.user ?: return
 
     val uri = LocalUriHandler.current
+    val clipboardManager = LocalClipboardManager.current
 
     Row(verticalAlignment = Alignment.Bottom) {
         user.bestDisplayName()?.let {
@@ -405,6 +409,44 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, navController: 
                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                 modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp)
             )
+        }
+    }
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = user.pubkeyDisplayHex(),
+            modifier = Modifier.padding(top = 1.dp, bottom = 1.dp),
+            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+        )
+
+        IconButton(
+            modifier = Modifier.size(30.dp).padding(start = 5.dp),
+            onClick = { clipboardManager.setText(AnnotatedString(user.pubkeyNpub())); }
+        ) {
+            Icon(
+                imageVector = Icons.Default.ContentCopy,
+                null,
+                modifier = Modifier.padding(end = 5.dp).size(15.dp),
+                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+            )
+        }
+    }
+
+    userBadge.acceptedBadges?.let { note ->
+        (note.event as? BadgeProfilesEvent)?.let { event ->
+            FlowRow(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 5.dp)) {
+                event.badgeAwardEvents().forEach { badgeAwardEvent ->
+                    val baseNote = LocalCache.notes[badgeAwardEvent]
+                    if (baseNote != null) {
+                        val badgeAwardState by baseNote.live().metadata.observeAsState()
+                        val baseBadgeDefinition = badgeAwardState?.note?.replyTo?.firstOrNull()
+
+                        if (baseBadgeDefinition != null) {
+                            BadgeThumb(baseBadgeDefinition, navController, 50.dp)
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -461,20 +503,25 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, navController: 
         }
     }
 
-    userBadge.acceptedBadges?.let { note ->
-        (note.event as? BadgeProfilesEvent)?.let { event ->
-            FlowRow(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 5.dp)) {
-                event.badgeAwardEvents().forEach { badgeAwardEvent ->
-                    val baseNote = LocalCache.notes[badgeAwardEvent]
-                    if (baseNote != null) {
-                        val badgeAwardState by baseNote.live().metadata.observeAsState()
-                        val baseBadgeDefinition = badgeAwardState?.note?.replyTo?.firstOrNull()
+    val identities = user.info?.latestMetadata?.identityClaims()
+    if (!identities.isNullOrEmpty()) {
+        identities.forEach { identity: IdentityClaim ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    tint = Color.Unspecified,
+                    painter = painterResource(id = identity.toIcon()),
+                    contentDescription = stringResource(identity.toDescriptor()),
+                    modifier = Modifier.size(16.dp)
+                )
 
-                        if (baseBadgeDefinition != null) {
-                            BadgeThumb(baseBadgeDefinition, navController, 50.dp)
-                        }
-                    }
-                }
+                ClickableText(
+                    text = AnnotatedString(identity.identity),
+                    onClick = { runCatching { uri.openUri(identity.toProofUrl()) } },
+                    style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary),
+                    modifier = Modifier
+                        .padding(top = 1.dp, bottom = 1.dp, start = 5.dp)
+                        .weight(1f)
+                )
             }
         }
     }

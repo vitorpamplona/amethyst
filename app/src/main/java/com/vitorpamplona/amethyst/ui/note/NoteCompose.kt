@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.note
 
+import android.content.Intent
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -25,11 +26,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.google.accompanist.flowlayout.FlowRow
@@ -753,7 +756,8 @@ fun UserPicture(
 @Composable
 fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, accountViewModel: AccountViewModel) {
     val clipboardManager = LocalClipboardManager.current
-    val context = LocalContext.current.applicationContext
+    val appContext = LocalContext.current.applicationContext
+    val actContext = LocalContext.current
 
     DropdownMenu(
         expanded = popupExpanded,
@@ -769,6 +773,33 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
             }
             Divider()
         }
+        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(accountViewModel.decrypt(note) ?: "")); onDismiss() }) {
+            Text(stringResource(R.string.copy_text))
+        }
+        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString("@${note.author?.pubkeyNpub()}" ?: "")); onDismiss() }) {
+            Text(stringResource(R.string.copy_user_pubkey))
+        }
+        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(note.idNote())); onDismiss() }) {
+            Text(stringResource(R.string.copy_note_id))
+        }
+        DropdownMenuItem(onClick = {
+            val sendIntent = Intent().apply {
+                action = Intent.ACTION_SEND
+                type = "text/plain"
+                putExtra(
+                    Intent.EXTRA_TEXT,
+                    externalLinkForNote(note)
+                )
+                putExtra(Intent.EXTRA_TITLE, actContext.getString(R.string.quick_action_share_browser_link))
+            }
+
+            val shareIntent = Intent.createChooser(sendIntent, appContext.getString(R.string.quick_action_share))
+            ContextCompat.startActivity(actContext, shareIntent, null)
+            onDismiss()
+        }) {
+            Text(stringResource(R.string.quick_action_share))
+        }
+        Divider()
         DropdownMenuItem(onClick = { accountViewModel.broadcast(note); onDismiss() }) {
             Text(stringResource(R.string.broadcast))
         }
@@ -784,7 +815,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
                 note.author?.let {
                     accountViewModel.hide(
                         it,
-                        context
+                        appContext
                     )
                 }; onDismiss()
             }) {
@@ -793,35 +824,35 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
             Divider()
             DropdownMenuItem(onClick = {
                 accountViewModel.report(note, ReportEvent.ReportType.SPAM)
-                note.author?.let { accountViewModel.hide(it, context) }
+                note.author?.let { accountViewModel.hide(it, appContext) }
                 onDismiss()
             }) {
                 Text(stringResource(R.string.report_spam_scam))
             }
             DropdownMenuItem(onClick = {
                 accountViewModel.report(note, ReportEvent.ReportType.PROFANITY)
-                note.author?.let { accountViewModel.hide(it, context) }
+                note.author?.let { accountViewModel.hide(it, appContext) }
                 onDismiss()
             }) {
                 Text(stringResource(R.string.report_hateful_speech))
             }
             DropdownMenuItem(onClick = {
                 accountViewModel.report(note, ReportEvent.ReportType.IMPERSONATION)
-                note.author?.let { accountViewModel.hide(it, context) }
+                note.author?.let { accountViewModel.hide(it, appContext) }
                 onDismiss()
             }) {
                 Text(stringResource(R.string.report_impersonation))
             }
             DropdownMenuItem(onClick = {
                 accountViewModel.report(note, ReportEvent.ReportType.NUDITY)
-                note.author?.let { accountViewModel.hide(it, context) }
+                note.author?.let { accountViewModel.hide(it, appContext) }
                 onDismiss()
             }) {
                 Text(stringResource(R.string.report_nudity_porn))
             }
             DropdownMenuItem(onClick = {
                 accountViewModel.report(note, ReportEvent.ReportType.ILLEGAL)
-                note.author?.let { accountViewModel.hide(it, context) }
+                note.author?.let { accountViewModel.hide(it, appContext) }
                 onDismiss()
             }) {
                 Text(stringResource(R.string.report_illegal_behaviour))

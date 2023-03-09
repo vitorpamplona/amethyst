@@ -5,6 +5,9 @@ import androidx.lifecycle.ViewModel
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.model.GitHubIdentity
+import com.vitorpamplona.amethyst.service.model.MastodonIdentity
+import com.vitorpamplona.amethyst.service.model.TwitterIdentity
 import java.io.ByteArrayInputStream
 import java.io.StringWriter
 
@@ -23,6 +26,10 @@ class NewUserMetadataViewModel : ViewModel() {
     val lnAddress = mutableStateOf("")
     val lnURL = mutableStateOf("")
 
+    val twitter = mutableStateOf("")
+    val github = mutableStateOf("")
+    val mastodon = mutableStateOf("")
+
     fun load(account: Account) {
         this.account = account
 
@@ -36,6 +43,19 @@ class NewUserMetadataViewModel : ViewModel() {
             nip05.value = it.info?.nip05 ?: ""
             lnAddress.value = it.info?.lud16 ?: ""
             lnURL.value = it.info?.lud06 ?: ""
+
+            twitter.value = ""
+            github.value = ""
+            mastodon.value = ""
+
+            // TODO: Validate Telegram input, somehow.
+            it.info?.latestMetadata?.identityClaims()?.forEach {
+                when (it) {
+                    is TwitterIdentity -> twitter.value = it.toProofUrl()
+                    is GitHubIdentity -> github.value = it.toProofUrl()
+                    is MastodonIdentity -> mastodon.value = it.toProofUrl()
+                }
+            }
         }
     }
 
@@ -61,10 +81,34 @@ class NewUserMetadataViewModel : ViewModel() {
         currentJson.put("lud16", lnAddress.value.trim())
         currentJson.put("lud06", lnURL.value.trim())
 
+        var claims = latest?.identityClaims() ?: emptyList()
+
+        if (twitter.value.isBlank()) {
+            // delete twitter
+            claims = claims.filter { it !is TwitterIdentity }
+        }
+
+        if (github.value.isBlank()) {
+            // delete github
+            claims = claims.filter { it !is GitHubIdentity }
+        }
+
+        if (mastodon.value.isBlank()) {
+            // delete mastodon
+            claims = claims.filter { it !is MastodonIdentity }
+        }
+
+        // Updates while keeping other identities intact
+        val newClaims = listOfNotNull(
+            TwitterIdentity.parseProofUrl(twitter.value),
+            GitHubIdentity.parseProofUrl(github.value),
+            MastodonIdentity.parseProofUrl(mastodon.value)
+        ) + claims.filter { it !is TwitterIdentity && it !is GitHubIdentity && it !is MastodonIdentity }
+
         val writer = StringWriter()
         ObjectMapper().writeValue(writer, currentJson)
 
-        account.sendNewUserMetadata(writer.buffer.toString())
+        account.sendNewUserMetadata(writer.buffer.toString(), newClaims)
 
         clear()
     }
@@ -79,5 +123,8 @@ class NewUserMetadataViewModel : ViewModel() {
         nip05.value = ""
         lnAddress.value = ""
         lnURL.value = ""
+        twitter.value = ""
+        github.value = ""
+        mastodon.value = ""
     }
 }
