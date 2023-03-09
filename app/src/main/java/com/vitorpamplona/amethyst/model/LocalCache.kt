@@ -305,11 +305,6 @@ object LocalCache {
             it.addTaggedPost(note)
         }
 
-        // Counts the replies
-        awardees.forEach {
-            it.addBadgeAward(note)
-        }
-
         // Replies of an Badge Definition are Award Events
         awardDefinition.forEach {
             it.addReply(note)
