@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name_release" translatable="false">Amethyst</string>
-    <string name="app_name_debug" translatable="false">Amethyst Debug</string>
     <string name="point_to_the_qr_code">Mutass a QR kódra</string>
     <string name="show_qr">QR kód megjelenítése</string>
     <string name="profile_image">Profil kép</string>
@@ -162,8 +160,6 @@
     <string name="show_in">Mutasd ebben</string>
     <string name="first">első</string>
     <string name="always_translate_to">Mindig fordítsa le</string>
-    <string name="nip_05" translatable="false">NIP-05</string>
-    <string name="lnurl" translatable="false">LNURL...</string>
     <string name="never">soha</string>
     <string name="now">most</string>
     <string name="h">ó</string>

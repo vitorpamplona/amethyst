@@ -78,6 +78,7 @@
     <string name="private_message_feed">Feed de mensagens privadas</string>
     <string name="public_chat_feed">Feed Chat Público</string>
     <string name="global_feed">Feed Global</string>
+    <string name="search_feed">Fonte de pesquisa</string>
     <string name="add_a_relay">Adicionar um Relay</string>
     <string name="display_name">Nome de Exibição</string>
     <string name="my_display_name">Meu nome de exibição</string>

@@ -93,6 +93,7 @@
     <string name="private_message_feed">Fuente de mensajes privados</string>
     <string name="public_chat_feed">Fuente de chat público</string>
     <string name="global_feed">Fuente global</string>
+    <string name="search_feed">Fuente de búsqueda</string>
     <string name="add_a_relay">Anadir transmisor</string>
     <string name="display_name">Nombre para mostrar</string>
     <string name="my_display_name">Mi nombre para mostrar</string>

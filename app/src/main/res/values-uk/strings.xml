@@ -1,6 +1,4 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="app_name_release" translatable="false">Amethyst</string>
-    <string name="app_name_debug" translatable="false">Amethyst Debug</string>
     <string name="point_to_the_qr_code">Наведіть на QR код</string>
     <string name="show_qr">Показати QR</string>
     <string name="profile_image">Фото профілю</string>
@@ -160,8 +158,6 @@
     <string name="show_in">Показати спершу на</string>
     <string name="first" />
     <string name="always_translate_to">Завжди перекладати на</string>
-    <string name="nip_05" translatable="false">NIP-05</string>
-    <string name="lnurl" translatable="false">LNURL...</string>
     <string name="never">ніколи</string>
     <string name="now">зараз</string>
     <string name="h">год</string>
