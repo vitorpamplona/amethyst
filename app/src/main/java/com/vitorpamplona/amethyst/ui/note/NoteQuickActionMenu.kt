@@ -47,6 +47,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
@@ -81,7 +82,7 @@ fun VerticalDivider(color: Color) =
 @Composable
 fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, accountViewModel: AccountViewModel) {
     val context = LocalContext.current
-    val primaryLight = lightenColor(MaterialTheme.colors.primary, 0.2f)
+    val primaryLight = lightenColor(MaterialTheme.colors.primary, 0.1f)
     val cardShape = RoundedCornerShape(5.dp)
     val clipboardManager = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
@@ -236,7 +237,7 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
 fun NoteQuickActionItem(icon: ImageVector, label: String, onClick: () -> Unit) {
     Column(
         modifier = Modifier
-            .size(64.dp)
+            .size(70.dp)
             .clickable { onClick() },
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
@@ -244,9 +245,9 @@ fun NoteQuickActionItem(icon: ImageVector, label: String, onClick: () -> Unit) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            modifier = Modifier.size(24.dp),
-            tint = MaterialTheme.colors.onPrimary
+            modifier = Modifier.size(24.dp).padding(bottom = 5.dp),
+            tint = Color.White
         )
-        Text(text = label, fontSize = 12.sp)
+        Text(text = label, fontSize = 12.sp, color = Color.White, textAlign = TextAlign.Center)
     }
 }
