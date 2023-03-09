@@ -177,6 +177,7 @@
     <string name="mark_all_known_as_read">Mark all Known as read</string>
     <string name="mark_all_new_as_read">Mark all New as read</string>
     <string name="mark_all_as_read">Mark all as read</string>
+    <string name="backup_keys">Backup Keys</string>
     <string name="account_backup_tips_md" tools:ignore="Typos">
         ## Key Backup and Safety Tips
         \n\nYour account is secured by a secret key. The key is long random string starting with **nsec1**. Anyone who has access to your secret key can publish content using your identity.
@@ -199,8 +200,8 @@
     <string name="quick_action_select">Select</string>
     <string name="quick_action_share_browser_link">Share Browser Link</string>
     <string name="quick_action_share">Share</string>
-    <string name="quick_action_copy_user_id">Mention</string>
-    <string name="quick_action_copy_note_id">Quote</string>
+    <string name="quick_action_copy_user_id">Copy author’s ID</string>
+    <string name="quick_action_copy_note_id">Copy note ID</string>
     <string name="quick_action_copy_text">Copy</string>
     <string name="quick_action_delete">Delete</string>
     <string name="quick_action_unfollow">Unfollow</string>
