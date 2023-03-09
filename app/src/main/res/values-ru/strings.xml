@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name_release" translatable="false">Amethyst</string>
     <string name="app_name_debug" translatable="false">Amethyst Debug</string>
     <string name="point_to_the_qr_code">Наведите на QR код</string>
@@ -172,4 +172,39 @@
     <string name="report_hateful_speech">Сообщить об оскорблениях</string>
     <string name="report_nudity_porn">Сообщить о наготе / порно</string>
     <string name="others">других</string>
+    <string name="search_feed">Поиск</string>
+    <string name="mark_all_known_as_read">Отметить все известные прочитанными</string>
+    <string name="mark_all_new_as_read">Отметить все новые прочитанными</string>
+    <string name="mark_all_as_read">Отметить всё прочитанным</string>
+    <string name="backup_keys">Резервное копирование</string>
+    <string name="account_backup_tips_md" tools:ignore="Typos">
+        ## Резервное копирование и советы по безопасности
+        \n\nВаш аккаунт защищен приватным ключом. Этот ключ – длинная случайная строка с приставкой **nsec1**. Любой, кто владеет вашим приватным ключом, может писать от вашего имени.
+        \n\n- **Никогда** не вставляйте ваш приватный ключ на сайтах или в приложениях, которым вы не доверяете.
+        \n- Разработчики Amethyst **никогда** не спросят ваш приватный ключ.
+        \n- **Сохраните** резервную копию приватного ключа, чтобы иметь возможность восстановить аккаунт. Советуем использовать менеджер паролей.
+    </string>
+    <string name="secret_key_copied_to_clipboard">Приватный ключ (nsec) скопирован</string>
+    <string name="copy_my_secret_key">Скопировать мой приватный ключ</string>
+    <string name="biometric_authentication_failed">Ошибка входа</string>
+    <string name="biometric_error">Ошибка</string>
+    <string name="badge_created_by">"Создан %1$s"</string>
+    <string name="badge_award_image_for">"Картинка значка-награды %1$s"</string>
+    <string name="new_badge_award_notif">Вы получили в награду новый значок</string>
+    <string name="award_granted_to">Значок-награда выдан</string>
+    <string name="copied_note_text_to_clipboard">Скопировать текст</string>
+    <string name="copied_user_id_to_clipboard" tools:ignore="Typos">ID (npub) автора скопирован</string>
+    <string name="copied_note_id_to_clipboard" tools:ignore="Typos">ID записи (note1) скопирован</string>
+    <string name="select_text_dialog_top">Выделить текст</string>
+    <string name="quick_action_select">Выделить</string>
+    <string name="quick_action_share_browser_link">Поделиться ссылкой</string>
+    <string name="quick_action_share">Поделиться</string>
+    <string name="quick_action_copy_user_id">Скопировать ID автора</string>
+    <string name="quick_action_copy_note_id">Скопировать ID записи</string>
+    <string name="quick_action_copy_text">Скопировать текст</string>
+    <string name="quick_action_delete">Удалить</string>
+    <string name="quick_action_unfollow">@string/unfollow</string>
+    <string name="quick_action_follow">@string/follow</string>
+    <string name="quick_action_request_deletion_alert_title">Запросить удаление</string>
+    <string name="quick_action_request_deletion_alert_body">Amethyst попросит релеи, к которым вы сейчас подключены, удалить эту запись. Однако нет гарантии, что запись будет навсегда удалена этими релеями, либо другими, уже сохранившими её.</string>
 </resources>
