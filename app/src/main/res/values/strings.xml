@@ -20,7 +20,7 @@
     <string name="relay_icon">Relay Icon</string>
     <string name="unknown_author">Unknown Author</string>
     <string name="copy_text">Copy Text</string>
-    <string name="copy_user_pubkey">Copy Author @npub</string>
+    <string name="copy_user_pubkey">Copy Author ID</string>
     <string name="copy_note_id">Copy Note ID</string>
     <string name="broadcast">Broadcast</string>
     <string name="block_hide_user"><![CDATA[Block & Hide User]]></string>
