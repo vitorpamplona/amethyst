@@ -250,7 +250,7 @@ fun ListContent(
         Divider(thickness = 0.25.dp)
 
         IconRow(
-            title = "Backup Keys",
+            title = stringResource(R.string.backup_keys),
             icon = R.drawable.ic_key,
             tint = MaterialTheme.colors.onBackground,
             onClick = { backupDialogOpen = true }

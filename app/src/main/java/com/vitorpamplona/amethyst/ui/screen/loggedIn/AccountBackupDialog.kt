@@ -38,7 +38,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -132,12 +131,12 @@ private fun NSecCopyButton(
         contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
     ) {
         Icon(
-            tint = Color.White,
+            tint = MaterialTheme.colors.onPrimary,
             imageVector = Icons.Default.Key,
             contentDescription = stringResource(R.string.copies_the_nsec_id_your_password_to_the_clipboard_for_backup),
             modifier = Modifier.padding(end = 5.dp)
         )
-        Text("Copy Secret Key", color = MaterialTheme.colors.onBackground)
+        Text(stringResource(id = R.string.copy_my_secret_key), color = MaterialTheme.colors.onPrimary)
     }
 }
 
