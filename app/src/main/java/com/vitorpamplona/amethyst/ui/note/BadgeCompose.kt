@@ -35,6 +35,8 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.ui.screen.BadgeCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -56,9 +58,11 @@ fun BadgeCompose(likeSetCard: BadgeCard, modifier: Modifier = Modifier, isInnerN
         var isNew by remember { mutableStateOf<Boolean>(false) }
 
         LaunchedEffect(key1 = likeSetCard) {
-            isNew = likeSetCard.createdAt() > NotificationCache.load(routeForLastRead, context)
+            withContext(Dispatchers.IO) {
+                isNew = likeSetCard.createdAt() > NotificationCache.load(routeForLastRead, context)
 
-            NotificationCache.markAsRead(routeForLastRead, likeSetCard.createdAt(), context)
+                NotificationCache.markAsRead(routeForLastRead, likeSetCard.createdAt(), context)
+            }
         }
 
         var backgroundColor = if (isNew) {

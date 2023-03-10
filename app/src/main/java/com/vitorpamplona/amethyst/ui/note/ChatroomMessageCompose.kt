@@ -64,6 +64,8 @@ import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 val ChatBubbleShapeMe = RoundedCornerShape(15.dp, 15.dp, 3.dp, 15.dp)
 val ChatBubbleShapeThem = RoundedCornerShape(3.dp, 15.dp, 15.dp, 15.dp)
@@ -131,12 +133,14 @@ fun ChatroomMessageCompose(
 
         LaunchedEffect(key1 = routeForLastRead) {
             routeForLastRead?.let {
-                val lastTime = NotificationCache.load(it, context)
+                withContext(Dispatchers.IO) {
+                    val lastTime = NotificationCache.load(it, context)
 
-                val createdAt = note.createdAt()
-                if (createdAt != null) {
-                    NotificationCache.markAsRead(it, createdAt, context)
-                    isNew = createdAt > lastTime
+                    val createdAt = note.createdAt()
+                    if (createdAt != null) {
+                        NotificationCache.markAsRead(it, createdAt, context)
+                        isNew = createdAt > lastTime
+                    }
                 }
             }
         }

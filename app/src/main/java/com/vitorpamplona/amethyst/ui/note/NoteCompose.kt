@@ -60,6 +60,8 @@ import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
 import com.vitorpamplona.amethyst.ui.theme.Following
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -120,13 +122,15 @@ fun NoteCompose(
         var isNew by remember { mutableStateOf<Boolean>(false) }
 
         LaunchedEffect(key1 = routeForLastRead) {
-            routeForLastRead?.let {
-                val lastTime = NotificationCache.load(it, context)
+            withContext(Dispatchers.IO) {
+                routeForLastRead?.let {
+                    val lastTime = NotificationCache.load(it, context)
 
-                val createdAt = note.createdAt()
-                if (createdAt != null) {
-                    NotificationCache.markAsRead(it, createdAt, context)
-                    isNew = createdAt > lastTime
+                    val createdAt = note.createdAt()
+                    if (createdAt != null) {
+                        NotificationCache.markAsRead(it, createdAt, context)
+                        isNew = createdAt > lastTime
+                    }
                 }
             }
         }

@@ -32,6 +32,8 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.ui.screen.BoostSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -53,9 +55,11 @@ fun BoostSetCompose(boostSetCard: BoostSetCard, isInnerNote: Boolean = false, ro
         var isNew by remember { mutableStateOf<Boolean>(false) }
 
         LaunchedEffect(key1 = boostSetCard) {
-            isNew = boostSetCard.createdAt > NotificationCache.load(routeForLastRead, context)
+            withContext(Dispatchers.IO) {
+                isNew = boostSetCard.createdAt > NotificationCache.load(routeForLastRead, context)
 
-            NotificationCache.markAsRead(routeForLastRead, boostSetCard.createdAt, context)
+                NotificationCache.markAsRead(routeForLastRead, boostSetCard.createdAt, context)
+            }
         }
 
         var backgroundColor = if (isNew) {

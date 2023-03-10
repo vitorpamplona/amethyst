@@ -34,6 +34,8 @@ import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.ui.screen.ZapSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -55,9 +57,11 @@ fun ZapSetCompose(zapSetCard: ZapSetCard, modifier: Modifier = Modifier, isInner
         var isNew by remember { mutableStateOf<Boolean>(false) }
 
         LaunchedEffect(key1 = zapSetCard) {
-            isNew = zapSetCard.createdAt > NotificationCache.load(routeForLastRead, context)
+            withContext(Dispatchers.IO) {
+                isNew = zapSetCard.createdAt > NotificationCache.load(routeForLastRead, context)
 
-            NotificationCache.markAsRead(routeForLastRead, zapSetCard.createdAt, context)
+                NotificationCache.markAsRead(routeForLastRead, zapSetCard.createdAt, context)
+            }
         }
 
         var backgroundColor = if (isNew) {

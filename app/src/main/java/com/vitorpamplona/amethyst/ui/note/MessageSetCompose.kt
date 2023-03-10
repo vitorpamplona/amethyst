@@ -30,6 +30,8 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.ui.screen.MessageSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -51,9 +53,12 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, isInnerNote: Boolean = fal
         var isNew by remember { mutableStateOf<Boolean>(false) }
 
         LaunchedEffect(key1 = messageSetCard) {
-            isNew = messageSetCard.createdAt() > NotificationCache.load(routeForLastRead, context)
+            withContext(Dispatchers.IO) {
+                isNew =
+                    messageSetCard.createdAt() > NotificationCache.load(routeForLastRead, context)
 
-            NotificationCache.markAsRead(routeForLastRead, messageSetCard.createdAt(), context)
+                NotificationCache.markAsRead(routeForLastRead, messageSetCard.createdAt(), context)
+            }
         }
 
         var backgroundColor = if (isNew) {

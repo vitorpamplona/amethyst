@@ -50,6 +50,8 @@ import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun ChatroomCompose(
@@ -90,9 +92,11 @@ fun ChatroomCompose(
             var hasNewMessages by remember { mutableStateOf<Boolean>(false) }
 
             LaunchedEffect(key1 = notificationCache, key2 = note) {
-                note.createdAt()?.let {
-                    hasNewMessages =
-                        it > notificationCache.cache.load("Channel/${channel.idHex}", context)
+                withContext(Dispatchers.IO) {
+                    note.createdAt()?.let {
+                        hasNewMessages =
+                            it > notificationCache.cache.load("Channel/${channel.idHex}", context)
+                    }
                 }
             }
 
@@ -152,11 +156,13 @@ fun ChatroomCompose(
             var hasNewMessages by remember { mutableStateOf<Boolean>(false) }
 
             LaunchedEffect(key1 = notificationCache, key2 = note) {
-                noteEvent?.let {
-                    hasNewMessages = it.createdAt() > notificationCache.cache.load(
-                        "Room/${userToComposeOn.pubkeyHex}",
-                        context
-                    )
+                withContext(Dispatchers.IO) {
+                    noteEvent?.let {
+                        hasNewMessages = it.createdAt() > notificationCache.cache.load(
+                            "Room/${userToComposeOn.pubkeyHex}",
+                            context
+                        )
+                    }
                 }
             }
 
