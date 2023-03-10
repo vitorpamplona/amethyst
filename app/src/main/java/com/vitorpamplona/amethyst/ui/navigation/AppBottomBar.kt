@@ -83,7 +83,7 @@ fun keyboardAsState(): State<Keyboard> {
 
 @Composable
 fun AppBottomBar(navController: NavHostController, accountViewModel: AccountViewModel) {
-    val currentRoute = currentRoute(navController)
+    val currentRoute = currentRoute(navController)?.substringBefore("?")
     val coroutineScope = rememberCoroutineScope()
 
     val isKeyboardOpen by keyboardAsState()
@@ -101,10 +101,10 @@ fun AppBottomBar(navController: NavHostController, accountViewModel: AccountView
                 bottomNavigationItems.forEach { item ->
                     BottomNavigationItem(
                         icon = { NotifiableIcon(item, currentRoute, accountViewModel) },
-                        selected = currentRoute == item.route,
+                        selected = currentRoute == item.base,
                         onClick = {
                             coroutineScope.launch {
-                                if (currentRoute != item.route) {
+                                if (currentRoute != item.base) {
                                     navController.navigate(item.route) {
                                         navController.graph.startDestinationRoute?.let { start ->
                                             popUpTo(start)
@@ -114,8 +114,7 @@ fun AppBottomBar(navController: NavHostController, accountViewModel: AccountView
                                         restoreState = true
                                     }
                                 } else {
-                                    // TODO: Make it scrool to the top
-                                    navController.navigate(item.route) {
+                                    navController.navigate("${item.base}?forceRefresh=${true}") {
                                         navController.graph.startDestinationRoute?.let { start ->
                                             popUpTo(start) { inclusive = item.route == Route.Home.route }
                                             restoreState = true
@@ -136,12 +135,12 @@ fun AppBottomBar(navController: NavHostController, accountViewModel: AccountView
 
 @Composable
 private fun NotifiableIcon(item: Route, currentRoute: String?, accountViewModel: AccountViewModel) {
-    Box(Modifier.size(if ("Home" == item.route) 25.dp else 23.dp)) {
+    Box(Modifier.size(if ("Home" == item.base) 25.dp else 23.dp)) {
         Icon(
             painter = painterResource(id = item.icon),
             null,
-            modifier = Modifier.size(if ("Home" == item.route) 24.dp else 20.dp),
-            tint = if (currentRoute == item.route) MaterialTheme.colors.primary else Color.Unspecified
+            modifier = Modifier.size(if ("Home" == item.base) 24.dp else 20.dp),
+            tint = if (currentRoute == item.base) MaterialTheme.colors.primary else Color.Unspecified
         )
 
         val accountState by accountViewModel.accountLiveData.observeAsState()

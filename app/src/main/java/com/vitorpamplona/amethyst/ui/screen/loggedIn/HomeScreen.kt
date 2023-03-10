@@ -34,11 +34,12 @@ import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.FeedView
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalPagerApi::class)
 @Composable
-fun HomeScreen(accountViewModel: AccountViewModel, navController: NavController) {
+fun HomeScreen(accountViewModel: AccountViewModel, navController: NavController, forceRefresh: Boolean? = false) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
@@ -106,8 +107,8 @@ fun HomeScreen(accountViewModel: AccountViewModel, navController: NavController)
             }
             HorizontalPager(count = 2, state = pagerState) {
                 when (pagerState.currentPage) {
-                    0 -> FeedView(feedViewModel, accountViewModel, navController, Route.Home.route + "Follows", Route.Home.route + "Follows")
-                    1 -> FeedView(feedViewModelReplies, accountViewModel, navController, Route.Home.route + "FollowsReplies", Route.Home.route + "FollowsReplies")
+                    0 -> FeedView(feedViewModel, accountViewModel, navController, Route.Home.base + "Follows", ScrollStateKeys.HOME_FOLLOWS, forceRefresh)
+                    1 -> FeedView(feedViewModelReplies, accountViewModel, navController, Route.Home.base + "FollowsReplies", ScrollStateKeys.HOME_REPLIES)
                 }
             }
         }

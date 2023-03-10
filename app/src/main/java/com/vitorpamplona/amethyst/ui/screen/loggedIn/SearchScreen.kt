@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.FeedView
 import com.vitorpamplona.amethyst.ui.screen.NostrGlobalFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.collectLatest
@@ -78,7 +79,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.channels.Channel as CoroutineChannel
 
 @Composable
-fun SearchScreen(accountViewModel: AccountViewModel, navController: NavController) {
+fun SearchScreen(accountViewModel: AccountViewModel, navController: NavController, forceRefresh: Boolean? = false) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
@@ -114,7 +115,7 @@ fun SearchScreen(accountViewModel: AccountViewModel, navController: NavControlle
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
             SearchBar(accountViewModel, navController)
-            FeedView(feedViewModel, accountViewModel, navController, null, "Global")
+            FeedView(feedViewModel, accountViewModel, navController, null, ScrollStateKeys.GLOBAL_SCREEN, forceRefresh)
         }
     }
 }

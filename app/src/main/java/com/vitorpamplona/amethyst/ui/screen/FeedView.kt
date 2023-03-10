@@ -19,6 +19,7 @@ import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,11 +41,12 @@ fun FeedView(
     accountViewModel: AccountViewModel,
     navController: NavController,
     routeForLastRead: String?,
-    scrollStateKey: String? = null
+    scrollStateKey: String? = null,
+    forceRefresh: Boolean? = false
 ) {
     val feedState by viewModel.feedContent.collectAsState()
 
-    var refreshing by remember { mutableStateOf(false) }
+    var refreshing by remember { mutableStateOf(forceRefresh!!) }
     val refresh = { refreshing = true; viewModel.refresh(); refreshing = false }
     val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = refresh)
 
@@ -74,7 +76,8 @@ fun FeedView(
                             routeForLastRead,
                             accountViewModel,
                             navController,
-                            scrollStateKey
+                            scrollStateKey,
+                            forceRefresh!!
                         )
                     }
 
@@ -95,12 +98,19 @@ private fun FeedLoaded(
     routeForLastRead: String?,
     accountViewModel: AccountViewModel,
     navController: NavController,
-    scrollStateKey: String?
+    scrollStateKey: String?,
+    forceRefresh: Boolean = false
 ) {
     val listState = if (scrollStateKey != null) {
         rememberForeverLazyListState(scrollStateKey)
     } else {
         rememberLazyListState()
+    }
+
+    if (forceRefresh) {
+        LaunchedEffect(Unit) {
+            listState.animateScrollToItem(0)
+        }
     }
 
     LazyColumn(

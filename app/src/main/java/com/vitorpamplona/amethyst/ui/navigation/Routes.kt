@@ -35,17 +35,32 @@ sealed class Route(
     val arguments: List<NamedNavArgument> = emptyList(),
     val buildScreen: (AccountViewModel, AccountStateViewModel, NavController) -> @Composable (NavBackStackEntry) -> Unit
 ) {
+    val base: String
+        get() = route.substringBefore("?")
+
     object Home : Route(
-        "Home",
+        "Home?forceRefresh={forceRefresh}",
         R.drawable.ic_home,
+        arguments = listOf(navArgument("forceRefresh") { type = NavType.BoolType; defaultValue = false }),
         hasNewItems = { acc, cache, ctx -> homeHasNewItems(acc, cache, ctx) },
-        buildScreen = { acc, accSt, nav -> { _ -> HomeScreen(acc, nav) } }
+        buildScreen = { acc, accSt, nav ->
+            { backStackEntry ->
+                HomeScreen(acc, nav, backStackEntry.arguments?.getBoolean("forceRefresh", false))
+            }
+        }
     )
+
     object Search : Route(
-        "Search",
+        "Search?forceRefresh={forceRefresh}",
         R.drawable.ic_globe,
-        buildScreen = { acc, accSt, nav -> { _ -> SearchScreen(acc, nav) } }
+        arguments = listOf(navArgument("forceRefresh") { type = NavType.BoolType; defaultValue = false }),
+        buildScreen = { acc, accSt, nav ->
+            { backStackEntry ->
+                SearchScreen(acc, nav, backStackEntry.arguments?.getBoolean("forceRefresh", false))
+            }
+        }
     )
+
     object Notification : Route(
         "Notification",
         R.drawable.ic_notifications,
