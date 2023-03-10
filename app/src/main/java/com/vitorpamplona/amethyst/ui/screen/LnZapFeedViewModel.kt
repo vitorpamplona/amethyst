@@ -63,7 +63,7 @@ open class LnZapFeedViewModel(val dataSource: FeedFilter<Pair<Note, Note>>) : Vi
 
     var handlerWaiting = AtomicBoolean()
 
-    private fun invalidateData() {
+    fun invalidateData() {
         if (handlerWaiting.getAndSet(true)) return
 
         val scope = CoroutineScope(Job() + Dispatchers.Default)
@@ -76,7 +76,6 @@ open class LnZapFeedViewModel(val dataSource: FeedFilter<Pair<Note, Note>>) : Vi
                     handlerWaiting.set(false)
                 }
             }
-            handlerWaiting.set(false)
         }
     }
 
