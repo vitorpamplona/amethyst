@@ -59,7 +59,9 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
                     .fillMaxSize()
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(10.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(10.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -67,13 +69,17 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
                 }
 
                 Column(
-                    modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 10.dp),
                     verticalArrangement = Arrangement.SpaceBetween
                 ) {
                     if (presenting) {
                         Row(
                             horizontalArrangement = Arrangement.Center,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 30.dp, vertical = 10.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 30.dp, vertical = 10.dp)
                         ) {
                         }
 
@@ -107,7 +113,9 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
 
                             Row(
                                 horizontalArrangement = Arrangement.Center,
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 35.dp, vertical = 10.dp)
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 35.dp, vertical = 10.dp)
                             ) {
                                 QrCodeDrawer("nostr:${user.pubkeyNpub()}")
                             }
@@ -115,7 +123,9 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
 
                         Row(
                             horizontalArrangement = Arrangement.Center,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 30.dp, vertical = 10.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 30.dp, vertical = 10.dp)
                         ) {
                             Button(
                                 onClick = { presenting = false },
@@ -132,38 +142,11 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
                             }
                         }
                     } else {
-                        Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-                            Text(
-                                stringResource(R.string.point_to_the_qr_code),
-                                modifier = Modifier.padding(top = 7.dp),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 25.sp
-                            )
-                        }
-
-                        Row(
-                            horizontalArrangement = Arrangement.Center,
-                            modifier = Modifier.fillMaxWidth().padding(30.dp)
-                        ) {
-                            QrCodeScanner(onScan)
-                        }
-
-                        Row(
-                            horizontalArrangement = Arrangement.Center,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 30.dp, vertical = 10.dp)
-                        ) {
-                            Button(
-                                onClick = { presenting = true },
-                                shape = RoundedCornerShape(35.dp),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(50.dp),
-                                colors = ButtonDefaults
-                                    .buttonColors(
-                                        backgroundColor = MaterialTheme.colors.primary
-                                    )
-                            ) {
-                                Text(text = stringResource(R.string.show_qr))
+                        QrCodeScanner {
+                            if (it.isNullOrEmpty()) {
+                                presenting = true
+                            } else {
+                                onScan(it)
                             }
                         }
                     }
