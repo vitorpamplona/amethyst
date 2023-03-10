@@ -62,9 +62,6 @@ fun ChatroomCompose(
     val noteState by baseNote.live().metadata.observeAsState()
     val note = noteState?.note
 
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
-
     val notificationCacheState = NotificationCache.live.observeAsState()
     val notificationCache = notificationCacheState.value ?: return
 
@@ -145,7 +142,7 @@ fun ChatroomCompose(
         var userToComposeOn = note.author!!
 
         if (replyAuthorBase != null) {
-            if (note.author == account.userProfile()) {
+            if (note.author == accountViewModel.userProfile()) {
                 userToComposeOn = replyAuthorBase
             }
         }
@@ -170,7 +167,7 @@ fun ChatroomCompose(
                 channelPicture = {
                     UserPicture(
                         userToComposeOn,
-                        account.userProfile(),
+                        accountViewModel.userProfile(),
                         size = 55.dp
                     )
                 },
