@@ -106,8 +106,8 @@ fun HomeScreen(accountViewModel: AccountViewModel, navController: NavController)
             }
             HorizontalPager(count = 2, state = pagerState) {
                 when (pagerState.currentPage) {
-                    0 -> FeedView(feedViewModel, accountViewModel, navController, Route.Home.route + "Follows")
-                    1 -> FeedView(feedViewModelReplies, accountViewModel, navController, Route.Home.route + "FollowsReplies")
+                    0 -> FeedView(feedViewModel, accountViewModel, navController, Route.Home.route + "Follows", Route.Home.route + "Follows")
+                    1 -> FeedView(feedViewModelReplies, accountViewModel, navController, Route.Home.route + "FollowsReplies", Route.Home.route + "FollowsReplies")
                 }
             }
         }

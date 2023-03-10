@@ -36,7 +36,8 @@ fun FeedView(
     viewModel: FeedViewModel,
     accountViewModel: AccountViewModel,
     navController: NavController,
-    routeForLastRead: String?
+    routeForLastRead: String?,
+    scrollStateKey: String? = null
 ) {
     val feedState by viewModel.feedContent.collectAsState()
 
@@ -74,7 +75,8 @@ fun FeedView(
                             state,
                             routeForLastRead,
                             accountViewModel,
-                            navController
+                            navController,
+                            scrollStateKey
                         )
                     }
                     is FeedState.Loading -> {
@@ -91,9 +93,14 @@ private fun FeedLoaded(
     state: FeedState.Loaded,
     routeForLastRead: String?,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    navController: NavController,
+    scrollStateKey: String?
 ) {
-    val listState = rememberLazyListState()
+    val listState = if (scrollStateKey != null) {
+        rememberForeverLazyListState(scrollStateKey)
+    } else {
+        rememberLazyListState()
+    }
 
     LazyColumn(
         contentPadding = PaddingValues(

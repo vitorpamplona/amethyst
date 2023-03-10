@@ -114,7 +114,7 @@ fun SearchScreen(accountViewModel: AccountViewModel, navController: NavControlle
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
             SearchBar(accountViewModel, navController)
-            FeedView(feedViewModel, accountViewModel, navController, null)
+            FeedView(feedViewModel, accountViewModel, navController, null, "Global")
         }
     }
 }
