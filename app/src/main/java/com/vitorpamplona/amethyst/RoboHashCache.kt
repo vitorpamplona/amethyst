@@ -15,10 +15,11 @@ import name.neuhalfen.projects.android.robohash.repository.ImageRepository
 import java.util.UUID
 
 object RoboHashCache {
+    private const val DEFAULT_AVATAR_HASH = "aaaa"
 
-    lateinit var robots: MyRoboHash
+    private lateinit var robots: MyRoboHash
 
-    lateinit var defaultAvatar: ImageBitmap
+    private lateinit var defaultAvatar: ImageBitmap
 
     @Synchronized
     fun get(context: Context): ImageBitmap {
@@ -27,7 +28,7 @@ object RoboHashCache {
 
             defaultAvatar = robots.imageForHandle(
                 robots.calculateHandleFromUUID(
-                    UUID.nameUUIDFromBytes("aaaa".toByteArray())
+                    UUID.nameUUIDFromBytes(DEFAULT_AVATAR_HASH.toByteArray())
                 )
             ).asImageBitmap()
         }
