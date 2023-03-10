@@ -1,24 +1,28 @@
 package com.vitorpamplona.amethyst.ui.screen
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
-import com.google.accompanist.swiperefresh.SwipeRefresh
-import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.vitorpamplona.amethyst.model.RelayInfo
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserState
@@ -101,15 +105,13 @@ class RelayFeedViewModel : ViewModel() {
     }
 }
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun RelayFeedView(viewModel: RelayFeedViewModel, accountViewModel: AccountViewModel, navController: NavController) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
     val feedState by viewModel.feedContent.collectAsState()
-
-    var isRefreshing by remember { mutableStateOf(false) }
-    val swipeRefreshState = rememberSwipeRefreshState(isRefreshing)
 
     var wantsToAddRelay by remember {
         mutableStateOf("")
@@ -119,19 +121,11 @@ fun RelayFeedView(viewModel: RelayFeedViewModel, accountViewModel: AccountViewMo
         NewRelayListView({ wantsToAddRelay = "" }, account, wantsToAddRelay)
     }
 
-    LaunchedEffect(isRefreshing) {
-        if (isRefreshing) {
-            viewModel.refresh()
-            isRefreshing = false
-        }
-    }
+    var refreshing by remember { mutableStateOf(false) }
+    val refresh = { refreshing = true; viewModel.refresh(); refreshing = false }
+    val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = refresh)
 
-    SwipeRefresh(
-        state = swipeRefreshState,
-        onRefresh = {
-            isRefreshing = true
-        }
-    ) {
+    Box(Modifier.pullRefresh(pullRefreshState)) {
         Column() {
             val listState = rememberLazyListState()
 
@@ -153,5 +147,7 @@ fun RelayFeedView(viewModel: RelayFeedViewModel, accountViewModel: AccountViewMo
                 }
             }
         }
+
+        PullRefreshIndicator(refreshing, pullRefreshState, Modifier.align(Alignment.TopCenter))
     }
 }
