@@ -33,12 +33,17 @@ class LnZapEvent(
         }
 
     override fun amount(): BigDecimal? {
-        return lnInvoice()?.let { LnInvoiceUtil.getAmountInSats(it) }
+        return amount
     }
 
     // Keeps this as a field because it's a heavier function used everywhere.
     val amount by lazy {
-        lnInvoice()?.let { LnInvoiceUtil.getAmountInSats(it) }
+        try {
+            lnInvoice()?.let { LnInvoiceUtil.getAmountInSats(it) }
+        } catch (e: Exception) {
+            Log.e("LnZapEvent", "Failed to Parse LnInvoice ${description()}", e)
+            null
+        }
     }
 
     override fun containedPost(): Event? = try {
