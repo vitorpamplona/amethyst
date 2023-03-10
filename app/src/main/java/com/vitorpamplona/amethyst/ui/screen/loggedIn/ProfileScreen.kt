@@ -695,11 +695,13 @@ fun TabNotesConversations(user: User, accountViewModel: AccountViewModel, navCon
 }
 
 @Composable
-fun TabFollows(user: User, accountViewModel: AccountViewModel, navController: NavController) {
+fun TabFollows(baseUser: User, accountViewModel: AccountViewModel, navController: NavController) {
     val feedViewModel: NostrUserProfileFollowsUserFeedViewModel = viewModel()
 
-    LaunchedEffect(Unit) {
-        feedViewModel.refresh()
+    val userState by baseUser.live().follows.observeAsState()
+
+    LaunchedEffect(userState) {
+        feedViewModel.invalidateData()
     }
 
     Column(Modifier.fillMaxHeight()) {
@@ -712,11 +714,13 @@ fun TabFollows(user: User, accountViewModel: AccountViewModel, navController: Na
 }
 
 @Composable
-fun TabFollowers(user: User, accountViewModel: AccountViewModel, navController: NavController) {
+fun TabFollowers(baseUser: User, accountViewModel: AccountViewModel, navController: NavController) {
     val feedViewModel: NostrUserProfileFollowersUserFeedViewModel = viewModel()
 
-    LaunchedEffect(Unit) {
-        feedViewModel.refresh()
+    val userState by baseUser.live().follows.observeAsState()
+
+    LaunchedEffect(userState) {
+        feedViewModel.invalidateData()
     }
 
     Column(Modifier.fillMaxHeight()) {
@@ -729,41 +733,39 @@ fun TabFollowers(user: User, accountViewModel: AccountViewModel, navController: 
 }
 
 @Composable
-fun TabReceivedZaps(user: User, accountViewModel: AccountViewModel, navController: NavController) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    if (accountState != null) {
-        val feedViewModel: NostrUserProfileZapsFeedViewModel = viewModel()
+fun TabReceivedZaps(baseUser: User, accountViewModel: AccountViewModel, navController: NavController) {
+    val feedViewModel: NostrUserProfileZapsFeedViewModel = viewModel()
 
-        LaunchedEffect(Unit) {
-            feedViewModel.refresh()
-        }
+    val userState by baseUser.live().zaps.observeAsState()
 
-        Column(Modifier.fillMaxHeight()) {
-            Column(
-                modifier = Modifier.padding(vertical = 0.dp)
-            ) {
-                LnZapFeedView(feedViewModel, accountViewModel, navController)
-            }
+    LaunchedEffect(userState) {
+        feedViewModel.invalidateData()
+    }
+
+    Column(Modifier.fillMaxHeight()) {
+        Column(
+            modifier = Modifier.padding(vertical = 0.dp)
+        ) {
+            LnZapFeedView(feedViewModel, accountViewModel, navController)
         }
     }
 }
 
 @Composable
-fun TabReports(user: User, accountViewModel: AccountViewModel, navController: NavController) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    if (accountState != null) {
-        val feedViewModel: NostrUserProfileReportFeedViewModel = viewModel()
+fun TabReports(baseUser: User, accountViewModel: AccountViewModel, navController: NavController) {
+    val feedViewModel: NostrUserProfileReportFeedViewModel = viewModel()
 
-        LaunchedEffect(Unit) {
-            feedViewModel.refresh()
-        }
+    val userState by baseUser.live().reports.observeAsState()
 
-        Column(Modifier.fillMaxHeight()) {
-            Column(
-                modifier = Modifier.padding(vertical = 0.dp)
-            ) {
-                FeedView(feedViewModel, accountViewModel, navController, null)
-            }
+    LaunchedEffect(userState) {
+        feedViewModel.invalidateData()
+    }
+
+    Column(Modifier.fillMaxHeight()) {
+        Column(
+            modifier = Modifier.padding(vertical = 0.dp)
+        ) {
+            FeedView(feedViewModel, accountViewModel, navController, null)
         }
     }
 }
