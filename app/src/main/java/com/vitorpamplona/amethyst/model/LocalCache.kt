@@ -402,7 +402,7 @@ object LocalCache {
                 e.printStackTrace()
             }
 
-            Log.d("CL", "AAA ${user.toBestDisplayName()} ${follows.size}")
+            // Log.d("CL", "AAA ${user.toBestDisplayName()} ${follows.size}")
         }
     }
 
