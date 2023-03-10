@@ -80,9 +80,6 @@ dependencies {
     // Biometrics
     implementation "androidx.biometric:biometric-ktx:1.2.0-alpha05"
 
-    // Swipe Refresh
-    implementation 'com.google.accompanist:accompanist-swiperefresh:0.29.1-alpha'
-
     // Bitcoin secp256k1 bindings to Android
     implementation 'fr.acinq.secp256k1:secp256k1-kmp-jni-android:0.7.1'
 
