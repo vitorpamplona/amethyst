@@ -21,7 +21,7 @@ object RoboHashCache {
     lateinit var defaultAvatar: ImageBitmap
 
     @Synchronized
-    fun get(context: Context, hash: String): ImageBitmap {
+    fun get(context: Context): ImageBitmap {
         if (!this::robots.isInitialized) {
             robots = MyRoboHash(context)
 

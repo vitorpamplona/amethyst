@@ -581,7 +581,7 @@ fun BadgeThumb(
     ) {
         if (image == null) {
             Image(
-                painter = BitmapPainter(RoboHashCache.get(ctx, "ohnothisauthorisnotfound")),
+                painter = BitmapPainter(RoboHashCache.get(ctx)),
                 contentDescription = stringResource(R.string.unknown_author),
                 modifier = pictureModifier
                     .fillMaxSize(1f)
@@ -591,9 +591,9 @@ fun BadgeThumb(
             AsyncImage(
                 model = image,
                 contentDescription = stringResource(id = R.string.profile_image),
-                placeholder = BitmapPainter(RoboHashCache.get(ctx, note.idHex)),
-                fallback = BitmapPainter(RoboHashCache.get(ctx, note.idHex)),
-                error = BitmapPainter(RoboHashCache.get(ctx, note.idHex)),
+                placeholder = BitmapPainter(RoboHashCache.get(ctx)),
+                fallback = BitmapPainter(RoboHashCache.get(ctx)),
+                error = BitmapPainter(RoboHashCache.get(ctx)),
                 modifier = pictureModifier
                     .fillMaxSize(1f)
                     .clip(shape = CircleShape)

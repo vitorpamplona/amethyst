@@ -199,9 +199,9 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
                 ) {
                     AsyncImageProxy(
                         model = ResizeImage(accountUser.profilePicture(), 34.dp),
-                        placeholder = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
-                        fallback = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
-                        error = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
+                        placeholder = BitmapPainter(RoboHashCache.get(ctx)),
+                        fallback = BitmapPainter(RoboHashCache.get(ctx)),
+                        error = BitmapPainter(RoboHashCache.get(ctx)),
                         contentDescription = stringResource(id = R.string.profile_image),
                         modifier = Modifier
                             .width(34.dp)

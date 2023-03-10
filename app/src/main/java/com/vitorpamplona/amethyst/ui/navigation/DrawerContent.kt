@@ -138,9 +138,9 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
             AsyncImageProxy(
                 model = ResizeImage(accountUser.profilePicture(), 100.dp),
                 contentDescription = stringResource(id = R.string.profile_image),
-                placeholder = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
-                fallback = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
-                error = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
+                placeholder = BitmapPainter(RoboHashCache.get(ctx)),
+                fallback = BitmapPainter(RoboHashCache.get(ctx)),
+                error = BitmapPainter(RoboHashCache.get(ctx)),
                 modifier = Modifier
                     .width(100.dp)
                     .height(100.dp)

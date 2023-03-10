@@ -100,10 +100,7 @@ fun ChatroomCompose(
             ChannelName(
                 channelPicture = channel.profilePicture(),
                 channelPicturePlaceholder = BitmapPainter(
-                    RoboHashCache.get(
-                        context,
-                        channel.idHex
-                    )
+                    RoboHashCache.get(context)
                 ),
                 channelTitle = {
                     Text(

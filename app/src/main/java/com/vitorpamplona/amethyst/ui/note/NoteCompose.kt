@@ -219,9 +219,9 @@ fun NoteCompose(
                                     ) {
                                         AsyncImageProxy(
                                             model = ResizeImage(channel.profilePicture(), 30.dp),
-                                            placeholder = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
-                                            fallback = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
-                                            error = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
+                                            placeholder = BitmapPainter(RoboHashCache.get(context)),
+                                            fallback = BitmapPainter(RoboHashCache.get(context)),
+                                            error = BitmapPainter(RoboHashCache.get(context)),
                                             contentDescription = stringResource(R.string.group_picture),
                                             modifier = Modifier
                                                 .width(30.dp)
@@ -604,9 +604,9 @@ private fun RelayBadges(baseNote: Note) {
             ) {
                 AsyncImage(
                     model = "https://$url/favicon.ico",
-                    placeholder = BitmapPainter(RoboHashCache.get(ctx, url)),
-                    fallback = BitmapPainter(RoboHashCache.get(ctx, url)),
-                    error = BitmapPainter(RoboHashCache.get(ctx, url)),
+                    placeholder = BitmapPainter(RoboHashCache.get(ctx)),
+                    fallback = BitmapPainter(RoboHashCache.get(ctx)),
+                    error = BitmapPainter(RoboHashCache.get(ctx)),
                     contentDescription = stringResource(R.string.relay_icon),
                     colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }),
                     modifier = Modifier
@@ -677,7 +677,7 @@ fun NoteAuthorPicture(
     ) {
         if (author == null) {
             Image(
-                painter = BitmapPainter(RoboHashCache.get(ctx, "ohnothisauthorisnotfound")),
+                painter = BitmapPainter(RoboHashCache.get(ctx)),
                 contentDescription = stringResource(R.string.unknown_author),
                 modifier = pictureModifier
                     .fillMaxSize(1f)
@@ -726,9 +726,9 @@ fun UserPicture(
         AsyncImageProxy(
             model = ResizeImage(user.profilePicture(), size),
             contentDescription = stringResource(id = R.string.profile_image),
-            placeholder = BitmapPainter(RoboHashCache.get(ctx, user.pubkeyHex)),
-            fallback = BitmapPainter(RoboHashCache.get(ctx, user.pubkeyHex)),
-            error = BitmapPainter(RoboHashCache.get(ctx, user.pubkeyHex)),
+            placeholder = BitmapPainter(RoboHashCache.get(ctx)),
+            fallback = BitmapPainter(RoboHashCache.get(ctx)),
+            error = BitmapPainter(RoboHashCache.get(ctx)),
             modifier = pictureModifier
                 .fillMaxSize(1f)
                 .clip(shape = CircleShape)

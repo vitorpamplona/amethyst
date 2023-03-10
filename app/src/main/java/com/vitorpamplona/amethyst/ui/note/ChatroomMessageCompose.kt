@@ -197,9 +197,9 @@ fun ChatroomMessageCompose(
                                 ) {
                                     AsyncImageProxy(
                                         model = ResizeImage(author.profilePicture(), 25.dp),
-                                        placeholder = BitmapPainter(RoboHashCache.get(context, author.pubkeyHex)),
-                                        fallback = BitmapPainter(RoboHashCache.get(context, author.pubkeyHex)),
-                                        error = BitmapPainter(RoboHashCache.get(context, author.pubkeyHex)),
+                                        placeholder = BitmapPainter(RoboHashCache.get(context)),
+                                        fallback = BitmapPainter(RoboHashCache.get(context)),
+                                        error = BitmapPainter(RoboHashCache.get(context)),
                                         contentDescription = stringResource(id = R.string.profile_image),
                                         modifier = Modifier
                                             .width(25.dp)
@@ -367,9 +367,9 @@ private fun RelayBadges(baseNote: Note) {
             ) {
                 AsyncImage(
                     model = "https://$url/favicon.ico",
-                    placeholder = BitmapPainter(RoboHashCache.get(ctx, url)),
-                    fallback = BitmapPainter(RoboHashCache.get(ctx, url)),
-                    error = BitmapPainter(RoboHashCache.get(ctx, url)),
+                    placeholder = BitmapPainter(RoboHashCache.get(ctx)),
+                    fallback = BitmapPainter(RoboHashCache.get(ctx)),
+                    error = BitmapPainter(RoboHashCache.get(ctx)),
                     contentDescription = stringResource(id = R.string.relay_icon),
                     colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }),
                     modifier = Modifier

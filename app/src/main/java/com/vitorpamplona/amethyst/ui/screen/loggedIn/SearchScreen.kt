@@ -247,7 +247,7 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
             itemsIndexed(searchResultsChannels.value, key = { _, item -> "c" + item.idHex }) { index, item ->
                 ChannelName(
                     channelPicture = item.profilePicture(),
-                    channelPicturePlaceholder = BitmapPainter(RoboHashCache.get(ctx, item.idHex)),
+                    channelPicturePlaceholder = BitmapPainter(RoboHashCache.get(ctx)),
                     channelTitle = {
                         Text(
                             "${item.info.name}",

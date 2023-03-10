@@ -81,9 +81,9 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
                             Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
                                 AsyncImageProxy(
                                     model = ResizeImage(user.profilePicture(), 100.dp),
-                                    placeholder = BitmapPainter(RoboHashCache.get(ctx, user.pubkeyHex)),
-                                    fallback = BitmapPainter(RoboHashCache.get(ctx, user.pubkeyHex)),
-                                    error = BitmapPainter(RoboHashCache.get(ctx, user.pubkeyHex)),
+                                    placeholder = BitmapPainter(RoboHashCache.get(ctx)),
+                                    fallback = BitmapPainter(RoboHashCache.get(ctx)),
+                                    error = BitmapPainter(RoboHashCache.get(ctx)),
                                     contentDescription = stringResource(R.string.profile_image),
                                     modifier = Modifier
                                         .width(100.dp)

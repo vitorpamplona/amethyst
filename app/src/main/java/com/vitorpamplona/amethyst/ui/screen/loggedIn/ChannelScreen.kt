@@ -225,9 +225,9 @@ fun ChannelHeader(baseChannel: Channel, account: Account, navController: NavCont
             Row(verticalAlignment = Alignment.CenterVertically) {
                 AsyncImageProxy(
                     model = ResizeImage(channel.profilePicture(), 35.dp),
-                    placeholder = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
-                    fallback = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
-                    error = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
+                    placeholder = BitmapPainter(RoboHashCache.get(context)),
+                    fallback = BitmapPainter(RoboHashCache.get(context)),
+                    error = BitmapPainter(RoboHashCache.get(context)),
                     contentDescription = context.getString(R.string.profile_image),
                     modifier = Modifier
                         .width(35.dp)

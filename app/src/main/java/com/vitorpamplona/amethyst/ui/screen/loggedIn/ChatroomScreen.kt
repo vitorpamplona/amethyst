@@ -215,9 +215,9 @@ fun ChatroomHeader(baseUser: User, accountViewModel: AccountViewModel, navContro
 
                 AsyncImageProxy(
                     model = ResizeImage(author.profilePicture(), 35.dp),
-                    placeholder = BitmapPainter(RoboHashCache.get(ctx, author.pubkeyHex)),
-                    fallback = BitmapPainter(RoboHashCache.get(ctx, author.pubkeyHex)),
-                    error = BitmapPainter(RoboHashCache.get(ctx, author.pubkeyHex)),
+                    placeholder = BitmapPainter(RoboHashCache.get(ctx)),
+                    fallback = BitmapPainter(RoboHashCache.get(ctx)),
+                    error = BitmapPainter(RoboHashCache.get(ctx)),
                     contentDescription = stringResource(id = R.string.profile_image),
                     modifier = Modifier
                         .width(35.dp)
