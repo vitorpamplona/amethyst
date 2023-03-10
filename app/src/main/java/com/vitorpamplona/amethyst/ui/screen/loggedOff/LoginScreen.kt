@@ -153,11 +153,16 @@ fun LoginPage(accountViewModel: AccountStateViewModel) {
                     onCheckedChange = { acceptedTerms.value = it }
                 )
 
+                val regularText =
+                    SpanStyle(color = MaterialTheme.colors.onBackground)
+
                 val clickableTextStyle =
                     SpanStyle(color = MaterialTheme.colors.primary)
 
                 val annotatedTermsString = buildAnnotatedString {
-                    append(stringResource(R.string.i_accept_the))
+                    withStyle(regularText) {
+                        append(stringResource(R.string.i_accept_the))
+                    }
 
                     withStyle(clickableTextStyle) {
                         pushStringAnnotation("openTerms", "")
