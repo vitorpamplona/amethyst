@@ -220,12 +220,12 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
                             onDismiss()
                         }
                     ) {
-                        Text("Don't show again")
+                        Text(stringResource(R.string.quick_action_dont_show_again_button))
                     }
                     Button(
                         onClick = { accountViewModel.delete(note); onDismiss() }
                     ) {
-                        Text("Delete")
+                        Text(stringResource(R.string.quick_action_delete_button))
                     }
                 }
             }
