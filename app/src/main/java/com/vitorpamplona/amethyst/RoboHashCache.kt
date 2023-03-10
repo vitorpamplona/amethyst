@@ -25,7 +25,11 @@ object RoboHashCache {
         if (!this::robots.isInitialized) {
             robots = MyRoboHash(context)
 
-            defaultAvatar = robots.imageForHandle(robots.calculateHandleFromUUID(UUID.nameUUIDFromBytes("aaaa".toByteArray()))).asImageBitmap()
+            defaultAvatar = robots.imageForHandle(
+                robots.calculateHandleFromUUID(
+                    UUID.nameUUIDFromBytes("aaaa".toByteArray())
+                )
+            ).asImageBitmap()
         }
 
         return defaultAvatar
