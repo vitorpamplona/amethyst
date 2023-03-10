@@ -72,7 +72,9 @@ import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.actions.SaveButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 import java.math.RoundingMode
 
@@ -99,7 +101,9 @@ fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel) {
     }
 
     Row(
-        modifier = Modifier.padding(top = 8.dp).fillMaxWidth(),
+        modifier = Modifier
+            .padding(top = 8.dp)
+            .fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -350,7 +354,12 @@ fun ZapReaction(
                                 .show()
                         }
                     } else if (account.zapAmountChoices.size == 1) {
-                        accountViewModel.zap(baseNote, account.zapAmountChoices.first() * 1000, "", context) {
+                        accountViewModel.zap(
+                            baseNote,
+                            account.zapAmountChoices.first() * 1000,
+                            "",
+                            context
+                        ) {
                             scope.launch {
                                 Toast
                                     .makeText(context, it, Toast.LENGTH_SHORT)
@@ -405,8 +414,16 @@ fun ZapReaction(
         }
     }
 
+    var zapAmount by remember { mutableStateOf<BigDecimal?>(null) }
+
+    LaunchedEffect(key1 = zappedNote) {
+        withContext(Dispatchers.IO) {
+            zapAmount = zappedNote?.zappedAmount()
+        }
+    }
+
     Text(
-        showAmount(zappedNote?.zappedAmount()),
+        showAmount(zapAmount),
         fontSize = 14.sp,
         color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
         modifier = textModifier

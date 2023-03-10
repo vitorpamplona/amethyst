@@ -89,6 +89,8 @@ import com.vitorpamplona.amethyst.ui.screen.UserFeedView
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.math.BigDecimal
 
 @OptIn(ExperimentalPagerApi::class)
 @Composable
@@ -210,9 +212,20 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                             },
                             {
                                 val userState by baseUser.live().zaps.observeAsState()
-                                val userZaps = userState?.user?.zappedAmount()
+                                val userZaps = userState?.user
 
-                                Text(text = "${showAmount(userZaps)} ${stringResource(id = R.string.zaps)}")
+                                var zapAmount by remember { mutableStateOf<BigDecimal?>(null) }
+
+                                LaunchedEffect(key1 = userState) {
+                                    withContext(Dispatchers.IO) {
+                                        val tempAmount = userZaps?.zappedAmount()
+                                        withContext(Dispatchers.Main) {
+                                            zapAmount = tempAmount
+                                        }
+                                    }
+                                }
+
+                                Text(text = "${showAmount(zapAmount)} ${stringResource(id = R.string.zaps)}")
                             },
                             {
                                 val userState by baseUser.live().reports.observeAsState()
