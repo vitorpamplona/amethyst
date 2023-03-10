@@ -60,6 +60,8 @@ import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
 import com.vitorpamplona.amethyst.ui.theme.Following
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -71,6 +73,7 @@ fun NoteCompose(
     isQuotedNote: Boolean = false,
     unPackReply: Boolean = true,
     makeItShort: Boolean = false,
+    addMarginTop: Boolean = true,
     parentBackgroundColor: Color? = null,
     accountViewModel: AccountViewModel,
     navController: NavController
@@ -119,13 +122,15 @@ fun NoteCompose(
         var isNew by remember { mutableStateOf<Boolean>(false) }
 
         LaunchedEffect(key1 = routeForLastRead) {
-            routeForLastRead?.let {
-                val lastTime = NotificationCache.load(it, context)
+            withContext(Dispatchers.IO) {
+                routeForLastRead?.let {
+                    val lastTime = NotificationCache.load(it, context)
 
-                val createdAt = note.createdAt()
-                if (createdAt != null) {
-                    NotificationCache.markAsRead(it, createdAt, context)
-                    isNew = createdAt > lastTime
+                    val createdAt = note.createdAt()
+                    if (createdAt != null) {
+                        NotificationCache.markAsRead(it, createdAt, context)
+                        isNew = createdAt > lastTime
+                    }
                 }
             }
         }
@@ -168,7 +173,7 @@ fun NoteCompose(
                     .padding(
                         start = if (!isBoostedNote) 12.dp else 0.dp,
                         end = if (!isBoostedNote) 12.dp else 0.dp,
-                        top = 10.dp
+                        top = if (addMarginTop) 10.dp else 0.dp
                     )
             ) {
                 if (!isBoostedNote && !isQuotedNote) {
@@ -413,6 +418,34 @@ fun NoteCompose(
                         }
 
                         ReactionsRow(note, accountViewModel)
+
+                        Divider(
+                            modifier = Modifier.padding(top = 10.dp),
+                            thickness = 0.25.dp
+                        )
+                    } else if (noteEvent is PrivateDmEvent &&
+                        noteEvent.recipientPubKey() != account.userProfile().pubkeyHex &&
+                        note.author != account.userProfile()
+                    ) {
+                        val recepient = noteEvent.recipientPubKey()?.let { LocalCache.checkGetOrCreateUser(it) }
+
+                        TranslateableRichTextViewer(
+                            stringResource(
+                                id = R.string.private_conversation_notification,
+                                "@${note.author?.pubkeyNpub()}",
+                                "@${recepient?.pubkeyNpub()}"
+                            ),
+                            canPreview = !makeItShort,
+                            Modifier.fillMaxWidth(),
+                            noteEvent.tags(),
+                            backgroundColor,
+                            accountViewModel,
+                            navController
+                        )
+
+                        if (!makeItShort) {
+                            ReactionsRow(note, accountViewModel)
+                        }
 
                         Divider(
                             modifier = Modifier.padding(top = 10.dp),

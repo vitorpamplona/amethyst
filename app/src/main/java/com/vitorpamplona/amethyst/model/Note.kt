@@ -368,7 +368,7 @@ class NoteLiveData(val note: Note) : LiveData<NoteState>(NoteState(note)) {
         }
     }
 
-    fun refresh() {
+    private fun refresh() {
         postValue(NoteState(note))
     }
 

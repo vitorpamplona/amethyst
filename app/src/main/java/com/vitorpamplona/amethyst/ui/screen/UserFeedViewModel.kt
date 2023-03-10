@@ -67,7 +67,7 @@ open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel() {
 
     var handlerWaiting = AtomicBoolean()
 
-    private fun invalidateData() {
+    fun invalidateData() {
         if (handlerWaiting.getAndSet(true)) return
 
         val scope = CoroutineScope(Job() + Dispatchers.Default)

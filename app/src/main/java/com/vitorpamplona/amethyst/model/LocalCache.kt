@@ -300,7 +300,7 @@ object LocalCache {
             // Saves relay list only if it's a user that is currently been seen
             user.updateContactList(event)
 
-            Log.d("CL", "AAA ${user.toBestDisplayName()} ${follows.size}")
+            // Log.d("CL", "AAA ${user.toBestDisplayName()} ${follows.size}")
         }
     }
 

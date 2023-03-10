@@ -40,7 +40,9 @@ import androidx.navigation.NavHostController
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 val bottomNavigationItems = listOf(
     Route.Home,
@@ -157,11 +159,15 @@ private fun NotifiableIcon(item: Route, currentRoute: String?, accountViewModel:
         val context = LocalContext.current.applicationContext
 
         LaunchedEffect(key1 = notif) {
-            hasNewItems = item.hasNewItems(account, notif.cache, context)
+            withContext(Dispatchers.IO) {
+                hasNewItems = item.hasNewItems(account, notif.cache, context)
+            }
         }
 
         LaunchedEffect(key1 = db) {
-            hasNewItems = item.hasNewItems(account, notif.cache, context)
+            withContext(Dispatchers.IO) {
+                hasNewItems = item.hasNewItems(account, notif.cache, context)
+            }
         }
 
         if (hasNewItems) {

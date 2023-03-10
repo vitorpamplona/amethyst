@@ -9,6 +9,7 @@ import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
+import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
@@ -111,7 +112,9 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>) : ViewModel() {
         }
 
         val textNoteCards = notes.filter { it.event !is ReactionEvent && it.event !is RepostEvent && it.event !is LnZapEvent }.map {
-            if (it.event is BadgeAwardEvent) {
+            if (it.event is PrivateDmEvent) {
+                MessageSetCard(it)
+            } else if (it.event is BadgeAwardEvent) {
                 BadgeCard(it)
             } else {
                 NoteCard(it)

@@ -9,9 +9,13 @@ import androidx.compose.material.Divider
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -31,6 +35,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.UnfollowButton
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.math.BigDecimal
 
 @Composable
 fun ZapNoteCompose(baseNote: Pair<Note, Note>, accountViewModel: AccountViewModel, navController: NavController) {
@@ -88,15 +94,20 @@ fun ZapNoteCompose(baseNote: Pair<Note, Note>, accountViewModel: AccountViewMode
                     )
                 }
 
-                val amount =
-                    (noteZap.event as? LnZapEvent)?.amount
+                var zapAmount by remember { mutableStateOf<BigDecimal?>(null) }
+
+                LaunchedEffect(key1 = noteZap) {
+                    withContext(Dispatchers.IO) {
+                        zapAmount = (noteZap.event as? LnZapEvent)?.amount
+                    }
+                }
 
                 Column(
                     modifier = Modifier.padding(start = 10.dp),
                     verticalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        "${showAmount(amount)} ${stringResource(R.string.sats)}",
+                        "${showAmount(zapAmount)} ${stringResource(R.string.sats)}",
                         color = BitcoinOrange,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.W500

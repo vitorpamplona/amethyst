@@ -20,25 +20,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
-import com.vitorpamplona.amethyst.ui.screen.BoostSetCard
+import com.vitorpamplona.amethyst.ui.screen.MessageSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun BoostSetCompose(boostSetCard: BoostSetCard, isInnerNote: Boolean = false, routeForLastRead: String, accountViewModel: AccountViewModel, navController: NavController) {
-    val noteState by boostSetCard.note.live().metadata.observeAsState()
+fun MessageSetCompose(messageSetCard: MessageSetCard, isInnerNote: Boolean = false, routeForLastRead: String, accountViewModel: AccountViewModel, navController: NavController) {
+    val noteState by messageSetCard.note.live().metadata.observeAsState()
     val note = noteState?.note
 
     val accountState by accountViewModel.accountLiveData.observeAsState()
@@ -54,11 +52,12 @@ fun BoostSetCompose(boostSetCard: BoostSetCard, isInnerNote: Boolean = false, ro
     } else {
         var isNew by remember { mutableStateOf<Boolean>(false) }
 
-        LaunchedEffect(key1 = boostSetCard) {
+        LaunchedEffect(key1 = messageSetCard) {
             withContext(Dispatchers.IO) {
-                isNew = boostSetCard.createdAt > NotificationCache.load(routeForLastRead, context)
+                isNew =
+                    messageSetCard.createdAt() > NotificationCache.load(routeForLastRead, context)
 
-                NotificationCache.markAsRead(routeForLastRead, boostSetCard.createdAt, context)
+                NotificationCache.markAsRead(routeForLastRead, messageSetCard.createdAt(), context)
             }
         }
 
@@ -97,34 +96,23 @@ fun BoostSetCompose(boostSetCard: BoostSetCard, isInnerNote: Boolean = false, ro
                     Box(
                         modifier = Modifier
                             .width(55.dp)
-                            .padding(0.dp)
+                            .padding(top = 5.dp)
                     ) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_retweeted),
+                            painter = painterResource(R.drawable.ic_dm),
                             null,
                             modifier = Modifier.size(16.dp).align(Alignment.TopEnd),
-                            tint = Color.Unspecified
+                            tint = MaterialTheme.colors.primary
                         )
                     }
                 }
 
                 Column(modifier = Modifier.padding(start = if (!isInnerNote) 10.dp else 0.dp)) {
-                    FlowRow() {
-                        boostSetCard.boostEvents.forEach {
-                            NoteAuthorPicture(
-                                note = it,
-                                navController = navController,
-                                userAccount = account.userProfile(),
-                                size = 35.dp
-                            )
-                        }
-                    }
-
                     NoteCompose(
                         baseNote = note,
                         routeForLastRead = null,
-                        modifier = Modifier.padding(top = 5.dp),
                         isBoostedNote = true,
+                        addMarginTop = false,
                         parentBackgroundColor = backgroundColor,
                         accountViewModel = accountViewModel,
                         navController = navController

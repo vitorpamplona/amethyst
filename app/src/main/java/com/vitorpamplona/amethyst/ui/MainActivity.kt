@@ -21,6 +21,9 @@ import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.screen.AccountScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -66,7 +69,9 @@ class MainActivity : FragmentActivity() {
         super.onResume()
 
         // Only starts after login
-        ServiceManager.start()
+        GlobalScope.launch(Dispatchers.IO) {
+            ServiceManager.start()
+        }
     }
 
     override fun onPause() {

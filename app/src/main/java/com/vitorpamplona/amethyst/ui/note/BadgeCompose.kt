@@ -11,10 +11,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.Divider
 import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MilitaryTech
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -35,6 +37,8 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.ui.screen.BadgeCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -56,9 +60,11 @@ fun BadgeCompose(likeSetCard: BadgeCard, modifier: Modifier = Modifier, isInnerN
         var isNew by remember { mutableStateOf<Boolean>(false) }
 
         LaunchedEffect(key1 = likeSetCard) {
-            isNew = likeSetCard.createdAt() > NotificationCache.load(routeForLastRead, context)
+            withContext(Dispatchers.IO) {
+                isNew = likeSetCard.createdAt() > NotificationCache.load(routeForLastRead, context)
 
-            NotificationCache.markAsRead(routeForLastRead, likeSetCard.createdAt(), context)
+                NotificationCache.markAsRead(routeForLastRead, likeSetCard.createdAt(), context)
+            }
         }
 
         var backgroundColor = if (isNew) {
@@ -108,11 +114,33 @@ fun BadgeCompose(likeSetCard: BadgeCard, modifier: Modifier = Modifier, isInnerN
                 }
 
                 Column(modifier = Modifier.padding(start = if (!isInnerNote) 10.dp else 0.dp)) {
-                    Text(
-                        stringResource(R.string.new_badge_award_notif),
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 5.dp)
-                    )
+                    Row() {
+                        Text(
+                            stringResource(R.string.new_badge_award_notif),
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 5.dp).weight(1f)
+                        )
+
+                        Text(
+                            timeAgo(note.createdAt(), context = context),
+                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                            maxLines = 1
+                        )
+
+                        IconButton(
+                            modifier = Modifier.then(Modifier.size(24.dp)),
+                            onClick = { popupExpanded = true }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                null,
+                                modifier = Modifier.size(15.dp),
+                                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                            )
+
+                            NoteDropDownMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
+                        }
+                    }
 
                     note.replyTo?.firstOrNull()?.let {
                         NoteCompose(
@@ -124,8 +152,6 @@ fun BadgeCompose(likeSetCard: BadgeCard, modifier: Modifier = Modifier, isInnerN
                             navController = navController
                         )
                     }
-
-                    NoteDropDownMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
 
                     Divider(
                         modifier = Modifier.padding(top = 10.dp),

@@ -62,7 +62,6 @@ import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
 import com.vitorpamplona.amethyst.service.model.IdentityClaim
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
-import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.DisplayNip05ProfileStatus
 import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
@@ -89,6 +88,8 @@ import com.vitorpamplona.amethyst.ui.screen.UserFeedView
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.math.BigDecimal
 
 @OptIn(ExperimentalPagerApi::class)
 @Composable
@@ -210,9 +211,20 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                             },
                             {
                                 val userState by baseUser.live().zaps.observeAsState()
-                                val userZaps = userState?.user?.zappedAmount()
+                                val userZaps = userState?.user
 
-                                Text(text = "${showAmount(userZaps)} ${stringResource(id = R.string.zaps)}")
+                                var zapAmount by remember { mutableStateOf<BigDecimal?>(null) }
+
+                                LaunchedEffect(key1 = userState) {
+                                    withContext(Dispatchers.IO) {
+                                        val tempAmount = userZaps?.zappedAmount()
+                                        withContext(Dispatchers.Main) {
+                                            zapAmount = tempAmount
+                                        }
+                                    }
+                                }
+
+                                Text(text = "${showAmount(zapAmount)} ${stringResource(id = R.string.zaps)}")
                             },
                             {
                                 val userState by baseUser.live().reports.observeAsState()
@@ -610,8 +622,8 @@ private fun DrawBanner(baseUser: User) {
     var zoomImageDialogOpen by remember { mutableStateOf(false) }
 
     if (!banner.isNullOrBlank()) {
-        AsyncImageProxy(
-            model = ResizeImage(banner, 125.dp),
+        AsyncImage(
+            model = banner,
             contentDescription = stringResource(id = R.string.profile_image),
             contentScale = ContentScale.FillWidth,
             modifier = Modifier
@@ -682,11 +694,13 @@ fun TabNotesConversations(user: User, accountViewModel: AccountViewModel, navCon
 }
 
 @Composable
-fun TabFollows(user: User, accountViewModel: AccountViewModel, navController: NavController) {
+fun TabFollows(baseUser: User, accountViewModel: AccountViewModel, navController: NavController) {
     val feedViewModel: NostrUserProfileFollowsUserFeedViewModel = viewModel()
 
-    LaunchedEffect(Unit) {
-        feedViewModel.refresh()
+    val userState by baseUser.live().follows.observeAsState()
+
+    LaunchedEffect(userState) {
+        feedViewModel.invalidateData()
     }
 
     Column(Modifier.fillMaxHeight()) {
@@ -699,11 +713,13 @@ fun TabFollows(user: User, accountViewModel: AccountViewModel, navController: Na
 }
 
 @Composable
-fun TabFollowers(user: User, accountViewModel: AccountViewModel, navController: NavController) {
+fun TabFollowers(baseUser: User, accountViewModel: AccountViewModel, navController: NavController) {
     val feedViewModel: NostrUserProfileFollowersUserFeedViewModel = viewModel()
 
-    LaunchedEffect(Unit) {
-        feedViewModel.refresh()
+    val userState by baseUser.live().follows.observeAsState()
+
+    LaunchedEffect(userState) {
+        feedViewModel.invalidateData()
     }
 
     Column(Modifier.fillMaxHeight()) {
@@ -716,41 +732,39 @@ fun TabFollowers(user: User, accountViewModel: AccountViewModel, navController: 
 }
 
 @Composable
-fun TabReceivedZaps(user: User, accountViewModel: AccountViewModel, navController: NavController) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    if (accountState != null) {
-        val feedViewModel: NostrUserProfileZapsFeedViewModel = viewModel()
+fun TabReceivedZaps(baseUser: User, accountViewModel: AccountViewModel, navController: NavController) {
+    val feedViewModel: NostrUserProfileZapsFeedViewModel = viewModel()
 
-        LaunchedEffect(Unit) {
-            feedViewModel.refresh()
-        }
+    val userState by baseUser.live().zaps.observeAsState()
 
-        Column(Modifier.fillMaxHeight()) {
-            Column(
-                modifier = Modifier.padding(vertical = 0.dp)
-            ) {
-                LnZapFeedView(feedViewModel, accountViewModel, navController)
-            }
+    LaunchedEffect(userState) {
+        feedViewModel.invalidateData()
+    }
+
+    Column(Modifier.fillMaxHeight()) {
+        Column(
+            modifier = Modifier.padding(vertical = 0.dp)
+        ) {
+            LnZapFeedView(feedViewModel, accountViewModel, navController)
         }
     }
 }
 
 @Composable
-fun TabReports(user: User, accountViewModel: AccountViewModel, navController: NavController) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    if (accountState != null) {
-        val feedViewModel: NostrUserProfileReportFeedViewModel = viewModel()
+fun TabReports(baseUser: User, accountViewModel: AccountViewModel, navController: NavController) {
+    val feedViewModel: NostrUserProfileReportFeedViewModel = viewModel()
 
-        LaunchedEffect(Unit) {
-            feedViewModel.refresh()
-        }
+    val userState by baseUser.live().reports.observeAsState()
 
-        Column(Modifier.fillMaxHeight()) {
-            Column(
-                modifier = Modifier.padding(vertical = 0.dp)
-            ) {
-                FeedView(feedViewModel, accountViewModel, navController, null)
-            }
+    LaunchedEffect(userState) {
+        feedViewModel.invalidateData()
+    }
+
+    Column(Modifier.fillMaxHeight()) {
+        Column(
+            modifier = Modifier.padding(vertical = 0.dp)
+        ) {
+            FeedView(feedViewModel, accountViewModel, navController, null)
         }
     }
 }

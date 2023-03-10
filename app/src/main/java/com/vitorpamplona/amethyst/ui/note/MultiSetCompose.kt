@@ -36,6 +36,8 @@ import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.ui.screen.MultiSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -57,9 +59,11 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, modifier: Modifier = Modifier, r
         var isNew by remember { mutableStateOf<Boolean>(false) }
 
         LaunchedEffect(key1 = multiSetCard) {
-            isNew = multiSetCard.createdAt > NotificationCache.load(routeForLastRead, context)
+            withContext(Dispatchers.IO) {
+                isNew = multiSetCard.createdAt > NotificationCache.load(routeForLastRead, context)
 
-            NotificationCache.markAsRead(routeForLastRead, multiSetCard.createdAt, context)
+                NotificationCache.markAsRead(routeForLastRead, multiSetCard.createdAt, context)
+            }
         }
 
         var backgroundColor = if (isNew) {
