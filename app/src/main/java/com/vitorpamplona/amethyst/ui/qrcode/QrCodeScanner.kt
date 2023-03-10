@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
+import com.google.zxing.client.android.Intents
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import com.vitorpamplona.amethyst.R
@@ -48,6 +49,7 @@ fun QrCodeScanner(onScan: (String?) -> Unit) {
         setPrompt(stringResource(id = R.string.point_to_the_qr_code))
         setBeepEnabled(false)
         setOrientationLocked(false)
+        addExtra(Intents.Scan.SCAN_TYPE, Intents.Scan.MIXED_SCAN)
     }
 
     DisposableEffect(lifecycleOwner) {
