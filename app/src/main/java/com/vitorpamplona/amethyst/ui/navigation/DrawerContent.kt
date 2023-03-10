@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
+import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.RoboHashCache
@@ -114,8 +115,8 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
     Box {
         val banner = accountUser.info?.banner
         if (banner != null && banner.isNotBlank()) {
-            AsyncImageProxy(
-                model = ResizeImage(banner, 150.dp),
+            AsyncImage(
+                model = banner,
                 contentDescription = stringResource(id = R.string.profile_image),
                 contentScale = ContentScale.FillWidth,
                 modifier = Modifier

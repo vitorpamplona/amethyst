@@ -62,7 +62,6 @@ import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
 import com.vitorpamplona.amethyst.service.model.IdentityClaim
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
-import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.DisplayNip05ProfileStatus
 import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
@@ -623,8 +622,8 @@ private fun DrawBanner(baseUser: User) {
     var zoomImageDialogOpen by remember { mutableStateOf(false) }
 
     if (!banner.isNullOrBlank()) {
-        AsyncImageProxy(
-            model = ResizeImage(banner, 125.dp),
+        AsyncImage(
+            model = banner,
             contentDescription = stringResource(id = R.string.profile_image),
             contentScale = ContentScale.FillWidth,
             modifier = Modifier
