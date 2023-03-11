@@ -22,16 +22,16 @@ import com.vitorpamplona.amethyst.ui.actions.NewPollView
 
 @Composable
 fun NewPollButton(account: Account) {
-    var wantsToPost by remember {
+    var wantsToPoll by remember {
         mutableStateOf(false)
     }
 
-    if (wantsToPost) {
-        NewPollView({ wantsToPost = false }, account = account)
+    if (wantsToPoll) {
+        NewPollView({ wantsToPoll = false }, account = account)
     }
 
     OutlinedButton(
-        onClick = { wantsToPost = true },
+        onClick = { wantsToPoll = true },
         modifier = Modifier.size(55.dp),
         shape = CircleShape,
         colors = ButtonDefaults.outlinedButtonColors(backgroundColor = MaterialTheme.colors.primary),

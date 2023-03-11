@@ -220,6 +220,7 @@
     <string name="twitter_proof_url_template" translatable="false">https://twitter.com/&lt;user&gt;/status/&lt;proof post&gt;</string>
 
     <string name="private_conversation_notification">"&lt;Unable to decrypt private message&gt;\n\nYou were cited in a private/encrypted conversation between %1$s and %2$s."</string>
-    <string name="poll">Poll</string>
+    <string name="post_poll">Post Poll</string>
+    <string name="primary_poll_description">Primary poll description…</string>
 
 </resources>

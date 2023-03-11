@@ -16,12 +16,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
@@ -32,7 +30,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
@@ -101,7 +98,7 @@ fun NewPollView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
 
                         PollButton(
                             onPost = {
-                                pollViewModel.sendPoll()
+                                pollViewModel.sendPost()
                                 onClose()
                             },
                             isActive = pollViewModel.message.text.isNotBlank() &&
@@ -148,7 +145,7 @@ fun NewPollView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                     },
                                 placeholder = {
                                     Text(
-                                        text = stringResource(R.string.what_s_on_your_mind),
+                                        text = stringResource(R.string.primary_poll_description),
                                         color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                                     )
                                 },
@@ -160,40 +157,6 @@ fun NewPollView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                 visualTransformation = UrlUserTagTransformation(MaterialTheme.colors.primary),
                                 textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
                             )
-
-                            val myUrlPreview = pollViewModel.urlPreview
-                            if (myUrlPreview != null) {
-                                Row(modifier = Modifier.padding(top = 5.dp)) {
-                                    if (isValidURL(myUrlPreview)) {
-                                        val removedParamsFromUrl =
-                                            myUrlPreview.split("?")[0].lowercase()
-                                        if (imageExtension.matcher(removedParamsFromUrl).matches()) {
-                                            AsyncImage(
-                                                model = myUrlPreview,
-                                                contentDescription = myUrlPreview,
-                                                contentScale = ContentScale.FillWidth,
-                                                modifier = Modifier
-                                                    .padding(top = 4.dp)
-                                                    .fillMaxWidth()
-                                                    .clip(shape = RoundedCornerShape(15.dp))
-                                                    .border(
-                                                        1.dp,
-                                                        MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
-                                                        RoundedCornerShape(15.dp)
-                                                    )
-                                            )
-                                        } else if (videoExtension.matcher(removedParamsFromUrl)
-                                            .matches()
-                                        ) {
-                                            VideoView(myUrlPreview)
-                                        } else {
-                                            UrlPreview(myUrlPreview, myUrlPreview)
-                                        }
-                                    } else if (noProtocolUrlValidator.matcher(myUrlPreview).matches()) {
-                                        UrlPreview("https://$myUrlPreview", myUrlPreview)
-                                    }
-                                }
-                            }
                         }
                     }
 
@@ -265,6 +228,6 @@ fun PollButton(modifier: Modifier = Modifier, onPost: () -> Unit = {}, isActive:
                 backgroundColor = if (isActive) MaterialTheme.colors.primary else Color.Gray
             )
     ) {
-        Text(text = stringResource(R.string.poll), color = Color.White)
+        Text(text = stringResource(R.string.post_poll), color = Color.White)
     }
 }
