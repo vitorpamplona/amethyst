@@ -23,6 +23,7 @@
     <string name="copy_user_pubkey">Copy Author ID</string>
     <string name="copy_note_id">Copy Note ID</string>
     <string name="broadcast">Broadcast</string>
+    <string name="request_deletion">Request Deletion</string>
     <string name="block_hide_user"><![CDATA[Block & Hide User]]></string>
     <string name="report_spam_scam">Report Spam / Scam</string>
     <string name="report_impersonation">Report Impersonation</string>
