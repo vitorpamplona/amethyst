@@ -13,6 +13,7 @@
 
     <application
         android:allowBackup="false"
+        android:name=".Amethyst"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@drawable/amethyst"

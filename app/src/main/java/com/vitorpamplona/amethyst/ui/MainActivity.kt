@@ -14,7 +14,6 @@ import coil.ImageLoader
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.decode.SvgDecoder
-import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.service.relays.Client
@@ -54,7 +53,7 @@ class MainActivity : FragmentActivity() {
                 // A surface container using the 'background' color from the theme
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background) {
                     val accountStateViewModel: AccountStateViewModel = viewModel {
-                        AccountStateViewModel(LocalPreferences(applicationContext))
+                        AccountStateViewModel()
                     }
 
                     AccountScreen(accountStateViewModel, startingPage)

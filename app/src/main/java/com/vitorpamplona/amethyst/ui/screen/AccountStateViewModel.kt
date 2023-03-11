@@ -17,7 +17,7 @@ import nostr.postr.Persona
 import nostr.postr.bechToBytes
 import java.util.regex.Pattern
 
-class AccountStateViewModel(private val localPreferences: LocalPreferences) : ViewModel() {
+class AccountStateViewModel() : ViewModel() {
     private val _accountContent = MutableStateFlow<AccountState>(AccountState.LoggedOff)
     val accountContent = _accountContent.asStateFlow()
 
@@ -26,7 +26,7 @@ class AccountStateViewModel(private val localPreferences: LocalPreferences) : Vi
 
         // Keeps it in the the UI thread to void blinking the login page.
         // viewModelScope.launch(Dispatchers.IO) {
-        localPreferences.loadFromEncryptedStorage()?.let {
+        LocalPreferences.loadFromEncryptedStorage()?.let {
             login(it)
         }
         // }
@@ -47,18 +47,19 @@ class AccountStateViewModel(private val localPreferences: LocalPreferences) : Vi
                 Account(Persona(Hex.decode(key)))
             }
 
-        localPreferences.saveToEncryptedStorage(account)
-
+        LocalPreferences.saveToEncryptedStorage(account)
         login(account)
     }
 
     fun newKey() {
         val account = Account(Persona())
-        localPreferences.saveToEncryptedStorage(account)
+        LocalPreferences.saveToEncryptedStorage(account)
         login(account)
     }
 
     fun login(account: Account) {
+        LocalPreferences.setCurrentAccount(account)
+
         if (account.loggedIn.privKey != null) {
             _accountContent.update { AccountState.LoggedIn(account) }
         } else {
@@ -77,7 +78,7 @@ class AccountStateViewModel(private val localPreferences: LocalPreferences) : Vi
 
     private val saveListener: (com.vitorpamplona.amethyst.model.AccountState) -> Unit = {
         GlobalScope.launch(Dispatchers.IO) {
-            localPreferences.saveToEncryptedStorage(it.account)
+            LocalPreferences.saveToEncryptedStorage(it.account)
         }
     }
 
@@ -100,6 +101,6 @@ class AccountStateViewModel(private val localPreferences: LocalPreferences) : Vi
 
         _accountContent.update { AccountState.LoggedOff }
 
-        localPreferences.clearEncryptedStorage()
+        LocalPreferences.clearEncryptedStorage()
     }
 }
