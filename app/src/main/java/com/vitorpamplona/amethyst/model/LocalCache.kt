@@ -58,7 +58,7 @@ object LocalCache {
 
     fun checkGetOrCreateUser(key: String): User? {
         return try {
-            val checkHex = Hex.decode(key).toNpub() // Checks if this is a valid Hex
+            checkIfValidHex(key)
             getOrCreateUser(key)
         } catch (e: IllegalArgumentException) {
             Log.e("LocalCache", "Invalid Key to create user: $key", e)
@@ -80,7 +80,7 @@ object LocalCache {
             return checkGetOrCreateAddressableNote(key)
         }
         return try {
-            val checkHex = Hex.decode(key).toNote() // Checks if this is a valid Hex
+            checkIfValidHex(key)
             getOrCreateNote(key)
         } catch (e: IllegalArgumentException) {
             Log.e("LocalCache", "Invalid Key to create note: $key", e)
@@ -99,12 +99,16 @@ object LocalCache {
 
     fun checkGetOrCreateChannel(key: String): Channel? {
         return try {
-            val checkHex = Hex.decode(key).toNote() // Checks if this is a valid Hex
+            checkIfValidHex(key)
             getOrCreateChannel(key)
         } catch (e: IllegalArgumentException) {
             Log.e("LocalCache", "Invalid Key to create channel: $key", e)
             null
         }
+    }
+
+    private fun checkIfValidHex(key: String) {
+        Hex.decode(key).toNpub()
     }
 
     @Synchronized
