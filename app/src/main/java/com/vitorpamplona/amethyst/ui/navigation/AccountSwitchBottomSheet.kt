@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.navigation
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,8 +13,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.Button
+import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
@@ -48,13 +53,18 @@ import androidx.compose.ui.platform.LocalAutofill
 import androidx.compose.ui.platform.LocalAutofillTree
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.LocalPreferences
@@ -104,30 +114,39 @@ fun AccountSwitchBottomSheet(
                     .padding(32.dp, 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                AsyncImageProxy(
-                    model = ResizeImage(acc.profilePicture, 64.dp),
-                    placeholder = BitmapPainter(RoboHashCache.get(context, acc.npub)),
-                    fallback = BitmapPainter(RoboHashCache.get(context, acc.npub)),
-                    error = BitmapPainter(RoboHashCache.get(context, acc.npub)),
-                    contentDescription = stringResource(id = R.string.profile_image),
-                    modifier = Modifier
-                        .width(64.dp)
-                        .height(64.dp)
-                        .clip(shape = CircleShape)
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    acc.displayName?.let {
-                        Text(it)
+                Row(
+                    modifier = Modifier.clickable {
+                        accountStateViewModel.login(acc.npub)
                     }
-                    Text(acc.npub.toShortenHex())
+                ) {
+                    AsyncImageProxy(
+                        model = ResizeImage(acc.profilePicture, 64.dp),
+                        placeholder = BitmapPainter(RoboHashCache.get(context, acc.npub)),
+                        fallback = BitmapPainter(RoboHashCache.get(context, acc.npub)),
+                        error = BitmapPainter(RoboHashCache.get(context, acc.npub)),
+                        contentDescription = stringResource(id = R.string.profile_image),
+                        modifier = Modifier
+                            .width(64.dp)
+                            .height(64.dp)
+                            .clip(shape = CircleShape)
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column {
+                        acc.displayName?.let {
+                            Text(it)
+                        }
+                        Text(acc.npub.toShortenHex())
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    if (current) {
+                        Text("✓")
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
                 }
-                Spacer(modifier = Modifier.width(8.dp))
-                if (current) {
-                    Text("✓")
-                }
-                Spacer(modifier = Modifier.weight(1f))
-                IconButton(onClick = { /*TODO*/ }) {
+
+                IconButton(
+                    onClick = { accountStateViewModel.logOff(acc.npub) }
+                ) {
                     Icon(imageVector = Icons.Default.Logout, "Logout")
                 }
             }
@@ -229,6 +248,49 @@ fun AccountSwitchBottomSheet(
                             style = MaterialTheme.typography.caption
                         )
                     }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Button(
+                        onClick = {
+                            if (key.value.text.isBlank()) {
+                                errorMessage = context.getString(R.string.key_is_required)
+                            }
+                            try {
+                                accountStateViewModel.login(key.value.text)
+                            } catch (e: Exception) {
+                                errorMessage = context.getString(R.string.invalid_key)
+                            }
+                        },
+                        shape = RoundedCornerShape(35.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
+                        colors = ButtonDefaults
+                            .buttonColors(
+                                backgroundColor = MaterialTheme.colors.primary
+                            )
+                    ) {
+                        Text(text = stringResource(R.string.login))
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    ClickableText(
+                        text = AnnotatedString(stringResource(R.string.generate_a_new_key)),
+                        modifier = Modifier
+                            .padding(20.dp)
+                            .fillMaxWidth(),
+                        onClick = {
+                            accountStateViewModel.newKey()
+                        },
+                        style = TextStyle(
+                            fontSize = 14.sp,
+                            textDecoration = TextDecoration.Underline,
+                            color = MaterialTheme.colors.primary,
+                            textAlign = TextAlign.Center
+                        )
+                    )
                 }
             }
         }

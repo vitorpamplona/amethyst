@@ -26,10 +26,14 @@ class AccountStateViewModel() : ViewModel() {
 
         // Keeps it in the the UI thread to void blinking the login page.
         // viewModelScope.launch(Dispatchers.IO) {
+        tryLoginExistingAccount()
+        // }
+    }
+
+    private fun tryLoginExistingAccount() {
         LocalPreferences.loadFromEncryptedStorage()?.let {
             login(it)
         }
-        // }
     }
 
     fun login(key: String) {
@@ -47,18 +51,18 @@ class AccountStateViewModel() : ViewModel() {
                 Account(Persona(Hex.decode(key)))
             }
 
-        LocalPreferences.saveToEncryptedStorage(account)
+        LocalPreferences.login(account)
         login(account)
     }
 
     fun newKey() {
         val account = Account(Persona())
-        LocalPreferences.saveToEncryptedStorage(account)
+        LocalPreferences.login(account)
         login(account)
     }
 
     fun login(account: Account) {
-        LocalPreferences.setCurrentAccount(account)
+        LocalPreferences.login(account)
 
         if (account.loggedIn.privKey != null) {
             _accountContent.update { AccountState.LoggedIn(account) }
@@ -82,7 +86,7 @@ class AccountStateViewModel() : ViewModel() {
         }
     }
 
-    fun logOff() {
+    fun logOff(npub: String) {
         val state = accountContent.value
 
         when (state) {
@@ -101,6 +105,7 @@ class AccountStateViewModel() : ViewModel() {
 
         _accountContent.update { AccountState.LoggedOff }
 
-        LocalPreferences.clearEncryptedStorage()
+        LocalPreferences.clearEncryptedStorage(npub)
+        tryLoginExistingAccount()
     }
 }

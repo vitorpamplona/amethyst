@@ -80,18 +80,27 @@ object LocalPreferences {
         }
     }
 
-    fun clearEncryptedStorage(npub: String? = null) {
-        val encPrefs = encryptedPreferences(npub)
-        encPrefs.edit().apply {
-            encPrefs.all.keys.forEach {
-                remove(it)
-            }
+    fun clearEncryptedStorage(npub: String) {
+        val userPrefs = encryptedPreferences(npub)
+        userPrefs.edit().clear().apply()
+        removeAccount(npub)
+
+        if (savedAccounts.isEmpty()) {
+            val appPrefs = encryptedPreferences()
+            appPrefs.edit().clear().apply()
+        } else if (currentAccount == npub) {
+            currentAccount = savedAccounts.elementAt(0)
+        }
+//        encPrefs.edit().apply {
+//            encPrefs.all.keys.forEach {
+//                remove(it)
+//            }
 //            encryptedPreferences.all.keys.filter {
 //                it.startsWith(npub)
 //            }.forEach {
 //                remove(it)
 //            }
-        }.apply()
+//        }.apply()
     }
 
     fun findAllLocalAccounts(): List<AccountInfo> {
@@ -130,6 +139,11 @@ object LocalPreferences {
             putString(PrefKeys.DISPLAY_NAME, account.userProfile().toBestDisplayName())
             putString(PrefKeys.PROFILE_PICTURE_URL, account.userProfile().profilePicture())
         }.apply()
+    }
+
+    fun login(account: Account) {
+        setCurrentAccount(account)
+        saveToEncryptedStorage(account)
     }
 
     fun loadFromEncryptedStorage(): Account? {
