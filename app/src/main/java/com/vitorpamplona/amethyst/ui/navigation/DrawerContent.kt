@@ -16,9 +16,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Divider
+import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.ModalBottomSheetState
 import androidx.compose.material.ScaffoldState
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
@@ -56,10 +58,12 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountBackupDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun DrawerContent(
     navController: NavHostController,
     scaffoldState: ScaffoldState,
+    sheetState: ModalBottomSheetState,
     accountViewModel: AccountViewModel,
     accountStateViewModel: AccountStateViewModel
 ) {
@@ -88,6 +92,7 @@ fun DrawerContent(
                 account.userProfile(),
                 navController,
                 scaffoldState,
+                sheetState,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1F),
@@ -214,15 +219,18 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
     }
 }
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun ListContent(
     accountUser: User?,
     navController: NavHostController,
     scaffoldState: ScaffoldState,
+    sheetState: ModalBottomSheetState,
     modifier: Modifier,
     accountViewModel: AccountStateViewModel,
     account: Account
 ) {
+    val coroutineScope = rememberCoroutineScope()
     var backupDialogOpen by remember { mutableStateOf(false) }
 
     Column(modifier = modifier.fillMaxHeight()) {
@@ -260,11 +268,18 @@ fun ListContent(
         Spacer(modifier = Modifier.weight(1f))
 
         IconRow(
-            stringResource(R.string.log_out),
-            R.drawable.ic_logout,
-            MaterialTheme.colors.onBackground,
-            onClick = { accountViewModel.logOff() }
+            title = "Accounts",
+            icon = R.drawable.manage_accounts,
+            tint = MaterialTheme.colors.onBackground,
+            onClick = { coroutineScope.launch { sheetState.show() } }
         )
+
+//        IconRow(
+//            title = stringResource(R.string.log_out),
+//            icon = R.drawable.ic_logout,
+//            tint = MaterialTheme.colors.onBackground,
+//            onClick = { accountViewModel.logOff() }
+//        )
     }
 
     if (backupDialogOpen) {

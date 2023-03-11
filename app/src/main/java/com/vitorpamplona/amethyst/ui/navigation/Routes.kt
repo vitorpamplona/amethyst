@@ -36,62 +36,95 @@ sealed class Route(
     val buildScreen: (AccountViewModel, AccountStateViewModel, NavController) -> @Composable (NavBackStackEntry) -> Unit
 ) {
     object Home : Route(
-        "Home",
-        R.drawable.ic_home,
-        hasNewItems = { acc, cache, ctx -> homeHasNewItems(acc, cache, ctx) },
-        buildScreen = { acc, accSt, nav -> { _ -> HomeScreen(acc, nav) } }
+        route = "Home",
+        icon = R.drawable.ic_home,
+        hasNewItems = { accountViewModel, cache, context ->
+            homeHasNewItems(accountViewModel, cache, context)
+        },
+        buildScreen = { accountViewModel, _, navController ->
+            { HomeScreen(accountViewModel, navController) }
+        }
     )
+
     object Search : Route(
-        "Search",
-        R.drawable.ic_globe,
-        buildScreen = { acc, accSt, nav -> { _ -> SearchScreen(acc, nav) } }
+        route = "Search",
+        icon = R.drawable.ic_globe,
+        buildScreen = { accountViewModel, _, navController ->
+            { SearchScreen(accountViewModel, navController) }
+        }
     )
+
     object Notification : Route(
-        "Notification",
-        R.drawable.ic_notifications,
-        hasNewItems = { acc, cache, ctx -> notificationHasNewItems(acc, cache, ctx) },
-        buildScreen = { acc, accSt, nav -> { _ -> NotificationScreen(acc, nav) } }
+        route = "Notification",
+        icon = R.drawable.ic_notifications,
+        hasNewItems = { accountViewModel, cache, context ->
+            notificationHasNewItems(accountViewModel, cache, context)
+        },
+        buildScreen = { accountViewModel, _, navController ->
+            { NotificationScreen(accountViewModel, navController) }
+        }
     )
 
     object Message : Route(
-        "Message",
-        R.drawable.ic_dm,
-        hasNewItems = { acc, cache, ctx -> messagesHasNewItems(acc, cache, ctx) },
-        buildScreen = { acc, accSt, nav -> { _ -> ChatroomListScreen(acc, nav) } }
+        route = "Message",
+        icon = R.drawable.ic_dm,
+        hasNewItems = { accountViewModel, cache, context ->
+            messagesHasNewItems(accountViewModel, cache, context)
+        },
+        buildScreen = { accountViewModel, _, navController ->
+            { ChatroomListScreen(accountViewModel, navController) }
+        }
     )
 
     object Filters : Route(
-        "Filters",
-        R.drawable.ic_security,
-        buildScreen = { acc, accSt, nav -> { _ -> FiltersScreen(acc, nav) } }
+        route = "Filters",
+        icon = R.drawable.ic_security,
+        buildScreen = { accountViewModel, _, navController ->
+            { FiltersScreen(accountViewModel, navController) }
+        }
     )
 
     object Profile : Route(
-        "User/{id}",
-        R.drawable.ic_profile,
+        route = "User/{id}",
+        icon = R.drawable.ic_profile,
         arguments = listOf(navArgument("id") { type = NavType.StringType }),
-        buildScreen = { acc, accSt, nav -> { ProfileScreen(it.arguments?.getString("id"), acc, nav) } }
+        buildScreen = { accountViewModel, _, navController ->
+            { ProfileScreen(it.arguments?.getString("id"), accountViewModel, navController) }
+        }
     )
 
     object Note : Route(
-        "Note/{id}",
-        R.drawable.ic_moments,
+        route = "Note/{id}",
+        icon = R.drawable.ic_moments,
         arguments = listOf(navArgument("id") { type = NavType.StringType }),
-        buildScreen = { acc, accSt, nav -> { ThreadScreen(it.arguments?.getString("id"), acc, nav) } }
+        buildScreen = { accountViewModel, _, navController ->
+            { ThreadScreen(it.arguments?.getString("id"), accountViewModel, navController) }
+        }
     )
 
     object Room : Route(
-        "Room/{id}",
-        R.drawable.ic_moments,
+        route = "Room/{id}",
+        icon = R.drawable.ic_moments,
         arguments = listOf(navArgument("id") { type = NavType.StringType }),
-        buildScreen = { acc, accSt, nav -> { ChatroomScreen(it.arguments?.getString("id"), acc, nav) } }
+        buildScreen = { accountViewModel, _, navController ->
+            { ChatroomScreen(it.arguments?.getString("id"), accountViewModel, navController) }
+        }
     )
 
     object Channel : Route(
-        "Channel/{id}",
-        R.drawable.ic_moments,
+        route = "Channel/{id}",
+        icon = R.drawable.ic_moments,
         arguments = listOf(navArgument("id") { type = NavType.StringType }),
-        buildScreen = { acc, accSt, nav -> { ChannelScreen(it.arguments?.getString("id"), acc, accSt, nav) } }
+        buildScreen = { accountViewModel, accountStateViewModel, navController ->
+            {
+                ChannelScreen(
+                    it.arguments?.getString("id"),
+                    accountViewModel,
+                    accountStateViewModel,
+                    navController
+                )
+            }
+        }
     )
 }
 
@@ -124,18 +157,32 @@ private fun homeHasNewItems(account: Account, cache: NotificationCache, context:
 
     HomeNewThreadFeedFilter.account = account
 
-    return (HomeNewThreadFeedFilter.feed().firstOrNull { it.createdAt() != null }?.createdAt() ?: 0) > lastTime
+    return (
+        HomeNewThreadFeedFilter.feed().firstOrNull { it.createdAt() != null }?.createdAt()
+            ?: 0
+        ) > lastTime
 }
 
-private fun notificationHasNewItems(account: Account, cache: NotificationCache, context: Context): Boolean {
+private fun notificationHasNewItems(
+    account: Account,
+    cache: NotificationCache,
+    context: Context
+): Boolean {
     val lastTime = cache.load("Notification", context)
 
     NotificationFeedFilter.account = account
 
-    return (NotificationFeedFilter.feed().firstOrNull { it.createdAt() != null }?.createdAt() ?: 0) > lastTime
+    return (
+        NotificationFeedFilter.feed().firstOrNull { it.createdAt() != null }?.createdAt()
+            ?: 0
+        ) > lastTime
 }
 
-private fun messagesHasNewItems(account: Account, cache: NotificationCache, context: Context): Boolean {
+private fun messagesHasNewItems(
+    account: Account,
+    cache: NotificationCache,
+    context: Context
+): Boolean {
     ChatroomListKnownFeedFilter.account = account
 
     val note = ChatroomListKnownFeedFilter.feed().firstOrNull {
