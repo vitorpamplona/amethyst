@@ -589,21 +589,19 @@ object LocalCache {
 
     fun consume(event: ChannelCreateEvent) {
         // Log.d("MT", "New Event ${event.content} ${event.id.toHex()}")
-        // new event
         val oldChannel = getOrCreateChannel(event.id)
         val author = getOrCreateUser(event.pubKey)
-        if (event.createdAt > oldChannel.updatedMetadataAt) {
-            if (oldChannel.creator == null || oldChannel.creator == author) {
-                oldChannel.updateChannelInfo(author, event.channelInfo(), event.createdAt)
+        if (event.createdAt <= oldChannel.updatedMetadataAt) {
+            return // older data, does nothing
+        }
+        if (oldChannel.creator == null || oldChannel.creator == author) {
+            oldChannel.updateChannelInfo(author, event.channelInfo(), event.createdAt)
 
-                val note = getOrCreateNote(event.id)
-                oldChannel.addNote(note)
-                note.loadEvent(event, author, emptyList(), emptyList())
+            val note = getOrCreateNote(event.id)
+            oldChannel.addNote(note)
+            note.loadEvent(event, author, emptyList(), emptyList())
 
-                refreshObservers()
-            }
-        } else {
-            // older data, does nothing
+            refreshObservers()
         }
     }
 
@@ -799,7 +797,7 @@ object LocalCache {
     }
 
     fun pruneOldAndHiddenMessages(account: Account) {
-        channels.forEach {
+        channels.forEach { it ->
             val toBeRemoved = it.value.pruneOldAndHiddenMessages(account)
 
             toBeRemoved.forEach {
@@ -815,7 +813,7 @@ object LocalCache {
                 }
 
                 // Counts the replies
-                it.replyTo?.forEach { replyingNote ->
+                it.replyTo?.forEach { _ ->
                     it.removeReply(it)
                 }
             }
