@@ -14,6 +14,7 @@ import nostr.postr.Persona
 import nostr.postr.toHex
 import java.util.Locale
 
+// MUST BE SET TO FALSE FOR PRODUCTION!!!!!
 const val DEBUG_PLAINTEXT_PREFERENCES = true
 
 data class AccountInfo(val npub: String, val current: Boolean, val displayName: String?, val profilePicture: String?)
