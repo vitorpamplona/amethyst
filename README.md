@@ -49,6 +49,7 @@ Amethyst brings the best social network to your Android phone. Just insert your 
 - [ ] Delegated Event Signing (NIP-26)
 - [ ] Account Creation / Backup Guidance (NIP-06)
 - [ ] Message Sent feedback (NIP-20)
+- [ ] Polls (NIP-69)
 
 # Development Overview
 

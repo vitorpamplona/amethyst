@@ -18,7 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.vitorpamplona.amethyst.buttons.NewChannelButton
-import com.vitorpamplona.amethyst.buttons.NewNoteButton
+import com.vitorpamplona.amethyst.buttons.NewPollButton
 import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.AppNavigation
 import com.vitorpamplona.amethyst.ui.navigation.AppTopBar
@@ -71,7 +71,8 @@ fun FloatingButton(navController: NavHostController, accountViewModel: AccountSt
                     // Does nothing.
                 }
                 is AccountState.LoggedIn -> {
-                    NewNoteButton(state.account)
+                    NewPollButton(state.account)
+                    // NewNoteButton(state.account)
                 }
             }
         }
