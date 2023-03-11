@@ -1,11 +1,6 @@
 package com.vitorpamplona.amethyst.ui.components
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
@@ -28,50 +23,6 @@ data class ResizeImage(val url: String?, val size: Dp) {
         val base64 = Base64.getUrlEncoder().encodeToString(url.toByteArray())
 
         return "https://d12fidohs5rlxk.cloudfront.net/preset:sharp/rs:fit:$imgPx:$imgPx:0/gravity:sm/$base64"
-    }
-}
-
-@Composable fun AsyncUserImageProxy(
-    pubkeyHex: String,
-    model: ResizeImage,
-    contentDescription: String?,
-    modifier: Modifier = Modifier,
-    alignment: Alignment = Alignment.Center,
-    contentScale: ContentScale = ContentScale.Fit,
-    alpha: Float = DefaultAlpha,
-    colorFilter: ColorFilter? = null,
-    filterQuality: FilterQuality = DrawScope.DefaultFilterQuality
-) {
-    var loading by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf(false) }
-
-    Box() {
-        AsyncImage(
-            model = model.proxyUrl(),
-            contentDescription = contentDescription,
-            modifier = modifier,
-            onLoading = { loading = true },
-            onSuccess = { loading = false; error = false },
-            onError = { loading = false; error = true },
-            alignment = alignment,
-            contentScale = contentScale,
-            alpha = alpha,
-            colorFilter = colorFilter,
-            filterQuality = filterQuality
-        )
-
-        if (model.url == null || loading || error) {
-            RoboHashAsyncImage(
-                message = pubkeyHex,
-                contentDescription = contentDescription,
-                modifier = modifier,
-                alignment = alignment,
-                contentScale = contentScale,
-                alpha = alpha,
-                colorFilter = colorFilter,
-                filterQuality = filterQuality
-            )
-        }
     }
 }
 

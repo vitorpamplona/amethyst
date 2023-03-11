@@ -27,8 +27,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.BitmapPainter
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
@@ -43,12 +41,11 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
-import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
+import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -98,13 +95,8 @@ fun ChatroomCompose(
             }
 
             ChannelName(
+                channelIdHex = channel.idHex,
                 channelPicture = channel.profilePicture(),
-                channelPicturePlaceholder = BitmapPainter(
-                    RoboHashCache.get(
-                        context,
-                        channel.idHex
-                    )
-                ),
                 channelTitle = {
                     Text(
                         text = buildAnnotatedString {
@@ -183,8 +175,8 @@ fun ChatroomCompose(
 
 @Composable
 fun ChannelName(
+    channelIdHex: String,
     channelPicture: String?,
-    channelPicturePlaceholder: Painter?,
     channelTitle: @Composable (Modifier) -> Unit,
     channelLastTime: Long?,
     channelLastContent: String?,
@@ -193,11 +185,9 @@ fun ChannelName(
 ) {
     ChannelName(
         channelPicture = {
-            AsyncImageProxy(
+            RobohashAsyncImageProxy(
+                robot = channelIdHex,
                 model = ResizeImage(channelPicture, 55.dp),
-                placeholder = channelPicturePlaceholder,
-                fallback = channelPicturePlaceholder,
-                error = channelPicturePlaceholder,
                 contentDescription = stringResource(R.string.channel_image),
                 modifier = Modifier
                     .width(55.dp)

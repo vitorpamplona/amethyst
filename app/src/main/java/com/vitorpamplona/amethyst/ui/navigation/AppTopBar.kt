@@ -57,8 +57,8 @@ import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
-import com.vitorpamplona.amethyst.ui.components.AsyncUserImageProxy
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
+import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.RelayPoolViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.launch
@@ -195,12 +195,9 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
                     },
                     modifier = Modifier
                 ) {
-                    AsyncUserImageProxy(
-                        pubkeyHex = accountUser.pubkeyHex,
+                    RobohashAsyncImageProxy(
+                        robot = accountUser.pubkeyHex,
                         model = ResizeImage(accountUser.profilePicture(), 34.dp),
-//                        placeholder = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
-//                        fallback = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
-//                        error = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
                         contentDescription = stringResource(id = R.string.profile_image),
                         modifier = Modifier
                             .width(34.dp)

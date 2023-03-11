@@ -19,7 +19,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.compositeOver
-import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -38,7 +37,6 @@ import coil.compose.AsyncImage
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -53,9 +51,11 @@ import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
-import com.vitorpamplona.amethyst.ui.components.AsyncUserImageProxy
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
+import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
+import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
+import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
@@ -217,12 +217,9 @@ fun NoteCompose(
                                             .height(30.dp)
                                             .align(Alignment.BottomEnd)
                                     ) {
-                                        AsyncUserImageProxy(
-                                            pubkeyHex = channel.idHex,
+                                        RobohashAsyncImageProxy(
+                                            robot = channel.idHex,
                                             model = ResizeImage(channel.profilePicture(), 30.dp),
-//                                            placeholder = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
-//                                            fallback = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
-//                                            error = BitmapPainter(RoboHashCache.get(context, channel.idHex)),
                                             contentDescription = stringResource(R.string.group_picture),
                                             modifier = Modifier
                                                 .width(30.dp)
@@ -603,11 +600,9 @@ private fun RelayBadges(baseNote: Note) {
                     .size(15.dp)
                     .padding(1.dp)
             ) {
-                AsyncImage(
+                RobohashFallbackAsyncImage(
+                    robot = "https://$url/favicon.ico",
                     model = "https://$url/favicon.ico",
-                    placeholder = BitmapPainter(RoboHashCache.get(ctx, url)),
-                    fallback = BitmapPainter(RoboHashCache.get(ctx, url)),
-                    error = BitmapPainter(RoboHashCache.get(ctx, url)),
                     contentDescription = stringResource(R.string.relay_icon),
                     colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }),
                     modifier = Modifier
@@ -677,8 +672,8 @@ fun NoteAuthorPicture(
             .height(size)
     ) {
         if (author == null) {
-            Image(
-                painter = BitmapPainter(RoboHashCache.get(ctx, "ohnothisauthorisnotfound")),
+            RobohashAsyncImage(
+                robot = "authornotfound",
                 contentDescription = stringResource(R.string.unknown_author),
                 modifier = pictureModifier
                     .fillMaxSize(1f)
@@ -724,8 +719,8 @@ fun UserPicture(
             .width(size)
             .height(size)
     ) {
-        AsyncUserImageProxy(
-            pubkeyHex = user.pubkeyHex,
+        RobohashAsyncImageProxy(
+            robot = user.pubkeyHex,
             model = ResizeImage(user.profilePicture(), size),
             contentDescription = stringResource(id = R.string.profile_image),
             modifier = pictureModifier

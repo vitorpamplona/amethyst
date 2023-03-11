@@ -52,9 +52,9 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
 import com.vitorpamplona.amethyst.ui.actions.PostButton
-import com.vitorpamplona.amethyst.ui.components.AsyncUserImageProxy
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
+import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.dal.ChatroomFeedFilter
 import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -211,12 +211,9 @@ fun ChatroomHeader(baseUser: User, accountViewModel: AccountViewModel, navContro
                 val authorState by baseUser.live().metadata.observeAsState()
                 val author = authorState?.user!!
 
-                AsyncUserImageProxy(
-                    pubkeyHex = author.pubkeyHex,
+                RobohashAsyncImageProxy(
+                    robot = author.pubkeyHex,
                     model = ResizeImage(author.profilePicture(), 35.dp),
-//                    placeholder = BitmapPainter(RoboHashCache.get(ctx, author.pubkeyHex)),
-//                    fallback = BitmapPainter(RoboHashCache.get(ctx, author.pubkeyHex)),
-//                    error = BitmapPainter(RoboHashCache.get(ctx, author.pubkeyHex)),
                     contentDescription = stringResource(id = R.string.profile_image),
                     modifier = Modifier
                         .width(35.dp)

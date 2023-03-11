@@ -49,8 +49,8 @@ import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.components.AsyncUserImageProxy
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
+import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountBackupDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.launch
@@ -135,13 +135,10 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
         }
 
         Column(modifier = modifier) {
-            AsyncUserImageProxy(
-                pubkeyHex = accountUser.pubkeyHex,
+            RobohashAsyncImageProxy(
+                robot = accountUser.pubkeyHex,
                 model = ResizeImage(accountUser.profilePicture(), 100.dp),
                 contentDescription = stringResource(id = R.string.profile_image),
-//                placeholder = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
-//                fallback = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
-//                error = BitmapPainter(RoboHashCache.get(ctx, accountUser.pubkeyHex)),
                 modifier = Modifier
                     .width(100.dp)
                     .height(100.dp)

@@ -66,8 +66,8 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
 import com.vitorpamplona.amethyst.ui.actions.PostButton
-import com.vitorpamplona.amethyst.ui.components.AsyncUserImageProxy
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
+import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.dal.ChannelFeedFilter
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
@@ -226,8 +226,8 @@ fun ChannelHeader(baseChannel: Channel, account: Account, navController: NavCont
     Column() {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                AsyncUserImageProxy(
-                    pubkeyHex = channel.idHex,
+                RobohashAsyncImageProxy(
+                    robot = channel.idHex,
                     model = ResizeImage(channel.profilePicture(), 35.dp),
                     contentDescription = context.getString(R.string.profile_image),
                     modifier = Modifier

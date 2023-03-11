@@ -36,7 +36,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
@@ -49,7 +48,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -245,8 +243,8 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
 
             itemsIndexed(searchResultsChannels.value, key = { _, item -> "c" + item.idHex }) { index, item ->
                 ChannelName(
+                    channelIdHex = item.idHex,
                     channelPicture = item.profilePicture(),
-                    channelPicturePlaceholder = BitmapPainter(RoboHashCache.get(ctx, item.idHex)),
                     channelTitle = {
                         Text(
                             "${item.info.name}",
