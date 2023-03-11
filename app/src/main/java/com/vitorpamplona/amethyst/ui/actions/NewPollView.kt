@@ -22,7 +22,6 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDirection
@@ -91,7 +90,7 @@ fun NewPollView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        ClosePollButton(onCancel = {
+                        CloseButton(onCancel = {
                             pollViewModel.cancel()
                             onClose()
                         })
@@ -189,27 +188,6 @@ fun NewPollView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                 }
             }
         }
-    }
-}
-
-@Composable
-fun ClosePollButton(onCancel: () -> Unit) {
-    Button(
-        onClick = {
-            onCancel()
-        },
-        shape = RoundedCornerShape(20.dp),
-        colors = ButtonDefaults
-            .buttonColors(
-                backgroundColor = Color.Gray
-            )
-    ) {
-        Icon(
-            painter = painterResource(id = R.drawable.ic_close),
-            contentDescription = stringResource(id = R.string.cancel),
-            modifier = Modifier.size(20.dp),
-            tint = Color.White
-        )
     }
 }
 
