@@ -6,25 +6,16 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.material.DrawerValue
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Scaffold
-import androidx.compose.material.rememberDrawerState
-import androidx.compose.material.rememberScaffoldState
+import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
+import com.vitorpamplona.amethyst.buttons.FabColumn
 import com.vitorpamplona.amethyst.buttons.NewChannelButton
-import com.vitorpamplona.amethyst.buttons.NewPollButton
-import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
-import com.vitorpamplona.amethyst.ui.navigation.AppNavigation
-import com.vitorpamplona.amethyst.ui.navigation.AppTopBar
-import com.vitorpamplona.amethyst.ui.navigation.DrawerContent
-import com.vitorpamplona.amethyst.ui.navigation.Route
-import com.vitorpamplona.amethyst.ui.navigation.currentRoute
+import com.vitorpamplona.amethyst.ui.navigation.*
 import com.vitorpamplona.amethyst.ui.screen.AccountState
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 
@@ -47,7 +38,7 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
             DrawerContent(navController, scaffoldState, accountViewModel, accountStateViewModel)
         },
         floatingActionButton = {
-            FloatingButton(navController, accountStateViewModel)
+            FloatingButtons(navController, accountStateViewModel)
         },
         scaffoldState = scaffoldState
     ) {
@@ -58,7 +49,7 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
 }
 
 @Composable
-fun FloatingButton(navController: NavHostController, accountViewModel: AccountStateViewModel) {
+fun FloatingButtons(navController: NavHostController, accountViewModel: AccountStateViewModel) {
     val accountState by accountViewModel.accountContent.collectAsState()
 
     if (currentRoute(navController) == Route.Home.route) {
@@ -71,8 +62,7 @@ fun FloatingButton(navController: NavHostController, accountViewModel: AccountSt
                     // Does nothing.
                 }
                 is AccountState.LoggedIn -> {
-                    NewPollButton(state.account)
-                    // NewNoteButton(state.account)
+                    FabColumn(state.account)
                 }
             }
         }
