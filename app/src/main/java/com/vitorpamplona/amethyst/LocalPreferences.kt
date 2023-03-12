@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
 import com.google.gson.GsonBuilder
@@ -12,9 +13,12 @@ import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.Event.Companion.getRefinedEvent
 import nostr.postr.Persona
 import nostr.postr.toHex
+import java.io.File
 import java.util.Locale
 
-// MUST BE SET TO FALSE FOR PRODUCTION!!!!!
+// Release mode (!BuildConfig.DEBUG) always uses encrypted preferences
+// To use plaintext SharedPreferences for debugging, set this to true
+// It will only apply in Debug builds
 const val DEBUG_PLAINTEXT_PREFERENCES = true
 
 data class AccountInfo(val npub: String, val current: Boolean, val displayName: String?, val profilePicture: String?)
@@ -62,6 +66,9 @@ object LocalPreferences {
         }.apply()
     }
 
+    /**
+     * Removes the account from the app level shared preferences
+     */
     private fun removeAccount(npub: String) {
         val accounts = savedAccounts.toMutableSet()
         accounts.remove(npub)
@@ -71,8 +78,21 @@ object LocalPreferences {
         }.apply()
     }
 
+    /**
+     * Deletes the npub-specific shared preference file
+     */
+    private fun deleteUserPreferenceFile(npub: String) {
+        val context = Amethyst.instance
+        val prefsDir = File("${context.filesDir.parent}/shared_prefs/")
+        prefsDir.list()?.forEach {
+            if (it.contains(npub)) {
+                File(prefsDir, it).delete()
+            }
+        }
+    }
+
     private fun encryptedPreferences(npub: String? = null): SharedPreferences {
-        return if (DEBUG_PLAINTEXT_PREFERENCES) {
+        return if (BuildConfig.DEBUG && DEBUG_PLAINTEXT_PREFERENCES) {
             val preferenceFile = if (npub == null) "testing_only" else "testing_only_$npub"
             Amethyst.instance.getSharedPreferences(preferenceFile, Context.MODE_PRIVATE)
         } else {
@@ -80,10 +100,16 @@ object LocalPreferences {
         }
     }
 
+    /**
+     * Clears the preferences for a given npub, deletes the preferences xml file,
+     * and switches the user to the first account in the list if it exists
+     */
+    @SuppressLint("ApplySharedPref")
     fun clearEncryptedStorage(npub: String) {
         val userPrefs = encryptedPreferences(npub)
-        userPrefs.edit().clear().apply()
+        userPrefs.edit().clear().commit()
         removeAccount(npub)
+        deleteUserPreferenceFile(npub)
 
         if (savedAccounts.isEmpty()) {
             val appPrefs = encryptedPreferences()
@@ -91,16 +117,6 @@ object LocalPreferences {
         } else if (currentAccount == npub) {
             currentAccount = savedAccounts.elementAt(0)
         }
-//        encPrefs.edit().apply {
-//            encPrefs.all.keys.forEach {
-//                remove(it)
-//            }
-//            encryptedPreferences.all.keys.filter {
-//                it.startsWith(npub)
-//            }.forEach {
-//                remove(it)
-//            }
-//        }.apply()
     }
 
     fun findAllLocalAccounts(): List<AccountInfo> {
