@@ -2,7 +2,9 @@ package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -56,6 +58,7 @@ import com.vitorpamplona.amethyst.ui.note.HiddenNote
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.NoteDropDownMenu
+import com.vitorpamplona.amethyst.ui.note.NoteQuickActionMenu
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.timeAgo
@@ -187,6 +190,7 @@ fun Modifier.drawReplyLevel(level: Int, color: Color, selected: Color): Modifier
     }
     .padding(start = (2 + (level * 3)).dp)
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun NoteMaster(
     baseNote: Note,
@@ -210,6 +214,8 @@ fun NoteMaster(
     var moreActionsExpanded by remember { mutableStateOf(false) }
 
     val noteEvent = note?.event
+
+    var popupExpanded by remember { mutableStateOf(false) }
 
     if (noteEvent == null) {
         BlankNote()
@@ -314,7 +320,14 @@ fun NoteMaster(
                 }
             }
 
-            Row(modifier = Modifier.padding(horizontal = 12.dp)) {
+            Row(
+                modifier = Modifier
+                    .padding(horizontal = 12.dp)
+                    .combinedClickable(
+                        onClick = { },
+                        onLongClick = { popupExpanded = true }
+                    )
+            ) {
                 Column() {
                     val eventContent = note.event?.content()
 
@@ -343,5 +356,7 @@ fun NoteMaster(
                 }
             }
         }
+
+        NoteQuickActionMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
     }
 }
