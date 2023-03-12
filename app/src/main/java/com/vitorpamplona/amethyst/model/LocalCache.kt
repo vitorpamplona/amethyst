@@ -58,7 +58,7 @@ object LocalCache {
 
     fun checkGetOrCreateUser(key: String): User? {
         return try {
-            val checkHex = Hex.decode(key).toNpub() // Checks if this is a valid Hex
+            checkIfValidHex(key)
             getOrCreateUser(key)
         } catch (e: IllegalArgumentException) {
             Log.e("LocalCache", "Invalid Key to create user: $key", e)
@@ -80,7 +80,7 @@ object LocalCache {
             return checkGetOrCreateAddressableNote(key)
         }
         return try {
-            val checkHex = Hex.decode(key).toNote() // Checks if this is a valid Hex
+            checkIfValidHex(key)
             getOrCreateNote(key)
         } catch (e: IllegalArgumentException) {
             Log.e("LocalCache", "Invalid Key to create note: $key", e)
@@ -99,12 +99,16 @@ object LocalCache {
 
     fun checkGetOrCreateChannel(key: String): Channel? {
         return try {
-            val checkHex = Hex.decode(key).toNote() // Checks if this is a valid Hex
+            checkIfValidHex(key)
             getOrCreateChannel(key)
         } catch (e: IllegalArgumentException) {
             Log.e("LocalCache", "Invalid Key to create channel: $key", e)
             null
         }
+    }
+
+    private fun checkIfValidHex(key: String) {
+        Hex.decode(key).toNpub()
     }
 
     @Synchronized
@@ -585,21 +589,19 @@ object LocalCache {
 
     fun consume(event: ChannelCreateEvent) {
         // Log.d("MT", "New Event ${event.content} ${event.id.toHex()}")
-        // new event
         val oldChannel = getOrCreateChannel(event.id)
         val author = getOrCreateUser(event.pubKey)
-        if (event.createdAt > oldChannel.updatedMetadataAt) {
-            if (oldChannel.creator == null || oldChannel.creator == author) {
-                oldChannel.updateChannelInfo(author, event.channelInfo(), event.createdAt)
+        if (event.createdAt <= oldChannel.updatedMetadataAt) {
+            return // older data, does nothing
+        }
+        if (oldChannel.creator == null || oldChannel.creator == author) {
+            oldChannel.updateChannelInfo(author, event.channelInfo(), event.createdAt)
 
-                val note = getOrCreateNote(event.id)
-                oldChannel.addNote(note)
-                note.loadEvent(event, author, emptyList(), emptyList())
+            val note = getOrCreateNote(event.id)
+            oldChannel.addNote(note)
+            note.loadEvent(event, author, emptyList(), emptyList())
 
-                refreshObservers()
-            }
-        } else {
-            // older data, does nothing
+            refreshObservers()
         }
     }
 
@@ -795,7 +797,7 @@ object LocalCache {
     }
 
     fun pruneOldAndHiddenMessages(account: Account) {
-        channels.forEach {
+        channels.forEach { it ->
             val toBeRemoved = it.value.pruneOldAndHiddenMessages(account)
 
             toBeRemoved.forEach {
@@ -811,7 +813,7 @@ object LocalCache {
                 }
 
                 // Counts the replies
-                it.replyTo?.forEach { replyingNote ->
+                it.replyTo?.forEach { _ ->
                     it.removeReply(it)
                 }
             }
