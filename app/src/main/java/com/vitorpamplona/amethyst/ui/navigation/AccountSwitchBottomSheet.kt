@@ -80,7 +80,7 @@ fun AccountSwitchBottomSheet(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Select Account", fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.account_switch_select_account), fontWeight = FontWeight.Bold)
         }
         accounts.forEach { acc ->
             val current = accountUser.pubkeyNpub() == acc.npub
@@ -92,20 +92,24 @@ fun AccountSwitchBottomSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(
-                    modifier = Modifier.weight(1f).clickable {
-                        accountStateViewModel.switchUser(acc.npub)
-                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable {
+                            accountStateViewModel.switchUser(acc.npub)
+                        },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
-                        modifier = Modifier.width(55.dp).padding(0.dp)
+                        modifier = Modifier
+                            .width(55.dp)
+                            .padding(0.dp)
                     ) {
                         AsyncImageProxy(
                             model = ResizeImage(acc.profilePicture, 55.dp),
                             placeholder = BitmapPainter(RoboHashCache.get(context, acc.npub)),
                             fallback = BitmapPainter(RoboHashCache.get(context, acc.npub)),
                             error = BitmapPainter(RoboHashCache.get(context, acc.npub)),
-                            contentDescription = stringResource(id = R.string.profile_image),
+                            contentDescription = stringResource(R.string.profile_image),
                             modifier = Modifier
                                 .width(55.dp)
                                 .height(55.dp)
@@ -113,19 +117,21 @@ fun AccountSwitchBottomSheet(
                         )
 
                         Box(
-                            modifier = Modifier.size(20.dp).align(Alignment.TopEnd)
+                            modifier = Modifier
+                                .size(20.dp)
+                                .align(Alignment.TopEnd)
                         ) {
                             if (acc.hasPrivKey) {
                                 Icon(
                                     imageVector = Icons.Default.Key,
-                                    contentDescription = "Has private key",
+                                    contentDescription = stringResource(R.string.account_switch_has_private_key),
                                     modifier = Modifier.size(20.dp),
                                     tint = MaterialTheme.colors.primary
                                 )
                             } else {
                                 Icon(
                                     imageVector = Icons.Default.Visibility,
-                                    contentDescription = "Read only, no private key",
+                                    contentDescription = stringResource(R.string.account_switch_pubkey_only),
                                     modifier = Modifier.size(20.dp),
                                     tint = MaterialTheme.colors.primary
                                 )
@@ -146,7 +152,7 @@ fun AccountSwitchBottomSheet(
                         if (current) {
                             Icon(
                                 imageVector = Icons.Default.RadioButtonChecked,
-                                contentDescription = "Active account",
+                                contentDescription = stringResource(R.string.account_switch_active_account),
                                 tint = MaterialTheme.colors.secondary
                             )
                         }
@@ -158,7 +164,7 @@ fun AccountSwitchBottomSheet(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Logout,
-                        contentDescription = "Logout",
+                        contentDescription = stringResource(R.string.log_out),
                         tint = MaterialTheme.colors.onSurface
                     )
                 }
@@ -172,7 +178,7 @@ fun AccountSwitchBottomSheet(
             verticalAlignment = Alignment.CenterVertically
         ) {
             TextButton(onClick = { popupExpanded = true }) {
-                Text("Add New Account")
+                Text(stringResource(R.string.account_switch_add_account_btn))
             }
         }
     }
@@ -186,12 +192,12 @@ fun AccountSwitchBottomSheet(
                 Box {
                     LoginPage(accountStateViewModel, isFirstLogin = false)
                     TopAppBar(
-                        title = { Text(text = "Add New Account") },
+                        title = { Text(text = stringResource(R.string.account_switch_add_account_dialog_title)) },
                         navigationIcon = {
                             IconButton(onClick = { popupExpanded = false }) {
                                 Icon(
                                     imageVector = Icons.Default.ArrowBack,
-                                    contentDescription = "Back",
+                                    contentDescription = stringResource(R.string.back),
                                     tint = MaterialTheme.colors.onSurface
                                 )
                             }

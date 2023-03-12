@@ -53,7 +53,6 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
-import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountBackupDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.launch
@@ -64,8 +63,7 @@ fun DrawerContent(
     navController: NavHostController,
     scaffoldState: ScaffoldState,
     sheetState: ModalBottomSheetState,
-    accountViewModel: AccountViewModel,
-    accountStateViewModel: AccountStateViewModel
+    accountViewModel: AccountViewModel
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
@@ -95,8 +93,7 @@ fun DrawerContent(
                 sheetState,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1F),
-                accountStateViewModel,
+                    .weight(1f),
                 account
             )
 
@@ -227,7 +224,6 @@ fun ListContent(
     scaffoldState: ScaffoldState,
     sheetState: ModalBottomSheetState,
     modifier: Modifier,
-    accountViewModel: AccountStateViewModel,
     account: Account
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -268,18 +264,11 @@ fun ListContent(
         Spacer(modifier = Modifier.weight(1f))
 
         IconRow(
-            title = "Accounts",
+            title = stringResource(R.string.drawer_accounts),
             icon = R.drawable.manage_accounts,
             tint = MaterialTheme.colors.onBackground,
             onClick = { coroutineScope.launch { sheetState.show() } }
         )
-
-//        IconRow(
-//            title = stringResource(R.string.log_out),
-//            icon = R.drawable.ic_logout,
-//            tint = MaterialTheme.colors.onBackground,
-//            onClick = { accountViewModel.logOff() }
-//        )
     }
 
     if (backupDialogOpen) {

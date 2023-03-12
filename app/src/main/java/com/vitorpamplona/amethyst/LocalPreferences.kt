@@ -22,7 +22,7 @@ import java.util.Locale
 // To use plaintext SharedPreferences for debugging, set this to true
 // It will only apply in Debug builds
 private const val DEBUG_PLAINTEXT_PREFERENCES = false
-private const val OLD_PREFS_FILENAME = "secret_keeper"
+private const val DEBUG_PREFERENCES_NAME = "debug_prefs"
 
 data class AccountInfo(
     val npub: String,
@@ -114,7 +114,7 @@ object LocalPreferences {
 
     private fun encryptedPreferences(npub: String? = null): SharedPreferences {
         return if (BuildConfig.DEBUG && DEBUG_PLAINTEXT_PREFERENCES) {
-            val preferenceFile = if (npub == null) "debug_prefs" else "debug_prefs_$npub"
+            val preferenceFile = if (npub == null) DEBUG_PREFERENCES_NAME else "${DEBUG_PREFERENCES_NAME}_$npub"
             Amethyst.instance.getSharedPreferences(preferenceFile, Context.MODE_PRIVATE)
         } else {
             return EncryptedStorage.preferences(npub)

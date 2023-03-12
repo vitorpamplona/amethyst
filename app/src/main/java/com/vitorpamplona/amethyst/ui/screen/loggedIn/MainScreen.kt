@@ -61,7 +61,7 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
                 AppTopBar(navController, scaffoldState, accountViewModel)
             },
             drawerContent = {
-                DrawerContent(navController, scaffoldState, sheetState, accountViewModel, accountStateViewModel)
+                DrawerContent(navController, scaffoldState, sheetState, accountViewModel)
             },
             floatingActionButton = {
                 FloatingButton(navController, accountStateViewModel)
