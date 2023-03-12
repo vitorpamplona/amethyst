@@ -25,10 +25,10 @@ class Nip05Verifier {
         return null
     }
 
-    fun fetchNip05Json(lnaddress: String, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
+    fun fetchNip05Json(nip05address: String, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
         val scope = CoroutineScope(Job() + Dispatchers.IO)
         scope.launch {
-            fetchNip05JsonSuspend(lnaddress, onSuccess, onError)
+            fetchNip05JsonSuspend(nip05address, onSuccess, onError)
         }
     }
 
