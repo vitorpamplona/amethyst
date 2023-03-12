@@ -829,7 +829,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
         if (note.author == accountViewModel.accountLiveData.value?.account?.userProfile()) {
             Divider()
             DropdownMenuItem(onClick = { accountViewModel.delete(note); onDismiss() }) {
-                Text("Request Deletion")
+                Text(stringResource(R.string.request_deletion))
             }
         }
         if (note.author != accountViewModel.accountLiveData.value?.account?.userProfile()) {
