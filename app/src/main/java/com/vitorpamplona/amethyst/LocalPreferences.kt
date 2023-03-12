@@ -54,6 +54,8 @@ private object PrefKeys {
 private val gson = GsonBuilder().create()
 
 object LocalPreferences {
+    private const val comma = ","
+
     private var currentAccount: String?
         get() = encryptedPreferences().getString(PrefKeys.CURRENT_ACCOUNT, null)
         set(npub) {
@@ -63,18 +65,21 @@ object LocalPreferences {
             }.apply()
         }
 
-    private val savedAccounts: Set<String>
-        get() = encryptedPreferences().getStringSet(PrefKeys.SAVED_ACCOUNTS, null) ?: setOf()
+    private val savedAccounts: List<String>
+        get() = encryptedPreferences()
+            .getString(PrefKeys.SAVED_ACCOUNTS, null)?.split(comma) ?: listOf()
 
     private val prefsDirPath: String
         get() = "${Amethyst.instance.filesDir.parent}/shared_prefs/"
 
     private fun addAccount(npub: String) {
-        val accounts = savedAccounts.toMutableSet()
-        accounts.add(npub)
+        val accounts = savedAccounts.toMutableList()
+        if (npub !in accounts) {
+            accounts.add(npub)
+        }
         val prefs = encryptedPreferences()
         prefs.edit().apply {
-            putStringSet(PrefKeys.SAVED_ACCOUNTS, accounts)
+            putString(PrefKeys.SAVED_ACCOUNTS, accounts.joinToString(comma))
         }.apply()
     }
 
@@ -92,12 +97,13 @@ object LocalPreferences {
      * Removes the account from the app level shared preferences
      */
     private fun removeAccount(npub: String) {
-        val accounts = savedAccounts.toMutableSet()
-        accounts.remove(npub)
-        val prefs = encryptedPreferences()
-        prefs.edit().apply {
-            putStringSet(PrefKeys.SAVED_ACCOUNTS, accounts)
-        }.apply()
+        val accounts = savedAccounts.toMutableList()
+        if (accounts.remove(npub)) {
+            val prefs = encryptedPreferences()
+            prefs.edit().apply {
+                putString(PrefKeys.SAVED_ACCOUNTS, accounts.joinToString(comma))
+            }.apply()
+        }
     }
 
     /**
