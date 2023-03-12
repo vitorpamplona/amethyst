@@ -128,7 +128,7 @@ class MastodonIdentity(
                 if (proofUrl.isBlank()) return null
                 val path = proofUrl.removePrefix("https://").split("?")[0].split("/")
 
-                return MastodonIdentity(path[0], path[1])
+                return MastodonIdentity("${path[0]}/${path[1]}", path[2])
             } catch (e: Exception) {
                 null
             }
