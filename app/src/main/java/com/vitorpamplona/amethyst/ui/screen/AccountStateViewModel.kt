@@ -51,18 +51,18 @@ class AccountStateViewModel() : ViewModel() {
                 Account(Persona(Hex.decode(key)))
             }
 
-        LocalPreferences.login(account)
+        LocalPreferences.updatePrefsForLogin(account)
         login(account)
     }
 
     fun newKey() {
         val account = Account(Persona())
-        LocalPreferences.login(account)
+        LocalPreferences.updatePrefsForLogin(account)
         login(account)
     }
 
     fun login(account: Account) {
-        LocalPreferences.login(account)
+        LocalPreferences.updatePrefsForLogin(account)
 
         if (account.loggedIn.privKey != null) {
             _accountContent.update { AccountState.LoggedIn(account) }
@@ -105,7 +105,7 @@ class AccountStateViewModel() : ViewModel() {
 
         _accountContent.update { AccountState.LoggedOff }
 
-        LocalPreferences.clearEncryptedStorage(npub)
+        LocalPreferences.updatePrefsForLogout(npub)
         tryLoginExistingAccount()
     }
 }

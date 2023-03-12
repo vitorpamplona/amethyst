@@ -11,17 +11,25 @@ import com.vitorpamplona.amethyst.model.toByteArray
 import com.vitorpamplona.amethyst.service.model.ContactListEvent
 import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.Event.Companion.getRefinedEvent
+import fr.acinq.secp256k1.Hex
 import nostr.postr.Persona
 import nostr.postr.toHex
+import nostr.postr.toNpub
 import java.io.File
 import java.util.Locale
 
 // Release mode (!BuildConfig.DEBUG) always uses encrypted preferences
 // To use plaintext SharedPreferences for debugging, set this to true
 // It will only apply in Debug builds
-const val DEBUG_PLAINTEXT_PREFERENCES = true
+private const val DEBUG_PLAINTEXT_PREFERENCES = false
+private const val OLD_PREFS_FILENAME = "secret_keeper"
 
-data class AccountInfo(val npub: String, val current: Boolean, val displayName: String?, val profilePicture: String?)
+data class AccountInfo(
+    val npub: String,
+    val current: Boolean,
+    val displayName: String?,
+    val profilePicture: String?
+)
 
 private object PrefKeys {
     const val CURRENT_ACCOUNT = "currently_logged_in_account"
@@ -57,6 +65,9 @@ object LocalPreferences {
     private val savedAccounts: Set<String>
         get() = encryptedPreferences().getStringSet(PrefKeys.SAVED_ACCOUNTS, null) ?: setOf()
 
+    private val prefsDirPath: String
+        get() = "${Amethyst.instance.filesDir.parent}/shared_prefs/"
+
     private fun addAccount(npub: String) {
         val accounts = savedAccounts.toMutableSet()
         accounts.add(npub)
@@ -64,6 +75,12 @@ object LocalPreferences {
         prefs.edit().apply {
             putStringSet(PrefKeys.SAVED_ACCOUNTS, accounts)
         }.apply()
+    }
+
+    private fun setCurrentAccount(account: Account) {
+        val npub = account.userProfile().pubkeyNpub()
+        currentAccount = npub
+        addAccount(npub)
     }
 
     /**
@@ -82,8 +99,7 @@ object LocalPreferences {
      * Deletes the npub-specific shared preference file
      */
     private fun deleteUserPreferenceFile(npub: String) {
-        val context = Amethyst.instance
-        val prefsDir = File("${context.filesDir.parent}/shared_prefs/")
+        val prefsDir = File(prefsDirPath)
         prefsDir.list()?.forEach {
             if (it.contains(npub)) {
                 File(prefsDir, it).delete()
@@ -93,7 +109,7 @@ object LocalPreferences {
 
     private fun encryptedPreferences(npub: String? = null): SharedPreferences {
         return if (BuildConfig.DEBUG && DEBUG_PLAINTEXT_PREFERENCES) {
-            val preferenceFile = if (npub == null) "testing_only" else "testing_only_$npub"
+            val preferenceFile = if (npub == null) "debug_prefs" else "debug_prefs_$npub"
             Amethyst.instance.getSharedPreferences(preferenceFile, Context.MODE_PRIVATE)
         } else {
             return EncryptedStorage.preferences(npub)
@@ -103,9 +119,13 @@ object LocalPreferences {
     /**
      * Clears the preferences for a given npub, deletes the preferences xml file,
      * and switches the user to the first account in the list if it exists
+     *
+     * We need to use `commit()` to write changes to disk and release the file
+     * lock so that it can be deleted. If we use `apply()` there is a race
+     * condition and the file will probably not be deleted
      */
     @SuppressLint("ApplySharedPref")
-    fun clearEncryptedStorage(npub: String) {
+    fun updatePrefsForLogout(npub: String) {
         val userPrefs = encryptedPreferences(npub)
         userPrefs.edit().clear().commit()
         removeAccount(npub)
@@ -119,7 +139,12 @@ object LocalPreferences {
         }
     }
 
-    fun findAllLocalAccounts(): List<AccountInfo> {
+    fun updatePrefsForLogin(account: Account) {
+        setCurrentAccount(account)
+        saveToEncryptedStorage(account)
+    }
+
+    fun allSavedAccounts(): List<AccountInfo> {
         return savedAccounts.map { npub ->
             val prefs = encryptedPreferences(npub)
 
@@ -130,12 +155,6 @@ object LocalPreferences {
                 profilePicture = prefs.getString(PrefKeys.PROFILE_PICTURE_URL, null)
             )
         }
-    }
-
-    fun setCurrentAccount(account: Account) {
-        val npub = account.userProfile().pubkeyNpub()
-        currentAccount = npub
-        addAccount(npub)
     }
 
     fun saveToEncryptedStorage(account: Account) {
@@ -155,11 +174,6 @@ object LocalPreferences {
             putString(PrefKeys.DISPLAY_NAME, account.userProfile().toBestDisplayName())
             putString(PrefKeys.PROFILE_PICTURE_URL, account.userProfile().profilePicture())
         }.apply()
-    }
-
-    fun login(account: Account) {
-        setCurrentAccount(account)
-        saveToEncryptedStorage(account)
     }
 
     fun loadFromEncryptedStorage(): Account? {
@@ -183,7 +197,8 @@ object LocalPreferences {
 
             val latestContactList = try {
                 getString(PrefKeys.LATEST_CONTACT_LIST, null)?.let {
-                    Event.gson.fromJson(it, Event::class.java).getRefinedEvent(true) as ContactListEvent
+                    Event.gson.fromJson(it, Event::class.java)
+                        .getRefinedEvent(true) as ContactListEvent
                 }
             } catch (e: Throwable) {
                 e.printStackTrace()
@@ -192,7 +207,10 @@ object LocalPreferences {
 
             val languagePreferences = try {
                 getString(PrefKeys.LANGUAGE_PREFS, null)?.let {
-                    gson.fromJson(it, object : TypeToken<Map<String, String>>() {}.type) as Map<String, String>
+                    gson.fromJson(
+                        it,
+                        object : TypeToken<Map<String, String>>() {}.type
+                    ) as Map<String, String>
                 } ?: mapOf()
             } catch (e: Throwable) {
                 e.printStackTrace()
@@ -226,5 +244,46 @@ object LocalPreferences {
         encryptedPreferences(currentAccount).run {
             return getLong(PrefKeys.LAST_READ(route), 0)
         }
+    }
+
+    fun migrateSingleUserPrefs() {
+        if (currentAccount != null) return
+
+        val pubkey = encryptedPreferences().getString(PrefKeys.NOSTR_PUBKEY, null) ?: return
+        val npub = Hex.decode(pubkey).toNpub()
+
+        val stringPrefs = listOf(
+            PrefKeys.NOSTR_PRIVKEY,
+            PrefKeys.NOSTR_PUBKEY,
+            PrefKeys.RELAYS,
+            PrefKeys.LANGUAGE_PREFS,
+            PrefKeys.TRANSLATE_TO,
+            PrefKeys.ZAP_AMOUNTS,
+            PrefKeys.LATEST_CONTACT_LIST
+        )
+
+        val stringSetPrefs = listOf(
+            PrefKeys.FOLLOWING_CHANNELS,
+            PrefKeys.HIDDEN_USERS,
+            PrefKeys.DONT_TRANSLATE_FROM
+        )
+
+        encryptedPreferences().apply {
+            val appPrefs = this
+            encryptedPreferences(npub).edit().apply {
+                val userPrefs = this
+
+                stringPrefs.forEach { userPrefs.putString(it, appPrefs.getString(it, null)) }
+                stringSetPrefs.forEach { userPrefs.putStringSet(it, appPrefs.getStringSet(it, null)) }
+                userPrefs.putBoolean(
+                    PrefKeys.HIDE_DELETE_REQUEST_INFO,
+                    appPrefs.getBoolean(PrefKeys.HIDE_DELETE_REQUEST_INFO, false)
+                )
+            }.apply()
+        }
+
+        encryptedPreferences().edit().clear().apply()
+        addAccount(npub)
+        currentAccount = npub
     }
 }

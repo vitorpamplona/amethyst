@@ -55,7 +55,7 @@ fun AccountSwitchBottomSheet(
     accountStateViewModel: AccountStateViewModel
 ) {
     val context = LocalContext.current
-    val accounts = LocalPreferences.findAllLocalAccounts()
+    val accounts = LocalPreferences.allSavedAccounts()
 
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
