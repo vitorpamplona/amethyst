@@ -16,9 +16,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Divider
+import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.ModalBottomSheetState
 import androidx.compose.material.ScaffoldState
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
@@ -51,17 +53,17 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
-import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountBackupDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun DrawerContent(
     navController: NavHostController,
     scaffoldState: ScaffoldState,
-    accountViewModel: AccountViewModel,
-    accountStateViewModel: AccountStateViewModel
+    sheetState: ModalBottomSheetState,
+    accountViewModel: AccountViewModel
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
@@ -88,10 +90,10 @@ fun DrawerContent(
                 account.userProfile(),
                 navController,
                 scaffoldState,
+                sheetState,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1F),
-                accountStateViewModel,
+                    .weight(1f),
                 account
             )
 
@@ -214,15 +216,17 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
     }
 }
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun ListContent(
     accountUser: User?,
     navController: NavHostController,
     scaffoldState: ScaffoldState,
+    sheetState: ModalBottomSheetState,
     modifier: Modifier,
-    accountViewModel: AccountStateViewModel,
     account: Account
 ) {
+    val coroutineScope = rememberCoroutineScope()
     var backupDialogOpen by remember { mutableStateOf(false) }
 
     Column(modifier = modifier.fillMaxHeight()) {
@@ -260,10 +264,10 @@ fun ListContent(
         Spacer(modifier = Modifier.weight(1f))
 
         IconRow(
-            stringResource(R.string.log_out),
-            R.drawable.ic_logout,
-            MaterialTheme.colors.onBackground,
-            onClick = { accountViewModel.logOff() }
+            title = stringResource(R.string.drawer_accounts),
+            icon = R.drawable.manage_accounts,
+            tint = MaterialTheme.colors.onBackground,
+            onClick = { coroutineScope.launch { sheetState.show() } }
         )
     }
 

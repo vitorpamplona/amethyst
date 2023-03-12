@@ -220,5 +220,13 @@
     <string name="private_conversation_notification">"&lt;Unable to decrypt private message&gt;\n\nYou were cited in a private/encrypted conversation between %1$s and %2$s."</string>
     <string name="quick_action_delete_button">Delete</string>
     <string name="quick_action_dont_show_again_button">Don\'t show again</string>
+    <string name="account_switch_add_account_dialog_title">Add New Account</string>
+    <string name="drawer_accounts">Accounts</string>
+    <string name="account_switch_select_account">Select Account</string>
+    <string name="account_switch_add_account_btn">Add New Account</string>
+    <string name="account_switch_active_account">Active account</string>
+    <string name="account_switch_has_private_key">Has private key</string>
+    <string name="account_switch_pubkey_only">Read only, no private key</string>
+    <string name="back">Back</string>
 
 </resources>
