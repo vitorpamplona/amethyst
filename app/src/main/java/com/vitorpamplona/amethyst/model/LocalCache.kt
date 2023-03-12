@@ -5,37 +5,10 @@ import androidx.lifecycle.LiveData
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.google.gson.reflect.TypeToken
-import com.vitorpamplona.amethyst.service.model.ATag
-import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
-import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
-import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
-import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.service.model.ChannelHideMessageEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMuteUserEvent
-import com.vitorpamplona.amethyst.service.model.ContactListEvent
-import com.vitorpamplona.amethyst.service.model.DeletionEvent
-import com.vitorpamplona.amethyst.service.model.Event
-import com.vitorpamplona.amethyst.service.model.LnZapEvent
-import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
-import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
-import com.vitorpamplona.amethyst.service.model.MetadataEvent
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
-import com.vitorpamplona.amethyst.service.model.ReactionEvent
-import com.vitorpamplona.amethyst.service.model.RecommendRelayEvent
-import com.vitorpamplona.amethyst.service.model.ReportEvent
-import com.vitorpamplona.amethyst.service.model.RepostEvent
-import com.vitorpamplona.amethyst.service.model.TextNoteEvent
+import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.Relay
 import fr.acinq.secp256k1.Hex
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import nostr.postr.toNpub
 import java.io.ByteArrayInputStream
 import java.time.Instant
@@ -57,13 +30,10 @@ object LocalCache {
     val addressables = ConcurrentHashMap<String, AddressableNote>()
 
     fun checkGetOrCreateUser(key: String): User? {
-        return try {
-            checkIfValidHex(key)
-            getOrCreateUser(key)
-        } catch (e: IllegalArgumentException) {
-            Log.e("LocalCache", "Invalid Key to create user: $key", e)
-            null
+        if (isValidHexNpub(key)) {
+            return getOrCreateUser(key)
         }
+        return null
     }
 
     @Synchronized
@@ -79,13 +49,10 @@ object LocalCache {
         if (ATag.isATag(key)) {
             return checkGetOrCreateAddressableNote(key)
         }
-        return try {
-            checkIfValidHex(key)
-            getOrCreateNote(key)
-        } catch (e: IllegalArgumentException) {
-            Log.e("LocalCache", "Invalid Key to create note: $key", e)
-            null
+        if (isValidHexNpub(key)) {
+            return getOrCreateNote(key)
         }
+        return null
     }
 
     @Synchronized
@@ -98,17 +65,20 @@ object LocalCache {
     }
 
     fun checkGetOrCreateChannel(key: String): Channel? {
-        return try {
-            checkIfValidHex(key)
-            getOrCreateChannel(key)
-        } catch (e: IllegalArgumentException) {
-            Log.e("LocalCache", "Invalid Key to create channel: $key", e)
-            null
+        if (isValidHexNpub(key)) {
+            return getOrCreateChannel(key)
         }
+        return null
     }
 
-    private fun checkIfValidHex(key: String) {
-        Hex.decode(key).toNpub()
+    private fun isValidHexNpub(key: String): Boolean {
+        return try {
+            Hex.decode(key).toNpub()
+            true
+        } catch (e: IllegalArgumentException) {
+            Log.e("LocalCache", "Invalid Key to create user: $key", e)
+            false
+        }
     }
 
     @Synchronized
