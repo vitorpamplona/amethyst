@@ -8,6 +8,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.MainScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedOff.LoginPage
 
 @Composable
 fun AccountScreen(accountStateViewModel: AccountStateViewModel, startingPage: String?) {
@@ -17,7 +18,7 @@ fun AccountScreen(accountStateViewModel: AccountStateViewModel, startingPage: St
         Crossfade(targetState = accountState, animationSpec = tween(durationMillis = 100)) { state ->
             when (state) {
                 is AccountState.LoggedOff -> {
-                    LoginPage(accountStateViewModel)
+                    LoginPage(accountStateViewModel, isFirstLogin = true)
                 }
                 is AccountState.LoggedIn -> {
                     MainScreen(AccountViewModel(state.account), accountStateViewModel, startingPage)

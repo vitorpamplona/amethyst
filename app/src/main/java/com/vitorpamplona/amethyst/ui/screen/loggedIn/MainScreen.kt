@@ -47,7 +47,7 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
     ModalBottomSheetLayout(
         sheetState = sheetState,
         sheetContent = {
-            AccountSwitchBottomSheet(accountViewModel = accountViewModel, accountStateViewModel = accountStateViewModel, sheetState = sheetState)
+            AccountSwitchBottomSheet(accountViewModel = accountViewModel, accountStateViewModel = accountStateViewModel)
         }
     ) {
         Scaffold(
