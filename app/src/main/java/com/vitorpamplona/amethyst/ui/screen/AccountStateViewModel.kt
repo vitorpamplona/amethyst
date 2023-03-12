@@ -55,6 +55,12 @@ class AccountStateViewModel() : ViewModel() {
         login(account)
     }
 
+    fun switchUser(npub: String) {
+        prepareLogoutOrSwitch()
+        LocalPreferences.switchToAccount(npub)
+        tryLoginExistingAccount()
+    }
+
     fun newKey() {
         val account = Account(Persona())
         LocalPreferences.updatePrefsForLogin(account)
@@ -86,7 +92,7 @@ class AccountStateViewModel() : ViewModel() {
         }
     }
 
-    fun logOff(npub: String) {
+    private fun prepareLogoutOrSwitch() {
         val state = accountContent.value
 
         when (state) {
@@ -104,7 +110,10 @@ class AccountStateViewModel() : ViewModel() {
         }
 
         _accountContent.update { AccountState.LoggedOff }
+    }
 
+    fun logOff(npub: String) {
+        prepareLogoutOrSwitch()
         LocalPreferences.updatePrefsForLogout(npub)
         tryLoginExistingAccount()
     }

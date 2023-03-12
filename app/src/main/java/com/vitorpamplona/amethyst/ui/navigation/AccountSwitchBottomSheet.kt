@@ -86,7 +86,7 @@ fun AccountSwitchBottomSheet(
             ) {
                 Row(
                     modifier = Modifier.clickable {
-                        accountStateViewModel.login(acc.npub)
+                        accountStateViewModel.switchUser(acc.npub)
                     },
                     verticalAlignment = Alignment.CenterVertically
                 ) {

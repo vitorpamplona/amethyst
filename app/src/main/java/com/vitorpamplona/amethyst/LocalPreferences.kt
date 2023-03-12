@@ -83,6 +83,10 @@ object LocalPreferences {
         addAccount(npub)
     }
 
+    fun switchToAccount(npub: String) {
+        currentAccount = npub
+    }
+
     /**
      * Removes the account from the app level shared preferences
      */
