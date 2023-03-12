@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -23,7 +24,10 @@ import androidx.compose.material.TextButton
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.RadioButtonChecked
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -84,40 +88,70 @@ fun AccountSwitchBottomSheet(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(32.dp, 16.dp),
+                    .padding(16.dp, 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(
-                    modifier = Modifier.clickable {
+                    modifier = Modifier.weight(1f).clickable {
                         accountStateViewModel.switchUser(acc.npub)
                     },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    AsyncImageProxy(
-                        model = ResizeImage(acc.profilePicture, 64.dp),
-                        placeholder = BitmapPainter(RoboHashCache.get(context, acc.npub)),
-                        fallback = BitmapPainter(RoboHashCache.get(context, acc.npub)),
-                        error = BitmapPainter(RoboHashCache.get(context, acc.npub)),
-                        contentDescription = stringResource(id = R.string.profile_image),
-                        modifier = Modifier
-                            .width(64.dp)
-                            .height(64.dp)
-                            .clip(shape = CircleShape)
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column {
-                        acc.displayName?.let {
-                            Text(it)
+                    Box(
+                        modifier = Modifier.width(55.dp).padding(0.dp)
+                    ) {
+                        AsyncImageProxy(
+                            model = ResizeImage(acc.profilePicture, 55.dp),
+                            placeholder = BitmapPainter(RoboHashCache.get(context, acc.npub)),
+                            fallback = BitmapPainter(RoboHashCache.get(context, acc.npub)),
+                            error = BitmapPainter(RoboHashCache.get(context, acc.npub)),
+                            contentDescription = stringResource(id = R.string.profile_image),
+                            modifier = Modifier
+                                .width(55.dp)
+                                .height(55.dp)
+                                .clip(shape = CircleShape)
+                        )
+
+                        Box(
+                            modifier = Modifier.size(20.dp).align(Alignment.TopEnd)
+                        ) {
+                            if (acc.hasPrivKey) {
+                                Icon(
+                                    imageVector = Icons.Default.Key,
+                                    contentDescription = "Has private key",
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colors.primary
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Visibility,
+                                    contentDescription = "Read only, no private key",
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colors.primary
+                                )
+                            }
                         }
-                        Text(acc.npub.toShortenHex())
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    if (current) {
-                        Text("✓")
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        val npubShortHex = acc.npub.toShortenHex()
+
+                        if (acc.displayName != null && acc.displayName != npubShortHex) {
+                            Text(acc.displayName)
+                        }
+
+                        Text(npubShortHex)
+                    }
+                    Column(modifier = Modifier.width(32.dp)) {
+                        if (current) {
+                            Icon(
+                                imageVector = Icons.Default.RadioButtonChecked,
+                                contentDescription = "Active account",
+                                tint = MaterialTheme.colors.secondary
+                            )
+                        }
                     }
                 }
-
-                Spacer(modifier = Modifier.weight(1f))
 
                 IconButton(
                     onClick = { accountStateViewModel.logOff(acc.npub) }

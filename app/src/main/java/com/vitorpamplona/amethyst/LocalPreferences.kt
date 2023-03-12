@@ -26,6 +26,7 @@ private const val OLD_PREFS_FILENAME = "secret_keeper"
 
 data class AccountInfo(
     val npub: String,
+    val hasPrivKey: Boolean,
     val current: Boolean,
     val displayName: String?,
     val profilePicture: String?
@@ -151,9 +152,11 @@ object LocalPreferences {
     fun allSavedAccounts(): List<AccountInfo> {
         return savedAccounts.map { npub ->
             val prefs = encryptedPreferences(npub)
+            val hasPrivKey = prefs.getString(PrefKeys.NOSTR_PRIVKEY, null) != null
 
             AccountInfo(
                 npub = npub,
+                hasPrivKey = hasPrivKey,
                 current = npub == currentAccount,
                 displayName = prefs.getString(PrefKeys.DISPLAY_NAME, null),
                 profilePicture = prefs.getString(PrefKeys.PROFILE_PICTURE_URL, null)
