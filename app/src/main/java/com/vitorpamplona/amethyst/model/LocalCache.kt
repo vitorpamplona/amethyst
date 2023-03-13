@@ -469,7 +469,7 @@ object LocalCache {
 
             val note = getOrCreateNote(event.id)
             oldChannel.addNote(note)
-            note.loadEvent(event, author, emptyList(), emptyList())
+            note.loadEvent(event, author, emptyList())
 
             refreshObservers()
         }
