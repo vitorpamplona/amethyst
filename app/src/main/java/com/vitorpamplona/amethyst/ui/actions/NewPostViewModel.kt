@@ -10,6 +10,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.*
+import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.ui.components.isValidURL
 import com.vitorpamplona.amethyst.ui.components.noProtocolUrlValidator
@@ -36,7 +37,10 @@ class NewPostViewModel : ViewModel() {
         replyingTo?.let { replyNote ->
             this.replyTos = (replyNote.replyTo ?: emptyList()).plus(replyNote)
             replyNote.author?.let { replyUser ->
-                val currentMentions = replyNote.mentions ?: emptyList()
+                val currentMentions = (replyNote.event as? TextNoteEvent)
+                    ?.mentions()
+                    ?.map { LocalCache.getOrCreateUser(it) } ?: emptyList()
+
                 if (currentMentions.contains(replyUser)) {
                     this.mentions = currentMentions
                 } else {

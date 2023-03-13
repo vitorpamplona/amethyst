@@ -14,7 +14,7 @@ class ChannelCreateEvent(
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
-    fun channelInfo() = try {
+    fun channelInfo(): ChannelData = try {
         MetadataEvent.gson.fromJson(content, ChannelData::class.java)
     } catch (e: Exception) {
         Log.e("ChannelMetadataEvent", "Can't parse channel info $content", e)

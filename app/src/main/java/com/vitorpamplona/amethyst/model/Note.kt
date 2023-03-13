@@ -35,7 +35,6 @@ open class Note(val idHex: String) {
     // They are immutable after that.
     var event: EventInterface? = null
     var author: User? = null
-    var mentions: List<User>? = null
     var replyTo: List<Note>? = null
 
     // These fields are updated every time an event related to this note is received.
@@ -72,10 +71,9 @@ open class Note(val idHex: String) {
 
     open fun createdAt() = event?.createdAt()
 
-    fun loadEvent(event: Event, author: User, mentions: List<User>, replyTo: List<Note>) {
+    fun loadEvent(event: Event, author: User, replyTo: List<Note>) {
         this.event = event
         this.author = author
-        this.mentions = mentions
         this.replyTo = replyTo
 
         liveSet?.metadata?.invalidateData()
@@ -215,15 +213,15 @@ open class Note(val idHex: String) {
         return reports[user] ?: emptySet()
     }
 
-    fun reportAuthorsBy(users: Set<User>): List<User> {
-        return reports.keys.filter { it in users }
+    fun reportAuthorsBy(users: Set<HexKey>): List<User> {
+        return reports.keys.filter { it.pubkeyHex in users }
     }
 
-    fun countReportAuthorsBy(users: Set<User>): Int {
-        return reports.keys.count { it in users }
+    fun countReportAuthorsBy(users: Set<HexKey>): Int {
+        return reports.keys.count { it.pubkeyHex in users }
     }
 
-    fun reportsBy(users: Set<User>): List<Note> {
+    fun reportsBy(users: Set<HexKey>): List<Note> {
         return reportAuthorsBy(users).mapNotNull {
             reports[it]
         }.flatten()

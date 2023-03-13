@@ -25,7 +25,12 @@ class LnZapRequestEvent(
     companion object {
         const val kind = 9734
 
-        fun create(originalNote: EventInterface, relays: Set<String>, privateKey: ByteArray, createdAt: Long = Date().time / 1000): LnZapRequestEvent {
+        fun create(
+            originalNote: EventInterface,
+            relays: Set<String>,
+            privateKey: ByteArray,
+            createdAt: Long = Date().time / 1000
+        ): LnZapRequestEvent {
             val content = ""
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             var tags = listOf(
@@ -42,7 +47,12 @@ class LnZapRequestEvent(
             return LnZapRequestEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
         }
 
-        fun create(userHex: String, relays: Set<String>, privateKey: ByteArray, createdAt: Long = Date().time / 1000): LnZapRequestEvent {
+        fun create(
+            userHex: String,
+            relays: Set<String>,
+            privateKey: ByteArray,
+            createdAt: Long = Date().time / 1000
+        ): LnZapRequestEvent {
             val content = ""
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             val tags = listOf(
