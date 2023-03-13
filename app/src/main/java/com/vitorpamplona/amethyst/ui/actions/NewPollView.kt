@@ -131,6 +131,7 @@ fun NewPollView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                             Text(stringResource(R.string.poll_heading_optional))
                             PollVoteValueRange()
                             PollConsensusThreshold()
+                            PollClosing()
                         }
                     }
 
