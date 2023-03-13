@@ -38,7 +38,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -47,13 +46,14 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.RoboHashCache
-import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
+import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.LoginPage
+import nostr.postr.bechToBytes
+import nostr.postr.toHex
 
 @Composable
 fun AccountSwitchBottomSheet(
@@ -108,18 +108,15 @@ fun AccountSwitchBottomSheet(
                                 .width(55.dp)
                                 .padding(0.dp)
                         ) {
-                            AsyncImageProxy(
+                            RobohashAsyncImageProxy(
+                                robot = acc.npub.bechToBytes("npub").toHex(),
                                 model = ResizeImage(acc.profilePicture, 55.dp),
-                                placeholder = BitmapPainter(RoboHashCache.get(context, acc.npub)),
-                                fallback = BitmapPainter(RoboHashCache.get(context, acc.npub)),
-                                error = BitmapPainter(RoboHashCache.get(context, acc.npub)),
                                 contentDescription = stringResource(R.string.profile_image),
                                 modifier = Modifier
                                     .width(55.dp)
                                     .height(55.dp)
                                     .clip(shape = CircleShape)
                             )
-
                             Box(
                                 modifier = Modifier
                                     .size(20.dp)
