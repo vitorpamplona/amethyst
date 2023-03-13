@@ -86,9 +86,7 @@ fun AccountSwitchBottomSheet(
             val current = accountUser.pubkeyNpub() == acc.npub
 
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp, 16.dp),
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(
@@ -99,62 +97,69 @@ fun AccountSwitchBottomSheet(
                         },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
+                    Row(
                         modifier = Modifier
-                            .width(55.dp)
-                            .padding(0.dp)
+                            .padding(16.dp, 16.dp)
+                            .weight(1f),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        AsyncImageProxy(
-                            model = ResizeImage(acc.profilePicture, 55.dp),
-                            placeholder = BitmapPainter(RoboHashCache.get(context, acc.npub)),
-                            fallback = BitmapPainter(RoboHashCache.get(context, acc.npub)),
-                            error = BitmapPainter(RoboHashCache.get(context, acc.npub)),
-                            contentDescription = stringResource(R.string.profile_image),
-                            modifier = Modifier
-                                .width(55.dp)
-                                .height(55.dp)
-                                .clip(shape = CircleShape)
-                        )
-
                         Box(
                             modifier = Modifier
-                                .size(20.dp)
-                                .align(Alignment.TopEnd)
+                                .width(55.dp)
+                                .padding(0.dp)
                         ) {
-                            if (acc.hasPrivKey) {
-                                Icon(
-                                    imageVector = Icons.Default.Key,
-                                    contentDescription = stringResource(R.string.account_switch_has_private_key),
-                                    modifier = Modifier.size(20.dp),
-                                    tint = MaterialTheme.colors.primary
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Default.Visibility,
-                                    contentDescription = stringResource(R.string.account_switch_pubkey_only),
-                                    modifier = Modifier.size(20.dp),
-                                    tint = MaterialTheme.colors.primary
-                                )
+                            AsyncImageProxy(
+                                model = ResizeImage(acc.profilePicture, 55.dp),
+                                placeholder = BitmapPainter(RoboHashCache.get(context, acc.npub)),
+                                fallback = BitmapPainter(RoboHashCache.get(context, acc.npub)),
+                                error = BitmapPainter(RoboHashCache.get(context, acc.npub)),
+                                contentDescription = stringResource(R.string.profile_image),
+                                modifier = Modifier
+                                    .width(55.dp)
+                                    .height(55.dp)
+                                    .clip(shape = CircleShape)
+                            )
+
+                            Box(
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .align(Alignment.TopEnd)
+                            ) {
+                                if (acc.hasPrivKey) {
+                                    Icon(
+                                        imageVector = Icons.Default.Key,
+                                        contentDescription = stringResource(R.string.account_switch_has_private_key),
+                                        modifier = Modifier.size(20.dp),
+                                        tint = MaterialTheme.colors.primary
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Default.Visibility,
+                                        contentDescription = stringResource(R.string.account_switch_pubkey_only),
+                                        modifier = Modifier.size(20.dp),
+                                        tint = MaterialTheme.colors.primary
+                                    )
+                                }
                             }
                         }
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        val npubShortHex = acc.npub.toShortenHex()
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            val npubShortHex = acc.npub.toShortenHex()
 
-                        if (acc.displayName != null && acc.displayName != npubShortHex) {
-                            Text(acc.displayName)
+                            if (acc.displayName != null && acc.displayName != npubShortHex) {
+                                Text(acc.displayName)
+                            }
+
+                            Text(npubShortHex)
                         }
-
-                        Text(npubShortHex)
-                    }
-                    Column(modifier = Modifier.width(32.dp)) {
-                        if (current) {
-                            Icon(
-                                imageVector = Icons.Default.RadioButtonChecked,
-                                contentDescription = stringResource(R.string.account_switch_active_account),
-                                tint = MaterialTheme.colors.secondary
-                            )
+                        Column(modifier = Modifier.width(32.dp)) {
+                            if (current) {
+                                Icon(
+                                    imageVector = Icons.Default.RadioButtonChecked,
+                                    contentDescription = stringResource(R.string.account_switch_active_account),
+                                    tint = MaterialTheme.colors.secondary
+                                )
+                            }
                         }
                     }
                 }
