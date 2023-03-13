@@ -2,7 +2,6 @@ package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.MaterialTheme
@@ -21,46 +20,26 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 
 @Composable
-fun PollVoteValueRange() {
-    var minText by rememberSaveable { mutableStateOf("") }
-    var maxText by rememberSaveable { mutableStateOf("") }
+fun PollConsensusThreshold() {
+    var text by rememberSaveable { mutableStateOf("") }
 
     Row(
-        Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Center
     ) {
         OutlinedTextField(
-            value = minText,
-            onValueChange = { minText = it },
+            value = text,
+            onValueChange = { text = it },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.width(150.dp),
             label = {
                 Text(
-                    text = stringResource(R.string.poll_vote_value_min),
+                    text = stringResource(R.string.poll_consensus_threshold),
                     color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                 )
             },
             placeholder = {
                 Text(
-                    text = stringResource(R.string.poll_vote_value_min_zap_amount),
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                )
-            }
-        )
-        OutlinedTextField(
-            value = maxText,
-            onValueChange = { maxText = it },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.width(150.dp),
-            label = {
-                Text(
-                    text = stringResource(R.string.poll_vote_value_max),
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                )
-            },
-            placeholder = {
-                Text(
-                    text = stringResource(R.string.poll_vote_value_max_zap_amount),
+                    text = stringResource(R.string.poll_consensus_threshold_percent),
                     color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                 )
             }
@@ -70,6 +49,6 @@ fun PollVoteValueRange() {
 
 @Preview
 @Composable
-fun PollVoteValueRangePreview() {
-    PollVoteValueRange()
+fun PollConsensusThresholdPreview() {
+    PollConsensusThreshold()
 }

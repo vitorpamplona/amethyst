@@ -221,12 +221,17 @@
 
     <string name="private_conversation_notification">"&lt;Unable to decrypt private message&gt;\n\nYou were cited in a private/encrypted conversation between %1$s and %2$s."</string>
     <string name="post_poll">Post Poll</string>
-    <string name="poll_primary_description">Primary poll description…</string>
-    <string name="poll_option_description">Poll option description</string>
-    <string name="poll_option_index">Option %s</string>
+    <string name="poll_heading_required">Required fields:</string>
     <string name="poll_zap_recipients">Zap recipients</string>
-    <string name="poll_heading_optional">Optional:</string>
+    <string name="poll_primary_description">Primary poll description…</string>
+    <string name="poll_option_index">Option %s</string>
+    <string name="poll_option_description">Poll option description</string>
+    <string name="poll_heading_optional">Optional fields:</string>
     <string name="poll_vote_value_min">Vote minimum</string>
     <string name="poll_vote_value_max">Vote maximum</string>
+    <string name="poll_consensus_threshold">Consensus threshold</string>
+    <string name="poll_consensus_threshold_percent">%</string>
+    <string name="poll_vote_value_min_zap_amount">Minimum zap</string>
+    <string name="poll_vote_value_max_zap_amount">Maximum zap</string>
 
 </resources>

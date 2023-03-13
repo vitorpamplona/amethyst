@@ -26,10 +26,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
-import com.vitorpamplona.amethyst.ui.components.PollOption
-import com.vitorpamplona.amethyst.ui.components.PollPrimaryDescription
-import com.vitorpamplona.amethyst.ui.components.PollRecipientsField
-import com.vitorpamplona.amethyst.ui.components.PollVoteValueRange
+import com.vitorpamplona.amethyst.ui.components.*
 import com.vitorpamplona.amethyst.ui.note.ReplyInformation
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.UserLine
 import kotlinx.coroutines.delay
@@ -113,6 +110,7 @@ fun NewPollView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                 }
                             }
 
+                            Text(stringResource(R.string.poll_heading_required))
                             PollRecipientsField()
                             PollPrimaryDescription(pollViewModel = pollViewModel)
                             PollOption(0)
@@ -132,6 +130,7 @@ fun NewPollView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                             }
                             Text(stringResource(R.string.poll_heading_optional))
                             PollVoteValueRange()
+                            PollConsensusThreshold()
                         }
                     }
 
