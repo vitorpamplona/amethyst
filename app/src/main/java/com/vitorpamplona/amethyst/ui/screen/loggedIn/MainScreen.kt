@@ -79,7 +79,7 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
 fun FloatingButton(navController: NavHostController, accountViewModel: AccountStateViewModel) {
     val accountState by accountViewModel.accountContent.collectAsState()
 
-    if (currentRoute(navController) == Route.Home.route) {
+    if (currentRoute(navController)?.substringBefore("?") == Route.Home.base) {
         Crossfade(targetState = accountState, animationSpec = tween(durationMillis = 100)) { state ->
             when (state) {
                 is AccountState.LoggedInViewOnly -> {
@@ -95,7 +95,7 @@ fun FloatingButton(navController: NavHostController, accountViewModel: AccountSt
         }
     }
 
-    if (currentRoute(navController) == Route.Message.route) {
+    if (currentRoute(navController) == Route.Message.base) {
         Crossfade(targetState = accountState, animationSpec = tween(durationMillis = 100)) { state ->
             when (state) {
                 is AccountState.LoggedInViewOnly -> {

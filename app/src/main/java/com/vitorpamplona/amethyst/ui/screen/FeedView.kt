@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.ui.screen
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -11,8 +12,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.Button
+import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.OutlinedButton
 import androidx.compose.material.Text
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -25,64 +30,65 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.google.accompanist.swiperefresh.SwipeRefresh
-import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun FeedView(
     viewModel: FeedViewModel,
     accountViewModel: AccountViewModel,
     navController: NavController,
-    routeForLastRead: String?
+    routeForLastRead: String?,
+    scrollStateKey: String? = null,
+    scrollToTop: Boolean = false
 ) {
     val feedState by viewModel.feedContent.collectAsState()
 
-    var isRefreshing by remember { mutableStateOf(false) }
-    val swipeRefreshState = rememberSwipeRefreshState(isRefreshing)
+    var refreshing by remember { mutableStateOf(false) }
+    val refresh = { refreshing = true; viewModel.refresh(); refreshing = false }
+    val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = refresh)
 
-    LaunchedEffect(isRefreshing) {
-        if (isRefreshing) {
-            viewModel.refresh()
-            isRefreshing = false
-        }
-    }
-
-    SwipeRefresh(
-        state = swipeRefreshState,
-        onRefresh = {
-            isRefreshing = true
-        }
-    ) {
-        Column() {
-            Crossfade(targetState = feedState, animationSpec = tween(durationMillis = 100)) { state ->
+    Box(Modifier.pullRefresh(pullRefreshState)) {
+        Column {
+            Crossfade(
+                targetState = feedState,
+                animationSpec = tween(durationMillis = 100)
+            ) { state ->
                 when (state) {
                     is FeedState.Empty -> {
                         FeedEmpty {
-                            isRefreshing = true
+                            refreshing = true
                         }
                     }
+
                     is FeedState.FeedError -> {
                         FeedError(state.errorMessage) {
-                            isRefreshing = true
+                            refreshing = true
                         }
                     }
+
                     is FeedState.Loaded -> {
+                        refreshing = false
                         FeedLoaded(
                             state,
                             routeForLastRead,
                             accountViewModel,
-                            navController
+                            navController,
+                            scrollStateKey,
+                            scrollToTop
                         )
                     }
+
                     is FeedState.Loading -> {
                         LoadingFeed()
                     }
                 }
             }
         }
+
+        PullRefreshIndicator(refreshing, pullRefreshState, Modifier.align(Alignment.TopCenter))
     }
 }
 
@@ -91,9 +97,21 @@ private fun FeedLoaded(
     state: FeedState.Loaded,
     routeForLastRead: String?,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    navController: NavController,
+    scrollStateKey: String?,
+    scrollToTop: Boolean = false
 ) {
-    val listState = rememberLazyListState()
+    val listState = if (scrollStateKey != null) {
+        rememberForeverLazyListState(scrollStateKey)
+    } else {
+        rememberLazyListState()
+    }
+
+    if (scrollToTop) {
+        LaunchedEffect(Unit) {
+            listState.scrollToItem(index = 0)
+        }
+    }
 
     LazyColumn(
         contentPadding = PaddingValues(
@@ -102,7 +120,7 @@ private fun FeedLoaded(
         ),
         state = listState
     ) {
-        itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { index, item ->
+        itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
             NoteCompose(
                 item,
                 isBoostedNote = false,
