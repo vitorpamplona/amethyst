@@ -44,43 +44,44 @@ fun UploadFromGallery(
                 }
             )
         } else {
-            Box() {
-                TextButton(
-                    modifier = Modifier
-                        .align(Alignment.TopCenter),
-                    enabled = !isUploading,
-                    onClick = {
-                        showGallerySelect = true
-                    }
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_add_photo),
-                        contentDescription = stringResource(id = R.string.upload_image),
-                        modifier = Modifier
-                            .height(20.dp)
-                            .padding(end = 8.dp),
-                        tint = MaterialTheme.colors.primary
-                    )
-
-                    if (!isUploading) {
-                        Text(stringResource(R.string.upload_image))
-                    } else {
-                        Text(stringResource(R.string.uploading))
-                    }
-                }
+            UploadBoxButton(isUploading) {
+                showGallerySelect = true
             }
         }
     } else {
-        Column {
-            Button(
-                onClick = { cameraPermissionState.launchPermissionRequest() },
-                enabled = !isUploading
-            ) {
-                if (!isUploading) {
-                    Text(stringResource(R.string.upload_image))
-                } else {
-                    Text(stringResource(R.string.uploading))
-                }
+        UploadBoxButton(isUploading) {
+            cameraPermissionState.launchPermissionRequest()
+        }
+    }
+}
+
+@Composable
+private fun UploadBoxButton(
+    isUploading: Boolean,
+    onClick: () -> Unit
+) {
+    Box() {
+        TextButton(
+            modifier = Modifier
+                .align(Alignment.TopCenter),
+            enabled = !isUploading,
+            onClick = {
+                onClick()
+            }
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_add_photo),
+                contentDescription = stringResource(id = R.string.upload_image),
+                modifier = Modifier
+                    .height(20.dp)
+                    .padding(end = 8.dp),
+                tint = MaterialTheme.colors.primary
+            )
+
+            if (!isUploading) {
+                Text(stringResource(R.string.upload_image))
+            } else {
+                Text(stringResource(R.string.uploading))
             }
         }
     }
