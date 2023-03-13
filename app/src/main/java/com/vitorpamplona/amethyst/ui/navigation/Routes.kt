@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.ui.navigation
 
-import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.navigation.NamedNavArgument
@@ -18,7 +17,7 @@ import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
 sealed class Route(
     val route: String,
     val icon: Int,
-    val hasNewItems: (Account, NotificationCache, Context) -> Boolean = { _, _, _ -> false },
+    val hasNewItems: (Account, NotificationCache) -> Boolean = { _, _ -> false },
     val arguments: List<NamedNavArgument> = emptyList()
 ) {
     val base: String
@@ -28,7 +27,7 @@ sealed class Route(
         route = "Home?scrollToTop={scrollToTop}",
         icon = R.drawable.ic_home,
         arguments = listOf(navArgument("scrollToTop") { type = NavType.BoolType; defaultValue = false }),
-        hasNewItems = { accountViewModel, cache, context -> homeHasNewItems(accountViewModel, cache, context) }
+        hasNewItems = { accountViewModel, cache -> homeHasNewItems(accountViewModel, cache) }
     )
 
     object Search : Route(
@@ -40,17 +39,13 @@ sealed class Route(
     object Notification : Route(
         route = "Notification",
         icon = R.drawable.ic_notifications,
-        hasNewItems = { accountViewModel, cache, context ->
-            notificationHasNewItems(accountViewModel, cache, context)
-        }
+        hasNewItems = { accountViewModel, cache -> notificationHasNewItems(accountViewModel, cache) }
     )
 
     object Message : Route(
         route = "Message",
         icon = R.drawable.ic_dm,
-        hasNewItems = { accountViewModel, cache, context ->
-            messagesHasNewItems(accountViewModel, cache, context)
-        }
+        hasNewItems = { accountViewModel, cache -> messagesHasNewItems(accountViewModel, cache) }
     )
 
     object Filters : Route(
@@ -92,8 +87,8 @@ fun currentRoute(navController: NavHostController): String? {
     return navBackStackEntry?.destination?.route
 }
 
-private fun homeHasNewItems(account: Account, cache: NotificationCache, context: Context): Boolean {
-    val lastTime = cache.load("HomeFollows", context)
+private fun homeHasNewItems(account: Account, cache: NotificationCache): Boolean {
+    val lastTime = cache.load("HomeFollows")
 
     HomeNewThreadFeedFilter.account = account
 
@@ -103,12 +98,8 @@ private fun homeHasNewItems(account: Account, cache: NotificationCache, context:
         ) > lastTime
 }
 
-private fun notificationHasNewItems(
-    account: Account,
-    cache: NotificationCache,
-    context: Context
-): Boolean {
-    val lastTime = cache.load("Notification", context)
+private fun notificationHasNewItems(account: Account, cache: NotificationCache): Boolean {
+    val lastTime = cache.load("Notification")
 
     NotificationFeedFilter.account = account
 
@@ -118,18 +109,14 @@ private fun notificationHasNewItems(
         ) > lastTime
 }
 
-private fun messagesHasNewItems(
-    account: Account,
-    cache: NotificationCache,
-    context: Context
-): Boolean {
+private fun messagesHasNewItems(account: Account, cache: NotificationCache): Boolean {
     ChatroomListKnownFeedFilter.account = account
 
     val note = ChatroomListKnownFeedFilter.feed().firstOrNull {
         it.createdAt() != null && it.channel() == null && it.author != account.userProfile()
     } ?: return false
 
-    val lastTime = cache.load("Room/${note.author?.pubkeyHex}", context)
+    val lastTime = cache.load("Room/${note.author?.pubkeyHex}")
 
     return (note.createdAt() ?: 0) > lastTime
 }

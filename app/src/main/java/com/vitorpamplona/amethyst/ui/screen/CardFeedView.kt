@@ -90,7 +90,7 @@ private fun FeedLoaded(
         ),
         state = listState
     ) {
-        itemsIndexed(state.feed.value, key = { _, item -> item.id() }) { index, item ->
+        itemsIndexed(state.feed.value, key = { _, item -> item.id() }) { _, item ->
             when (item) {
                 is NoteCard -> NoteCompose(
                     item.note,

@@ -1,9 +1,9 @@
 package com.vitorpamplona.amethyst.ui.components
 
+import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
-import androidx.compose.foundation.gestures.forEachGesture
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,17 +32,15 @@ fun ZoomableAsyncImage(imageUrl: String) {
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .pointerInput(Unit) {
-                forEachGesture {
-                    awaitPointerEventScope {
-                        awaitFirstDown()
-                        do {
-                            val event = awaitPointerEvent()
-                            scale *= event.calculateZoom()
-                            val offset = event.calculatePan()
-                            offsetX += offset.x
-                            offsetY += offset.y
-                        } while (event.changes.any { it.pressed })
-                    }
+                awaitEachGesture {
+                    awaitFirstDown()
+                    do {
+                        val event = awaitPointerEvent()
+                        scale *= event.calculateZoom()
+                        val offset = event.calculatePan()
+                        offsetX += offset.x
+                        offsetY += offset.y
+                    } while (event.changes.any { it.pressed })
                 }
             }
     ) {

@@ -38,7 +38,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -60,9 +59,7 @@ fun AccountSwitchBottomSheet(
     accountViewModel: AccountViewModel,
     accountStateViewModel: AccountStateViewModel
 ) {
-    val context = LocalContext.current
     val accounts = LocalPreferences.allSavedAccounts()
-
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 

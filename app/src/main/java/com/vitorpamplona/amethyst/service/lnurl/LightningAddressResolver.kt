@@ -133,9 +133,9 @@ class LightningAddressResolver {
 
         fetchLightningAddressJson(
             lnaddress,
-            onSuccess = {
+            onSuccess = { lnAddressJson ->
                 val lnurlp = try {
-                    mapper.readTree(it)
+                    mapper.readTree(lnAddressJson)
                 } catch (t: Throwable) {
                     onError("Error Parsing JSON from Lightning Address. Check the user's lightning setup")
                     null
@@ -149,9 +149,9 @@ class LightningAddressResolver {
 
                 val allowsNostr = lnurlp?.get("allowsNostr")?.asBoolean() ?: false
 
-                callback?.let { callback ->
+                callback?.let { cb ->
                     fetchLightningInvoice(
-                        callback,
+                        cb,
                         milliSats,
                         message,
                         if (allowsNostr) nostrRequest else null,

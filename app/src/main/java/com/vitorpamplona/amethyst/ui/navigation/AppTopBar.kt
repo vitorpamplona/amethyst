@@ -71,6 +71,7 @@ fun AppTopBar(navController: NavHostController, scaffoldState: ScaffoldState, ac
     }
 }
 
+@OptIn(coil.annotation.ExperimentalCoilApi::class)
 @Composable
 fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
@@ -86,7 +87,6 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
     val coroutineScope = rememberCoroutineScope()
 
     val context = LocalContext.current
-    val ctx = LocalContext.current.applicationContext
 
     var wantsToEditRelays by remember {
         mutableStateOf(false)
@@ -99,7 +99,6 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
     Column() {
         TopAppBar(
             elevation = 0.dp,
-            backgroundColor = Color(0xFFFFFF),
             title = {
                 Column(
                     modifier = Modifier.fillMaxWidth(),

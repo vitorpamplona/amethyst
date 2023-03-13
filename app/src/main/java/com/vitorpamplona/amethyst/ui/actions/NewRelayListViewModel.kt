@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.ui.actions
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
@@ -18,20 +17,20 @@ class NewRelayListViewModel : ViewModel() {
     private val _relays = MutableStateFlow<List<RelaySetupInfo>>(emptyList())
     val relays = _relays.asStateFlow()
 
-    fun load(account: Account, ctx: Context) {
+    fun load(account: Account) {
         this.account = account
-        clear(ctx)
+        clear()
     }
 
-    fun create(ctx: Context) {
+    fun create() {
         relays.let {
             account.saveRelayList(it.value)
         }
 
-        clear(ctx)
+        clear()
     }
 
-    fun clear(ctx: Context) {
+    fun clear() {
         _relays.update {
             var relayFile = account.userProfile().latestContactList?.relays()
 

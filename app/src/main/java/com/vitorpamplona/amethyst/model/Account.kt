@@ -23,6 +23,7 @@ import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
@@ -48,6 +49,7 @@ fun getLanguagesSpokenByUser(): Set<String> {
     return codedList
 }
 
+@OptIn(DelicateCoroutinesApi::class)
 class Account(
     val loggedIn: Persona,
     var followingChannels: Set<String> = DefaultChannels,

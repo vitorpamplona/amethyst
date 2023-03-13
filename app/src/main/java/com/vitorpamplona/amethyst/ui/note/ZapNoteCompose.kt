@@ -18,7 +18,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -54,7 +53,6 @@ fun ZapNoteCompose(baseNote: Pair<Note, Note>, accountViewModel: AccountViewMode
 
     val baseAuthor = noteZapRequest.author
 
-    val ctx = LocalContext.current.applicationContext
     val coroutineScope = rememberCoroutineScope()
 
     if (baseAuthor == null) {
@@ -83,8 +81,8 @@ fun ZapNoteCompose(baseNote: Pair<Note, Note>, accountViewModel: AccountViewMode
                         UsernameDisplay(baseAuthor)
                     }
 
-                    val userState by baseAuthor.live().metadata.observeAsState()
-                    val user = userState?.user ?: return
+                    val baseAuthorState by baseAuthor.live().metadata.observeAsState()
+                    val user = baseAuthorState?.user ?: return
 
                     Text(
                         user.info?.about ?: "",

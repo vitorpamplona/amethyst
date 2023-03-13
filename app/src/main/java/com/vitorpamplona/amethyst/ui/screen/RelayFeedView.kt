@@ -22,7 +22,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.model.RelayInfo
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserState
@@ -107,7 +106,7 @@ class RelayFeedViewModel : ViewModel() {
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun RelayFeedView(viewModel: RelayFeedViewModel, accountViewModel: AccountViewModel, navController: NavController) {
+fun RelayFeedView(viewModel: RelayFeedViewModel, accountViewModel: AccountViewModel) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
@@ -136,11 +135,10 @@ fun RelayFeedView(viewModel: RelayFeedViewModel, accountViewModel: AccountViewMo
                 ),
                 state = listState
             ) {
-                itemsIndexed(feedState, key = { _, item -> item.url }) { index, item ->
+                itemsIndexed(feedState, key = { _, item -> item.url }) { _, item ->
                     RelayCompose(
                         item,
                         accountViewModel = accountViewModel,
-                        navController = navController,
                         onAddRelay = { wantsToAddRelay = item.url },
                         onRemoveRelay = { wantsToAddRelay = item.url }
                     )

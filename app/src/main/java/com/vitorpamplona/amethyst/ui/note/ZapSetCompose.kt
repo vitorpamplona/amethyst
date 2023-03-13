@@ -23,7 +23,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.compositeOver
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -39,14 +38,12 @@ import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ZapSetCompose(zapSetCard: ZapSetCard, modifier: Modifier = Modifier, isInnerNote: Boolean = false, routeForLastRead: String, accountViewModel: AccountViewModel, navController: NavController) {
+fun ZapSetCompose(zapSetCard: ZapSetCard, isInnerNote: Boolean = false, routeForLastRead: String, accountViewModel: AccountViewModel, navController: NavController) {
     val noteState by zapSetCard.note.live().metadata.observeAsState()
     val note = noteState?.note
 
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
-
-    val context = LocalContext.current.applicationContext
 
     val noteEvent = note?.event
     var popupExpanded by remember { mutableStateOf(false) }
@@ -58,9 +55,9 @@ fun ZapSetCompose(zapSetCard: ZapSetCard, modifier: Modifier = Modifier, isInner
 
         LaunchedEffect(key1 = zapSetCard) {
             withContext(Dispatchers.IO) {
-                isNew = zapSetCard.createdAt > NotificationCache.load(routeForLastRead, context)
+                isNew = zapSetCard.createdAt > NotificationCache.load(routeForLastRead)
 
-                NotificationCache.markAsRead(routeForLastRead, zapSetCard.createdAt, context)
+                NotificationCache.markAsRead(routeForLastRead, zapSetCard.createdAt)
             }
         }
 

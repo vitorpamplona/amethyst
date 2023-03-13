@@ -26,7 +26,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -59,8 +58,6 @@ fun TranslateableRichTextViewer(
 
     var showOriginal by remember { mutableStateOf(false) }
     var langSettingsPopupExpanded by remember { mutableStateOf(false) }
-
-    val context = LocalContext.current
 
     val accountState by accountViewModel.accountLanguagesLiveData.observeAsState()
     val account = accountState?.account ?: return
@@ -154,7 +151,7 @@ fun TranslateableRichTextViewer(
                         onDismissRequest = { langSettingsPopupExpanded = false }
                     ) {
                         DropdownMenuItem(onClick = {
-                            accountViewModel.dontTranslateFrom(source, context)
+                            accountViewModel.dontTranslateFrom(source)
                             langSettingsPopupExpanded = false
                         }) {
                             if (source in account.dontTranslateFrom) {
@@ -169,7 +166,7 @@ fun TranslateableRichTextViewer(
 
                             Spacer(modifier = Modifier.size(10.dp))
 
-                            Text(stringResource(R.string.never_translate_from) + "${Locale(source).displayName}")
+                            Text(stringResource(R.string.never_translate_from) + Locale(source).displayName)
                         }
                         Divider()
                         DropdownMenuItem(onClick = {
@@ -223,11 +220,11 @@ fun TranslateableRichTextViewer(
                         Divider()
 
                         val languageList =
-                            ConfigurationCompat.getLocales(Resources.getSystem().getConfiguration())
+                            ConfigurationCompat.getLocales(Resources.getSystem().configuration)
                         for (i in 0 until languageList.size()) {
                             languageList.get(i)?.let { lang ->
                                 DropdownMenuItem(onClick = {
-                                    accountViewModel.translateTo(lang, context)
+                                    accountViewModel.translateTo(lang)
                                     langSettingsPopupExpanded = false
                                 }) {
                                     if (lang.language in account.translateTo) {

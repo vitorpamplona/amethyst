@@ -22,7 +22,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -44,8 +43,6 @@ fun BoostSetCompose(boostSetCard: BoostSetCard, isInnerNote: Boolean = false, ro
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
-    val context = LocalContext.current.applicationContext
-
     val noteEvent = note?.event
     var popupExpanded by remember { mutableStateOf(false) }
 
@@ -56,13 +53,13 @@ fun BoostSetCompose(boostSetCard: BoostSetCard, isInnerNote: Boolean = false, ro
 
         LaunchedEffect(key1 = boostSetCard) {
             withContext(Dispatchers.IO) {
-                isNew = boostSetCard.createdAt > NotificationCache.load(routeForLastRead, context)
+                isNew = boostSetCard.createdAt > NotificationCache.load(routeForLastRead)
 
-                NotificationCache.markAsRead(routeForLastRead, boostSetCard.createdAt, context)
+                NotificationCache.markAsRead(routeForLastRead, boostSetCard.createdAt)
             }
         }
 
-        var backgroundColor = if (isNew) {
+        val backgroundColor = if (isNew) {
             MaterialTheme.colors.primary.copy(0.12f).compositeOver(MaterialTheme.colors.background)
         } else {
             MaterialTheme.colors.background

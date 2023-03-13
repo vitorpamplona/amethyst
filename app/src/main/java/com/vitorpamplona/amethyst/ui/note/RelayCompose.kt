@@ -22,7 +22,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.RelayInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -34,7 +33,6 @@ import java.time.format.DateTimeFormatter
 fun RelayCompose(
     relay: RelayInfo,
     accountViewModel: AccountViewModel,
-    navController: NavController,
     onAddRelay: () -> Unit,
     onRemoveRelay: () -> Unit
 ) {
@@ -48,8 +46,6 @@ fun RelayCompose(
             modifier = Modifier
                 .padding(start = 12.dp, end = 12.dp, top = 10.dp)
         ) {
-            // UserPicture(user, navController, account.userProfile(), 55.dp)
-
             Column(
                 modifier = Modifier
                     .padding(start = 10.dp)

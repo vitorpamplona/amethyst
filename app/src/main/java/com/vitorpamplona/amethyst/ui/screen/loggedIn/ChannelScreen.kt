@@ -71,7 +71,6 @@ import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.dal.ChannelFeedFilter
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
-import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.ChatroomFeedView
 import com.vitorpamplona.amethyst.ui.screen.NostrChannelFeedViewModel
 
@@ -79,7 +78,6 @@ import com.vitorpamplona.amethyst.ui.screen.NostrChannelFeedViewModel
 fun ChannelScreen(
     channelId: String?,
     accountViewModel: AccountViewModel,
-    accountStateViewModel: AccountStateViewModel,
     navController: NavController
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
@@ -103,7 +101,7 @@ fun ChannelScreen(
         }
 
         DisposableEffect(channelId) {
-            val observer = LifecycleEventObserver { source, event ->
+            val observer = LifecycleEventObserver { _, event ->
                 if (event == Lifecycle.Event.ON_RESUME) {
                     println("Channel Start")
                     NostrChannelDataSource.start()

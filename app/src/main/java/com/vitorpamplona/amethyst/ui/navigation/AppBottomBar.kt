@@ -30,7 +30,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
@@ -141,7 +140,7 @@ private fun NotifiableIcon(route: Route, selected: Boolean, accountViewModel: Ac
     Box(Modifier.size(if ("Home" == route.base) 25.dp else 23.dp)) {
         Icon(
             painter = painterResource(id = route.icon),
-            null,
+            contentDescription = null,
             modifier = Modifier.size(if ("Home" == route.base) 24.dp else 20.dp),
             tint = if (selected) MaterialTheme.colors.primary else Color.Unspecified
         )
@@ -158,17 +157,15 @@ private fun NotifiableIcon(route: Route, selected: Boolean, accountViewModel: Ac
 
         var hasNewItems by remember { mutableStateOf<Boolean>(false) }
 
-        val context = LocalContext.current.applicationContext
-
         LaunchedEffect(key1 = notif) {
             withContext(Dispatchers.IO) {
-                hasNewItems = route.hasNewItems(account, notif.cache, context)
+                hasNewItems = route.hasNewItems(account, notif.cache)
             }
         }
 
         LaunchedEffect(key1 = db) {
             withContext(Dispatchers.IO) {
-                hasNewItems = route.hasNewItems(account, notif.cache, context)
+                hasNewItems = route.hasNewItems(account, notif.cache)
             }
         }
 

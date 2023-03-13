@@ -64,8 +64,6 @@ fun ChatroomCompose(
     val notificationCacheState = NotificationCache.live.observeAsState()
     val notificationCache = notificationCacheState.value ?: return
 
-    val context = LocalContext.current.applicationContext
-
     if (note?.event == null) {
         BlankNote(Modifier)
     } else if (note.channel() != null) {
@@ -84,22 +82,22 @@ fun ChatroomCompose(
         } else {
             noteEvent?.content()
         }
-        channel?.let { channel ->
+        channel?.let { chan ->
             var hasNewMessages by remember { mutableStateOf<Boolean>(false) }
 
             LaunchedEffect(key1 = notificationCache, key2 = note) {
                 withContext(Dispatchers.IO) {
-                    note.createdAt()?.let {
+                    note.createdAt()?.let { timestamp ->
                         hasNewMessages =
-                            it > notificationCache.cache.load("Channel/${channel.idHex}", context)
+                            timestamp > notificationCache.cache.load("Channel/${chan.idHex}")
                     }
                 }
             }
 
             ChannelName(
-                channelIdHex = channel.idHex,
-                channelPicture = channel.profilePicture(),
-                channelTitle = {
+                channelIdHex = chan.idHex,
+                channelPicture = chan.profilePicture(),
+                channelTitle = { modifier ->
                     Text(
                         text = buildAnnotatedString {
                             withStyle(
@@ -107,7 +105,7 @@ fun ChatroomCompose(
                                     fontWeight = FontWeight.Bold
                                 )
                             ) {
-                                append(channel.info.name)
+                                append(chan.info.name)
                             }
 
                             withStyle(
@@ -120,14 +118,14 @@ fun ChatroomCompose(
                             }
                         },
                         fontWeight = FontWeight.Bold,
-                        modifier = it,
+                        modifier = modifier,
                         style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
                     )
                 },
                 channelLastTime = note.createdAt(),
                 channelLastContent = "${author?.toBestDisplayName()}: " + description,
                 hasNewMessages = hasNewMessages,
-                onClick = { navController.navigate("Channel/${channel.idHex}") }
+                onClick = { navController.navigate("Channel/${chan.idHex}") }
             )
         }
     } else {
@@ -153,8 +151,7 @@ fun ChatroomCompose(
                 withContext(Dispatchers.IO) {
                     noteEvent?.let {
                         hasNewMessages = it.createdAt() > notificationCache.cache.load(
-                            "Room/${userToComposeOn.pubkeyHex}",
-                            context
+                            "Room/${userToComposeOn.pubkeyHex}"
                         )
                     }
                 }

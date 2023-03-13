@@ -7,6 +7,7 @@ import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -18,6 +19,7 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
         invalidateFilters()
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     override fun start() {
         if (this::account.isInitialized) {
             GlobalScope.launch(Dispatchers.Main) {
@@ -27,6 +29,7 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
         super.start()
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     override fun stop() {
         super.stop()
         if (this::account.isInitialized) {
