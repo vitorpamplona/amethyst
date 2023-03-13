@@ -78,7 +78,12 @@ import com.vitorpamplona.amethyst.ui.screen.ChatroomFeedView
 import com.vitorpamplona.amethyst.ui.screen.NostrChannelFeedViewModel
 
 @Composable
-fun ChannelScreen(channelId: String?, accountViewModel: AccountViewModel, accountStateViewModel: AccountStateViewModel, navController: NavController) {
+fun ChannelScreen(
+    channelId: String?,
+    accountViewModel: AccountViewModel,
+    accountStateViewModel: AccountStateViewModel,
+    navController: NavController
+) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account
 

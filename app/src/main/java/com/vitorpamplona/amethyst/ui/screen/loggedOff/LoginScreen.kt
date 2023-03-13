@@ -1,4 +1,4 @@
-package com.vitorpamplona.amethyst.ui.screen
+package com.vitorpamplona.amethyst.ui.screen.loggedOff
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
@@ -36,14 +36,18 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import java.util.*
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun LoginPage(accountViewModel: AccountStateViewModel) {
+fun LoginPage(
+    accountViewModel: AccountStateViewModel,
+    isFirstLogin: Boolean
+) {
     val key = remember { mutableStateOf(TextFieldValue("")) }
     var errorMessage by remember { mutableStateOf("") }
-    val acceptedTerms = remember { mutableStateOf(false) }
+    val acceptedTerms = remember { mutableStateOf(!isFirstLogin) }
     var termsAcceptanceIsRequired by remember { mutableStateOf("") }
     val uri = LocalUriHandler.current
     val context = LocalContext.current
@@ -147,48 +151,50 @@ fun LoginPage(accountViewModel: AccountStateViewModel) {
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(
-                    checked = acceptedTerms.value,
-                    onCheckedChange = { acceptedTerms.value = it }
-                )
+            if (isFirstLogin) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = acceptedTerms.value,
+                        onCheckedChange = { acceptedTerms.value = it }
+                    )
 
-                val regularText =
-                    SpanStyle(color = MaterialTheme.colors.onBackground)
+                    val regularText =
+                        SpanStyle(color = MaterialTheme.colors.onBackground)
 
-                val clickableTextStyle =
-                    SpanStyle(color = MaterialTheme.colors.primary)
+                    val clickableTextStyle =
+                        SpanStyle(color = MaterialTheme.colors.primary)
 
-                val annotatedTermsString = buildAnnotatedString {
-                    withStyle(regularText) {
-                        append(stringResource(R.string.i_accept_the))
-                    }
-
-                    withStyle(clickableTextStyle) {
-                        pushStringAnnotation("openTerms", "")
-                        append(stringResource(R.string.terms_of_use))
-                    }
-                }
-
-                ClickableText(
-                    text = annotatedTermsString
-                ) { spanOffset ->
-                    annotatedTermsString.getStringAnnotations(spanOffset, spanOffset)
-                        .firstOrNull()
-                        ?.also { span ->
-                            if (span.tag == "openTerms") {
-                                runCatching { uri.openUri("https://github.com/vitorpamplona/amethyst/blob/main/PRIVACY.md") }
-                            }
+                    val annotatedTermsString = buildAnnotatedString {
+                        withStyle(regularText) {
+                            append(stringResource(R.string.i_accept_the))
                         }
-                }
-            }
 
-            if (termsAcceptanceIsRequired.isNotBlank()) {
-                Text(
-                    text = termsAcceptanceIsRequired,
-                    color = MaterialTheme.colors.error,
-                    style = MaterialTheme.typography.caption
-                )
+                        withStyle(clickableTextStyle) {
+                            pushStringAnnotation("openTerms", "")
+                            append(stringResource(R.string.terms_of_use))
+                        }
+                    }
+
+                    ClickableText(
+                        text = annotatedTermsString
+                    ) { spanOffset ->
+                        annotatedTermsString.getStringAnnotations(spanOffset, spanOffset)
+                            .firstOrNull()
+                            ?.also { span ->
+                                if (span.tag == "openTerms") {
+                                    runCatching { uri.openUri("https://github.com/vitorpamplona/amethyst/blob/main/PRIVACY.md") }
+                                }
+                            }
+                    }
+                }
+
+                if (termsAcceptanceIsRequired.isNotBlank()) {
+                    Text(
+                        text = termsAcceptanceIsRequired,
+                        color = MaterialTheme.colors.error,
+                        style = MaterialTheme.typography.caption
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(20.dp))
