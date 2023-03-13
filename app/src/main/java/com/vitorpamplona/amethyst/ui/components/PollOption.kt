@@ -15,12 +15,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.actions.NewPollViewModel
 
 @Composable
-fun PollOption(pollViewModel: NewPollViewModel, optionIndex: Int) {
+fun PollOption(optionIndex: Int) {
     var text by rememberSaveable() { mutableStateOf("") }
 
     Row() {
@@ -58,4 +58,10 @@ fun PollOption(pollViewModel: NewPollViewModel, optionIndex: Int) {
             )
         }
     }
+}
+
+@Preview
+@Composable
+fun PollOptionPreview() {
+    PollOption(0)
 }

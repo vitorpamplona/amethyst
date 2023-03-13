@@ -20,13 +20,13 @@ fun PollRecipientsField() {
         onValueChange = { text = it },
         label = {
             Text(
-                text = stringResource(R.string.poll_recipients),
+                text = stringResource(R.string.poll_zap_recipients),
                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
             )
         },
         placeholder = {
             Text(
-                text = stringResource(R.string.poll_recipients),
+                text = stringResource(R.string.poll_zap_recipients),
                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
             )
         }

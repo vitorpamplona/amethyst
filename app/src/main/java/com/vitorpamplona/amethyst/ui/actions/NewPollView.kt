@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.ui.components.PollOption
 import com.vitorpamplona.amethyst.ui.components.PollPrimaryDescription
 import com.vitorpamplona.amethyst.ui.components.PollRecipientsField
+import com.vitorpamplona.amethyst.ui.components.PollVoteValueRange
 import com.vitorpamplona.amethyst.ui.note.ReplyInformation
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.UserLine
 import kotlinx.coroutines.delay
@@ -114,8 +115,8 @@ fun NewPollView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
 
                             PollRecipientsField()
                             PollPrimaryDescription(pollViewModel = pollViewModel)
-                            PollOption(pollViewModel, 0)
-                            PollOption(pollViewModel, 1)
+                            PollOption(0)
+                            PollOption(1)
                             Button(
                                 onClick = { /*TODO*/ },
                                 border = BorderStroke(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.32f)),
@@ -129,6 +130,8 @@ fun NewPollView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
+                            Text(stringResource(R.string.poll_heading_optional))
+                            PollVoteValueRange()
                         }
                     }
 
@@ -182,3 +185,9 @@ fun PollButton(modifier: Modifier = Modifier, onPost: () -> Unit = {}, isActive:
         Text(text = stringResource(R.string.post_poll), color = Color.White)
     }
 }
+
+/*@Preview
+@Composable
+fun NewPollViewPreview() {
+    NewPollView(onClose = {}, account = Account(loggedIn = Persona()))
+}*/

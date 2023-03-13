@@ -224,6 +224,9 @@
     <string name="poll_primary_description">Primary poll description…</string>
     <string name="poll_option_description">Poll option description</string>
     <string name="poll_option_index">Option %s</string>
-    <string name="poll_recipients">Poll recipients</string>
+    <string name="poll_zap_recipients">Zap recipients</string>
+    <string name="poll_heading_optional">Optional:</string>
+    <string name="poll_vote_value_min">Vote minimum</string>
+    <string name="poll_vote_value_max">Vote maximum</string>
 
 </resources>
