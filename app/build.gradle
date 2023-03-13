@@ -130,28 +130,18 @@ dependencies {
 
     // For QR generation
     implementation 'com.google.zxing:core:3.5.1'
-    implementation "androidx.camera:camera-camera2:1.2.1"
-    implementation 'androidx.camera:camera-lifecycle:1.2.1'
-    implementation 'androidx.camera:camera-view:1.2.1'
+    implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
 
     // Markdown
     implementation "com.halilibo.compose-richtext:richtext-ui:0.16.0"
     implementation "com.halilibo.compose-richtext:richtext-ui-material:0.16.0"
     implementation "com.halilibo.compose-richtext:richtext-commonmark:0.16.0"
 
-    // For QR Scanning
-    implementation 'com.google.mlkit:vision-common:17.3.0'
-
-    // Local Barcode Scanning model
-    // The idea is to make it work for degoogled phones
-    implementation 'com.google.mlkit:barcode-scanning:17.0.3'
-
     // Local model for language identification
     implementation 'com.google.mlkit:language-id:17.0.4'
 
     // Google services model the translate text
     implementation 'com.google.mlkit:translate:17.0.1'
-
 
     // Automatic memory leak detection
     debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.10'

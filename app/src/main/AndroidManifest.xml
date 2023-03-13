@@ -23,6 +23,7 @@
         android:theme="@style/Theme.Amethyst"
         android:largeHeap="true"
         android:usesCleartextTraffic="true"
+        android:hardwareAccelerated="true"
         tools:targetApi="33">
         <activity
             android:name=".ui.MainActivity"
@@ -46,6 +47,11 @@
                 android:name="android.app.lib_name"
                 android:value="" />
         </activity>
+
+        <activity
+            android:name="com.journeyapps.barcodescanner.CaptureActivity"
+            android:screenOrientation="fullSensor"
+            tools:replace="screenOrientation" />
     </application>
 
 </manifest>
