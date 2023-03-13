@@ -26,7 +26,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -35,11 +34,10 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
-import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
+import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.qrcode.QrCodeScanner
 
 @Composable
@@ -85,11 +83,9 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
 
                         Column(modifier = Modifier.fillMaxWidth()) {
                             Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-                                AsyncImageProxy(
+                                RobohashAsyncImageProxy(
+                                    robot = user.pubkeyHex,
                                     model = ResizeImage(user.profilePicture(), 100.dp),
-                                    placeholder = BitmapPainter(RoboHashCache.get(ctx, user.pubkeyHex)),
-                                    fallback = BitmapPainter(RoboHashCache.get(ctx, user.pubkeyHex)),
-                                    error = BitmapPainter(RoboHashCache.get(ctx, user.pubkeyHex)),
                                     contentDescription = stringResource(R.string.profile_image),
                                     modifier = Modifier
                                         .width(100.dp)

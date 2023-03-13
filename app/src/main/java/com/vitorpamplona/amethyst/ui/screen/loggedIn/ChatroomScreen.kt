@@ -36,7 +36,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
@@ -49,14 +48,13 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
 import com.vitorpamplona.amethyst.ui.actions.PostButton
-import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
+import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.dal.ChatroomFeedFilter
 import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -213,11 +211,9 @@ fun ChatroomHeader(baseUser: User, accountViewModel: AccountViewModel, navContro
                 val authorState by baseUser.live().metadata.observeAsState()
                 val author = authorState?.user!!
 
-                AsyncImageProxy(
+                RobohashAsyncImageProxy(
+                    robot = author.pubkeyHex,
                     model = ResizeImage(author.profilePicture(), 35.dp),
-                    placeholder = BitmapPainter(RoboHashCache.get(ctx, author.pubkeyHex)),
-                    fallback = BitmapPainter(RoboHashCache.get(ctx, author.pubkeyHex)),
-                    error = BitmapPainter(RoboHashCache.get(ctx, author.pubkeyHex)),
                     contentDescription = stringResource(id = R.string.profile_image),
                     modifier = Modifier
                         .width(35.dp)

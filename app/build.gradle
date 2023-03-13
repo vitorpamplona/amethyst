@@ -97,9 +97,6 @@ dependencies {
     implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.14.2'
     implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
 
-    // Robohash for Avatars
-    implementation group: 'com.github.vitorpamplona', name: 'android-robohash', version: 'master-SNAPSHOT', ext: 'aar'
-
     // link preview
     implementation 'tw.com.oneup.www:Baha-UrlPreview:1.0.1'
 

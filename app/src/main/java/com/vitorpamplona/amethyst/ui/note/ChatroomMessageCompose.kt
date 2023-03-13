@@ -40,7 +40,6 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.compositeOver
-import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -51,17 +50,16 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import coil.compose.AsyncImage
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
-import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
+import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
+import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
@@ -149,12 +147,14 @@ fun ChatroomMessageCompose(
             val modif = if (innerQuote) {
                 Modifier.padding(top = 10.dp, end = 5.dp)
             } else {
-                Modifier.fillMaxWidth(1f).padding(
-                    start = 12.dp,
-                    end = 12.dp,
-                    top = 5.dp,
-                    bottom = 5.dp
-                )
+                Modifier
+                    .fillMaxWidth(1f)
+                    .padding(
+                        start = 12.dp,
+                        end = 12.dp,
+                        top = 5.dp,
+                        bottom = 5.dp
+                    )
             }
 
             Row(
@@ -182,9 +182,11 @@ fun ChatroomMessageCompose(
                         var bubbleSize by remember { mutableStateOf(IntSize.Zero) }
 
                         Column(
-                            modifier = Modifier.padding(start = 10.dp, end = 5.dp, bottom = 5.dp).onSizeChanged {
-                                bubbleSize = it
-                            }
+                            modifier = Modifier
+                                .padding(start = 10.dp, end = 5.dp, bottom = 5.dp)
+                                .onSizeChanged {
+                                    bubbleSize = it
+                                }
                         ) {
                             val authorState by note.author!!.live().metadata.observeAsState()
                             val author = authorState?.user!!
@@ -195,11 +197,9 @@ fun ChatroomMessageCompose(
                                     horizontalArrangement = alignment,
                                     modifier = Modifier.padding(top = 5.dp)
                                 ) {
-                                    AsyncImageProxy(
+                                    RobohashAsyncImageProxy(
+                                        robot = author.pubkeyHex,
                                         model = ResizeImage(author.profilePicture(), 25.dp),
-                                        placeholder = BitmapPainter(RoboHashCache.get(context, author.pubkeyHex)),
-                                        fallback = BitmapPainter(RoboHashCache.get(context, author.pubkeyHex)),
-                                        error = BitmapPainter(RoboHashCache.get(context, author.pubkeyHex)),
                                         contentDescription = stringResource(id = R.string.profile_image),
                                         modifier = Modifier
                                             .width(25.dp)
@@ -307,11 +307,16 @@ fun ChatroomMessageCompose(
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween,
-                                modifier = Modifier.padding(top = 5.dp).then(
-                                    with(LocalDensity.current) {
-                                        Modifier.widthIn(bubbleSize.width.toDp(), availableBubbleSize.width.toDp())
-                                    }
-                                )
+                                modifier = Modifier
+                                    .padding(top = 5.dp)
+                                    .then(
+                                        with(LocalDensity.current) {
+                                            Modifier.widthIn(
+                                                bubbleSize.width.toDp(),
+                                                availableBubbleSize.width.toDp()
+                                            )
+                                        }
+                                    )
                             ) {
                                 Row() {
                                     Text(
@@ -365,18 +370,16 @@ private fun RelayBadges(baseNote: Note) {
                     .size(15.dp)
                     .padding(1.dp)
             ) {
-                AsyncImage(
+                RobohashFallbackAsyncImage(
+                    robot = "https://$url/favicon.ico",
                     model = "https://$url/favicon.ico",
-                    placeholder = BitmapPainter(RoboHashCache.get(ctx, url)),
-                    fallback = BitmapPainter(RoboHashCache.get(ctx, url)),
-                    error = BitmapPainter(RoboHashCache.get(ctx, url)),
                     contentDescription = stringResource(id = R.string.relay_icon),
                     colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }),
                     modifier = Modifier
                         .fillMaxSize(1f)
                         .clip(shape = CircleShape)
                         .background(MaterialTheme.colors.background)
-                        .clickable(onClick = { uri.openUri("https://" + url) })
+                        .clickable(onClick = { uri.openUri("https://$url") })
                 )
             }
         }
