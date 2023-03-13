@@ -15,9 +15,9 @@ private fun toHex(color: Color): String {
 
 private val sha256: MessageDigest = MessageDigest.getInstance("SHA-256")
 
-private fun byteMod(byte: Byte, modulo: Int): Int {
+private fun byteMod10(byte: Byte): Int {
     val ub = byte.toUByte().toInt()
-    return ub % modulo
+    return ub % 10
 }
 
 private fun bytesToRGB(b1: Byte, b2: Byte, b3: Byte): Color {
@@ -27,16 +27,13 @@ private fun bytesToRGB(b1: Byte, b2: Byte, b3: Byte): Color {
 private fun svgString(msg: String): String {
     val hash = sha256.digest(msg.toByteArray())
     val hashHex = hash.joinToString(separator = "") { b -> "%02x".format(b) }
-    val bgColor1 = bytesToRGB(hash[0], hash[1], hash[2])
-    val bgColor2 = bytesToRGB(hash[3], hash[4], hash[5])
-    val fgColor = bytesToRGB(hash[6], hash[7], hash[8])
-    val bgIndex = byteMod(hash[9], 8)
-    val bodyIndex = byteMod(hash[10], 10)
-    val faceIndex = byteMod(hash[11], 10)
-    val eyesIndex = byteMod(hash[12], 10)
-    val mouthIndex = byteMod(hash[13], 10)
-    val accIndex = byteMod(hash[14], 10)
-    val background = backgrounds[bgIndex]
+    val bgColor = bytesToRGB(hash[0], hash[1], hash[2])
+    val fgColor = bytesToRGB(hash[3], hash[4], hash[5])
+    val bodyIndex = byteMod10(hash[6])
+    val faceIndex = byteMod10(hash[7])
+    val eyesIndex = byteMod10(hash[8])
+    val mouthIndex = byteMod10(hash[9])
+    val accIndex = byteMod10(hash[10])
     val body = bodies[bodyIndex]
     val face = faces[faceIndex]
     val eye = eyes[eyesIndex]
@@ -47,11 +44,11 @@ private fun svgString(msg: String): String {
         <svg id="$hashHex" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
             <defs>
                 <style>
-                    .cls-fill-1{fill:${toHex(fgColor)};}.cls-fill-2{fill:${toHex(fgColor)};}.bg-1{fill:${toHex(bgColor1)};}.bg-2{fill:${toHex(bgColor2)}}
+                    .cls-bg{fill:${toHex(bgColor)}}.cls-fill-1{fill:${toHex(fgColor)};}.cls-fill-2{fill:${toHex(fgColor)};}
                     ${body.style}${face.style}${eye.style}${mouth.style}${accessory.style}
                 </style>
             </defs>
-            <title>RoboHash $hashHex</title>
+            <title>Robohash $hashHex</title>
             ${background}${body.paths}${face.paths}${eye.paths}${mouth.paths}${accessory.paths}
         </svg>
     """.trimIndent()
@@ -66,22 +63,14 @@ object Robohash {
                     svgString(message).toByteArray()
                 )
             )
+            .crossfade(100)
             .build()
     }
 }
 
 private data class Part(val style: String, val paths: String)
 
-private val backgrounds: List<String> = listOf(
-    """<g><rect class="bg-1" width="300" height="300"/><polygon class="bg-2" points="148 217 42 0 21 0 148 217"/><polygon class="bg-2" points="300 238 300 225 148 217 300 238"/><polygon class="bg-2" points="0 3 0 34 148 217 0 3"/><polygon class="bg-2" points="148 217 300 56 300 29 148 217"/><polygon class="bg-2" points="300 264 300 250 148 217 300 264"/><polygon class="bg-2" points="0 60 0 82 148 217 0 60"/><polygon class="bg-2" points="300 99 300 79 148 217 300 99"/><polygon class="bg-2" points="148 217 253 0 233 0 148 217"/><polygon class="bg-2" points="300 133 300 117 148 217 300 133"/><polygon class="bg-2" points="300 162 300 148 148 217 300 162"/><polygon class="bg-2" points="148 217 147 0 131 0 148 217"/><polygon class="bg-2" points="148 217 262 300 285 300 148 217"/><polygon class="bg-2" points="148 217 114 0 97 0 148 217"/><polygon class="bg-2" points="148 217 180 0 163 0 148 217"/><polygon class="bg-2" points="300 293 300 278 148 217 300 293"/><polygon class="bg-2" points="0 101 0 118 148 217 0 101"/><polygon class="bg-2" points="148 217 214 0 197 0 148 217"/><polygon class="bg-2" points="148 217 80 0 61 0 148 217"/><polygon class="bg-2" points="300 213 300 201 148 217 300 213"/><polygon class="bg-2" points="300 188 300 176 148 217 300 188"/><polygon class="bg-2" points="0 209 0 220 148 217 0 209"/><polygon class="bg-2" points="148 217 188 300 197 300 148 217"/><polygon class="bg-2" points="148 217 81 300 92 300 148 217"/><polygon class="bg-2" points="148 217 101 300 110 300 148 217"/><polygon class="bg-2" points="148 217 206 300 217 300 148 217"/><polygon class="bg-2" points="148 217 118 300 125 300 148 217"/><polygon class="bg-2" points="148 217 157 300 164 300 148 217"/><polygon class="bg-2" points="148 217 172 300 179 300 148 217"/><polygon class="bg-2" points="148 217 132 300 139 300 148 217"/><polygon class="bg-2" points="148 217 55 300 69 300 148 217"/><polygon class="bg-2" points="148 217 230 300 245 300 148 217"/><polygon class="bg-2" points="148 217 297 0 274 0 148 217"/><polygon class="bg-2" points="0 161 0 173 148 217 0 161"/><polygon class="bg-2" points="0 185 0 197 148 217 0 185"/><polygon class="bg-2" points="148 217 19 300 39 300 148 217"/><polygon class="bg-2" points="0 133 0 148 148 217 0 133"/><polygon class="bg-2" points="148 217 146 300 150 300 148 217"/><polygon class="bg-2" points="0 282 0 296 148 217 0 282"/><polygon class="bg-2" points="0 256 0 268 148 217 0 256"/><polygon class="bg-2" points="0 232 0 243 148 217 0 232"/></g>""",
-    """<g><rect class="bg-1" width="300" height="300"/><polygon class="bg-2" points="187 94 178 78 187 61 207 61 216 78 207 94 187 94"/><polygon class="bg-2" points="251 94 242 78 251 61 271 61 280 78 271 94 251 94"/><polygon class="bg-2" points="251 131 242 114 251 98 271 98 280 114 271 131 251 131"/><polygon class="bg-2" points="251 168 242 151 251 135 271 135 280 151 271 168 251 168"/><polygon class="bg-2" points="188 168 178 151 188 135 207 135 216 151 207 168 188 168"/><polygon class="bg-2" points="219 76 210 59 219 42 239 42 248 59 239 76 219 76"/><polygon class="bg-2" points="219 113 210 96 219 79 239 79 248 96 239 113 219 113"/><polygon class="bg-2" points="219 150 210 133 219 116 239 116 248 133 239 150 219 150"/><polygon class="bg-2" points="156 150 146 133 156 116 175 116 185 133 175 150 156 150"/><rect class="bg-2" x="16" y="13" width="5" height="5.94"/><rect class="bg-2" x="34" y="9" width="5" height="1.78"/><rect class="bg-2" x="32" y="13" width="4" height="9.8"/><rect class="bg-2" x="38" y="9" width="2" height="14.85"/><rect class="bg-2" x="29" y="13" width="1" height="269.59"/><rect class="bg-2" x="24" y="28" width="5" height="77.47"/><rect class="bg-2" x="30" y="153" width="4" height="2.08"/><rect class="bg-2" x="24" y="140" width="5" height="1.78"/><rect class="bg-2" x="32" y="124" width="1" height="16.47"/><rect class="bg-2" x="33" y="127" width="2" height="12.17"/><rect class="bg-2" x="30" y="113" width="2" height="7.13"/><rect class="bg-2" x="36" y="114" width="5" height="1.78"/><rect class="bg-2" x="37" y="116" width="3" height="1.04"/><rect class="bg-2" x="27" y="282" width="4" height="2.22"/><rect class="bg-2" x="41" y="230" width="2" height="4.9"/><rect class="bg-2" x="39" y="227" width="1" height="2.38"/><rect class="bg-2" x="34" y="227" width="1" height="6.97"/><rect class="bg-2" x="34" y="237" width="9" height="4.75"/><rect class="bg-2" x="42" y="240" width="3" height="4.3"/><rect class="bg-2" x="34" y="246" width="8" height="2.37"/><rect class="bg-2" x="42" y="251" width="2" height="1.93"/><rect class="bg-2" x="33" y="255" width="9" height="4.16"/><rect class="bg-2" x="40" y="257" width="4" height="4.01"/><rect class="bg-2" x="39" y="265" width="4" height="4.16"/><rect class="bg-2" x="41" y="274" width="2" height="2.23"/><rect class="bg-2" x="37" y="276" width="2" height="2.08"/><rect class="bg-2" x="34" y="263" width="1" height="9.35"/><rect class="bg-2" x="34" y="274" width="1" height="8.17"/><rect class="bg-2" x="29" y="179" width="2" height="11.43"/></g>""",
-    """<g><rect class="bg-1" width="300" height="300"/><path class="bg-2" d="M38.3,22.4l2.2-.7a27,27,0,0,0-.4-2.8c7.7-2.6,10.7,0,10.7,0a3.4,3.4,0,0,0,1.8,3.4,15.9,15.9,0,0,1,2.7,1.2c-.3.6-.6,1.4-1,2.1a18.5,18.5,0,0,0-5-1.7,15.2,15.2,0,0,0-5.2-.3,16.4,16.4,0,0,0-4.9,1H39c-.3-.8-.6-1.5-.8-2.2Z" transform="translate(0 0)"/><path class="bg-2" d="M68,42.9a22.4,22.4,0,0,1-.4,5.8l-2.3-.6a22.4,22.4,0,0,0,.4-5.2Z" transform="translate(0 0)"/><path class="bg-2" d="M63.6,52.9l2,1.2a23.2,23.2,0,0,1-3.1,4.6,21.4,21.4,0,0,1-4.2,3.7L57,60.5a20.5,20.5,0,0,0,3.8-3.4A23.6,23.6,0,0,0,63.6,52.9Z" transform="translate(0 0)"/><path class="bg-2" d="M25.6,26.8c1.5,1.5,2.7,1.8,3.6,1.7a21.4,21.4,0,0,1,4.2-3.7l1.3,2A21.8,21.8,0,0,1,39,24.6l.9,2.5A16.2,16.2,0,0,0,36.2,29a15.3,15.3,0,0,0-3.3,2.9,16.4,16.4,0,0,0-2.6,3.7,15,15,0,0,0-1.5,4.2l-2.6-.6a17.7,17.7,0,0,0-.4,5.2,16.3,16.3,0,0,0,.9,5.2v.2A22.7,22.7,0,0,0,29,54.5a23,23,0,0,0,3.5,4.1,19.4,19.4,0,0,0,4.4,3.1A18,18,0,0,0,42,63.4a18,18,0,0,0,5.2.4,19.4,19.4,0,0,0,.2,2.4,22.7,22.7,0,0,1-5.8-.4l-5.6-2a24.5,24.5,0,0,1-5-3.4,22.6,22.6,0,0,1-4-4.7,23.5,23.5,0,0,1-2.5-5.3c0-.1,0-.1-.1-.2a.6.6,0,0,0-.1-.4,4.4,4.4,0,0,0-5.6-1.3C16.7,32.3,25.7,26.9,25.6,26.8Z" transform="translate(0 0)"/><path class="bg-2" d="M32.1,48.4a14.8,14.8,0,0,1,9.2-18.6c7.6-2.7,16.2,1.7,18.8,9.7A14.7,14.7,0,0,1,50.9,58,14.9,14.9,0,0,1,32.1,48.4Z" transform="translate(0 0)"/><path class="bg-2" d="M40.6,87.5,23,101.2a4.5,4.5,0,1,0,5.5,7.1L43.3,96.7l14.6,11.5a4.5,4.5,0,0,0,6.3-.7,4.5,4.5,0,0,0-.7-6.3L46.1,87.5A4.4,4.4,0,0,0,40.6,87.5Z" transform="translate(0 0)"/><path class="bg-2" d="M40.6,106.2,23,119.9a4.6,4.6,0,0,0-.8,6.3,4.5,4.5,0,0,0,6.3.8l14.8-11.5L57.9,127a4.5,4.5,0,0,0,6.3-.8,4.6,4.6,0,0,0-.7-6.3L46.1,106.3A4.5,4.5,0,0,0,40.6,106.2Z" transform="translate(0 0)"/><rect class="bg-2" x="24" y="236" width="17.4" height="17.36"/><rect class="bg-2" x="45.1" y="236" width="17.4" height="17.36"/><rect class="bg-2" x="24" y="256.4" width="17.4" height="17.36"/><rect class="bg-2" x="45.1" y="256.5" width="13.1" height="13.07"/><path class="bg-2" d="M55.2,189a2.5,2.5,0,0,1-2.5,2.5H33.8a2.5,2.5,0,0,1-2.5-2.5h0a2.5,2.5,0,0,1,2.5-2.5H52.7a2.5,2.5,0,0,1,2.5,2.5Z" transform="translate(0 0)"/><path class="bg-2" d="M55.2,197.4a2.5,2.5,0,0,1-2.5,2.5H33.8a2.5,2.5,0,0,1-2.5-2.5h0a2.5,2.5,0,0,1,2.5-2.5H52.7a2.5,2.5,0,0,1,2.5,2.5Z" transform="translate(0 0)"/><path class="bg-2" d="M55.2,205.9a2.5,2.5,0,0,1-2.5,2.5H33.8a2.5,2.5,0,0,1-2.5-2.5h0a2.5,2.5,0,0,1,2.5-2.5H52.7a2.5,2.5,0,0,1,2.5,2.5Z" transform="translate(0 0)"/><path class="bg-2" d="M32.4,154.6a3.2,3.2,0,0,0-3.3,3.2v21.7a3.3,3.3,0,0,0,3.3,3.3H54.1a3.2,3.2,0,0,0,3.2-3.3v-11L43.4,154.6Z" transform="translate(0 0)"/></g>""",
-    """<g><rect class="bg-1" width="300" height="300"/><rect class="bg-2" x="49.3" y="23.9" width="59" height="1.8"/><rect class="bg-2" x="49.3" y="28.1" width="29.2" height="1.8"/><rect class="bg-2" x="49.3" y="32.3" width="75.4" height="1.8"/><rect class="bg-2" x="49.3" y="36.6" width="29.2" height="1.8"/><rect class="bg-2" x="49.3" y="40.8" width="76.6" height="1.8"/><rect class="bg-2" x="49.3" y="45" width="49.7" height="1.8"/><rect class="bg-2" x="49.3" y="49.2" width="86.5" height="1.8"/><rect class="bg-2" x="49.3" y="53.4" width="29.2" height="1.8"/><rect class="bg-2" x="19.4" y="24.1" width="23.9" height="19.69"/><path class="bg-2" d="M272.8,58.1c0-.8-.5-1-1.1-.5l-4.4,3.6a3.1,3.1,0,0,0-1.1,2.2V237.1a3.4,3.4,0,0,0,1.1,2.3l4.4,3.6c.6.5,1.1.2,1.1-.5Z"/><path class="bg-2" d="M279.3,16.5a2.3,2.3,0,0,0-2.4,2.3V281.7a2.4,2.4,0,0,0,2.4,2.4h4.6a2.3,2.3,0,0,0,2.3-2.4V246.2a5.5,5.5,0,0,0-1.8-3.8l-2.9-2.4a5.7,5.7,0,0,1-1.8-3.8V64.4a5.5,5.5,0,0,1,1.8-3.8l2.9-2.4a5.5,5.5,0,0,0,1.8-3.8V18.8a2.3,2.3,0,0,0-2.3-2.3Z"/></g>""",
-    """<g><rect class="bg-1" width="300" height="300"/><circle class="bg-2" cx="30.3" cy="25.6" r="2.3"/><circle class="bg-2" cx="85" cy="69.2" r="2.3"/><circle class="bg-2" cx="134.7" cy="259.4" r="2.3"/><path class="bg-2" d="M159.2,43.8a2.3,2.3,0,0,1-2.3,2.3,2.3,2.3,0,0,1-2.3-2.3,2.3,2.3,0,0,1,2.3-2.3A2.4,2.4,0,0,1,159.2,43.8Z"/><path class="bg-2" d="M237.7,74.8a2.3,2.3,0,0,1-2.3,2.2,2.3,2.3,0,1,1,0-4.5A2.3,2.3,0,0,1,237.7,74.8Z"/><path class="bg-2" d="M268.6,36.1a2.3,2.3,0,0,1-2.3,2.3,2.4,2.4,0,0,1-2.3-2.3,2.3,2.3,0,0,1,2.3-2.3A2.3,2.3,0,0,1,268.6,36.1Z"/><circle class="bg-2" cx="53" cy="152.1" r="2.3"/><circle class="bg-2" cx="248.6" cy="146.6" r="2.3"/><path class="bg-2" d="M144.8,100.2a2.3,2.3,0,0,1-2.3,2.3,2.4,2.4,0,0,1-2.3-2.3,2.3,2.3,0,0,1,2.3-2.3A2.3,2.3,0,0,1,144.8,100.2Z"/><circle class="bg-2" cx="206.6" cy="222.9" r="2.3"/><circle class="bg-2" cx="100.5" cy="25" r="1.7"/><circle class="bg-2" cx="201.1" cy="30" r="1.7"/><path class="bg-2" d="M194,44.4a1.7,1.7,0,0,1-1.7,1.7,1.6,1.6,0,0,1-1.7-1.7,1.7,1.7,0,0,1,1.7-1.7A1.8,1.8,0,0,1,194,44.4Z"/><circle class="bg-2" cx="238.7" cy="52.2" r="1.7"/><path class="bg-2" d="M44.1,54.9a1.7,1.7,0,0,1-1.7,1.7,1.8,1.8,0,0,1-1.7-1.7,1.7,1.7,0,0,1,1.7-1.7A1.6,1.6,0,0,1,44.1,54.9Z"/><circle class="bg-2" cx="80" cy="57.1" r="1.7"/><circle class="bg-2" cx="98.3" cy="66.4" r="1.7"/><circle class="bg-2" cx="109.9" cy="116.8" r="1.7"/><circle class="bg-2" cx="200.5" cy="96.9" r="1.7"/><circle class="bg-2" cx="271.2" cy="102.4" r="1.7"/><path class="bg-2" d="M163.5,163.2a1.7,1.7,0,0,1-1.7,1.7,1.8,1.8,0,0,1-1.7-1.7,1.7,1.7,0,0,1,1.7-1.7A1.6,1.6,0,0,1,163.5,163.2Z"/><path class="bg-2" d="M182.3,137.8a1.7,1.7,0,0,1-3.4,0,1.7,1.7,0,0,1,3.4,0Z"/><path class="bg-2" d="M77.3,224a1.7,1.7,0,0,1-3.4,0,1.7,1.7,0,0,1,3.4,0Z"/><circle class="bg-2" cx="262.4" cy="275.9" r="1.7"/><circle class="bg-2" cx="216.6" cy="217.9" r="1.7"/><path class="bg-2" d="M118.8,191.4a1.7,1.7,0,1,1-3.4,0,1.7,1.7,0,1,1,3.4,0Z"/><circle class="bg-2" cx="42.4" cy="268.2" r="1.7"/></g>""",
-    """<g><rect class="bg-1" x="0.2" width="299.8" height="299.81"/><path class="bg-2" d="M278.7,140.9c-5.8-23.9-37.5-36.2-59.5-34.2-28.4,2.5-42,19.3-54.9,42-9.7-12.3-38.1-4.6-34.2,15.5-13-17.5-31.7-29.8-55-27.2-20.6,2-43.3,21.4-45.2,42C20,163.6,8,162.5,0,166.7V299.9H299.8V133.7C292.4,131.9,284.1,134.8,278.7,140.9Z" transform="translate(0 -0.1)"/></g>""",
-    """<rect class="bg-1" width="300" height="300"/>""",
-    """<rect class="bg-1" width="300" height="300"/><path class="bg-2" d="M0,248.5V300H300V40.2S195.8,194.2,0,248.5Z"/>"""
-)
+private const val background = """<polyline class="cls-bg" points="150.3 7.4 55.1 97.9 55.1 203.1 150.3 293.6 245.9 203.1 245.9 97.9 150.3 7.4"/>"""
 
 private val accessories: List<Part> = listOf(
     Part(

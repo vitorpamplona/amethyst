@@ -1,11 +1,6 @@
 package com.vitorpamplona.amethyst.ui.components
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
@@ -16,6 +11,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
+import coil.compose.rememberAsyncImagePainter
 
 @Composable
 fun RobohashAsyncImage(
@@ -46,8 +42,8 @@ fun RobohashAsyncImage(
 
 @Composable
 fun RobohashFallbackAsyncImage(
-    robot: String = "aaaa",
-    model: Any?,
+    robot: String,
+    model: String?,
     contentDescription: String?,
     modifier: Modifier = Modifier,
     alignment: Alignment = Alignment.Center,
@@ -56,37 +52,22 @@ fun RobohashFallbackAsyncImage(
     colorFilter: ColorFilter? = null,
     filterQuality: FilterQuality = DrawScope.DefaultFilterQuality
 ) {
-    var loading by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val painter = rememberAsyncImagePainter(model = Robohash.imageRequest(context, robot))
 
-    Box {
-        AsyncImage(
-            model = model,
-            contentDescription = contentDescription,
-            modifier = modifier,
-            onLoading = { loading = true },
-            onSuccess = { loading = false; error = false },
-            onError = { error = true },
-            alignment = alignment,
-            contentScale = contentScale,
-            alpha = alpha,
-            colorFilter = colorFilter,
-            filterQuality = filterQuality
-        )
-
-        if (loading || error) {
-            RobohashAsyncImage(
-                robot = robot,
-                contentDescription = contentDescription,
-                modifier = modifier,
-                alignment = alignment,
-                contentScale = contentScale,
-                alpha = alpha,
-                colorFilter = colorFilter,
-                filterQuality = filterQuality
-            )
-        }
-    }
+    AsyncImage(
+        model = model,
+        contentDescription = contentDescription,
+        modifier = modifier,
+        placeholder = painter,
+        fallback = painter,
+        error = painter,
+        alignment = alignment,
+        contentScale = contentScale,
+        alpha = alpha,
+        colorFilter = colorFilter,
+        filterQuality = filterQuality
+    )
 }
 
 @Composable
