@@ -42,11 +42,11 @@ fun FeedView(
     navController: NavController,
     routeForLastRead: String?,
     scrollStateKey: String? = null,
-    forceRefresh: Boolean = false
+    scrollToTop: Boolean = false
 ) {
     val feedState by viewModel.feedContent.collectAsState()
 
-    var refreshing by remember { mutableStateOf(forceRefresh) }
+    var refreshing by remember { mutableStateOf(false) }
     val refresh = { refreshing = true; viewModel.refresh(); refreshing = false }
     val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = refresh)
 
@@ -77,7 +77,7 @@ fun FeedView(
                             accountViewModel,
                             navController,
                             scrollStateKey,
-                            forceRefresh
+                            scrollToTop
                         )
                     }
 
@@ -99,7 +99,7 @@ private fun FeedLoaded(
     accountViewModel: AccountViewModel,
     navController: NavController,
     scrollStateKey: String?,
-    forceRefresh: Boolean = false
+    scrollToTop: Boolean = false
 ) {
     val listState = if (scrollStateKey != null) {
         rememberForeverLazyListState(scrollStateKey)
@@ -107,9 +107,9 @@ private fun FeedLoaded(
         rememberLazyListState()
     }
 
-    if (forceRefresh) {
+    if (scrollToTop) {
         LaunchedEffect(Unit) {
-            listState.animateScrollToItem(0)
+            listState.scrollToItem(index = 0)
         }
     }
 

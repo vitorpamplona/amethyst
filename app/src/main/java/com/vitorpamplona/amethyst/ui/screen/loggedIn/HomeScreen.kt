@@ -39,7 +39,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalPagerApi::class)
 @Composable
-fun HomeScreen(accountViewModel: AccountViewModel, navController: NavController, forceRefresh: Boolean = false) {
+fun HomeScreen(accountViewModel: AccountViewModel, navController: NavController, scrollToTop: Boolean = false) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
@@ -107,7 +107,7 @@ fun HomeScreen(accountViewModel: AccountViewModel, navController: NavController,
             }
             HorizontalPager(count = 2, state = pagerState) {
                 when (pagerState.currentPage) {
-                    0 -> FeedView(feedViewModel, accountViewModel, navController, Route.Home.base + "Follows", ScrollStateKeys.HOME_FOLLOWS, forceRefresh)
+                    0 -> FeedView(feedViewModel, accountViewModel, navController, Route.Home.base + "Follows", ScrollStateKeys.HOME_FOLLOWS, scrollToTop)
                     1 -> FeedView(feedViewModelReplies, accountViewModel, navController, Route.Home.base + "FollowsReplies", ScrollStateKeys.HOME_REPLIES)
                 }
             }

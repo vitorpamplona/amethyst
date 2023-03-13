@@ -25,7 +25,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.FiltersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.HomeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.NotificationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ProfileScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.SearchScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ThreadScreen
 
 sealed class Route(
@@ -33,32 +32,25 @@ sealed class Route(
     val icon: Int,
     val hasNewItems: (Account, NotificationCache, Context) -> Boolean = { _, _, _ -> false },
     val arguments: List<NamedNavArgument> = emptyList(),
-    val buildScreen: (AccountViewModel, AccountStateViewModel, NavController) -> @Composable (NavBackStackEntry) -> Unit
+    val buildScreen: ((AccountViewModel, AccountStateViewModel, NavController) -> @Composable (NavBackStackEntry) -> Unit)? = null
 ) {
     val base: String
         get() = route.substringBefore("?")
 
     object Home : Route(
-        "Home?forceRefresh={forceRefresh}",
+        "Home?scrollToTop={scrollToTop}",
         R.drawable.ic_home,
-        arguments = listOf(navArgument("forceRefresh") { type = NavType.BoolType; defaultValue = false }),
+        arguments = listOf(navArgument("scrollToTop") { type = NavType.BoolType; defaultValue = false }),
         hasNewItems = { accountViewModel, cache, context -> homeHasNewItems(accountViewModel, cache, context) },
         buildScreen = { accountViewModel, _, navController ->
-            { backStackEntry ->
-                HomeScreen(accountViewModel, navController, backStackEntry.arguments?.getBoolean("forceRefresh", false) ?: false)
-            }
+            { HomeScreen(accountViewModel, navController, it.arguments?.getBoolean("scrollToTop", false) ?: false) }
         }
     )
 
     object Search : Route(
-        "Search?forceRefresh={forceRefresh}",
-        R.drawable.ic_globe,
-        arguments = listOf(navArgument("forceRefresh") { type = NavType.BoolType; defaultValue = false }),
-        buildScreen = { acc, _, navController ->
-            { backStackEntry ->
-                SearchScreen(acc, navController, backStackEntry.arguments?.getBoolean("forceRefresh", false) ?: false)
-            }
-        }
+        route = "Search?scrollToTop={scrollToTop}",
+        icon = R.drawable.ic_globe,
+        arguments = listOf(navArgument("scrollToTop") { type = NavType.BoolType; defaultValue = false })
     )
 
     object Notification : Route(
@@ -154,7 +146,7 @@ val Routes = listOf(
 // *  Functions below only exist because we have not broken the datasource classes into backend and frontend.
 // **
 @Composable
-public fun currentRoute(navController: NavHostController): String? {
+fun currentRoute(navController: NavHostController): String? {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     return navBackStackEntry?.destination?.route
 }
