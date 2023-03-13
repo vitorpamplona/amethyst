@@ -1,6 +1,8 @@
 package com.vitorpamplona.amethyst.ui.actions
 
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -14,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -25,6 +28,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.ui.components.PollOption
 import com.vitorpamplona.amethyst.ui.components.PollPrimaryDescription
+import com.vitorpamplona.amethyst.ui.components.PollRecipientsField
 import com.vitorpamplona.amethyst.ui.note.ReplyInformation
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.UserLine
 import kotlinx.coroutines.delay
@@ -36,6 +40,8 @@ fun NewPollView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
     val context = LocalContext.current
 
     val scrollState = rememberScrollState()
+
+    var pollOptionList = listOf<String>()
 
     LaunchedEffect(Unit) {
         pollViewModel.load(account, baseReplyTo, quote)
@@ -106,10 +112,23 @@ fun NewPollView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                 }
                             }
 
+                            PollRecipientsField()
                             PollPrimaryDescription(pollViewModel = pollViewModel)
-
                             PollOption(pollViewModel, 0)
                             PollOption(pollViewModel, 1)
+                            Button(
+                                onClick = { /*TODO*/ },
+                                border = BorderStroke(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.32f)),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                )
+                            ) {
+                                Image(
+                                    painterResource(id = android.R.drawable.ic_input_add),
+                                    contentDescription = "Add poll option button",
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
                         }
                     }
 

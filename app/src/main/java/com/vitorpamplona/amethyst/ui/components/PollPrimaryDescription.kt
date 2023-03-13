@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
@@ -34,14 +35,21 @@ fun PollPrimaryDescription(pollViewModel: NewPollViewModel) {
         onValueChange = {
             pollViewModel.updateMessage(it)
         },
+        label = {
+            Text(
+                text = stringResource(R.string.poll_primary_description),
+                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+            )
+        },
         keyboardOptions = KeyboardOptions.Default.copy(
             capitalization = KeyboardCapitalization.Sentences
         ),
         modifier = Modifier
             .fillMaxWidth()
+            .padding(top = 8.dp)
             .border(
                 width = 1.dp,
-                color = MaterialTheme.colors.surface,
+                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                 shape = RoundedCornerShape(8.dp)
             )
             .focusRequester(focusRequester)
@@ -52,7 +60,7 @@ fun PollPrimaryDescription(pollViewModel: NewPollViewModel) {
             },
         placeholder = {
             Text(
-                text = stringResource(R.string.primary_poll_description),
+                text = stringResource(R.string.poll_primary_description),
                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
             )
         },
