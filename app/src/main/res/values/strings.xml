@@ -222,5 +222,7 @@
     <string name="private_conversation_notification">"&lt;Unable to decrypt private message&gt;\n\nYou were cited in a private/encrypted conversation between %1$s and %2$s."</string>
     <string name="post_poll">Post Poll</string>
     <string name="primary_poll_description">Primary poll description…</string>
+    <string name="poll_option_description">Poll option description</string>
+    <string name="poll_option_index">Option %s</string>
 
 </resources>
