@@ -22,7 +22,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -37,14 +36,12 @@ import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun LikeSetCompose(likeSetCard: LikeSetCard, modifier: Modifier = Modifier, isInnerNote: Boolean = false, routeForLastRead: String, accountViewModel: AccountViewModel, navController: NavController) {
+fun LikeSetCompose(likeSetCard: LikeSetCard, isInnerNote: Boolean = false, routeForLastRead: String, accountViewModel: AccountViewModel, navController: NavController) {
     val noteState by likeSetCard.note.live().metadata.observeAsState()
     val note = noteState?.note
 
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
-
-    val context = LocalContext.current.applicationContext
 
     val noteEvent = note?.event
     var popupExpanded by remember { mutableStateOf(false) }
@@ -56,13 +53,13 @@ fun LikeSetCompose(likeSetCard: LikeSetCard, modifier: Modifier = Modifier, isIn
 
         LaunchedEffect(key1 = likeSetCard) {
             withContext(Dispatchers.IO) {
-                isNew = likeSetCard.createdAt > NotificationCache.load(routeForLastRead, context)
+                isNew = likeSetCard.createdAt > NotificationCache.load(routeForLastRead)
 
-                NotificationCache.markAsRead(routeForLastRead, likeSetCard.createdAt, context)
+                NotificationCache.markAsRead(routeForLastRead, likeSetCard.createdAt)
             }
         }
 
-        var backgroundColor = if (isNew) {
+        val backgroundColor = if (isNew) {
             MaterialTheme.colors.primary.copy(0.12f).compositeOver(MaterialTheme.colors.background)
         } else {
             MaterialTheme.colors.background

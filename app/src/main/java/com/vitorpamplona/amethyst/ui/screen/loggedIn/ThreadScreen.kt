@@ -36,7 +36,7 @@ fun ThreadScreen(noteId: String?, accountViewModel: AccountViewModel, navControl
         }
 
         DisposableEffect(accountViewModel) {
-            val observer = LifecycleEventObserver { source, event ->
+            val observer = LifecycleEventObserver { _, event ->
                 if (event == Lifecycle.Event.ON_RESUME) {
                     println("Thread Start")
                     ThreadFeedFilter.loadThread(noteId)

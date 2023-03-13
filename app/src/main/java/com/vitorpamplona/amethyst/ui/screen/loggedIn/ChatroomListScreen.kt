@@ -145,7 +145,7 @@ fun TabKnown(
 
     val lifeCycleOwner = LocalLifecycleOwner.current
     DisposableEffect(accountViewModel) {
-        val observer = LifecycleEventObserver { source, event ->
+        val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 NostrChatroomListDataSource.resetFilters()
                 feedViewModel.refresh()
@@ -186,7 +186,7 @@ fun TabNew(
 
     val lifeCycleOwner = LocalLifecycleOwner.current
     DisposableEffect(accountViewModel) {
-        val observer = LifecycleEventObserver { source, event ->
+        val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 NostrChatroomListDataSource.resetFilters()
                 feedViewModel.refresh()

@@ -22,7 +22,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -92,7 +91,6 @@ private fun FeedLoaded(
     val account = accountState?.account ?: return
     val notificationCacheState = NotificationCache.live.observeAsState()
     val notificationCache = notificationCacheState.value ?: return
-    val context = LocalContext.current.applicationContext
 
     LaunchedEffect(key1 = markAsRead.value) {
         if (markAsRead.value) {
@@ -112,7 +110,7 @@ private fun FeedLoaded(
                         "Room/${userToComposeOn.pubkeyHex}"
                     }
 
-                    notificationCache.cache.markAsRead(route, it.createdAt(), context)
+                    notificationCache.cache.markAsRead(route, it.createdAt())
                 }
             }
             markAsRead.value = false

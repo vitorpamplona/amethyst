@@ -132,11 +132,11 @@ fun ChatroomMessageCompose(
         LaunchedEffect(key1 = routeForLastRead) {
             routeForLastRead?.let {
                 withContext(Dispatchers.IO) {
-                    val lastTime = NotificationCache.load(it, context)
+                    val lastTime = NotificationCache.load(it)
 
                     val createdAt = note.createdAt()
                     if (createdAt != null) {
-                        NotificationCache.markAsRead(it, createdAt, context)
+                        NotificationCache.markAsRead(it, createdAt)
                         isNew = createdAt > lastTime
                     }
                 }
@@ -206,17 +206,17 @@ fun ChatroomMessageCompose(
                                             .height(25.dp)
                                             .clip(shape = CircleShape)
                                             .clickable(onClick = {
-                                                author?.let {
+                                                author.let {
                                                     navController.navigate("User/${it.pubkeyHex}")
                                                 }
                                             })
                                     )
 
                                     Text(
-                                        "  ${author?.toBestDisplayName()}",
+                                        "  ${author.toBestDisplayName()}",
                                         fontWeight = FontWeight.Bold,
                                         modifier = Modifier.clickable(onClick = {
-                                            author?.let {
+                                            author.let {
                                                 navController.navigate("User/${it.pubkeyHex}")
                                             }
                                         })
@@ -225,9 +225,9 @@ fun ChatroomMessageCompose(
                             }
 
                             val replyTo = note.replyTo
-                            if (!innerQuote && replyTo != null && replyTo.isNotEmpty()) {
+                            if (!innerQuote && !replyTo.isNullOrEmpty()) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    replyTo.toSet().mapIndexed { index, note ->
+                                    replyTo.toSet().mapIndexed { _, note ->
                                         if (note.event != null) {
                                             ChatroomMessageCompose(
                                                 note,
@@ -360,7 +360,6 @@ private fun RelayBadges(baseNote: Note) {
     val relaysToDisplay = if (expanded) noteRelays else noteRelays.take(3)
 
     val uri = LocalUriHandler.current
-    val ctx = LocalContext.current.applicationContext
 
     FlowRow(Modifier.padding(start = 10.dp)) {
         relaysToDisplay.forEach {

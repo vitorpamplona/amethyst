@@ -3,12 +3,11 @@ package com.vitorpamplona.amethyst.ui.actions
 import android.content.ContentResolver
 import android.content.ContentValues
 import android.content.Context
-import android.content.Intent
+import android.media.MediaScannerConnection
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import androidx.annotation.RequiresApi
-import androidx.core.net.toUri
 import okhttp3.*
 import okio.BufferedSource
 import okio.IOException
@@ -135,12 +134,7 @@ object ImageSaver {
 
         // Call the media scanner manually, so the image
         // appears in the gallery faster.
-        context.sendBroadcast(
-            Intent(
-                Intent.ACTION_MEDIA_SCANNER_SCAN_FILE,
-                outputFile.toUri()
-            )
-        )
+        MediaScannerConnection.scanFile(context, arrayOf(outputFile.toString()), null, null)
     }
 
     private const val PICTURES_SUBDIRECTORY = "Amethyst"

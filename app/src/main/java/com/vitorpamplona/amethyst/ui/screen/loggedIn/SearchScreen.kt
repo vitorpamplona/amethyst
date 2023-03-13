@@ -36,7 +36,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -88,7 +87,7 @@ fun SearchScreen(
     }
 
     DisposableEffect(accountViewModel) {
-        val observer = LifecycleEventObserver { source, event ->
+        val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Global Start")
                 NostrGlobalDataSource.start()
@@ -126,8 +125,6 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
     val scope = rememberCoroutineScope()
 
     val onlineSearch = NostrSearchEventOrUserDataSource
-
-    val ctx = LocalContext.current.applicationContext
 
     val isTrailingIconVisible by remember {
         derivedStateOf {
@@ -237,11 +234,11 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
                 bottom = 10.dp
             )
         ) {
-            itemsIndexed(searchResults.value, key = { _, item -> "u" + item.pubkeyHex }) { index, item ->
+            itemsIndexed(searchResults.value, key = { _, item -> "u" + item.pubkeyHex }) { _, item ->
                 UserCompose(item, accountViewModel = accountViewModel, navController = navController)
             }
 
-            itemsIndexed(searchResultsChannels.value, key = { _, item -> "c" + item.idHex }) { index, item ->
+            itemsIndexed(searchResultsChannels.value, key = { _, item -> "c" + item.idHex }) { _, item ->
                 ChannelName(
                     channelIdHex = item.idHex,
                     channelPicture = item.profilePicture(),
@@ -258,7 +255,7 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
                 )
             }
 
-            itemsIndexed(searchResultsNotes.value, key = { _, item -> "n" + item.idHex }) { index, item ->
+            itemsIndexed(searchResultsNotes.value, key = { _, item -> "n" + item.idHex }) { _, item ->
                 NoteCompose(item, accountViewModel = accountViewModel, navController = navController)
             }
         }

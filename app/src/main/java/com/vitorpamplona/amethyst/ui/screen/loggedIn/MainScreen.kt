@@ -69,7 +69,7 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
             scaffoldState = scaffoldState
         ) {
             Column(modifier = Modifier.padding(bottom = it.calculateBottomPadding())) {
-                AppNavigation(navController, accountViewModel, accountStateViewModel, startingPage)
+                AppNavigation(navController, accountViewModel, startingPage)
             }
         }
     }

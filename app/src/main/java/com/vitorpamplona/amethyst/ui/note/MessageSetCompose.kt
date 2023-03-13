@@ -21,7 +21,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.compositeOver
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -39,11 +38,6 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, isInnerNote: Boolean = fal
     val noteState by messageSetCard.note.live().metadata.observeAsState()
     val note = noteState?.note
 
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
-
-    val context = LocalContext.current.applicationContext
-
     val noteEvent = note?.event
     var popupExpanded by remember { mutableStateOf(false) }
 
@@ -55,13 +49,13 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, isInnerNote: Boolean = fal
         LaunchedEffect(key1 = messageSetCard) {
             withContext(Dispatchers.IO) {
                 isNew =
-                    messageSetCard.createdAt() > NotificationCache.load(routeForLastRead, context)
+                    messageSetCard.createdAt() > NotificationCache.load(routeForLastRead)
 
-                NotificationCache.markAsRead(routeForLastRead, messageSetCard.createdAt(), context)
+                NotificationCache.markAsRead(routeForLastRead, messageSetCard.createdAt())
             }
         }
 
-        var backgroundColor = if (isNew) {
+        val backgroundColor = if (isNew) {
             MaterialTheme.colors.primary.copy(0.12f).compositeOver(MaterialTheme.colors.background)
         } else {
             MaterialTheme.colors.background

@@ -27,13 +27,13 @@ class TypedFilter(
     fun filterToJson(filter: JsonFilter): JsonObject {
         val jsonObject = JsonObject()
         filter.ids?.run {
-            jsonObject.add("ids", JsonArray().apply { filter.ids?.forEach { add(it) } })
+            jsonObject.add("ids", JsonArray().apply { filter.ids.forEach { add(it) } })
         }
         filter.authors?.run {
-            jsonObject.add("authors", JsonArray().apply { filter.authors?.forEach { add(it) } })
+            jsonObject.add("authors", JsonArray().apply { filter.authors.forEach { add(it) } })
         }
         filter.kinds?.run {
-            jsonObject.add("kinds", JsonArray().apply { filter.kinds?.forEach { add(it) } })
+            jsonObject.add("kinds", JsonArray().apply { filter.kinds.forEach { add(it) } })
         }
         filter.tags?.run {
             entries.forEach { kv ->

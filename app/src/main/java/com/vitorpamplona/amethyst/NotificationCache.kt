@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst
 
-import android.content.Context
 import androidx.lifecycle.LiveData
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -14,7 +13,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 object NotificationCache {
     val lastReadByRoute = mutableMapOf<String, Long>()
 
-    fun markAsRead(route: String, timestampInSecs: Long, context: Context) {
+    fun markAsRead(route: String, timestampInSecs: Long) {
         val lastTime = lastReadByRoute[route]
         if (lastTime == null || timestampInSecs > lastTime) {
             lastReadByRoute.put(route, timestampInSecs)
@@ -27,7 +26,7 @@ object NotificationCache {
         }
     }
 
-    fun load(route: String, context: Context): Long {
+    fun load(route: String): Long {
         var lastTime = lastReadByRoute[route]
         if (lastTime == null) {
             lastTime = LocalPreferences.loadLastRead(route)

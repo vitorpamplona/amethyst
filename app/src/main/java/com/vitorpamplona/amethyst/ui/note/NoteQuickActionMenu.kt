@@ -124,7 +124,7 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
                         }
                         VerticalDivider(primaryLight)
                         NoteQuickActionItem(Icons.Default.AlternateEmail, stringResource(R.string.quick_action_copy_user_id)) {
-                            clipboardManager.setText(AnnotatedString("@${note.author?.pubkeyNpub()}" ?: ""))
+                            clipboardManager.setText(AnnotatedString("@${note.author?.pubkeyNpub()}"))
                             showToast(R.string.copied_user_id_to_clipboard)
                             onDismiss()
                         }

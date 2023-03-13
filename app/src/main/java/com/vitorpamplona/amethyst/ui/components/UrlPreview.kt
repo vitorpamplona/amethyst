@@ -18,14 +18,14 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun UrlPreview(url: String, urlText: String) {
-    val default = UrlCachedPreviewer.cache[url]?.let {
-        if (it.url == url) {
-            UrlPreviewState.Loaded(it)
-        } else {
-            UrlPreviewState.Empty
-        }
-    } ?: UrlPreviewState.Loading
-    var context = LocalContext.current
+//    val default = UrlCachedPreviewer.cache[url]?.let {
+//        if (it.url == url) {
+//            UrlPreviewState.Loaded(it)
+//        } else {
+//            UrlPreviewState.Empty
+//        }
+//    } ?: UrlPreviewState.Loading
+    val context = LocalContext.current
 
     var urlPreviewState by remember { mutableStateOf<UrlPreviewState>(UrlPreviewState.Loading) }
 

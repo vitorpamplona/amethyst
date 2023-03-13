@@ -34,7 +34,7 @@ fun NotificationScreen(accountViewModel: AccountViewModel, navController: NavCon
 
     val lifeCycleOwner = LocalLifecycleOwner.current
     DisposableEffect(accountViewModel) {
-        val observer = LifecycleEventObserver { source, event ->
+        val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 feedViewModel.refresh()
             }

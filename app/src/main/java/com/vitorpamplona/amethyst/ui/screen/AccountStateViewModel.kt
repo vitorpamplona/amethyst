@@ -6,6 +6,7 @@ import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
 import fr.acinq.secp256k1.Hex
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
@@ -67,6 +68,7 @@ class AccountStateViewModel() : ViewModel() {
         login(account)
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     fun login(account: Account) {
         LocalPreferences.updatePrefsForLogin(account)
 
@@ -86,16 +88,16 @@ class AccountStateViewModel() : ViewModel() {
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     private val saveListener: (com.vitorpamplona.amethyst.model.AccountState) -> Unit = {
         GlobalScope.launch(Dispatchers.IO) {
             LocalPreferences.saveToEncryptedStorage(it.account)
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     private fun prepareLogoutOrSwitch() {
-        val state = accountContent.value
-
-        when (state) {
+        when (val state = accountContent.value) {
             is AccountState.LoggedIn -> {
                 GlobalScope.launch(Dispatchers.Main) {
                     state.account.saveable.removeObserver(saveListener)

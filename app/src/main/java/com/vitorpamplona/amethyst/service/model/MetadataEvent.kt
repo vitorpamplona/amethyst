@@ -28,9 +28,7 @@ abstract class IdentityClaim(
 
     companion object {
         fun create(platformIdentity: String, proof: String): IdentityClaim? {
-            val platformIdentity = platformIdentity.split(':')
-            val platform = platformIdentity[0]
-            val identity = platformIdentity[1]
+            val (platform, identity) = platformIdentity.split(':')
 
             return when (platform.lowercase()) {
                 GitHubIdentity.platform -> GitHubIdentity(identity, proof)
@@ -169,16 +167,16 @@ class MetadataEvent(
         }
 
         fun create(contactMetaData: String, identities: List<IdentityClaim>, privateKey: ByteArray, createdAt: Long = Date().time / 1000): MetadataEvent {
-            val content = contactMetaData
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf<List<String>>()
-            identities?.forEach {
+
+            identities.forEach {
                 tags.add(listOf("i", it.platformIdentity(), it.proof))
             }
 
-            val id = generateId(pubKey, createdAt, kind, tags, content)
+            val id = generateId(pubKey, createdAt, kind, tags, contactMetaData)
             val sig = Utils.sign(id, privateKey)
-            return MetadataEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
+            return MetadataEvent(id.toHexKey(), pubKey, createdAt, tags, contactMetaData, sig.toHexKey())
         }
     }
 }

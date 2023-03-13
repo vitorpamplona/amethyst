@@ -89,7 +89,7 @@ class User(val pubkeyHex: String) {
         return info?.picture
     }
 
-    fun follow(user: User, followedAt: Long) {
+    fun follow(user: User) {
         follows = follows + user
         user.followers = user.followers + this
 
@@ -105,7 +105,7 @@ class User(val pubkeyHex: String) {
         user.liveSet?.follows?.invalidateData()
     }
 
-    fun follow(users: Set<User>, followedAt: Long) {
+    fun follow(users: Set<User>) {
         follows = follows + users
         users.forEach {
             if (this !in it.followers && it.liveSet?.isInUse() == true) {
@@ -258,7 +258,7 @@ class User(val pubkeyHex: String) {
         val toBeAdded = newFollows - follows
         val toBeRemoved = follows - newFollows
 
-        follow(toBeAdded, updateAt)
+        follow(toBeAdded)
         unfollow(toBeRemoved)
 
         updatedFollowsAt = updateAt

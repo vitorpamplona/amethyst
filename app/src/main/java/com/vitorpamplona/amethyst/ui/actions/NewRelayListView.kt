@@ -40,7 +40,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -58,12 +57,10 @@ import java.lang.Math.round
 @Composable
 fun NewRelayListView(onClose: () -> Unit, account: Account, relayToAdd: String = "") {
     val postViewModel: NewRelayListViewModel = viewModel()
-    val ctx = LocalContext.current.applicationContext
-
     val feedState by postViewModel.relays.collectAsState()
 
     LaunchedEffect(Unit) {
-        postViewModel.load(account, ctx)
+        postViewModel.load(account)
     }
 
     Dialog(
@@ -83,13 +80,13 @@ fun NewRelayListView(onClose: () -> Unit, account: Account, relayToAdd: String =
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     CloseButton(onCancel = {
-                        postViewModel.clear(ctx)
+                        postViewModel.clear()
                         onClose()
                     })
 
                     PostButton(
                         onPost = {
-                            postViewModel.create(ctx)
+                            postViewModel.create()
                             onClose()
                         },
                         true

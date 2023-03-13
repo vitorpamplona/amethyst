@@ -36,7 +36,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -81,7 +80,7 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
         }
 
         DisposableEffect(userId) {
-            val observer = LifecycleEventObserver { source, event ->
+            val observer = LifecycleEventObserver { _, event ->
                 if (event == Lifecycle.Event.ON_RESUME) {
                     println("Private Message Start")
                     NostrChatroomDataSource.start()
@@ -101,11 +100,7 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
 
         Column(Modifier.fillMaxHeight()) {
             NostrChatroomDataSource.withUser?.let {
-                ChatroomHeader(
-                    it,
-                    accountViewModel = accountViewModel,
-                    navController = navController
-                )
+                ChatroomHeader(it, navController = navController)
             }
 
             Column(
@@ -198,9 +193,7 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
 }
 
 @Composable
-fun ChatroomHeader(baseUser: User, accountViewModel: AccountViewModel, navController: NavController) {
-    val ctx = LocalContext.current.applicationContext
-
+fun ChatroomHeader(baseUser: User, navController: NavController) {
     Column(
         modifier = Modifier.clickable(
             onClick = { navController.navigate("User/${baseUser.pubkeyHex}") }
