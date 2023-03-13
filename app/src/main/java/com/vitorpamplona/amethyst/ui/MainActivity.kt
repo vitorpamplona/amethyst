@@ -49,12 +49,14 @@ class MainActivity : FragmentActivity() {
                 .build()
         }
 
+        LocalPreferences.migrateSingleUserPrefs()
+
         setContent {
             AmethystTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background) {
                     val accountStateViewModel: AccountStateViewModel = viewModel {
-                        AccountStateViewModel(LocalPreferences(applicationContext))
+                        AccountStateViewModel()
                     }
 
                     AccountScreen(accountStateViewModel, startingPage)

@@ -21,7 +21,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -51,7 +50,6 @@ import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.google.accompanist.pager.rememberPagerState
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -65,6 +63,8 @@ import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
 import com.vitorpamplona.amethyst.ui.components.DisplayNip05ProfileStatus
 import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
+import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
+import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
 import com.vitorpamplona.amethyst.ui.dal.UserProfileConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowersFeedFilter
@@ -432,13 +432,17 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, navController: 
         )
 
         IconButton(
-            modifier = Modifier.size(30.dp).padding(start = 5.dp),
+            modifier = Modifier
+                .size(30.dp)
+                .padding(start = 5.dp),
             onClick = { clipboardManager.setText(AnnotatedString(user.pubkeyNpub())); }
         ) {
             Icon(
                 imageVector = Icons.Default.ContentCopy,
                 null,
-                modifier = Modifier.padding(end = 5.dp).size(15.dp),
+                modifier = Modifier
+                    .padding(end = 5.dp)
+                    .size(15.dp),
                 tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
             )
         }
@@ -580,20 +584,18 @@ fun BadgeThumb(
             .height(size)
     ) {
         if (image == null) {
-            Image(
-                painter = BitmapPainter(RoboHashCache.get(ctx, "ohnothisauthorisnotfound")),
+            RobohashAsyncImage(
+                robot = "authornotfound",
                 contentDescription = stringResource(R.string.unknown_author),
                 modifier = pictureModifier
                     .fillMaxSize(1f)
                     .background(MaterialTheme.colors.background)
             )
         } else {
-            AsyncImage(
+            RobohashFallbackAsyncImage(
+                robot = note.idHex,
                 model = image,
                 contentDescription = stringResource(id = R.string.profile_image),
-                placeholder = BitmapPainter(RoboHashCache.get(ctx, note.idHex)),
-                fallback = BitmapPainter(RoboHashCache.get(ctx, note.idHex)),
-                error = BitmapPainter(RoboHashCache.get(ctx, note.idHex)),
                 modifier = pictureModifier
                     .fillMaxSize(1f)
                     .clip(shape = CircleShape)

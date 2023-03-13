@@ -186,7 +186,7 @@ fun ServerConfigHeader() {
                     Spacer(modifier = Modifier.size(5.dp))
 
                     Text(
-                        text = "Spam",
+                        text = stringResource(R.string.spam),
                         maxLines = 1,
                         fontSize = 14.sp,
                         modifier = Modifier.weight(1f),

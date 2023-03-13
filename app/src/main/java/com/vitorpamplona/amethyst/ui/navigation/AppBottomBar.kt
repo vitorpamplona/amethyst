@@ -84,8 +84,8 @@ fun keyboardAsState(): State<Keyboard> {
 @Composable
 fun AppBottomBar(navController: NavHostController, accountViewModel: AccountViewModel) {
     val currentRoute = currentRoute(navController)
+    val currentRouteBase = currentRoute?.substringBefore("?")
     val coroutineScope = rememberCoroutineScope()
-
     val isKeyboardOpen by keyboardAsState()
 
     if (isKeyboardOpen == Keyboard.Closed) {
@@ -99,13 +99,15 @@ fun AppBottomBar(navController: NavHostController, accountViewModel: AccountView
                 backgroundColor = MaterialTheme.colors.background
             ) {
                 bottomNavigationItems.forEach { item ->
+                    val selected = currentRouteBase == item.base
+
                     BottomNavigationItem(
-                        icon = { NotifiableIcon(item, currentRoute, accountViewModel) },
-                        selected = currentRoute == item.route,
+                        icon = { NotifiableIcon(item, selected, accountViewModel) },
+                        selected = selected,
                         onClick = {
                             coroutineScope.launch {
-                                if (currentRoute != item.route) {
-                                    navController.navigate(item.route) {
+                                if (currentRouteBase != item.base) {
+                                    navController.navigate(item.base) {
                                         navController.graph.startDestinationRoute?.let { start ->
                                             popUpTo(start)
                                             restoreState = true
@@ -114,8 +116,8 @@ fun AppBottomBar(navController: NavHostController, accountViewModel: AccountView
                                         restoreState = true
                                     }
                                 } else {
-                                    // TODO: Make it scrool to the top
-                                    navController.navigate(item.route) {
+                                    val route = currentRoute.replace("{scrollToTop}", "true")
+                                    navController.navigate(route) {
                                         navController.graph.startDestinationRoute?.let { start ->
                                             popUpTo(start) { inclusive = item.route == Route.Home.route }
                                             restoreState = true
@@ -135,13 +137,13 @@ fun AppBottomBar(navController: NavHostController, accountViewModel: AccountView
 }
 
 @Composable
-private fun NotifiableIcon(item: Route, currentRoute: String?, accountViewModel: AccountViewModel) {
-    Box(Modifier.size(if ("Home" == item.route) 25.dp else 23.dp)) {
+private fun NotifiableIcon(route: Route, selected: Boolean, accountViewModel: AccountViewModel) {
+    Box(Modifier.size(if ("Home" == route.base) 25.dp else 23.dp)) {
         Icon(
-            painter = painterResource(id = item.icon),
+            painter = painterResource(id = route.icon),
             null,
-            modifier = Modifier.size(if ("Home" == item.route) 24.dp else 20.dp),
-            tint = if (currentRoute == item.route) MaterialTheme.colors.primary else Color.Unspecified
+            modifier = Modifier.size(if ("Home" == route.base) 24.dp else 20.dp),
+            tint = if (selected) MaterialTheme.colors.primary else Color.Unspecified
         )
 
         val accountState by accountViewModel.accountLiveData.observeAsState()
@@ -160,13 +162,13 @@ private fun NotifiableIcon(item: Route, currentRoute: String?, accountViewModel:
 
         LaunchedEffect(key1 = notif) {
             withContext(Dispatchers.IO) {
-                hasNewItems = item.hasNewItems(account, notif.cache, context)
+                hasNewItems = route.hasNewItems(account, notif.cache, context)
             }
         }
 
         LaunchedEffect(key1 = db) {
             withContext(Dispatchers.IO) {
-                hasNewItems = item.hasNewItems(account, notif.cache, context)
+                hasNewItems = route.hasNewItems(account, notif.cache, context)
             }
         }
 

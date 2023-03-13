@@ -31,6 +31,7 @@ object ImageSaver {
         val client = OkHttpClient.Builder().build()
 
         val request = Request.Builder()
+            .header("User-Agent", "Amethyst")
             .get()
             .url(url)
             .build()

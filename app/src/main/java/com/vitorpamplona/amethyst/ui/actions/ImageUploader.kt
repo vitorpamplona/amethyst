@@ -43,8 +43,9 @@ object ImageUploader {
             .build()
 
         val request: Request = Request.Builder()
-            .url("https://api.imgur.com/3/image")
             .header("Authorization", "Client-ID e6aea87296f3f96")
+            .header("User-Agent", "Amethyst")
+            .url("https://api.imgur.com/3/image")
             .post(requestBody)
             .build()
 

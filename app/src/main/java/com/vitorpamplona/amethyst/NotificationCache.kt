@@ -21,7 +21,7 @@ object NotificationCache {
 
             val scope = CoroutineScope(Job() + Dispatchers.IO)
             scope.launch {
-                LocalPreferences(context).saveLastRead(route, timestampInSecs)
+                LocalPreferences.saveLastRead(route, timestampInSecs)
                 live.invalidateData()
             }
         }
@@ -30,7 +30,7 @@ object NotificationCache {
     fun load(route: String, context: Context): Long {
         var lastTime = lastReadByRoute[route]
         if (lastTime == null) {
-            lastTime = LocalPreferences(context).loadLastRead(route)
+            lastTime = LocalPreferences.loadLastRead(route)
             lastReadByRoute[route] = lastTime
         }
         return lastTime

@@ -2,7 +2,10 @@ package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -14,12 +17,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.Divider
+import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -42,8 +49,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import com.google.accompanist.swiperefresh.SwipeRefresh
-import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
@@ -56,48 +61,40 @@ import com.vitorpamplona.amethyst.ui.note.HiddenNote
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.NoteDropDownMenu
+import com.vitorpamplona.amethyst.ui.note.NoteQuickActionMenu
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.delay
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: AccountViewModel, navController: NavController) {
     val feedState by viewModel.feedContent.collectAsState()
 
-    var isRefreshing by remember { mutableStateOf(false) }
-    val swipeRefreshState = rememberSwipeRefreshState(isRefreshing)
-
     val listState = rememberLazyListState()
 
-    LaunchedEffect(isRefreshing) {
-        if (isRefreshing) {
-            viewModel.refresh()
-            isRefreshing = false
-        }
-    }
+    var refreshing by remember { mutableStateOf(false) }
+    val refresh = { refreshing = true; viewModel.refresh(); refreshing = false }
+    val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = refresh)
 
-    SwipeRefresh(
-        state = swipeRefreshState,
-        onRefresh = {
-            isRefreshing = true
-        }
-    ) {
+    Box(Modifier.pullRefresh(pullRefreshState)) {
         Column() {
             Crossfade(targetState = feedState, animationSpec = tween(durationMillis = 100)) { state ->
                 when (state) {
                     is FeedState.Empty -> {
                         FeedEmpty {
-                            isRefreshing = true
+                            refreshing = true
                         }
                     }
                     is FeedState.FeedError -> {
                         FeedError(state.errorMessage) {
-                            isRefreshing = true
+                            refreshing = true
                         }
                     }
                     is FeedState.Loaded -> {
+                        refreshing = false
                         LaunchedEffect(noteId) {
                             // waits to load the thread to scroll to item.
                             delay(100)
@@ -160,6 +157,8 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
                 }
             }
         }
+
+        PullRefreshIndicator(refreshing, pullRefreshState, Modifier.align(Alignment.TopCenter))
     }
 }
 
@@ -187,6 +186,7 @@ fun Modifier.drawReplyLevel(level: Int, color: Color, selected: Color): Modifier
     }
     .padding(start = (2 + (level * 3)).dp)
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun NoteMaster(
     baseNote: Note,
@@ -210,6 +210,8 @@ fun NoteMaster(
     var moreActionsExpanded by remember { mutableStateOf(false) }
 
     val noteEvent = note?.event
+
+    var popupExpanded by remember { mutableStateOf(false) }
 
     if (noteEvent == null) {
         BlankNote()
@@ -314,7 +316,14 @@ fun NoteMaster(
                 }
             }
 
-            Row(modifier = Modifier.padding(horizontal = 12.dp)) {
+            Row(
+                modifier = Modifier
+                    .padding(horizontal = 12.dp)
+                    .combinedClickable(
+                        onClick = { },
+                        onLongClick = { popupExpanded = true }
+                    )
+            ) {
                 Column() {
                     val eventContent = note.event?.content()
 
@@ -343,5 +352,7 @@ fun NoteMaster(
                 }
             }
         }
+
+        NoteQuickActionMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
     }
 }

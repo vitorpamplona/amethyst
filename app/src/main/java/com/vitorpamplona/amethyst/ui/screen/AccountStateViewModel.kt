@@ -17,7 +17,7 @@ import nostr.postr.Persona
 import nostr.postr.bechToBytes
 import java.util.regex.Pattern
 
-class AccountStateViewModel(private val localPreferences: LocalPreferences) : ViewModel() {
+class AccountStateViewModel() : ViewModel() {
     private val _accountContent = MutableStateFlow<AccountState>(AccountState.LoggedOff)
     val accountContent = _accountContent.asStateFlow()
 
@@ -26,10 +26,14 @@ class AccountStateViewModel(private val localPreferences: LocalPreferences) : Vi
 
         // Keeps it in the the UI thread to void blinking the login page.
         // viewModelScope.launch(Dispatchers.IO) {
-        localPreferences.loadFromEncryptedStorage()?.let {
+        tryLoginExistingAccount()
+        // }
+    }
+
+    private fun tryLoginExistingAccount() {
+        LocalPreferences.loadFromEncryptedStorage()?.let {
             login(it)
         }
-        // }
     }
 
     fun login(key: String) {
@@ -47,18 +51,25 @@ class AccountStateViewModel(private val localPreferences: LocalPreferences) : Vi
                 Account(Persona(Hex.decode(key)))
             }
 
-        localPreferences.saveToEncryptedStorage(account)
-
+        LocalPreferences.updatePrefsForLogin(account)
         login(account)
+    }
+
+    fun switchUser(npub: String) {
+        prepareLogoutOrSwitch()
+        LocalPreferences.switchToAccount(npub)
+        tryLoginExistingAccount()
     }
 
     fun newKey() {
         val account = Account(Persona())
-        localPreferences.saveToEncryptedStorage(account)
+        LocalPreferences.updatePrefsForLogin(account)
         login(account)
     }
 
     fun login(account: Account) {
+        LocalPreferences.updatePrefsForLogin(account)
+
         if (account.loggedIn.privKey != null) {
             _accountContent.update { AccountState.LoggedIn(account) }
         } else {
@@ -77,11 +88,11 @@ class AccountStateViewModel(private val localPreferences: LocalPreferences) : Vi
 
     private val saveListener: (com.vitorpamplona.amethyst.model.AccountState) -> Unit = {
         GlobalScope.launch(Dispatchers.IO) {
-            localPreferences.saveToEncryptedStorage(it.account)
+            LocalPreferences.saveToEncryptedStorage(it.account)
         }
     }
 
-    fun logOff() {
+    private fun prepareLogoutOrSwitch() {
         val state = accountContent.value
 
         when (state) {
@@ -99,7 +110,11 @@ class AccountStateViewModel(private val localPreferences: LocalPreferences) : Vi
         }
 
         _accountContent.update { AccountState.LoggedOff }
+    }
 
-        localPreferences.clearEncryptedStorage()
+    fun logOff(npub: String) {
+        prepareLogoutOrSwitch()
+        LocalPreferences.updatePrefsForLogout(npub)
+        tryLoginExistingAccount()
     }
 }

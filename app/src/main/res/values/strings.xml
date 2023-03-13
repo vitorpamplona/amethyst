@@ -23,6 +23,7 @@
     <string name="copy_user_pubkey">Copy Author ID</string>
     <string name="copy_note_id">Copy Note ID</string>
     <string name="broadcast">Broadcast</string>
+    <string name="request_deletion">Request Deletion</string>
     <string name="block_hide_user"><![CDATA[Block & Hide User]]></string>
     <string name="report_spam_scam">Report Spam / Scam</string>
     <string name="report_impersonation">Report Impersonation</string>
@@ -178,7 +179,13 @@
     <string name="mark_all_new_as_read">Mark all New as read</string>
     <string name="mark_all_as_read">Mark all as read</string>
     <string name="backup_keys">Backup Keys</string>
-    <string name="account_backup_tips_md" tools:ignore="Typos">"         ## Key Backup and Safety Tips           Your account is secured by a secret key. The key is long random string starting with **nsec1**. Anyone who has access to your secret key can publish content using your identity.           - Do **not** put your secret key in any website or software you do not trust.          - Amethyst developers will **never** ask you for your secret key.          - **Do** keep a secure backup of your secret key for account recovery. We recommend using a password manager.     "</string>
+    <string name="account_backup_tips_md" tools:ignore="Typos">
+        ## Key Backup and Safety Tips
+        \n\nYour account is secured by a secret key. The key is long random string starting with **nsec1**. Anyone who has access to your secret key can publish content using your identity.
+        \n\n- Do **not** put your secret key in any website or software you do not trust.
+        \n- Amethyst developers will **never** ask you for your secret key.
+        \n- **Do** keep a secure backup of your secret key for account recovery. We recommend using a password manager.
+    </string>
     <string name="secret_key_copied_to_clipboard">Secret key (nsec) copied to clipboard</string>
     <string name="copy_my_secret_key">Copy my secret key</string>
     <string name="biometric_authentication_failed">Authentication failed</string>
@@ -202,19 +209,24 @@
     <string name="quick_action_follow">Follow</string>
     <string name="quick_action_request_deletion_alert_title">Request Deletion</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst will request that your note be deleted from the relays you are currently connected to. There is no guarantee that your note will be permanently deleted from those relays, or from other relays where it may be stored.</string>
-
     <string name="github" translatable="false">Github Gist w/ Proof</string>
     <string name="telegram" translatable="false">Telegram</string>
     <string name="mastodon" translatable="false">Mastodon Post ID w/ Proof</string>
     <string name="twitter" translatable="false">Twitter Status w/ Proof</string>
-
     <string name="github_proof_url_template" translatable="false">https://gist.github.com/&lt;user&gt;/&lt;gist&gt;</string>
     <string name="telegram_proof_url_template" translatable="false">https://t.me/&lt;proof post&gt;</string>
     <string name="mastodon_proof_url_template" translatable="false">https://&lt;server&gt;/&lt;user&gt;/&lt;proof post&gt;</string>
     <string name="twitter_proof_url_template" translatable="false">https://twitter.com/&lt;user&gt;/status/&lt;proof post&gt;</string>
-
     <string name="private_conversation_notification">"&lt;Unable to decrypt private message&gt;\n\nYou were cited in a private/encrypted conversation between %1$s and %2$s."</string>
     <string name="quick_action_delete_button">Delete</string>
     <string name="quick_action_dont_show_again_button">Don\'t show again</string>
+    <string name="account_switch_add_account_dialog_title">Add New Account</string>
+    <string name="drawer_accounts">Accounts</string>
+    <string name="account_switch_select_account">Select Account</string>
+    <string name="account_switch_add_account_btn">Add New Account</string>
+    <string name="account_switch_active_account">Active account</string>
+    <string name="account_switch_has_private_key">Has private key</string>
+    <string name="account_switch_pubkey_only">Read only, no private key</string>
+    <string name="back">Back</string>
 
 </resources>

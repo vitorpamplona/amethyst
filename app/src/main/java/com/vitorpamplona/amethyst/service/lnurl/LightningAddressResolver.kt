@@ -51,7 +51,10 @@ class LightningAddressResolver {
         }
 
         withContext(Dispatchers.IO) {
-            val request: Request = Request.Builder().url(url).build()
+            val request: Request = Request.Builder()
+                .header("User-Agent", "Amethyst")
+                .url(url)
+                .build()
 
             client.newCall(request).enqueue(object : Callback {
                 override fun onResponse(call: Call, response: Response) {
@@ -91,7 +94,10 @@ class LightningAddressResolver {
                 url += "&nostr=$encodedNostrRequest"
             }
 
-            val request: Request = Request.Builder().url(url).build()
+            val request: Request = Request.Builder()
+                .header("User-Agent", "Amethyst")
+                .url(url)
+                .build()
 
             client.newCall(request).enqueue(object : Callback {
                 override fun onResponse(call: Call, response: Response) {

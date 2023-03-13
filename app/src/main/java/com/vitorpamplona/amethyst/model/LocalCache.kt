@@ -27,13 +27,7 @@ import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.service.relays.Relay
 import fr.acinq.secp256k1.Hex
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import nostr.postr.toNpub
 import java.io.ByteArrayInputStream
 import java.time.Instant
@@ -55,13 +49,10 @@ object LocalCache {
     val addressables = ConcurrentHashMap<String, AddressableNote>()
 
     fun checkGetOrCreateUser(key: String): User? {
-        return try {
-            val checkHex = Hex.decode(key).toNpub() // Checks if this is a valid Hex
-            getOrCreateUser(key)
-        } catch (e: IllegalArgumentException) {
-            Log.e("LocalCache", "Invalid Key to create user: $key", e)
-            null
+        if (isValidHexNpub(key)) {
+            return getOrCreateUser(key)
         }
+        return null
     }
 
     @Synchronized
@@ -77,13 +68,10 @@ object LocalCache {
         if (ATag.isATag(key)) {
             return checkGetOrCreateAddressableNote(key)
         }
-        return try {
-            val checkHex = Hex.decode(key).toNote() // Checks if this is a valid Hex
-            getOrCreateNote(key)
-        } catch (e: IllegalArgumentException) {
-            Log.e("LocalCache", "Invalid Key to create note: $key", e)
-            null
+        if (isValidHexNpub(key)) {
+            return getOrCreateNote(key)
         }
+        return null
     }
 
     @Synchronized
@@ -96,12 +84,19 @@ object LocalCache {
     }
 
     fun checkGetOrCreateChannel(key: String): Channel? {
+        if (isValidHexNpub(key)) {
+            return getOrCreateChannel(key)
+        }
+        return null
+    }
+
+    private fun isValidHexNpub(key: String): Boolean {
         return try {
-            val checkHex = Hex.decode(key).toNote() // Checks if this is a valid Hex
-            getOrCreateChannel(key)
+            Hex.decode(key).toNpub()
+            true
         } catch (e: IllegalArgumentException) {
-            Log.e("LocalCache", "Invalid Key to create channel: $key", e)
-            null
+            Log.e("LocalCache", "Invalid Key to create user: $key", e)
+            false
         }
     }
 
@@ -464,21 +459,19 @@ object LocalCache {
 
     fun consume(event: ChannelCreateEvent) {
         // Log.d("MT", "New Event ${event.content} ${event.id.toHex()}")
-        // new event
         val oldChannel = getOrCreateChannel(event.id)
         val author = getOrCreateUser(event.pubKey)
-        if (event.createdAt > oldChannel.updatedMetadataAt) {
-            if (oldChannel.creator == null || oldChannel.creator == author) {
-                oldChannel.updateChannelInfo(author, event.channelInfo(), event.createdAt)
+        if (event.createdAt <= oldChannel.updatedMetadataAt) {
+            return // older data, does nothing
+        }
+        if (oldChannel.creator == null || oldChannel.creator == author) {
+            oldChannel.updateChannelInfo(author, event.channelInfo(), event.createdAt)
 
-                val note = getOrCreateNote(event.id)
-                oldChannel.addNote(note)
-                note.loadEvent(event, author, emptyList())
+            val note = getOrCreateNote(event.id)
+            oldChannel.addNote(note)
+            note.loadEvent(event, author, emptyList(), emptyList())
 
-                refreshObservers()
-            }
-        } else {
-            // older data, does nothing
+            refreshObservers()
         }
     }
 
@@ -653,7 +646,7 @@ object LocalCache {
     }
 
     fun pruneOldAndHiddenMessages(account: Account) {
-        channels.forEach {
+        channels.forEach { it ->
             val toBeRemoved = it.value.pruneOldAndHiddenMessages(account)
 
             toBeRemoved.forEach {
@@ -666,7 +659,7 @@ object LocalCache {
                         ?.mapNotNull { checkGetOrCreateUser(it) }
 
                 // Counts the replies
-                it.replyTo?.forEach { replyingNote ->
+                it.replyTo?.forEach { _ ->
                     it.removeReply(it)
                 }
             }

@@ -36,7 +36,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
@@ -47,10 +46,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -58,14 +55,14 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrGlobalDataSource
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
-import com.vitorpamplona.amethyst.ui.dal.GlobalFeedFilter
 import com.vitorpamplona.amethyst.ui.note.ChannelName
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.FeedView
-import com.vitorpamplona.amethyst.ui.screen.NostrGlobalFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.collectLatest
@@ -78,12 +75,12 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.channels.Channel as CoroutineChannel
 
 @Composable
-fun SearchScreen(accountViewModel: AccountViewModel, navController: NavController) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
-
-    GlobalFeedFilter.account = account
-    val feedViewModel: NostrGlobalFeedViewModel = viewModel()
+fun SearchScreen(
+    accountViewModel: AccountViewModel,
+    feedViewModel: FeedViewModel,
+    navController: NavController,
+    scrollToTop: Boolean = false
+) {
     val lifeCycleOwner = LocalLifecycleOwner.current
 
     LaunchedEffect(accountViewModel) {
@@ -114,7 +111,7 @@ fun SearchScreen(accountViewModel: AccountViewModel, navController: NavControlle
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
             SearchBar(accountViewModel, navController)
-            FeedView(feedViewModel, accountViewModel, navController, null)
+            FeedView(feedViewModel, accountViewModel, navController, null, ScrollStateKeys.GLOBAL_SCREEN, scrollToTop)
         }
     }
 }
@@ -246,8 +243,8 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
 
             itemsIndexed(searchResultsChannels.value, key = { _, item -> "c" + item.idHex }) { index, item ->
                 ChannelName(
+                    channelIdHex = item.idHex,
                     channelPicture = item.profilePicture(),
-                    channelPicturePlaceholder = BitmapPainter(RoboHashCache.get(ctx, item.idHex)),
                     channelTitle = {
                         Text(
                             "${item.info.name}",
