@@ -45,7 +45,7 @@ sealed class Route(
         hasNewItems = { accountViewModel, cache, context -> homeHasNewItems(accountViewModel, cache, context) },
         buildScreen = { accountViewModel, _, navController ->
             { backStackEntry ->
-                HomeScreen(accountViewModel, navController, backStackEntry.arguments?.getBoolean("forceRefresh", false))
+                HomeScreen(accountViewModel, navController, backStackEntry.arguments?.getBoolean("forceRefresh", false) ?: false)
             }
         }
     )
@@ -56,7 +56,7 @@ sealed class Route(
         arguments = listOf(navArgument("forceRefresh") { type = NavType.BoolType; defaultValue = false }),
         buildScreen = { acc, _, navController ->
             { backStackEntry ->
-                SearchScreen(acc, navController, backStackEntry.arguments?.getBoolean("forceRefresh", false))
+                SearchScreen(acc, navController, backStackEntry.arguments?.getBoolean("forceRefresh", false) ?: false)
             }
         }
     )

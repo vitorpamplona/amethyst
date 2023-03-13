@@ -39,7 +39,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalPagerApi::class)
 @Composable
-fun HomeScreen(accountViewModel: AccountViewModel, navController: NavController, forceRefresh: Boolean? = false) {
+fun HomeScreen(accountViewModel: AccountViewModel, navController: NavController, forceRefresh: Boolean = false) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 

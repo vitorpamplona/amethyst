@@ -42,11 +42,11 @@ fun FeedView(
     navController: NavController,
     routeForLastRead: String?,
     scrollStateKey: String? = null,
-    forceRefresh: Boolean? = false
+    forceRefresh: Boolean = false
 ) {
     val feedState by viewModel.feedContent.collectAsState()
 
-    var refreshing by remember { mutableStateOf(forceRefresh!!) }
+    var refreshing by remember { mutableStateOf(forceRefresh) }
     val refresh = { refreshing = true; viewModel.refresh(); refreshing = false }
     val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = refresh)
 
@@ -77,7 +77,7 @@ fun FeedView(
                             accountViewModel,
                             navController,
                             scrollStateKey,
-                            forceRefresh!!
+                            forceRefresh
                         )
                     }
 

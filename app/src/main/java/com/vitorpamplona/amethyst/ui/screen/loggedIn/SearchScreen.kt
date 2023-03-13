@@ -79,7 +79,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.channels.Channel as CoroutineChannel
 
 @Composable
-fun SearchScreen(accountViewModel: AccountViewModel, navController: NavController, forceRefresh: Boolean? = false) {
+fun SearchScreen(accountViewModel: AccountViewModel, navController: NavController, forceRefresh: Boolean = false) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
