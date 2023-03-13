@@ -124,18 +124,18 @@ fun NoteCompose(
         LaunchedEffect(key1 = routeForLastRead) {
             withContext(Dispatchers.IO) {
                 routeForLastRead?.let {
-                    val lastTime = NotificationCache.load(it, context)
+                    val lastTime = NotificationCache.load(it)
 
                     val createdAt = note.createdAt()
                     if (createdAt != null) {
-                        NotificationCache.markAsRead(it, createdAt, context)
+                        NotificationCache.markAsRead(it, createdAt)
                         isNew = createdAt > lastTime
                     }
                 }
             }
         }
 
-        var backgroundColor = if (isNew) {
+        val backgroundColor = if (isNew) {
             val newColor = MaterialTheme.colors.primary.copy(0.12f)
             if (parentBackgroundColor != null) {
                 newColor.compositeOver(parentBackgroundColor)
@@ -342,7 +342,7 @@ fun NoteCompose(
                         // Reposts have trash in their contents.
                         if (noteEvent is ReactionEvent) {
                             val refactorReactionText =
-                                if (noteEvent.content == "+") "❤" else noteEvent.content ?: " "
+                                if (noteEvent.content == "+") "❤" else noteEvent.content
 
                             Text(
                                 text = refactorReactionText
@@ -357,7 +357,6 @@ fun NoteCompose(
                                 ReportEvent.ReportType.SPAM -> stringResource(R.string.spam)
                                 ReportEvent.ReportType.IMPERSONATION -> stringResource(R.string.impersonation)
                                 ReportEvent.ReportType.ILLEGAL -> stringResource(R.string.illegal_behavior)
-                                else -> stringResource(R.string.unknown)
                             }
                         }.toSet().joinToString(", ")
 
@@ -590,7 +589,6 @@ private fun RelayBadges(baseNote: Note) {
     val relaysToDisplay = if (expanded) noteRelays else noteRelays.take(3)
 
     val uri = LocalUriHandler.current
-    val ctx = LocalContext.current.applicationContext
 
     FlowRow(Modifier.padding(top = 10.dp, start = 5.dp, end = 4.dp)) {
         relaysToDisplay.forEach {
@@ -656,15 +654,13 @@ fun NoteAuthorPicture(
     baseNote: Note,
     baseUserAccount: User,
     size: Dp,
-    pictureModifier: Modifier = Modifier,
+    modifier: Modifier = Modifier,
     onClick: ((User) -> Unit)? = null
 ) {
     val noteState by baseNote.live().metadata.observeAsState()
     val note = noteState?.note ?: return
 
     val author = note.author
-
-    val ctx = LocalContext.current.applicationContext
 
     Box(
         Modifier
@@ -675,13 +671,13 @@ fun NoteAuthorPicture(
             RobohashAsyncImage(
                 robot = "authornotfound",
                 contentDescription = stringResource(R.string.unknown_author),
-                modifier = pictureModifier
+                modifier = modifier
                     .fillMaxSize(1f)
                     .clip(shape = CircleShape)
                     .background(MaterialTheme.colors.background)
             )
         } else {
-            UserPicture(author, baseUserAccount, size, pictureModifier, onClick)
+            UserPicture(author, baseUserAccount, size, modifier, onClick)
         }
     }
 }
@@ -705,14 +701,12 @@ fun UserPicture(
     baseUser: User,
     baseUserAccount: User,
     size: Dp,
-    pictureModifier: Modifier = Modifier,
+    modifier: Modifier = Modifier,
     onClick: ((User) -> Unit)? = null,
     onLongClick: ((User) -> Unit)? = null
 ) {
     val userState by baseUser.live().metadata.observeAsState()
     val user = userState?.user ?: return
-
-    val ctx = LocalContext.current.applicationContext
 
     Box(
         Modifier
@@ -723,7 +717,7 @@ fun UserPicture(
             robot = user.pubkeyHex,
             model = ResizeImage(user.profilePicture(), size),
             contentDescription = stringResource(id = R.string.profile_image),
-            modifier = pictureModifier
+            modifier = modifier
                 .fillMaxSize(1f)
                 .clip(shape = CircleShape)
                 .background(MaterialTheme.colors.background)
@@ -793,7 +787,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
         DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(accountViewModel.decrypt(note) ?: "")); onDismiss() }) {
             Text(stringResource(R.string.copy_text))
         }
-        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString("@${note.author?.pubkeyNpub()}" ?: "")); onDismiss() }) {
+        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString("@${note.author?.pubkeyNpub()}")); onDismiss() }) {
             Text(stringResource(R.string.copy_user_pubkey))
         }
         DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(note.idNote())); onDismiss() }) {
@@ -830,10 +824,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
             Divider()
             DropdownMenuItem(onClick = {
                 note.author?.let {
-                    accountViewModel.hide(
-                        it,
-                        appContext
-                    )
+                    accountViewModel.hide(it)
                 }; onDismiss()
             }) {
                 Text(stringResource(R.string.block_hide_user))
@@ -841,35 +832,35 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
             Divider()
             DropdownMenuItem(onClick = {
                 accountViewModel.report(note, ReportEvent.ReportType.SPAM)
-                note.author?.let { accountViewModel.hide(it, appContext) }
+                note.author?.let { accountViewModel.hide(it) }
                 onDismiss()
             }) {
                 Text(stringResource(R.string.report_spam_scam))
             }
             DropdownMenuItem(onClick = {
                 accountViewModel.report(note, ReportEvent.ReportType.PROFANITY)
-                note.author?.let { accountViewModel.hide(it, appContext) }
+                note.author?.let { accountViewModel.hide(it) }
                 onDismiss()
             }) {
                 Text(stringResource(R.string.report_hateful_speech))
             }
             DropdownMenuItem(onClick = {
                 accountViewModel.report(note, ReportEvent.ReportType.IMPERSONATION)
-                note.author?.let { accountViewModel.hide(it, appContext) }
+                note.author?.let { accountViewModel.hide(it) }
                 onDismiss()
             }) {
                 Text(stringResource(R.string.report_impersonation))
             }
             DropdownMenuItem(onClick = {
                 accountViewModel.report(note, ReportEvent.ReportType.NUDITY)
-                note.author?.let { accountViewModel.hide(it, appContext) }
+                note.author?.let { accountViewModel.hide(it) }
                 onDismiss()
             }) {
                 Text(stringResource(R.string.report_nudity_porn))
             }
             DropdownMenuItem(onClick = {
                 accountViewModel.report(note, ReportEvent.ReportType.ILLEGAL)
-                note.author?.let { accountViewModel.hide(it, appContext) }
+                note.author?.let { accountViewModel.hide(it) }
                 onDismiss()
             }) {
                 Text(stringResource(R.string.report_illegal_behaviour))

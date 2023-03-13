@@ -12,7 +12,6 @@ import com.google.accompanist.pager.rememberPagerState
 import com.vitorpamplona.amethyst.ui.dal.GlobalFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeNewThreadFeedFilter
-import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrGlobalFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
@@ -32,7 +31,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.ThreadScreen
 fun AppNavigation(
     navController: NavHostController,
     accountViewModel: AccountViewModel,
-    accountStateViewModel: AccountStateViewModel,
     nextPage: String? = null
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
@@ -111,7 +109,6 @@ fun AppNavigation(
                 ChannelScreen(
                     channelId = it.arguments?.getString("id"),
                     accountViewModel = accountViewModel,
-                    accountStateViewModel = accountStateViewModel,
                     navController = navController
                 )
             })

@@ -13,7 +13,6 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -33,7 +32,6 @@ fun UserCompose(baseUser: User, accountViewModel: AccountViewModel, navControlle
     val userState by account.userProfile().live().follows.observeAsState()
     val userFollows = userState?.user ?: return
 
-    val ctx = LocalContext.current.applicationContext
     val coroutineScope = rememberCoroutineScope()
 
     Column(
@@ -58,8 +56,8 @@ fun UserCompose(baseUser: User, accountViewModel: AccountViewModel, navControlle
                     UsernameDisplay(baseUser)
                 }
 
-                val userState by baseUser.live().metadata.observeAsState()
-                val user = userState?.user ?: return
+                val baseUserState by baseUser.live().metadata.observeAsState()
+                val user = baseUserState?.user ?: return
 
                 Text(
                     user.info?.about ?: "",

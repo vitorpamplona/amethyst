@@ -208,7 +208,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                             itemsIndexed(
                                 userSuggestions,
                                 key = { _, item -> item.pubkeyHex }
-                            ) { index, item ->
+                            ) { _, item ->
                                 UserLine(item, account) {
                                     postViewModel.autocompleteWithUser(item)
                                 }

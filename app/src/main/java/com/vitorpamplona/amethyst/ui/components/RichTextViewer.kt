@@ -218,7 +218,7 @@ fun TagLink(word: String, tags: List<List<String>>, canPreview: Boolean, backgro
 
     val index = try {
         matcher.find()
-        matcher.group(1).toInt()
+        matcher.group(1)?.toInt()
     } catch (e: Exception) {
         println("Couldn't link tag $word")
         null

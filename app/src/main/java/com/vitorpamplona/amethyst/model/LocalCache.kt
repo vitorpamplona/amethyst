@@ -334,8 +334,9 @@ object LocalCache {
         }
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun consume(event: RecommendRelayEvent) {
-        // Log.d("RR", event.toJson())
+//        // Log.d("RR", event.toJson())
     }
 
     fun consume(event: ContactListEvent) {
@@ -650,9 +651,11 @@ object LocalCache {
         refreshObservers()
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun consume(event: ChannelHideMessageEvent) {
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun consume(event: ChannelMuteUserEvent) {
     }
 

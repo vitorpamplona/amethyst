@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.service.relays
 
 import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.EventInterface
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -78,6 +79,7 @@ object Client : RelayPool.Listener {
         RelayPool.unloadRelays()
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     override fun onEvent(event: Event, subscriptionId: String, relay: Relay) {
         // Releases the Web thread for the new payload.
         // May need to add a processing queue if processing new events become too costly.
@@ -86,6 +88,7 @@ object Client : RelayPool.Listener {
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     override fun onError(error: Error, subscriptionId: String, relay: Relay) {
         // Releases the Web thread for the new payload.
         // May need to add a processing queue if processing new events become too costly.
@@ -94,6 +97,7 @@ object Client : RelayPool.Listener {
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     override fun onRelayStateChange(type: Relay.Type, relay: Relay, channel: String?) {
         // Releases the Web thread for the new payload.
         // May need to add a processing queue if processing new events become too costly.
@@ -102,6 +106,7 @@ object Client : RelayPool.Listener {
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     override fun onSendResponse(eventId: String, success: Boolean, message: String, relay: Relay) {
         // Releases the Web thread for the new payload.
         // May need to add a processing queue if processing new events become too costly.

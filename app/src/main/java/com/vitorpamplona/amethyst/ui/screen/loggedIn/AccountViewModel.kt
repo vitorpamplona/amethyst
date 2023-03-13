@@ -97,19 +97,19 @@ class AccountViewModel(private val account: Account) : ViewModel() {
         return account.decryptContent(note)
     }
 
-    fun hide(user: User, ctx: Context) {
+    fun hide(user: User) {
         account.hideUser(user.pubkeyHex)
     }
 
-    fun show(user: User, ctx: Context) {
+    fun show(user: User) {
         account.showUser(user.pubkeyHex)
     }
 
-    fun translateTo(lang: Locale, ctx: Context) {
+    fun translateTo(lang: Locale) {
         account.updateTranslateTo(lang.language)
     }
 
-    fun dontTranslateFrom(lang: String, ctx: Context) {
+    fun dontTranslateFrom(lang: String) {
         account.addDontTranslateFrom(lang)
     }
 

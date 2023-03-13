@@ -27,7 +27,6 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalUriHandler
@@ -111,7 +110,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
     val lifeCycleOwner = LocalLifecycleOwner.current
 
     DisposableEffect(accountViewModel) {
-        val observer = LifecycleEventObserver { source, event ->
+        val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Profile Start")
                 NostrUserProfileDataSource.loadUserProfile(userId)
@@ -259,13 +258,13 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                         }
                     ) {
                         when (pagerState.currentPage) {
-                            0 -> TabNotesNewThreads(baseUser, accountViewModel, navController)
-                            1 -> TabNotesConversations(baseUser, accountViewModel, navController)
+                            0 -> TabNotesNewThreads(accountViewModel, navController)
+                            1 -> TabNotesConversations(accountViewModel, navController)
                             2 -> TabFollows(baseUser, accountViewModel, navController)
                             3 -> TabFollowers(baseUser, accountViewModel, navController)
                             4 -> TabReceivedZaps(baseUser, accountViewModel, navController)
                             5 -> TabReports(baseUser, accountViewModel, navController)
-                            6 -> TabRelays(baseUser, accountViewModel, navController)
+                            6 -> TabRelays(baseUser, accountViewModel)
                         }
                     }
                 }
@@ -335,7 +334,7 @@ private fun ProfileHeader(
                     baseUser = baseUser,
                     baseUserAccount = account.userProfile(),
                     size = 100.dp,
-                    pictureModifier = Modifier.border(
+                    modifier = Modifier.border(
                         3.dp,
                         MaterialTheme.colors.background,
                         CircleShape
@@ -576,8 +575,6 @@ fun BadgeThumb(
     val event = (note.event as? BadgeDefinitionEvent)
     val image = event?.thumb() ?: event?.image()
 
-    val ctx = LocalContext.current.applicationContext
-
     Box(
         Modifier
             .width(size)
@@ -656,7 +653,7 @@ private fun DrawBanner(baseUser: User) {
 }
 
 @Composable
-fun TabNotesNewThreads(user: User, accountViewModel: AccountViewModel, navController: NavController) {
+fun TabNotesNewThreads(accountViewModel: AccountViewModel, navController: NavController) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     if (accountState != null) {
         val feedViewModel: NostrUserProfileNewThreadsFeedViewModel = viewModel()
@@ -676,7 +673,7 @@ fun TabNotesNewThreads(user: User, accountViewModel: AccountViewModel, navContro
 }
 
 @Composable
-fun TabNotesConversations(user: User, accountViewModel: AccountViewModel, navController: NavController) {
+fun TabNotesConversations(accountViewModel: AccountViewModel, navController: NavController) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     if (accountState != null) {
         val feedViewModel: NostrUserProfileConversationsFeedViewModel = viewModel()
@@ -772,13 +769,13 @@ fun TabReports(baseUser: User, accountViewModel: AccountViewModel, navController
 }
 
 @Composable
-fun TabRelays(user: User, accountViewModel: AccountViewModel, navController: NavController) {
+fun TabRelays(user: User, accountViewModel: AccountViewModel) {
     val feedViewModel: RelayFeedViewModel = viewModel()
 
     val lifeCycleOwner = LocalLifecycleOwner.current
 
     DisposableEffect(user) {
-        val observer = LifecycleEventObserver { source, event ->
+        val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Profile Relay Start")
                 feedViewModel.subscribeTo(user)
@@ -801,7 +798,7 @@ fun TabRelays(user: User, accountViewModel: AccountViewModel, navController: Nav
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            RelayFeedView(feedViewModel, accountViewModel, navController)
+            RelayFeedView(feedViewModel, accountViewModel)
         }
     }
 }
@@ -943,8 +940,6 @@ fun ShowUserButton(onClick: () -> Unit) {
 @Composable
 fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () -> Unit, accountViewModel: AccountViewModel) {
     val clipboardManager = LocalClipboardManager.current
-    val context = LocalContext.current.applicationContext
-
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
@@ -960,52 +955,51 @@ fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () ->
             Divider()
             if (account.isHidden(user)) {
                 DropdownMenuItem(onClick = {
-                    user.let {
-                        accountViewModel.show(
-                            it,
-                            context
-                        )
-                    }; onDismiss()
+                    accountViewModel.show(user)
+                    onDismiss()
                 }) {
                     Text(stringResource(R.string.unblock_user))
                 }
             } else {
-                DropdownMenuItem(onClick = { user.let { accountViewModel.hide(it, context) }; onDismiss() }) {
+                DropdownMenuItem(onClick = {
+                    accountViewModel.hide(user)
+                    onDismiss()
+                }) {
                     Text(stringResource(id = R.string.block_hide_user))
                 }
             }
             Divider()
             DropdownMenuItem(onClick = {
                 accountViewModel.report(user, ReportEvent.ReportType.SPAM)
-                user.let { accountViewModel.hide(it, context) }
+                accountViewModel.hide(user)
                 onDismiss()
             }) {
                 Text(stringResource(id = R.string.report_spam_scam))
             }
             DropdownMenuItem(onClick = {
                 accountViewModel.report(user, ReportEvent.ReportType.PROFANITY)
-                user.let { accountViewModel.hide(it, context) }
+                accountViewModel.hide(user)
                 onDismiss()
             }) {
                 Text(stringResource(R.string.report_hateful_speech))
             }
             DropdownMenuItem(onClick = {
                 accountViewModel.report(user, ReportEvent.ReportType.IMPERSONATION)
-                user.let { accountViewModel.hide(it, context) }
+                accountViewModel.hide(user)
                 onDismiss()
             }) {
                 Text(stringResource(id = R.string.report_impersonation))
             }
             DropdownMenuItem(onClick = {
                 accountViewModel.report(user, ReportEvent.ReportType.NUDITY)
-                user.let { accountViewModel.hide(it, context) }
+                accountViewModel.hide(user)
                 onDismiss()
             }) {
                 Text(stringResource(R.string.report_nudity_porn))
             }
             DropdownMenuItem(onClick = {
                 accountViewModel.report(user, ReportEvent.ReportType.ILLEGAL)
-                user.let { accountViewModel.hide(it, context) }
+                accountViewModel.hide(user)
                 onDismiss()
             }) {
                 Text(stringResource(id = R.string.report_illegal_behaviour))

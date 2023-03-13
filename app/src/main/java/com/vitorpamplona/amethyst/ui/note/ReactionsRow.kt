@@ -39,12 +39,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -280,7 +278,7 @@ fun LikeReaction(
             }
         }
     ) {
-        if (reactedNote?.isReactedBy(accountViewModel.userProfile()) == true) {
+        if (reactedNote.isReactedBy(accountViewModel.userProfile())) {
             Icon(
                 painter = painterResource(R.drawable.ic_liked),
                 null,
@@ -298,7 +296,7 @@ fun LikeReaction(
     }
 
     Text(
-        " ${showCount(reactedNote?.reactions?.size)}",
+        " ${showCount(reactedNote.reactions.size)}",
         fontSize = 14.sp,
         color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
         modifier = textModifier
@@ -590,15 +588,13 @@ class UpdateZapAmountViewModel : ViewModel() {
     }
 }
 
-@OptIn(ExperimentalComposeUiApi::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun UpdateZapAmountDialog(onClose: () -> Unit, account: Account) {
     val postViewModel: UpdateZapAmountViewModel = viewModel()
 
-    val ctx = LocalContext.current.applicationContext
-
     // initialize focus reference to be able to request focus programmatically
-    val keyboardController = LocalSoftwareKeyboardController.current
+//    val keyboardController = LocalSoftwareKeyboardController.current
 
     LaunchedEffect(account) {
         postViewModel.load(account)

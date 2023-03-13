@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.ui.actions
 
-import android.content.Context
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
@@ -25,7 +24,7 @@ class NewChannelViewModel : ViewModel() {
         }
     }
 
-    fun create(context: Context) {
+    fun create() {
         this.account?.let { account ->
             if (originalChannel == null) {
                 account.sendCreateNewChannel(

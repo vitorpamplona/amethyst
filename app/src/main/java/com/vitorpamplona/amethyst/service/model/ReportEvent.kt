@@ -19,9 +19,9 @@ class ReportEvent(
 
     private fun defaultReportType(): ReportType {
         // Works with old and new structures for report.
-        var reportType = tags.filter { it.firstOrNull() == "report" }.mapNotNull { it.getOrNull(1) }.map { ReportType.valueOf(it.toUpperCase()) }.firstOrNull()
+        var reportType = tags.filter { it.firstOrNull() == "report" }.mapNotNull { it.getOrNull(1) }.map { ReportType.valueOf(it.uppercase()) }.firstOrNull()
         if (reportType == null) {
-            reportType = tags.mapNotNull { it.getOrNull(2) }.map { ReportType.valueOf(it.toUpperCase()) }.firstOrNull()
+            reportType = tags.mapNotNull { it.getOrNull(2) }.map { ReportType.valueOf(it.uppercase()) }.firstOrNull()
         }
         if (reportType == null) {
             reportType = ReportType.SPAM
@@ -34,7 +34,7 @@ class ReportEvent(
         .map {
             ReportedKey(
                 it[1],
-                it.getOrNull(2)?.toUpperCase()?.let { it1 -> ReportType.valueOf(it1) } ?: defaultReportType()
+                it.getOrNull(2)?.uppercase()?.let { it1 -> ReportType.valueOf(it1) } ?: defaultReportType()
             )
         }
 
@@ -43,7 +43,7 @@ class ReportEvent(
         .map {
             ReportedKey(
                 it[1],
-                it.getOrNull(2)?.toUpperCase()?.let { it1 -> ReportType.valueOf(it1) } ?: defaultReportType()
+                it.getOrNull(2)?.uppercase()?.let { it1 -> ReportType.valueOf(it1) } ?: defaultReportType()
             )
         }
 

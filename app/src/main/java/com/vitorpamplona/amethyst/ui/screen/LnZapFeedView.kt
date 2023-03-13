@@ -78,7 +78,7 @@ private fun LnZapFeedLoaded(
         ),
         state = listState
     ) {
-        itemsIndexed(state.feed.value, key = { _, item -> item.second.idHex }) { index, item ->
+        itemsIndexed(state.feed.value, key = { _, item -> item.second.idHex }) { _, item ->
             ZapNoteCompose(item, accountViewModel = accountViewModel, navController = navController)
         }
     }

@@ -42,12 +42,9 @@ import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun BadgeCompose(likeSetCard: BadgeCard, modifier: Modifier = Modifier, isInnerNote: Boolean = false, routeForLastRead: String, accountViewModel: AccountViewModel, navController: NavController) {
+fun BadgeCompose(likeSetCard: BadgeCard, isInnerNote: Boolean = false, routeForLastRead: String, accountViewModel: AccountViewModel, navController: NavController) {
     val noteState by likeSetCard.note.live().metadata.observeAsState()
     val note = noteState?.note
-
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
 
     val context = LocalContext.current.applicationContext
 
@@ -61,13 +58,13 @@ fun BadgeCompose(likeSetCard: BadgeCard, modifier: Modifier = Modifier, isInnerN
 
         LaunchedEffect(key1 = likeSetCard) {
             withContext(Dispatchers.IO) {
-                isNew = likeSetCard.createdAt() > NotificationCache.load(routeForLastRead, context)
+                isNew = likeSetCard.createdAt() > NotificationCache.load(routeForLastRead)
 
-                NotificationCache.markAsRead(routeForLastRead, likeSetCard.createdAt(), context)
+                NotificationCache.markAsRead(routeForLastRead, likeSetCard.createdAt())
             }
         }
 
-        var backgroundColor = if (isNew) {
+        val backgroundColor = if (isNew) {
             MaterialTheme.colors.primary.copy(0.12f).compositeOver(MaterialTheme.colors.background)
         } else {
             MaterialTheme.colors.background

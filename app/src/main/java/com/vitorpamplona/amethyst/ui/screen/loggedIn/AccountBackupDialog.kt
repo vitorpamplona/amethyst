@@ -167,6 +167,7 @@ private fun authenticatedCopyNSec(
         return
     }
 
+    @Suppress("DEPRECATION")
     fun keyguardPrompt() {
         val intent = keyguardManager.createConfirmDeviceCredentialIntent(
             context.getString(R.string.app_name_release),
