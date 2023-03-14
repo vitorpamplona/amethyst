@@ -25,6 +25,8 @@ import com.google.accompanist.pager.PagerState
 import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
+import com.vitorpamplona.amethyst.ui.dal.HomeConversationsFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.HomeNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.FeedView
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
@@ -43,10 +45,12 @@ fun HomeScreen(
     scrollToTop: Boolean = false
 ) {
     val coroutineScope = rememberCoroutineScope()
+    val account = accountViewModel.accountLiveData.value?.account ?: return
 
     LaunchedEffect(accountViewModel) {
+        HomeNewThreadFeedFilter.account = account
+        HomeConversationsFeedFilter.account = account
         NostrHomeDataSource.resetFilters()
-
         homeFeedViewModel.refresh()
         repliesFeedViewModel.refresh()
     }
