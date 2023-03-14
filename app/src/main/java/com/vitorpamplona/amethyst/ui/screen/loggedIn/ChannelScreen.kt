@@ -178,13 +178,6 @@ fun ChannelScreen(
                 }
             }
 
-            Row(modifier = Modifier.fillMaxWidth()) {
-                UploadFromGallery(
-                    isUploading = channelScreenModel.isUploadingImage
-                ) {
-                    channelScreenModel.upload(it, context)
-                }
-            }
             // LAST ROW
             Row(
                 modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp, top = 5.dp).fillMaxWidth(),
@@ -219,6 +212,15 @@ fun ChannelScreen(
                             isActive = channelScreenModel.message.text.isNotBlank() && !channelScreenModel.isUploadingImage,
                             modifier = Modifier.padding(end = 10.dp)
                         )
+                    },
+                    leadingIcon = {
+                        UploadFromGallery(
+                            isUploading = channelScreenModel.isUploadingImage,
+                            tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                            modifier = Modifier.padding(start = 5.dp)
+                        ) {
+                            channelScreenModel.upload(it, context)
+                        }
                     },
                     colors = TextFieldDefaults.textFieldColors(
                         focusedIndicatorColor = Color.Transparent,

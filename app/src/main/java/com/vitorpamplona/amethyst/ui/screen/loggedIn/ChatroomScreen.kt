@@ -156,13 +156,6 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
                 }
             }
 
-            Row(modifier = Modifier.fillMaxWidth()) {
-                UploadFromGallery(
-                    isUploading =  chatRoomScreenModel.isUploadingImage
-                ) {
-                    chatRoomScreenModel.upload(it, context)
-                }
-            }
             // LAST ROW
             Row(
                 modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp, top = 5.dp)
@@ -193,9 +186,18 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
                                 replyTo.value = null
                                 feedViewModel.refresh() // Don't wait a full second before updating
                             },
-                            isActive =  chatRoomScreenModel.message.text.isNotBlank() && !chatRoomScreenModel.isUploadingImage,
-                            modifier = Modifier.padding(end = 10.dp),
+                            isActive = chatRoomScreenModel.message.text.isNotBlank() && !chatRoomScreenModel.isUploadingImage,
+                            modifier = Modifier.padding(end = 10.dp)
                         )
+                    },
+                    leadingIcon = {
+                        UploadFromGallery(
+                            isUploading = chatRoomScreenModel.isUploadingImage,
+                            tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                            modifier = Modifier.padding(start = 5.dp)
+                        ) {
+                            chatRoomScreenModel.upload(it, context)
+                        }
                     },
                     colors = TextFieldDefaults.textFieldColors(
                         focusedIndicatorColor = Color.Transparent,

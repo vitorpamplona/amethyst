@@ -218,7 +218,9 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
 
                     Row(modifier = Modifier.fillMaxWidth()) {
                         UploadFromGallery(
-                            isUploading = postViewModel.isUploadingImage
+                            isUploading = postViewModel.isUploadingImage,
+                            tint = MaterialTheme.colors.primary,
+                            modifier = Modifier.padding(bottom = 10.dp)
                         ) {
                             postViewModel.upload(it, context)
                         }
