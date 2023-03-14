@@ -1,11 +1,20 @@
 package com.vitorpamplona.amethyst.ui.components
 
 import android.content.Context
+import android.net.Uri
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import coil.ImageLoader
+import coil.decode.DataSource
+import coil.decode.ImageSource
+import coil.fetch.Fetcher
+import coil.fetch.SourceResult
 import coil.request.ImageRequest
-import java.nio.ByteBuffer
+import coil.request.Options
+import okio.Buffer
 import java.security.MessageDigest
+import kotlin.time.ExperimentalTime
+import kotlin.time.measureTimedValue
 
 private fun toHex(color: Color): String {
     val argb = color.toArgb()
@@ -40,29 +49,54 @@ private fun svgString(msg: String): String {
     val mouth = mouths[mouthIndex]
     val accessory = accessories[accIndex]
 
-    return """
-        <svg id="$hashHex" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
-            <defs>
-                <style>
-                    .cls-bg{fill:${toHex(bgColor)}}.cls-fill-1{fill:${toHex(fgColor)};}.cls-fill-2{fill:${toHex(fgColor)};}
-                    ${body.style}${face.style}${eye.style}${mouth.style}${accessory.style}
-                </style>
-            </defs>
-            <title>Robohash $hashHex</title>
-            ${background}${body.paths}${face.paths}${eye.paths}${mouth.paths}${accessory.paths}
-        </svg>
-    """.trimIndent()
+    return """<svg id="$hashHex" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+    <defs>
+        <style>
+            .cls-bg{fill:${toHex(bgColor)}}.cls-fill-1{fill:${toHex(fgColor)};}.cls-fill-2{fill:${toHex(fgColor)};}
+            ${body.style}${face.style}${eye.style}${mouth.style}${accessory.style}
+        </style>
+    </defs>
+    <title>Robohash $hashHex</title>
+    ${background}${body.paths}${face.paths}${eye.paths}${mouth.paths}${accessory.paths}
+</svg>"""
 }
 
+class HashImageFetcher(
+    private val context: Context,
+    private val data: Uri
+) : Fetcher {
+
+    @OptIn(ExperimentalTime::class)
+    override suspend fun fetch(): SourceResult {
+        val (value, elapsed) = measureTimedValue {
+            val source = try {
+                Buffer().apply { write(svgString(data.toString()).toByteArray()) }
+            } finally {
+            }
+
+            SourceResult(
+                source = ImageSource(source, context),
+                mimeType = null,
+                dataSource = DataSource.MEMORY
+            )
+        }
+        println("Elapsed: $elapsed")
+
+        return value
+    }
+
+    class Factory : Fetcher.Factory<Uri> {
+        override fun create(data: Uri, options: Options, imageLoader: ImageLoader): Fetcher {
+            return HashImageFetcher(options.context, data)
+        }
+    }
+}
 object Robohash {
     fun imageRequest(context: Context, message: String): ImageRequest {
         return ImageRequest
             .Builder(context)
-            .data(
-                ByteBuffer.wrap(
-                    svgString(message).toByteArray()
-                )
-            )
+            .data("robohash:$message")
+            .fetcherFactory(HashImageFetcher.Factory())
             .crossfade(100)
             .build()
     }

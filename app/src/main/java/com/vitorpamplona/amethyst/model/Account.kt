@@ -319,7 +319,7 @@ class Account(
         LocalCache.consume(signedEvent, null)
     }
 
-    fun sendPrivateMeesage(message: String, toUser: String, replyingTo: Note? = null) {
+    fun sendPrivateMessage(message: String, toUser: String, replyingTo: Note? = null) {
         if (!isWriteable()) return
         val user = LocalCache.users[toUser] ?: return
 

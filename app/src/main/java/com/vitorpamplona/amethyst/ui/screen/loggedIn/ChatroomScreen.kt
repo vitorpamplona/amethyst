@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import android.widget.Toast
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -36,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -50,7 +52,9 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
+import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.PostButton
+import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
@@ -64,9 +68,10 @@ import com.vitorpamplona.amethyst.ui.screen.NostrChatRoomFeedViewModel
 fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navController: NavController) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account
+    val context = LocalContext.current
+    val chatRoomScreenModel: NewPostViewModel = viewModel()
 
     if (account != null && userId != null) {
-        val newPost = remember { mutableStateOf(TextFieldValue("")) }
         val replyTo = remember { mutableStateOf<Note?>(null) }
 
         ChatroomFeedFilter.loadMessagesBetween(account, userId)
@@ -77,6 +82,9 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
 
         LaunchedEffect(userId) {
             feedViewModel.refresh()
+            chatRoomScreenModel.imageUploadingError.collect { error ->
+                Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+            }
         }
 
         DisposableEffect(userId) {
@@ -156,8 +164,8 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 TextField(
-                    value = newPost.value,
-                    onValueChange = { newPost.value = it },
+                    value = chatRoomScreenModel.message,
+                    onValueChange = { chatRoomScreenModel.updateMessage(it) },
                     keyboardOptions = KeyboardOptions.Default.copy(
                         capitalization = KeyboardCapitalization.Sentences
                     ),
@@ -173,14 +181,23 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
                     trailingIcon = {
                         PostButton(
                             onPost = {
-                                account.sendPrivateMeesage(newPost.value.text, userId, replyTo.value)
-                                newPost.value = TextFieldValue("")
+                                account.sendPrivateMessage(chatRoomScreenModel.message.text, userId, replyTo.value)
+                                chatRoomScreenModel.message = TextFieldValue("")
                                 replyTo.value = null
                                 feedViewModel.refresh() // Don't wait a full second before updating
                             },
-                            newPost.value.text.isNotBlank(),
+                            isActive = chatRoomScreenModel.message.text.isNotBlank() && !chatRoomScreenModel.isUploadingImage,
                             modifier = Modifier.padding(end = 10.dp)
                         )
+                    },
+                    leadingIcon = {
+                        UploadFromGallery(
+                            isUploading = chatRoomScreenModel.isUploadingImage,
+                            tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                            modifier = Modifier.padding(start = 5.dp)
+                        ) {
+                            chatRoomScreenModel.upload(it, context)
+                        }
                     },
                     colors = TextFieldDefaults.textFieldColors(
                         focusedIndicatorColor = Color.Transparent,

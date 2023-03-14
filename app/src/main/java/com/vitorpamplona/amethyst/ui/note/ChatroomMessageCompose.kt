@@ -344,7 +344,7 @@ fun ChatroomMessageCompose(
                     }
                 }
 
-                NoteQuickActionMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
+                NoteDropDownMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
             }
         }
     }
