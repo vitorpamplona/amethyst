@@ -11,6 +11,7 @@ object GlobalFeedFilter : FeedFilter<Note>() {
     lateinit var account: Account
 
     override fun feed() = LocalCache.notes.values
+        .asSequence()
         .filter {
             (it.event is TextNoteEvent || it.event is LongTextNoteEvent || it.event is ChannelMessageEvent) &&
                 it.replyTo.isNullOrEmpty()
@@ -23,5 +24,6 @@ object GlobalFeedFilter : FeedFilter<Note>() {
         }
         .filter { account.isAcceptable(it) }
         .sortedBy { it.createdAt() }
+        .toList()
         .reversed()
 }

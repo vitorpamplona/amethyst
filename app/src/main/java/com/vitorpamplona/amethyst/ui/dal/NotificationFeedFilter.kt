@@ -9,33 +9,32 @@ object NotificationFeedFilter : FeedFilter<Note>() {
     lateinit var account: Account
 
     override fun feed(): List<Note> {
-        val loggedInUser = account.userProfile().pubkeyHex
+        val loggedInUser = account.userProfile()
         return LocalCache.notes.values
-            .filter { it.event?.isTaggedUser(loggedInUser) ?: false }
-            .filter {
-                it.author == null || (!account.isHidden(it.author!!) && it.author != account.userProfile())
-            }
+            .asSequence()
             .filter {
                 it.event !is ChannelCreateEvent &&
                     it.event !is ChannelMetadataEvent &&
                     it.event !is LnZapRequestEvent &&
                     it.event !is BadgeDefinitionEvent &&
-                    it.event !is BadgeProfilesEvent
+                    it.event !is BadgeProfilesEvent &&
+                    it.event?.isTaggedUser(loggedInUser.pubkeyHex) ?: false &&
+                    (it.author == null || (!account.isHidden(it.author!!) && it.author != loggedInUser))
             }
             .filter { it ->
                 it.event !is TextNoteEvent ||
-                    it.replyTo?.any { it.author == account.userProfile() } == true ||
-                    account.userProfile() in it.directlyCiteUsers()
+                    it.replyTo?.any { it.author == loggedInUser } == true ||
+                    loggedInUser in it.directlyCiteUsers()
             }
             .filter {
                 it.event !is ReactionEvent ||
-                    it.replyTo?.lastOrNull()?.author == account.userProfile() ||
-                    account.userProfile() in it.directlyCiteUsers()
+                    it.replyTo?.lastOrNull()?.author == loggedInUser ||
+                    loggedInUser in it.directlyCiteUsers()
             }
             .filter {
                 it.event !is RepostEvent ||
-                    it.replyTo?.lastOrNull()?.author == account.userProfile() ||
-                    account.userProfile() in it.directlyCiteUsers()
+                    it.replyTo?.lastOrNull()?.author == loggedInUser ||
+                    loggedInUser in it.directlyCiteUsers()
             }
             .sortedBy { it.createdAt() }
             .toList()
