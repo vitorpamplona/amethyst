@@ -23,7 +23,12 @@ class ContactListEvent(
     val verifiedFollowKeySet: Set<HexKey> by lazy {
         tags.filter { it[0] == "p" }.mapNotNull {
             it.getOrNull(1)?.let { unverifiedHex: String ->
-                decodePublicKey(unverifiedHex).toHexKey()
+                try {
+                    decodePublicKey(unverifiedHex).toHexKey()
+                } catch (e: Exception) {
+                    Log.w("ContactListEvent", "Can't parse tags as a follows: ${it[1]}", e)
+                    null
+                }
             }
         }.toSet()
     }
