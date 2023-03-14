@@ -99,6 +99,7 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
     Column() {
         TopAppBar(
             elevation = 0.dp,
+            backgroundColor = MaterialTheme.colors.surface,
             title = {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
