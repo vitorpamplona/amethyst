@@ -228,5 +228,19 @@
     <string name="account_switch_has_private_key">Has private key</string>
     <string name="account_switch_pubkey_only">Read only, no private key</string>
     <string name="back">Back</string>
+    <string name="report_dialog_spam">Spam or scams</string>
+    <string name="report_dialog_profanity">Profanity or hateful conduct</string>
+    <string name="report_dialog_impersonation">Malicious impersonation</string>
+    <string name="report_dialog_nudity">Nudity or graphic content</string>
+    <string name="report_dialog_illegal">Illegal Behavior</string>
+    <string name="report_dialog_blocking_a_user">Blocking a user will hide their content in your app. Your notes are still publicly viewable, including to people you block.</string>
+    <string name="report_dialog_block_hide_user_btn"><![CDATA[Block & Hide User]]></string>
+    <string name="report_dialog_report_btn">Report Abuse</string>
+    <string name="report_dialog_reminder_public">All reports posted will be publicly visible.</string>
+    <string name="report_dialog_additional_reason_placeholder">Optionally provide additional context about your report...</string>
+    <string name="report_dialog_additional_reason_label">Additional Context</string>
+    <string name="report_dialog_select_reason_label">Reason</string>
+    <string name="report_dialog_select_reason_placeholder">Select a reason...</string>
+    <string name="report_dialog_post_report_btn">Post Report</string>
 
 </resources>

@@ -24,6 +24,7 @@ import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AlternateEmail
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FormatQuote
@@ -57,6 +58,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.SelectTextDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
 import kotlinx.coroutines.launch
 
 fun lightenColor(color: Color, amount: Float): Color {
@@ -88,6 +90,7 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
     val scope = rememberCoroutineScope()
     var showSelectTextDialog by remember { mutableStateOf(false) }
     var showDeleteAlertDialog by remember { mutableStateOf(false) }
+    var showReportDialog by remember { mutableStateOf(false) }
     val isOwnNote = note.author == accountViewModel.userProfile()
     val isFollowingUser = !isOwnNote && accountViewModel.isFollowing(note.author!!)
 
@@ -133,6 +136,14 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
                             clipboardManager.setText(AnnotatedString("@${note.idNote()}"))
                             showToast(R.string.copied_note_id_to_clipboard)
                             onDismiss()
+                        }
+
+                        if (note.author != accountViewModel.accountLiveData.value?.account?.userProfile()) {
+                            VerticalDivider(primaryLight)
+
+                            NoteQuickActionItem(Icons.Default.Block, "Block") {
+                                showReportDialog = true
+                            }
                         }
                     }
                     Divider(
@@ -187,6 +198,7 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
                             ContextCompat.startActivity(context, shareIntent, null)
                             onDismiss()
                         }
+                        VerticalDivider(primaryLight)
                     }
                 }
             }
@@ -200,36 +212,14 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
     }
 
     if (showDeleteAlertDialog) {
-        AlertDialog(
-            onDismissRequest = { onDismiss() },
-            title = {
-                Text(text = stringResource(R.string.quick_action_request_deletion_alert_title))
-            },
-            text = {
-                Text(text = stringResource(R.string.quick_action_request_deletion_alert_body))
-            },
-            buttons = {
-                Row(
-                    modifier = Modifier.padding(all = 8.dp).fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    TextButton(
-                        onClick = {
-                            accountViewModel.setHideDeleteRequestInfo()
-                            accountViewModel.delete(note)
-                            onDismiss()
-                        }
-                    ) {
-                        Text(stringResource(R.string.quick_action_dont_show_again_button))
-                    }
-                    Button(
-                        onClick = { accountViewModel.delete(note); onDismiss() }
-                    ) {
-                        Text(stringResource(R.string.quick_action_delete_button))
-                    }
-                }
-            }
-        )
+        DeleteAlertDialog(note, accountViewModel, onDismiss)
+    }
+
+    if (showReportDialog) {
+        ReportNoteDialog(note, accountViewModel) {
+            showReportDialog = false
+            onDismiss()
+        }
     }
 }
 
@@ -245,9 +235,47 @@ fun NoteQuickActionItem(icon: ImageVector, label: String, onClick: () -> Unit) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            modifier = Modifier.size(24.dp).padding(bottom = 5.dp),
+            modifier = Modifier
+                .size(24.dp)
+                .padding(bottom = 5.dp),
             tint = Color.White
         )
         Text(text = label, fontSize = 12.sp, color = Color.White, textAlign = TextAlign.Center)
     }
+}
+
+@Composable
+fun DeleteAlertDialog(note: Note, accountViewModel: AccountViewModel, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(text = stringResource(R.string.quick_action_request_deletion_alert_title))
+        },
+        text = {
+            Text(text = stringResource(R.string.quick_action_request_deletion_alert_body))
+        },
+        buttons = {
+            Row(
+                modifier = Modifier
+                    .padding(all = 8.dp)
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                TextButton(
+                    onClick = {
+                        accountViewModel.setHideDeleteRequestInfo()
+                        accountViewModel.delete(note)
+                        onDismiss()
+                    }
+                ) {
+                    Text(stringResource(R.string.quick_action_dont_show_again_button))
+                }
+                Button(
+                    onClick = { accountViewModel.delete(note); onDismiss() }
+                ) {
+                    Text(stringResource(R.string.quick_action_delete_button))
+                }
+            }
+        }
+    )
 }

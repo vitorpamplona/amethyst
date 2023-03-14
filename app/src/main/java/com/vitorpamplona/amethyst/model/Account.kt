@@ -170,7 +170,7 @@ class Account(
         return LnZapRequestEvent.create(userPubKeyHex, userProfile().latestContactList?.relays()?.keys?.ifEmpty { null } ?: localRelays.map { it.url }.toSet(), loggedIn.privKey!!)
     }
 
-    fun report(note: Note, type: ReportEvent.ReportType) {
+    fun report(note: Note, type: ReportEvent.ReportType, content: String = "") {
         if (!isWriteable()) return
 
         if (note.hasReacted(userProfile(), "⚠️")) {
@@ -185,7 +185,7 @@ class Account(
         }
 
         note.event?.let {
-            val event = ReportEvent.create(it, type, loggedIn.privKey!!)
+            val event = ReportEvent.create(it, type, loggedIn.privKey!!, content = content)
             Client.send(event)
             LocalCache.consume(event, null)
         }

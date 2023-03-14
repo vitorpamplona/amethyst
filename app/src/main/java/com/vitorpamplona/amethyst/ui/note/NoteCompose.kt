@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.theme.Following
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -779,6 +780,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
     val clipboardManager = LocalClipboardManager.current
     val appContext = LocalContext.current.applicationContext
     val actContext = LocalContext.current
+    var reportDialogShowing by remember { mutableStateOf(false) }
 
     DropdownMenu(
         expanded = popupExpanded,
@@ -832,49 +834,16 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
         }
         if (note.author != accountViewModel.accountLiveData.value?.account?.userProfile()) {
             Divider()
-            DropdownMenuItem(onClick = {
-                note.author?.let {
-                    accountViewModel.hide(it)
-                }; onDismiss()
-            }) {
-                Text(stringResource(R.string.block_hide_user))
+            DropdownMenuItem(onClick = { reportDialogShowing = true }) {
+                Text("Block / Report")
             }
-            Divider()
-            DropdownMenuItem(onClick = {
-                accountViewModel.report(note, ReportEvent.ReportType.SPAM)
-                note.author?.let { accountViewModel.hide(it) }
-                onDismiss()
-            }) {
-                Text(stringResource(R.string.report_spam_scam))
-            }
-            DropdownMenuItem(onClick = {
-                accountViewModel.report(note, ReportEvent.ReportType.PROFANITY)
-                note.author?.let { accountViewModel.hide(it) }
-                onDismiss()
-            }) {
-                Text(stringResource(R.string.report_hateful_speech))
-            }
-            DropdownMenuItem(onClick = {
-                accountViewModel.report(note, ReportEvent.ReportType.IMPERSONATION)
-                note.author?.let { accountViewModel.hide(it) }
-                onDismiss()
-            }) {
-                Text(stringResource(R.string.report_impersonation))
-            }
-            DropdownMenuItem(onClick = {
-                accountViewModel.report(note, ReportEvent.ReportType.NUDITY)
-                note.author?.let { accountViewModel.hide(it) }
-                onDismiss()
-            }) {
-                Text(stringResource(R.string.report_nudity_porn))
-            }
-            DropdownMenuItem(onClick = {
-                accountViewModel.report(note, ReportEvent.ReportType.ILLEGAL)
-                note.author?.let { accountViewModel.hide(it) }
-                onDismiss()
-            }) {
-                Text(stringResource(R.string.report_illegal_behaviour))
-            }
+        }
+    }
+
+    if (reportDialogShowing) {
+        ReportNoteDialog(note = note, accountViewModel = accountViewModel) {
+            reportDialogShowing = false
+            onDismiss()
         }
     }
 }
