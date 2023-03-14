@@ -31,7 +31,7 @@ jobs:
       - name: Sign AAB (Google Play)
         uses: r0adkll/sign-android-release@v1
         with:
-          releaseDirectory: app/build/outputs/bundle/play/release
+          releaseDirectory: app/build/outputs/bundle/playRelease
           signingKeyBase64: ${{ secrets.SIGNING_KEY }}
           alias: ${{ secrets.KEY_ALIAS }}
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
@@ -40,7 +40,7 @@ jobs:
       - name: Sign AAB (F-Droid)
         uses: r0adkll/sign-android-release@v1
         with:
-          releaseDirectory: app/build/outputs/bundle/fdroid/release
+          releaseDirectory: app/build/outputs/bundle/fdroidRelease
           signingKeyBase64: ${{ secrets.SIGNING_KEY }}
           alias: ${{ secrets.KEY_ALIAS }}
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
@@ -149,7 +149,7 @@ jobs:
 
 
       # Google Play AAB
-      - name: Upload AAB Asset
+      - name: Upload Google Play AAB Asset
         id: upload-release-asset-play-aab
         uses: actions/upload-release-asset@v1
         env:
@@ -161,13 +161,13 @@ jobs:
           asset_content_type: application/zip
 
       # FDroid AAB
-      - name: Upload AAB Asset
+      - name: Upload F-Droid AAB Asset
         id: upload-release-asset-fdroid-aab
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: app/build/outputs/bundle/froidRelease/app-fdroid-release.aab
+          asset_path: app/build/outputs/bundle/fdroidRelease/app-fdroid-release.aab
           asset_name: amethyst-fdroid-${{ github.ref_name }}.aab
           asset_content_type: application/zip
