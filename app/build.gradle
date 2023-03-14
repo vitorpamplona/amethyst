@@ -33,19 +33,45 @@ android {
             resValue "string", "app_name", "@string/app_name_debug"
         }
     }
+
+    flavorDimensions "channel"
+
+    productFlavors {
+        play {
+            dimension "channel"
+        }
+
+        fdroid {
+            dimension "channel"
+        }
+    }
+
+    splits {
+        abi {
+            enable true
+            reset()
+            include "x86", "x86_64"
+            universalApk false
+        }
+    }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
     }
+
     kotlinOptions {
         jvmTarget = '11'
     }
+
     buildFeatures {
         compose true
     }
+
     composeOptions {
         kotlinCompilerExtensionVersion "1.4.3"
     }
+
     packagingOptions {
         resources {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
@@ -135,10 +161,10 @@ dependencies {
     implementation "com.halilibo.compose-richtext:richtext-commonmark:0.16.0"
 
     // Local model for language identification
-    implementation 'com.google.mlkit:language-id:17.0.4'
+    playImplementation 'com.google.mlkit:language-id:17.0.4'
 
     // Google services model the translate text
-    implementation 'com.google.mlkit:translate:17.0.1'
+    playImplementation 'com.google.mlkit:translate:17.0.1'
 
     // Automatic memory leak detection
     debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.10'
