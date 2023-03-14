@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import android.widget.Toast
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -65,7 +66,9 @@ import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
+import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.PostButton
+import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.dal.ChannelFeedFilter
@@ -82,9 +85,10 @@ fun ChannelScreen(
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account
+    val context = LocalContext.current
+    val channelScreenModel: NewPostViewModel = viewModel()
 
     if (account != null && channelId != null) {
-        val newPost = remember { mutableStateOf(TextFieldValue("")) }
         val replyTo = remember { mutableStateOf<Note?>(null) }
 
         ChannelFeedFilter.loadMessagesBetween(account, channelId)
@@ -98,6 +102,9 @@ fun ChannelScreen(
 
         LaunchedEffect(Unit) {
             feedViewModel.invalidateData()
+            channelScreenModel.imageUploadingError.collect { error ->
+                Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+            }
         }
 
         DisposableEffect(channelId) {
@@ -171,6 +178,13 @@ fun ChannelScreen(
                 }
             }
 
+            Row(modifier = Modifier.fillMaxWidth()) {
+                UploadFromGallery(
+                    isUploading = channelScreenModel.isUploadingImage
+                ) {
+                    channelScreenModel.upload(it, context)
+                }
+            }
             // LAST ROW
             Row(
                 modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp, top = 5.dp).fillMaxWidth(),
@@ -178,8 +192,10 @@ fun ChannelScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 TextField(
-                    value = newPost.value,
-                    onValueChange = { newPost.value = it },
+                    value = channelScreenModel.message,
+                    onValueChange = {
+                        channelScreenModel.updateMessage(it)
+                    },
                     keyboardOptions = KeyboardOptions.Default.copy(
                         capitalization = KeyboardCapitalization.Sentences
                     ),
@@ -195,12 +211,12 @@ fun ChannelScreen(
                     trailingIcon = {
                         PostButton(
                             onPost = {
-                                account.sendChannelMessage(newPost.value.text, channel.idHex, replyTo.value, null)
-                                newPost.value = TextFieldValue("")
+                                account.sendChannelMessage(channelScreenModel.message.text, channel.idHex, replyTo.value, null)
+                                channelScreenModel.message = TextFieldValue("")
                                 replyTo.value = null
                                 feedViewModel.refresh() // Don't wait a full second before updating
                             },
-                            newPost.value.text.isNotBlank(),
+                            isActive = channelScreenModel.message.text.isNotBlank() && !channelScreenModel.isUploadingImage,
                             modifier = Modifier.padding(end = 10.dp)
                         )
                     },
