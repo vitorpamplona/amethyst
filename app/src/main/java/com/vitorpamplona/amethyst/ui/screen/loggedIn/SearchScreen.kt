@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrGlobalDataSource
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
+import com.vitorpamplona.amethyst.ui.dal.GlobalFeedFilter
 import com.vitorpamplona.amethyst.ui.note.ChannelName
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.UserCompose
@@ -81,8 +82,11 @@ fun SearchScreen(
     scrollToTop: Boolean = false
 ) {
     val lifeCycleOwner = LocalLifecycleOwner.current
+    val account = accountViewModel.accountLiveData.value?.account ?: return
 
     LaunchedEffect(accountViewModel) {
+        GlobalFeedFilter.account = account
+        NostrGlobalDataSource.resetFilters()
         feedViewModel.refresh()
     }
 
