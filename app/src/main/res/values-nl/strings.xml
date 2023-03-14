@@ -161,7 +161,7 @@
     <string name="to">naar</string>
     <string name="show_in">Laten zien in</string>
     <string name="first">eerste</string>
-    <string name="always_translate_to">Altijd vertalen naar</string>
+    <string name="always_translate_to">Altijd vertalen naar </string>
     <string name="nip_05" translatable="false">NIP-05</string>
     <string name="lnurl" translatable="false">LNURL...</string>
     <string name="never">nooit</string>
