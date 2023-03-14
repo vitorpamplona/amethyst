@@ -52,7 +52,6 @@ class AccountStateViewModel() : ViewModel() {
                 Account(Persona(Hex.decode(key)))
             }
 
-        LocalPreferences.updatePrefsForLogin(account)
         login(account)
     }
 
@@ -64,7 +63,6 @@ class AccountStateViewModel() : ViewModel() {
 
     fun newKey() {
         val account = Account(Persona())
-        LocalPreferences.updatePrefsForLogin(account)
         login(account)
     }
 
