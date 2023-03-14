@@ -80,7 +80,7 @@ jobs:
 
       # Google Play APK
       - name: Upload Play APK Universal Asset
-        id: upload-release-asset-apk
+        id: upload-release-asset-play-universal-apk
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -91,7 +91,7 @@ jobs:
           asset_content_type: application/zip
 
       - name: Upload Play APK x86 Asset
-        id: upload-release-asset-apk
+        id: upload-release-asset-play-x86-apk
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -102,7 +102,7 @@ jobs:
           asset_content_type: application/zip
 
       - name: Upload Play APK x86_64 Asset
-        id: upload-release-asset-apk
+        id: upload-release-asset-play-x86-64-apk
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -114,7 +114,7 @@ jobs:
 
       # F-Droid APK
       - name: Upload F-Droid APK Universal Asset
-        id: upload-release-asset-apk
+        id: upload-release-asset-fdroid-universal-apk
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -125,7 +125,7 @@ jobs:
           asset_content_type: application/zip
 
       - name: Upload F-Droid APK x86 Asset
-        id: upload-release-asset-apk
+        id: upload-release-asset-fdroid-x86-apk
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -136,7 +136,7 @@ jobs:
           asset_content_type: application/zip
 
       - name: Upload F-Droid APK x86_64 Asset
-        id: upload-release-asset-apk
+        id: upload-release-asset-fdroid-x86-64-apk
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -150,7 +150,7 @@ jobs:
 
       # Google Play AAB
       - name: Upload AAB Asset
-        id: upload-release-asset-aab
+        id: upload-release-asset-play-aab
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -162,7 +162,7 @@ jobs:
 
       # FDroid AAB
       - name: Upload AAB Asset
-        id: upload-release-asset-aab
+        id: upload-release-asset-fdroid-aab
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
