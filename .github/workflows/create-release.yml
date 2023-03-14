@@ -28,10 +28,19 @@ jobs:
       - name: Build AAB
         run: ./gradlew clean bundleRelease --stacktrace
 
-      - name: Sign AAB
+      - name: Sign AAB (Google Play)
         uses: r0adkll/sign-android-release@v1
         with:
-          releaseDirectory: app/build/outputs/bundle/release
+          releaseDirectory: app/build/outputs/bundle/play/release
+          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+          alias: ${{ secrets.KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Sign AAB (F-Droid)
+        uses: r0adkll/sign-android-release@v1
+        with:
+          releaseDirectory: app/build/outputs/bundle/fdroid/release
           signingKeyBase64: ${{ secrets.SIGNING_KEY }}
           alias: ${{ secrets.KEY_ALIAS }}
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
@@ -40,10 +49,19 @@ jobs:
       - name: Build APK
         run: ./gradlew assembleRelease --stacktrace --no-daemon
 
-      - name: Sign APK
+      - name: Sign APK (Google Play)
         uses: r0adkll/sign-android-release@v1
         with:
-          releaseDirectory: app/build/outputs/apk/release
+          releaseDirectory: app/build/outputs/apk/play/release
+          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+          alias: ${{ secrets.KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Sign APK (F-Droid)
+        uses: r0adkll/sign-android-release@v1
+        with:
+          releaseDirectory: app/build/outputs/apk/fdroid/release
           signingKeyBase64: ${{ secrets.SIGNING_KEY }}
           alias: ${{ secrets.KEY_ALIAS }}
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
@@ -60,17 +78,77 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: Upload APK Asset
+      # Google Play APK
+      - name: Upload Play APK Universal Asset
         id: upload-release-asset-apk
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} 
-          asset_path: app/build/outputs/apk/release/app-release-unsigned-signed.apk
-          asset_name: app-release-${{ github.ref_name }}.apk
+          asset_path: app/build/outputs/apk/play/release/app-play-universal-release-unsigned-signed.apk
+          asset_name: amethyst-googleplay-universal-${{ github.ref_name }}.apk
           asset_content_type: application/zip
 
+      - name: Upload Play APK x86 Asset
+        id: upload-release-asset-apk
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: app/build/outputs/apk/play/release/app-play-x86-release-unsigned-signed.apk
+          asset_name: amethyst-googleplay-x86-${{ github.ref_name }}.apk
+          asset_content_type: application/zip
+
+      - name: Upload Play APK x86_64 Asset
+        id: upload-release-asset-apk
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: app/build/outputs/apk/play/release/app-play-x86_64-release-unsigned-signed.apk
+          asset_name: amethyst-googleplay-x86_64-${{ github.ref_name }}.apk
+          asset_content_type: application/zip
+
+      # F-Droid APK
+      - name: Upload F-Droid APK Universal Asset
+        id: upload-release-asset-apk
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: app/build/outputs/apk/fdroid/release/app-fdroid-universal-release-unsigned-signed.apk
+          asset_name: amethyst-fdroid-universal-${{ github.ref_name }}.apk
+          asset_content_type: application/zip
+
+      - name: Upload F-Droid APK x86 Asset
+        id: upload-release-asset-apk
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: app/build/outputs/apk/fdroid/release/app-fdroid-x86-release-unsigned-signed.apk
+          asset_name: amethyst-fdroid-x86-${{ github.ref_name }}.apk
+          asset_content_type: application/zip
+
+      - name: Upload F-Droid APK x86_64 Asset
+        id: upload-release-asset-apk
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: app/build/outputs/apk/fdroid/release/app-fdroid-x86_64-release-unsigned-signed.apk
+          asset_name: amethyst-fdroid-x86_64-${{ github.ref_name }}.apk
+          asset_content_type: application/zip
+
+
+
+      # Google Play AAB
       - name: Upload AAB Asset
         id: upload-release-asset-aab
         uses: actions/upload-release-asset@v1
@@ -78,6 +156,18 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: app/build/outputs/bundle/release/app-release.aab
-          asset_name: app-release-${{ github.ref_name }}.aab
+          asset_path: app/build/outputs/bundle/playRelease/app-play-release.aab
+          asset_name: amethyst-googleplay-${{ github.ref_name }}.aab
+          asset_content_type: application/zip
+
+      # FDroid AAB
+      - name: Upload AAB Asset
+        id: upload-release-asset-aab
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: app/build/outputs/bundle/froidRelease/app-fdroid-release.aab
+          asset_name: amethyst-fdroid-${{ github.ref_name }}.aab
           asset_content_type: application/zip
