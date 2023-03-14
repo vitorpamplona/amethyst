@@ -79,7 +79,7 @@ object LocalPreferences {
         }
         val prefs = encryptedPreferences()
         prefs.edit().apply {
-            putString(PrefKeys.SAVED_ACCOUNTS, accounts.joinToString(comma))
+            putString(PrefKeys.SAVED_ACCOUNTS, accounts.joinToString(comma).ifBlank { null })
         }.apply()
     }
 
@@ -101,7 +101,7 @@ object LocalPreferences {
         if (accounts.remove(npub)) {
             val prefs = encryptedPreferences()
             prefs.edit().apply {
-                putString(PrefKeys.SAVED_ACCOUNTS, accounts.joinToString(comma))
+                putString(PrefKeys.SAVED_ACCOUNTS, accounts.joinToString(comma).ifBlank { null })
             }.apply()
         }
     }
