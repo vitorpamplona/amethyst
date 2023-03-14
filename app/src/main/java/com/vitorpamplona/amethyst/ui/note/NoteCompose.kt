@@ -294,7 +294,12 @@ fun NoteCompose(
 
                     Spacer(modifier = Modifier.height(3.dp))
 
-                    if (noteEvent is TextNoteEvent && (note.replyTo != null || note.mentions != null)) {
+                    if (noteEvent is TextNoteEvent && (note.replyTo != null || noteEvent.mentions().isNotEmpty())) {
+                        val sortedMentions = noteEvent.mentions()
+                            .map { LocalCache.getOrCreateUser(it) }
+                            .toSet()
+                            .sortedBy { account.userProfile().isFollowing(it) }
+
                         val replyingDirectlyTo = note.replyTo?.lastOrNull()
                         if (replyingDirectlyTo != null && unPackReply) {
                             NoteCompose(
@@ -316,10 +321,13 @@ fun NoteCompose(
                                 navController = navController
                             )
                         } else {
-                            ReplyInformation(note.replyTo, note.mentions, account, navController)
+                            ReplyInformation(note.replyTo, sortedMentions, account, navController)
                         }
-                    } else if (noteEvent is ChannelMessageEvent && (note.replyTo != null || note.mentions != null)) {
-                        val sortedMentions = note.mentions?.toSet()?.sortedBy { account.userProfile().isFollowing(it) }
+                    } else if (noteEvent is ChannelMessageEvent && (note.replyTo != null || noteEvent.mentions() != null)) {
+                        val sortedMentions = noteEvent.mentions()
+                            .map { LocalCache.getOrCreateUser(it) }
+                            .toSet()
+                            .sortedBy { account.userProfile().isFollowing(it) }
 
                         note.channel()?.let {
                             ReplyInformationChannel(note.replyTo, sortedMentions, it, navController)
@@ -381,14 +389,16 @@ fun NoteCompose(
                         Text(text = stringResource(R.string.award_granted_to))
 
                         FlowRow(modifier = Modifier.padding(top = 5.dp)) {
-                            note.mentions?.forEach {
-                                UserPicture(
-                                    user = it,
-                                    navController = navController,
-                                    userAccount = account.userProfile(),
-                                    size = 35.dp
-                                )
-                            }
+                            noteEvent.awardees()
+                                .map { LocalCache.getOrCreateUser(it) }
+                                .forEach {
+                                    UserPicture(
+                                        user = it,
+                                        navController = navController,
+                                        userAccount = account.userProfile(),
+                                        size = 35.dp
+                                    )
+                                }
                         }
 
                         note.replyTo?.firstOrNull()?.let {

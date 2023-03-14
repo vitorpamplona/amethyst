@@ -14,7 +14,9 @@ object UserProfileFollowsFeedFilter : FeedFilter<User>() {
     }
 
     override fun feed(): List<User> {
-        return user?.follows
+        return user?.latestContactList?.unverifiedFollowKeySet()?.map {
+            LocalCache.getOrCreateUser(it)
+        }
             ?.filter { account.isAcceptable(it) }
             ?.reversed() ?: emptyList()
     }

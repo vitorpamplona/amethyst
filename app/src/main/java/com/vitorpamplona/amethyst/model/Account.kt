@@ -154,7 +154,7 @@ class Account(
         if (!isWriteable()) return null
 
         note.event?.let {
-            return LnZapRequestEvent.create(it, userProfile().relays?.keys?.ifEmpty { null } ?: localRelays.map { it.url }.toSet(), loggedIn.privKey!!)
+            return LnZapRequestEvent.create(it, userProfile().latestContactList?.relays()?.keys?.ifEmpty { null } ?: localRelays.map { it.url }.toSet(), loggedIn.privKey!!)
         }
 
         return null
@@ -167,7 +167,7 @@ class Account(
     fun createZapRequestFor(userPubKeyHex: String): LnZapRequestEvent? {
         if (!isWriteable()) return null
 
-        return LnZapRequestEvent.create(userPubKeyHex, userProfile().relays?.keys?.ifEmpty { null } ?: localRelays.map { it.url }.toSet(), loggedIn.privKey!!)
+        return LnZapRequestEvent.create(userPubKeyHex, userProfile().latestContactList?.relays()?.keys?.ifEmpty { null } ?: localRelays.map { it.url }.toSet(), loggedIn.privKey!!)
     }
 
     fun report(note: Note, type: ReportEvent.ReportType) {
@@ -250,7 +250,7 @@ class Account(
         val event = if (contactList != null && follows.isNotEmpty()) {
             ContactListEvent.create(
                 follows.plus(Contact(user.pubkeyHex, null)),
-                userProfile().relays,
+                contactList.relays(),
                 loggedIn.privKey!!
             )
         } else {
@@ -275,7 +275,7 @@ class Account(
         if (contactList != null && follows.isNotEmpty()) {
             val event = ContactListEvent.create(
                 follows.filter { it.pubKeyHex != user.pubkeyHex },
-                userProfile().relays,
+                contactList.relays(),
                 loggedIn.privKey!!
             )
 
@@ -454,7 +454,7 @@ class Account(
     }
 
     private fun updateContactListTo(newContactList: ContactListEvent?) {
-        if (newContactList?.follows().isNullOrEmpty()) return
+        if (newContactList?.unverifiedFollowKeySet().isNullOrEmpty()) return
 
         // Events might be different objects, we have to compare their ids.
         if (backupContactList?.id != newContactList?.id) {
@@ -465,7 +465,7 @@ class Account(
 
     // Takes a User's relay list and adds the types of feeds they are active for.
     fun activeRelays(): Array<Relay>? {
-        var usersRelayList = userProfile().relays?.map {
+        var usersRelayList = userProfile().latestContactList?.relays()?.map {
             val localFeedTypes = localRelays.firstOrNull() { localRelay -> localRelay.url == it.key }?.feedTypes ?: FeedType.values().toSet()
             Relay(it.key, it.value.read, it.value.write, localFeedTypes)
         } ?: return null
@@ -501,15 +501,23 @@ class Account(
 
     fun isHidden(user: User) = user.pubkeyHex in hiddenUsers || user.pubkeyHex in transientHiddenUsers
 
+    fun followingKeySet(): Set<HexKey> {
+        return userProfile().latestContactList?.verifiedFollowKeySet ?: emptySet()
+    }
+
     fun isAcceptable(user: User): Boolean {
         return !isHidden(user) && // if user hasn't hided this author
             user.reportsBy(userProfile()).isEmpty() && // if user has not reported this post
-            user.countReportAuthorsBy(userProfile().follows) < 5
+            user.countReportAuthorsBy(followingKeySet()) < 5
     }
 
     fun isAcceptableDirect(note: Note): Boolean {
         return note.reportsBy(userProfile()).isEmpty() && // if user has not reported this post
-            note.countReportAuthorsBy(userProfile().follows) < 5 // if it has 5 reports by reliable users
+            note.countReportAuthorsBy(followingKeySet()) < 5 // if it has 5 reports by reliable users
+    }
+
+    fun isFollowing(user: User): Boolean {
+        return user.pubkeyHex in followingKeySet()
     }
 
     fun isAcceptable(note: Note): Boolean {
@@ -522,7 +530,7 @@ class Account(
     }
 
     fun getRelevantReports(note: Note): Set<Note> {
-        val followsPlusMe = userProfile().follows + userProfile()
+        val followsPlusMe = userProfile().latestContactList?.verifiedFollowKeySetAndMe ?: emptySet()
 
         val innerReports = if (note.event is RepostEvent) {
             note.replyTo?.map { getRelevantReports(it) }?.flatten() ?: emptyList()
@@ -532,8 +540,9 @@ class Account(
 
         return (
             note.reportsBy(followsPlusMe) +
-                (note.author?.reportsBy(followsPlusMe) ?: emptyList()) +
-                innerReports
+                (
+                    note.author?.reportsBy(followsPlusMe) ?: emptyList()
+                    ) + innerReports
             ).toSet()
     }
 
@@ -575,7 +584,7 @@ class Account(
                 it.cache.spamMessages.snapshot().values.forEach {
                     if (it.pubkeyHex !in transientHiddenUsers && it.duplicatedMessages.size >= 5) {
                         val userToBlock = LocalCache.getOrCreateUser(it.pubkeyHex)
-                        if (userToBlock != userProfile() && userToBlock !in userProfile().follows) {
+                        if (userToBlock != userProfile() && userToBlock.pubkeyHex !in followingKeySet()) {
                             transientHiddenUsers = transientHiddenUsers + it.pubkeyHex
                         }
                     }

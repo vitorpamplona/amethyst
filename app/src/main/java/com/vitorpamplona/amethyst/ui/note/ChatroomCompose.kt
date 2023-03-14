@@ -41,9 +41,11 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
+import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -127,7 +129,10 @@ fun ChatroomCompose(
             )
         }
     } else {
-        val replyAuthorBase = note.mentions?.first()
+        val replyAuthorBase =
+            (note.event as? PrivateDmEvent)
+                ?.recipientPubKey()
+                ?.let { LocalCache.getOrCreateUser(it) }
 
         var userToComposeOn = note.author!!
 
