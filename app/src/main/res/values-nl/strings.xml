@@ -8,10 +8,10 @@
     <string name="show_anyway">Laat toch zien</string>
     <string name="post_was_flagged_as_inappropriate_by">Bericht gemarkeerd als ongepast door</string>
     <string name="post_not_found">Bericht niet gevonden</string>
-    <string name="channel_image">Groepsafbeelding</string>
+    <string name="channel_image">Kanaalafbeelding</string>
     <string name="referenced_event_not_found">Verwezen event niet gevonden</string>
     <string name="could_not_decrypt_the_message">Note versleuteld met encryptie</string>
-    <string name="group_picture">Kanaal-afbeelding</string>
+    <string name="group_picture">Groepafbeelding</string>
     <string name="explicit_content">Expliciete inhoud</string>
     <string name="spam">Spam</string>
     <string name="impersonation">Imitatie</string>
@@ -53,7 +53,7 @@
     <string name="lightning_invoice">Lightning invoice</string>
     <string name="pay">Betalen</string>
     <string name="lightning_tips">Lightning Tips</string>
-    <string name="note_to_receiver">Notitie aan ontvanger</string>
+    <string name="note_to_receiver">Note aan ontvanger</string>
     <string name="thank_you_so_much">Hartelijk bedankt!</string>
     <string name="amount_in_sats">Bedrag in sats</string>
     <string name="send_sats">Verstuur sats</string>
@@ -97,16 +97,16 @@
     <string name="uploading">Uploaden…</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Gebruiker heeft geen Lightning Adress ingesteld om sats te ontvangen</string>
     <string name="reply_here">"hier reageren.. "</string>
-    <string name="copies_the_note_id_to_the_clipboard_for_sharing">Kopieert Notitie ID naar klembord om te delen</string>
-    <string name="copy_channel_id_note_to_the_clipboard">Kopieer kanaal ID (Notitie) naar klembord</string>
+    <string name="copies_the_note_id_to_the_clipboard_for_sharing">Kopieert note ID naar klembord om te delen</string>
+    <string name="copy_channel_id_note_to_the_clipboard">Kopieer kanaal ID (note) naar klembord</string>
     <string name="edits_the_channel_metadata">Past de kanaal-metadata aan</string>
     <string name="join">Lid worden</string>
     <string name="known">Bekend</string>
     <string name="new_requests">Nieuw verzoek</string>
     <string name="blocked_users">Geblokeerde gebruikers</string>
-    <string name="new_threads">Nieuwe notities</string>
+    <string name="new_threads">Nieuwe notes</string>
     <string name="conversations">Gesprekken</string>
-    <string name="notes">Notities</string>
+    <string name="notes">Notes</string>
     <string name="replies">Reacties</string>
     <string name="follows">"Volgend"</string>
     <string name="reports">"Rapporten"</string>
@@ -174,9 +174,9 @@
     <string name="report_hateful_speech">Haatdragende taal rapporteren</string>
     <string name="report_nudity_porn">Naaktheid / porno rapporteren</string>
     <string name="others">anderen</string>
-    <string name="mark_all_known_as_read">Alle bekende als gelezen markeren</string>
-    <string name="mark_all_new_as_read">Alle nieuwe als gelezen markeren</string>
-    <string name="mark_all_as_read">Alles als gelezen markeren</string>
+    <string name="mark_all_known_as_read">Bekende markeren als gelezen</string>
+    <string name="mark_all_new_as_read">Nieuwe markeren als gelezen</string>
+    <string name="mark_all_as_read">Alles markeren als gelezen</string>
     <string name="backup_keys">Back-up sleutels</string>
     <string name="account_backup_tips_md" tools:ignore="Typos">
         ## Sleutel back-up en veiligheidstips
@@ -193,19 +193,38 @@
     <string name="badge_award_image_for">"Badge award afbeelding voor %1$s"</string>
     <string name="new_badge_award_notif">Je hebt een nieuwe Badge award ontvangen</string>
     <string name="award_granted_to">Badge award gegeven aan</string>
-    <string name="copied_note_text_to_clipboard">Notitie tekst gekopieerd naar klembord</string>
+    <string name="copied_note_text_to_clipboard">Note tekst gekopieerd naar klembord</string>
     <string name="copied_user_id_to_clipboard" tools:ignore="Typos">@npub auteur gekopieerd naar klembord</string>
-    <string name="copied_note_id_to_clipboard" tools:ignore="Typos">Notitie ID (@note1) gekopieerd naar klembord</string>
+    <string name="copied_note_id_to_clipboard" tools:ignore="Typos">Note ID (@note1) gekopieerd naar klembord</string>
     <string name="select_text_dialog_top">Selecteer tekst</string>
     <string name="quick_action_select">Selecteer</string>
     <string name="quick_action_share_browser_link">Deel browserlink</string>
     <string name="quick_action_share">Delen</string>
     <string name="quick_action_copy_user_id">Auteur ID</string>
-    <string name="quick_action_copy_note_id">Notitie ID</string>
+    <string name="quick_action_copy_note_id">Note ID</string>
     <string name="quick_action_copy_text">Kopieer tekst</string>
     <string name="quick_action_delete">Verwijderen</string>
     <string name="quick_action_unfollow">Ontvolgen</string>
     <string name="quick_action_follow">Volgen</string>
     <string name="quick_action_request_deletion_alert_title">Verzoek om te verwijderen</string>
-    <string name="quick_action_request_deletion_alert_body">Amethyst zal vragen om uw notitie te verwijderen van de relays waarmee u momenteel verbonden bent. Er is geen garantie dat uw notitie permanent wordt verwijderd van deze relays, of van andere relays waar het kan worden opgeslagen.</string>
+    <string name="quick_action_request_deletion_alert_body">Amethyst zal vragen om uw note te verwijderen van de relays waarmee u momenteel verbonden bent. Er is geen garantie dat uw note permanent wordt verwijderd van deze relays, of van andere relays waar het kan worden opgeslagen.</string>
+	<string name="github" translatable="false">Github Gist w/ Proof</string>
+    <string name="telegram" translatable="false">Telegram</string>
+    <string name="mastodon" translatable="false">Mastodon Post ID w/ Proof</string>
+    <string name="twitter" translatable="false">Twitter Status w/ Proof</string>
+    <string name="github_proof_url_template" translatable="false">https://gist.github.com/&lt;user&gt;/&lt;gist&gt;</string>
+    <string name="telegram_proof_url_template" translatable="false">https://t.me/&lt;proof post&gt;</string>
+    <string name="mastodon_proof_url_template" translatable="false">https://&lt;server&gt;/&lt;user&gt;/&lt;proof post&gt;</string>
+    <string name="twitter_proof_url_template" translatable="false">https://twitter.com/&lt;user&gt;/status/&lt;proof post&gt;</string>
+    <string name="private_conversation_notification">"&lt;Kan privébericht niet ontsleutelen&gt;\n\nJe werd genoemd in een privégesprek tussen %1$s en %2$s."</string>
+    <string name="quick_action_delete_button">Verwijderen</string>
+    <string name="quick_action_dont_show_again_button">Niet meer laten zien</string>
+    <string name="account_switch_add_account_dialog_title">Nieuw account toevoegen</string>
+    <string name="drawer_accounts">Accounts</string>
+    <string name="account_switch_select_account">Account selecteren</string>
+    <string name="account_switch_add_account_btn">Nieuw account toevoegen</string>
+    <string name="account_switch_active_account">Account activeren</string>
+    <string name="account_switch_has_private_key">Heeft privésleutel</string>
+    <string name="account_switch_pubkey_only">Alleen lezen, geen privésleutel</string>
+    <string name="back">Terug</string>
 </resources>
