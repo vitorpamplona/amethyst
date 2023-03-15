@@ -72,7 +72,7 @@ fun UserCompose(baseUser: User, accountViewModel: AccountViewModel, navControlle
                     ShowUserButton {
                         account.showUser(baseUser.pubkeyHex)
                     }
-                } else if (userFollows.isFollowing(baseUser)) {
+                } else if (userFollows.isFollowingCached(baseUser)) {
                     UnfollowButton { coroutineScope.launch(Dispatchers.IO) { account.unfollow(baseUser) } }
                 } else {
                     FollowButton { coroutineScope.launch(Dispatchers.IO) { account.follow(baseUser) } }

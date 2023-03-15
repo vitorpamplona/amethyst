@@ -299,7 +299,7 @@ fun NoteCompose(
                         val sortedMentions = noteEvent.mentions()
                             .map { LocalCache.getOrCreateUser(it) }
                             .toSet()
-                            .sortedBy { account.userProfile().isFollowing(it) }
+                            .sortedBy { account.userProfile().isFollowingCached(it) }
 
                         val replyingDirectlyTo = note.replyTo?.lastOrNull()
                         if (replyingDirectlyTo != null && unPackReply) {
@@ -328,7 +328,7 @@ fun NoteCompose(
                         val sortedMentions = noteEvent.mentions()
                             .map { LocalCache.getOrCreateUser(it) }
                             .toSet()
-                            .sortedBy { account.userProfile().isFollowing(it) }
+                            .sortedBy { account.userProfile().isFollowingCached(it) }
 
                         note.channel()?.let {
                             ReplyInformationChannel(note.replyTo, sortedMentions, it, navController)
@@ -453,7 +453,7 @@ fun NoteCompose(
                         val eventContent = accountViewModel.decrypt(note)
 
                         val canPreview = note.author == account.userProfile() ||
-                            (note.author?.let { account.userProfile().isFollowing(it) } ?: true) ||
+                            (note.author?.let { account.userProfile().isFollowingCached(it) } ?: true) ||
                             !noteForReports.hasAnyReports()
 
                         if (eventContent != null) {
@@ -747,7 +747,7 @@ fun UserPicture(
         val accountState by baseUserAccount.live().follows.observeAsState()
         val accountUser = accountState?.user ?: return
 
-        if (accountUser.isFollowing(user) || user == accountUser) {
+        if (accountUser.isFollowingCached(user) || user == accountUser) {
             Box(
                 Modifier
                     .width(size.div(3.5f))
@@ -786,7 +786,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
         expanded = popupExpanded,
         onDismissRequest = onDismiss
     ) {
-        if (note.author != accountViewModel.accountLiveData.value?.account?.userProfile() && !accountViewModel.accountLiveData.value?.account?.userProfile()!!.isFollowing(note.author!!)) {
+        if (!accountViewModel.isFollowing(note.author!!)) {
             DropdownMenuItem(onClick = {
                 accountViewModel.follow(
                     note.author ?: return@DropdownMenuItem

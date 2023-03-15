@@ -373,7 +373,7 @@ private fun ProfileHeader(
                         ShowUserButton {
                             account.showUser(baseUser.pubkeyHex)
                         }
-                    } else if (accountUser.isFollowing(baseUser)) {
+                    } else if (accountUser.isFollowingCached(baseUser)) {
                         UnfollowButton { coroutineScope.launch(Dispatchers.IO) { account.unfollow(baseUser) } }
                     } else {
                         FollowButton { coroutineScope.launch(Dispatchers.IO) { account.follow(baseUser) } }

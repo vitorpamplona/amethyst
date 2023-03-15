@@ -117,7 +117,7 @@ fun ZapNoteCompose(baseNote: Pair<Note, Note>, accountViewModel: AccountViewMode
                         ShowUserButton {
                             account.showUser(baseAuthor.pubkeyHex)
                         }
-                    } else if (userFollows.isFollowing(baseAuthor)) {
+                    } else if (userFollows.isFollowingCached(baseAuthor)) {
                         UnfollowButton { coroutineScope.launch(Dispatchers.IO) { account.unfollow(baseAuthor) } }
                     } else {
                         FollowButton { coroutineScope.launch(Dispatchers.IO) { account.follow(baseAuthor) } }

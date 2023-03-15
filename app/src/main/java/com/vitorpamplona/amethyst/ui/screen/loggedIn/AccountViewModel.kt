@@ -125,8 +125,12 @@ class AccountViewModel(private val account: Account) : ViewModel() {
         account.unfollow(user)
     }
 
+    fun isLoggedUser(user: User): Boolean {
+        return account.userProfile() == user
+    }
+
     fun isFollowing(user: User): Boolean {
-        return account.userProfile().isFollowing(user)
+        return account.userProfile().isFollowingCached(user)
     }
 
     val hideDeleteRequestDialog: Boolean

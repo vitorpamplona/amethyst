@@ -236,7 +236,13 @@ class User(val pubkeyHex: String) {
     }
 
     fun isFollowing(user: User): Boolean {
-        return (latestContactList)?.unverifiedFollowKeySet()?.toSet()?.let {
+        return latestContactList?.unverifiedFollowKeySet()?.toSet()?.let {
+            return user.pubkeyHex in it
+        } ?: false
+    }
+
+    fun isFollowingCached(user: User): Boolean {
+        return latestContactList?.verifiedFollowKeySet?.let {
             return user.pubkeyHex in it
         } ?: false
     }

@@ -328,7 +328,7 @@ fun NoteMaster(
                     val eventContent = note.event?.content()
 
                     val canPreview = note.author == account.userProfile() ||
-                        (note.author?.let { account.userProfile().isFollowing(it) } ?: true) ||
+                        (note.author?.let { account.userProfile().isFollowingCached(it) } ?: true) ||
                         !noteForReports.hasAnyReports()
 
                     if (eventContent != null) {

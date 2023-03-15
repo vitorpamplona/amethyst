@@ -30,7 +30,7 @@ fun ReplyInformation(replyTo: List<Note>?, mentions: List<User>?, account: Accou
 
 @Composable
 fun ReplyInformation(replyTo: List<Note>?, dupMentions: List<User>?, account: Account, prefix: String = "", onUserTagClick: (User) -> Unit) {
-    val mentions = dupMentions?.toSet()?.sortedBy { !account.userProfile().isFollowing(it) }
+    val mentions = dupMentions?.toSet()?.sortedBy { !account.userProfile().isFollowingCached(it) }
     var expanded by remember { mutableStateOf((mentions?.size ?: 0) <= 2) }
 
     FlowRow() {

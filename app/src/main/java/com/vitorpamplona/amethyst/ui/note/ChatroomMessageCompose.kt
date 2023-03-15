@@ -277,7 +277,7 @@ fun ChatroomMessageCompose(
                                     val eventContent = accountViewModel.decrypt(note)
 
                                     val canPreview = note.author == accountUser ||
-                                        (note.author?.let { accountUser.isFollowing(it) } ?: true) ||
+                                        (note.author?.let { accountUser.isFollowingCached(it) } ?: true) ||
                                         !noteForReports.hasAnyReports()
 
                                     if (eventContent != null) {
