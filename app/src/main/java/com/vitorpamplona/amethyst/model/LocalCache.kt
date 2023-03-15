@@ -270,7 +270,6 @@ object LocalCache {
         // Log.d("TN", "New Boost (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${formattedDateTime(event.createdAt)}")
 
         val author = getOrCreateUser(event.pubKey)
-        val awardees = event.awardees().mapNotNull { checkGetOrCreateUser(it) }
         val awardDefinition = event.awardDefinition().map { getOrCreateAddressableNote(it) }
 
         note.loadEvent(event, author, awardDefinition)
