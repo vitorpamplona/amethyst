@@ -353,6 +353,19 @@ object LocalCache {
                     masterNote.removeReport(deleteNote)
                 }
 
+                val channel = deleteNote.channel()
+                channel?.removeNote(deleteNote)
+
+                if (deleteNote.event is PrivateDmEvent) {
+                    val author = deleteNote.author
+                    val recipient = (deleteNote.event as? PrivateDmEvent)?.recipientPubKey()?.let { checkGetOrCreateUser(it) }
+
+                    if (recipient != null && author != null) {
+                        author.removeMessage(recipient, deleteNote)
+                        recipient.removeMessage(author, deleteNote)
+                    }
+                }
+
                 notes.remove(deleteNote.idHex)
 
                 deletedAtLeastOne = true

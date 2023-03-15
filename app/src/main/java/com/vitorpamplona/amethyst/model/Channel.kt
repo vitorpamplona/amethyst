@@ -27,6 +27,10 @@ class Channel(val idHex: String) {
         notes[note.idHex] = note
     }
 
+    fun removeNote(note: Note) {
+        notes.remove(note.idHex)
+    }
+
     fun updateChannelInfo(creator: User, channelInfo: ChannelCreateEvent.ChannelData, updatedAt: Long) {
         this.creator = creator
         this.info = channelInfo
