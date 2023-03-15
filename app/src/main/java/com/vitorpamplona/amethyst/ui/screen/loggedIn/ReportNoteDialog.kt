@@ -40,6 +40,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ReportEvent
+import com.vitorpamplona.amethyst.ui.theme.WarningColor
 
 @Composable
 fun ReportNoteDialog(note: Note, accountViewModel: AccountViewModel, onDismiss: () -> Unit) {
@@ -138,8 +139,6 @@ fun ReportNoteDialog(note: Note, accountViewModel: AccountViewModel, onDismiss: 
     }
 }
 
-private val warningColor = Color(0xFFC62828)
-
 @Composable
 private fun SpacerH16() = Spacer(modifier = Modifier.height(16.dp))
 
@@ -155,7 +154,7 @@ private fun SectionHeader(text: String) = Text(
 private fun ActionButton(text: String, icon: ImageVector, enabled: Boolean = true, onClick: () -> Unit) = Button(
     onClick = onClick,
     enabled = enabled,
-    colors = ButtonDefaults.buttonColors(backgroundColor = warningColor),
+    colors = ButtonDefaults.buttonColors(backgroundColor = WarningColor),
     modifier = Modifier.fillMaxWidth()
 ) {
     Row(
