@@ -14,7 +14,7 @@ object GlobalFeedFilter : FeedFilter<Note>() {
         val followChannels = account.followingChannels()
         val followUsers = account.followingKeySet()
 
-        return LocalCache.notes.values
+        val notes = LocalCache.notes.values
             .asSequence()
             .filter {
                 (it.event is TextNoteEvent || it.event is LongTextNoteEvent || it.event is ChannelMessageEvent) &&
@@ -27,8 +27,24 @@ object GlobalFeedFilter : FeedFilter<Note>() {
                     (it.author?.pubkeyHex !in followUsers)
             }
             .filter { account.isAcceptable(it) }
-            .sortedBy { it.createdAt() }
             .toList()
+
+        val longFormNotes = LocalCache.addressables.values
+            .asSequence()
+            .filter {
+                (it.event is LongTextNoteEvent) && it.replyTo.isNullOrEmpty()
+            }
+            .filter {
+                // does not show events already in the public chat list
+                (it.channel() == null || it.channel() !in followChannels) &&
+                    // does not show people the user already follows
+                    (it.author?.pubkeyHex !in followUsers)
+            }
+            .filter { account.isAcceptable(it) }
+            .toList()
+
+        return (notes + longFormNotes)
+            .sortedBy { it.createdAt() }
             .reversed()
     }
 }
