@@ -457,7 +457,7 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, navController: 
                         val baseBadgeDefinition = badgeAwardState?.note?.replyTo?.firstOrNull()
 
                         if (baseBadgeDefinition != null) {
-                            BadgeThumb(baseBadgeDefinition, navController, 50.dp)
+                            BadgeThumb(baseBadgeDefinition, navController, 35.dp)
                         }
                     }
                 }
