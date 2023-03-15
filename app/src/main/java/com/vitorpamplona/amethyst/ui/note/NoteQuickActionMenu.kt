@@ -45,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -100,6 +101,12 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
     val isOwnNote = note.author == accountViewModel.accountLiveData.value?.account?.userProfile()
     val isFollowingUser = !isOwnNote && accountViewModel.isFollowing(note.author!!)
 
+    val backgroundColor = if (MaterialTheme.colors.isLight) {
+        MaterialTheme.colors.primary
+    } else {
+        MaterialTheme.colors.primary.copy(alpha = 0.32f).compositeOver(MaterialTheme.colors.background)
+    }
+
     val showToast = { stringResource: Int ->
         scope.launch {
             Toast.makeText(
@@ -115,7 +122,7 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
             Card(
                 modifier = Modifier.shadow(elevation = 6.dp, shape = cardShape),
                 shape = cardShape,
-                backgroundColor = MaterialTheme.colors.primary
+                backgroundColor = backgroundColor
             ) {
                 Column(modifier = Modifier.width(IntrinsicSize.Min)) {
                     Row(modifier = Modifier.height(IntrinsicSize.Min)) {
