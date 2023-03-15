@@ -197,6 +197,23 @@
     <string name="copied_user_id_to_clipboard" tools:ignore="Typos">Copied author’s @npub to clipboard</string>
     <string name="copied_note_id_to_clipboard" tools:ignore="Typos">Copied note ID (@note1) to clipboard</string>
     <string name="select_text_dialog_top">Select Text</string>
+    <string name="github" translatable="false">Github Gist w/ Proof</string>
+    <string name="telegram" translatable="false">Telegram</string>
+    <string name="mastodon" translatable="false">Mastodon Post ID w/ Proof</string>
+    <string name="twitter" translatable="false">Twitter Status w/ Proof</string>
+    <string name="github_proof_url_template" translatable="false">https://gist.github.com/&lt;user&gt;/&lt;gist&gt;</string>
+    <string name="telegram_proof_url_template" translatable="false">https://t.me/&lt;proof post&gt;</string>
+    <string name="mastodon_proof_url_template" translatable="false">https://&lt;server&gt;/&lt;user&gt;/&lt;proof post&gt;</string>
+    <string name="twitter_proof_url_template" translatable="false">https://twitter.com/&lt;user&gt;/status/&lt;proof post&gt;</string>
+    <string name="private_conversation_notification">"&lt;Unable to decrypt private message&gt;\n\nYou were cited in a private/encrypted conversation between %1$s and %2$s."</string>
+    <string name="account_switch_add_account_dialog_title">Add New Account</string>
+    <string name="drawer_accounts">Accounts</string>
+    <string name="account_switch_select_account">Select Account</string>
+    <string name="account_switch_add_account_btn">Add New Account</string>
+    <string name="account_switch_active_account">Active account</string>
+    <string name="account_switch_has_private_key">Has private key</string>
+    <string name="account_switch_pubkey_only">Read only, no private key</string>
+    <string name="back">Back</string>
     <string name="quick_action_select">Select</string>
     <string name="quick_action_share_browser_link">Share Browser Link</string>
     <string name="quick_action_share">Share</string>
@@ -208,24 +225,25 @@
     <string name="quick_action_follow">Follow</string>
     <string name="quick_action_request_deletion_alert_title">Request Deletion</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst will request that your note be deleted from the relays you are currently connected to. There is no guarantee that your note will be permanently deleted from those relays, or from other relays where it may be stored.</string>
-    <string name="github" translatable="false">Github Gist w/ Proof</string>
-    <string name="telegram" translatable="false">Telegram</string>
-    <string name="mastodon" translatable="false">Mastodon Post ID w/ Proof</string>
-    <string name="twitter" translatable="false">Twitter Status w/ Proof</string>
-    <string name="github_proof_url_template" translatable="false">https://gist.github.com/&lt;user&gt;/&lt;gist&gt;</string>
-    <string name="telegram_proof_url_template" translatable="false">https://t.me/&lt;proof post&gt;</string>
-    <string name="mastodon_proof_url_template" translatable="false">https://&lt;server&gt;/&lt;user&gt;/&lt;proof post&gt;</string>
-    <string name="twitter_proof_url_template" translatable="false">https://twitter.com/&lt;user&gt;/status/&lt;proof post&gt;</string>
-    <string name="private_conversation_notification">"&lt;Unable to decrypt private message&gt;\n\nYou were cited in a private/encrypted conversation between %1$s and %2$s."</string>
+    <string name="quick_action_block_dialog_btn">Block</string>
+    <string name="quick_action_delete_dialog_btn">Delete</string>
+    <string name="quick_action_block">Block</string>
+    <string name="quick_action_report">Report</string>
     <string name="quick_action_delete_button">Delete</string>
     <string name="quick_action_dont_show_again_button">Don\'t show again</string>
-    <string name="account_switch_add_account_dialog_title">Add New Account</string>
-    <string name="drawer_accounts">Accounts</string>
-    <string name="account_switch_select_account">Select Account</string>
-    <string name="account_switch_add_account_btn">Add New Account</string>
-    <string name="account_switch_active_account">Active account</string>
-    <string name="account_switch_has_private_key">Has private key</string>
-    <string name="account_switch_pubkey_only">Read only, no private key</string>
-    <string name="back">Back</string>
+    <string name="report_dialog_spam">Spam or scams</string>
+    <string name="report_dialog_profanity">Profanity or hateful conduct</string>
+    <string name="report_dialog_impersonation">Malicious impersonation</string>
+    <string name="report_dialog_nudity">Nudity or graphic content</string>
+    <string name="report_dialog_illegal">Illegal Behavior</string>
+    <string name="report_dialog_blocking_a_user">Blocking a user will hide their content in your app. Your notes are still publicly viewable, including to people you block. Blocked users are listed on the Security Filters screen.</string>
+    <string name="report_dialog_block_hide_user_btn"><![CDATA[Block & Hide User]]></string>
+    <string name="report_dialog_report_btn">Report Abuse</string>
+    <string name="report_dialog_reminder_public">All reports posted will be publicly visible.</string>
+    <string name="report_dialog_additional_reason_placeholder">Optionally provide additional context about your report…</string>
+    <string name="report_dialog_additional_reason_label">Additional Context</string>
+    <string name="report_dialog_select_reason_label">Reason</string>
+    <string name="report_dialog_select_reason_placeholder">Select a reason…</string>
+    <string name="report_dialog_post_report_btn">Post Report</string>
 
 </resources>

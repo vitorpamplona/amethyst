@@ -59,7 +59,8 @@ class Account(
     var languagePreferences: Map<String, String> = mapOf(),
     var translateTo: String = Locale.getDefault().language,
     var zapAmountChoices: List<Long> = listOf(500L, 1000L, 5000L),
-    var hideDeleteRequestInfo: Boolean = false,
+    var hideDeleteRequestDialog: Boolean = false,
+    var hideBlockAlertDialog: Boolean = false,
     var backupContactList: ContactListEvent? = null
 ) {
     var transientHiddenUsers: Set<String> = setOf()
@@ -170,7 +171,7 @@ class Account(
         return LnZapRequestEvent.create(userPubKeyHex, userProfile().latestContactList?.relays()?.keys?.ifEmpty { null } ?: localRelays.map { it.url }.toSet(), loggedIn.privKey!!)
     }
 
-    fun report(note: Note, type: ReportEvent.ReportType) {
+    fun report(note: Note, type: ReportEvent.ReportType, content: String = "") {
         if (!isWriteable()) return
 
         if (note.hasReacted(userProfile(), "⚠️")) {
@@ -185,7 +186,7 @@ class Account(
         }
 
         note.event?.let {
-            val event = ReportEvent.create(it, type, loggedIn.privKey!!)
+            val event = ReportEvent.create(it, type, loggedIn.privKey!!, content = content)
             Client.send(event)
             LocalCache.consume(event, null)
         }
@@ -553,8 +554,13 @@ class Account(
         saveable.invalidateData()
     }
 
-    fun setHideDeleteRequestInfo() {
-        hideDeleteRequestInfo = true
+    fun setHideDeleteRequestDialog() {
+        hideDeleteRequestDialog = true
+        saveable.invalidateData()
+    }
+
+    fun setHideBlockAlertDialog() {
+        hideBlockAlertDialog = true
         saveable.invalidateData()
     }
 

@@ -47,7 +47,8 @@ private object PrefKeys {
     const val TRANSLATE_TO = "translateTo"
     const val ZAP_AMOUNTS = "zapAmounts"
     const val LATEST_CONTACT_LIST = "latestContactList"
-    const val HIDE_DELETE_REQUEST_INFO = "hideDeleteRequestInfo"
+    const val HIDE_DELETE_REQUEST_DIALOG = "hide_delete_request_dialog"
+    const val HIDE_BLOCK_ALERT_DIALOG = "hide_block_alert_dialog"
     val LAST_READ: (String) -> String = { route -> "last_read_route_$route" }
 }
 
@@ -183,7 +184,8 @@ object LocalPreferences {
             putString(PrefKeys.TRANSLATE_TO, account.translateTo)
             putString(PrefKeys.ZAP_AMOUNTS, gson.toJson(account.zapAmountChoices))
             putString(PrefKeys.LATEST_CONTACT_LIST, Event.gson.toJson(account.backupContactList))
-            putBoolean(PrefKeys.HIDE_DELETE_REQUEST_INFO, account.hideDeleteRequestInfo)
+            putBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, account.hideDeleteRequestDialog)
+            putBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, account.hideBlockAlertDialog)
             putString(PrefKeys.DISPLAY_NAME, account.userProfile().toBestDisplayName())
             putString(PrefKeys.PROFILE_PICTURE_URL, account.userProfile().profilePicture())
         }.apply()
@@ -230,7 +232,8 @@ object LocalPreferences {
                 mapOf()
             }
 
-            val hideDeleteRequestInfo = getBoolean(PrefKeys.HIDE_DELETE_REQUEST_INFO, false)
+            val hideDeleteRequestDialog = getBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, false)
+            val hideBlockAlertDialog = getBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, false)
 
             return Account(
                 Persona(privKey = privKey?.toByteArray(), pubKey = pubKey.toByteArray()),
@@ -241,7 +244,8 @@ object LocalPreferences {
                 languagePreferences,
                 translateTo,
                 zapAmountChoices,
-                hideDeleteRequestInfo,
+                hideDeleteRequestDialog,
+                hideBlockAlertDialog,
                 latestContactList
             )
         }
@@ -289,8 +293,8 @@ object LocalPreferences {
                 stringPrefs.forEach { userPrefs.putString(it, appPrefs.getString(it, null)) }
                 stringSetPrefs.forEach { userPrefs.putStringSet(it, appPrefs.getStringSet(it, null)) }
                 userPrefs.putBoolean(
-                    PrefKeys.HIDE_DELETE_REQUEST_INFO,
-                    appPrefs.getBoolean(PrefKeys.HIDE_DELETE_REQUEST_INFO, false)
+                    PrefKeys.HIDE_DELETE_REQUEST_DIALOG,
+                    appPrefs.getBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, false)
                 )
             }.apply()
         }

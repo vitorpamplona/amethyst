@@ -12,3 +12,5 @@ val Following = Color(0xFF03DAC5)
 val Nip05 = Color(0xFF01BAFF)
 val FollowsFollow = Color.Yellow
 val NIP05Verified = Color.Blue
+
+val WarningColor = Color(0xFFC62828)

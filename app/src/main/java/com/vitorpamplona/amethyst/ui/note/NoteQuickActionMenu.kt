@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,6 +17,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.AlertDialog
 import androidx.compose.material.Button
+import androidx.compose.material.ButtonColors
+import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Card
 import androidx.compose.material.Divider
 import androidx.compose.material.Icon
@@ -24,11 +27,13 @@ import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AlternateEmail
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FormatQuote
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PersonRemove
+import androidx.compose.material.icons.filled.Report
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -57,9 +62,11 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.SelectTextDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
+import com.vitorpamplona.amethyst.ui.theme.WarningColor
 import kotlinx.coroutines.launch
 
-fun lightenColor(color: Color, amount: Float): Color {
+private fun lightenColor(color: Color, amount: Float): Color {
     var argb = color.toArgb()
     val hslOut = floatArrayOf(0f, 0f, 0f)
     ColorUtils.colorToHSL(argb, hslOut)
@@ -71,7 +78,7 @@ fun lightenColor(color: Color, amount: Float): Color {
 val externalLinkForNote = { note: Note -> "https://snort.social/e/${note.idNote()}" }
 
 @Composable
-fun VerticalDivider(color: Color) =
+private fun VerticalDivider(color: Color) =
     Divider(
         color = color,
         modifier = Modifier
@@ -88,7 +95,9 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
     val scope = rememberCoroutineScope()
     var showSelectTextDialog by remember { mutableStateOf(false) }
     var showDeleteAlertDialog by remember { mutableStateOf(false) }
-    val isOwnNote = note.author == accountViewModel.userProfile()
+    var showBlockAlertDialog by remember { mutableStateOf(false) }
+    var showReportDialog by remember { mutableStateOf(false) }
+    val isOwnNote = note.author == accountViewModel.accountLiveData.value?.account?.userProfile()
     val isFollowingUser = !isOwnNote && accountViewModel.isFollowing(note.author!!)
 
     val showToast = { stringResource: Int ->
@@ -134,6 +143,19 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
                             showToast(R.string.copied_note_id_to_clipboard)
                             onDismiss()
                         }
+
+                        if (!isOwnNote) {
+                            VerticalDivider(primaryLight)
+
+                            NoteQuickActionItem(Icons.Default.Block, stringResource(R.string.quick_action_block)) {
+                                if (accountViewModel.hideBlockAlertDialog) {
+                                    note.author?.let { accountViewModel.hide(it) }
+                                    onDismiss()
+                                } else {
+                                    showBlockAlertDialog = true
+                                }
+                            }
+                        }
                     }
                     Divider(
                         color = primaryLight,
@@ -144,7 +166,7 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
                     Row(modifier = Modifier.height(IntrinsicSize.Min)) {
                         if (isOwnNote) {
                             NoteQuickActionItem(Icons.Default.Delete, stringResource(R.string.quick_action_delete)) {
-                                if (accountViewModel.hideDeleteRequestInfo()) {
+                                if (accountViewModel.hideDeleteRequestDialog) {
                                     accountViewModel.delete(note)
                                     onDismiss()
                                 } else {
@@ -187,6 +209,14 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
                             ContextCompat.startActivity(context, shareIntent, null)
                             onDismiss()
                         }
+
+                        if (!isOwnNote) {
+                            VerticalDivider(primaryLight)
+
+                            NoteQuickActionItem(Icons.Default.Report, stringResource(R.string.quick_action_report)) {
+                                showReportDialog = true
+                            }
+                        }
                     }
                 }
             }
@@ -200,36 +230,24 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
     }
 
     if (showDeleteAlertDialog) {
-        AlertDialog(
-            onDismissRequest = { onDismiss() },
-            title = {
-                Text(text = stringResource(R.string.quick_action_request_deletion_alert_title))
-            },
-            text = {
-                Text(text = stringResource(R.string.quick_action_request_deletion_alert_body))
-            },
-            buttons = {
-                Row(
-                    modifier = Modifier.padding(all = 8.dp).fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    TextButton(
-                        onClick = {
-                            accountViewModel.setHideDeleteRequestInfo()
-                            accountViewModel.delete(note)
-                            onDismiss()
-                        }
-                    ) {
-                        Text(stringResource(R.string.quick_action_dont_show_again_button))
-                    }
-                    Button(
-                        onClick = { accountViewModel.delete(note); onDismiss() }
-                    ) {
-                        Text(stringResource(R.string.quick_action_delete_button))
-                    }
-                }
-            }
-        )
+        DeleteAlertDialog(note, accountViewModel) {
+            showDeleteAlertDialog = false
+            onDismiss()
+        }
+    }
+
+    if (showBlockAlertDialog) {
+        BlockAlertDialog(note, accountViewModel) {
+            showBlockAlertDialog = false
+            onDismiss()
+        }
+    }
+
+    if (showReportDialog) {
+        ReportNoteDialog(note, accountViewModel) {
+            showReportDialog = false
+            onDismiss()
+        }
     }
 }
 
@@ -245,9 +263,99 @@ fun NoteQuickActionItem(icon: ImageVector, label: String, onClick: () -> Unit) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            modifier = Modifier.size(24.dp).padding(bottom = 5.dp),
+            modifier = Modifier
+                .size(24.dp)
+                .padding(bottom = 5.dp),
             tint = Color.White
         )
         Text(text = label, fontSize = 12.sp, color = Color.White, textAlign = TextAlign.Center)
     }
+}
+
+@Composable
+fun DeleteAlertDialog(note: Note, accountViewModel: AccountViewModel, onDismiss: () -> Unit) =
+    QuickActionAlertDialog(
+        title = stringResource(R.string.quick_action_request_deletion_alert_title),
+        textContent = stringResource(R.string.quick_action_request_deletion_alert_body),
+        buttonIcon = Icons.Default.Delete,
+        buttonText = stringResource(R.string.quick_action_delete_dialog_btn),
+        onClickDoOnce = {
+            accountViewModel.delete(note)
+            onDismiss()
+        },
+        onClickDontShowAgain = {
+            accountViewModel.delete(note)
+            accountViewModel.dontShowDeleteRequestDialog()
+            onDismiss()
+        },
+        onDismiss = onDismiss
+    )
+
+@Composable
+private fun BlockAlertDialog(note: Note, accountViewModel: AccountViewModel, onDismiss: () -> Unit) =
+    QuickActionAlertDialog(
+        title = stringResource(R.string.report_dialog_block_hide_user_btn),
+        textContent = stringResource(R.string.report_dialog_blocking_a_user),
+        buttonIcon = Icons.Default.Block,
+        buttonText = stringResource(R.string.quick_action_block_dialog_btn),
+        buttonColors = ButtonDefaults.buttonColors(
+            backgroundColor = WarningColor,
+            contentColor = Color.White
+        ),
+        onClickDoOnce = {
+            note.author?.let { accountViewModel.hide(it) }
+            onDismiss()
+        },
+        onClickDontShowAgain = {
+            note.author?.let { accountViewModel.hide(it) }
+            accountViewModel.dontShowBlockAlertDialog()
+            onDismiss()
+        },
+        onDismiss = onDismiss
+    )
+
+@Composable
+private fun QuickActionAlertDialog(
+    title: String,
+    textContent: String,
+    buttonIcon: ImageVector,
+    buttonText: String,
+    buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
+    onClickDoOnce: () -> Unit,
+    onClickDontShowAgain: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(title)
+        },
+        text = {
+            Text(textContent)
+        },
+        buttons = {
+            Row(
+                modifier = Modifier
+                    .padding(all = 8.dp)
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                TextButton(onClick = onClickDontShowAgain) {
+                    Text(stringResource(R.string.quick_action_dont_show_again_button))
+                }
+                Button(onClick = onClickDoOnce, colors = buttonColors) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = buttonIcon,
+                            contentDescription = null
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(buttonText)
+                    }
+                }
+            }
+        }
+    )
 }

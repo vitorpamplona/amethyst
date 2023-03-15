@@ -73,8 +73,8 @@ class AccountViewModel(private val account: Account) : ViewModel() {
         )
     }
 
-    fun report(note: Note, type: ReportEvent.ReportType) {
-        account.report(note, type)
+    fun report(note: Note, type: ReportEvent.ReportType, content: String = "") {
+        account.report(note, type, content)
     }
 
     fun report(user: User, type: ReportEvent.ReportType) {
@@ -129,11 +129,17 @@ class AccountViewModel(private val account: Account) : ViewModel() {
         return account.userProfile().isFollowing(user)
     }
 
-    fun hideDeleteRequestInfo(): Boolean {
-        return account.hideDeleteRequestInfo
+    val hideDeleteRequestDialog: Boolean
+        get() = account.hideDeleteRequestDialog
+
+    fun dontShowDeleteRequestDialog() {
+        account.setHideDeleteRequestDialog()
     }
 
-    fun setHideDeleteRequestInfo() {
-        account.setHideDeleteRequestInfo()
+    val hideBlockAlertDialog: Boolean
+        get() = account.hideBlockAlertDialog
+
+    fun dontShowBlockAlertDialog() {
+        account.setHideBlockAlertDialog()
     }
 }
