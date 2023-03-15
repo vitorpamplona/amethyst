@@ -707,7 +707,6 @@ fun UserPicture(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun UserPicture(
     baseUser: User,
@@ -731,16 +730,8 @@ fun UserPicture(
         showFollowingMark = showFollowingMark,
         size = size,
         modifier = modifier,
-        onClick = {
-            if (onClick != null) {
-                onClick(user)
-            }
-        },
-        onLongClick = {
-            if (onLongClick != null) {
-                onLongClick(user)
-            }
-        }
+        onClick = onClick?.let { { it(user) } },
+        onLongClick = onLongClick?.let { { it(user) } }
     )
 }
 
