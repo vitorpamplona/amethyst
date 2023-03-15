@@ -12,8 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.Divider
@@ -35,7 +33,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -56,10 +53,9 @@ import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.PostButton
 import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
-import com.vitorpamplona.amethyst.ui.components.ResizeImage
-import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.dal.ChatroomFeedFilter
 import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
+import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.ChatroomFeedView
 import com.vitorpamplona.amethyst.ui.screen.NostrChatRoomFeedViewModel
@@ -108,7 +104,7 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
 
         Column(Modifier.fillMaxHeight()) {
             NostrChatroomDataSource.withUser?.let {
-                ChatroomHeader(it, navController = navController)
+                ChatroomHeader(it, account.userProfile(), navController = navController)
             }
 
             Column(
@@ -210,7 +206,7 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
 }
 
 @Composable
-fun ChatroomHeader(baseUser: User, navController: NavController) {
+fun ChatroomHeader(baseUser: User, accountUser: User, navController: NavController) {
     Column(
         modifier = Modifier.clickable(
             onClick = { navController.navigate("User/${baseUser.pubkeyHex}") }
@@ -218,17 +214,10 @@ fun ChatroomHeader(baseUser: User, navController: NavController) {
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                val authorState by baseUser.live().metadata.observeAsState()
-                val author = authorState?.user!!
-
-                RobohashAsyncImageProxy(
-                    robot = author.pubkeyHex,
-                    model = ResizeImage(author.profilePicture(), 35.dp),
-                    contentDescription = stringResource(id = R.string.profile_image),
-                    modifier = Modifier
-                        .width(35.dp)
-                        .height(35.dp)
-                        .clip(shape = CircleShape)
+                UserPicture(
+                    baseUser = baseUser,
+                    baseUserAccount = accountUser,
+                    size = 35.dp
                 )
 
                 Column(modifier = Modifier.padding(start = 10.dp)) {
