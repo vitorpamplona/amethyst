@@ -71,6 +71,7 @@ object ServiceManager {
         account?.let {
             LocalCache.pruneOldAndHiddenMessages(it)
             LocalCache.pruneHiddenMessages(it)
+            LocalCache.pruneContactLists(it)
             // LocalCache.pruneNonFollows(it)
         }
     }

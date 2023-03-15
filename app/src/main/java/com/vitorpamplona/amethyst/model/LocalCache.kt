@@ -708,6 +708,18 @@ object LocalCache {
         println("PRUNE: ${toBeRemoved.size} messages removed because they were Hidden")
     }
 
+    fun pruneContactLists(userAccount: Account) {
+        var removingContactList = 0
+        users.values.forEach {
+            if (it != userAccount.userProfile() && (it.liveSet == null || it.liveSet?.isInUse() == false)) {
+                it.latestContactList = null
+                removingContactList++
+            }
+        }
+
+        println("PRUNE: $removingContactList contact lists")
+    }
+
     // Observers line up here.
     val live: LocalCacheLiveData = LocalCacheLiveData(this)
 
