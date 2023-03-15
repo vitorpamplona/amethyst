@@ -13,8 +13,6 @@ import coil.request.ImageRequest
 import coil.request.Options
 import okio.Buffer
 import java.security.MessageDigest
-import kotlin.time.ExperimentalTime
-import kotlin.time.measureTimedValue
 
 private fun toHex(color: Color): String {
     val argb = color.toArgb()
@@ -66,26 +64,20 @@ class HashImageFetcher(
     private val data: Uri
 ) : Fetcher {
 
-    @OptIn(ExperimentalTime::class)
     override suspend fun fetch(): SourceResult {
-        val (value, elapsed) = measureTimedValue {
-            val source = try {
-                Buffer().apply { write(svgString(data.toString()).toByteArray()) }
-            } finally {
-            }
-
-            SourceResult(
-                source = ImageSource(source, context),
-                mimeType = null,
-                dataSource = DataSource.MEMORY
-            )
+        val source = try {
+            Buffer().apply { write(svgString(data.toString()).toByteArray()) }
+        } finally {
         }
-        println("Elapsed: $elapsed")
 
-        return value
+        return SourceResult(
+            source = ImageSource(source, context),
+            mimeType = null,
+            dataSource = DataSource.MEMORY
+        )
     }
 
-    class Factory : Fetcher.Factory<Uri> {
+    object Factory : Fetcher.Factory<Uri> {
         override fun create(data: Uri, options: Options, imageLoader: ImageLoader): Fetcher {
             return HashImageFetcher(options.context, data)
         }
@@ -96,7 +88,7 @@ object Robohash {
         return ImageRequest
             .Builder(context)
             .data("robohash:$message")
-            .fetcherFactory(HashImageFetcher.Factory())
+            .fetcherFactory(HashImageFetcher.Factory)
             .crossfade(100)
             .build()
     }
