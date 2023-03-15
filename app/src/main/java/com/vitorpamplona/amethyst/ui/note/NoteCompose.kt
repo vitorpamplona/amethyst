@@ -820,7 +820,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
         expanded = popupExpanded,
         onDismissRequest = onDismiss
     ) {
-        if (!accountViewModel.isFollowing(note.author!!)) {
+        if (!accountViewModel.isFollowing(note.author)) {
             DropdownMenuItem(onClick = {
                 accountViewModel.follow(
                     note.author ?: return@DropdownMenuItem
@@ -860,14 +860,12 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
         DropdownMenuItem(onClick = { accountViewModel.broadcast(note); onDismiss() }) {
             Text(stringResource(R.string.broadcast))
         }
-        if (note.author == accountViewModel.accountLiveData.value?.account?.userProfile()) {
-            Divider()
+        Divider()
+        if (accountViewModel.isLoggedUser(note.author)) {
             DropdownMenuItem(onClick = { accountViewModel.delete(note); onDismiss() }) {
                 Text(stringResource(R.string.request_deletion))
             }
-        }
-        if (note.author != accountViewModel.accountLiveData.value?.account?.userProfile()) {
-            Divider()
+        } else {
             DropdownMenuItem(onClick = { reportDialogShowing = true }) {
                 Text("Block / Report")
             }

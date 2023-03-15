@@ -98,7 +98,7 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
     var showDeleteAlertDialog by remember { mutableStateOf(false) }
     var showBlockAlertDialog by remember { mutableStateOf(false) }
     var showReportDialog by remember { mutableStateOf(false) }
-    val isOwnNote = note.author == accountViewModel.accountLiveData.value?.account?.userProfile()
+    val isOwnNote = accountViewModel.isLoggedUser(note.author)
     val isFollowingUser = !isOwnNote && accountViewModel.isFollowing(note.author!!)
 
     val backgroundColor = if (MaterialTheme.colors.isLight) {

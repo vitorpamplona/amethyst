@@ -125,11 +125,12 @@ class AccountViewModel(private val account: Account) : ViewModel() {
         account.unfollow(user)
     }
 
-    fun isLoggedUser(user: User): Boolean {
+    fun isLoggedUser(user: User?): Boolean {
         return account.userProfile() == user
     }
 
-    fun isFollowing(user: User): Boolean {
+    fun isFollowing(user: User?): Boolean {
+        if (user == null) return false
         return account.userProfile().isFollowingCached(user)
     }
 
