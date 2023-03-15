@@ -585,7 +585,8 @@ fun BadgeThumb(
                 robot = "authornotfound",
                 contentDescription = stringResource(R.string.unknown_author),
                 modifier = pictureModifier
-                    .fillMaxSize(1f)
+                    .width(size)
+                    .height(size)
                     .background(MaterialTheme.colors.background)
             )
         } else {
@@ -594,7 +595,8 @@ fun BadgeThumb(
                 model = image,
                 contentDescription = stringResource(id = R.string.profile_image),
                 modifier = pictureModifier
-                    .fillMaxSize(1f)
+                    .width(size)
+                    .height(size)
                     .clip(shape = CircleShape)
                     .background(MaterialTheme.colors.background)
                     .run {

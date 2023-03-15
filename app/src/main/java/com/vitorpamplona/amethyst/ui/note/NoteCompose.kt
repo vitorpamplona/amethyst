@@ -683,7 +683,8 @@ fun NoteAuthorPicture(
                 robot = "authornotfound",
                 contentDescription = stringResource(R.string.unknown_author),
                 modifier = modifier
-                    .fillMaxSize(1f)
+                    .width(size)
+                    .height(size)
                     .clip(shape = CircleShape)
                     .background(MaterialTheme.colors.background)
             )
@@ -729,7 +730,8 @@ fun UserPicture(
             model = ResizeImage(user.profilePicture(), size),
             contentDescription = stringResource(id = R.string.profile_image),
             modifier = modifier
-                .fillMaxSize(1f)
+                .width(size)
+                .height(size)
                 .clip(shape = CircleShape)
                 .background(MaterialTheme.colors.background)
                 .run {
