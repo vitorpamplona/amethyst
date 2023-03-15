@@ -409,7 +409,6 @@ object LocalCache {
         if (note.event != null) return
 
         val author = getOrCreateUser(event.pubKey)
-        val mentions = event.originalAuthor().mapNotNull { checkGetOrCreateUser(it) }
         val repliesTo = event.originalPost().mapNotNull { checkGetOrCreateNote(it) } +
             event.taggedAddresses().mapNotNull { getOrCreateAddressableNote(it) }
 
@@ -538,7 +537,6 @@ object LocalCache {
             return
         }
 
-        val mentions = event.mentions().mapNotNull { checkGetOrCreateUser(it) }
         val replyTo = event.replyTos()
             .mapNotNull { checkGetOrCreateNote(it) }
             .filter { it.event !is ChannelCreateEvent }
