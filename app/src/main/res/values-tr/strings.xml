@@ -56,7 +56,6 @@
     <string name="thank_you_so_much">Çok teşekkürler!</string>
     <string name="amount_in_sats">Satlarda Miktar</string>
     <string name="send_sats">Satlar Gönder</string>
-    <string name="never_translate_from">Asla çevirme</string>
     <string name="new_channel">Yeni Kanal</string>
     <string name="channel_name">Kanal Adı</string>
     <string name="my_awesome_group">Benim Harika Grubum</string>
@@ -152,12 +151,12 @@
     <string name="public_chat">Herkese Açık Chat</string>
     <string name="posts_received">alınan gönderiler</string>
     <string name="remove">Kaldır</string>
-    <string name="auto">Otomatik</string>
-    <string name="translated_from">şundan çevirildi</string>
-    <string name="to">şuna</string>
-    <string name="show_in">Şunda göster</string>
-    <string name="first">ilk</string>
-    <string name="always_translate_to">Her zaman şuna çevir</string>
+    <string name="translations_auto">Otomatik</string>
+    <string name="translations_translated_from">şundan çevirildi</string>
+    <string name="translations_to">şuna</string>
+    <string name="translations_show_in_lang_first">Şunda göster %1$s ilk</string>
+    <string name="translations_always_translate_to_lang">Her zaman şuna çevir %1$s</string>
+    <string name="translations_never_translate_from_lang">Asla çevirme %1$s</string>
     <string name="never">asla</string>
     <string name="now">şimdi</string>
     <string name="h">h</string>

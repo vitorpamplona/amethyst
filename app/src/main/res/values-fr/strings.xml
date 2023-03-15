@@ -56,7 +56,6 @@
     <string name="thank_you_so_much">Merci beaucoup!</string>
     <string name="amount_in_sats">Montant en Sats</string>
     <string name="send_sats">Envoyer des Sats</string>
-    <string name="never_translate_from">"Ne jamais traduire depuis "</string>
     <string name="error_parsing_preview_for">"Erreur d\'analyse de l\'aperçu pour %1$s : %2$s"</string>
     <string name="preview_card_image_for">"Aperçu de l\'image pour %1$s"</string>
     <string name="new_channel">Nouveau canal</string>
@@ -154,12 +153,12 @@
     <string name="public_chat">Chat public</string>
     <string name="posts_received">messages reçus</string>
     <string name="remove">Retirer</string>
-    <string name="auto">Auto</string>
-    <string name="translated_from">traduit de</string>
-    <string name="to">vers</string>
-    <string name="show_in">Montre en</string>
-    <string name="first">en premier</string>
-    <string name="always_translate_to">"Toujours traduire en "</string>
+    <string name="translations_auto">Auto</string>
+    <string name="translations_translated_from">traduit de</string>
+    <string name="translations_to">vers</string>
+    <string name="translations_show_in_lang_first">Montre en %1$s en premier</string>
+    <string name="translations_always_translate_to_lang">Toujours traduire en %1$s</string>
+    <string name="translations_never_translate_from_lang">Ne jamais traduire depuis %1$s</string>
     <string name="never">jamais</string>
     <string name="now">maintenant</string>
     <string name="h">h</string>

@@ -56,7 +56,6 @@
     <string name="thank_you_so_much">Nagyon szépen köszönöm!</string>
     <string name="amount_in_sats">Összeg Sats-ban</string>
     <string name="send_sats">Sats küldése</string>
-    <string name="never_translate_from">"Soha ne fordítsd erről "</string>
     <string name="error_parsing_preview_for">"Hiba a következő előnézetében %1$s : %2$s"</string>
     <string name="preview_card_image_for">"Kártyakép előnézete %1$s"</string>
     <string name="new_channel">Új Csatorna</string>
@@ -154,12 +153,12 @@
     <string name="public_chat">Publikus Chat</string>
     <string name="posts_received">beérkezett hozzászólások</string>
     <string name="remove">Eltávolítás</string>
-    <string name="auto">Automatikus</string>
-    <string name="translated_from">fordítás erről</string>
-    <string name="to">erre</string>
-    <string name="show_in">Mutasd ebben</string>
-    <string name="first">első</string>
-    <string name="always_translate_to">Mindig fordítsa le</string>
+    <string name="translations_auto">Automatikus</string>
+    <string name="translations_translated_from">fordítás erről</string>
+    <string name="translations_to">erre</string>
+    <string name="translations_show_in_lang_first">Mutasd ebben %1$s első</string>
+    <string name="translations_always_translate_to_lang">Mindig fordítsa le %1$s</string>
+    <string name="translations_never_translate_from_lang">Soha ne fordítsd erről %1$s</string>
     <string name="never">soha</string>
     <string name="now">most</string>
     <string name="h">ó</string>

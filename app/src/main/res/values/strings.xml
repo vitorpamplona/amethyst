@@ -58,7 +58,6 @@
     <string name="thank_you_so_much">Thank you so much!</string>
     <string name="amount_in_sats">Amount in Sats</string>
     <string name="send_sats">Send Sats</string>
-    <string name="never_translate_from">"Never translate from "</string>
     <string name="error_parsing_preview_for">"Error parsing preview for %1$s : %2$s"</string>
     <string name="preview_card_image_for">"Preview Card Image for %1$s"</string>
     <string name="new_channel">New Channel</string>
@@ -157,12 +156,12 @@
     <string name="posts_received">posts received</string>
     <string name="remove">Remove</string>
     <string name="sats" translatable="false">sats</string>
-    <string name="auto">Auto</string>
-    <string name="translated_from">translated from</string>
-    <string name="to">to</string>
-    <string name="show_in">Show in</string>
-    <string name="first">first</string>
-    <string name="always_translate_to">Always translate to</string>
+    <string name="translations_auto">Auto</string>
+    <string name="translations_translated_from">translated from</string>
+    <string name="translations_to">to</string>
+    <string name="translations_show_in_lang_first">Show in %1$s first</string>
+    <string name="translations_always_translate_to_lang">Always translate to %1$s</string>
+    <string name="translations_never_translate_from_lang">Never translate from %1$s</string>
     <string name="nip_05" translatable="false">NIP-05</string>
     <string name="lnurl" translatable="false">LNURL...</string>
     <string name="never">never</string>
