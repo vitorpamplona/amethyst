@@ -239,9 +239,9 @@ open class Note(val idHex: String) {
         val dayAgo = Date().time / 1000 - 24 * 60 * 60
         return reports.isNotEmpty() ||
             (
-                author?.reports?.values?.filter {
+                author?.reports?.values?.any {
                     it.firstOrNull { (it.createdAt() ?: 0) > dayAgo } != null
-                }?.isNotEmpty() ?: false
+                } ?: false
                 )
     }
 
