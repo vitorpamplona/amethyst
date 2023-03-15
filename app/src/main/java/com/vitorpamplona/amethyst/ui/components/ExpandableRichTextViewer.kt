@@ -26,7 +26,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.lnurl.LnInvoiceUtil
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 const val SHORT_TEXT_LENGTH = 350
@@ -43,15 +42,14 @@ fun ExpandableRichTextViewer(
 ) {
     var showFullText by remember { mutableStateOf(false) }
 
+    // Cuts the text in the first space after 350
+    val firstSpaceAfterCut = content.indexOf(' ', SHORT_TEXT_LENGTH)
+    val whereToCut = if (firstSpaceAfterCut < 0) SHORT_TEXT_LENGTH else firstSpaceAfterCut
+
     val text = if (showFullText) {
         content
     } else {
-        val (lnStart, lnEnd) = LnInvoiceUtil.locateInvoice(content)
-        if (lnStart < SHORT_TEXT_LENGTH && lnEnd > 0) {
-            content.take(lnEnd)
-        } else {
-            content.take(SHORT_TEXT_LENGTH)
-        }
+        content.take(whereToCut)
     }
 
     Box(contentAlignment = Alignment.BottomCenter) {
@@ -67,7 +65,7 @@ fun ExpandableRichTextViewer(
         )
         // }
 
-        if (content.length > 350 && !showFullText) {
+        if (content.length > whereToCut && !showFullText) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
