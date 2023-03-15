@@ -297,7 +297,7 @@ fun NoteCompose(
 
                     if (noteEvent is TextNoteEvent && (note.replyTo != null || noteEvent.mentions().isNotEmpty())) {
                         val sortedMentions = noteEvent.mentions()
-                            .map { LocalCache.getOrCreateUser(it) }
+                            .mapNotNull { LocalCache.checkGetOrCreateUser(it) }
                             .toSet()
                             .sortedBy { account.userProfile().isFollowingCached(it) }
 
@@ -326,7 +326,7 @@ fun NoteCompose(
                         }
                     } else if (noteEvent is ChannelMessageEvent && (note.replyTo != null || noteEvent.mentions() != null)) {
                         val sortedMentions = noteEvent.mentions()
-                            .map { LocalCache.getOrCreateUser(it) }
+                            .mapNotNull { LocalCache.checkGetOrCreateUser(it) }
                             .toSet()
                             .sortedBy { account.userProfile().isFollowingCached(it) }
 
