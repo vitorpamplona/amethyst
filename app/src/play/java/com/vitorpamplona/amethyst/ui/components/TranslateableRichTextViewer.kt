@@ -111,17 +111,17 @@ fun TranslateableRichTextViewer(
                     val annotatedTranslationString = buildAnnotatedString {
                         withStyle(clickableTextStyle) {
                             pushStringAnnotation("langSettings", true.toString())
-                            append(stringResource(R.string.auto))
+                            append(stringResource(R.string.translations_auto))
                         }
 
-                        append("-${stringResource(R.string.translated_from)} ")
+                        append("-${stringResource(R.string.translations_translated_from)} ")
 
                         withStyle(clickableTextStyle) {
                             pushStringAnnotation("showOriginal", true.toString())
                             append(Locale(source).displayName)
                         }
 
-                        append(" ${stringResource(R.string.to)} ")
+                        append(" ${stringResource(R.string.translations_to)} ")
 
                         withStyle(clickableTextStyle) {
                             pushStringAnnotation("showOriginal", false.toString())
@@ -166,7 +166,7 @@ fun TranslateableRichTextViewer(
 
                             Spacer(modifier = Modifier.size(10.dp))
 
-                            Text(stringResource(R.string.never_translate_from) + Locale(source).displayName)
+                            Text(stringResource(R.string.translations_never_translate_from_lang, Locale(source).displayName))
                         }
                         Divider()
                         DropdownMenuItem(onClick = {
@@ -185,13 +185,7 @@ fun TranslateableRichTextViewer(
 
                             Spacer(modifier = Modifier.size(10.dp))
 
-                            Text(
-                                "${stringResource(R.string.show_in)} ${Locale(source).displayName} ${
-                                stringResource(
-                                    R.string.first
-                                )
-                                }"
-                            )
+                            Text(stringResource(R.string.translations_show_in_lang_first, Locale(source).displayName))
                         }
                         DropdownMenuItem(onClick = {
                             accountViewModel.prefer(source, target, target)
@@ -209,13 +203,7 @@ fun TranslateableRichTextViewer(
 
                             Spacer(modifier = Modifier.size(10.dp))
 
-                            Text(
-                                "${stringResource(R.string.show_in)} ${Locale(target).displayName} ${
-                                stringResource(
-                                    R.string.first
-                                )
-                                }"
-                            )
+                            Text(stringResource(R.string.translations_show_in_lang_first, Locale(target).displayName))
                         }
                         Divider()
 
@@ -239,7 +227,7 @@ fun TranslateableRichTextViewer(
 
                                     Spacer(modifier = Modifier.size(10.dp))
 
-                                    Text("${stringResource(R.string.always_translate_to)}${lang.displayName}")
+                                    Text(stringResource(R.string.translations_always_translate_to_lang, lang.displayName))
                                 }
                             }
                         }

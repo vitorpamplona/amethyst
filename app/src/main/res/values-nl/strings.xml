@@ -57,7 +57,6 @@
     <string name="thank_you_so_much">Hartelijk bedankt!</string>
     <string name="amount_in_sats">Bedrag in sats</string>
     <string name="send_sats">Verstuur sats</string>
-    <string name="never_translate_from">"Nooit vertalen vanuit "</string>
     <string name="error_parsing_preview_for">"Error parsing preview voor %1$s : %2$s"</string>
     <string name="preview_card_image_for">"Voorbeeld kaartafbeelding voor %1$s"</string>
     <string name="new_channel">Nieuw kanaal</string>
@@ -156,12 +155,12 @@
     <string name="posts_received">berichten ontvangen</string>
     <string name="remove">verwijderen</string>
     <string name="sats" translatable="false">sats</string>
-    <string name="auto">Auto</string>
-    <string name="translated_from">vertaald van</string>
-    <string name="to">naar</string>
-    <string name="show_in">Laten zien in</string>
-    <string name="first">eerste</string>
-    <string name="always_translate_to">Altijd vertalen naar</string>
+    <string name="translations_auto">Auto</string>
+    <string name="translations_translated_from">vertaald van</string>
+    <string name="translations_to">naar</string>
+    <string name="translations_show_in_lang_first">Eerst laten zien in %1$s</string>
+    <string name="translations_always_translate_to_lang">Altijd vertalen naar %1$s</string>
+    <string name="translations_never_translate_from_lang">Nooit vertalen vanuit %1$s</string>
     <string name="nip_05" translatable="false">NIP-05</string>
     <string name="lnurl" translatable="false">LNURL...</string>
     <string name="never">nooit</string>

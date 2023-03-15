@@ -55,7 +55,6 @@
     <string name="thank_you_so_much">Большое спасибо!</string>
     <string name="amount_in_sats">Сумма в sat</string>
     <string name="send_sats">Отправить</string>
-    <string name="never_translate_from">"Не переводить с "</string>
     <string name="error_parsing_preview_for">"Не удалось создать предпросмотр для %1$s : %2$s"</string>
     <string name="preview_card_image_for">"Предпросмотр для %1$s"</string>
     <string name="new_channel">Новый канал</string>
@@ -152,12 +151,12 @@
     <string name="public_chat">Публичный чат</string>
     <string name="posts_received">записей получено</string>
     <string name="remove">Удалить</string>
-    <string name="auto">Автоматически</string>
-    <string name="translated_from">переведено с</string>
-    <string name="to">на</string>
-    <string name="show_in">Показать сперва на</string>
-    <string name="first" />
-    <string name="always_translate_to">Всегда переводить на</string>
+    <string name="translations_auto">Автоматически</string>
+    <string name="translations_translated_from">переведено с</string>
+    <string name="translations_to">на</string>
+    <string name="translations_show_in_lang_first">Показать сперва на %1$s</string>
+    <string name="translations_always_translate_to_lang">Всегда переводить на %1$s</string>
+    <string name="translations_never_translate_from_lang">Не переводить с %1$s</string>
     <string name="never">никогда</string>
     <string name="now">сейчас</string>
     <string name="h">ч</string>

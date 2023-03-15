@@ -56,7 +56,6 @@
     <string name="thank_you_so_much">شكرا جزيلا!</string>
     <string name="amount_in_sats">المبلغ في Sats</string>
     <string name="send_sats">إرسال Sats</string>
-    <string name="never_translate_from">"لا تترجم ابداً من "</string>
     <string name="error_parsing_preview_for">خطأ في تحليل المعاينة لـ %1$s : %2$s</string>
     <string name="preview_card_image_for">معاينة صورة البطاقة لـ %1$s</string>
     <string name="new_channel">قناة جديدة</string>
@@ -153,12 +152,12 @@
     <string name="public_chat">الدردشة العامة</string>
     <string name="posts_received">تم استلام المشاركات</string>
     <string name="remove">ازالة</string>
-    <string name="auto">تلقائي</string>
-    <string name="translated_from">مترجم من</string>
-    <string name="to">الى</string>
-    <string name="show_in">تظهر في</string>
-    <string name="first">اولا</string>
-    <string name="always_translate_to">ترجمة إلى</string>
+    <string name="translations_auto">تلقائي</string>
+    <string name="translations_translated_from">مترجم من</string>
+    <string name="translations_to">الى</string>
+    <string name="translations_show_in_lang_first">تظهر في %1$s اولا</string>
+    <string name="translations_always_translate_to_lang">ترجمة إلى %1$s</string>
+    <string name="translations_never_translate_from_lang">لا تترجم ابداً من %1$s</string>
     <string name="never">ابداً</string>
     <string name="now">الان</string>
     <string name="h">س</string>

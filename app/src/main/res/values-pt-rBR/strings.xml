@@ -56,7 +56,6 @@
     <string name="thank_you_so_much">Obrigado!</string>
     <string name="amount_in_sats">Quantidade em Sats</string>
     <string name="send_sats">Enviar Sats</string>
-    <string name="never_translate_from">"Nunca traduzir de "</string>
     <string name="error_parsing_preview_for">Erro ao analisar a visualização para %1$s: %2$s</string>
     <string name="preview_card_image_for">Visualize a imagem do cartão para %1$s</string>
     <string name="new_channel">Novo Canal</string>
@@ -154,12 +153,12 @@
     <string name="public_chat">Chat público</string>
     <string name="posts_received">postagens recebidas</string>
     <string name="remove">Remover</string>
-    <string name="auto">"Automaticamente "</string>
-    <string name="translated_from">"traduzido de "</string>
-    <string name="to">para</string>
-    <string name="show_in">Mostrar em</string>
-    <string name="first">primeiro</string>
-    <string name="always_translate_to">"Sempre traduzir para "</string>
+    <string name="translations_auto">"Automaticamente "</string>
+    <string name="translations_translated_from">"traduzido de "</string>
+    <string name="translations_to">para</string>
+    <string name="translations_show_in_lang_first">Mostrar em %1$s primeiro</string>
+    <string name="translations_always_translate_to_lang">Sempre traduzir para %1$s</string>
+    <string name="translations_never_translate_from_lang">Nunca traduzir de %1$s</string>
     <string name="never">nunca</string>
     <string name="now">agora</string>
     <string name="h">h</string>

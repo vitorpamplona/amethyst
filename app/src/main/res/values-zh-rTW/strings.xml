@@ -55,7 +55,6 @@
     <string name="thank_you_so_much">非常感謝！</string>
     <string name="amount_in_sats">數量 (sats)</string>
     <string name="send_sats">發送 sats</string>
-    <string name="never_translate_from">"不再翻譯"</string>
     <string name="error_parsing_preview_for">"解析 %1$s 預覽出錯：%2$s"</string>
     <string name="preview_card_image_for">"預覽 %1$s 卡片圖片"</string>
     <string name="new_channel">新頻道</string>
@@ -150,16 +149,15 @@
     <string name="unfollow">取關</string>
     <string name="channel_created">頻道已創建</string>
     <string name="channel_information_changed_to">頻道信息已更改為</string>
-
     <string name="public_chat">公共聊天</string>
     <string name="posts_received">收到文章</string>
     <string name="remove">移除</string>
-    <string name="auto">自動</string>
-    <string name="translated_from">從</string>
-    <string name="to">更改為</string>
-    <string name="show_in">先顯示</string>
-    <string name="first">在前</string>
-    <string name="always_translate_to">總是翻譯為</string>
+    <string name="translations_auto">自動</string>
+    <string name="translations_translated_from">從</string>
+    <string name="translations_to">更改為</string>
+    <string name="translations_show_in_lang_first">顯示 %1$s 在前</string>
+    <string name="translations_always_translate_to_lang">總是翻譯為 %1$s</string>
+    <string name="translations_never_translate_from_lang">不再翻譯 %1$s</string>
     <string name="never">從不</string>
     <string name="now">現在</string>
     <string name="h">小時</string>
