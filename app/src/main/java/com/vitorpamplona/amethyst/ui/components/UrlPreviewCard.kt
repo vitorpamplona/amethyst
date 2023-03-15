@@ -34,12 +34,18 @@ fun UrlPreviewCard(
         modifier = Modifier
             .clickable { runCatching { uri.openUri(url) } }
             .clip(shape = RoundedCornerShape(15.dp))
-            .border(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.12f), RoundedCornerShape(15.dp))
+            .border(
+                1.dp,
+                MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
+                RoundedCornerShape(15.dp)
+            )
     ) {
         Column {
+            val url = URL(previewInfo.url)
+
             // correctly treating relative images
             val imageUrl = if (previewInfo.image.startsWith("/")) {
-                URL(URL(previewInfo.url), previewInfo.image).toString()
+                URL(url, previewInfo.image).toString()
             } else {
                 previewInfo.image
             }
@@ -52,11 +58,22 @@ fun UrlPreviewCard(
             )
 
             Text(
+                text = url.host,
+                style = MaterialTheme.typography.caption,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 10.dp, end = 10.dp, top = 10.dp),
+                color = Color.Gray,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Text(
                 text = previewInfo.title,
                 style = MaterialTheme.typography.body2,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 10.dp, end = 10.dp, top = 10.dp),
+                    .padding(start = 10.dp, end = 10.dp),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
