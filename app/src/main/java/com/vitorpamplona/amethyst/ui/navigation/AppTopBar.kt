@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
 import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
 import com.vitorpamplona.amethyst.service.NostrGlobalDataSource
+import com.vitorpamplona.amethyst.service.NostrHashtagDataSource
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleChannelDataSource
@@ -138,6 +139,7 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
                                     NostrSingleChannelDataSource.printCounter()
                                     NostrSingleUserDataSource.printCounter()
                                     NostrThreadDataSource.printCounter()
+                                    NostrHashtagDataSource.printCounter()
 
                                     NostrUserProfileDataSource.printCounter()
 

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
@@ -17,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -46,8 +48,8 @@ val videoExtension = Pattern.compile("(.*/)*.+\\.(mp4|avi|wmv|mpg|amv|webm|mov)$
 val noProtocolUrlValidator = Pattern.compile("^[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b(?:[-a-zA-Z0-9()@:%_\\+.~#?&//=]*)$")
 val tagIndex = Pattern.compile(".*\\#\\[([0-9]+)\\].*")
 
-val mentionsPattern: Pattern = Pattern.compile("@([A-Za-z0-9_-]+)")
-val hashTagsPattern: Pattern = Pattern.compile("#([A-Za-z0-9_-]+)")
+val mentionsPattern: Pattern = Pattern.compile("@([A-Za-z0-9_\\-]+)")
+val hashTagsPattern: Pattern = Pattern.compile("#([A-Za-z0-9_\\-]+)")
 val urlPattern: Pattern = Patterns.WEB_URL
 
 fun isValidURL(url: String?): Boolean {
@@ -144,6 +146,8 @@ fun RichTextViewer(
                                 UrlPreview("https://$word", word)
                             } else if (tagIndex.matcher(word).matches() && tags != null) {
                                 TagLink(word, tags, canPreview, backgroundColor, accountViewModel, navController)
+                            } else if (hashTagsPattern.matcher(word).matches()) {
+                                HashTag(word, accountViewModel, navController)
                             } else if (isBechLink(word)) {
                                 BechLink(word, navController)
                             } else {
@@ -163,6 +167,8 @@ fun RichTextViewer(
                                 ClickableUrl(word, "https://$word")
                             } else if (tagIndex.matcher(word).matches() && tags != null) {
                                 TagLink(word, tags, canPreview, backgroundColor, accountViewModel, navController)
+                            } else if (hashTagsPattern.matcher(word).matches()) {
+                                HashTag(word, accountViewModel, navController)
                             } else if (isBechLink(word)) {
                                 BechLink(word, navController)
                             } else {
@@ -209,6 +215,29 @@ fun BechLink(word: String, navController: NavController) {
         Text(text = "$word ")
     } else {
         ClickableRoute(nip19Route, navController)
+    }
+}
+
+@Composable
+fun HashTag(word: String, accountViewModel: AccountViewModel, navController: NavController) {
+    val hashtagMatcher = hashTagsPattern.matcher(word)
+
+    val tag = try {
+        hashtagMatcher.find()
+        hashtagMatcher.group(1)
+    } catch (e: Exception) {
+        println("Couldn't link hashtag $word")
+        null
+    }
+
+    if (tag != null) {
+        ClickableText(
+            text = AnnotatedString("#$tag "),
+            onClick = { navController.navigate("Hashtag/$tag") },
+            style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary)
+        )
+    } else {
+        Text(text = "$word ")
     }
 }
 

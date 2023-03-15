@@ -20,6 +20,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChatroomListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChatroomScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.FiltersScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.HashtagScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.HomeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.NotificationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ProfileScreen
@@ -88,6 +89,16 @@ fun AppNavigation(
             composable(route.route, route.arguments, content = {
                 ThreadScreen(
                     noteId = it.arguments?.getString("id"),
+                    accountViewModel = accountViewModel,
+                    navController = navController
+                )
+            })
+        }
+
+        Route.Hashtag.let { route ->
+            composable(route.route, route.arguments, content = {
+                HashtagScreen(
+                    tag = it.arguments?.getString("id"),
                     accountViewModel = accountViewModel,
                     navController = navController
                 )

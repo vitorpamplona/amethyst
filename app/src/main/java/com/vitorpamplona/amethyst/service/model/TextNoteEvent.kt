@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.service.model
 
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.findHashtags
 import nostr.postr.Utils
 import java.util.Date
 
@@ -28,6 +29,9 @@ class TextNoteEvent(
             }
             addresses?.forEach {
                 tags.add(listOf("a", it.toTag()))
+            }
+            findHashtags(msg).forEach {
+                tags.add(listOf("t", it))
             }
             val id = generateId(pubKey, createdAt, kind, tags, msg)
             val sig = Utils.sign(id, privateKey)

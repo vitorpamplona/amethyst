@@ -24,4 +24,6 @@ interface EventInterface {
     fun hasValidSignature(): Boolean
 
     fun isTaggedUser(loggedInUser: String): Boolean
+
+    fun isTaggedHash(hashtag: String): Boolean
 }

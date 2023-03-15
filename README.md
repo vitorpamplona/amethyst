@@ -32,6 +32,7 @@ Amethyst brings the best social network to your Android phone. Just insert your 
 - [x] Online Relay Search (NIP-50)
 - [x] Internationalization
 - [x] Badges (NIP-58)
+- [x] Hashtags
 - [ ] Local Database 
 - [ ] View Individual Reactions (Like, Boost, Zaps, Reports) per Post
 - [ ] Bookmarks, Pinned Posts, Muted Events (NIP-51)

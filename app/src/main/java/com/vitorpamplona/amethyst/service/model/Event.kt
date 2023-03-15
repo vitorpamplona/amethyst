@@ -39,7 +39,11 @@ open class Event(
 
     fun taggedUsers() = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
 
+    fun hashtags() = tags.filter { it.firstOrNull() == "t" }.mapNotNull { it.getOrNull(1) }
+
     override fun isTaggedUser(idHex: String) = tags.any { it.getOrNull(0) == "p" && it.getOrNull(1) == idHex }
+
+    override fun isTaggedHash(hashtag: String) = tags.any { it.getOrNull(0) == "t" && it.getOrNull(1).equals(hashtag, true) }
 
     /**
      * Checks if the ID is correct and then if the pubKey's secret key signed the event.

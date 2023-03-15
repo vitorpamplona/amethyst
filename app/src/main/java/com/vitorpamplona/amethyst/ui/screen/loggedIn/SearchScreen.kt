@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.Divider
@@ -72,6 +73,7 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.regex.Pattern
 import kotlinx.coroutines.channels.Channel as CoroutineChannel
 
 @Composable
@@ -126,7 +128,9 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
     val searchResults = remember { mutableStateOf<List<User>>(emptyList()) }
     val searchResultsNotes = remember { mutableStateOf<List<Note>>(emptyList()) }
     val searchResultsChannels = remember { mutableStateOf<List<Channel>>(emptyList()) }
+    val hashtagResults = remember { mutableStateOf<List<String>>(emptyList()) }
     val scope = rememberCoroutineScope()
+    val listState = rememberLazyListState()
 
     val onlineSearch = NostrSearchEventOrUserDataSource
 
@@ -149,6 +153,8 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
                 .distinctUntilChanged()
                 .debounce(300)
                 .collectLatest {
+                    hashtagResults.value = findHashtags(it)
+
                     if (it.removePrefix("npub").removePrefix("note").length >= 4) {
                         onlineSearch.search(it.trim())
                     }
@@ -156,6 +162,9 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
                     searchResults.value = LocalCache.findUsersStartingWith(it)
                     searchResultsNotes.value = LocalCache.findNotesStartingWith(it).sortedBy { it.createdAt() }.reversed()
                     searchResultsChannels.value = LocalCache.findChannelsStartingWith(it)
+
+                    // makes sure to show the top of the search
+                    scope.launch(Dispatchers.Main) { listState.animateScrollToItem(0) }
                 }
         }
     }
@@ -236,8 +245,15 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
             contentPadding = PaddingValues(
                 top = 10.dp,
                 bottom = 10.dp
-            )
+            ),
+            state = listState
         ) {
+            itemsIndexed(hashtagResults.value, key = { _, item -> "#" + item }) { _, item ->
+                HashtagLine(item) {
+                    navController.navigate("Hashtag/$item")
+                }
+            }
+
             itemsIndexed(searchResults.value, key = { _, item -> "u" + item.pubkeyHex }) { _, item ->
                 UserCompose(item, accountViewModel = accountViewModel, navController = navController)
             }
@@ -263,6 +279,57 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
                 NoteCompose(item, accountViewModel = accountViewModel, navController = navController)
             }
         }
+    }
+}
+
+val hashtagSearch = Pattern.compile("(?:\\s|\\A)#([A-Za-z0-9_\\-]+)")
+
+fun findHashtags(content: String): List<String> {
+    val matcher = hashtagSearch.matcher(content)
+    val returningList = mutableSetOf<String>()
+    while (matcher.find()) {
+        try {
+            val tag = matcher.group(1)
+            if (tag != null && tag.isNotBlank()) {
+                returningList.add(tag)
+            }
+        } catch (e: Exception) {
+        }
+    }
+    return returningList.toList()
+}
+
+@Composable
+fun HashtagLine(tag: String, onClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(
+                    start = 12.dp,
+                    end = 12.dp,
+                    top = 10.dp
+                )
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    "Search hashtag: #$tag",
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        Divider(
+            modifier = Modifier.padding(top = 10.dp),
+            thickness = 0.25.dp
+        )
     }
 }
 

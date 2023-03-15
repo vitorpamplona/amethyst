@@ -65,6 +65,12 @@ sealed class Route(
         arguments = listOf(navArgument("id") { type = NavType.StringType })
     )
 
+    object Hashtag : Route(
+        route = "Hashtag/{id}",
+        icon = R.drawable.ic_moments,
+        arguments = listOf(navArgument("id") { type = NavType.StringType })
+    )
+
     object Room : Route(
         route = "Room/{id}",
         icon = R.drawable.ic_moments,
