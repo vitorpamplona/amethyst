@@ -720,14 +720,49 @@ fun UserPicture(
     val userState by baseUser.live().metadata.observeAsState()
     val user = userState?.user ?: return
 
+    val accountState by baseUserAccount.live().follows.observeAsState()
+    val accountUser = accountState?.user ?: return
+
+    val showFollowingMark = accountUser.isFollowingCached(user) || user == accountUser
+
+    UserPicture(
+        userHex = user.pubkeyHex,
+        userPicture = user.profilePicture(),
+        showFollowingMark = showFollowingMark,
+        size = size,
+        modifier = modifier,
+        onClick = {
+            if (onClick != null) {
+                onClick(user)
+            }
+        },
+        onLongClick = {
+            if (onLongClick != null) {
+                onLongClick(user)
+            }
+        }
+    )
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun UserPicture(
+    userHex: String,
+    userPicture: String?,
+    showFollowingMark: Boolean,
+    size: Dp,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null
+) {
     Box(
         Modifier
             .width(size)
             .height(size)
     ) {
         RobohashAsyncImageProxy(
-            robot = user.pubkeyHex,
-            model = ResizeImage(user.profilePicture(), size),
+            robot = userHex,
+            model = ResizeImage(userPicture, size),
             contentDescription = stringResource(id = R.string.profile_image),
             modifier = modifier
                 .width(size)
@@ -736,9 +771,9 @@ fun UserPicture(
                 .background(MaterialTheme.colors.background)
                 .run {
                     if (onClick != null && onLongClick != null) {
-                        this.combinedClickable(onClick = { onClick(user) }, onLongClick = { onLongClick(user) })
+                        this.combinedClickable(onClick = onClick, onLongClick = onLongClick)
                     } else if (onClick != null) {
-                        this.clickable(onClick = { onClick(user) })
+                        this.clickable(onClick = onClick)
                     } else {
                         this
                     }
@@ -746,10 +781,7 @@ fun UserPicture(
 
         )
 
-        val accountState by baseUserAccount.live().follows.observeAsState()
-        val accountUser = accountState?.user ?: return
-
-        if (accountUser.isFollowingCached(user) || user == accountUser) {
+        if (showFollowingMark) {
             Box(
                 Modifier
                     .width(size.div(3.5f))

@@ -26,11 +26,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.ui.screen.MultiSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -114,18 +118,7 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
                                 )
                             }
 
-                            Column(modifier = Modifier.padding(start = 10.dp)) {
-                                FlowRow() {
-                                    multiSetCard.zapEvents.forEach {
-                                        NoteAuthorPicture(
-                                            note = it.key,
-                                            navController = navController,
-                                            userAccount = account.userProfile(),
-                                            size = 35.dp
-                                        )
-                                    }
-                                }
-                            }
+                            AuthorGallery(multiSetCard.zapEvents.keys, navController, account)
                         }
                     }
 
@@ -146,18 +139,7 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
                                 )
                             }
 
-                            Column(modifier = Modifier.padding(start = 10.dp)) {
-                                FlowRow() {
-                                    multiSetCard.boostEvents.forEach {
-                                        NoteAuthorPicture(
-                                            note = it,
-                                            navController = navController,
-                                            userAccount = account.userProfile(),
-                                            size = 35.dp
-                                        )
-                                    }
-                                }
-                            }
+                            AuthorGallery(multiSetCard.boostEvents, navController, account)
                         }
                     }
 
@@ -178,18 +160,7 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
                                 )
                             }
 
-                            Column(modifier = Modifier.padding(start = 10.dp)) {
-                                FlowRow() {
-                                    multiSetCard.likeEvents.forEach {
-                                        NoteAuthorPicture(
-                                            note = it,
-                                            navController = navController,
-                                            userAccount = account.userProfile(),
-                                            size = 35.dp
-                                        )
-                                    }
-                                }
-                            }
+                            AuthorGallery(multiSetCard.likeEvents, navController, account)
                         }
                     }
 
@@ -217,4 +188,55 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
             }
         }
     }
+}
+
+@Composable
+fun AuthorGallery(
+    authorNotes: Collection<Note>,
+    navController: NavController,
+    account: Account
+) {
+    val accountState by account.userProfile().live().follows.observeAsState()
+    val accountUser = accountState?.user ?: return
+
+    Column(modifier = Modifier.padding(start = 10.dp)) {
+        FlowRow() {
+            authorNotes.forEach {
+                FastNoteAuthorPicture(
+                    note = it,
+                    navController = navController,
+                    userAccount = accountUser,
+                    size = 35.dp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun FastNoteAuthorPicture(
+    note: Note,
+    navController: NavController,
+    userAccount: User,
+    size: Dp,
+    pictureModifier: Modifier = Modifier
+) {
+    // can't be null if here
+    val author = note.author ?: return
+
+    val userState by author.live().metadata.observeAsState()
+    val user = userState?.user ?: return
+
+    val showFollowingMark = userAccount.isFollowingCached(user) || user == userAccount
+
+    UserPicture(
+        userHex = user.pubkeyHex,
+        userPicture = user.profilePicture(),
+        showFollowingMark = showFollowingMark,
+        size = size,
+        modifier = pictureModifier,
+        onClick = {
+            navController.navigate("User/${user.pubkeyHex}")
+        }
+    )
 }
