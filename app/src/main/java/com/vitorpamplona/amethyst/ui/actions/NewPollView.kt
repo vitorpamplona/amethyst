@@ -39,8 +39,6 @@ fun NewPollView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
 
     val scrollState = rememberScrollState()
 
-    var pollOptionList = listOf<String>()
-
     LaunchedEffect(Unit) {
         pollViewModel.load(account, baseReplyTo, quote)
         delay(100)
@@ -113,10 +111,11 @@ fun NewPollView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                             Text(stringResource(R.string.poll_heading_required))
                             PollRecipientsField()
                             PollPrimaryDescription(pollViewModel = pollViewModel)
-                            PollOption(0)
-                            PollOption(1)
+                            pollViewModel.pollOptions.forEachIndexed { index, element ->
+                                PollOption(pollViewModel, index)
+                            }
                             Button(
-                                onClick = { /*TODO*/ },
+                                onClick = { pollViewModel.pollOptions.add("") },
                                 border = BorderStroke(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.32f)),
                                 colors = ButtonDefaults.outlinedButtonColors(
                                     contentColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)

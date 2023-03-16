@@ -1,11 +1,14 @@
 package com.vitorpamplona.amethyst.ui.actions
 
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.text.input.TextFieldValue
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 
 class NewPollViewModel : NewPostViewModel() {
+
+    var pollOptions = mutableStateListOf("", "")
 
     override fun load(account: Account, replyingTo: Note?, quote: Note?) {
         super.load(account, replyingTo, quote)
