@@ -189,6 +189,7 @@ class User(val pubkeyHex: String) {
         }
     }
 
+    @Synchronized
     fun addMessage(user: User, msg: Note) {
         val privateChatroom = getOrCreatePrivateChatroom(user)
         if (msg !in privateChatroom.roomMessages) {
@@ -197,6 +198,7 @@ class User(val pubkeyHex: String) {
         }
     }
 
+    @Synchronized
     fun removeMessage(user: User, msg: Note) {
         val privateChatroom = getOrCreatePrivateChatroom(user)
         if (msg in privateChatroom.roomMessages) {
