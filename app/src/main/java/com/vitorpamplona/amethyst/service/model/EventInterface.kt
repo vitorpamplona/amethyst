@@ -26,4 +26,6 @@ interface EventInterface {
     fun isTaggedUser(loggedInUser: String): Boolean
 
     fun isTaggedHash(hashtag: String): Boolean
+    fun isTaggedHashes(hashtag: Set<String>): Boolean
+    fun firstIsTaggedHashes(hashtag: Set<String>): String?
 }

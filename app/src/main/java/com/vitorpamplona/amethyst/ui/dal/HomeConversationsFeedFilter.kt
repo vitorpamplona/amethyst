@@ -12,11 +12,12 @@ object HomeConversationsFeedFilter : FeedFilter<Note>() {
     override fun feed(): List<Note> {
         val user = account.userProfile()
         val followingKeySet = user.cachedFollowingKeySet()
+        val followingTagSet = user.cachedFollowingTagSet()
 
         return LocalCache.notes.values
             .filter {
                 (it.event is TextNoteEvent || it.event is RepostEvent) &&
-                    it.author?.pubkeyHex in followingKeySet &&
+                    (it.author?.pubkeyHex in followingKeySet || (it.event?.isTaggedHashes(followingTagSet) ?: false)) &&
                     // && account.isAcceptable(it)  // This filter follows only. No need to check if acceptable
                     it.author?.let { !account.isHidden(it) } ?: true &&
                     !it.isNewThread()

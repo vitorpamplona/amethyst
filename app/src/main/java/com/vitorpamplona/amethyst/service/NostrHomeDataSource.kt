@@ -58,9 +58,28 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
         )
     }
 
+    fun createFollowTagsFilter(): TypedFilter? {
+        val hashToLoad = account.followingTagSet()
+
+        if (hashToLoad.isEmpty()) return null
+
+        return TypedFilter(
+            types = setOf(FeedType.FOLLOWS),
+            filter = JsonFilter(
+                kinds = listOf(TextNoteEvent.kind, LongTextNoteEvent.kind),
+                tags = mapOf(
+                    "t" to hashToLoad.map {
+                        listOf(it, it.lowercase(), it.uppercase(), it.capitalize())
+                    }.flatten()
+                ),
+                limit = 100
+            )
+        )
+    }
+
     val followAccountChannel = requestNewChannel()
 
     override fun updateChannelFilters() {
-        followAccountChannel.typedFilters = listOf(createFollowAccountsFilter()).ifEmpty { null }
+        followAccountChannel.typedFilters = listOfNotNull(createFollowAccountsFilter(), createFollowTagsFilter()).ifEmpty { null }
     }
 }

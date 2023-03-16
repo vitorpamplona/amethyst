@@ -249,6 +249,12 @@ class User(val pubkeyHex: String) {
         } ?: false
     }
 
+    fun isFollowingHashtag(tag: String): Boolean {
+        return latestContactList?.unverifiedFollowTagSet()?.toSet()?.let {
+            return tag in it
+        } ?: false
+    }
+
     fun isFollowingCached(user: User): Boolean {
         return latestContactList?.verifiedFollowKeySet?.let {
             return user.pubkeyHex in it
@@ -265,6 +271,10 @@ class User(val pubkeyHex: String) {
 
     fun cachedFollowingKeySet(): Set<HexKey> {
         return latestContactList?.verifiedFollowKeySet ?: emptySet()
+    }
+
+    fun cachedFollowingTagSet(): Set<HexKey> {
+        return latestContactList?.verifiedFollowTagSet ?: emptySet()
     }
 
     fun cachedFollowCount(): Int? {

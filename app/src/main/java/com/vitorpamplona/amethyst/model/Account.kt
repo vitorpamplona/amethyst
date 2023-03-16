@@ -91,10 +91,12 @@ class Account(
 
         val contactList = userProfile().latestContactList
         val follows = contactList?.follows() ?: emptyList()
+        val followsTags = contactList?.unverifiedFollowTagSet() ?: emptyList()
 
         if (contactList != null && follows.isNotEmpty()) {
             val event = ContactListEvent.create(
                 follows,
+                followsTags,
                 relays,
                 loggedIn.privKey!!
             )
@@ -102,7 +104,7 @@ class Account(
             Client.send(event)
             LocalCache.consume(event)
         } else {
-            val event = ContactListEvent.create(listOf(), relays, loggedIn.privKey!!)
+            val event = ContactListEvent.create(listOf(), listOf(), relays, loggedIn.privKey!!)
 
             // Keep this local to avoid erasing a good contact list.
             // Client.send(event)
@@ -246,11 +248,13 @@ class Account(
         if (!isWriteable()) return
 
         val contactList = userProfile().latestContactList
-        val follows = contactList?.follows() ?: emptyList()
+        val followingUsers = contactList?.follows() ?: emptyList()
+        val followingTags = contactList?.unverifiedFollowTagSet() ?: emptyList()
 
-        val event = if (contactList != null && follows.isNotEmpty()) {
+        val event = if (contactList != null) {
             ContactListEvent.create(
-                follows.plus(Contact(user.pubkeyHex, null)),
+                followingUsers.plus(Contact(user.pubkeyHex, null)),
+                followingTags,
                 contactList.relays(),
                 loggedIn.privKey!!
             )
@@ -258,6 +262,35 @@ class Account(
             val relays = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) }
             ContactListEvent.create(
                 listOf(Contact(user.pubkeyHex, null)),
+                followingTags,
+                relays,
+                loggedIn.privKey!!
+            )
+        }
+
+        Client.send(event)
+        LocalCache.consume(event)
+    }
+
+    fun follow(tag: String) {
+        if (!isWriteable()) return
+
+        val contactList = userProfile().latestContactList
+        val followingUsers = contactList?.follows() ?: emptyList()
+        val followingTags = contactList?.unverifiedFollowTagSet() ?: emptyList()
+
+        val event = if (contactList != null) {
+            ContactListEvent.create(
+                followingUsers,
+                followingTags.plus(tag),
+                contactList.relays(),
+                loggedIn.privKey!!
+            )
+        } else {
+            val relays = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) }
+            ContactListEvent.create(
+                followingUsers,
+                followingTags.plus(tag),
                 relays,
                 loggedIn.privKey!!
             )
@@ -271,11 +304,33 @@ class Account(
         if (!isWriteable()) return
 
         val contactList = userProfile().latestContactList
-        val follows = contactList?.follows() ?: emptyList()
+        val followingUsers = contactList?.follows() ?: emptyList()
+        val followingTags = contactList?.unverifiedFollowTagSet() ?: emptyList()
 
-        if (contactList != null && follows.isNotEmpty()) {
+        if (contactList != null && (followingUsers.isNotEmpty() || followingTags.isNotEmpty())) {
             val event = ContactListEvent.create(
-                follows.filter { it.pubKeyHex != user.pubkeyHex },
+                followingUsers.filter { it.pubKeyHex != user.pubkeyHex },
+                followingTags,
+                contactList.relays(),
+                loggedIn.privKey!!
+            )
+
+            Client.send(event)
+            LocalCache.consume(event)
+        }
+    }
+
+    fun unfollow(tag: String) {
+        if (!isWriteable()) return
+
+        val contactList = userProfile().latestContactList
+        val followingUsers = contactList?.follows() ?: emptyList()
+        val followingTags = contactList?.unverifiedFollowTagSet() ?: emptyList()
+
+        if (contactList != null && (followingUsers.isNotEmpty() || followingTags.isNotEmpty())) {
+            val event = ContactListEvent.create(
+                followingUsers,
+                followingTags.filter { it != tag },
                 contactList.relays(),
                 loggedIn.privKey!!
             )
@@ -503,7 +558,11 @@ class Account(
     fun isHidden(user: User) = user.pubkeyHex in hiddenUsers || user.pubkeyHex in transientHiddenUsers
 
     fun followingKeySet(): Set<HexKey> {
-        return userProfile().latestContactList?.verifiedFollowKeySet ?: emptySet()
+        return userProfile().cachedFollowingKeySet() ?: emptySet()
+    }
+
+    fun followingTagSet(): Set<HexKey> {
+        return userProfile().cachedFollowingTagSet() ?: emptySet()
     }
 
     fun isAcceptable(user: User): Boolean {

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandMore
@@ -265,6 +266,15 @@ fun NoteCompose(
                                 "  ${stringResource(id = R.string.boosted)}",
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                            )
+                        }
+
+                        val firstTag = noteEvent.firstIsTaggedHashes(account.followingTagSet())
+                        if (firstTag != null) {
+                            ClickableText(
+                                text = AnnotatedString(" #$firstTag"),
+                                onClick = { navController.navigate("Hashtag/$firstTag") },
+                                style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(alpha = 0.52f))
                             )
                         }
 

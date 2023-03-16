@@ -13,6 +13,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -22,10 +23,13 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.NostrHashtagDataSource
 import com.vitorpamplona.amethyst.ui.dal.HashtagFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.FeedView
 import com.vitorpamplona.amethyst.ui.screen.NostrHashtagFeedViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Composable
 fun HashtagScreen(tag: String?, accountViewModel: AccountViewModel, navController: NavController) {
@@ -70,7 +74,7 @@ fun HashtagScreen(tag: String?, accountViewModel: AccountViewModel, navControlle
             Column(
                 modifier = Modifier.padding(vertical = 0.dp)
             ) {
-                HashtagHeader(tag)
+                HashtagHeader(tag, account)
                 FeedView(feedViewModel, accountViewModel, navController, null)
             }
         }
@@ -78,7 +82,12 @@ fun HashtagScreen(tag: String?, accountViewModel: AccountViewModel, navControlle
 }
 
 @Composable
-fun HashtagHeader(tag: String) {
+fun HashtagHeader(tag: String, account: Account) {
+    val userState by account.userProfile().live().follows.observeAsState()
+    val userFollows = userState?.user ?: return
+
+    val coroutineScope = rememberCoroutineScope()
+
     Column() {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -94,8 +103,15 @@ fun HashtagHeader(tag: String) {
                     ) {
                         Text(
                             "#$tag",
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.weight(1f)
                         )
+
+                        if (userFollows.isFollowingHashtag(tag)) {
+                            UnfollowButton { coroutineScope.launch(Dispatchers.IO) { account.unfollow(tag) } }
+                        } else {
+                            FollowButton { coroutineScope.launch(Dispatchers.IO) { account.follow(tag) } }
+                        }
                     }
                 }
             }
