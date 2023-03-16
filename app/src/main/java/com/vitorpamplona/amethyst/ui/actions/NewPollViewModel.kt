@@ -35,6 +35,9 @@ class NewPollViewModel : NewPostViewModel() {
     }
 
     override fun cancel() {
+        // delete existing pollOptions
+        pollOptions = mutableStateListOf("", "")
+
         super.cancel()
     }
 

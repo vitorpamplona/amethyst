@@ -2,10 +2,7 @@ package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -18,8 +15,10 @@ import com.vitorpamplona.amethyst.ui.actions.NewPollViewModel
 
 @Composable
 fun PollOption(pollViewModel: NewPollViewModel, optionIndex: Int) {
-    Row() {
+    Row {
         OutlinedTextField(
+            modifier = Modifier
+                .weight(1F),
             value = pollViewModel.pollOptions[optionIndex],
             onValueChange = { pollViewModel.pollOptions[optionIndex] = it },
             label = {

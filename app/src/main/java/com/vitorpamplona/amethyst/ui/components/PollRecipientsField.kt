@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.components
 
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
@@ -8,6 +9,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.vitorpamplona.amethyst.R
 
@@ -16,6 +18,8 @@ fun PollRecipientsField() {
     var text by rememberSaveable() { mutableStateOf("") }
 
     OutlinedTextField(
+        modifier = Modifier
+            .fillMaxWidth(),
         value = text,
         onValueChange = { text = it },
         label = {

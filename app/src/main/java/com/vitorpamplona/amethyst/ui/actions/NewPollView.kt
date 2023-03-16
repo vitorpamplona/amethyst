@@ -109,7 +109,6 @@ fun NewPollView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                             }
 
                             Text(stringResource(R.string.poll_heading_required))
-                            PollRecipientsField()
                             PollPrimaryDescription(pollViewModel = pollViewModel)
                             pollViewModel.pollOptions.forEachIndexed { index, element ->
                                 PollOption(pollViewModel, index)
@@ -128,6 +127,7 @@ fun NewPollView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                 )
                             }
                             Text(stringResource(R.string.poll_heading_optional))
+                            PollRecipientsField()
                             PollVoteValueRange()
                             PollConsensusThreshold()
                             PollClosing()
