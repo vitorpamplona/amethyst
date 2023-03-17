@@ -4,11 +4,10 @@ import android.util.Patterns
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
+import androidx.compose.material.Icon
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
@@ -18,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -34,6 +34,7 @@ import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.material.MaterialRichText
 import com.halilibo.richtext.ui.resolveDefaults
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.checkForHashtagWithIcon
 import com.vitorpamplona.amethyst.service.lnurl.LnInvoiceUtil
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
@@ -49,7 +50,7 @@ val noProtocolUrlValidator = Pattern.compile("^[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.
 val tagIndex = Pattern.compile(".*\\#\\[([0-9]+)\\].*")
 
 val mentionsPattern: Pattern = Pattern.compile("@([A-Za-z0-9_\\-]+)")
-val hashTagsPattern: Pattern = Pattern.compile("#([A-Za-z0-9_\\-]+)")
+val hashTagsPattern: Pattern = Pattern.compile("#([A-Za-z0-9_\\-]+\\.?+\\,?+\\??+\\!?+\\;?+\\-?)")
 val urlPattern: Pattern = Patterns.WEB_URL
 
 fun isValidURL(url: String?): Boolean {
@@ -147,7 +148,21 @@ fun RichTextViewer(
                             } else if (tagIndex.matcher(word).matches() && tags != null) {
                                 TagLink(word, tags, canPreview, backgroundColor, accountViewModel, navController)
                             } else if (hashTagsPattern.matcher(word).matches()) {
-                                HashTag(word, accountViewModel, navController)
+                                if (word.endsWith(".") || word.endsWith(",") || word.endsWith("?") || word.endsWith("!") || word.endsWith(";") || word.endsWith("-")) {
+                                    var wordwithoutsuffix = word.removeRange(word.length - 1, word.length)
+                                    var suffix = word.last()
+                                    HashTag(wordwithoutsuffix, accountViewModel, navController)
+                                    Text(
+                                        text = "$suffix ",
+                                        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+                                    )
+                                } else {
+                                    HashTag(word, accountViewModel, navController)
+                                    Text(
+                                        text = " ",
+                                        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+                                    )
+                                }
                             } else if (isBechLink(word)) {
                                 BechLink(word, navController)
                             } else {
@@ -219,11 +234,22 @@ fun HashTag(word: String, accountViewModel: AccountViewModel, navController: Nav
     }
 
     if (tag != null) {
+        val hashtagIcon = checkForHashtagWithIcon(tag)
         ClickableText(
-            text = AnnotatedString("#$tag "),
+            text = AnnotatedString("#$tag"),
             onClick = { navController.navigate("Hashtag/$tag") },
             style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary)
         )
+
+        if (hashtagIcon != null) {
+            Icon(
+                painter = painterResource(hashtagIcon.icon),
+                contentDescription = hashtagIcon.description,
+                tint = hashtagIcon.color,
+                modifier = Modifier.size(20.dp).padding(0.dp, 5.dp, 0.dp, 0.dp)
+
+            )
+        }
     } else {
         Text(text = "$word ")
     }
