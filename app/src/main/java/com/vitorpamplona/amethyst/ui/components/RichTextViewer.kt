@@ -48,7 +48,10 @@ import java.util.regex.Pattern
 
 val imageExtension = Pattern.compile("(.*/)*.+\\.(png|jpg|gif|bmp|jpeg|webp|svg)$", Pattern.CASE_INSENSITIVE)
 val videoExtension = Pattern.compile("(.*/)*.+\\.(mp4|avi|wmv|mpg|amv|webm|mov)$", Pattern.CASE_INSENSITIVE)
-val noProtocolUrlValidator = Pattern.compile("^[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b(?:[-a-zA-Z0-9()@:%_\\+.~#?&//=]*)$")
+
+// Group 1 = url, group 4 additional chars
+val noProtocolUrlValidator = Pattern.compile("(([\\w\\d-]+\\.)*[a-zA-Z][\\w-]+[\\.\\:]\\w+([\\/\\?\\=\\&\\#\\.]?[\\w-]+)*\\/?)(.*)")
+
 val tagIndex = Pattern.compile(".*\\#\\[([0-9]+)\\].*")
 
 val mentionsPattern: Pattern = Pattern.compile("@([A-Za-z0-9_\\-]+)")
@@ -146,7 +149,13 @@ fun RichTextViewer(
                             } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
                                 ClickablePhone(word)
                             } else if (noProtocolUrlValidator.matcher(word).matches()) {
-                                UrlPreview("https://$word", word)
+                                val matcher = noProtocolUrlValidator.matcher(word)
+                                matcher.find()
+                                val url = matcher.group(1) // url
+                                val additionalChars = matcher.group(4) ?: "" // additional chars
+
+                                ClickableUrl(url, "https://$url")
+                                Text("$additionalChars")
                             } else if (tagIndex.matcher(word).matches() && tags != null) {
                                 TagLink(word, tags, canPreview, backgroundColor, accountViewModel, navController)
                             } else if (hashTagsPattern.matcher(word).matches()) {
@@ -167,7 +176,13 @@ fun RichTextViewer(
                             } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
                                 ClickablePhone(word)
                             } else if (noProtocolUrlValidator.matcher(word).matches()) {
-                                ClickableUrl(word, "https://$word")
+                                val matcher = noProtocolUrlValidator.matcher(word)
+                                matcher.find()
+                                val url = matcher.group(1) // url
+                                val additionalChars = matcher.group(4) ?: "" // additional chars
+
+                                ClickableUrl(url, "https://$url")
+                                Text("$additionalChars")
                             } else if (tagIndex.matcher(word).matches() && tags != null) {
                                 TagLink(word, tags, canPreview, backgroundColor, accountViewModel, navController)
                             } else if (hashTagsPattern.matcher(word).matches()) {
