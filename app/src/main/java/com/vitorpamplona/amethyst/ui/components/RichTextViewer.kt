@@ -231,14 +231,6 @@ fun HashTag(word: String, accountViewModel: AccountViewModel, navController: Nav
                 ) {
                     append("#$tag")
                 }
-                if (suffix != null) {
-                    withStyle(
-                        LocalTextStyle.current.copy(color = MaterialTheme.colors.onBackground)
-                            .toSpanStyle()
-                    ) {
-                        append(suffix)
-                    }
-                }
             },
             onClick = { navController.navigate("Hashtag/$tag") }
         )
@@ -252,7 +244,7 @@ fun HashTag(word: String, accountViewModel: AccountViewModel, navController: Nav
             )
         }
 
-        Text(text = " ")
+        Text(text = "$suffix ")
     } else {
         Text(text = "$word ")
     }
