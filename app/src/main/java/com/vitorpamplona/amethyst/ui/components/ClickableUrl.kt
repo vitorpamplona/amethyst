@@ -12,7 +12,7 @@ fun ClickableUrl(urlText: String, url: String) {
     val uri = LocalUriHandler.current
 
     ClickableText(
-        text = AnnotatedString("$urlText "),
+        text = AnnotatedString(urlText),
         onClick = { runCatching { uri.openUri(url) } },
         style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary)
     )

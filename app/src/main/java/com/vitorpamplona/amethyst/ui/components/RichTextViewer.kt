@@ -155,7 +155,7 @@ fun RichTextViewer(
                                 val additionalChars = matcher.group(4) ?: "" // additional chars
 
                                 ClickableUrl(url, "https://$url")
-                                Text("$additionalChars")
+                                Text("$additionalChars ")
                             } else if (tagIndex.matcher(word).matches() && tags != null) {
                                 TagLink(word, tags, canPreview, backgroundColor, accountViewModel, navController)
                             } else if (hashTagsPattern.matcher(word).matches()) {
@@ -182,7 +182,7 @@ fun RichTextViewer(
                                 val additionalChars = matcher.group(4) ?: "" // additional chars
 
                                 ClickableUrl(url, "https://$url")
-                                Text("$additionalChars")
+                                Text("$additionalChars ")
                             } else if (tagIndex.matcher(word).matches() && tags != null) {
                                 TagLink(word, tags, canPreview, backgroundColor, accountViewModel, navController)
                             } else if (hashTagsPattern.matcher(word).matches()) {
