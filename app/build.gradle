@@ -38,6 +38,7 @@ android {
 
     productFlavors {
         play {
+            getIsDefault().set(true)
             dimension "channel"
         }
 
