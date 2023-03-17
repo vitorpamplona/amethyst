@@ -309,7 +309,7 @@ fun NoteCompose(
 
                     Spacer(modifier = Modifier.height(3.dp))
 
-                    if (noteEvent is TextNoteEvent && (note.replyTo != null || noteEvent.mentions().isNotEmpty())) {
+                    if (!makeItShort && noteEvent is TextNoteEvent && (note.replyTo != null || noteEvent.mentions().isNotEmpty())) {
                         val sortedMentions = noteEvent.mentions()
                             .mapNotNull { LocalCache.checkGetOrCreateUser(it) }
                             .toSet()
@@ -338,7 +338,7 @@ fun NoteCompose(
                         } else {
                             ReplyInformation(note.replyTo, sortedMentions, account, navController)
                         }
-                    } else if (noteEvent is ChannelMessageEvent && (note.replyTo != null || noteEvent.mentions() != null)) {
+                    } else if (!makeItShort && noteEvent is ChannelMessageEvent && (note.replyTo != null || noteEvent.mentions() != null)) {
                         val sortedMentions = noteEvent.mentions()
                             .mapNotNull { LocalCache.checkGetOrCreateUser(it) }
                             .toSet()
