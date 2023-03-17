@@ -1,9 +1,7 @@
 package com.vitorpamplona.amethyst.ui.components
 
 import android.util.Patterns
-import androidx.compose.animation.VectorConverter
 import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -13,12 +11,8 @@ import androidx.compose.material.Icon
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -30,18 +24,15 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextDirection
-import androidx.compose.ui.text.toLowerCase
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import coil.ImageLoader
 import com.google.accompanist.flowlayout.FlowRow
 import com.halilibo.richtext.markdown.Markdown
 import com.halilibo.richtext.markdown.MarkdownParseOptions
 import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.material.MaterialRichText
 import com.halilibo.richtext.ui.resolveDefaults
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.checkForHashtagWithIcon
 import com.vitorpamplona.amethyst.service.lnurl.LnInvoiceUtil
@@ -240,11 +231,11 @@ fun HashTag(word: String, accountViewModel: AccountViewModel, navController: Nav
         null
     }
 
-
     if (tag != null) {
         var txt = AnnotatedString("#$tag ")
-        val HashtagIcon = checkForHashtagWithIcon(tag)
-        if(HashtagIcon != null){
+        val hashtagIcon = checkForHashtagWithIcon(tag)
+
+        if (hashtagIcon != null) {
             txt = AnnotatedString("#$tag")
         }
         ClickableText(
@@ -252,12 +243,13 @@ fun HashTag(word: String, accountViewModel: AccountViewModel, navController: Nav
             onClick = { navController.navigate("Hashtag/$tag") },
             style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary)
         )
-        if(HashtagIcon != null){
+
+        if (hashtagIcon != null) {
             Icon(
-                painter = painterResource(HashtagIcon.icon),
-                HashtagIcon.description,
-                tint =  HashtagIcon.color,
-                modifier = Modifier.size(20.dp).padding(0.dp,5.dp,0.dp,0.dp)
+                painter = painterResource(hashtagIcon.icon),
+                contentDescription = hashtagIcon.description,
+                tint = hashtagIcon.color,
+                modifier = Modifier.size(20.dp).padding(0.dp, 5.dp, 0.dp, 0.dp)
 
             )
         }
