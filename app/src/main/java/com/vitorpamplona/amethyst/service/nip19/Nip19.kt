@@ -18,16 +18,12 @@ object Nip19 {
         if (uri == null) return null
 
         try {
-            println("Issue trying to Decode NIP19 $uri")
-
             val matcher = nip19regex.matcher(uri)
             matcher.find()
             val uriScheme = matcher.group(1) // nostr:
             val type = matcher.group(2) // npub1
             val key = matcher.group(3) // bech32
             val additionalChars = matcher.group(4) ?: "" // additional chars
-
-            println("Issue trying to Decode NIP19 Additional Chars $additionalChars")
 
             val bytes = (type + key).bechToBytes()
             val parsed = when (type.lowercase()) {
