@@ -7,7 +7,7 @@ fun checkForHashtagWithIcon(tag: String): HashtagIcon? {
         return HashtagIcon(R.drawable.ht_btc, "Bitcoin", Color(0xFFF2A900))
     } else if (tag.lowercase() == "nostr") {
         return HashtagIcon(R.drawable.ht_nostr, "Nostr", Color(0xFF9C59FF))
-    } else if (tag.lowercase() == "zap" || tag.lowercase() == "zapathon" || tag.lowercase() == "lightning") {
+    } else if (tag.lowercase() == "zap" || tag.lowercase() == "zapathon" || tag.lowercase() == "zapraiser" || tag.lowercase() == "zaplife" || tag.lowercase() == "lightning") {
         return HashtagIcon(R.drawable.ht_zap, "Zap", Color(0xFFFFEC01))
     } else if (tag.lowercase() == "amethyst") {
         return HashtagIcon(R.drawable.ht_amethyst, "Amethyst", Color(0xFFb793e6))
