@@ -414,7 +414,7 @@ fun ZapReaction(
 
     var zapAmount by remember { mutableStateOf<BigDecimal?>(null) }
 
-    LaunchedEffect(key1 = zappedNote) {
+    LaunchedEffect(key1 = zapsState) {
         withContext(Dispatchers.IO) {
             zapAmount = zappedNote?.zappedAmount()
         }
