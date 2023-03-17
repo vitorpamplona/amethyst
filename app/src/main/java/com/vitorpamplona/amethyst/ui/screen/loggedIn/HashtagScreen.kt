@@ -107,7 +107,7 @@ fun HashtagHeader(tag: String, account: Account) {
                             modifier = Modifier.weight(1f)
                         )
 
-                        if (userFollows.isFollowingHashtag(tag)) {
+                        if (userFollows.isFollowingHashtagCached(tag)) {
                             UnfollowButton { coroutineScope.launch(Dispatchers.IO) { account.unfollow(tag) } }
                         } else {
                             FollowButton { coroutineScope.launch(Dispatchers.IO) { account.follow(tag) } }

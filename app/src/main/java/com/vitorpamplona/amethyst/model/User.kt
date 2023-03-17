@@ -257,6 +257,12 @@ class User(val pubkeyHex: String) {
         } ?: false
     }
 
+    fun isFollowingHashtagCached(tag: String): Boolean {
+        return latestContactList?.verifiedFollowTagSet?.let {
+            return tag.lowercase() in it
+        } ?: false
+    }
+
     fun isFollowingCached(user: User): Boolean {
         return latestContactList?.verifiedFollowKeySet?.let {
             return user.pubkeyHex in it

@@ -330,7 +330,7 @@ class Account(
         if (contactList != null && (followingUsers.isNotEmpty() || followingTags.isNotEmpty())) {
             val event = ContactListEvent.create(
                 followingUsers,
-                followingTags.filter { it != tag },
+                followingTags.filter { !it.equals(tag, ignoreCase = true) },
                 contactList.relays(),
                 loggedIn.privKey!!
             )
