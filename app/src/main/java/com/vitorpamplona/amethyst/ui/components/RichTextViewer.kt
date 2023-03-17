@@ -52,7 +52,7 @@ val videoExtension = Pattern.compile("(.*/)*.+\\.(mp4|avi|wmv|mpg|amv|webm|mov)$
 // Group 1 = url, group 4 additional chars
 val noProtocolUrlValidator = Pattern.compile("(([\\w\\d-]+\\.)*[a-zA-Z][\\w-]+[\\.\\:]\\w+([\\/\\?\\=\\&\\#\\.]?[\\w-]+)*\\/?)(.*)")
 
-val tagIndex = Pattern.compile(".*\\#\\[([0-9]+)\\].*")
+val tagIndex = Pattern.compile("\\#\\[([0-9]+)\\](.*)")
 
 val mentionsPattern: Pattern = Pattern.compile("@([A-Za-z0-9_\\-]+)")
 val hashTagsPattern: Pattern = Pattern.compile("#([a-z0-9_\\-]+)(.*)", Pattern.CASE_INSENSITIVE)
@@ -269,12 +269,12 @@ fun HashTag(word: String, accountViewModel: AccountViewModel, navController: Nav
 fun TagLink(word: String, tags: List<List<String>>, canPreview: Boolean, backgroundColor: Color, accountViewModel: AccountViewModel, navController: NavController) {
     val matcher = tagIndex.matcher(word)
 
-    val index = try {
+    val (index, extraCharacters) = try {
         matcher.find()
-        matcher.group(1)?.toInt()
+        Pair(matcher.group(1)?.toInt(), matcher.group(2) ?: "")
     } catch (e: Exception) {
-        println("Couldn't link tag $word")
-        null
+        Log.w("Tag Parser", "Couldn't link tag $word", e)
+        Pair(null, null)
     }
 
     if (index == null) {
@@ -289,6 +289,7 @@ fun TagLink(word: String, tags: List<List<String>>, canPreview: Boolean, backgro
                 val user = userState.value?.user
                 if (user != null) {
                     ClickableUserTag(user, navController)
+                    Text(text = "$extraCharacters ")
                 } else {
                     Text(text = "$word ")
                 }
@@ -319,6 +320,7 @@ fun TagLink(word: String, tags: List<List<String>>, canPreview: Boolean, backgro
                     )
                 } else {
                     ClickableNoteTag(note, navController)
+                    Text(text = "$extraCharacters ")
                 }
             } else {
                 // if here the tag is not a valid Nostr Hex

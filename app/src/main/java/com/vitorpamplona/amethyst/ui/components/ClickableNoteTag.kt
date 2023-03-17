@@ -15,7 +15,7 @@ fun ClickableNoteTag(
     navController: NavController
 ) {
     ClickableText(
-        text = AnnotatedString("@${baesNote.idNote().toShortenHex()} "),
+        text = AnnotatedString("@${baesNote.idNote().toShortenHex()}"),
         onClick = { navController.navigate("Note/${baesNote.idHex}") },
         style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary)
     )
