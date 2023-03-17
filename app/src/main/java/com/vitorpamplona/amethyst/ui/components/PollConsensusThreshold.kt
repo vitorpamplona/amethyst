@@ -8,21 +8,43 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
+import androidx.compose.material.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.actions.NewPollViewModel
 
 @Composable
-fun PollConsensusThreshold() {
+fun PollConsensusThreshold(pollViewModel: NewPollViewModel) {
     var text by rememberSaveable { mutableStateOf("") }
+
+    var isInputValid = true
+    if (text.isNotEmpty()) {
+        try {
+            val int = text.toInt()
+            if (int < 0 || int > 100) {
+                isInputValid = false
+            } else { pollViewModel.consensus = int }
+        } catch (e: Exception) { isInputValid = false }
+    }
+
+    val colorInValid = TextFieldDefaults.outlinedTextFieldColors(
+        focusedBorderColor = MaterialTheme.colors.error,
+        unfocusedBorderColor = Color.Red
+    )
+    val colorValid = TextFieldDefaults.outlinedTextFieldColors(
+        focusedBorderColor = MaterialTheme.colors.primary,
+        unfocusedBorderColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+    )
 
     Row(
         Modifier.fillMaxWidth(),
@@ -33,6 +55,7 @@ fun PollConsensusThreshold() {
             onValueChange = { text = it },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.width(150.dp),
+            colors = if (isInputValid) colorValid else colorInValid,
             label = {
                 Text(
                     text = stringResource(R.string.poll_consensus_threshold),
@@ -52,5 +75,5 @@ fun PollConsensusThreshold() {
 @Preview
 @Composable
 fun PollConsensusThresholdPreview() {
-    PollConsensusThreshold()
+    PollConsensusThreshold(NewPollViewModel())
 }

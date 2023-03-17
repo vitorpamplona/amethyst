@@ -230,7 +230,7 @@
     <string name="poll_zap_value_min">Zap minimum</string>
     <string name="poll_zap_value_max">Zap maximum</string>
     <string name="poll_consensus_threshold">Consensus</string>
-    <string name="poll_consensus_threshold_percent">%</string>
+    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_zap_amount">sats</string>
     <string name="poll_closing_time">Close after</string>
     <string name="poll_closing_time_days">days</string>

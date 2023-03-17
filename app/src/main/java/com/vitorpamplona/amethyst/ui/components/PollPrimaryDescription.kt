@@ -1,13 +1,10 @@
 package com.vitorpamplona.amethyst.ui.components
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -30,6 +27,20 @@ fun PollPrimaryDescription(pollViewModel: NewPollViewModel) {
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
 
+    var isInputValid = true
+    if (pollViewModel.message.text.isEmpty()) {
+        isInputValid = false
+    }
+
+    val colorInValid = TextFieldDefaults.outlinedTextFieldColors(
+        focusedBorderColor = MaterialTheme.colors.error,
+        unfocusedBorderColor = Color.Red
+    )
+    val colorValid = TextFieldDefaults.outlinedTextFieldColors(
+        focusedBorderColor = MaterialTheme.colors.primary,
+        unfocusedBorderColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+    )
+
     OutlinedTextField(
         value = pollViewModel.message,
         onValueChange = {
@@ -47,11 +58,6 @@ fun PollPrimaryDescription(pollViewModel: NewPollViewModel) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 8.dp)
-            .border(
-                width = 1.dp,
-                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-                shape = RoundedCornerShape(8.dp)
-            )
             .focusRequester(focusRequester)
             .onFocusChanged {
                 if (it.isFocused) {
@@ -64,11 +70,7 @@ fun PollPrimaryDescription(pollViewModel: NewPollViewModel) {
                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
             )
         },
-        colors = TextFieldDefaults
-            .outlinedTextFieldColors(
-                unfocusedBorderColor = Color.Transparent,
-                focusedBorderColor = Color.Transparent
-            ),
+        colors = if (isInputValid) colorValid else colorInValid,
         visualTransformation = UrlUserTagTransformation(MaterialTheme.colors.primary),
         textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
     )

@@ -5,23 +5,20 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.actions.NewPollViewModel
 
 @Composable
-fun PollRecipientsField() {
-    var text by rememberSaveable() { mutableStateOf("") }
+fun PollRecipientsField(pollViewModel: NewPollViewModel) {
 
     OutlinedTextField(
         modifier = Modifier
             .fillMaxWidth(),
-        value = text,
-        onValueChange = { text = it },
+        value = pollViewModel.zapRecipients[0],
+        onValueChange = { /* TODO */ },
+        enabled = false, // TODO enable add recipients
         label = {
             Text(
                 text = stringResource(R.string.poll_zap_recipients),

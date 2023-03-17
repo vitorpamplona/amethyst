@@ -3,12 +3,18 @@ package com.vitorpamplona.amethyst.ui.actions
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.text.input.TextFieldValue
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 
 class NewPollViewModel : NewPostViewModel() {
 
+    var zapRecipients = mutableStateListOf<HexKey>()
     var pollOptions = mutableStateListOf("", "")
+    var zapMax: Int? = null
+    var zapMin: Int? = null
+    var consensus: Int? = null
+    var closedAfter: Int? = null
 
     override fun load(account: Account, replyingTo: Note?, quote: Note?) {
         super.load(account, replyingTo, quote)
@@ -32,13 +38,15 @@ class NewPollViewModel : NewPostViewModel() {
 
     override fun sendPost() {
         super.sendPost()
+
+        // delete existing pollOptions
+        pollOptions = mutableStateListOf("", "")
     }
 
     override fun cancel() {
-        // delete existing pollOptions
-        pollOptions = mutableStateListOf("", "")
-
         super.cancel()
+
+        pollOptions = mutableStateListOf("", "")
     }
 
     override fun findUrlInMessage(): String? {

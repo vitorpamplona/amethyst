@@ -39,6 +39,11 @@ fun NewPollView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
 
     val scrollState = rememberScrollState()
 
+    // if no recipients, add user's pubkey
+    if (pollViewModel.zapRecipients.isEmpty()) {
+        pollViewModel.zapRecipients.add(account.userProfile().pubkeyHex)
+    }
+
     LaunchedEffect(Unit) {
         pollViewModel.load(account, baseReplyTo, quote)
         delay(100)
@@ -109,7 +114,8 @@ fun NewPollView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                             }
 
                             Text(stringResource(R.string.poll_heading_required))
-                            PollPrimaryDescription(pollViewModel = pollViewModel)
+                            PollRecipientsField(pollViewModel)
+                            PollPrimaryDescription(pollViewModel)
                             pollViewModel.pollOptions.forEachIndexed { index, element ->
                                 PollOption(pollViewModel, index)
                             }
@@ -127,10 +133,9 @@ fun NewPollView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                 )
                             }
                             Text(stringResource(R.string.poll_heading_optional))
-                            PollRecipientsField()
-                            PollVoteValueRange()
-                            PollConsensusThreshold()
-                            PollClosing()
+                            PollVoteValueRange(pollViewModel)
+                            PollConsensusThreshold(pollViewModel)
+                            PollClosing(pollViewModel)
                         }
                     }
 

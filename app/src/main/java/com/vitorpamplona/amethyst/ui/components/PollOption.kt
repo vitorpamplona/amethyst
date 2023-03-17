@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -15,6 +16,20 @@ import com.vitorpamplona.amethyst.ui.actions.NewPollViewModel
 
 @Composable
 fun PollOption(pollViewModel: NewPollViewModel, optionIndex: Int) {
+    var isInputValid = true
+    if (pollViewModel.pollOptions[optionIndex].isEmpty()) {
+        isInputValid = false
+    }
+
+    val colorInValid = TextFieldDefaults.outlinedTextFieldColors(
+        focusedBorderColor = MaterialTheme.colors.error,
+        unfocusedBorderColor = Color.Red
+    )
+    val colorValid = TextFieldDefaults.outlinedTextFieldColors(
+        focusedBorderColor = MaterialTheme.colors.primary,
+        unfocusedBorderColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+    )
+
     Row {
         OutlinedTextField(
             modifier = Modifier
@@ -32,8 +47,8 @@ fun PollOption(pollViewModel: NewPollViewModel, optionIndex: Int) {
                     text = stringResource(R.string.poll_option_description),
                     color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                 )
-            }
-
+            },
+            colors = if (isInputValid) colorValid else colorInValid
         )
         if (optionIndex > 1) {
             Button(
