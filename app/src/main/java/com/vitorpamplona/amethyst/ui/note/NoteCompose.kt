@@ -303,7 +303,7 @@ fun NoteCompose(
                         }
                     }
 
-                    if (note.author != null && !makeItShort) {
+                    if (note.author != null && !makeItShort && !isQuotedNote) {
                         ObserveDisplayNip05Status(note.author!!)
                     }
 
