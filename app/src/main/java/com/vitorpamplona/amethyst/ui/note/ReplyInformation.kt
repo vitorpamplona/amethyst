@@ -64,7 +64,7 @@ fun ReplyInformation(replyTo: List<Note>?, dupMentions: List<User>?, account: Ac
                                 )
                             } else if (idx < repliesToDisplay.size - 1) {
                                 Text(
-                                    " ${stringResource(R.string.and)} ",
+                                    "${stringResource(R.string.and)}",
                                     fontSize = 13.sp,
                                     color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                                 )
@@ -78,7 +78,7 @@ fun ReplyInformation(replyTo: List<Note>?, dupMentions: List<User>?, account: Ac
                                 )
                             } else if (idx < repliesToDisplay.size) {
                                 Text(
-                                    " ${stringResource(R.string.and)} ",
+                                    "${stringResource(R.string.and)}",
                                     fontSize = 13.sp,
                                     color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                                 )
