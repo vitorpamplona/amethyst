@@ -18,7 +18,7 @@ object NostrSearchEventOrUserDataSource : NostrDataSource("SingleEventFeed") {
 
     private fun createAnythingWithIDFilter(): List<TypedFilter>? {
         val mySearchString = searchString
-        if (mySearchString == null) {
+        if (mySearchString.isNullOrBlank()) {
             return null
         }
 

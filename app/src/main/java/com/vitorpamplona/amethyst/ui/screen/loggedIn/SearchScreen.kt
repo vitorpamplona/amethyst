@@ -97,10 +97,13 @@ fun SearchScreen(
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Global Start")
                 NostrGlobalDataSource.start()
+                NostrSearchEventOrUserDataSource.start()
                 feedViewModel.refresh()
             }
             if (event == Lifecycle.Event.ON_PAUSE) {
                 println("Global Stop")
+                NostrSearchEventOrUserDataSource.clear()
+                NostrSearchEventOrUserDataSource.stop()
                 NostrGlobalDataSource.stop()
             }
         }

@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import android.content.Intent
+import android.graphics.Bitmap
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -20,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -33,6 +35,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.toBitmap
+import androidx.core.graphics.get
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.google.accompanist.flowlayout.FlowRow
@@ -497,17 +501,20 @@ fun NoteCompose(
 
 @Composable
 fun BadgeDisplay(baseNote: Note) {
+    val background = MaterialTheme.colors.background
     val badgeData = baseNote.event as? BadgeDefinitionEvent ?: return
+    var backgroundFromImage by remember { mutableStateOf(background) }
 
     Row(
         modifier = Modifier
             .padding(10.dp)
-            .clip(shape = CutCornerShape(20, 20, 0, 0))
+            .clip(shape = CutCornerShape(20, 20, 20, 20))
             .border(
                 5.dp,
                 MaterialTheme.colors.primary.copy(alpha = 0.32f),
                 CutCornerShape(20)
             )
+            .background(backgroundFromImage)
     ) {
         Column {
             badgeData.image()?.let {
@@ -518,7 +525,11 @@ fun BadgeDisplay(baseNote: Note) {
                         it
                     ),
                     contentScale = ContentScale.FillWidth,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    onSuccess = {
+                        val backgroundColor = it.result.drawable.toBitmap(200, 200).copy(Bitmap.Config.ARGB_8888, false).get(0, 199)
+                        backgroundFromImage = Color(backgroundColor)
+                    }
                 )
             }
 
@@ -529,7 +540,8 @@ fun BadgeDisplay(baseNote: Note) {
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 10.dp, end = 10.dp, top = 10.dp)
+                        .padding(start = 10.dp, end = 10.dp),
+                    color = if (backgroundFromImage.luminance() > 0.5) lightColors().onBackground else darkColors().onBackground
                 )
             }
 
