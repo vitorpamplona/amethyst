@@ -22,7 +22,7 @@
     <string name="copy_user_pubkey">A felhasználó PubKulcs másolása</string>
     <string name="copy_note_id">A bejegyzés azonosítójának másolása</string>
     <string name="broadcast">Közvetít</string>
-    <string name="block_hide_user"><![CDATA[Block & Hide User]]></string>
+    <string name="block_hide_user"><![CDATA[Tiltás és Felhasználó elrejtése]]></string>
     <string name="report_spam_scam">Spam / Csalás bejelentés</string>
     <string name="report_impersonation">Megszemélyesítés bejelentés</string>
     <string name="report_explicit_content">Szókimondó tartalom bejelentés</string>
@@ -65,7 +65,7 @@
     <string name="description">Leírás</string>
     <string name="about_us">"Rólunk.. "</string>
     <string name="what_s_on_your_mind">Mire gondolsz?</string>
-    <string name="post">Hozzászólás</string>
+    <string name="post">Küldés</string>
     <string name="save">Mentés</string>
     <string name="create">Létrehoz</string>
     <string name="cancel">Törlés</string>
@@ -85,7 +85,7 @@
     <string name="my_username">Felhasználónevem</string>
     <string name="about_me">Rólam</string>
     <string name="avatar_url">Avatarom URL-je</string>
-    <string name="banner_url">Bannerem UR-jeL</string>
+    <string name="banner_url">Bannerem URL-je</string>
     <string name="website_url">Oldalam URL-je</string>
     <string name="ln_address">LN Cím</string>
     <string name="ln_url_outdated">LN URL (elavult)</string>
@@ -94,7 +94,7 @@
     <string name="upload_image">Kép feltöltése</string>
     <string name="uploading">Feltöltés…</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">A felhasználó a sat fogadáshoz nem rendelkezik LN cím beállítással</string>
-    <string name="reply_here">"válaszolj ide.. "</string>
+    <string name="reply_here">"itt tudsz válaszolni.. "</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">Megosztáshoz a bejegyzés azonosítót a vágólapra másolja</string>
     <string name="copy_channel_id_note_to_the_clipboard">Bejegyzés azonosító vágólapra másolása</string>
     <string name="edits_the_channel_metadata">Szerkeszti a csatorna metaadatait</string>
@@ -102,7 +102,7 @@
     <string name="known">Ismert</string>
     <string name="new_requests">Új kérések</string>
     <string name="blocked_users">Letiltott felhasználók</string>
-    <string name="new_threads">Új szálak</string>
+    <string name="new_threads">Bejegyzések</string>
     <string name="conversations">Beszélgetések</string>
     <string name="notes">Bejegyzések</string>
     <string name="replies">Válaszok</string>
@@ -130,7 +130,7 @@
     <string name="hide_password">Jelszó elrejtése</string>
     <string name="invalid_key">Érvénytelen kulcs</string>
     <string name="i_accept_the">"Elfogadom a "</string>
-    <string name="terms_of_use">használati feltételek</string>
+    <string name="terms_of_use">használati feltételeket</string>
     <string name="acceptance_of_terms_is_required">A feltételek elfogadása szükséges</string>
     <string name="key_is_required">Kulcs szükséges</string>
     <string name="login">Bejelentkezés</string>
@@ -147,7 +147,7 @@
     <string name="description_to">leírását erre</string>
     <string name="and_picture_to">és a képet erre</string>
     <string name="leave">Kilépés</string>
-    <string name="unfollow">Leíratkozás</string>
+    <string name="unfollow">Kikövetem</string>
     <string name="channel_created">Csatorna létrehozva</string>
     <string name="channel_information_changed_to">"A csatornainformáció a következőre módosult"</string>
     <string name="public_chat">Publikus Chat</string>
@@ -156,9 +156,9 @@
     <string name="translations_auto">Automatikus</string>
     <string name="translations_translated_from">fordítás erről</string>
     <string name="translations_to">erre</string>
-    <string name="translations_show_in_lang_first">Mutasd ebben %1$s első</string>
-    <string name="translations_always_translate_to_lang">Mindig fordítsa le %1$s</string>
-    <string name="translations_never_translate_from_lang">Soha ne fordítsd erről %1$s</string>
+    <string name="translations_show_in_lang_first">Először %1$s nyelven</string>
+    <string name="translations_always_translate_to_lang">Mindig fordítsa le %1$s-ra</string>
+    <string name="translations_never_translate_from_lang">Soha ne fordíts %1$s-ról</string>
     <string name="never">soha</string>
     <string name="now">most</string>
     <string name="h">ó</string>
@@ -174,7 +174,7 @@
     <string name="mark_all_as_read">Összes megjelölése olvasottként</string>
     <string name="account_backup_tips_md">
         ## Kulcs- és biztonsági mentési tippek
-        \n\nFiókját titkos kulcs védi. A kulcs egy hosszú véletlenszerű karakterlánc, amely **nsec1**-al kezdődik. Bárki, aki hozzáfér az Ön titkos kulcsához, közzétehet tartalmat az Ön személyazonosságának használatával.
+        \n\nFiókját titkos kulcs védi. A kulcs egy hosszú véletlenszerű karakterlánc, amely **nsec1**-el kezdődik. Bárki, aki az Ön titkos kulcsához hozzáfér, az Ön személyazonosságának használatával bármilyen tartalmat közzétehet.
         \n\n- **Ne** helyezze el titkos kulcsát olyan webhelyen vagy szoftverben, amelyben nem bízik.
         \n- Az Amethyst fejlesztők a titkos kulcsodat **soha** nem fogják elkérni.
         \n- A fiók-helyreállításhoz, titkos kulcsáról **mindig** készítsen biztonságos biztonsági másolatot. Javasoljuk a jelszókezelő használatát.
