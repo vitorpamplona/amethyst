@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.components
 
+import android.util.Log
 import android.util.Patterns
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
@@ -18,12 +19,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -50,7 +52,7 @@ val noProtocolUrlValidator = Pattern.compile("^[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.
 val tagIndex = Pattern.compile(".*\\#\\[([0-9]+)\\].*")
 
 val mentionsPattern: Pattern = Pattern.compile("@([A-Za-z0-9_\\-]+)")
-val hashTagsPattern: Pattern = Pattern.compile("#([A-Za-z0-9_\\-]+\\.?+\\,?+\\??+\\!?+\\;?+\\-?)")
+val hashTagsPattern: Pattern = Pattern.compile("#([a-z0-9_\\-]+)(.*)", Pattern.CASE_INSENSITIVE)
 val urlPattern: Pattern = Patterns.WEB_URL
 
 fun isValidURL(url: String?): Boolean {
@@ -148,21 +150,7 @@ fun RichTextViewer(
                             } else if (tagIndex.matcher(word).matches() && tags != null) {
                                 TagLink(word, tags, canPreview, backgroundColor, accountViewModel, navController)
                             } else if (hashTagsPattern.matcher(word).matches()) {
-                                if (word.endsWith(".") || word.endsWith(",") || word.endsWith("?") || word.endsWith("!") || word.endsWith(";") || word.endsWith("-")) {
-                                    var wordwithoutsuffix = word.removeRange(word.length - 1, word.length)
-                                    var suffix = word.last()
-                                    HashTag(wordwithoutsuffix, accountViewModel, navController)
-                                    Text(
-                                        text = "$suffix ",
-                                        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-                                    )
-                                } else {
-                                    HashTag(word, accountViewModel, navController)
-                                    Text(
-                                        text = " ",
-                                        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-                                    )
-                                }
+                                HashTag(word, accountViewModel, navController)
                             } else if (isBechLink(word)) {
                                 BechLink(word, navController)
                             } else {
@@ -225,20 +213,34 @@ fun BechLink(word: String, navController: NavController) {
 fun HashTag(word: String, accountViewModel: AccountViewModel, navController: NavController) {
     val hashtagMatcher = hashTagsPattern.matcher(word)
 
-    val tag = try {
+    val (tag, suffix) = try {
         hashtagMatcher.find()
-        hashtagMatcher.group(1)
+        Pair(hashtagMatcher.group(1), hashtagMatcher.group(2))
     } catch (e: Exception) {
-        println("Couldn't link hashtag $word")
-        null
+        Log.e("Hashtag Parser", "Couldn't link hashtag $word", e)
+        Pair(null, null)
     }
 
     if (tag != null) {
         val hashtagIcon = checkForHashtagWithIcon(tag)
+
         ClickableText(
-            text = AnnotatedString("#$tag"),
-            onClick = { navController.navigate("Hashtag/$tag") },
-            style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary)
+            text = buildAnnotatedString {
+                withStyle(
+                    LocalTextStyle.current.copy(color = MaterialTheme.colors.primary).toSpanStyle()
+                ) {
+                    append("#$tag")
+                }
+                if (suffix != null) {
+                    withStyle(
+                        LocalTextStyle.current.copy(color = MaterialTheme.colors.onBackground)
+                            .toSpanStyle()
+                    ) {
+                        append(suffix)
+                    }
+                }
+            },
+            onClick = { navController.navigate("Hashtag/$tag") }
         )
 
         if (hashtagIcon != null) {
@@ -247,9 +249,10 @@ fun HashTag(word: String, accountViewModel: AccountViewModel, navController: Nav
                 contentDescription = hashtagIcon.description,
                 tint = hashtagIcon.color,
                 modifier = Modifier.size(20.dp).padding(0.dp, 5.dp, 0.dp, 0.dp)
-
             )
         }
+
+        Text(text = " ")
     } else {
         Text(text = "$word ")
     }
