@@ -43,8 +43,8 @@ import java.net.URISyntaxException
 import java.net.URL
 import java.util.regex.Pattern
 
-val imageExtension = Pattern.compile("(.*/)*.+\\.(png|jpg|gif|bmp|jpeg|webp|svg)$")
-val videoExtension = Pattern.compile("(.*/)*.+\\.(mp4|avi|wmv|mpg|amv|webm|mov)$")
+val imageExtension = Pattern.compile("(.*/)*.+\\.(png|jpg|gif|bmp|jpeg|webp|svg)$", Pattern.CASE_INSENSITIVE)
+val videoExtension = Pattern.compile("(.*/)*.+\\.(mp4|avi|wmv|mpg|amv|webm|mov)$", Pattern.CASE_INSENSITIVE)
 val noProtocolUrlValidator = Pattern.compile("^[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b(?:[-a-zA-Z0-9()@:%_\\+.~#?&//=]*)$")
 val tagIndex = Pattern.compile(".*\\#\\[([0-9]+)\\].*")
 
@@ -197,19 +197,7 @@ fun isBechLink(word: String): Boolean {
 
 @Composable
 fun BechLink(word: String, navController: NavController) {
-    val uri = if (word.startsWith("nostr", true)) {
-        word
-    } else if (word.startsWith("@")) {
-        word.replaceFirst("@", "nostr:")
-    } else {
-        "nostr:$word"
-    }
-
-    val nip19Route = try {
-        Nip19.uriToRoute(uri)
-    } catch (e: Exception) {
-        null
-    }
+    val nip19Route = Nip19.uriToRoute(word)
 
     if (nip19Route == null) {
         Text(text = "$word ")

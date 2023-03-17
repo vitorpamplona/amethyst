@@ -1,35 +1,47 @@
 package com.vitorpamplona.amethyst.service.nip19
 
+import android.util.Log
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.bechToBytes
+import java.util.regex.Pattern
 
 object Nip19 {
     enum class Type {
         USER, NOTE, RELAY, ADDRESS
     }
 
-    data class Return(val type: Type, val hex: String, val relay: String? = null)
+    val nip19regex = Pattern.compile("(nostr:)?@?(nsec1|npub1|nevent1|naddr1|note1|nprofile1|nrelay1)([qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)(.*)", Pattern.CASE_INSENSITIVE)
+
+    data class Return(val type: Type, val hex: String, val relay: String? = null, val additionalChars: String = "")
 
     fun uriToRoute(uri: String?): Return? {
-        try {
-            val key = uri?.removePrefix("nostr:") ?: return null
+        if (uri == null) return null
 
-            val bytes = key.bechToBytes()
-            if (key.startsWith("npub")) {
-                return npub(bytes)
-            } else if (key.startsWith("note")) {
-                return note(bytes)
-            } else if (key.startsWith("nprofile")) {
-                return nprofile(bytes)
-            } else if (key.startsWith("nevent")) {
-                return nevent(bytes)
-            } else if (key.startsWith("nrelay")) {
-                return nrelay(bytes)
-            } else if (key.startsWith("naddr")) {
-                return naddr(bytes)
+        try {
+            println("Issue trying to Decode NIP19 $uri")
+
+            val matcher = nip19regex.matcher(uri)
+            matcher.find()
+            val uriScheme = matcher.group(1) // nostr:
+            val type = matcher.group(2) // npub1
+            val key = matcher.group(3) // bech32
+            val additionalChars = matcher.group(4) ?: "" // additional chars
+
+            println("Issue trying to Decode NIP19 Additional Chars $additionalChars")
+
+            val bytes = (type + key).bechToBytes()
+            val parsed = when (type.lowercase()) {
+                "npub1" -> npub(bytes)
+                "note1" -> note(bytes)
+                "nprofile1" -> nprofile(bytes)
+                "nevent1" -> nevent(bytes)
+                "nrelay1" -> nrelay(bytes)
+                "naddr1" -> naddr(bytes)
+                else -> null
             }
+            return parsed?.copy(additionalChars = additionalChars)
         } catch (e: Throwable) {
-            println("Issue trying to Decode NIP19 $uri: ${e.message}")
+            Log.e("NIP19 Parser", "Issue trying to Decode NIP19 $uri: ${e.message}", e)
         }
 
         return null
