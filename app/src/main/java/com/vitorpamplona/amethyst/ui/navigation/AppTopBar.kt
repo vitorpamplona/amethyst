@@ -214,7 +214,7 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
                     modifier = Modifier
                 ) {
                     Icon(
-                        painter = painterResource(R.drawable.ic_trends),
+                        painter = painterResource(R.drawable.relays),
                         null,
                         modifier = Modifier.size(24.dp),
                         tint = Color.Unspecified
