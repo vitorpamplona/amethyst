@@ -39,14 +39,13 @@ class NewPollViewModel : NewPostViewModel() {
     override fun sendPost() {
         super.sendPost()
 
-        // delete existing pollOptions
-        pollOptions = mutableStateListOf("", "")
+        clearStates()
     }
 
     override fun cancel() {
         super.cancel()
 
-        pollOptions = mutableStateListOf("", "")
+        clearStates()
     }
 
     override fun findUrlInMessage(): String? {
@@ -63,5 +62,15 @@ class NewPollViewModel : NewPostViewModel() {
 
     override fun autocompleteWithUser(item: User) {
         super.autocompleteWithUser(item)
+    }
+
+    private fun clearStates() {
+        // clear states
+        zapRecipients = mutableStateListOf<HexKey>()
+        pollOptions = mutableStateListOf("", "")
+        zapMax = null
+        zapMin = null
+        consensus = null
+        closedAfter = null
     }
 }

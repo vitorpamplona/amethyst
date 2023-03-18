@@ -5,11 +5,18 @@ import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
 import java.util.Date
 
+const val POLL_OPTIONS = "poll_options"
+const val VALUE_MAXIMUM = "value_maximum"
+const val VALUE_MINIMUM = "value_minimum"
+const val CONSENSUS_THRESHOLD = "consensus_threshold"
+const val CLOSED_AT = "closed_at"
+
 class PollNoteEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
     tags: List<List<String>>,
+    // ots: , TODO implement OTS: https://github.com/opentimestamps/java-opentimestamps
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -23,15 +30,28 @@ class PollNoteEvent(
 
     fun replyTos() = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
 
+    fun pollOptions() = tags.filter { it.firstOrNull() == POLL_OPTIONS }.mapNotNull { it.getOrNull(1) }
+    fun valueMaximum() = tags.filter { it.firstOrNull() == VALUE_MAXIMUM }.mapNotNull { it.getOrNull(1) }
+    fun valueMinimum() = tags.filter { it.firstOrNull() == VALUE_MINIMUM }.mapNotNull { it.getOrNull(1) }
+    fun consensusThreshold() = tags.filter { it.firstOrNull() == CONSENSUS_THRESHOLD }.mapNotNull { it.getOrNull(1) }
+    fun closedAt() = tags.filter { it.firstOrNull() == CLOSED_AT }.mapNotNull { it.getOrNull(1) }
+
     companion object {
         const val kind = 6969
 
-        fun create(msg: String,
-                   replyTos: List<String>?,
-                   mentions: List<String>?,
-                   addresses: List<ATag>?,
-                   privateKey: ByteArray,
-                   createdAt: Long = Date().time / 1000): PollNoteEvent {
+        fun create(
+            msg: String,
+            replyTos: List<String>?,
+            mentions: List<String>?,
+            addresses: List<ATag>?,
+            privateKey: ByteArray,
+            createdAt: Long = Date().time / 1000,
+            pollOptions: List<Map<Int, String>>,
+            valueMaximum: Int?,
+            valueMinimum: Int?,
+            consensusThreshold: Int?,
+            closedAt: Int?
+        ): PollNoteEvent {
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf<List<String>>()
             replyTos?.forEach {
@@ -43,6 +63,13 @@ class PollNoteEvent(
             addresses?.forEach {
                 tags.add(listOf("a", it.toTag()))
             }
+            pollOptions.forEach {
+                tags.add(listOf(POLL_OPTIONS, it.toString()))
+            }
+            tags.add(listOf(VALUE_MAXIMUM, valueMaximum.toString()))
+            tags.add(listOf(VALUE_MINIMUM, valueMinimum.toString()))
+            tags.add(listOf(CONSENSUS_THRESHOLD, consensusThreshold.toString()))
+            tags.add(listOf(CLOSED_AT, closedAt.toString()))
             val id = generateId(pubKey, createdAt, kind, tags, msg)
             val sig = Utils.sign(id, privateKey)
             return PollNoteEvent(id.toHexKey(), pubKey, createdAt, tags, msg, sig.toHexKey())

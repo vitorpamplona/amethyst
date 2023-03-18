@@ -8,10 +8,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.actions.NewPollViewModel
 
 @Composable
-fun PollRecipientsField(pollViewModel: NewPollViewModel) {
+fun PollRecipientsField(pollViewModel: NewPollViewModel, account: Account) {
+    // if no recipients, add user's pubkey
+    if (pollViewModel.zapRecipients.isEmpty()) {
+        pollViewModel.zapRecipients.add(account.userProfile().pubkeyHex)
+    }
 
     OutlinedTextField(
         modifier = Modifier
