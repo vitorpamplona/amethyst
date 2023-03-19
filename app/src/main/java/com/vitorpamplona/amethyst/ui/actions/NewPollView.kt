@@ -88,7 +88,12 @@ fun NewPollView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                 onClose()
                             },
                             isActive = pollViewModel.message.text.isNotBlank() &&
-                                !pollViewModel.isUploadingImage
+                                pollViewModel.pollOptions.all { it.isNotEmpty() } &&
+                                pollViewModel.isValidRecipients.value &&
+                                pollViewModel.isValidvalueMaximum.value &&
+                                pollViewModel.isValidvalueMinimum.value &&
+                                pollViewModel.isValidConsensusThreshold.value &&
+                                pollViewModel.isValidClosedAt.value
                         )
                     }
 

@@ -29,25 +29,25 @@ fun PollVoteValueRange(pollViewModel: NewPollViewModel) {
     var textMin by rememberSaveable { mutableStateOf("") }
 
     // check for zapMax amounts < 1
-    var isMaxValid = true
+    pollViewModel.isValidvalueMaximum.value = true
     if (textMax.isNotEmpty()) {
         try {
             val int = textMax.toInt()
             if (int < 1) {
-                isMaxValid = false
+                pollViewModel.isValidvalueMaximum.value = false
             } else { pollViewModel.valueMaximum = int }
-        } catch (e: Exception) { isMaxValid = false }
+        } catch (e: Exception) { pollViewModel.isValidvalueMaximum.value = false }
     }
 
     // check for minZap amounts < 1
-    var isMinValid = true
+    pollViewModel.isValidvalueMinimum.value = true
     if (textMin.isNotEmpty()) {
         try {
             val int = textMin.toInt()
             if (int < 1) {
-                isMinValid = false
+                pollViewModel.isValidvalueMinimum.value = false
             } else { pollViewModel.valueMinimum = int }
-        } catch (e: Exception) { isMinValid = false }
+        } catch (e: Exception) { pollViewModel.isValidvalueMinimum.value = false }
     }
 
     // check for zapMin > zapMax
@@ -57,12 +57,12 @@ fun PollVoteValueRange(pollViewModel: NewPollViewModel) {
             val intMax = textMax.toInt()
 
             if (intMin > intMax) {
-                isMinValid = false
-                isMaxValid = false
+                pollViewModel.isValidvalueMinimum.value = false
+                pollViewModel.isValidvalueMaximum.value = false
             }
         } catch (e: Exception) {
-            isMinValid = false
-            isMaxValid = false
+            pollViewModel.isValidvalueMinimum.value = false
+            pollViewModel.isValidvalueMaximum.value = false
         }
     }
 
@@ -84,7 +84,7 @@ fun PollVoteValueRange(pollViewModel: NewPollViewModel) {
             onValueChange = { textMin = it },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.width(150.dp),
-            colors = if (isMinValid) colorValid else colorInValid,
+            colors = if (pollViewModel.isValidvalueMinimum.value) colorValid else colorInValid,
             label = {
                 Text(
                     text = stringResource(R.string.poll_zap_value_min),
@@ -103,7 +103,7 @@ fun PollVoteValueRange(pollViewModel: NewPollViewModel) {
             onValueChange = { textMax = it },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.width(150.dp),
-            colors = if (isMaxValid) colorValid else colorInValid,
+            colors = if (pollViewModel.isValidvalueMaximum.value) colorValid else colorInValid,
             label = {
                 Text(
                     text = stringResource(R.string.poll_zap_value_max),

@@ -27,14 +27,14 @@ import com.vitorpamplona.amethyst.ui.actions.NewPollViewModel
 fun PollClosing(pollViewModel: NewPollViewModel) {
     var text by rememberSaveable { mutableStateOf("") }
 
-    var isInputValid = true
+    pollViewModel.isValidClosedAt.value = true
     if (text.isNotEmpty()) {
         try {
             val int = text.toInt()
             if (int < 0) {
-                isInputValid = false
+                pollViewModel.isValidClosedAt.value = false
             } else { pollViewModel.closedAt = int }
-        } catch (e: Exception) { isInputValid = false }
+        } catch (e: Exception) { pollViewModel.isValidClosedAt.value = false }
     }
 
     val colorInValid = TextFieldDefaults.outlinedTextFieldColors(
@@ -55,7 +55,7 @@ fun PollClosing(pollViewModel: NewPollViewModel) {
             onValueChange = { text = it },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.width(150.dp),
-            colors = if (isInputValid) colorValid else colorInValid,
+            colors = if (pollViewModel.isValidClosedAt.value) colorValid else colorInValid,
             label = {
                 Text(
                     text = stringResource(R.string.poll_closing_time),

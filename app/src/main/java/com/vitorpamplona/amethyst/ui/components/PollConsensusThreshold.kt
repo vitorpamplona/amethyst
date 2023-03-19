@@ -27,14 +27,14 @@ import com.vitorpamplona.amethyst.ui.actions.NewPollViewModel
 fun PollConsensusThreshold(pollViewModel: NewPollViewModel) {
     var text by rememberSaveable { mutableStateOf("") }
 
-    var isInputValid = true
+    pollViewModel.isValidConsensusThreshold.value = true
     if (text.isNotEmpty()) {
         try {
             val int = text.toInt()
             if (int < 0 || int > 100) {
-                isInputValid = false
+                pollViewModel.isValidConsensusThreshold.value = false
             } else { pollViewModel.consensusThreshold = int }
-        } catch (e: Exception) { isInputValid = false }
+        } catch (e: Exception) { pollViewModel.isValidConsensusThreshold.value = false }
     }
 
     val colorInValid = TextFieldDefaults.outlinedTextFieldColors(
@@ -55,7 +55,7 @@ fun PollConsensusThreshold(pollViewModel: NewPollViewModel) {
             onValueChange = { text = it },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.width(150.dp),
-            colors = if (isInputValid) colorValid else colorInValid,
+            colors = if (pollViewModel.isValidConsensusThreshold.value) colorValid else colorInValid,
             label = {
                 Text(
                     text = stringResource(R.string.poll_consensus_threshold),

@@ -16,11 +16,6 @@ import com.vitorpamplona.amethyst.ui.actions.NewPollViewModel
 
 @Composable
 fun PollOption(pollViewModel: NewPollViewModel, optionIndex: Int) {
-    var isInputValid = true
-    if (pollViewModel.pollOptions[optionIndex].isEmpty()) {
-        isInputValid = false
-    }
-
     val colorInValid = TextFieldDefaults.outlinedTextFieldColors(
         focusedBorderColor = MaterialTheme.colors.error,
         unfocusedBorderColor = Color.Red
@@ -48,7 +43,7 @@ fun PollOption(pollViewModel: NewPollViewModel, optionIndex: Int) {
                     color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                 )
             },
-            colors = if (isInputValid) colorValid else colorInValid
+            colors = if (pollViewModel.pollOptions[optionIndex].isNotEmpty()) colorValid else colorInValid
         )
         if (optionIndex > 1) {
             Button(

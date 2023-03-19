@@ -18,6 +18,8 @@ fun PollRecipientsField(pollViewModel: NewPollViewModel, account: Account) {
         pollViewModel.zapRecipients.add(account.userProfile().pubkeyHex)
     }
 
+    // TODO allow add multiple recipients and check input validity
+
     OutlinedTextField(
         modifier = Modifier
             .fillMaxWidth(),

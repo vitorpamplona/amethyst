@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.actions
 
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.text.input.TextFieldValue
 import com.vitorpamplona.amethyst.model.*
 import com.vitorpamplona.amethyst.service.nip19.Nip19
@@ -13,6 +14,12 @@ class NewPollViewModel : NewPostViewModel() {
     var valueMinimum: Int? = null
     var consensusThreshold: Int? = null
     var closedAt: Int? = null
+
+    var isValidRecipients = mutableStateOf(true)
+    var isValidvalueMaximum = mutableStateOf(true)
+    var isValidvalueMinimum = mutableStateOf(true)
+    var isValidConsensusThreshold = mutableStateOf(true)
+    var isValidClosedAt = mutableStateOf(true)
 
     override fun load(account: Account, replyingTo: Note?, quote: Note?) {
         super.load(account, replyingTo, quote)
