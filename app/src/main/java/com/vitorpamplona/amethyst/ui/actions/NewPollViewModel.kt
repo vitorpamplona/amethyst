@@ -1,15 +1,19 @@
 package com.vitorpamplona.amethyst.ui.actions
 
+import androidx.annotation.Keep
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.text.input.TextFieldValue
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import com.vitorpamplona.amethyst.model.*
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 
 class NewPollViewModel : NewPostViewModel() {
 
     var zapRecipients = mutableStateListOf<HexKey>()
-    var pollOptions = mutableStateListOf("", "")
+    var pollOptions = mutableStateMapOf<Int, String>(Pair(0, ""), Pair(1, ""))
     var valueMaximum: Int? = null
     var valueMinimum: Int? = null
     var consensusThreshold: Int? = null
@@ -91,7 +95,7 @@ class NewPollViewModel : NewPostViewModel() {
             account?.sendPoll(newMessage, replyTos, mentions)
         }*/
 
-        account?.sendPoll(newMessage, replyTos, mentions, getPollOptionsList(), valueMaximum, valueMinimum, consensusThreshold, closedAt)
+        account?.sendPoll(newMessage, replyTos, mentions, pollOptions, valueMaximum, valueMinimum, consensusThreshold, closedAt)
 
         clearPollStates()
     }
@@ -126,18 +130,17 @@ class NewPollViewModel : NewPostViewModel() {
         mentions = null
 
         zapRecipients = mutableStateListOf<HexKey>()
-        pollOptions = mutableStateListOf("", "")
+        pollOptions = mutableStateMapOf<Int, String>(Pair(0, ""), Pair(1, ""))
         valueMaximum = null
         valueMinimum = null
         consensusThreshold = null
         closedAt = null
     }
+}
 
-    private fun getPollOptionsList(): List<Map<Int, String>> {
-        val optionsList: MutableList<Map<Int, String>> = mutableListOf()
-        pollOptions.forEachIndexed { i, s ->
-            optionsList.add(mapOf(Pair(i, s)))
-        }
-        return optionsList
-    }
+@Keep // Do not obfuscate! Variable names are needed for parsers
+data class PollOptions(var poll_options: List<String>)
+fun parseJsonPollOption(json: String): PollOptions {
+    val typeToken = object : TypeToken<PollOptions>() {}.type
+    return Gson().fromJson(json, typeToken)
 }

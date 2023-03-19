@@ -88,7 +88,7 @@ fun NewPollView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                 onClose()
                             },
                             isActive = pollViewModel.message.text.isNotBlank() &&
-                                pollViewModel.pollOptions.all { it.isNotEmpty() } &&
+                                pollViewModel.pollOptions.values.all { it.isNotEmpty() } &&
                                 pollViewModel.isValidRecipients.value &&
                                 pollViewModel.isValidvalueMaximum.value &&
                                 pollViewModel.isValidvalueMinimum.value &&
@@ -116,11 +116,11 @@ fun NewPollView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                             Text(stringResource(R.string.poll_heading_required))
                             PollRecipientsField(pollViewModel, account)
                             PollPrimaryDescription(pollViewModel)
-                            pollViewModel.pollOptions.forEachIndexed { index, element ->
+                            pollViewModel.pollOptions.values.forEachIndexed { index, element ->
                                 PollOption(pollViewModel, index)
                             }
                             Button(
-                                onClick = { pollViewModel.pollOptions.add("") },
+                                onClick = { pollViewModel.pollOptions.values.add("") },
                                 border = BorderStroke(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.32f)),
                                 colors = ButtonDefaults.outlinedButtonColors(
                                     contentColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)

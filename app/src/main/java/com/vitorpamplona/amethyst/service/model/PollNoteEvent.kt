@@ -46,7 +46,7 @@ class PollNoteEvent(
             addresses: List<ATag>?,
             privateKey: ByteArray,
             createdAt: Long = Date().time / 1000,
-            pollOptions: List<Map<Int, String>>,
+            pollOptions: Map<Int, String>,
             valueMaximum: Int?,
             valueMinimum: Int?,
             consensusThreshold: Int?,
@@ -63,7 +63,7 @@ class PollNoteEvent(
             addresses?.forEach {
                 tags.add(listOf("a", it.toTag()))
             }
-            tags.add(listOf(POLL_OPTIONS, pollOptions.toString()))
+            tags.add(listOf(POLL_OPTIONS, gson.toJson(pollOptions)))
             tags.add(listOf(VALUE_MAXIMUM, valueMaximum.toString()))
             tags.add(listOf(VALUE_MINIMUM, valueMinimum.toString()))
             tags.add(listOf(CONSENSUS_THRESHOLD, consensusThreshold.toString()))
@@ -71,6 +71,10 @@ class PollNoteEvent(
             val id = generateId(pubKey, createdAt, kind, tags, msg)
             val sig = Utils.sign(id, privateKey)
             return PollNoteEvent(id.toHexKey(), pubKey, createdAt, tags, msg, sig.toHexKey())
+        }
+
+        fun parseJsonPollOptions(s: String): Map<Int, String> {
+            return gson.fromJson<Map<Int, String>>(s, MutableMap::class.java)
         }
     }
 }
@@ -84,10 +88,11 @@ class PollNoteEvent(
   "tags": [
     ["e", <32-bytes hex of the id of the poll event>, <primary poll host relay URL>],
     ["p", <32-bytes hex of the key>, <primary poll host relay URL>],
-    ["poll_options",
-        "[[0, 'poll option 0 description string'],
-        [1, 'poll option 1 description string'],
-        [<n>, 'poll option <n> description string']]"
+    ["poll_options", "{
+        \"0\": \"poll option 0 description string\",
+        \"1\": \"poll option 1 description string\",
+        \"n\": \"poll option <n> description string\"
+      }"
     ],
     ["value_maximum", "maximum satoshi value for inclusion in tally"],
     ["value_minimum", "minimum satoshi value for inclusion in tally"],

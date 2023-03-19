@@ -29,7 +29,7 @@ fun PollOption(pollViewModel: NewPollViewModel, optionIndex: Int) {
         OutlinedTextField(
             modifier = Modifier
                 .weight(1F),
-            value = pollViewModel.pollOptions[optionIndex],
+            value = pollViewModel.pollOptions[optionIndex] ?: "",
             onValueChange = { pollViewModel.pollOptions[optionIndex] = it },
             label = {
                 Text(
@@ -43,14 +43,14 @@ fun PollOption(pollViewModel: NewPollViewModel, optionIndex: Int) {
                     color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                 )
             },
-            colors = if (pollViewModel.pollOptions[optionIndex].isNotEmpty()) colorValid else colorInValid
+            colors = if (pollViewModel.pollOptions[optionIndex]?.isNotEmpty() == true) colorValid else colorInValid
         )
         if (optionIndex > 1) {
             Button(
                 modifier = Modifier
                     .padding(start = 6.dp, top = 2.dp)
                     .imePadding(),
-                onClick = { pollViewModel.pollOptions.removeAt(optionIndex) },
+                onClick = { pollViewModel.pollOptions.remove(optionIndex) },
                 border = BorderStroke(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.32f)),
                 colors = ButtonDefaults.outlinedButtonColors(
                     contentColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)

@@ -4,21 +4,10 @@ import android.content.res.Resources
 import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.model.*
-import com.vitorpamplona.amethyst.service.relays.Client
-import com.vitorpamplona.amethyst.service.relays.Constants
-import com.vitorpamplona.amethyst.service.relays.FeedType
-import com.vitorpamplona.amethyst.service.relays.Relay
-import com.vitorpamplona.amethyst.service.relays.RelayPool
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import com.vitorpamplona.amethyst.service.relays.*
+import kotlinx.coroutines.*
 import nostr.postr.Persona
-import java.util.Locale
+import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 
 val DefaultChannels = setOf(
@@ -291,7 +280,7 @@ class Account(
         message: String,
         replyTo: List<Note>?,
         mentions: List<User>?,
-        pollOptions: List<Map<Int, String>>,
+        pollOptions: Map<Int, String>,
         valueMaximum: Int?,
         valueMinimum: Int?,
         consensusThreshold: Int?,
@@ -535,7 +524,7 @@ class Account(
             isAcceptableDirect(note) &&
             (
                 note.event !is RepostEvent ||
-                    (note.event is RepostEvent && note.replyTo?.firstOrNull { isAcceptableDirect(it) } != null)
+                    (note.replyTo?.firstOrNull { isAcceptableDirect(it) } != null)
                 ) // is not a reaction about a blocked post
     }
 
