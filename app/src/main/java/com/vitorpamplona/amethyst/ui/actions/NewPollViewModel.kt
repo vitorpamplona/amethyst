@@ -2,19 +2,17 @@ package com.vitorpamplona.amethyst.ui.actions
 
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.text.input.TextFieldValue
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.HexKey
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.*
+import com.vitorpamplona.amethyst.service.nip19.Nip19
 
 class NewPollViewModel : NewPostViewModel() {
 
     var zapRecipients = mutableStateListOf<HexKey>()
     var pollOptions = mutableStateListOf("", "")
-    var zapMax: Int? = null
-    var zapMin: Int? = null
-    var consensus: Int? = null
-    var closedAfter: Int? = null
+    var valueMaximum: Int? = null
+    var valueMinimum: Int? = null
+    var consensusThreshold: Int? = null
+    var closedAt: Int? = null
 
     override fun load(account: Account, replyingTo: Note?, quote: Note?) {
         super.load(account, replyingTo, quote)
@@ -36,16 +34,65 @@ class NewPollViewModel : NewPostViewModel() {
         return super.tagIndex(note)
     }
 
-    override fun sendPost() {
-        super.sendPost()
+    fun sendPoll() {
+        // adds all references to mentions and reply tos
+        message.text.split('\n').forEach { paragraph: String ->
+            paragraph.split(' ').forEach { word: String ->
+                val results = parseDirtyWordForKey(word)
 
-        clearStates()
+                if (results?.key?.type == Nip19.Type.USER) {
+                    addUserToMentions(LocalCache.getOrCreateUser(results.key.hex))
+                } else if (results?.key?.type == Nip19.Type.NOTE) {
+                    addNoteToReplyTos(LocalCache.getOrCreateNote(results.key.hex))
+                } else if (results?.key?.type == Nip19.Type.ADDRESS) {
+                    val note = LocalCache.checkGetOrCreateAddressableNote(results.key.hex)
+                    if (note != null) {
+                        addNoteToReplyTos(note)
+                    }
+                }
+            }
+        }
+
+        // Tags the text in the correct order.
+        val newMessage = message.text.split('\n').map { paragraph: String ->
+            paragraph.split(' ').map { word: String ->
+                val results = parseDirtyWordForKey(word)
+                if (results?.key?.type == Nip19.Type.USER) {
+                    val user = LocalCache.getOrCreateUser(results.key.hex)
+
+                    "#[${tagIndex(user)}]${results.restOfWord}"
+                } else if (results?.key?.type == Nip19.Type.NOTE) {
+                    val note = LocalCache.getOrCreateNote(results.key.hex)
+
+                    "#[${tagIndex(note)}]${results.restOfWord}"
+                } else if (results?.key?.type == Nip19.Type.ADDRESS) {
+                    val note = LocalCache.checkGetOrCreateAddressableNote(results.key.hex)
+                    if (note != null) {
+                        "#[${tagIndex(note)}]${results.restOfWord}"
+                    } else {
+                        word
+                    }
+                } else {
+                    word
+                }
+            }.joinToString(" ")
+        }.joinToString("\n")
+
+        /* if (originalNote?.channel() != null) {
+            account?.sendChannelMessage(newMessage, originalNote!!.channel()!!.idHex, originalNote!!, mentions)
+           } else {
+            account?.sendPoll(newMessage, replyTos, mentions)
+        }*/
+
+        account?.sendPoll(newMessage, replyTos, mentions, getPollOptionsList(), valueMaximum, valueMinimum, consensusThreshold, closedAt)
+
+        clearPollStates()
     }
 
     override fun cancel() {
         super.cancel()
 
-        clearStates()
+        clearPollStates()
     }
 
     override fun findUrlInMessage(): String? {
@@ -64,13 +111,26 @@ class NewPollViewModel : NewPostViewModel() {
         super.autocompleteWithUser(item)
     }
 
-    private fun clearStates() {
-        // clear states
+    // clear all states
+    private fun clearPollStates() {
+        message = TextFieldValue("")
+        urlPreview = null
+        isUploadingImage = false
+        mentions = null
+
         zapRecipients = mutableStateListOf<HexKey>()
         pollOptions = mutableStateListOf("", "")
-        zapMax = null
-        zapMin = null
-        consensus = null
-        closedAfter = null
+        valueMaximum = null
+        valueMinimum = null
+        consensusThreshold = null
+        closedAt = null
+    }
+
+    private fun getPollOptionsList(): List<Map<Int, String>> {
+        val optionsList: MutableList<Map<Int, String>> = mutableListOf()
+        pollOptions.forEachIndexed { i, s ->
+            optionsList.add(mapOf(Pair(i, s)))
+        }
+        return optionsList
     }
 }

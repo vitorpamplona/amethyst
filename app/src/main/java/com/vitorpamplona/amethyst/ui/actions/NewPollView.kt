@@ -84,7 +84,7 @@ fun NewPollView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
 
                         PollButton(
                             onPost = {
-                                pollViewModel.sendPost()
+                                pollViewModel.sendPoll()
                                 onClose()
                             },
                             isActive = pollViewModel.message.text.isNotBlank() &&

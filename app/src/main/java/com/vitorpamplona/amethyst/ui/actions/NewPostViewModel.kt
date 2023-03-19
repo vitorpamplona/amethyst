@@ -71,7 +71,7 @@ open class NewPostViewModel : ViewModel() {
         return (if (originalNote?.channel() != null) 1 else 0) + (replyTos?.indexOf(note) ?: 0)
     }
 
-    open fun sendPost() {
+    fun sendPost() {
         // adds all references to mentions and reply tos
         message.text.split('\n').forEach { paragraph: String ->
             paragraph.split(' ').forEach { word: String ->

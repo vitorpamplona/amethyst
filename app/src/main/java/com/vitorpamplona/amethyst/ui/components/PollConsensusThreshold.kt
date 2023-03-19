@@ -33,7 +33,7 @@ fun PollConsensusThreshold(pollViewModel: NewPollViewModel) {
             val int = text.toInt()
             if (int < 0 || int > 100) {
                 isInputValid = false
-            } else { pollViewModel.consensus = int }
+            } else { pollViewModel.consensusThreshold = int }
         } catch (e: Exception) { isInputValid = false }
     }
 

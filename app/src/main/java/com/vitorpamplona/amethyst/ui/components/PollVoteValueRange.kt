@@ -33,9 +33,9 @@ fun PollVoteValueRange(pollViewModel: NewPollViewModel) {
     if (textMax.isNotEmpty()) {
         try {
             val int = textMax.toInt()
-            if ( int < 1)
+            if (int < 1) {
                 isMaxValid = false
-            else pollViewModel.zapMax = int
+            } else { pollViewModel.valueMaximum = int }
         } catch (e: Exception) { isMaxValid = false }
     }
 
@@ -44,9 +44,9 @@ fun PollVoteValueRange(pollViewModel: NewPollViewModel) {
     if (textMin.isNotEmpty()) {
         try {
             val int = textMin.toInt()
-            if ( int < 1)
+            if (int < 1) {
                 isMinValid = false
-            else pollViewModel.zapMin = int
+            } else { pollViewModel.valueMinimum = int }
         } catch (e: Exception) { isMinValid = false }
     }
 
@@ -56,7 +56,7 @@ fun PollVoteValueRange(pollViewModel: NewPollViewModel) {
             val intMin = textMin.toInt()
             val intMax = textMax.toInt()
 
-            if ( intMin > intMax) {
+            if (intMin > intMax) {
                 isMinValid = false
                 isMaxValid = false
             }
@@ -68,7 +68,8 @@ fun PollVoteValueRange(pollViewModel: NewPollViewModel) {
 
     val colorInValid = TextFieldDefaults.outlinedTextFieldColors(
         focusedBorderColor = MaterialTheme.colors.error,
-        unfocusedBorderColor = Color.Red)
+        unfocusedBorderColor = Color.Red
+    )
     val colorValid = TextFieldDefaults.outlinedTextFieldColors(
         focusedBorderColor = MaterialTheme.colors.primary,
         unfocusedBorderColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)

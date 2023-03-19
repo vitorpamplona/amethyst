@@ -16,7 +16,7 @@ class PollNoteEvent(
     pubKey: HexKey,
     createdAt: Long,
     tags: List<List<String>>,
-    // ots: , TODO implement OTS: https://github.com/opentimestamps/java-opentimestamps
+    // ots: String?, TODO implement OTS: https://github.com/opentimestamps/java-opentimestamps
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -63,9 +63,7 @@ class PollNoteEvent(
             addresses?.forEach {
                 tags.add(listOf("a", it.toTag()))
             }
-            pollOptions.forEach {
-                tags.add(listOf(POLL_OPTIONS, it.toString()))
-            }
+            tags.add(listOf(POLL_OPTIONS, pollOptions.toString()))
             tags.add(listOf(VALUE_MAXIMUM, valueMaximum.toString()))
             tags.add(listOf(VALUE_MINIMUM, valueMinimum.toString()))
             tags.add(listOf(CONSENSUS_THRESHOLD, consensusThreshold.toString()))

@@ -33,7 +33,7 @@ fun PollClosing(pollViewModel: NewPollViewModel) {
             val int = text.toInt()
             if (int < 0) {
                 isInputValid = false
-            } else { pollViewModel.closedAfter = int }
+            } else { pollViewModel.closedAt = int }
         } catch (e: Exception) { isInputValid = false }
     }
 

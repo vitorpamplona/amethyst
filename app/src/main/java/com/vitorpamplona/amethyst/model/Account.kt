@@ -3,20 +3,7 @@ package com.vitorpamplona.amethyst.model
 import android.content.res.Resources
 import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
-import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
-import com.vitorpamplona.amethyst.service.model.Contact
-import com.vitorpamplona.amethyst.service.model.ContactListEvent
-import com.vitorpamplona.amethyst.service.model.DeletionEvent
-import com.vitorpamplona.amethyst.service.model.IdentityClaim
-import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
-import com.vitorpamplona.amethyst.service.model.MetadataEvent
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
-import com.vitorpamplona.amethyst.service.model.ReactionEvent
-import com.vitorpamplona.amethyst.service.model.ReportEvent
-import com.vitorpamplona.amethyst.service.model.RepostEvent
-import com.vitorpamplona.amethyst.service.model.TextNoteEvent
+import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.relays.FeedType
@@ -298,6 +285,39 @@ class Account(
         )
         Client.send(signedEvent)
         LocalCache.consume(signedEvent)
+    }
+
+    fun sendPoll(
+        message: String,
+        replyTo: List<Note>?,
+        mentions: List<User>?,
+        pollOptions: List<Map<Int, String>>,
+        valueMaximum: Int?,
+        valueMinimum: Int?,
+        consensusThreshold: Int?,
+        closedAt: Int?
+    ) {
+        if (!isWriteable()) return
+
+        val repliesToHex = replyTo?.map { it.idHex }
+        val mentionsHex = mentions?.map { it.pubkeyHex }
+        val addresses = replyTo?.mapNotNull { it.address() }
+
+        val signedEvent = PollNoteEvent.create(
+            msg = message,
+            replyTos = repliesToHex,
+            mentions = mentionsHex,
+            addresses = addresses,
+            privateKey = loggedIn.privKey!!,
+            pollOptions = pollOptions,
+            valueMaximum = valueMaximum,
+            valueMinimum = valueMinimum,
+            consensusThreshold = consensusThreshold,
+            closedAt = closedAt
+        )
+        println("PollNoteEvent: %s".format(signedEvent.toJson()))
+        // Client.send(signedEvent)
+        // LocalCache.consume(signedEvent)
     }
 
     fun sendChannelMessage(message: String, toChannel: String, replyingTo: Note? = null, mentions: List<User>?) {
