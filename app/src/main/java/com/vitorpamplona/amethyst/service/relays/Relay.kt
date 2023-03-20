@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.service.relays
 
+import com.vitorpamplona.amethyst.BuildConfig
 import android.util.Log
 import com.google.gson.JsonElement
 import com.vitorpamplona.amethyst.service.model.Event
@@ -56,7 +57,7 @@ class Relay(
 
         try {
             val request = Request.Builder()
-                .header("User-Agent", "Amethyst")
+                .header("User-Agent", "Amethyst " + BuildConfig.VERSION_NAME)
                 .url(url.trim())
                 .build()
             val listener = object : WebSocketListener() {

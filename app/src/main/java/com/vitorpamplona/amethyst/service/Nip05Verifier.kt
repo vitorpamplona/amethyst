@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.service
 
+import com.vitorpamplona.amethyst.BuildConfig
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -43,7 +44,7 @@ class Nip05Verifier {
         withContext(Dispatchers.IO) {
             try {
                 val request = Request.Builder()
-                    .header("User-Agent", "Amethyst")
+                    .header("User-Agent", "Amethyst " + BuildConfig.VERSION_NAME)
                     .url(url)
                     .build()
 

@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.actions
 
+import com.vitorpamplona.amethyst.BuildConfig
 import android.content.ContentResolver
 import android.content.ContentValues
 import android.content.Context
@@ -30,7 +31,7 @@ object ImageSaver {
         val client = OkHttpClient.Builder().build()
 
         val request = Request.Builder()
-            .header("User-Agent", "Amethyst")
+            .header("User-Agent", "Amethyst " + BuildConfig.VERSION_NAME)
             .get()
             .url(url)
             .build()
@@ -137,5 +138,5 @@ object ImageSaver {
         MediaScannerConnection.scanFile(context, arrayOf(outputFile.toString()), null, null)
     }
 
-    private const val PICTURES_SUBDIRECTORY = "Amethyst"
+    private const val PICTURES_SUBDIRECTORY = "Amethyst " + BuildConfig.VERSION_NAME
 }
