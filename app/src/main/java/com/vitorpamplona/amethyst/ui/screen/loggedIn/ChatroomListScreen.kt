@@ -139,7 +139,8 @@ fun TabKnown(
     val feedViewModel: NostrChatroomListKnownFeedViewModel = viewModel()
 
     LaunchedEffect(accountViewModel) {
-        NostrChatroomListDataSource.resetFilters()
+        NostrChatroomListDataSource.account = account
+        NostrChatroomListDataSource.start()
         feedViewModel.refresh()
     }
 
@@ -147,7 +148,8 @@ fun TabKnown(
     DisposableEffect(accountViewModel) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                NostrChatroomListDataSource.resetFilters()
+                NostrChatroomListDataSource.account = account
+                NostrChatroomListDataSource.start()
                 feedViewModel.refresh()
             }
         }
@@ -180,7 +182,8 @@ fun TabNew(
     val feedViewModel: NostrChatroomListNewFeedViewModel = viewModel()
 
     LaunchedEffect(accountViewModel) {
-        NostrChatroomListDataSource.resetFilters()
+        NostrChatroomListDataSource.account = account
+        NostrChatroomListDataSource.start()
         feedViewModel.refresh()
     }
 
@@ -188,7 +191,8 @@ fun TabNew(
     DisposableEffect(accountViewModel) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                NostrChatroomListDataSource.resetFilters()
+                NostrChatroomListDataSource.account = account
+                NostrChatroomListDataSource.start()
                 feedViewModel.refresh()
             }
         }
