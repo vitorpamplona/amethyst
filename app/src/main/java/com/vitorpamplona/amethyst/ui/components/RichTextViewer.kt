@@ -8,6 +8,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
+import androidx.compose.foundation.text.InlineTextContent
+import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material.Icon
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
@@ -19,13 +21,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextDirection
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -94,7 +93,11 @@ fun RichTextViewer(
                     MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
                     RoundedCornerShape(15.dp)
                 )
-                .background(MaterialTheme.colors.onSurface.copy(alpha = 0.05f).compositeOver(backgroundColor))
+                .background(
+                    MaterialTheme.colors.onSurface
+                        .copy(alpha = 0.05f)
+                        .compositeOver(backgroundColor)
+                )
         ),
         stringStyle = RichTextStyle().resolveDefaults().stringStyle?.copy(
             linkStyle = SpanStyle(
@@ -238,7 +241,6 @@ fun HashTag(word: String, accountViewModel: AccountViewModel, navController: Nav
 
     if (tag != null) {
         val hashtagIcon = checkForHashtagWithIcon(tag)
-
         ClickableText(
             text = buildAnnotatedString {
                 withStyle(
@@ -251,14 +253,43 @@ fun HashTag(word: String, accountViewModel: AccountViewModel, navController: Nav
         )
 
         if (hashtagIcon != null) {
-            Icon(
-                painter = painterResource(hashtagIcon.icon),
-                contentDescription = hashtagIcon.description,
-                tint = hashtagIcon.color,
-                modifier = Modifier.size(20.dp).padding(0.dp, 5.dp, 0.dp, 0.dp)
+            val myId = "inlineContent"
+            val emptytext = buildAnnotatedString {
+                withStyle(
+                    LocalTextStyle.current.copy(color = MaterialTheme.colors.primary).toSpanStyle()
+                ) {
+                    append("")
+                    appendInlineContent(myId, "[icon]")
+                }
+            }
+            val inlineContent = mapOf(
+                Pair(
+                    myId,
+                    InlineTextContent(
+                        Placeholder(
+                            width = 16.sp,
+                            height = 16.sp,
+                            placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+                        )
+                    ) {
+                        if (hashtagIcon != null) {
+                            Icon(
+                                painter = painterResource(hashtagIcon.icon),
+                                contentDescription = hashtagIcon.description,
+                                tint = hashtagIcon.color,
+                                modifier = hashtagIcon.modifier
+                            )
+                        }
+                    }
+                )
+            )
+
+            // Empty Text for Size of Icon
+            Text(
+                text = emptytext,
+                inlineContent = inlineContent
             )
         }
-
         Text(text = "$suffix ")
     } else {
         Text(text = "$word ")
