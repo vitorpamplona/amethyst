@@ -91,9 +91,6 @@ fun ChannelScreen(
     if (account != null && channelId != null) {
         val replyTo = remember { mutableStateOf<Note?>(null) }
 
-        ChannelFeedFilter.loadMessagesBetween(account, channelId)
-        NostrChannelDataSource.loadMessagesBetween(channelId)
-
         val channelState by NostrChannelDataSource.channel!!.live.observeAsState()
         val channel = channelState?.channel ?: return
 
@@ -101,6 +98,9 @@ fun ChannelScreen(
         val lifeCycleOwner = LocalLifecycleOwner.current
 
         LaunchedEffect(Unit) {
+            ChannelFeedFilter.loadMessagesBetween(account, channelId)
+            NostrChannelDataSource.loadMessagesBetween(account, channelId)
+
             feedViewModel.invalidateData()
             channelScreenModel.imageUploadingError.collect { error ->
                 Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
@@ -111,11 +111,15 @@ fun ChannelScreen(
             val observer = LifecycleEventObserver { _, event ->
                 if (event == Lifecycle.Event.ON_RESUME) {
                     println("Channel Start")
-                    NostrChannelDataSource.start()
+                    ChannelFeedFilter.loadMessagesBetween(account, channelId)
+                    NostrChannelDataSource.loadMessagesBetween(account, channelId)
+
                     feedViewModel.invalidateData()
                 }
                 if (event == Lifecycle.Event.ON_PAUSE) {
                     println("Channel Stop")
+
+                    NostrChannelDataSource.clear()
                     NostrChannelDataSource.stop()
                 }
             }
