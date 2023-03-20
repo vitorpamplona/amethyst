@@ -24,7 +24,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.NewPollViewModel
 
 @Composable
-fun PollConsensusThreshold(pollViewModel: NewPollViewModel) {
+fun NewPollConsensusThreshold(pollViewModel: NewPollViewModel) {
     var text by rememberSaveable { mutableStateOf("") }
 
     pollViewModel.isValidConsensusThreshold.value = true
@@ -74,6 +74,6 @@ fun PollConsensusThreshold(pollViewModel: NewPollViewModel) {
 
 @Preview
 @Composable
-fun PollConsensusThresholdPreview() {
-    PollConsensusThreshold(NewPollViewModel())
+fun NewPollConsensusThresholdPreview() {
+    NewPollConsensusThreshold(NewPollViewModel())
 }

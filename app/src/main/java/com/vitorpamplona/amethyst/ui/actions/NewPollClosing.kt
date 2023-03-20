@@ -24,7 +24,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.NewPollViewModel
 
 @Composable
-fun PollClosing(pollViewModel: NewPollViewModel) {
+fun NewPollClosing(pollViewModel: NewPollViewModel) {
     var text by rememberSaveable { mutableStateOf("") }
 
     pollViewModel.isValidClosedAt.value = true
@@ -74,6 +74,6 @@ fun PollClosing(pollViewModel: NewPollViewModel) {
 
 @Preview
 @Composable
-fun PollClosingPreview() {
-    PollClosing(NewPollViewModel())
+fun NewPollClosingPreview() {
+    NewPollClosing(NewPollViewModel())
 }

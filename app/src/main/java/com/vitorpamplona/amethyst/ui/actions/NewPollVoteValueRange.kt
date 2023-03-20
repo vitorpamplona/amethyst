@@ -24,7 +24,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.NewPollViewModel
 
 @Composable
-fun PollVoteValueRange(pollViewModel: NewPollViewModel) {
+fun NewPollVoteValueRange(pollViewModel: NewPollViewModel) {
     var textMax by rememberSaveable { mutableStateOf("") }
     var textMin by rememberSaveable { mutableStateOf("") }
 
@@ -122,6 +122,6 @@ fun PollVoteValueRange(pollViewModel: NewPollViewModel) {
 
 @Preview
 @Composable
-fun PollVoteValueRangePreview() {
-    PollVoteValueRange(NewPollViewModel())
+fun NewPollVoteValueRangePreview() {
+    NewPollVoteValueRange(NewPollViewModel())
 }

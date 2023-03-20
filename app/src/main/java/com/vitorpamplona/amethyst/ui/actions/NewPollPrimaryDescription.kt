@@ -22,7 +22,7 @@ import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun PollPrimaryDescription(pollViewModel: NewPollViewModel) {
+fun NewPollPrimaryDescription(pollViewModel: NewPollViewModel) {
     // initialize focus reference to be able to request focus programmatically
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current

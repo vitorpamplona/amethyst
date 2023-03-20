@@ -1,4 +1,4 @@
-package com.vitorpamplona.amethyst.ui.components
+package com.vitorpamplona.amethyst.ui.actions
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -12,10 +12,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.actions.NewPollViewModel
 
 @Composable
-fun PollOption(pollViewModel: NewPollViewModel, optionIndex: Int) {
+fun NewPollOption(pollViewModel: NewPollViewModel, optionIndex: Int) {
     val colorInValid = TextFieldDefaults.outlinedTextFieldColors(
         focusedBorderColor = MaterialTheme.colors.error,
         unfocusedBorderColor = Color.Red
@@ -68,6 +67,6 @@ fun PollOption(pollViewModel: NewPollViewModel, optionIndex: Int) {
 
 @Preview
 @Composable
-fun PollOptionPreview() {
-    PollOption(NewPollViewModel(), 0)
+fun NewPollOptionPreview() {
+    NewPollOption(NewPollViewModel(), 0)
 }

@@ -6,7 +6,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.text.input.TextFieldValue
 import com.vitorpamplona.amethyst.model.*
 import com.vitorpamplona.amethyst.service.nip19.Nip19
-import org.json.JSONObject
 
 class NewPollViewModel : NewPostViewModel() {
 
@@ -134,13 +133,4 @@ class NewPollViewModel : NewPostViewModel() {
         consensusThreshold = null
         closedAt = null
     }
-}
-
-fun jsonToPollOptions(jsonString: String): Map<Int, String> {
-    val jsonMap = mutableMapOf<Int, String>()
-    val jsonObject = JSONObject(jsonString)
-    jsonObject.keys().forEach {
-        jsonMap[it.toString().toInt()] = jsonObject.getString(it)
-    }
-    return jsonMap
 }

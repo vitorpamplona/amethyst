@@ -114,13 +114,13 @@ fun NewPollView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                             }
 
                             Text(stringResource(R.string.poll_heading_required))
-                            PollRecipientsField(pollViewModel, account)
-                            PollPrimaryDescription(pollViewModel)
+                            NewPollRecipientsField(pollViewModel, account)
+                            NewPollPrimaryDescription(pollViewModel)
                             pollViewModel.pollOptions.values.forEachIndexed { index, element ->
-                                PollOption(pollViewModel, index)
+                                NewPollOption(pollViewModel, index)
                             }
                             Button(
-                                onClick = { pollViewModel.pollOptions.values.add("") },
+                                onClick = { pollViewModel.pollOptions[pollViewModel.pollOptions.size] = "" },
                                 border = BorderStroke(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.32f)),
                                 colors = ButtonDefaults.outlinedButtonColors(
                                     contentColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
@@ -133,9 +133,9 @@ fun NewPollView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                 )
                             }
                             Text(stringResource(R.string.poll_heading_optional))
-                            PollVoteValueRange(pollViewModel)
-                            PollConsensusThreshold(pollViewModel)
-                            PollClosing(pollViewModel)
+                            NewPollVoteValueRange(pollViewModel)
+                            NewPollConsensusThreshold(pollViewModel)
+                            NewPollClosing(pollViewModel)
                         }
                     }
 

@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.service.model
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
+import org.json.JSONObject
 import java.util.Date
 
 const val POLL_OPTIONS = "poll_options"
@@ -73,8 +74,13 @@ class PollNoteEvent(
             return PollNoteEvent(id.toHexKey(), pubKey, createdAt, tags, msg, sig.toHexKey())
         }
 
-        fun parseJsonPollOptions(s: String): Map<Int, String> {
-            return gson.fromJson<Map<Int, String>>(s, MutableMap::class.java)
+        fun jsonToPollOptions(jsonString: String): Map<Int, String> {
+            val jsonMap = mutableMapOf<Int, String>()
+            val jsonObject = JSONObject(jsonString)
+            jsonObject.keys().forEach {
+                jsonMap[it.toString().toInt()] = jsonObject.getString(it)
+            }
+            return jsonMap
         }
     }
 }
