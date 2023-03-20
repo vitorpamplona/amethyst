@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.ui.actions
 
-import com.vitorpamplona.amethyst.BuildConfig
 import android.content.ContentResolver
 import android.content.ContentValues
 import android.content.Context
@@ -9,6 +8,7 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import androidx.annotation.RequiresApi
+import com.vitorpamplona.amethyst.BuildConfig
 import okhttp3.*
 import okio.BufferedSource
 import okio.IOException
@@ -31,7 +31,7 @@ object ImageSaver {
         val client = OkHttpClient.Builder().build()
 
         val request = Request.Builder()
-            .header("User-Agent", "Amethyst " + BuildConfig.VERSION_NAME)
+            .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
             .get()
             .url(url)
             .build()

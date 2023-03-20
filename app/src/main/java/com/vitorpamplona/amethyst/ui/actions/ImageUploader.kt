@@ -1,9 +1,9 @@
 package com.vitorpamplona.amethyst.ui.actions
 
-import com.vitorpamplona.amethyst.BuildConfig
 import android.content.ContentResolver
 import android.net.Uri
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.vitorpamplona.amethyst.BuildConfig
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okio.BufferedSink
@@ -45,7 +45,7 @@ object ImageUploader {
 
         val request: Request = Request.Builder()
             .header("Authorization", "Client-ID e6aea87296f3f96")
-            .header("User-Agent", "Amethyst " + BuildConfig.VERSION_NAME)
+            .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
             .url("https://api.imgur.com/3/image")
             .post(requestBody)
             .build()
