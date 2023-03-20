@@ -1,14 +1,12 @@
 package com.vitorpamplona.amethyst.ui.actions
 
-import androidx.annotation.Keep
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.text.input.TextFieldValue
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import com.vitorpamplona.amethyst.model.*
 import com.vitorpamplona.amethyst.service.nip19.Nip19
+import org.json.JSONObject
 
 class NewPollViewModel : NewPostViewModel() {
 
@@ -138,9 +136,11 @@ class NewPollViewModel : NewPostViewModel() {
     }
 }
 
-@Keep // Do not obfuscate! Variable names are needed for parsers
-data class PollOptions(var poll_options: List<String>)
-fun parseJsonPollOption(json: String): PollOptions {
-    val typeToken = object : TypeToken<PollOptions>() {}.type
-    return Gson().fromJson(json, typeToken)
+fun jsonToPollOptions(jsonString: String): Map<Int, String> {
+    val jsonMap = mutableMapOf<Int, String>()
+    val jsonObject = JSONObject(jsonString)
+    jsonObject.keys().forEach {
+        jsonMap[it.toString().toInt()] = jsonObject.getString(it)
+    }
+    return jsonMap
 }
