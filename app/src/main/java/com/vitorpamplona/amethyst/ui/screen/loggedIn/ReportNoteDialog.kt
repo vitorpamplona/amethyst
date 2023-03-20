@@ -63,7 +63,7 @@ fun ReportNoteDialog(note: Note, accountViewModel: AccountViewModel, onDismiss: 
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text(text = "Block and Report") },
+                    title = { Text(text = stringResource(id = R.string.report_dialog_title)) },
                     navigationIcon = {
                         IconButton(onClick = onDismiss) {
                             Icon(
@@ -83,7 +83,7 @@ fun ReportNoteDialog(note: Note, accountViewModel: AccountViewModel, onDismiss: 
                 verticalArrangement = Arrangement.SpaceAround
             ) {
                 SpacerH16()
-                SectionHeader(text = "Block")
+                SectionHeader(text = stringResource(id = R.string.block_only))
                 SpacerH16()
                 Text(
                     text = stringResource(R.string.report_dialog_blocking_a_user)
