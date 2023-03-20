@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.service.lnurl
 
+import com.vitorpamplona.amethyst.BuildConfig
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -52,7 +53,7 @@ class LightningAddressResolver {
 
         withContext(Dispatchers.IO) {
             val request: Request = Request.Builder()
-                .header("User-Agent", "Amethyst")
+                .header("User-Agent", "Amethyst " + BuildConfig.VERSION_NAME)
                 .url(url)
                 .build()
 
@@ -95,7 +96,7 @@ class LightningAddressResolver {
             }
 
             val request: Request = Request.Builder()
-                .header("User-Agent", "Amethyst")
+                .header("User-Agent", "Amethyst " + BuildConfig.VERSION_NAME)
                 .url(url)
                 .build()
 
