@@ -27,6 +27,11 @@ object NotificationFeedFilter : FeedFilter<Note>() {
                     it.replyTo?.any { it.author == account.userProfile() } == true ||
                     account.userProfile() in it.directlyCiteUsers()
             }
+            .filter { it ->
+                it.event !is PollNoteEvent ||
+                it.replyTo?.any { it.author == account.userProfile() } == true ||
+                account.userProfile() in it.directlyCiteUsers()
+            }
             .filter {
                 it.event !is ReactionEvent ||
                     it.replyTo?.lastOrNull()?.author == account.userProfile() ||

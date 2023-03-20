@@ -42,17 +42,7 @@ import com.vitorpamplona.amethyst.RoboHashCache
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
-import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
-import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
-import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
-import com.vitorpamplona.amethyst.service.model.ReactionEvent
-import com.vitorpamplona.amethyst.service.model.ReportEvent
-import com.vitorpamplona.amethyst.service.model.RepostEvent
-import com.vitorpamplona.amethyst.service.model.TextNoteEvent
+import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.ui.components.AsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
@@ -321,6 +311,31 @@ fun NoteCompose(
 
                         note.channel()?.let {
                             ReplyInformationChannel(note.replyTo, sortedMentions, it, navController)
+                        }
+                    }
+
+                    if (noteEvent is PollNoteEvent && (note.replyTo != null || note.mentions != null)) {
+                        val replyingDirectlyTo = note.replyTo?.lastOrNull()
+                        if (replyingDirectlyTo != null && unPackReply) {
+                            NoteCompose(
+                                baseNote = replyingDirectlyTo,
+                                isQuotedNote = true,
+                                modifier = Modifier
+                                    .padding(0.dp)
+                                    .fillMaxWidth()
+                                    .clip(shape = RoundedCornerShape(15.dp))
+                                    .border(
+                                        1.dp,
+                                        MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
+                                        RoundedCornerShape(15.dp)
+                                    ),
+                                unPackReply = false,
+                                makeItShort = true,
+                                parentBackgroundColor = MaterialTheme.colors.onSurface.copy(alpha = 0.05f)
+                                    .compositeOver(backgroundColor),
+                                accountViewModel = accountViewModel,
+                                navController = navController
+                            )
                         }
                     }
 

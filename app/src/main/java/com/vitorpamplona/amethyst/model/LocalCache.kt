@@ -803,6 +803,7 @@ object LocalCache {
     fun findNotesStartingWith(text: String): List<Note> {
         return notes.values.filter {
             (it.event is TextNoteEvent && it.event?.content()?.contains(text, true) ?: false) ||
+                (it.event is PollNoteEvent && it.event?.content()?.contains(text, true) ?: false) ||
                 (it.event is ChannelMessageEvent && it.event?.content()?.contains(text, true) ?: false) ||
                 it.idHex.startsWith(text, true) ||
                 it.idNote().startsWith(text, true)
