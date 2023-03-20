@@ -304,9 +304,9 @@ class Account(
             consensusThreshold = consensusThreshold,
             closedAt = closedAt
         )
-        println("PollNoteEvent: %s".format(signedEvent.toJson()))
-        // Client.send(signedEvent)
-        // LocalCache.consume(signedEvent)
+        println("Sending new PollNoteEvent: %s".format(signedEvent.toJson()))
+        Client.send(signedEvent)
+        LocalCache.consume(signedEvent)
     }
 
     fun sendChannelMessage(message: String, toChannel: String, replyingTo: Note? = null, mentions: List<User>?) {

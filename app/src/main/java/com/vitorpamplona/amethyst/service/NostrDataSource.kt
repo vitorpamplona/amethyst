@@ -2,27 +2,7 @@ package com.vitorpamplona.amethyst.service
 
 import android.util.Log
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
-import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
-import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
-import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.service.model.ChannelHideMessageEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMuteUserEvent
-import com.vitorpamplona.amethyst.service.model.ContactListEvent
-import com.vitorpamplona.amethyst.service.model.DeletionEvent
-import com.vitorpamplona.amethyst.service.model.Event
-import com.vitorpamplona.amethyst.service.model.LnZapEvent
-import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
-import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
-import com.vitorpamplona.amethyst.service.model.MetadataEvent
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
-import com.vitorpamplona.amethyst.service.model.ReactionEvent
-import com.vitorpamplona.amethyst.service.model.RecommendRelayEvent
-import com.vitorpamplona.amethyst.service.model.ReportEvent
-import com.vitorpamplona.amethyst.service.model.RepostEvent
-import com.vitorpamplona.amethyst.service.model.TextNoteEvent
+import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.Subscription
@@ -91,6 +71,7 @@ abstract class NostrDataSource(val debugName: String) {
                             LocalCache.consume(event)
                         }
                         is TextNoteEvent -> LocalCache.consume(event, relay)
+                        is PollNoteEvent -> LocalCache.consume(event, relay)
                         else -> {
                             Log.w("Event Not Supported", event.toJson())
                         }
