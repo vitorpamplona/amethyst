@@ -91,6 +91,9 @@ fun ChannelScreen(
     if (account != null && channelId != null) {
         val replyTo = remember { mutableStateOf<Note?>(null) }
 
+        ChannelFeedFilter.loadMessagesBetween(account, channelId)
+        NostrChannelDataSource.loadMessagesBetween(account, channelId)
+
         val channelState by NostrChannelDataSource.channel!!.live.observeAsState()
         val channel = channelState?.channel ?: return
 

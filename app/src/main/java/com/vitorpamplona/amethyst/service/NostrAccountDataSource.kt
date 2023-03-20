@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.service
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
 import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
+import com.vitorpamplona.amethyst.service.model.BookmarkListEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ContactListEvent
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
@@ -51,6 +52,17 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
         )
     }
 
+    fun createAccountBookmarkListFilter(): TypedFilter {
+        return TypedFilter(
+            types = FeedType.values().toSet(),
+            filter = JsonFilter(
+                kinds = listOf(BookmarkListEvent.kind),
+                authors = listOf(account.userProfile().pubkeyHex),
+                limit = 1
+            )
+        )
+    }
+
     fun createAccountReportsFilter(): TypedFilter {
         return TypedFilter(
             types = FeedType.values().toSet(),
@@ -87,7 +99,8 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
             createAccountContactListFilter(),
             createNotificationFilter(),
             createAccountReportsFilter(),
-            createAccountAcceptedAwardsFilter()
+            createAccountAcceptedAwardsFilter(),
+            createAccountBookmarkListFilter()
         ).ifEmpty { null }
     }
 }

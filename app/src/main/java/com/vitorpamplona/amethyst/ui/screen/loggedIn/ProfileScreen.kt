@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
+import com.vitorpamplona.amethyst.ui.dal.UserProfileBookmarksFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowersFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowsFeedFilter
@@ -75,6 +76,7 @@ import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.screen.FeedView
 import com.vitorpamplona.amethyst.ui.screen.LnZapFeedView
+import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileBookmarksFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileConversationsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileFollowersUserFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileFollowsUserFeedViewModel
@@ -104,6 +106,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
     UserProfileFollowsFeedFilter.loadUserProfile(account, userId)
     UserProfileZapsFeedFilter.loadUserProfile(userId)
     UserProfileReportsFeedFilter.loadUserProfile(userId)
+    UserProfileBookmarksFeedFilter.loadUserProfile(account, userId)
 
     NostrUserProfileDataSource.loadUserProfile(userId)
 
@@ -112,7 +115,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
     DisposableEffect(accountViewModel) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                println("Profile Start")
+                println("Profidle Start")
                 NostrUserProfileDataSource.loadUserProfile(userId)
                 NostrUserProfileDataSource.start()
             }
@@ -226,6 +229,14 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                                 Text(text = "${showAmount(zapAmount)} ${stringResource(id = R.string.zaps)}")
                             },
                             {
+                                val userState by baseUser.live().bookmarks.observeAsState()
+                                val bookmarkList = userState?.user?.latestBookmarkList
+                                val userBookmarks =
+                                    (bookmarkList?.taggedEvents()?.count() ?: 0) + (bookmarkList?.taggedAddresses()?.count() ?: 0)
+
+                                Text(text = "$userBookmarks ${stringResource(R.string.bookmarks)}")
+                            },
+                            {
                                 val userState by baseUser.live().reports.observeAsState()
                                 val userReports = userState?.user?.reports?.values?.flatten()?.count()
 
@@ -251,7 +262,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                         }
                     }
                     HorizontalPager(
-                        count = 7,
+                        count = 8,
                         state = pagerState,
                         modifier = with(LocalDensity.current) {
                             Modifier.height((columnSize.height - tabsSize.height).toDp())
@@ -263,8 +274,9 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                             2 -> TabFollows(baseUser, accountViewModel, navController)
                             3 -> TabFollowers(baseUser, accountViewModel, navController)
                             4 -> TabReceivedZaps(baseUser, accountViewModel, navController)
-                            5 -> TabReports(baseUser, accountViewModel, navController)
-                            6 -> TabRelays(baseUser, accountViewModel)
+                            5 -> TabBookmarks(baseUser, accountViewModel, navController)
+                            6 -> TabReports(baseUser, accountViewModel, navController)
+                            7 -> TabRelays(baseUser, accountViewModel)
                         }
                     }
                 }
@@ -681,6 +693,27 @@ fun TabNotesConversations(accountViewModel: AccountViewModel, navController: Nav
         val feedViewModel: NostrUserProfileConversationsFeedViewModel = viewModel()
 
         LaunchedEffect(Unit) {
+            feedViewModel.refresh()
+        }
+
+        Column(Modifier.fillMaxHeight()) {
+            Column(
+                modifier = Modifier.padding(vertical = 0.dp)
+            ) {
+                FeedView(feedViewModel, accountViewModel, navController, null)
+            }
+        }
+    }
+}
+
+@Composable
+fun TabBookmarks(baseUser: User, accountViewModel: AccountViewModel, navController: NavController) {
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val userState by baseUser.live().bookmarks.observeAsState()
+    if (accountState != null) {
+        val feedViewModel: NostrUserProfileBookmarksFeedViewModel = viewModel()
+
+        LaunchedEffect(userState) {
             feedViewModel.refresh()
         }
 

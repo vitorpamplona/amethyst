@@ -4,6 +4,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
 import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
+import com.vitorpamplona.amethyst.service.model.BookmarkListEvent
 import com.vitorpamplona.amethyst.service.model.ContactListEvent
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
@@ -90,6 +91,17 @@ object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
         )
     }
 
+    fun createBookmarksFilter() = user?.let {
+        TypedFilter(
+            types = FeedType.values().toSet(),
+            filter = JsonFilter(
+                kinds = listOf(BookmarkListEvent.kind),
+                authors = listOf(it.pubkeyHex),
+                limit = 1
+            )
+        )
+    }
+
     fun createReceivedAwardsFilter() = user?.let {
         TypedFilter(
             types = FeedType.values().toSet(),
@@ -111,7 +123,8 @@ object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
             createFollowersFilter(),
             createUserReceivedZapsFilter(),
             createAcceptedAwardsFilter(),
-            createReceivedAwardsFilter()
+            createReceivedAwardsFilter(),
+            createBookmarksFilter()
         ).ifEmpty { null }
     }
 }

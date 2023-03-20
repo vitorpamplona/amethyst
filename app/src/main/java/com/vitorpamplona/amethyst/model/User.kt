@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
+import com.vitorpamplona.amethyst.service.model.BookmarkListEvent
 import com.vitorpamplona.amethyst.service.model.ContactListEvent
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.MetadataEvent
@@ -28,6 +29,7 @@ class User(val pubkeyHex: String) {
     var info: UserMetadata? = null
 
     var latestContactList: ContactListEvent? = null
+    var latestBookmarkList: BookmarkListEvent? = null
 
     var notes = setOf<Note>()
         private set
@@ -73,6 +75,13 @@ class User(val pubkeyHex: String) {
     fun profilePicture(): String? {
         if (info?.picture.isNullOrBlank()) info?.picture = null
         return info?.picture
+    }
+
+    fun updateBookmark(event: BookmarkListEvent) {
+        if (event.id == latestBookmarkList?.id) return
+
+        latestBookmarkList = event
+        liveSet?.bookmarks?.invalidateData()
     }
 
     fun updateContactList(event: ContactListEvent) {
@@ -335,6 +344,7 @@ class UserLiveSet(u: User) {
     val metadata: UserLiveData = UserLiveData(u)
     val zaps: UserLiveData = UserLiveData(u)
     val badges: UserLiveData = UserLiveData(u)
+    val bookmarks: UserLiveData = UserLiveData(u)
 
     fun isInUse(): Boolean {
         return follows.hasObservers() ||
@@ -344,7 +354,8 @@ class UserLiveSet(u: User) {
             relayInfo.hasObservers() ||
             metadata.hasObservers() ||
             zaps.hasObservers() ||
-            badges.hasObservers()
+            badges.hasObservers() ||
+            bookmarks.hasObservers()
     }
 }
 

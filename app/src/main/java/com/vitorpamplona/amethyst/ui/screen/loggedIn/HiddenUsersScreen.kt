@@ -29,7 +29,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalPagerApi::class)
 @Composable
-fun FiltersScreen(accountViewModel: AccountViewModel, navController: NavController) {
+fun HiddenUsersScreen(accountViewModel: AccountViewModel, navController: NavController) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account
 

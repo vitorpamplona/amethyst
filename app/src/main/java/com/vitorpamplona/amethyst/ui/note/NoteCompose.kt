@@ -870,6 +870,25 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
             Text(stringResource(R.string.quick_action_share))
         }
         Divider()
+        if (accountViewModel.isInPrivateBookmarks(note)) {
+            DropdownMenuItem(onClick = { accountViewModel.removePrivateBookmark(note); onDismiss() }) {
+                Text(stringResource(R.string.remove_from_private_bookmarks))
+            }
+        } else {
+            DropdownMenuItem(onClick = { accountViewModel.addPrivateBookmark(note); onDismiss() }) {
+                Text(stringResource(R.string.add_to_private_bookmarks))
+            }
+        }
+        if (accountViewModel.isInPublicBookmarks(note)) {
+            DropdownMenuItem(onClick = { accountViewModel.removePublicBookmark(note); onDismiss() }) {
+                Text(stringResource(R.string.remove_from_public_bookmarks))
+            }
+        } else {
+            DropdownMenuItem(onClick = { accountViewModel.addPublicBookmark(note); onDismiss() }) {
+                Text(stringResource(R.string.add_to_public_bookmarks))
+            }
+        }
+        Divider()
         DropdownMenuItem(onClick = { accountViewModel.broadcast(note); onDismiss() }) {
             Text(stringResource(R.string.broadcast))
         }

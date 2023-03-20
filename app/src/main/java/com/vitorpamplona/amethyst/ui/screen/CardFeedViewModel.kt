@@ -99,8 +99,6 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>) : ViewModel() {
                 }
             }
 
-        // val boostCards = boostsPerEvent.map { BoostSetCard(it.key, it.value) }
-
         val allBaseNotes = zapsPerEvent.keys + boostsPerEvent.keys + reactionsPerEvent.keys
         val multiCards = allBaseNotes.map {
             MultiSetCard(

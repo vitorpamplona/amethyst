@@ -38,6 +38,14 @@ open class Event(
     override fun toJson(): String = gson.toJson(this)
 
     fun taggedUsers() = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
+    fun taggedEvents() = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
+
+    fun taggedAddresses() = tags.filter { it.firstOrNull() == "a" }.mapNotNull {
+        val aTagValue = it.getOrNull(1)
+        val relay = it.getOrNull(2)
+
+        if (aTagValue != null) ATag.parse(aTagValue, relay) else null
+    }
 
     fun hashtags() = tags.filter { it.firstOrNull() == "t" }.mapNotNull { it.getOrNull(1) }
 
@@ -175,7 +183,7 @@ open class Event(
             BadgeAwardEvent.kind -> BadgeAwardEvent(id, pubKey, createdAt, tags, content, sig)
             BadgeDefinitionEvent.kind -> BadgeDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
             BadgeProfilesEvent.kind -> BadgeProfilesEvent(id, pubKey, createdAt, tags, content, sig)
-
+            BookmarkListEvent.kind -> BookmarkListEvent(id, pubKey, createdAt, tags, content, sig)
             ChannelCreateEvent.kind -> ChannelCreateEvent(id, pubKey, createdAt, tags, content, sig)
             ChannelHideMessageEvent.kind -> ChannelHideMessageEvent(id, pubKey, createdAt, tags, content, sig)
             ChannelMessageEvent.kind -> ChannelMessageEvent(id, pubKey, createdAt, tags, content, sig)
@@ -206,7 +214,15 @@ open class Event(
                 tags,
                 content
             )
+
+            // GSON decided to hardcode these replacements.
+            // They break Nostr's hash check.
+            // These lines revert their code.
+            // https://github.com/google/gson/issues/2295
             val rawEventJson = gson.toJson(rawEvent)
+                .replace("\\u2028", "\u2028")
+                .replace("\\u2029", "\u2029")
+
             return sha256.digest(rawEventJson.toByteArray())
         }
 

@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.model
 import android.content.res.Resources
 import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
+import com.vitorpamplona.amethyst.service.model.BookmarkListEvent
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
@@ -413,6 +414,116 @@ class Account(
         LocalCache.consume(event)
 
         joinChannel(event.id)
+    }
+
+    fun addPrivateBookmark(note: Note) {
+        if (!isWriteable()) return
+
+        val bookmarks = userProfile().latestBookmarkList
+
+        val event = BookmarkListEvent.create(
+            "bookmark",
+            bookmarks?.taggedEvents() ?: emptyList(),
+            bookmarks?.taggedUsers() ?: emptyList(),
+            bookmarks?.taggedAddresses() ?: emptyList(),
+
+            bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!)?.plus(note.idHex) ?: listOf(note.idHex),
+            bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
+            bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
+
+            loggedIn.privKey!!
+        )
+
+        Client.send(event)
+        LocalCache.consume(event)
+    }
+
+    fun addPublicBookmark(note: Note) {
+        if (!isWriteable()) return
+
+        val bookmarks = userProfile().latestBookmarkList
+
+        val event = BookmarkListEvent.create(
+            "bookmark",
+            bookmarks?.taggedEvents()?.plus(note.idHex) ?: listOf(note.idHex),
+            bookmarks?.taggedUsers() ?: emptyList(),
+            bookmarks?.taggedAddresses() ?: emptyList(),
+
+            bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!) ?: emptyList(),
+            bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
+            bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
+
+            loggedIn.privKey!!
+        )
+
+        Client.send(event)
+        LocalCache.consume(event)
+    }
+
+    fun removePrivateBookmark(note: Note) {
+        if (!isWriteable()) return
+
+        val bookmarks = userProfile().latestBookmarkList
+
+        val event = BookmarkListEvent.create(
+            "bookmark",
+            bookmarks?.taggedEvents() ?: emptyList(),
+            bookmarks?.taggedUsers() ?: emptyList(),
+            bookmarks?.taggedAddresses() ?: emptyList(),
+
+            bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!)?.minus(note.idHex) ?: listOf(),
+            bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
+            bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
+
+            loggedIn.privKey!!
+        )
+
+        Client.send(event)
+        LocalCache.consume(event)
+    }
+
+    fun removePublicBookmark(note: Note) {
+        if (!isWriteable()) return
+
+        val bookmarks = userProfile().latestBookmarkList
+
+        val event = BookmarkListEvent.create(
+            "bookmark",
+            bookmarks?.taggedEvents()?.minus(note.idHex),
+            bookmarks?.taggedUsers() ?: emptyList(),
+            bookmarks?.taggedAddresses() ?: emptyList(),
+
+            bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!) ?: emptyList(),
+            bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
+            bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
+
+            loggedIn.privKey!!
+        )
+
+        Client.send(event)
+        LocalCache.consume(event)
+    }
+
+    fun isInPrivateBookmarks(note: Note): Boolean {
+        if (!isWriteable()) return false
+
+        if (note is AddressableNote) {
+            return userProfile().latestBookmarkList?.privateTaggedAddresses(loggedIn.privKey!!)
+                ?.contains(note.address) == true
+        } else {
+            return userProfile().latestBookmarkList?.privateTaggedEvents(loggedIn.privKey!!)
+                ?.contains(note.idHex) == true
+        }
+    }
+
+    fun isInPublicBookmarks(note: Note): Boolean {
+        if (!isWriteable()) return false
+
+        if (note is AddressableNote) {
+            return userProfile().latestBookmarkList?.taggedAddresses()?.contains(note.address) == true
+        } else {
+            return userProfile().latestBookmarkList?.taggedEvents()?.contains(note.idHex) == true
+        }
     }
 
     fun joinChannel(idHex: String) {

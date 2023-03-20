@@ -16,11 +16,12 @@ import com.vitorpamplona.amethyst.ui.screen.NostrGlobalFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.BookmarkListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChatroomListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChatroomScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.FiltersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.HashtagScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.HiddenUsersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.HomeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.NotificationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ProfileScreen
@@ -73,7 +74,8 @@ fun AppNavigation(
 
         composable(Route.Message.route, content = { ChatroomListScreen(accountViewModel, navController) })
         composable(Route.Notification.route, content = { NotificationScreen(accountViewModel, navController) })
-        composable(Route.Filters.route, content = { FiltersScreen(accountViewModel, navController) })
+        composable(Route.BlockedUsers.route, content = { HiddenUsersScreen(accountViewModel, navController) })
+        composable(Route.Bookmarks.route, content = { BookmarkListScreen(accountViewModel, navController) })
 
         Route.Profile.let { route ->
             composable(route.route, route.arguments, content = {

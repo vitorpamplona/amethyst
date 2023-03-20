@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.LocalCacheState
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.dal.BookmarkPrivateFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.BookmarkPublicFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ChannelFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ChatroomFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ChatroomListKnownFeedFilter
@@ -15,6 +17,7 @@ import com.vitorpamplona.amethyst.ui.dal.HashtagFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ThreadFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.UserProfileBookmarksFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
@@ -38,10 +41,14 @@ class NostrHashtagFeedViewModel : FeedViewModel(HashtagFeedFilter)
 class NostrUserProfileNewThreadsFeedViewModel : FeedViewModel(UserProfileNewThreadFeedFilter)
 class NostrUserProfileConversationsFeedViewModel : FeedViewModel(UserProfileConversationsFeedFilter)
 class NostrUserProfileReportFeedViewModel : FeedViewModel(UserProfileReportsFeedFilter)
+class NostrUserProfileBookmarksFeedViewModel : FeedViewModel(UserProfileBookmarksFeedFilter)
 class NostrChatroomListKnownFeedViewModel : FeedViewModel(ChatroomListKnownFeedFilter)
 class NostrChatroomListNewFeedViewModel : FeedViewModel(ChatroomListNewFeedFilter)
 class NostrHomeFeedViewModel : FeedViewModel(HomeNewThreadFeedFilter)
 class NostrHomeRepliesFeedViewModel : FeedViewModel(HomeConversationsFeedFilter)
+
+class NostrBookmarkPublicFeedViewModel : FeedViewModel(BookmarkPublicFeedFilter)
+class NostrBookmarkPrivateFeedViewModel : FeedViewModel(BookmarkPrivateFeedFilter)
 
 abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
     private val _feedContent = MutableStateFlow<FeedState>(FeedState.Loading)

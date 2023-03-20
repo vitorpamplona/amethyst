@@ -8,6 +8,7 @@ import com.vitorpamplona.amethyst.service.model.ATag
 import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
 import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
+import com.vitorpamplona.amethyst.service.model.BookmarkListEvent
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelHideMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
@@ -151,6 +152,18 @@ object LocalCache {
             }
 
             oldUser.updateUserInfo(newUser, event)
+            // Log.d("MT", "New User Metadata ${oldUser.pubkeyDisplayHex} ${oldUser.toBestDisplayName()}")
+        } else {
+            // Log.d("MT","Relay sent a previous Metadata Event ${oldUser.toBestDisplayName()} ${formattedDateTime(event.createdAt)} > ${formattedDateTime(oldUser.updatedAt)}")
+        }
+    }
+
+    fun consume(event: BookmarkListEvent) {
+        val user = getOrCreateUser(event.pubKey)
+        if (user.latestBookmarkList == null || event.createdAt > user.latestBookmarkList!!.createdAt) {
+            if (event.dTag() == "bookmark") {
+                user.updateBookmark(event)
+            }
             // Log.d("MT", "New User Metadata ${oldUser.pubkeyDisplayHex} ${oldUser.toBestDisplayName()}")
         } else {
             // Log.d("MT","Relay sent a previous Metadata Event ${oldUser.toBestDisplayName()} ${formattedDateTime(event.createdAt)} > ${formattedDateTime(oldUser.updatedAt)}")

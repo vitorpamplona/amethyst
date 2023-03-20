@@ -48,9 +48,14 @@ sealed class Route(
         hasNewItems = { accountViewModel, cache -> messagesHasNewItems(accountViewModel, cache) }
     )
 
-    object Filters : Route(
-        route = "Filters",
+    object BlockedUsers : Route(
+        route = "BlockedUsers",
         icon = R.drawable.ic_security
+    )
+
+    object Bookmarks : Route(
+        route = "Bookmarks",
+        icon = R.drawable.ic_bookmarks
     )
 
     object Profile : Route(

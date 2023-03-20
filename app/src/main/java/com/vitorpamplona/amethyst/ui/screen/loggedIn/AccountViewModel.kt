@@ -85,6 +85,30 @@ class AccountViewModel(private val account: Account) : ViewModel() {
         account.boost(note)
     }
 
+    fun addPrivateBookmark(note: Note) {
+        account.addPrivateBookmark(note)
+    }
+
+    fun addPublicBookmark(note: Note) {
+        account.addPublicBookmark(note)
+    }
+
+    fun removePrivateBookmark(note: Note) {
+        account.removePrivateBookmark(note)
+    }
+
+    fun removePublicBookmark(note: Note) {
+        account.removePublicBookmark(note)
+    }
+
+    fun isInPrivateBookmarks(note: Note): Boolean {
+        return account.isInPrivateBookmarks(note)
+    }
+
+    fun isInPublicBookmarks(note: Note): Boolean {
+        return account.isInPublicBookmarks(note)
+    }
+
     fun broadcast(note: Note) {
         account.broadcast(note)
     }
