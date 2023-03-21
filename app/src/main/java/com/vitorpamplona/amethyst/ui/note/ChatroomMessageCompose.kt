@@ -98,14 +98,16 @@ fun ChatroomMessageCompose(
     if (note?.event == null) {
         BlankNote(Modifier)
     } else if (!account.isAcceptable(noteForReports) && !showHiddenNote) {
-        HiddenNote(
-            account.getRelevantReports(noteForReports),
-            account.userProfile(),
-            Modifier,
-            innerQuote,
-            navController,
-            onClick = { showHiddenNote = true }
-        )
+        if (!account.isHidden(noteForReports.author!!)) {
+            HiddenNote(
+                account.getRelevantReports(noteForReports),
+                account.userProfile(),
+                Modifier,
+                innerQuote,
+                navController,
+                onClick = { showHiddenNote = true }
+            )
+        }
     } else {
         var backgroundBubbleColor: Color
         var alignment: Arrangement.Horizontal
