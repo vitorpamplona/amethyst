@@ -466,7 +466,7 @@ object LocalCache {
 
         val mentions = event.reportedAuthor().mapNotNull { checkGetOrCreateUser(it.key) }
         val repliesTo = event.reportedPost().mapNotNull { checkGetOrCreateNote(it.key) } +
-            event.taggedAddresses().mapNotNull { getOrCreateAddressableNote(it) }
+            event.taggedAddresses().map { getOrCreateAddressableNote(it) }
 
         note.loadEvent(event, author, repliesTo)
 
