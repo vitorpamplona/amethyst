@@ -31,11 +31,19 @@ class PollNoteEvent(
 
     fun replyTos() = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
 
-    fun pollOptions() = tags.filter { it.firstOrNull() == POLL_OPTIONS }.mapNotNull { it.getOrNull(1) }
-    fun valueMaximum() = tags.filter { it.firstOrNull() == VALUE_MAXIMUM }.mapNotNull { it.getOrNull(1) }
-    fun valueMinimum() = tags.filter { it.firstOrNull() == VALUE_MINIMUM }.mapNotNull { it.getOrNull(1) }
-    fun consensusThreshold() = tags.filter { it.firstOrNull() == CONSENSUS_THRESHOLD }.mapNotNull { it.getOrNull(1) }
-    fun closedAt() = tags.filter { it.firstOrNull() == CLOSED_AT }.mapNotNull { it.getOrNull(1) }
+    fun pollOptions() = jsonToPollOptions(tags.filter { it.firstOrNull() == POLL_OPTIONS }[0][1])
+    fun valueMaximum() = tags.filter { it.firstOrNull() == VALUE_MAXIMUM }.mapNotNull {
+        it.getOrNull(1)?.get(1)
+    }
+    fun valueMinimum() = tags.filter { it.firstOrNull() == VALUE_MINIMUM }.mapNotNull {
+        it.getOrNull(1)?.get(1)
+    }
+    fun consensusThreshold() = tags.filter { it.firstOrNull() == CONSENSUS_THRESHOLD }.mapNotNull {
+        it.getOrNull(1)?.get(1)
+    }
+    fun closedAt() = tags.filter { it.firstOrNull() == CLOSED_AT }.mapNotNull {
+        it.getOrNull(1)?.get(1)
+    }
 
     companion object {
         const val kind = 6969

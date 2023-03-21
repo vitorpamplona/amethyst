@@ -282,7 +282,7 @@ fun NoteCompose(
 
                     Spacer(modifier = Modifier.height(3.dp))
 
-                    if (noteEvent is TextNoteEvent && (note.replyTo != null || note.mentions != null)) {
+                    if ((noteEvent is TextNoteEvent || noteEvent is PollNoteEvent) && (note.replyTo != null || note.mentions != null)) {
                         val replyingDirectlyTo = note.replyTo?.lastOrNull()
                         if (replyingDirectlyTo != null && unPackReply) {
                             NoteCompose(
@@ -311,31 +311,6 @@ fun NoteCompose(
 
                         note.channel()?.let {
                             ReplyInformationChannel(note.replyTo, sortedMentions, it, navController)
-                        }
-                    }
-
-                    if (noteEvent is PollNoteEvent && (note.replyTo != null || note.mentions != null)) {
-                        val replyingDirectlyTo = note.replyTo?.lastOrNull()
-                        if (replyingDirectlyTo != null && unPackReply) {
-                            NoteCompose(
-                                baseNote = replyingDirectlyTo,
-                                isQuotedNote = true,
-                                modifier = Modifier
-                                    .padding(0.dp)
-                                    .fillMaxWidth()
-                                    .clip(shape = RoundedCornerShape(15.dp))
-                                    .border(
-                                        1.dp,
-                                        MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
-                                        RoundedCornerShape(15.dp)
-                                    ),
-                                unPackReply = false,
-                                makeItShort = true,
-                                parentBackgroundColor = MaterialTheme.colors.onSurface.copy(alpha = 0.05f)
-                                    .compositeOver(backgroundColor),
-                                accountViewModel = accountViewModel,
-                                navController = navController
-                            )
                         }
                     }
 
@@ -469,6 +444,10 @@ fun NoteCompose(
                                 accountViewModel,
                                 navController
                             )
+
+                            if (noteEvent is PollNoteEvent) {
+                                PollNote(noteEvent, canPreview, makeItShort, accountViewModel, navController)
+                            }
                         }
 
                         if (!makeItShort) {
