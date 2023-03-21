@@ -267,8 +267,8 @@ fun HashTag(word: String, accountViewModel: AccountViewModel, navController: Nav
                     myId,
                     InlineTextContent(
                         Placeholder(
-                            width = 16.sp,
-                            height = 16.sp,
+                            width = 17.sp,
+                            height = 17.sp,
                             placeholderVerticalAlign = PlaceholderVerticalAlign.Center
                         )
                     ) {
