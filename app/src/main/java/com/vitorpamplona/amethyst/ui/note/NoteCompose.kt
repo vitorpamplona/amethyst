@@ -446,7 +446,13 @@ fun NoteCompose(
                             )
 
                             if (noteEvent is PollNoteEvent) {
-                                PollNote(noteEvent, canPreview, makeItShort, accountViewModel, navController)
+                                PollNote(
+                                    noteEvent,
+                                    canPreview = canPreview && !makeItShort,
+                                    backgroundColor,
+                                    accountViewModel,
+                                    navController
+                                )
                             }
                         }
 
