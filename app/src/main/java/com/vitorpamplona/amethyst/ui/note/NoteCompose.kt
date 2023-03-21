@@ -112,14 +112,16 @@ fun NoteCompose(
             isBoostedNote
         )
     } else if (!account.isAcceptable(noteForReports) && !showHiddenNote) {
-        HiddenNote(
-            account.getRelevantReports(noteForReports),
-            account.userProfile(),
-            modifier,
-            isBoostedNote,
-            navController,
-            onClick = { showHiddenNote = true }
-        )
+        if (!account.isHidden(noteForReports.author!!)) {
+            HiddenNote(
+                account.getRelevantReports(noteForReports),
+                account.userProfile(),
+                modifier,
+                isBoostedNote,
+                navController,
+                onClick = { showHiddenNote = true }
+            )
+        }
     } else if ((noteEvent is ChannelCreateEvent || noteEvent is ChannelMetadataEvent) && baseChannel != null) {
         ChannelHeader(baseChannel = baseChannel, account = account, navController = navController)
     } else if (noteEvent is BadgeDefinitionEvent) {
