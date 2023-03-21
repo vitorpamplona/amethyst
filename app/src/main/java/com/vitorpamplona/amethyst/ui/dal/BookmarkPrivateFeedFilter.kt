@@ -18,7 +18,7 @@ object BookmarkPrivateFeedFilter : FeedFilter<Note>() {
         val addresses = bookmarks?.privateTaggedAddresses(privKey)
             ?.map { LocalCache.getOrCreateAddressableNote(it) } ?: emptyList()
 
-        return notes.plus(addresses)
+        return notes.plus(addresses).toSet()
             .sortedBy { it.createdAt() }
             .reversed()
     }
