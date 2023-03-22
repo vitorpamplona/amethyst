@@ -3,7 +3,6 @@ package com.vitorpamplona.amethyst.ui.actions
 import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -28,6 +27,7 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.GetMediaActivityResultContract
 import java.util.concurrent.atomic.AtomicBoolean
 
 @OptIn(ExperimentalPermissionsApi::class)
@@ -150,7 +150,7 @@ fun GallerySelect(
 ) {
     var hasLaunched by remember { mutableStateOf(AtomicBoolean(false)) }
     val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent(),
+        contract = GetMediaActivityResultContract(),
         onResult = { uri: Uri? ->
             onImageUri(uri)
             hasLaunched.set(false)
@@ -161,7 +161,7 @@ fun GallerySelect(
     fun LaunchGallery() {
         SideEffect {
             if (!hasLaunched.getAndSet(true)) {
-                launcher.launch("image/*")
+                launcher.launch("*/*")
             }
         }
     }

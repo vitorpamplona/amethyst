@@ -14,6 +14,8 @@ import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.ui.components.isValidURL
 import com.vitorpamplona.amethyst.ui.components.noProtocolUrlValidator
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 
@@ -140,12 +142,16 @@ class NewPostViewModel : ViewModel() {
             onSuccess = { imageUrl ->
                 isUploadingImage = false
                 message = TextFieldValue(message.text + "\n\n" + imageUrl)
-                urlPreview = findUrlInMessage()
+
+                viewModelScope.launch(Dispatchers.IO) {
+                    delay(2000)
+                    urlPreview = findUrlInMessage()
+                }
             },
             onError = {
                 isUploadingImage = false
                 viewModelScope.launch {
-                    imageUploadingError.emit("Failed to upload the image")
+                    imageUploadingError.emit("Failed to upload the image / video")
                 }
             }
         )
