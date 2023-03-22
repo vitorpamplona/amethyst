@@ -41,6 +41,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.ViewModel
@@ -228,9 +229,7 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, account: Account) {
                 var qrScanning by remember { mutableStateOf(false) }
 
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 5.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(stringResource(id = R.string.wallet_connect_service), Modifier.weight(1f))
@@ -244,6 +243,20 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, account: Account) {
                             tint = MaterialTheme.colors.primary
                         )
                     }
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        stringResource(id = R.string.wallet_connect_service_explainer),
+                        Modifier.weight(1f),
+                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                        fontSize = 14.sp
+                    )
                 }
 
                 if (qrScanning) {
