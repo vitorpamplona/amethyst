@@ -37,7 +37,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
-import com.vitorpamplona.amethyst.ui.qrcode.QrCodeScanner
+import com.vitorpamplona.amethyst.ui.qrcode.NIP19QrCodeScanner
 
 @Composable
 fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
@@ -135,7 +135,7 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
                             }
                         }
                     } else {
-                        QrCodeScanner {
+                        NIP19QrCodeScanner {
                             if (it.isNullOrEmpty()) {
                                 presenting = true
                             } else {

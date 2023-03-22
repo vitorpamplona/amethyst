@@ -8,6 +8,7 @@ import com.google.gson.reflect.TypeToken
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.model.toByteArray
+import com.vitorpamplona.amethyst.service.model.Contact
 import com.vitorpamplona.amethyst.service.model.ContactListEvent
 import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.Event.Companion.getRefinedEvent
@@ -46,6 +47,7 @@ private object PrefKeys {
     const val LANGUAGE_PREFS = "languagePreferences"
     const val TRANSLATE_TO = "translateTo"
     const val ZAP_AMOUNTS = "zapAmounts"
+    const val ZAP_PAYMENT_REQUEST_SERVER = "zapPaymentServer"
     const val LATEST_CONTACT_LIST = "latestContactList"
     const val HIDE_DELETE_REQUEST_DIALOG = "hide_delete_request_dialog"
     const val HIDE_BLOCK_ALERT_DIALOG = "hide_block_alert_dialog"
@@ -183,6 +185,7 @@ object LocalPreferences {
             putString(PrefKeys.LANGUAGE_PREFS, gson.toJson(account.languagePreferences))
             putString(PrefKeys.TRANSLATE_TO, account.translateTo)
             putString(PrefKeys.ZAP_AMOUNTS, gson.toJson(account.zapAmountChoices))
+            putString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, gson.toJson(account.zapPaymentRequest))
             putString(PrefKeys.LATEST_CONTACT_LIST, Event.gson.toJson(account.backupContactList))
             putBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, account.hideDeleteRequestDialog)
             putBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, account.hideBlockAlertDialog)
@@ -209,6 +212,15 @@ object LocalPreferences {
                 getString(PrefKeys.ZAP_AMOUNTS, "[]"),
                 object : TypeToken<List<Long>>() {}.type
             ) ?: listOf(500L, 1000L, 5000L)
+
+            val zapPaymentRequestServer = try {
+                getString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, null)?.let {
+                    gson.fromJson(it, Contact::class.java)
+                }
+            } catch (e: Throwable) {
+                e.printStackTrace()
+                null
+            }
 
             val latestContactList = try {
                 getString(PrefKeys.LATEST_CONTACT_LIST, null)?.let {
@@ -244,6 +256,7 @@ object LocalPreferences {
                 languagePreferences,
                 translateTo,
                 zapAmountChoices,
+                zapPaymentRequestServer,
                 hideDeleteRequestDialog,
                 hideBlockAlertDialog,
                 latestContactList

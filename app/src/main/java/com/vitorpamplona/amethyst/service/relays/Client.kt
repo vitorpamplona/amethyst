@@ -64,8 +64,24 @@ object Client : RelayPool.Listener {
         RelayPool.sendFilterOnlyIfDisconnected()
     }
 
-    fun send(signedEvent: EventInterface) {
-        RelayPool.send(signedEvent)
+    fun send(signedEvent: EventInterface, relay: String? = null) {
+        if (relay == null) {
+            RelayPool.send(signedEvent)
+        } else {
+            val useConnectedRelay = relays.filter { it.url == relay }
+
+            if (useConnectedRelay.isNotEmpty()) {
+                useConnectedRelay.forEach {
+                    it.send(signedEvent)
+                }
+            } else {
+                /** temporary connection */
+                Relay(relay, false, true, emptySet()).requestAndWatch() {
+                    it.send(signedEvent)
+                    it.disconnect()
+                }
+            }
+        }
     }
 
     fun close(subscriptionId: String) {

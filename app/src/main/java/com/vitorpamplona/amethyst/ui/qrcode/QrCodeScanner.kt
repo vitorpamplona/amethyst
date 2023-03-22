@@ -12,10 +12,8 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 
 @Composable
-fun QrCodeScanner(onScan: (String?) -> Unit) {
-    val lifecycleOwner = LocalLifecycleOwner.current
-
-    val parseQrResult = { it: String ->
+fun NIP19QrCodeScanner(onScan: (String?) -> Unit) {
+    SimpleQrCodeScanner {
         try {
             val nip19 = Nip19.uriToRoute(it)
             val startingPage = when (nip19?.type) {
@@ -34,11 +32,16 @@ fun QrCodeScanner(onScan: (String?) -> Unit) {
             onScan(null)
         }
     }
+}
+
+@Composable
+fun SimpleQrCodeScanner(onScan: (String?) -> Unit) {
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     val qrLauncher =
         rememberLauncherForActivityResult(ScanContract()) {
             if (it.contents != null) {
-                parseQrResult(it.contents)
+                onScan(it.contents)
             } else {
                 onScan(null)
             }

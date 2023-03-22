@@ -193,6 +193,7 @@ open class Event(
             DeletionEvent.kind -> DeletionEvent(id, pubKey, createdAt, tags, content, sig)
 
             LnZapEvent.kind -> LnZapEvent(id, pubKey, createdAt, tags, content, sig)
+            LnZapPaymentRequestEvent.kind -> LnZapPaymentRequestEvent(id, pubKey, createdAt, tags, content, sig)
             LnZapRequestEvent.kind -> LnZapRequestEvent(id, pubKey, createdAt, tags, content, sig)
             LongTextNoteEvent.kind -> LongTextNoteEvent(id, pubKey, createdAt, tags, content, sig)
             MetadataEvent.kind -> MetadataEvent(id, pubKey, createdAt, tags, content, sig)

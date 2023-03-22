@@ -53,6 +53,16 @@ class Relay(
 
     @Synchronized
     fun requestAndWatch() {
+        requestAndWatch {
+            // Sends everything.
+            Client.allSubscriptions().forEach {
+                sendFilter(requestId = it)
+            }
+        }
+    }
+
+    @Synchronized
+    fun requestAndWatch(onConnected: (Relay) -> Unit) {
         if (socket != null) return
 
         try {
@@ -65,12 +75,9 @@ class Relay(
                 override fun onOpen(webSocket: WebSocket, response: Response) {
                     isReady = true
                     ping = response.receivedResponseAtMillis - response.sentRequestAtMillis
-
                     // Log.w("Relay", "Relay OnOpen, Loading All subscriptions $url")
-                    // Sends everything.
-                    Client.allSubscriptions().forEach {
-                        sendFilter(requestId = it)
-                    }
+                    onConnected(this@Relay)
+
                     listeners.forEach { it.onRelayStateChange(this@Relay, Type.CONNECT, null) }
                 }
 

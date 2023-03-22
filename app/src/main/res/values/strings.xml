@@ -251,10 +251,12 @@
     <string name="bookmarks">Bookmarks</string>
     <string name="private_bookmarks">Private Bookmarks</string>
     <string name="public_bookmarks">Public Bookmarks</string>
-
     <string name="add_to_private_bookmarks">Add to Private Bookmarks</string>
     <string name="add_to_public_bookmarks">Add to Public Bookmarks</string>
-
     <string name="remove_from_private_bookmarks">Remove from Private Bookmarks</string>
     <string name="remove_from_public_bookmarks">Remove from Public Bookmarks</string>
+
+    <string name="wallet_connect_service">Wallet Connect Service</string>
+    <string name="wallet_connect_service_pubkey">Wallet Connect Pubkey</string>
+    <string name="wallet_connect_service_relay">Wallet Connect Relay</string>
 </resources>

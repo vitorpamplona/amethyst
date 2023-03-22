@@ -11,6 +11,7 @@ import com.vitorpamplona.amethyst.service.model.Contact
 import com.vitorpamplona.amethyst.service.model.ContactListEvent
 import com.vitorpamplona.amethyst.service.model.DeletionEvent
 import com.vitorpamplona.amethyst.service.model.IdentityClaim
+import com.vitorpamplona.amethyst.service.model.LnZapPaymentRequestEvent
 import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
 import com.vitorpamplona.amethyst.service.model.MetadataEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
@@ -60,6 +61,7 @@ class Account(
     var languagePreferences: Map<String, String> = mapOf(),
     var translateTo: String = Locale.getDefault().language,
     var zapAmountChoices: List<Long> = listOf(500L, 1000L, 5000L),
+    var zapPaymentRequest: Contact? = null,
     var hideDeleteRequestDialog: Boolean = false,
     var hideBlockAlertDialog: Boolean = false,
     var backupContactList: ContactListEvent? = null
@@ -162,6 +164,20 @@ class Account(
         }
 
         return null
+    }
+
+    fun hasWalletConnectSetup(): Boolean {
+        return zapPaymentRequest != null
+    }
+
+    fun sendZapPaymentRequestFor(lnInvoice: String) {
+        if (!isWriteable()) return
+
+        zapPaymentRequest?.let {
+            val event = LnZapPaymentRequestEvent.create(lnInvoice, it.pubKeyHex, loggedIn.privKey!!)
+
+            Client.send(event, it.relayUri)
+        }
     }
 
     fun createZapRequestFor(user: User): LnZapRequestEvent? {
@@ -555,6 +571,12 @@ class Account(
 
     fun changeZapAmounts(newAmounts: List<Long>) {
         zapAmountChoices = newAmounts
+        live.invalidateData()
+        saveable.invalidateData()
+    }
+
+    fun changeZapPaymentRequest(newServer: Contact?) {
+        zapPaymentRequest = newServer
         live.invalidateData()
         saveable.invalidateData()
     }

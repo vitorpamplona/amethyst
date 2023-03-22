@@ -64,9 +64,13 @@ class AccountViewModel(private val account: Account) : ViewModel() {
             message,
             zapRequest?.toJson(),
             onSuccess = {
-                runCatching {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("lightning:$it"))
-                    ContextCompat.startActivity(context, intent, null)
+                if (account.hasWalletConnectSetup()) {
+                    account.sendZapPaymentRequestFor(it)
+                } else {
+                    runCatching {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("lightning:$it"))
+                        ContextCompat.startActivity(context, intent, null)
+                    }
                 }
             },
             onError = onError
