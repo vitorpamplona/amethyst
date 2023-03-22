@@ -60,6 +60,7 @@ import androidx.compose.ui.window.Popup
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.SelectTextDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -76,7 +77,13 @@ private fun lightenColor(color: Color, amount: Float): Color {
     return Color(argb)
 }
 
-val externalLinkForNote = { note: Note -> "https://snort.social/e/${note.idNote()}" }
+val externalLinkForNote = { note: Note ->
+    if (note is AddressableNote) {
+        "https://habla.news/a/${note.address().toNAddr()}"
+    } else {
+        "https://snort.social/e/${note.idNote()}"
+    }
+}
 
 @Composable
 private fun VerticalDivider(color: Color) =

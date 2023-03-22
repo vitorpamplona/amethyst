@@ -53,4 +53,20 @@ class NIP19ParserTest {
         val address = ATag(30023, "d1e60465c2b777325e9133f2100d2bb31416dca810f54a1d95665621c5dee193", "89de7920", "wss://relay.damus.io")
         assertEquals("naddr1qqyrswtyv5mnjv3sqy28wumn8ghj7un9d3shjtnyv9kh2uewd9hsygx3uczxts4hwue9ayfn7ggq62anzstde2qs749pm9tx2csuthhpjvpsgqqqw4rs8pmj38", address.toNAddr())
     }
+
+    @Test
+    fun nAddrParserGizmo() {
+        val result = Nip19.uriToRoute("naddr1qpqrvvfnvccrzdryxgunzvtxvgukge34xfjnqdpcv9sk2desxgmrscesvserzd3h8ycrywphvg6nsvf58ycnqef3v5mnsvt98pjnqdfs8ypzq3huhccxt6h34eupz3jeynjgjgek8lel2f4adaea0svyk94a3njdqvzqqqr4gudhrkyk")
+        assertEquals(Nip19.Type.ADDRESS, result?.type)
+        assertEquals("30023:46fcbe3065eaf1ae7811465924e48923363ff3f526bd6f73d7c184b16bd8ce4d:613f014d2911fb9df52e048aae70268c0d216790287b5814910e1e781e8e0509", result?.hex)
+        assertEquals(null, result?.relay)
+    }
+
+    @Test
+    fun nAddrParserGizmo2() {
+        val result = Nip19.uriToRoute("naddr1qq9rzd3h8y6nqwf5xyuqygzxljlrqe027xh8sy2xtyjwfzfrxcll8afxh4hh847psjckhkxwf5psgqqqw4rsty50fx")
+        assertEquals(Nip19.Type.ADDRESS, result?.type)
+        assertEquals("30023:46fcbe3065eaf1ae7811465924e48923363ff3f526bd6f73d7c184b16bd8ce4d:1679509418", result?.hex)
+        assertEquals(null, result?.relay)
+    }
 }
