@@ -13,6 +13,7 @@ import okhttp3.Callback
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
+import java.math.BigDecimal
 import java.net.URLEncoder
 
 class LightningAddressResolver {
@@ -165,7 +166,13 @@ class LightningAddressResolver {
                             }
 
                             lnInvoice?.get("pr")?.asText()?.let { pr ->
-                                onSuccess(pr)
+                                // Forces LN Invoice amount to be the requested amount.
+                                val invoiceAmount = LnInvoiceUtil.getAmountInSats(pr)
+                                if (invoiceAmount.multiply(BigDecimal(1000)).toLong() == BigDecimal(milliSats).toLong()) {
+                                    onSuccess(pr)
+                                } else {
+                                    onError("Incorrect invoice amount (${invoiceAmount.toLong()} sats) from server")
+                                }
                             } ?: onError("Invoice Not Created (element pr not found in the resulting JSON)")
                         },
                         onError = onError
