@@ -7,6 +7,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.map
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountState
@@ -14,6 +15,9 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.service.model.ReportEvent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 class AccountViewModel(private val account: Account) : ViewModel() {
@@ -48,7 +52,7 @@ class AccountViewModel(private val account: Account) : ViewModel() {
         account.delete(account.boostsTo(note))
     }
 
-    fun zap(note: Note, amount: Long, message: String, context: Context, onError: (String) -> Unit) {
+    suspend fun zap(note: Note, amount: Long, message: String, context: Context, onError: (String) -> Unit, onProgress: (percent: Float) -> Unit) {
         val lud16 = note.author?.info?.lud16?.trim() ?: note.author?.info?.lud06?.trim()
 
         if (lud16.isNullOrBlank()) {
@@ -58,22 +62,34 @@ class AccountViewModel(private val account: Account) : ViewModel() {
 
         val zapRequest = account.createZapRequestFor(note)
 
+        onProgress(0.10f)
+
         LightningAddressResolver().lnAddressInvoice(
             lud16,
             amount,
             message,
             zapRequest?.toJson(),
             onSuccess = {
+                onProgress(0.7f)
                 if (account.hasWalletConnectSetup()) {
                     account.sendZapPaymentRequestFor(it)
+                    onProgress(0.8f)
+
+                    // Awaits for the event to come back to LocalCache.
+                    viewModelScope.launch(Dispatchers.IO) {
+                        delay(1000)
+                        onProgress(0f)
+                    }
                 } else {
                     runCatching {
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("lightning:$it"))
                         ContextCompat.startActivity(context, intent, null)
                     }
+                    onProgress(0f)
                 }
             },
-            onError = onError
+            onError = onError,
+            onProgress = onProgress
         )
     }
 

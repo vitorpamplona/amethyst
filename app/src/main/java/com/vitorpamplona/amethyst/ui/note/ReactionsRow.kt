@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
+import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
@@ -33,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
@@ -307,7 +309,10 @@ fun ZapReaction(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    var zappingProgress by remember { mutableStateOf(0f) }
+
     Row(
+        verticalAlignment = CenterVertically,
         modifier = Modifier
             .then(Modifier.size(20.dp))
             .combinedClickable(
@@ -336,17 +341,26 @@ fun ZapReaction(
                                 .show()
                         }
                     } else if (account.zapAmountChoices.size == 1) {
-                        accountViewModel.zap(
-                            baseNote,
-                            account.zapAmountChoices.first() * 1000,
-                            "",
-                            context
-                        ) {
-                            scope.launch {
-                                Toast
-                                    .makeText(context, it, Toast.LENGTH_SHORT)
-                                    .show()
-                            }
+                        scope.launch(Dispatchers.IO) {
+                            accountViewModel.zap(
+                                baseNote,
+                                account.zapAmountChoices.first() * 1000,
+                                "",
+                                context,
+                                onError = {
+                                    scope.launch {
+                                        zappingProgress = 0f
+                                        Toast
+                                            .makeText(context, it, Toast.LENGTH_SHORT)
+                                            .show()
+                                    }
+                                },
+                                onProgress = {
+                                    scope.launch(Dispatchers.Main) {
+                                        zappingProgress = it
+                                    }
+                                }
+                            )
                         }
                     } else if (account.zapAmountChoices.size > 1) {
                         wantsToZap = true
@@ -363,6 +377,7 @@ fun ZapReaction(
                 accountViewModel,
                 onDismiss = {
                     wantsToZap = false
+                    zappingProgress = 0f
                 },
                 onChangeAmount = {
                     wantsToZap = false
@@ -370,7 +385,13 @@ fun ZapReaction(
                 },
                 onError = {
                     scope.launch {
+                        zappingProgress = 0f
                         Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+                    }
+                },
+                onProgress = {
+                    scope.launch(Dispatchers.Main) {
+                        zappingProgress = it
                     }
                 }
             )
@@ -380,6 +401,7 @@ fun ZapReaction(
         }
 
         if (zappedNote?.isZappedBy(account.userProfile()) == true) {
+            zappingProgress = 1f
             Icon(
                 imageVector = Icons.Default.Bolt,
                 contentDescription = stringResource(R.string.zaps),
@@ -387,12 +409,19 @@ fun ZapReaction(
                 tint = BitcoinOrange
             )
         } else {
-            Icon(
-                imageVector = Icons.Outlined.Bolt,
-                contentDescription = stringResource(id = R.string.zaps),
-                modifier = Modifier.size(20.dp),
-                tint = grayTint
-            )
+            if (zappingProgress < 0.1 || zappingProgress > 0.99) {
+                Icon(
+                    imageVector = Icons.Outlined.Bolt,
+                    contentDescription = stringResource(id = R.string.zaps),
+                    modifier = Modifier.size(20.dp),
+                    tint = grayTint
+                )
+            } else {
+                CircularProgressIndicator(
+                    progress = zappingProgress,
+                    modifier = Modifier.size(15.dp)
+                )
+            }
         }
     }
 
@@ -485,11 +514,20 @@ private fun BoostTypeChoicePopup(baseNote: Note, accountViewModel: AccountViewMo
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
-fun ZapAmountChoicePopup(baseNote: Note, accountViewModel: AccountViewModel, onDismiss: () -> Unit, onChangeAmount: () -> Unit, onError: (text: String) -> Unit) {
+fun ZapAmountChoicePopup(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    onDismiss: () -> Unit,
+    onChangeAmount: () -> Unit,
+    onError: (text: String) -> Unit,
+    onProgress: (percent: Float) -> Unit
+) {
     val context = LocalContext.current
 
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
+
+    val scope = rememberCoroutineScope()
 
     Popup(
         alignment = Alignment.BottomCenter,
@@ -501,8 +539,17 @@ fun ZapAmountChoicePopup(baseNote: Note, accountViewModel: AccountViewModel, onD
                 Button(
                     modifier = Modifier.padding(horizontal = 3.dp),
                     onClick = {
-                        accountViewModel.zap(baseNote, amountInSats * 1000, "", context, onError)
-                        onDismiss()
+                        scope.launch(Dispatchers.IO) {
+                            accountViewModel.zap(
+                                baseNote,
+                                amountInSats * 1000,
+                                "",
+                                context,
+                                onError,
+                                onProgress
+                            )
+                            onDismiss()
+                        }
                     },
                     shape = RoundedCornerShape(20.dp),
                     colors = ButtonDefaults
@@ -516,8 +563,17 @@ fun ZapAmountChoicePopup(baseNote: Note, accountViewModel: AccountViewModel, onD
                         textAlign = TextAlign.Center,
                         modifier = Modifier.combinedClickable(
                             onClick = {
-                                accountViewModel.zap(baseNote, amountInSats * 1000, "", context, onError)
-                                onDismiss()
+                                scope.launch(Dispatchers.IO) {
+                                    accountViewModel.zap(
+                                        baseNote,
+                                        amountInSats * 1000,
+                                        "",
+                                        context,
+                                        onError,
+                                        onProgress
+                                    )
+                                    onDismiss()
+                                }
                             },
                             onLongClick = {
                                 onChangeAmount()

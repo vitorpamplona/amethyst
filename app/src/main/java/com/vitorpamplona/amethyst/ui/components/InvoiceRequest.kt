@@ -149,6 +149,8 @@ fun InvoiceRequest(lud16: String, toUserPubKeyHex: String, account: Account, onC
                                 Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
                                 onClose()
                             }
+                        },
+                        onProgress = {
                         }
                     )
                 },

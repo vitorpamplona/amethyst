@@ -130,12 +130,14 @@ class LightningAddressResolver {
         )
     }
 
-    fun lnAddressInvoice(lnaddress: String, milliSats: Long, message: String, nostrRequest: String? = null, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
+    fun lnAddressInvoice(lnaddress: String, milliSats: Long, message: String, nostrRequest: String? = null, onSuccess: (String) -> Unit, onError: (String) -> Unit, onProgress: (percent: Float) -> Unit) {
         val mapper = jacksonObjectMapper()
 
         fetchLightningAddressJson(
             lnaddress,
             onSuccess = { lnAddressJson ->
+                onProgress(0.4f)
+
                 val lnurlp = try {
                     mapper.readTree(lnAddressJson)
                 } catch (t: Throwable) {
@@ -158,6 +160,8 @@ class LightningAddressResolver {
                         message,
                         if (allowsNostr) nostrRequest else null,
                         onSuccess = {
+                            onProgress(0.6f)
+
                             val lnInvoice = try {
                                 mapper.readTree(it)
                             } catch (t: Throwable) {
@@ -169,6 +173,7 @@ class LightningAddressResolver {
                                 // Forces LN Invoice amount to be the requested amount.
                                 val invoiceAmount = LnInvoiceUtil.getAmountInSats(pr)
                                 if (invoiceAmount.multiply(BigDecimal(1000)).toLong() == BigDecimal(milliSats).toLong()) {
+                                    onProgress(0.7f)
                                     onSuccess(pr)
                                 } else {
                                     onError("Incorrect invoice amount (${invoiceAmount.toLong()} sats) from server")
