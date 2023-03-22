@@ -336,7 +336,7 @@ fun TagLink(word: String, tags: List<List<String>>, canPreview: Boolean, backgro
                         baseNote = note,
                         accountViewModel = accountViewModel,
                         modifier = Modifier
-                            .padding(0.dp)
+                            .padding(top = 2.dp, bottom = 0.dp, start = 0.dp, end = 0.dp)
                             .fillMaxWidth()
                             .clip(shape = RoundedCornerShape(15.dp))
                             .border(
