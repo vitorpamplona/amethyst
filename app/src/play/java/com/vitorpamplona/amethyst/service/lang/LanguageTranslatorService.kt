@@ -21,7 +21,8 @@ class ResultOrError(
 
 object LanguageTranslatorService {
     private val languageIdentification = LanguageIdentification.getClient()
-    val lnRegex = Pattern.compile("\\blnbc[a-z0-9]+\\b")
+    val lnRegex = Pattern.compile("\\blnbc[a-z0-9]+\\b", Pattern.CASE_INSENSITIVE)
+    val tagRegex = Pattern.compile("(nostr:)?@?(nsec1|npub1|nevent1|naddr1|note1|nprofile1|nrelay1)([qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)", Pattern.CASE_INSENSITIVE)
 
     private val translators =
         object : LruCache<TranslatorOptions, Translator>(10) {
@@ -61,7 +62,7 @@ object LanguageTranslatorService {
         return translator.downloadModelIfNeeded().onSuccessTask {
             val tasks = mutableListOf<Task<String>>()
 
-            val dict = lnDictionary(text) + urlDictionary(text)
+            val dict = lnDictionary(text) + urlDictionary(text) + tagDictionary(text)
 
             for (paragraph in encodeDictionary(text, dict).split("\n")) {
                 tasks.add(translator.translate(paragraph))
@@ -92,6 +93,21 @@ object LanguageTranslatorService {
             newText = newText.replace(pair.key, pair.value, true)
         }
         return newText
+    }
+
+    private fun tagDictionary(text: String): Map<String, String> {
+        val matcher = tagRegex.matcher(text)
+        val returningList = mutableMapOf<String, String>()
+        val counter = 0
+        while (matcher.find()) {
+            try {
+                val tag = matcher.group()
+                val short = "Amethysttagindexer$counter"
+                returningList.put(short, tag)
+            } catch (e: Exception) {
+            }
+        }
+        return returningList
     }
 
     private fun lnDictionary(text: String): Map<String, String> {
