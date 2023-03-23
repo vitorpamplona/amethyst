@@ -616,7 +616,14 @@ private fun LongFormHeader(noteEvent: LongTextNoteEvent, note: Note, loggedIn: U
                         contentScale = ContentScale.FillWidth,
                         modifier = Modifier.fillMaxWidth()
                     )
-                }
+                } ?: Image(
+                    painter = painterResource(R.drawable.profile_banner),
+                    contentDescription = stringResource(R.string.profile_banner),
+                    contentScale = ContentScale.FillWidth,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(150.dp)
+                )
 
                 Box(
                     Modifier
