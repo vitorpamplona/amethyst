@@ -482,6 +482,25 @@ fun NoteCompose(
                                 accountViewModel,
                                 navController
                             )
+
+                            val hashtags = noteEvent.hashtags()
+                            if (hashtags.isNotEmpty()) {
+                                FlowRow() {
+                                    hashtags.forEach {
+                                        if (!eventContent.contains(it, true)) {
+                                            ClickableText(
+                                                text = AnnotatedString("#$it "),
+                                                onClick = { navController.navigate("Hashtag/$it") },
+                                                style = LocalTextStyle.current.copy(
+                                                    color = MaterialTheme.colors.primary.copy(
+                                                        alpha = 0.52f
+                                                    )
+                                                )
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
 
                         if (!makeItShort) {

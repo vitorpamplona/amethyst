@@ -28,4 +28,5 @@ interface EventInterface {
     fun isTaggedHash(hashtag: String): Boolean
     fun isTaggedHashes(hashtag: Set<String>): Boolean
     fun firstIsTaggedHashes(hashtag: Set<String>): String?
+    fun hashtags(): List<String>
 }

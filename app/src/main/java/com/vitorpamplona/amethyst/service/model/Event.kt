@@ -47,7 +47,7 @@ open class Event(
         if (aTagValue != null) ATag.parse(aTagValue, relay) else null
     }
 
-    fun hashtags() = tags.filter { it.firstOrNull() == "t" }.mapNotNull { it.getOrNull(1) }
+    override fun hashtags() = tags.filter { it.firstOrNull() == "t" }.mapNotNull { it.getOrNull(1) }
 
     override fun isTaggedUser(idHex: String) = tags.any { it.getOrNull(0) == "p" && it.getOrNull(1) == idHex }
 
