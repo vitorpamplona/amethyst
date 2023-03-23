@@ -360,7 +360,7 @@ class Account(
     fun sendPost(message: String, replyTo: List<Note>?, mentions: List<User>?) {
         if (!isWriteable()) return
 
-        val repliesToHex = replyTo?.map { it.idHex }
+        val repliesToHex = replyTo?.filter { it.address() == null }?.map { it.idHex }
         val mentionsHex = mentions?.map { it.pubkeyHex }
         val addresses = replyTo?.mapNotNull { it.address() }
 
