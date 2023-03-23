@@ -10,8 +10,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
@@ -42,6 +44,7 @@ import coil.compose.AsyncImage
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -50,6 +53,7 @@ import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
+import com.vitorpamplona.amethyst.service.model.EventInterface
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
@@ -65,9 +69,11 @@ import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
+import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Following
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.math.BigDecimal
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -273,15 +279,8 @@ fun NoteCompose(
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                             )
-                        }
-
-                        val firstTag = noteEvent.firstIsTaggedHashes(account.followingTagSet())
-                        if (firstTag != null) {
-                            ClickableText(
-                                text = AnnotatedString(" #$firstTag"),
-                                onClick = { navController.navigate("Hashtag/$firstTag") },
-                                style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(alpha = 0.52f))
-                            )
+                        } else {
+                            DisplayFollowingHashtagsInPost(noteEvent, account, navController)
                         }
 
                         Text(
@@ -306,7 +305,14 @@ fun NoteCompose(
                     }
 
                     if (note.author != null && !makeItShort && !isQuotedNote) {
-                        ObserveDisplayNip05Status(note.author!!)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            ObserveDisplayNip05Status(note.author!!, Modifier.weight(1f))
+
+                            val baseReward = noteEvent.getReward()
+                            if (baseReward != null) {
+                                DisplayReward(baseReward, baseNote, navController)
+                            }
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(3.dp))
@@ -483,24 +489,7 @@ fun NoteCompose(
                                 navController
                             )
 
-                            val hashtags = noteEvent.hashtags()
-                            if (hashtags.isNotEmpty()) {
-                                FlowRow() {
-                                    hashtags.forEach {
-                                        if (!eventContent.contains(it, true)) {
-                                            ClickableText(
-                                                text = AnnotatedString("#$it "),
-                                                onClick = { navController.navigate("Hashtag/$it") },
-                                                style = LocalTextStyle.current.copy(
-                                                    color = MaterialTheme.colors.primary.copy(
-                                                        alpha = 0.52f
-                                                    )
-                                                )
-                                            )
-                                        }
-                                    }
-                                }
-                            }
+                            DisplayUncitedHashtags(noteEvent, eventContent, navController)
                         }
 
                         if (!makeItShort) {
@@ -516,6 +505,107 @@ fun NoteCompose(
                     NoteQuickActionMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun DisplayFollowingHashtagsInPost(
+    noteEvent: EventInterface,
+    account: Account,
+    navController: NavController
+) {
+    Column() {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            val firstTag =
+                noteEvent.firstIsTaggedHashes(account.followingTagSet())
+            if (firstTag != null) {
+                ClickableText(
+                    text = AnnotatedString(" #$firstTag"),
+                    onClick = { navController.navigate("Hashtag/$firstTag") },
+                    style = LocalTextStyle.current.copy(
+                        color = MaterialTheme.colors.primary.copy(
+                            alpha = 0.52f
+                        )
+                    )
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun DisplayUncitedHashtags(
+    noteEvent: EventInterface,
+    eventContent: String,
+    navController: NavController
+) {
+    val hashtags = noteEvent.hashtags()
+    if (hashtags.isNotEmpty()) {
+        FlowRow() {
+            hashtags.forEach {
+                if (!eventContent.contains(it, true)) {
+                    ClickableText(
+                        text = AnnotatedString("#$it "),
+                        onClick = { navController.navigate("Hashtag/$it") },
+                        style = LocalTextStyle.current.copy(
+                            color = MaterialTheme.colors.primary.copy(
+                                alpha = 0.52f
+                            )
+                        )
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DisplayReward(
+    baseReward: BigDecimal,
+    baseNote: Note,
+    navController: NavController
+) {
+    Column() {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            ClickableText(
+                text = AnnotatedString("#bounty"),
+                onClick = { navController.navigate("Hashtag/bounty") },
+                style = LocalTextStyle.current.copy(
+                    color = MaterialTheme.colors.primary.copy(
+                        alpha = 0.52f
+                    )
+                )
+            )
+
+            Icon(
+                imageVector = Icons.Default.Bolt,
+                contentDescription = stringResource(R.string.zaps),
+                modifier = Modifier.size(20.dp),
+                tint = BitcoinOrange
+            )
+
+            val repliesState by baseNote.live().replies.observeAsState()
+            val replyNote = repliesState?.note
+
+            var rewardAmount by remember {
+                mutableStateOf<BigDecimal?>(
+                    baseReward
+                )
+            }
+
+            LaunchedEffect(key1 = repliesState) {
+                withContext(Dispatchers.IO) {
+                    replyNote?.pledgedAmountByOthers()?.let {
+                        rewardAmount = baseReward.add(it)
+                    }
+                }
+            }
+
+            Text(
+                showAmount(rewardAmount),
+                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+            )
         }
     }
 }

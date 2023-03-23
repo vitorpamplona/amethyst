@@ -57,6 +57,9 @@ import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
 import com.vitorpamplona.amethyst.ui.note.BadgeDisplay
 import com.vitorpamplona.amethyst.ui.note.BlankNote
+import com.vitorpamplona.amethyst.ui.note.DisplayFollowingHashtagsInPost
+import com.vitorpamplona.amethyst.ui.note.DisplayReward
+import com.vitorpamplona.amethyst.ui.note.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.note.HiddenNote
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
@@ -250,6 +253,8 @@ fun NoteMaster(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         NoteUsernameDisplay(baseNote, Modifier.weight(1f))
 
+                        DisplayFollowingHashtagsInPost(noteEvent, account, navController)
+
                         Text(
                             timeAgo(note.createdAt(), context = context),
                             color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
@@ -271,7 +276,14 @@ fun NoteMaster(
                         }
                     }
 
-                    ObserveDisplayNip05Status(baseNote)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        ObserveDisplayNip05Status(baseNote, Modifier.weight(1f))
+
+                        val baseReward = noteEvent.getReward()
+                        if (baseReward != null) {
+                            DisplayReward(baseReward, baseNote, navController)
+                        }
+                    }
                 }
             }
 
@@ -341,6 +353,8 @@ fun NoteMaster(
                             accountViewModel,
                             navController
                         )
+
+                        DisplayUncitedHashtags(noteEvent, eventContent, navController)
                     }
 
                     ReactionsRow(note, accountViewModel)

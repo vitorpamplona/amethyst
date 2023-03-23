@@ -235,6 +235,20 @@ open class Note(val idHex: String) {
             }.sumOf { it }
     }
 
+    fun pledgedAmountByOthers(): BigDecimal {
+        return replies
+            .filter { it.event?.isTaggedHash("bounty-added-reward") ?: false }
+            .mapNotNull {
+                try {
+                    BigDecimal(it.event?.content())
+                } catch (e: Exception) {
+                    null
+                    // do nothing if it can't convert to bigdecimal
+                }
+            }
+            .sumOf { it }
+    }
+
     fun hasAnyReports(): Boolean {
         val dayAgo = Date().time / 1000 - 24 * 60 * 60
         return reports.isNotEmpty() ||

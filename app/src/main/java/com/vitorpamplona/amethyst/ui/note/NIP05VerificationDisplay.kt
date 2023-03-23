@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.components
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -76,18 +77,18 @@ fun nip05VerificationAsAState(user: UserMetadata, pubkeyHex: String): State<Bool
 }
 
 @Composable
-fun ObserveDisplayNip05Status(baseNote: Note) {
+fun ObserveDisplayNip05Status(baseNote: Note, columnModifier: Modifier = Modifier) {
     val noteState by baseNote.live().metadata.observeAsState()
     val note = noteState?.note ?: return
 
     val author = note.author
     if (author != null) {
-        ObserveDisplayNip05Status(author)
+        ObserveDisplayNip05Status(author, columnModifier)
     }
 }
 
 @Composable
-fun ObserveDisplayNip05Status(baseUser: User) {
+fun ObserveDisplayNip05Status(baseUser: User, columnModifier: Modifier = Modifier) {
     val userState by baseUser.live().metadata.observeAsState()
     val user = userState?.user ?: return
 
@@ -96,52 +97,54 @@ fun ObserveDisplayNip05Status(baseUser: User) {
     user.nip05()?.let { nip05 ->
         if (nip05.split("@").size == 2) {
             val nip05Verified by nip05VerificationAsAState(user.info!!, user.pubkeyHex)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (nip05.split("@")[0] != "_") {
-                    Text(
-                        text = AnnotatedString(nip05.split("@")[0]),
-                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+            Column(modifier = columnModifier) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (nip05.split("@")[0] != "_") {
+                        Text(
+                            text = AnnotatedString(nip05.split("@")[0]),
+                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+
+                    if (nip05Verified == null) {
+                        Icon(
+                            tint = Color.Yellow,
+                            imageVector = Icons.Default.Downloading,
+                            contentDescription = "Downloading",
+                            modifier = Modifier
+                                .size(14.dp)
+                                .padding(top = 1.dp)
+                        )
+                    } else if (nip05Verified == true) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_verified),
+                            "NIP-05 Verified",
+                            tint = Nip05.copy(0.52f),
+                            modifier = Modifier
+                                .size(14.dp)
+                                .padding(top = 1.dp)
+                        )
+                    } else {
+                        Icon(
+                            tint = Color.Red,
+                            imageVector = Icons.Default.Report,
+                            contentDescription = "Invalid Nip05",
+                            modifier = Modifier
+                                .size(14.dp)
+                                .padding(top = 1.dp)
+                        )
+                    }
+
+                    ClickableText(
+                        text = AnnotatedString(nip05.split("@")[1]),
+                        onClick = { nip05.let { runCatching { uri.openUri("https://${it.split("@")[1]}") } } },
+                        style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(0.52f)),
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Visible
                     )
                 }
-
-                if (nip05Verified == null) {
-                    Icon(
-                        tint = Color.Yellow,
-                        imageVector = Icons.Default.Downloading,
-                        contentDescription = "Downloading",
-                        modifier = Modifier
-                            .size(14.dp)
-                            .padding(top = 1.dp)
-                    )
-                } else if (nip05Verified == true) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_verified),
-                        "NIP-05 Verified",
-                        tint = Nip05.copy(0.52f),
-                        modifier = Modifier
-                            .size(14.dp)
-                            .padding(top = 1.dp)
-                    )
-                } else {
-                    Icon(
-                        tint = Color.Red,
-                        imageVector = Icons.Default.Report,
-                        contentDescription = "Invalid Nip05",
-                        modifier = Modifier
-                            .size(14.dp)
-                            .padding(top = 1.dp)
-                    )
-                }
-
-                ClickableText(
-                    text = AnnotatedString(nip05.split("@")[1]),
-                    onClick = { nip05.let { runCatching { uri.openUri("https://${it.split("@")[1]}") } } },
-                    style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(0.52f)),
-                    maxLines = 1,
-                    overflow = TextOverflow.Visible
-                )
             }
         }
     }

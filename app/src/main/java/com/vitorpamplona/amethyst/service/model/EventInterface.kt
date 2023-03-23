@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.service.model
 
 import com.vitorpamplona.amethyst.model.HexKey
+import java.math.BigDecimal
 
 interface EventInterface {
     fun id(): HexKey
@@ -29,4 +30,6 @@ interface EventInterface {
     fun isTaggedHashes(hashtag: Set<String>): Boolean
     fun firstIsTaggedHashes(hashtag: Set<String>): String?
     fun hashtags(): List<String>
+
+    fun getReward(): BigDecimal?
 }
