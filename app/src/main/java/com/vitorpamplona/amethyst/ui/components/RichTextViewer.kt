@@ -120,7 +120,8 @@ fun RichTextViewer(
             content.contains("```")
         ) {
             MaterialRichText(
-                style = myMarkDownStyle
+                style = myMarkDownStyle,
+                modifier = Modifier.padding(bottom = 5.dp)
             ) {
                 Markdown(
                     content = content,
