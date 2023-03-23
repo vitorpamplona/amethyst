@@ -542,9 +542,11 @@ fun DisplayUncitedHashtags(
 ) {
     val hashtags = noteEvent.hashtags()
     if (hashtags.isNotEmpty()) {
-        FlowRow() {
-            hashtags.forEach {
-                if (!eventContent.contains(it, true)) {
+        FlowRow(
+            modifier = Modifier.padding(top = 5.dp)
+        ) {
+            hashtags.forEach { hashtag ->
+                if (!eventContent.contains(hashtag, true)) {
                     ClickableText(
                         text = AnnotatedString("#$hashtag "),
                         onClick = { navController.navigate("Hashtag/$hashtag") },
