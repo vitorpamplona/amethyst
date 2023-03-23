@@ -394,7 +394,7 @@ fun NoteCompose(
                             thickness = 0.25.dp
                         )
                     } else if (noteEvent is LongTextNoteEvent) {
-                        LongFormHeader(noteEvent)
+                        LongFormHeader(noteEvent, note, account.userProfile())
 
                         ReactionsRow(note, accountViewModel)
 
@@ -584,7 +584,7 @@ fun BadgeDisplay(baseNote: Note) {
 }
 
 @Composable
-private fun LongFormHeader(noteEvent: LongTextNoteEvent) {
+private fun LongFormHeader(noteEvent: LongTextNoteEvent, note: Note, loggedIn: User) {
     Row(
         modifier = Modifier
             .clip(shape = RoundedCornerShape(15.dp))
@@ -605,6 +605,28 @@ private fun LongFormHeader(noteEvent: LongTextNoteEvent) {
                     contentScale = ContentScale.FillWidth,
                     modifier = Modifier.fillMaxWidth()
                 )
+            } ?: Box() {
+                note.author?.info?.banner?.let {
+                    AsyncImage(
+                        model = it,
+                        contentDescription = stringResource(
+                            R.string.preview_card_image_for,
+                            it
+                        ),
+                        contentScale = ContentScale.FillWidth,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                Box(
+                    Modifier
+                        .width(75.dp)
+                        .height(75.dp)
+                        .padding(10.dp)
+                        .align(Alignment.BottomStart)
+                ) {
+                    NoteAuthorPicture(baseNote = note, baseUserAccount = loggedIn, size = 55.dp)
+                }
             }
 
             noteEvent.title()?.let {
@@ -629,6 +651,16 @@ private fun LongFormHeader(noteEvent: LongTextNoteEvent) {
                     overflow = TextOverflow.Ellipsis
                 )
             }
+                ?: Text(
+                    text = noteEvent.content.take(200),
+                    style = MaterialTheme.typography.caption,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
+                    color = Color.Gray,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
+                )
         }
     }
 }
