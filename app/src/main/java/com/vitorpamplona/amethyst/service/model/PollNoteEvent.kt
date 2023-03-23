@@ -3,10 +3,9 @@ package com.vitorpamplona.amethyst.service.model
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
-import org.json.JSONObject
 import java.util.Date
 
-const val POLL_OPTIONS = "poll_options"
+const val POLL_OPTION = "poll_option"
 const val VALUE_MAXIMUM = "value_maximum"
 const val VALUE_MINIMUM = "value_minimum"
 const val CONSENSUS_THRESHOLD = "consensus_threshold"
@@ -31,19 +30,23 @@ class PollNoteEvent(
 
     fun replyTos() = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
 
-    fun pollOptions() = jsonToPollOptions(tags.filter { it.firstOrNull() == POLL_OPTIONS }[0][1])
-    fun valueMaximum() = tags.filter { it.firstOrNull() == VALUE_MAXIMUM }.mapNotNull {
-        it.getOrNull(1)?.get(1)
+    fun pollOptions(): Map<Int, String> {
+        val map = mutableMapOf<Int, String>()
+        tags.filter { it.first() == POLL_OPTION }
+            .forEach { map[it[1].toInt()] = it[2] }
+        return map
     }
-    fun valueMinimum() = tags.filter { it.firstOrNull() == VALUE_MINIMUM }.mapNotNull {
-        it.getOrNull(1)?.get(1)
-    }
-    fun consensusThreshold() = tags.filter { it.firstOrNull() == CONSENSUS_THRESHOLD }.mapNotNull {
-        it.getOrNull(1)?.get(1)
-    }
-    fun closedAt() = tags.filter { it.firstOrNull() == CLOSED_AT }.mapNotNull {
-        it.getOrNull(1)?.get(1)
-    }
+    fun valueMaximum(): Int? = tags.filter { it.firstOrNull() == VALUE_MAXIMUM }
+        .getOrNull(1)?.getOrNull(1)?.toInt()
+
+    fun valueMinimum(): Int? = tags.filter { it.firstOrNull() == VALUE_MINIMUM }
+        .getOrNull(1)?.getOrNull(1)?.toInt()
+
+    fun consensusThreshold(): Int? = tags.filter { it.firstOrNull() == CONSENSUS_THRESHOLD }
+        .getOrNull(1)?.getOrNull(1)?.toInt()
+
+    fun closedAt(): Int? = tags.filter { it.firstOrNull() == CLOSED_AT }
+        .getOrNull(1)?.getOrNull(1)?.toInt()
 
     companion object {
         const val kind = 6969
@@ -72,7 +75,9 @@ class PollNoteEvent(
             addresses?.forEach {
                 tags.add(listOf("a", it.toTag()))
             }
-            tags.add(listOf(POLL_OPTIONS, gson.toJson(pollOptions)))
+            pollOptions.forEach { poll_op ->
+                tags.add(listOf(POLL_OPTION, poll_op.key.toString(), poll_op.value))
+            }
             tags.add(listOf(VALUE_MAXIMUM, valueMaximum.toString()))
             tags.add(listOf(VALUE_MINIMUM, valueMinimum.toString()))
             tags.add(listOf(CONSENSUS_THRESHOLD, consensusThreshold.toString()))
@@ -80,15 +85,6 @@ class PollNoteEvent(
             val id = generateId(pubKey, createdAt, kind, tags, msg)
             val sig = Utils.sign(id, privateKey)
             return PollNoteEvent(id.toHexKey(), pubKey, createdAt, tags, msg, sig.toHexKey())
-        }
-
-        fun jsonToPollOptions(jsonString: String): Map<Int, String> {
-            val jsonMap = mutableMapOf<Int, String>()
-            val jsonObject = JSONObject(jsonString)
-            jsonObject.keys().forEach {
-                jsonMap[it.toString().toInt()] = jsonObject.getString(it)
-            }
-            return jsonMap
         }
     }
 }
@@ -102,12 +98,9 @@ class PollNoteEvent(
   "tags": [
     ["e", <32-bytes hex of the id of the poll event>, <primary poll host relay URL>],
     ["p", <32-bytes hex of the key>, <primary poll host relay URL>],
-    ["poll_options", "{
-        \"0\": \"poll option 0 description string\",
-        \"1\": \"poll option 1 description string\",
-        \"n\": \"poll option <n> description string\"
-      }"
-    ],
+    ["poll_option", "0", "poll option 0 description string"],
+    ["poll_option", "1", "poll option 1 description string"],
+    ["poll_option", "n", "poll option <n> description string"],
     ["value_maximum", "maximum satoshi value for inclusion in tally"],
     ["value_minimum", "minimum satoshi value for inclusion in tally"],
     ["consensus_threshold", "required percentage to attain consensus <0..100>"],

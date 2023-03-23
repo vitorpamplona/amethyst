@@ -26,9 +26,9 @@ fun PollNote(
         .border(BorderStroke(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.32f)))
         .padding(4.dp)
 
-    pollEvent.pollOptions().values.forEachIndexed { index, string ->
+    pollEvent.pollOptions().forEach { poll_op ->
         TranslateableRichTextViewer(
-            string,
+            poll_op.value,
             canPreview,
             modifier,
             pollEvent.tags(),

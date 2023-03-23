@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.ui.actions
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.text.input.TextFieldValue
 import com.vitorpamplona.amethyst.model.*
 import com.vitorpamplona.amethyst.service.nip19.Nip19
@@ -10,7 +11,7 @@ import com.vitorpamplona.amethyst.service.nip19.Nip19
 class NewPollViewModel : NewPostViewModel() {
 
     var zapRecipients = mutableStateListOf<HexKey>()
-    var pollOptions = mutableStateMapOf<Int, String>(Pair(0, ""), Pair(1, ""))
+    var pollOptions = newStateMapPollOptions()
     var valueMaximum: Int? = null
     var valueMinimum: Int? = null
     var consensusThreshold: Int? = null
@@ -127,10 +128,14 @@ class NewPollViewModel : NewPostViewModel() {
         mentions = null
 
         zapRecipients = mutableStateListOf<HexKey>()
-        pollOptions = mutableStateMapOf<Int, String>(Pair(0, ""), Pair(1, ""))
+        pollOptions = newStateMapPollOptions()
         valueMaximum = null
         valueMinimum = null
         consensusThreshold = null
         closedAt = null
+    }
+
+    private fun newStateMapPollOptions(): SnapshotStateMap<Int, String> {
+        return mutableStateMapOf(Pair(0, ""), Pair(1, ""))
     }
 }
