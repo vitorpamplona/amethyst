@@ -329,7 +329,7 @@ fun NoteMaster(
 
                         if (noteEvent is PollNoteEvent) {
                             PollNote(
-                                noteEvent,
+                                note,
                                 canPreview,
                                 backgroundColor,
                                 accountViewModel,

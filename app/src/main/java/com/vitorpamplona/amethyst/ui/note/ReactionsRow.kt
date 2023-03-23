@@ -350,7 +350,7 @@ fun ZapReaction(
                                 .show()
                         }
                     } else if (account.zapAmountChoices.size == 1) {
-                        accountViewModel.zap(baseNote, account.zapAmountChoices.first() * 1000, "", context) {
+                        accountViewModel.zap(baseNote, account.zapAmountChoices.first() * 1000, null, "", context) {
                             scope.launch {
                                 Toast
                                     .makeText(context, it, Toast.LENGTH_SHORT)
@@ -502,7 +502,7 @@ fun ZapAmountChoicePopup(baseNote: Note, accountViewModel: AccountViewModel, onD
                 Button(
                     modifier = Modifier.padding(horizontal = 3.dp),
                     onClick = {
-                        accountViewModel.zap(baseNote, amountInSats * 1000, "", context, onError)
+                        accountViewModel.zap(baseNote, amountInSats * 1000, null, "", context, onError)
                         onDismiss()
                     },
                     shape = RoundedCornerShape(20.dp),
@@ -517,7 +517,7 @@ fun ZapAmountChoicePopup(baseNote: Note, accountViewModel: AccountViewModel, onD
                         textAlign = TextAlign.Center,
                         modifier = Modifier.combinedClickable(
                             onClick = {
-                                accountViewModel.zap(baseNote, amountInSats * 1000, "", context, onError)
+                                accountViewModel.zap(baseNote, amountInSats * 1000, null, "", context, onError)
                                 onDismiss()
                             },
                             onLongClick = {

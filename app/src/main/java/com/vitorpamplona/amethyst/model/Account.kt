@@ -124,11 +124,16 @@ class Account(
         }
     }
 
-    fun createZapRequestFor(note: Note): LnZapRequestEvent? {
+    fun createZapRequestFor(note: Note, pollOption: Int?): LnZapRequestEvent? {
         if (!isWriteable()) return null
 
-        note.event?.let {
-            return LnZapRequestEvent.create(it, userProfile().relays?.keys?.ifEmpty { null } ?: localRelays.map { it.url }.toSet(), loggedIn.privKey!!)
+        note.event?.let { event ->
+            return LnZapRequestEvent.create(
+                event,
+                userProfile().relays?.keys?.ifEmpty { null } ?: localRelays.map { it.url }.toSet(),
+                loggedIn.privKey!!,
+                pollOption
+            )
         }
 
         return null

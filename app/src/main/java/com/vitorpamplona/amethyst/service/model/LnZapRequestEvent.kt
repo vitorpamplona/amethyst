@@ -21,11 +21,19 @@ class LnZapRequestEvent(
 
         if (aTagValue != null) ATag.parse(aTagValue, relay) else null
     }
+    fun pollOption(): Int? = tags.filter { it.firstOrNull() == POLL_OPTION }
+        .getOrNull(1)?.getOrNull(1)?.toInt()
 
     companion object {
         const val kind = 9734
 
-        fun create(originalNote: EventInterface, relays: Set<String>, privateKey: ByteArray, createdAt: Long = Date().time / 1000): LnZapRequestEvent {
+        fun create(
+            originalNote: EventInterface,
+            relays: Set<String>,
+            privateKey: ByteArray,
+            pollOption: Int?,
+            createdAt: Long = Date().time / 1000
+        ): LnZapRequestEvent {
             val content = ""
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             var tags = listOf(
@@ -35,6 +43,9 @@ class LnZapRequestEvent(
             )
             if (originalNote is LongTextNoteEvent) {
                 tags = tags + listOf(listOf("a", originalNote.address().toTag()))
+            }
+            if (pollOption != null && pollOption >= 0) {
+                tags = tags + listOf(listOf(POLL_OPTION, pollOption.toString()))
             }
 
             val id = generateId(pubKey, createdAt, kind, tags, content)
@@ -85,7 +96,11 @@ class LnZapRequestEvent(
     "wss://nostr.bitcoiner.social",
     "ws://monad.jb55.com:8080",
     "wss://relay.snort.social"
+  ],
+  [
+    "poll_option", "n"
   ]
-  ]
+  ],
+  "ots": <base64-encoded OTS file data> // TODO
 }
 */

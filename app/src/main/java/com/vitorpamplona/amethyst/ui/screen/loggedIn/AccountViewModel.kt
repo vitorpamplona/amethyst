@@ -48,7 +48,7 @@ class AccountViewModel(private val account: Account) : ViewModel() {
         account.delete(account.boostsTo(note))
     }
 
-    fun zap(note: Note, amount: Long, message: String, context: Context, onError: (String) -> Unit) {
+    fun zap(note: Note, amount: Long, pollOption: Int?, message: String, context: Context, onError: (String) -> Unit) {
         val lud16 = note.author?.info?.lud16?.trim() ?: note.author?.info?.lud06?.trim()
 
         if (lud16.isNullOrBlank()) {
@@ -56,7 +56,7 @@ class AccountViewModel(private val account: Account) : ViewModel() {
             return
         }
 
-        val zapRequest = account.createZapRequestFor(note)
+        val zapRequest = account.createZapRequestFor(note, pollOption)
 
         LightningAddressResolver().lnAddressInvoice(
             lud16,

@@ -19,6 +19,10 @@ class LnZapEvent(
         .filter { it.firstOrNull() == "e" }
         .mapNotNull { it.getOrNull(1) }
 
+    override fun zappedPollOption(): Int? = tags
+        .filter { it.firstOrNull() == "poll_option" }
+        .getOrNull(1)?.getOrNull(1)?.toInt()
+
     override fun zappedAuthor() = tags
         .filter { it.firstOrNull() == "p" }
         .mapNotNull { it.getOrNull(1) }

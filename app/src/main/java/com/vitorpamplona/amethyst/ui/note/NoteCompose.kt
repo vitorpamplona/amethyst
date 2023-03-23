@@ -447,7 +447,7 @@ fun NoteCompose(
 
                             if (noteEvent is PollNoteEvent) {
                                 PollNote(
-                                    noteEvent,
+                                    note,
                                     canPreview = canPreview && !makeItShort,
                                     backgroundColor,
                                     accountViewModel,
