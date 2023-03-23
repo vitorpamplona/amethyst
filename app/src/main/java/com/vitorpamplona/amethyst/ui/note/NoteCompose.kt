@@ -546,8 +546,8 @@ fun DisplayUncitedHashtags(
             hashtags.forEach {
                 if (!eventContent.contains(it, true)) {
                     ClickableText(
-                        text = AnnotatedString("#$it "),
-                        onClick = { navController.navigate("Hashtag/$it") },
+                        text = AnnotatedString("#$hashtag "),
+                        onClick = { navController.navigate("Hashtag/$hashtag") },
                         style = LocalTextStyle.current.copy(
                             color = MaterialTheme.colors.primary.copy(
                                 alpha = 0.52f
