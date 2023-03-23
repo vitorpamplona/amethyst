@@ -365,7 +365,7 @@ private fun RelayBadges(baseNote: Note) {
 
     FlowRow(Modifier.padding(start = 10.dp)) {
         relaysToDisplay.forEach {
-            val url = it.removePrefix("wss://")
+            val url = it.removePrefix("wss://").removePrefix("ws://")
             Box(
                 Modifier
                     .size(15.dp)
