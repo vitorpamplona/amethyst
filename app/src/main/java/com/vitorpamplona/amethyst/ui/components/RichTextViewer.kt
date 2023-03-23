@@ -68,6 +68,8 @@ fun isValidURL(url: String?): Boolean {
     }
 }
 
+val richTextDefaults = RichTextStyle().resolveDefaults()
+
 @Composable
 fun RichTextViewer(
     content: String,
@@ -78,8 +80,8 @@ fun RichTextViewer(
     accountViewModel: AccountViewModel,
     navController: NavController
 ) {
-    val myMarkDownStyle = RichTextStyle().resolveDefaults().copy(
-        codeBlockStyle = RichTextStyle().resolveDefaults().codeBlockStyle?.copy(
+    val myMarkDownStyle = richTextDefaults.copy(
+        codeBlockStyle = richTextDefaults.codeBlockStyle?.copy(
             textStyle = TextStyle(
                 fontFamily = FontFamily.Monospace,
                 fontSize = 14.sp
@@ -99,7 +101,7 @@ fun RichTextViewer(
                         .compositeOver(backgroundColor)
                 )
         ),
-        stringStyle = RichTextStyle().resolveDefaults().stringStyle?.copy(
+        stringStyle = richTextDefaults.stringStyle?.copy(
             linkStyle = SpanStyle(
                 textDecoration = TextDecoration.Underline,
                 color = MaterialTheme.colors.primary
