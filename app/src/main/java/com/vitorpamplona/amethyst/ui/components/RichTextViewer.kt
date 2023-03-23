@@ -145,7 +145,7 @@ fun RichTextViewer(
                                 } else if (videoExtension.matcher(removedParamsFromUrl).matches()) {
                                     VideoView(word)
                                 } else {
-                                    UrlPreview(word, word)
+                                    UrlPreview(word, "$word ")
                                 }
                             } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
                                 ClickableEmail(word)
