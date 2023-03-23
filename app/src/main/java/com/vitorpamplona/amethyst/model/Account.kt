@@ -357,7 +357,7 @@ class Account(
         }
     }
 
-    fun sendPost(message: String, replyTo: List<Note>?, mentions: List<User>?) {
+    fun sendPost(message: String, replyTo: List<Note>?, mentions: List<User>?, tags: List<String>? = null) {
         if (!isWriteable()) return
 
         val repliesToHex = replyTo?.filter { it.address() == null }?.map { it.idHex }
@@ -369,8 +369,10 @@ class Account(
             replyTos = repliesToHex,
             mentions = mentionsHex,
             addresses = addresses,
+            extraTags = tags,
             privateKey = loggedIn.privKey!!
         )
+
         Client.send(signedEvent)
         LocalCache.consume(signedEvent)
     }

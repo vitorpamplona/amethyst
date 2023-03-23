@@ -281,7 +281,7 @@ fun NoteMaster(
 
                         val baseReward = noteEvent.getReward()
                         if (baseReward != null) {
-                            DisplayReward(baseReward, baseNote, navController)
+                            DisplayReward(baseReward, baseNote, account, navController)
                         }
                     }
                 }

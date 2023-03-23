@@ -18,7 +18,15 @@ class TextNoteEvent(
     companion object {
         const val kind = 1
 
-        fun create(msg: String, replyTos: List<String>?, mentions: List<String>?, addresses: List<ATag>?, privateKey: ByteArray, createdAt: Long = Date().time / 1000): TextNoteEvent {
+        fun create(
+            msg: String,
+            replyTos: List<String>?,
+            mentions: List<String>?,
+            addresses: List<ATag>?,
+            extraTags: List<String>?,
+            privateKey: ByteArray,
+            createdAt: Long = Date().time / 1000
+        ): TextNoteEvent {
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf<List<String>>()
             replyTos?.forEach {
@@ -31,6 +39,9 @@ class TextNoteEvent(
                 tags.add(listOf("a", it.toTag()))
             }
             findHashtags(msg).forEach {
+                tags.add(listOf("t", it))
+            }
+            extraTags?.forEach {
                 tags.add(listOf("t", it))
             }
             val id = generateId(pubKey, createdAt, kind, tags, msg)

@@ -310,7 +310,7 @@ fun NoteCompose(
 
                             val baseReward = noteEvent.getReward()
                             if (baseReward != null) {
-                                DisplayReward(baseReward, baseNote, navController)
+                                DisplayReward(baseReward, baseNote, account, navController)
                             }
                         }
                     }
@@ -566,10 +566,16 @@ fun DisplayUncitedHashtags(
 fun DisplayReward(
     baseReward: BigDecimal,
     baseNote: Note,
+    account: Account,
     navController: NavController
 ) {
+    var popupExpanded by remember { mutableStateOf(false) }
+
     Column() {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.clickable { popupExpanded = true }
+        ) {
             ClickableText(
                 text = AnnotatedString("#bounty"),
                 onClick = { navController.navigate("Hashtag/bounty") },
@@ -580,15 +586,24 @@ fun DisplayReward(
                 )
             )
 
-            Icon(
-                imageVector = Icons.Default.Bolt,
-                contentDescription = stringResource(R.string.zaps),
-                modifier = Modifier.size(20.dp),
-                tint = BitcoinOrange
-            )
-
             val repliesState by baseNote.live().replies.observeAsState()
             val replyNote = repliesState?.note
+
+            if (replyNote?.hasPledgeBy(account.userProfile()) == true) {
+                Icon(
+                    imageVector = Icons.Default.Bolt,
+                    contentDescription = stringResource(R.string.zaps),
+                    modifier = Modifier.size(20.dp),
+                    tint = BitcoinOrange
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Bolt,
+                    contentDescription = stringResource(R.string.zaps),
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                )
+            }
 
             var rewardAmount by remember {
                 mutableStateOf<BigDecimal?>(
@@ -608,6 +623,12 @@ fun DisplayReward(
                 showAmount(rewardAmount),
                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
             )
+        }
+
+        if (popupExpanded) {
+            AddBountyAmountDialog(baseNote, account) {
+                popupExpanded = false
+            }
         }
     }
 }

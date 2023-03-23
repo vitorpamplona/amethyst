@@ -260,4 +260,6 @@
     <string name="wallet_connect_service_explainer">Uses your private key to pay zaps without leaving the app. Anyone with access to your Nostr private key will be able to spend your wallet\'s balance. Only keep funds you are ok to lose and use a private relay if possible. The relay operator can see your payments metadata.</string>
     <string name="wallet_connect_service_pubkey">Wallet Connect Pubkey</string>
     <string name="wallet_connect_service_relay">Wallet Connect Relay</string>
+
+    <string name="pledge_amount_in_sats">Pledge Amount in Sats</string>
 </resources>
