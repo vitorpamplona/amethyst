@@ -479,17 +479,26 @@ fun NoteCompose(
                             !noteForReports.hasAnyReports()
 
                         if (eventContent != null) {
-                            TranslateableRichTextViewer(
-                                eventContent,
-                                canPreview = canPreview && !makeItShort,
-                                Modifier.fillMaxWidth(),
-                                noteEvent.tags(),
-                                backgroundColor,
-                                accountViewModel,
-                                navController
-                            )
+                            if (makeItShort && note.author == account.userProfile()) {
+                                Text(
+                                    text = eventContent,
+                                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            } else {
+                                TranslateableRichTextViewer(
+                                    eventContent,
+                                    canPreview = canPreview && !makeItShort,
+                                    Modifier.fillMaxWidth(),
+                                    noteEvent.tags(),
+                                    backgroundColor,
+                                    accountViewModel,
+                                    navController
+                                )
 
-                            DisplayUncitedHashtags(noteEvent, eventContent, navController)
+                                DisplayUncitedHashtags(noteEvent, eventContent, navController)
+                            }
                         }
 
                         if (!makeItShort) {
