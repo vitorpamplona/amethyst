@@ -74,6 +74,7 @@
     <string name="failed_to_upload_the_image">Failed to upload the image</string>
     <string name="relay_address">Relay Address</string>
     <string name="posts">Posts</string>
+    <string name="bytes">Bytes</string>
     <string name="errors">Errors</string>
     <string name="home_feed">Home Feed</string>
     <string name="private_message_feed">Private Message Feed</string>

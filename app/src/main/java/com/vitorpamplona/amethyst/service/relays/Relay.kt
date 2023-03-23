@@ -31,9 +31,10 @@ class Relay(
     private var socket: WebSocket? = null
     private var isReady: Boolean = false
 
-    var eventDownloadCounter = 0
+    var eventDownloadCounterInBytes = 0
+    var eventUploadCounterInBytes = 0
+
     var spamCounter = 0
-    var eventUploadCounter = 0
     var errorCounter = 0
     var ping: Long? = null
 
@@ -89,7 +90,7 @@ class Relay(
                         when (type) {
                             "EVENT" -> {
                                 // Log.w("Relay", "Relay onEVENT $url, $channel")
-                                eventDownloadCounter++
+                                eventDownloadCounterInBytes += text.bytesUsedInMemory()
                                 val event = Event.fromJson(msg[2], Client.lenient)
                                 listeners.forEach { it.onEvent(this@Relay, channel, event) }
                             }
@@ -185,6 +186,7 @@ class Relay(
                             """["REQ","$requestId",${filters.take(10).joinToString(",") { it.filter.toJson() }}]"""
                         // println("FILTERSSENT ${url} ${request}")
                         socket?.send(request)
+                        eventUploadCounterInBytes += request.bytesUsedInMemory()
                     }
                 }
             } else {
@@ -209,8 +211,9 @@ class Relay(
 
     fun send(signedEvent: EventInterface) {
         if (write) {
-            socket?.send("""["EVENT",${signedEvent.toJson()}]""")
-            eventUploadCounter++
+            val event = """["EVENT",${signedEvent.toJson()}]"""
+            socket?.send(event)
+            eventUploadCounterInBytes += event.bytesUsedInMemory()
         }
     }
 
@@ -256,4 +259,8 @@ class Relay(
          */
         fun onRelayStateChange(relay: Relay, type: Type, channel: String?)
     }
+}
+
+fun String.bytesUsedInMemory(): Int {
+    return (8 * ((((this.length) * 2) + 45) / 8))
 }
