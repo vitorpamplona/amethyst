@@ -37,6 +37,7 @@ import com.halilibo.richtext.ui.resolveDefaults
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.checkForHashtagWithIcon
 import com.vitorpamplona.amethyst.service.lnurl.LnInvoiceUtil
+import com.vitorpamplona.amethyst.service.lnurl.LnWithdrawalUtil
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -138,6 +139,7 @@ fun RichTextViewer(
                         if (canPreview) {
                             // Explicit URL
                             val lnInvoice = LnInvoiceUtil.findInvoice(word)
+                            val lnWithdrawal = LnWithdrawalUtil.findWithdrawal(word)
                             if (lnInvoice != null) {
                                 InvoicePreview(lnInvoice)
                             } else if (isValidURL(word)) {
@@ -149,6 +151,8 @@ fun RichTextViewer(
                                 } else {
                                     UrlPreview(word, "$word ")
                                 }
+                            } else if (lnWithdrawal != null) {
+                                ClickableWithdrawal(withdrawalString = lnWithdrawal)
                             } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
                                 ClickableEmail(word)
                             } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
