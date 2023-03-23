@@ -246,7 +246,7 @@ open class Note(val idHex: String) {
                     // do nothing if it can't convert to bigdecimal
                 }
 
-                pledgeValue != null && it.author != user
+                pledgeValue != null && it.author == user
             }
     }
 
