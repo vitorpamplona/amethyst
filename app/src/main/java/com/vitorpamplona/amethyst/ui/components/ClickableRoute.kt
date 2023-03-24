@@ -49,7 +49,7 @@ fun ClickableRoute(
         if (note.event is ChannelCreateEvent) {
             CreateClickableText(note.idDisplayNote(), nip19.additionalChars, "Channel/${nip19.hex}", navController)
         } else if (note.event is PrivateDmEvent) {
-            CreateClickableText(note.idDisplayNote(), nip19.additionalChars, "Room/${note.author?.pubkeyHex}", navController)
+            CreateClickableText(note.idDisplayNote(), nip19.additionalChars, "Room/${note.author?.pubkeyHex()}", navController)
         } else if (channel != null) {
             CreateClickableText(channel.toBestDisplayName(), nip19.additionalChars, "Channel/${note.channel()?.idHex}", navController)
         } else {
@@ -64,7 +64,7 @@ fun ClickableRoute(
         if (note.event is ChannelCreateEvent) {
             CreateClickableText(note.idDisplayNote(), nip19.additionalChars, "Channel/${nip19.hex}", navController)
         } else if (note.event is PrivateDmEvent) {
-            CreateClickableText(note.idDisplayNote(), nip19.additionalChars, "Room/${note.author?.pubkeyHex}", navController)
+            CreateClickableText(note.idDisplayNote(), nip19.additionalChars, "Room/${note.author?.pubkeyHex()}", navController)
         } else if (channel != null) {
             CreateClickableText(channel.toBestDisplayName(), nip19.additionalChars, "Channel/${note.channel()?.idHex}", navController)
         } else {

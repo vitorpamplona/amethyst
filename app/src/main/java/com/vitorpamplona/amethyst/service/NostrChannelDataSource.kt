@@ -34,7 +34,7 @@ object NostrChannelDataSource : NostrDataSource("ChatroomFeed") {
                 types = setOf(FeedType.FOLLOWS, FeedType.PRIVATE_DMS, FeedType.GLOBAL, FeedType.SEARCH),
                 filter = JsonFilter(
                     kinds = listOf(ChannelMessageEvent.kind),
-                    authors = listOf(myAccount.userProfile().pubkeyHex),
+                    authors = listOf(myAccount.userProfile().pubkeyHex()),
                     limit = 50
                 )
             )

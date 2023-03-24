@@ -3,8 +3,9 @@ package com.vitorpamplona.amethyst.ui.dal
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.UserInterface
 
-object UserProfileFollowersFeedFilter : FeedFilter<User>() {
+object UserProfileFollowersFeedFilter : FeedFilter<UserInterface>() {
     lateinit var account: Account
     var user: User? = null
 

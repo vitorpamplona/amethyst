@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.RelayInfo
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.UserInterface
 import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
 import com.vitorpamplona.amethyst.ui.note.RelayCompose
@@ -46,14 +46,14 @@ class RelayFeedViewModel : ViewModel() {
     private val _feedContent = MutableStateFlow<List<RelayInfo>>(emptyList())
     val feedContent = _feedContent.asStateFlow()
 
-    var currentUser: User? = null
+    var currentUser: UserInterface? = null
 
     fun refresh() {
         viewModelScope.launch(Dispatchers.Default) {
-            val beingUsed = currentUser?.relaysBeingUsed?.values ?: emptyList()
-            val beingUsedSet = currentUser?.relaysBeingUsed?.keys ?: emptySet()
+            val beingUsed = currentUser?.relaysBeingUsed()?.values ?: emptyList()
+            val beingUsedSet = currentUser?.relaysBeingUsed()?.keys ?: emptySet()
 
-            val newRelaysFromRecord = currentUser?.latestContactList?.relays()?.entries?.mapNotNull {
+            val newRelaysFromRecord = currentUser?.latestContactList()?.relays()?.entries?.mapNotNull {
                 if (it.key !in beingUsedSet) {
                     RelayInfo(it.key, 0, 0)
                 } else {
@@ -71,14 +71,14 @@ class RelayFeedViewModel : ViewModel() {
         invalidateData()
     }
 
-    fun subscribeTo(user: User) {
+    fun subscribeTo(user: UserInterface) {
         currentUser = user
         user.live().relays.observeForever(listener)
         user.live().relayInfo.observeForever(listener)
         invalidateData()
     }
 
-    fun unsubscribeTo(user: User) {
+    fun unsubscribeTo(user: UserInterface) {
         user.live().relays.removeObserver(listener)
         user.live().relayInfo.removeObserver(listener)
         currentUser = null

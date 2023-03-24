@@ -16,20 +16,17 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.Channel
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.*
 
 @Composable
-fun ReplyInformation(replyTo: List<Note>?, mentions: List<User>?, account: Account, navController: NavController) {
+fun ReplyInformation(replyTo: List<Note>?, mentions: List<UserInterface>?, account: Account, navController: NavController) {
     ReplyInformation(replyTo, mentions, account) {
-        navController.navigate("User/${it.pubkeyHex}")
+        navController.navigate("User/${it.pubkeyHex()}")
     }
 }
 
 @Composable
-fun ReplyInformation(replyTo: List<Note>?, dupMentions: List<User>?, account: Account, prefix: String = "", onUserTagClick: (User) -> Unit) {
+fun ReplyInformation(replyTo: List<Note>?, dupMentions: List<UserInterface>?, account: Account, prefix: String = "", onUserTagClick: (UserInterface) -> Unit) {
     val mentions = dupMentions?.toSet()?.sortedBy { !account.userProfile().isFollowingCached(it) }
     var expanded by remember { mutableStateOf((mentions?.size ?: 0) <= 2) }
 
@@ -104,13 +101,13 @@ fun ReplyInformation(replyTo: List<Note>?, dupMentions: List<User>?, account: Ac
 }
 
 @Composable
-fun ReplyInformationChannel(replyTo: List<Note>?, mentions: List<User>?, channel: Channel, navController: NavController) {
+fun ReplyInformationChannel(replyTo: List<Note>?, mentions: List<UserInterface>?, channel: Channel, navController: NavController) {
     ReplyInformationChannel(
         replyTo,
         mentions,
         channel,
         onUserTagClick = {
-            navController.navigate("User/${it.pubkeyHex}")
+            navController.navigate("User/${it.pubkeyHex()}")
         },
         onChannelTagClick = {
             navController.navigate("Channel/${it.idHex}")
@@ -121,10 +118,10 @@ fun ReplyInformationChannel(replyTo: List<Note>?, mentions: List<User>?, channel
 @Composable
 fun ReplyInformationChannel(
     replyTo: List<Note>?,
-    mentions: List<User>?,
+    mentions: List<UserInterface>?,
     baseChannel: Channel,
     prefix: String = "",
-    onUserTagClick: (User) -> Unit,
+    onUserTagClick: (UserInterface) -> Unit,
     onChannelTagClick: (Channel) -> Unit
 ) {
     val channelState by baseChannel.live.observeAsState()

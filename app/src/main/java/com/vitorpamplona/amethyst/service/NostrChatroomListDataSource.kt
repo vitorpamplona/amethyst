@@ -16,7 +16,7 @@ object NostrChatroomListDataSource : NostrDataSource("MailBoxFeed") {
         types = setOf(FeedType.PRIVATE_DMS),
         filter = JsonFilter(
             kinds = listOf(PrivateDmEvent.kind),
-            tags = mapOf("p" to listOf(account.userProfile().pubkeyHex))
+            tags = mapOf("p" to listOf(account.userProfile().pubkeyHex()))
         )
     )
 
@@ -24,7 +24,7 @@ object NostrChatroomListDataSource : NostrDataSource("MailBoxFeed") {
         types = setOf(FeedType.PRIVATE_DMS),
         filter = JsonFilter(
             kinds = listOf(PrivateDmEvent.kind),
-            authors = listOf(account.userProfile().pubkeyHex)
+            authors = listOf(account.userProfile().pubkeyHex())
         )
     )
 
@@ -32,7 +32,7 @@ object NostrChatroomListDataSource : NostrDataSource("MailBoxFeed") {
         types = setOf(FeedType.PUBLIC_CHATS),
         filter = JsonFilter(
             kinds = listOf(ChannelCreateEvent.kind, ChannelMetadataEvent.kind),
-            authors = listOf(account.userProfile().pubkeyHex)
+            authors = listOf(account.userProfile().pubkeyHex())
         )
     )
 

@@ -9,7 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.UserInterface
 
 @Composable
 fun NoteUsernameDisplay(baseNote: Note, weight: Modifier = Modifier) {
@@ -24,7 +24,7 @@ fun NoteUsernameDisplay(baseNote: Note, weight: Modifier = Modifier) {
 }
 
 @Composable
-fun UsernameDisplay(baseUser: User, weight: Modifier = Modifier) {
+fun UsernameDisplay(baseUser: UserInterface, weight: Modifier = Modifier) {
     val userState by baseUser.live().metadata.observeAsState()
     val user = userState?.user ?: return
 

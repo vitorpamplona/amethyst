@@ -33,14 +33,14 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.UserInterface
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.qrcode.NIP19QrCodeScanner
 
 @Composable
-fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
+fun ShowQRDialog(user: UserInterface, onScan: (String) -> Unit, onClose: () -> Unit) {
     var presenting by remember { mutableStateOf(true) }
 
     Dialog(
@@ -81,7 +81,7 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
                         Column(modifier = Modifier.fillMaxWidth()) {
                             Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
                                 RobohashAsyncImageProxy(
-                                    robot = user.pubkeyHex,
+                                    robot = user.pubkeyHex(),
                                     model = ResizeImage(user.profilePicture(), 100.dp),
                                     contentDescription = stringResource(R.string.profile_image),
                                     modifier = Modifier

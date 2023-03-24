@@ -47,7 +47,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.UserInterface
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.PostButton
@@ -206,10 +206,10 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
 }
 
 @Composable
-fun ChatroomHeader(baseUser: User, accountUser: User, navController: NavController) {
+fun ChatroomHeader(baseUser: UserInterface, accountUser: UserInterface, navController: NavController) {
     Column(
         modifier = Modifier.clickable(
-            onClick = { navController.navigate("User/${baseUser.pubkeyHex}") }
+            onClick = { navController.navigate("User/${baseUser.pubkeyHex()}") }
         )
     ) {
         Column(modifier = Modifier.padding(12.dp)) {

@@ -4,7 +4,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.LocalCacheState
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.UserInterface
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HiddenAccountsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowersFeedFilter
@@ -25,7 +25,7 @@ class NostrUserProfileFollowsUserFeedViewModel : UserFeedViewModel(UserProfileFo
 class NostrUserProfileFollowersUserFeedViewModel : UserFeedViewModel(UserProfileFollowersFeedFilter)
 class NostrHiddenAccountsFeedViewModel : UserFeedViewModel(HiddenAccountsFeedFilter)
 
-open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel() {
+open class UserFeedViewModel(val dataSource: FeedFilter<UserInterface>) : ViewModel() {
     private val _feedContent = MutableStateFlow<UserFeedState>(UserFeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
 
@@ -50,7 +50,7 @@ open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel() {
         }
     }
 
-    private fun updateFeed(notes: List<User>) {
+    private fun updateFeed(notes: List<UserInterface>) {
         val scope = CoroutineScope(Job() + Dispatchers.Main)
         scope.launch {
             val currentState = feedContent.value

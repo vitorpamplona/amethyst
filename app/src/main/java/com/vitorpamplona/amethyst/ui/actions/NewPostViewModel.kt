@@ -23,7 +23,7 @@ class NewPostViewModel : ViewModel() {
     private var account: Account? = null
     private var originalNote: Note? = null
 
-    var mentions by mutableStateOf<List<User>?>(null)
+    var mentions by mutableStateOf<List<UserInterface>?>(null)
     var replyTos by mutableStateOf<List<Note>?>(null)
 
     var message by mutableStateOf(TextFieldValue(""))
@@ -31,7 +31,7 @@ class NewPostViewModel : ViewModel() {
     var isUploadingImage by mutableStateOf(false)
     val imageUploadingError = MutableSharedFlow<String?>()
 
-    var userSuggestions by mutableStateOf<List<User>>(emptyList())
+    var userSuggestions by mutableStateOf<List<UserInterface>>(emptyList())
     var userSuggestionAnchor: TextRange? = null
 
     fun load(account: Account, replyingTo: Note?, quote: Note?) {
@@ -58,7 +58,7 @@ class NewPostViewModel : ViewModel() {
         this.account = account
     }
 
-    fun addUserToMentions(user: User) {
+    fun addUserToMentions(user: UserInterface) {
         mentions = if (mentions?.contains(user) == true) mentions else mentions?.plus(user) ?: listOf(user)
     }
 
@@ -67,7 +67,7 @@ class NewPostViewModel : ViewModel() {
         replyTos = if (replyTos?.contains(note) == true) replyTos else replyTos?.plus(note) ?: listOf(note)
     }
 
-    fun tagIndex(user: User): Int {
+    fun tagIndex(user: UserInterface): Int {
         // Postr Events assembles replies before mentions in the tag order
         return (if (originalNote?.channel() != null) 1 else 0) + (replyTos?.size ?: 0) + (mentions?.indexOf(user) ?: 0)
     }
@@ -178,7 +178,7 @@ class NewPostViewModel : ViewModel() {
         }
     }
 
-    fun removeFromReplyList(it: User) {
+    fun removeFromReplyList(it: UserInterface) {
         mentions = mentions?.minus(it)
     }
 
@@ -197,7 +197,7 @@ class NewPostViewModel : ViewModel() {
         }
     }
 
-    fun autocompleteWithUser(item: User) {
+    fun autocompleteWithUser(item: UserInterface) {
         userSuggestionAnchor?.let {
             val lastWord = message.text.substring(0, it.end).substringAfterLast("\n").substringAfterLast(" ")
             val lastWordStart = it.end - lastWord.length

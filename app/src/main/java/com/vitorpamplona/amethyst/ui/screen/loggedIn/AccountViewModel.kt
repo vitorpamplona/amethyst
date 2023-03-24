@@ -9,10 +9,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.AccountState
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.*
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import kotlinx.coroutines.Dispatchers
@@ -28,7 +25,7 @@ class AccountViewModel(private val account: Account) : ViewModel() {
         return account.isWriteable()
     }
 
-    fun userProfile(): User {
+    fun userProfile(): UserInterface {
         return account.userProfile()
     }
 
@@ -53,7 +50,8 @@ class AccountViewModel(private val account: Account) : ViewModel() {
     }
 
     suspend fun zap(note: Note, amount: Long, message: String, context: Context, onError: (String) -> Unit, onProgress: (percent: Float) -> Unit) {
-        val lud16 = note.author?.info?.lud16?.trim() ?: note.author?.info?.lud06?.trim()
+        val lud16 = note.author?.info()?.lud16?.trim()
+            ?: note.author?.info()?.lud06?.trim()
 
         if (lud16.isNullOrBlank()) {
             onError(context.getString(R.string.user_does_not_have_a_lightning_address_setup_to_receive_sats))
@@ -97,7 +95,7 @@ class AccountViewModel(private val account: Account) : ViewModel() {
         account.report(note, type, content)
     }
 
-    fun report(user: User, type: ReportEvent.ReportType) {
+    fun report(user: UserInterface, type: ReportEvent.ReportType) {
         account.report(user, type)
     }
 
@@ -141,12 +139,12 @@ class AccountViewModel(private val account: Account) : ViewModel() {
         return account.decryptContent(note)
     }
 
-    fun hide(user: User) {
-        account.hideUser(user.pubkeyHex)
+    fun hide(user: UserInterface) {
+        account.hideUser(user.pubkeyHex())
     }
 
-    fun show(user: User) {
-        account.showUser(user.pubkeyHex)
+    fun show(user: UserInterface) {
+        account.showUser(user.pubkeyHex())
     }
 
     fun translateTo(lang: Locale) {
@@ -161,19 +159,19 @@ class AccountViewModel(private val account: Account) : ViewModel() {
         account.prefer(source, target, preference)
     }
 
-    fun follow(user: User) {
+    fun follow(user: UserInterface) {
         account.follow(user)
     }
 
-    fun unfollow(user: User) {
+    fun unfollow(user: UserInterface) {
         account.unfollow(user)
     }
 
-    fun isLoggedUser(user: User?): Boolean {
+    fun isLoggedUser(user: UserInterface?): Boolean {
         return account.userProfile() == user
     }
 
-    fun isFollowing(user: User?): Boolean {
+    fun isFollowing(user: UserInterface?): Boolean {
         if (user == null) return false
         return account.userProfile().isFollowingCached(user)
     }

@@ -16,7 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.UserInterface
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.FollowButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ShowUserButton
@@ -25,7 +25,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Composable
-fun UserCompose(baseUser: User, accountViewModel: AccountViewModel, navController: NavController) {
+fun UserCompose(baseUser: UserInterface, accountViewModel: AccountViewModel, navController: NavController) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
@@ -37,7 +37,7 @@ fun UserCompose(baseUser: User, accountViewModel: AccountViewModel, navControlle
     Column(
         modifier =
         Modifier.clickable(
-            onClick = { navController.navigate("User/${baseUser.pubkeyHex}") }
+            onClick = { navController.navigate("User/${baseUser.pubkeyHex()}") }
         )
     ) {
         Row(
@@ -60,7 +60,7 @@ fun UserCompose(baseUser: User, accountViewModel: AccountViewModel, navControlle
                 val user = baseUserState?.user ?: return
 
                 Text(
-                    user.info?.about ?: "",
+                    user.info()?.about ?: "",
                     color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -70,7 +70,7 @@ fun UserCompose(baseUser: User, accountViewModel: AccountViewModel, navControlle
             Column(modifier = Modifier.padding(start = 10.dp)) {
                 if (account.isHidden(baseUser)) {
                     ShowUserButton {
-                        account.showUser(baseUser.pubkeyHex)
+                        account.showUser(baseUser.pubkeyHex())
                     }
                 } else if (userFollows.isFollowingCached(baseUser)) {
                     UnfollowButton { coroutineScope.launch(Dispatchers.IO) { account.unfollow(baseUser) } }

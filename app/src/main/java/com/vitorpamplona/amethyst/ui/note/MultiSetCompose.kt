@@ -34,7 +34,7 @@ import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.UserInterface
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.ui.screen.MultiSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -217,7 +217,7 @@ fun AuthorGallery(
 fun FastNoteAuthorPicture(
     note: Note,
     navController: NavController,
-    userAccount: User,
+    userAccount: UserInterface,
     size: Dp,
     pictureModifier: Modifier = Modifier
 ) {
@@ -230,13 +230,13 @@ fun FastNoteAuthorPicture(
     val showFollowingMark = userAccount.isFollowingCached(user) || user == userAccount
 
     UserPicture(
-        userHex = user.pubkeyHex,
+        userHex = user.pubkeyHex(),
         userPicture = user.profilePicture(),
         showFollowingMark = showFollowingMark,
         size = size,
         modifier = pictureModifier,
         onClick = {
-            navController.navigate("User/${user.pubkeyHex}")
+            navController.navigate("User/${user.pubkeyHex()}")
         }
     )
 }

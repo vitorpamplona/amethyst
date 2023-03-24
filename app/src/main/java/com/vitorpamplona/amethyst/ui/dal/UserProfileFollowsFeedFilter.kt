@@ -3,8 +3,9 @@ package com.vitorpamplona.amethyst.ui.dal
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.UserInterface
 
-object UserProfileFollowsFeedFilter : FeedFilter<User>() {
+object UserProfileFollowsFeedFilter : FeedFilter<UserInterface>() {
     lateinit var account: Account
     var user: User? = null
 
@@ -13,7 +14,7 @@ object UserProfileFollowsFeedFilter : FeedFilter<User>() {
         user = LocalCache.users[userId]
     }
 
-    override fun feed(): List<User> {
+    override fun feed(): List<UserInterface> {
         return user?.latestContactList?.unverifiedFollowKeySet()?.mapNotNull {
             LocalCache.checkGetOrCreateUser(it)
         }?.toSet()

@@ -7,12 +7,14 @@ object UserZaps {
     fun forProfileFeed(zaps: Map<Note, Note?>?): List<Pair<Note, Note>> {
         if (zaps == null) return emptyList()
 
-        return (
+        val list: List<Pair<Note, Note>> = (
             zaps
                 .filter { it.value != null }
                 .toList()
                 .sortedBy { (it.second?.event as? LnZapEventInterface)?.amount() }
                 .reversed()
             ) as List<Pair<Note, Note>>
+
+        return list
     }
 }

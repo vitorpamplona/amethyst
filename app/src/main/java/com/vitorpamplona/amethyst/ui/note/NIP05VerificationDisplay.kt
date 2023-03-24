@@ -29,7 +29,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.UserInterface
 import com.vitorpamplona.amethyst.model.UserMetadata
 import com.vitorpamplona.amethyst.service.Nip05Verifier
 import com.vitorpamplona.amethyst.ui.theme.Nip05
@@ -88,7 +88,7 @@ fun ObserveDisplayNip05Status(baseNote: Note, columnModifier: Modifier = Modifie
 }
 
 @Composable
-fun ObserveDisplayNip05Status(baseUser: User, columnModifier: Modifier = Modifier) {
+fun ObserveDisplayNip05Status(baseUser: UserInterface, columnModifier: Modifier = Modifier) {
     val userState by baseUser.live().metadata.observeAsState()
     val user = userState?.user ?: return
 
@@ -96,7 +96,7 @@ fun ObserveDisplayNip05Status(baseUser: User, columnModifier: Modifier = Modifie
 
     user.nip05()?.let { nip05 ->
         if (nip05.split("@").size == 2) {
-            val nip05Verified by nip05VerificationAsAState(user.info!!, user.pubkeyHex)
+            val nip05Verified by nip05VerificationAsAState(user.info()!!, user.pubkeyHex())
             Column(modifier = columnModifier) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (nip05.split("@")[0] != "_") {
@@ -151,12 +151,12 @@ fun ObserveDisplayNip05Status(baseUser: User, columnModifier: Modifier = Modifie
 }
 
 @Composable
-fun DisplayNip05ProfileStatus(user: User) {
+fun DisplayNip05ProfileStatus(user: UserInterface) {
     val uri = LocalUriHandler.current
 
     user.nip05()?.let { nip05 ->
         if (nip05.split("@").size == 2) {
-            val nip05Verified by nip05VerificationAsAState(user.info!!, user.pubkeyHex)
+            val nip05Verified by nip05VerificationAsAState(user.info()!!, user.pubkeyHex())
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (nip05Verified == null) {
                     Icon(

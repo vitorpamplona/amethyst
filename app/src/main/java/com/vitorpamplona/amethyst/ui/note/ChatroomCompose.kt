@@ -151,7 +151,7 @@ fun ChatroomCompose(
                 withContext(Dispatchers.IO) {
                     noteEvent?.let {
                         hasNewMessages = it.createdAt() > notificationCache.cache.load(
-                            "Room/${userToComposeOn.pubkeyHex}"
+                            "Room/${userToComposeOn.pubkeyHex()}"
                         )
                     }
                 }
@@ -169,7 +169,7 @@ fun ChatroomCompose(
                 channelLastTime = note.createdAt(),
                 channelLastContent = accountViewModel.decrypt(note),
                 hasNewMessages = hasNewMessages,
-                onClick = { navController.navigate("Room/${user.pubkeyHex}") }
+                onClick = { navController.navigate("Room/${user.pubkeyHex()}") }
             )
         }
     }

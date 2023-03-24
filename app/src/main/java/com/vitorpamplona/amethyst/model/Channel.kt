@@ -8,7 +8,7 @@ import fr.acinq.secp256k1.Hex
 import java.util.concurrent.ConcurrentHashMap
 
 class Channel(val idHex: String) {
-    var creator: User? = null
+    var creator: UserInterface? = null
     var info = ChannelCreateEvent.ChannelData(null, null, null)
 
     var updatedMetadataAt: Long = 0
@@ -31,7 +31,7 @@ class Channel(val idHex: String) {
         notes.remove(note.idHex)
     }
 
-    fun updateChannelInfo(creator: User, channelInfo: ChannelCreateEvent.ChannelData, updatedAt: Long) {
+    fun updateChannelInfo(creator: UserInterface, channelInfo: ChannelCreateEvent.ChannelData, updatedAt: Long) {
         this.creator = creator
         this.info = channelInfo
         this.updatedMetadataAt = updatedAt

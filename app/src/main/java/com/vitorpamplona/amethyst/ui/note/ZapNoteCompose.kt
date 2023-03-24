@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.model.LnZapEvent
+import com.vitorpamplona.amethyst.service.model.LnZapEventInterface
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.FollowButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ShowUserButton
@@ -61,7 +61,7 @@ fun ZapNoteCompose(baseNote: Pair<Note, Note>, accountViewModel: AccountViewMode
         Column(
             modifier =
             Modifier.clickable(
-                onClick = { navController.navigate("User/${baseAuthor.pubkeyHex}") }
+                onClick = { navController.navigate("User/${baseAuthor.pubkeyHex()}") }
             ),
             verticalArrangement = Arrangement.Center
         ) {
@@ -85,7 +85,7 @@ fun ZapNoteCompose(baseNote: Pair<Note, Note>, accountViewModel: AccountViewMode
                     val user = baseAuthorState?.user ?: return
 
                     Text(
-                        user.info?.about ?: "",
+                        user.info()?.about ?: "",
                         color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -96,7 +96,7 @@ fun ZapNoteCompose(baseNote: Pair<Note, Note>, accountViewModel: AccountViewMode
 
                 LaunchedEffect(key1 = noteZap) {
                     withContext(Dispatchers.IO) {
-                        zapAmount = (noteZap.event as? LnZapEvent)?.amount
+                        zapAmount = (noteZap.event as? LnZapEventInterface)?.amount()
                     }
                 }
 
@@ -115,7 +115,7 @@ fun ZapNoteCompose(baseNote: Pair<Note, Note>, accountViewModel: AccountViewMode
                 Column(modifier = Modifier.padding(start = 10.dp)) {
                     if (account.isHidden(baseAuthor)) {
                         ShowUserButton {
-                            account.showUser(baseAuthor.pubkeyHex)
+                            account.showUser(baseAuthor.pubkeyHex())
                         }
                     } else if (userFollows.isFollowingCached(baseAuthor)) {
                         UnfollowButton { coroutineScope.launch(Dispatchers.IO) { account.unfollow(baseAuthor) } }

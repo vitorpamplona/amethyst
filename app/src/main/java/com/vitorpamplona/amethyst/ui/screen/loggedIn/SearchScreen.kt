@@ -48,11 +48,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.Channel
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.*
 import com.vitorpamplona.amethyst.service.NostrGlobalDataSource
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.ui.dal.GlobalFeedFilter
@@ -257,7 +253,7 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
                 }
             }
 
-            itemsIndexed(searchResults.value, key = { _, item -> "u" + item.pubkeyHex }) { _, item ->
+            itemsIndexed(searchResults.value, key = { _, item -> "u" + item.pubkeyHex() }) { _, item ->
                 UserCompose(item, accountViewModel = accountViewModel, navController = navController)
             }
 
@@ -338,7 +334,7 @@ fun HashtagLine(tag: String, onClick: () -> Unit) {
 
 @Composable
 fun UserLine(
-    baseUser: User,
+    baseUser: UserInterface,
     account: Account,
     onClick: () -> Unit
 ) {
@@ -370,7 +366,7 @@ fun UserLine(
                 val user = userState?.user ?: return
 
                 Text(
-                    user.info?.about?.take(100) ?: "",
+                    user.info()?.about?.take(100) ?: "",
                     color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis

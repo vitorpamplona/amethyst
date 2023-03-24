@@ -34,7 +34,7 @@ open class Note(val idHex: String) {
     // These fields are only available after the Text Note event is received.
     // They are immutable after that.
     var event: EventInterface? = null
-    var author: User? = null
+    var author: UserInterface? = null
     var replyTo: List<Note>? = null
 
     // These fields are updated every time an event related to this note is received.
@@ -44,7 +44,7 @@ open class Note(val idHex: String) {
         private set
     var boosts = setOf<Note>()
         private set
-    var reports = mapOf<User, Set<Note>>()
+    var reports = mapOf<UserInterface, Set<Note>>()
         private set
     var zaps = mapOf<Note, Note?>()
         private set
@@ -71,7 +71,7 @@ open class Note(val idHex: String) {
 
     open fun createdAt() = event?.createdAt()
 
-    fun loadEvent(event: Event, author: User, replyTo: List<Note>) {
+    fun loadEvent(event: Event, author: UserInterface, replyTo: List<Note>) {
         this.event = event
         this.author = author
         this.replyTo = replyTo
@@ -196,29 +196,29 @@ open class Note(val idHex: String) {
         }
     }
 
-    fun isZappedBy(user: User): Boolean {
+    fun isZappedBy(user: UserInterface): Boolean {
         // Zaps who the requester was the user
         return zaps.any { it.key.author == user }
     }
 
-    fun isReactedBy(user: User): Boolean {
+    fun isReactedBy(user: UserInterface): Boolean {
         return reactions.any { it.author == user }
     }
 
-    fun isBoostedBy(user: User): Boolean {
+    fun isBoostedBy(user: UserInterface): Boolean {
         return boosts.any { it.author == user }
     }
 
-    fun reportsBy(user: User): Set<Note> {
+    fun reportsBy(user: UserInterface): Set<Note> {
         return reports[user] ?: emptySet()
     }
 
-    fun reportAuthorsBy(users: Set<HexKey>): List<User> {
-        return reports.keys.filter { it.pubkeyHex in users }
+    fun reportAuthorsBy(users: Set<HexKey>): List<UserInterface> {
+        return reports.keys.filter { it.pubkeyHex() in users }
     }
 
     fun countReportAuthorsBy(users: Set<HexKey>): Int {
-        return reports.keys.count { it.pubkeyHex in users }
+        return reports.keys.count { it.pubkeyHex()in users }
     }
 
     fun reportsBy(users: Set<HexKey>): List<Note> {
@@ -235,7 +235,7 @@ open class Note(val idHex: String) {
             }.sumOf { it }
     }
 
-    fun hasPledgeBy(user: User): Boolean {
+    fun hasPledgeBy(user: UserInterface): Boolean {
         return replies
             .filter { it.event?.isTaggedHash("bounty-added-reward") ?: false }
             .any {
@@ -268,9 +268,11 @@ open class Note(val idHex: String) {
         val dayAgo = Date().time / 1000 - 24 * 60 * 60
         return reports.isNotEmpty() ||
             (
-                author?.reports?.values?.any {
-                    it.firstOrNull { (it.createdAt() ?: 0) > dayAgo } != null
-                } ?: false
+                author?.reports()
+                    ?.values
+                    ?.any {
+                        it.firstOrNull { (it.createdAt() ?: 0) > dayAgo } != null
+                    } ?: false
                 )
     }
 
@@ -289,9 +291,9 @@ open class Note(val idHex: String) {
         return returningList
     }
 
-    fun directlyCiteUsers(): Set<User> {
+    fun directlyCiteUsers(): Set<UserInterface> {
         val matcher = tagSearch.matcher(event?.content() ?: "")
-        val returningList = mutableSetOf<User>()
+        val returningList = mutableSetOf<UserInterface>()
         while (matcher.find()) {
             try {
                 val tag = matcher.group(1)?.let { event?.tags()?.get(it.toInt()) }
@@ -321,20 +323,20 @@ open class Note(val idHex: String) {
         return zaps.any { it.key.author == loggedIn }
     }
 
-    fun hasReacted(loggedIn: User, content: String): Boolean {
+    fun hasReacted(loggedIn: UserInterface, content: String): Boolean {
         return reactedBy(loggedIn, content).isNotEmpty()
     }
 
-    fun reactedBy(loggedIn: User, content: String): List<Note> {
+    fun reactedBy(loggedIn: UserInterface, content: String): List<Note> {
         return reactions.filter { it.author == loggedIn && it.event?.content() == content }
     }
 
-    fun hasBoostedInTheLast5Minutes(loggedIn: User): Boolean {
+    fun hasBoostedInTheLast5Minutes(loggedIn: UserInterface): Boolean {
         val currentTime = Date().time / 1000
         return boosts.firstOrNull { it.author == loggedIn && (it.createdAt() ?: 0) > currentTime - (60 * 5) } != null // 5 minute protection
     }
 
-    fun boostedBy(loggedIn: User): List<Note> {
+    fun boostedBy(loggedIn: UserInterface): List<Note> {
         return boosts.filter { it.author == loggedIn }
     }
 

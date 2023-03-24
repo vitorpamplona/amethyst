@@ -2,21 +2,11 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
-import com.vitorpamplona.amethyst.service.model.BookmarkListEvent
-import com.vitorpamplona.amethyst.service.model.ContactListEvent
-import com.vitorpamplona.amethyst.service.model.LnZapEvent
-import com.vitorpamplona.amethyst.service.model.MetadataEvent
-import com.vitorpamplona.amethyst.service.model.ReportEvent
+import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import fr.acinq.secp256k1.Hex
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import nostr.postr.Bech32
 import nostr.postr.toNpub
 import java.math.BigDecimal
@@ -25,7 +15,7 @@ import java.util.regex.Pattern
 
 val lnurlpPattern = Pattern.compile("(?i:http|https):\\/\\/((.+)\\/)*\\.well-known\\/lnurlp\\/(.*)")
 
-class User(val pubkeyHex: String) {
+class User(val pubkeyHex: String) : UserInterface {
     var info: UserMetadata? = null
 
     var latestContactList: ContactListEvent? = null
@@ -34,7 +24,7 @@ class User(val pubkeyHex: String) {
     var notes = setOf<Note>()
         private set
 
-    var reports = mapOf<User, Set<Note>>()
+    var reports = mapOf<UserInterface, Set<Note>>()
         private set
 
     var latestReportTime: Long = 0
@@ -45,46 +35,61 @@ class User(val pubkeyHex: String) {
     var relaysBeingUsed = mapOf<String, RelayInfo>()
         private set
 
-    var privateChatrooms = mapOf<User, Chatroom>()
+    var privateChatrooms = mapOf<UserInterface, Chatroom>()
         private set
 
     var acceptedBadges: AddressableNote? = null
 
-    fun pubkey() = Hex.decode(pubkeyHex)
-    fun pubkeyNpub() = pubkey().toNpub()
-    fun pubkeyDisplayHex() = pubkeyNpub().toShortenHex()
+    var liveSet: UserLiveSet? = null
+
+    override fun info(): UserMetadata? = info
+    override fun latestContactList(): ContactListEvent? = latestContactList
+    override fun latestBookmarkList(): BookmarkListEvent? = latestBookmarkList
+    override fun zaps(): Map<Note, Note?> = zaps
+    override fun notes(): Set<Note> = notes
+    override fun reports(): Map<UserInterface, Set<Note>> = reports
+    override fun latestReportTime(): Long = latestReportTime
+    override fun relaysBeingUsed(): Map<String, RelayInfo> = relaysBeingUsed
+    override fun privateChatrooms(): Map<UserInterface, Chatroom> = privateChatrooms
+    override fun acceptedBadges(): AddressableNote? = acceptedBadges
+    override fun liveSet(): UserLiveSet? = liveSet
+    override fun pubkeyHex() = pubkeyHex
+
+    override fun pubkey() = Hex.decode(pubkeyHex)
+    override fun pubkeyNpub() = pubkey().toNpub()
+    override fun pubkeyDisplayHex() = pubkeyNpub().toShortenHex()
 
     override fun toString(): String = pubkeyHex
 
-    fun toBestDisplayName(): String {
+    override fun toBestDisplayName(): String {
         return bestDisplayName() ?: bestUsername() ?: pubkeyDisplayHex()
     }
 
-    fun bestUsername(): String? {
+    override fun bestUsername(): String? {
         return info?.name?.ifBlank { null } ?: info?.username?.ifBlank { null }
     }
 
-    fun bestDisplayName(): String? {
+    override fun bestDisplayName(): String? {
         return info?.displayName?.ifBlank { null } ?: info?.display_name?.ifBlank { null }
     }
 
-    fun nip05(): String? {
+    override fun nip05(): String? {
         return info?.nip05?.ifBlank { null }
     }
 
-    fun profilePicture(): String? {
+    override fun profilePicture(): String? {
         if (info?.picture.isNullOrBlank()) info?.picture = null
         return info?.picture
     }
 
-    fun updateBookmark(event: BookmarkListEvent) {
+    override fun updateBookmark(event: BookmarkListEvent) {
         if (event.id == latestBookmarkList?.id) return
 
         latestBookmarkList = event
         liveSet?.bookmarks?.invalidateData()
     }
 
-    fun updateContactList(event: ContactListEvent) {
+    override fun updateContactList(event: ContactListEvent) {
         if (event.id == latestContactList?.id) return
 
         val oldContactListEvent = latestContactList
@@ -105,22 +110,22 @@ class User(val pubkeyHex: String) {
         liveSet?.relays?.invalidateData()
     }
 
-    fun addNote(note: Note) {
+    override fun addNote(note: Note) {
         if (note !in notes) {
             notes = notes + note
             // No need for Listener yet
         }
     }
 
-    fun removeNote(note: Note) {
+    override fun removeNote(note: Note) {
         notes = notes - note
     }
 
-    fun clearNotes() {
+    override fun clearNotes() {
         notes = setOf<Note>()
     }
 
-    fun addReport(note: Note) {
+    override fun addReport(note: Note) {
         val author = note.author ?: return
 
         if (author !in reports.keys) {
@@ -137,7 +142,7 @@ class User(val pubkeyHex: String) {
         }
     }
 
-    fun removeReport(deleteNote: Note) {
+    override fun removeReport(deleteNote: Note) {
         val author = deleteNote.author ?: return
 
         if (author in reports.keys && reports[author]?.contains(deleteNote) == true) {
@@ -148,12 +153,12 @@ class User(val pubkeyHex: String) {
         }
     }
 
-    fun updateAcceptedBadges(note: AddressableNote) {
+    override fun updateAcceptedBadges(note: AddressableNote) {
         acceptedBadges = note
         liveSet?.badges?.invalidateData()
     }
 
-    fun addZap(zapRequest: Note, zap: Note?) {
+    override fun addZap(zapRequest: Note, zap: Note?) {
         if (zapRequest !in zaps.keys) {
             zaps = zaps + Pair(zapRequest, zap)
             liveSet?.zaps?.invalidateData()
@@ -163,7 +168,7 @@ class User(val pubkeyHex: String) {
         }
     }
 
-    fun zappedAmount(): BigDecimal {
+    override fun zappedAmount(): BigDecimal {
         return zaps.mapNotNull { it.value?.event }
             .filterIsInstance<LnZapEvent>()
             .mapNotNull {
@@ -171,26 +176,26 @@ class User(val pubkeyHex: String) {
             }.sumOf { it }
     }
 
-    fun reportsBy(user: User): Set<Note> {
+    override fun reportsBy(user: UserInterface): Set<Note> {
         return reports[user] ?: emptySet()
     }
 
-    fun reportAuthorsBy(users: Set<HexKey>): List<User> {
-        return reports.keys.filter { it.pubkeyHex in users }
+    override fun reportAuthorsBy(users: Set<HexKey>): List<UserInterface> {
+        return reports.keys.filter { it.pubkeyHex()in users }
     }
 
-    fun countReportAuthorsBy(users: Set<HexKey>): Int {
-        return reports.keys.count { it.pubkeyHex in users }
+    override fun countReportAuthorsBy(users: Set<HexKey>): Int {
+        return reports.keys.count { it.pubkeyHex() in users }
     }
 
-    fun reportsBy(users: Set<HexKey>): List<Note> {
+    override fun reportsBy(users: Set<HexKey>): List<Note> {
         return reportAuthorsBy(users).mapNotNull {
             reports[it]
         }.flatten()
     }
 
     @Synchronized
-    fun getOrCreatePrivateChatroom(user: User): Chatroom {
+    override fun getOrCreatePrivateChatroom(user: UserInterface): Chatroom {
         return privateChatrooms[user] ?: run {
             val privateChatroom = Chatroom(setOf<Note>())
             privateChatrooms = privateChatrooms + Pair(user, privateChatroom)
@@ -199,7 +204,7 @@ class User(val pubkeyHex: String) {
     }
 
     @Synchronized
-    fun addMessage(user: User, msg: Note) {
+    override fun addMessage(user: UserInterface, msg: Note) {
         val privateChatroom = getOrCreatePrivateChatroom(user)
         if (msg !in privateChatroom.roomMessages) {
             privateChatroom.roomMessages = privateChatroom.roomMessages + msg
@@ -208,7 +213,7 @@ class User(val pubkeyHex: String) {
     }
 
     @Synchronized
-    fun removeMessage(user: User, msg: Note) {
+    override fun removeMessage(user: UserInterface, msg: Note) {
         val privateChatroom = getOrCreatePrivateChatroom(user)
         if (msg in privateChatroom.roomMessages) {
             privateChatroom.roomMessages = privateChatroom.roomMessages - msg
@@ -216,7 +221,7 @@ class User(val pubkeyHex: String) {
         }
     }
 
-    fun addRelayBeingUsed(relay: Relay, eventTime: Long) {
+    override fun addRelayBeingUsed(relay: Relay, eventTime: Long) {
         val here = relaysBeingUsed[relay.url]
         if (here == null) {
             relaysBeingUsed = relaysBeingUsed + Pair(relay.url, RelayInfo(relay.url, eventTime, 1))
@@ -230,7 +235,7 @@ class User(val pubkeyHex: String) {
         liveSet?.relayInfo?.invalidateData()
     }
 
-    fun updateUserInfo(newUserInfo: UserMetadata, latestMetadata: MetadataEvent) {
+    override fun updateUserInfo(newUserInfo: UserMetadata, latestMetadata: MetadataEvent) {
         info = newUserInfo
         info?.latestMetadata = latestMetadata
         info?.updatedMetadataAt = latestMetadata.createdAt
@@ -254,87 +259,85 @@ class User(val pubkeyHex: String) {
         liveSet?.metadata?.invalidateData()
     }
 
-    fun isFollowing(user: User): Boolean {
+    override fun isFollowing(user: UserInterface): Boolean {
         return latestContactList?.unverifiedFollowKeySet()?.toSet()?.let {
-            return user.pubkeyHex in it
+            return user.pubkeyHex()in it
         } ?: false
     }
 
-    fun isFollowingHashtag(tag: String): Boolean {
+    override fun isFollowingHashtag(tag: String): Boolean {
         return latestContactList?.unverifiedFollowTagSet()?.toSet()?.let {
             return tag in it
         } ?: false
     }
 
-    fun isFollowingHashtagCached(tag: String): Boolean {
+    override fun isFollowingHashtagCached(tag: String): Boolean {
         return latestContactList?.verifiedFollowTagSet?.let {
             return tag.lowercase() in it
         } ?: false
     }
 
-    fun isFollowingCached(user: User): Boolean {
+    override fun isFollowingCached(user: UserInterface): Boolean {
         return latestContactList?.verifiedFollowKeySet?.let {
-            return user.pubkeyHex in it
+            return user.pubkeyHex()in it
         } ?: false
     }
 
-    fun transientFollowCount(): Int? {
+    override fun transientFollowCount(): Int? {
         return latestContactList?.unverifiedFollowKeySet()?.size
     }
 
-    fun transientFollowerCount(): Int {
+    override fun transientFollowerCount(): Int {
         return LocalCache.users.values.count { it.latestContactList?.let { pubkeyHex in it.unverifiedFollowKeySet() } ?: false }
     }
 
-    fun cachedFollowingKeySet(): Set<HexKey> {
+    override fun cachedFollowingKeySet(): Set<HexKey> {
         return latestContactList?.verifiedFollowKeySet ?: emptySet()
     }
 
-    fun cachedFollowingTagSet(): Set<HexKey> {
+    override fun cachedFollowingTagSet(): Set<HexKey> {
         return latestContactList?.verifiedFollowTagSet ?: emptySet()
     }
 
-    fun cachedFollowCount(): Int? {
+    override fun cachedFollowCount(): Int? {
         return latestContactList?.verifiedFollowKeySet?.size
     }
 
-    fun cachedFollowerCount(): Int {
+    override fun cachedFollowerCount(): Int {
         return LocalCache.users.values.count { it.latestContactList?.let { pubkeyHex in it.unverifiedFollowKeySet() } ?: false }
     }
 
-    fun hasSentMessagesTo(user: User?): Boolean {
+    override fun hasSentMessagesTo(user: UserInterface?): Boolean {
         val messagesToUser = privateChatrooms[user] ?: return false
 
         return messagesToUser.roomMessages.any { this == it.author }
     }
 
-    fun hasReport(loggedIn: User, type: ReportEvent.ReportType): Boolean {
+    override fun hasReport(loggedIn: UserInterface, type: ReportEvent.ReportType): Boolean {
         return reports[loggedIn]?.firstOrNull() {
             it.event is ReportEvent && (it.event as ReportEvent).reportedAuthor().any { it.reportType == type }
         } != null
     }
 
-    fun anyNameStartsWith(username: String): Boolean {
+    override fun anyNameStartsWith(username: String): Boolean {
         return info?.anyNameStartsWith(username) ?: false
     }
 
-    var liveSet: UserLiveSet? = null
-
-    fun live(): UserLiveSet {
+    override fun live(): UserLiveSet {
         if (liveSet == null) {
             liveSet = UserLiveSet(this)
         }
         return liveSet!!
     }
 
-    fun clearLive() {
+    override fun clearLive() {
         if (liveSet != null && liveSet?.isInUse() == false) {
             liveSet = null
         }
     }
 }
 
-class UserLiveSet(u: User) {
+class UserLiveSet(u: UserInterface) {
     // UI Observers line up here.
     val follows: UserLiveData = UserLiveData(u)
     val reports: UserLiveData = UserLiveData(u)
@@ -399,7 +402,7 @@ class UserMetadata {
     }
 }
 
-class UserLiveData(val user: User) : LiveData<UserState>(UserState(user)) {
+class UserLiveData(val user: UserInterface) : LiveData<UserState>(UserState(user)) {
 
     // Refreshes observers in batches.
     var handlerWaiting = AtomicBoolean()
@@ -435,4 +438,4 @@ class UserLiveData(val user: User) : LiveData<UserState>(UserState(user)) {
     }
 }
 
-class UserState(val user: User)
+class UserState(val user: UserInterface)

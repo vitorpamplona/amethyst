@@ -4,10 +4,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.UserMetadata
-import com.vitorpamplona.amethyst.model.decodePublicKey
-import com.vitorpamplona.amethyst.model.toHexKey
+import com.vitorpamplona.amethyst.model.*
 import com.vitorpamplona.amethyst.ui.actions.buildAnnotatedStringWithUrlHighlighting
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -30,8 +27,8 @@ class UrlUserTagTransformationTest {
     @Test
     fun transformationText() {
         val user = LocalCache.getOrCreateUser(decodePublicKey("npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z").toHexKey())
-        user.info = UserMetadata()
-        user.info?.displayName = "Vitor Pamplona"
+        (user as User).info = UserMetadata()
+        user.info()?.displayName = "Vitor Pamplona"
 
         val transformedText = buildAnnotatedStringWithUrlHighlighting(
             AnnotatedString("New Hey @npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z"),
@@ -64,8 +61,8 @@ class UrlUserTagTransformationTest {
     @Test
     fun transformationTextTwoKeys() {
         val user = LocalCache.getOrCreateUser(decodePublicKey("npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z").toHexKey())
-        user.info = UserMetadata()
-        user.info?.displayName = "Vitor Pamplona"
+        (user as User).info = UserMetadata()
+        user.info()?.displayName = "Vitor Pamplona"
 
         val transformedText = buildAnnotatedStringWithUrlHighlighting(
             AnnotatedString("New Hey @npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z and @npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z"),

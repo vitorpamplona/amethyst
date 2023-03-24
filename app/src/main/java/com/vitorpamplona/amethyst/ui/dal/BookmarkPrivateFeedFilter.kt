@@ -10,7 +10,7 @@ object BookmarkPrivateFeedFilter : FeedFilter<Note>() {
     override fun feed(): List<Note> {
         val privKey = account.loggedIn.privKey ?: return emptyList()
 
-        val bookmarks = account.userProfile().latestBookmarkList
+        val bookmarks = account.userProfile().latestBookmarkList()
 
         val notes = bookmarks?.privateTaggedEvents(privKey)
             ?.mapNotNull { LocalCache.checkGetOrCreateNote(it) } ?: emptyList()

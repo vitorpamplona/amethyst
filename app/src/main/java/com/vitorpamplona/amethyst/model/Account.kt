@@ -3,38 +3,11 @@ package com.vitorpamplona.amethyst.model
 import android.content.res.Resources
 import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
-import com.vitorpamplona.amethyst.service.model.BookmarkListEvent
-import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
-import com.vitorpamplona.amethyst.service.model.Contact
-import com.vitorpamplona.amethyst.service.model.ContactListEvent
-import com.vitorpamplona.amethyst.service.model.DeletionEvent
-import com.vitorpamplona.amethyst.service.model.IdentityClaim
-import com.vitorpamplona.amethyst.service.model.LnZapPaymentRequestEvent
-import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
-import com.vitorpamplona.amethyst.service.model.MetadataEvent
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
-import com.vitorpamplona.amethyst.service.model.ReactionEvent
-import com.vitorpamplona.amethyst.service.model.ReportEvent
-import com.vitorpamplona.amethyst.service.model.RepostEvent
-import com.vitorpamplona.amethyst.service.model.TextNoteEvent
-import com.vitorpamplona.amethyst.service.relays.Client
-import com.vitorpamplona.amethyst.service.relays.Constants
-import com.vitorpamplona.amethyst.service.relays.FeedType
-import com.vitorpamplona.amethyst.service.relays.Relay
-import com.vitorpamplona.amethyst.service.relays.RelayPool
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import com.vitorpamplona.amethyst.service.model.*
+import com.vitorpamplona.amethyst.service.relays.*
+import kotlinx.coroutines.*
 import nostr.postr.Persona
-import java.util.Locale
+import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 
 val DefaultChannels = setOf(
@@ -73,7 +46,7 @@ class Account(
     val liveLanguages: AccountLiveData = AccountLiveData(this)
     val saveable: AccountLiveData = AccountLiveData(this)
 
-    fun userProfile(): User {
+    fun userProfile(): UserInterface {
         return LocalCache.getOrCreateUser(loggedIn.pubKey.toHexKey())
     }
 
@@ -81,7 +54,7 @@ class Account(
         return followingChannels.map { LocalCache.getOrCreateChannel(it) }
     }
 
-    fun hiddenUsers(): List<User> {
+    fun hiddenUsers(): List<UserInterface> {
         return (hiddenUsers + transientHiddenUsers).map { LocalCache.getOrCreateUser(it) }
     }
 
@@ -92,7 +65,7 @@ class Account(
     fun sendNewRelayList(relays: Map<String, ContactListEvent.ReadWrite>) {
         if (!isWriteable()) return
 
-        val contactList = userProfile().latestContactList
+        val contactList = userProfile().latestContactList()
         val follows = contactList?.follows() ?: emptyList()
         val followsTags = contactList?.unverifiedFollowTagSet() ?: emptyList()
 
@@ -160,7 +133,15 @@ class Account(
         if (!isWriteable()) return null
 
         note.event?.let {
-            return LnZapRequestEvent.create(it, userProfile().latestContactList?.relays()?.keys?.ifEmpty { null } ?: localRelays.map { it.url }.toSet(), loggedIn.privKey!!)
+            return LnZapRequestEvent.create(
+                it,
+                userProfile()
+                    .latestContactList()
+                    ?.relays()
+                    ?.keys
+                    ?.ifEmpty { null } ?: localRelays.map { it.url }.toSet(),
+                loggedIn.privKey!!
+            )
         }
 
         return null
@@ -187,7 +168,15 @@ class Account(
     fun createZapRequestFor(userPubKeyHex: String): LnZapRequestEvent? {
         if (!isWriteable()) return null
 
-        return LnZapRequestEvent.create(userPubKeyHex, userProfile().latestContactList?.relays()?.keys?.ifEmpty { null } ?: localRelays.map { it.url }.toSet(), loggedIn.privKey!!)
+        return LnZapRequestEvent.create(
+            userPubKeyHex,
+            userProfile()
+                .latestContactList()
+                ?.relays()
+                ?.keys
+                ?.ifEmpty { null } ?: localRelays.map { it.url }.toSet(),
+            loggedIn.privKey!!
+        )
     }
 
     fun report(note: Note, type: ReportEvent.ReportType, content: String = "") {
@@ -211,7 +200,7 @@ class Account(
         }
     }
 
-    fun report(user: User, type: ReportEvent.ReportType) {
+    fun report(user: UserInterface, type: ReportEvent.ReportType) {
         if (!isWriteable()) return
 
         if (user.hasReport(userProfile(), type)) {
@@ -219,7 +208,7 @@ class Account(
             return
         }
 
-        val event = ReportEvent.create(user.pubkeyHex, type, loggedIn.privKey!!)
+        val event = ReportEvent.create(user.pubkeyHex(), type, loggedIn.privKey!!)
         Client.send(event)
         LocalCache.consume(event, null)
     }
@@ -261,16 +250,16 @@ class Account(
         }
     }
 
-    fun follow(user: User) {
+    fun follow(user: UserInterface) {
         if (!isWriteable()) return
 
-        val contactList = userProfile().latestContactList
+        val contactList = userProfile().latestContactList()
         val followingUsers = contactList?.follows() ?: emptyList()
         val followingTags = contactList?.unverifiedFollowTagSet() ?: emptyList()
 
         val event = if (contactList != null) {
             ContactListEvent.create(
-                followingUsers.plus(Contact(user.pubkeyHex, null)),
+                followingUsers.plus(Contact(user.pubkeyHex(), null)),
                 followingTags,
                 contactList.relays(),
                 loggedIn.privKey!!
@@ -278,7 +267,7 @@ class Account(
         } else {
             val relays = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) }
             ContactListEvent.create(
-                listOf(Contact(user.pubkeyHex, null)),
+                listOf(Contact(user.pubkeyHex(), null)),
                 followingTags,
                 relays,
                 loggedIn.privKey!!
@@ -292,7 +281,7 @@ class Account(
     fun follow(tag: String) {
         if (!isWriteable()) return
 
-        val contactList = userProfile().latestContactList
+        val contactList = userProfile().latestContactList()
         val followingUsers = contactList?.follows() ?: emptyList()
         val followingTags = contactList?.unverifiedFollowTagSet() ?: emptyList()
 
@@ -317,16 +306,16 @@ class Account(
         LocalCache.consume(event)
     }
 
-    fun unfollow(user: User) {
+    fun unfollow(user: UserInterface) {
         if (!isWriteable()) return
 
-        val contactList = userProfile().latestContactList
+        val contactList = userProfile().latestContactList()
         val followingUsers = contactList?.follows() ?: emptyList()
         val followingTags = contactList?.unverifiedFollowTagSet() ?: emptyList()
 
         if (contactList != null && (followingUsers.isNotEmpty() || followingTags.isNotEmpty())) {
             val event = ContactListEvent.create(
-                followingUsers.filter { it.pubKeyHex != user.pubkeyHex },
+                followingUsers.filter { it.pubKeyHex != user.pubkeyHex() },
                 followingTags,
                 contactList.relays(),
                 loggedIn.privKey!!
@@ -340,7 +329,7 @@ class Account(
     fun unfollow(tag: String) {
         if (!isWriteable()) return
 
-        val contactList = userProfile().latestContactList
+        val contactList = userProfile().latestContactList()
         val followingUsers = contactList?.follows() ?: emptyList()
         val followingTags = contactList?.unverifiedFollowTagSet() ?: emptyList()
 
@@ -357,11 +346,11 @@ class Account(
         }
     }
 
-    fun sendPost(message: String, replyTo: List<Note>?, mentions: List<User>?, tags: List<String>? = null) {
+    fun sendPost(message: String, replyTo: List<Note>?, mentions: List<UserInterface>?, tags: List<String>? = null) {
         if (!isWriteable()) return
 
         val repliesToHex = replyTo?.filter { it.address() == null }?.map { it.idHex }
-        val mentionsHex = mentions?.map { it.pubkeyHex }
+        val mentionsHex = mentions?.map { it.pubkeyHex() }
         val addresses = replyTo?.mapNotNull { it.address() }
 
         val signedEvent = TextNoteEvent.create(
@@ -377,11 +366,11 @@ class Account(
         LocalCache.consume(signedEvent)
     }
 
-    fun sendChannelMessage(message: String, toChannel: String, replyingTo: Note? = null, mentions: List<User>?) {
+    fun sendChannelMessage(message: String, toChannel: String, replyingTo: Note? = null, mentions: List<UserInterface>?) {
         if (!isWriteable()) return
 
         val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
-        val mentionsHex = mentions?.map { it.pubkeyHex }
+        val mentionsHex = mentions?.map { it.pubkeyHex() }
 
         val signedEvent = ChannelMessageEvent.create(
             message = message,
@@ -437,7 +426,7 @@ class Account(
     fun addPrivateBookmark(note: Note) {
         if (!isWriteable()) return
 
-        val bookmarks = userProfile().latestBookmarkList
+        val bookmarks = userProfile().latestBookmarkList()
 
         val event = BookmarkListEvent.create(
             "bookmark",
@@ -459,7 +448,7 @@ class Account(
     fun addPublicBookmark(note: Note) {
         if (!isWriteable()) return
 
-        val bookmarks = userProfile().latestBookmarkList
+        val bookmarks = userProfile().latestBookmarkList()
 
         val event = BookmarkListEvent.create(
             "bookmark",
@@ -481,7 +470,7 @@ class Account(
     fun removePrivateBookmark(note: Note) {
         if (!isWriteable()) return
 
-        val bookmarks = userProfile().latestBookmarkList
+        val bookmarks = userProfile().latestBookmarkList()
 
         val event = BookmarkListEvent.create(
             "bookmark",
@@ -503,7 +492,7 @@ class Account(
     fun removePublicBookmark(note: Note) {
         if (!isWriteable()) return
 
-        val bookmarks = userProfile().latestBookmarkList
+        val bookmarks = userProfile().latestBookmarkList()
 
         val event = BookmarkListEvent.create(
             "bookmark",
@@ -526,21 +515,25 @@ class Account(
         if (!isWriteable()) return false
 
         if (note is AddressableNote) {
-            return userProfile().latestBookmarkList?.privateTaggedAddresses(loggedIn.privKey!!)
+            return userProfile()
+                .latestBookmarkList()
+                ?.privateTaggedAddresses(loggedIn.privKey!!)
                 ?.contains(note.address) == true
-        } else {
-            return userProfile().latestBookmarkList?.privateTaggedEvents(loggedIn.privKey!!)
-                ?.contains(note.idHex) == true
         }
+
+        return userProfile()
+            .latestBookmarkList()
+            ?.privateTaggedEvents(loggedIn.privKey!!)
+            ?.contains(note.idHex) == true
     }
 
     fun isInPublicBookmarks(note: Note): Boolean {
         if (!isWriteable()) return false
 
         if (note is AddressableNote) {
-            return userProfile().latestBookmarkList?.taggedAddresses()?.contains(note.address) == true
+            return userProfile().latestBookmarkList()?.taggedAddresses()?.contains(note.address) == true
         } else {
-            return userProfile().latestBookmarkList?.taggedEvents()?.contains(note.idHex) == true
+            return userProfile().latestBookmarkList()?.taggedEvents()?.contains(note.idHex) == true
         }
     }
 
@@ -656,8 +649,11 @@ class Account(
 
     // Takes a User's relay list and adds the types of feeds they are active for.
     fun activeRelays(): Array<Relay>? {
-        var usersRelayList = userProfile().latestContactList?.relays()?.map {
-            val localFeedTypes = localRelays.firstOrNull() { localRelay -> localRelay.url == it.key }?.feedTypes ?: FeedType.values().toSet()
+        var usersRelayList = userProfile().latestContactList()?.relays()?.map {
+            val localFeedTypes = localRelays
+                .firstOrNull() { localRelay -> localRelay.url == it.key }
+                ?.feedTypes
+                ?: FeedType.values().toSet()
             Relay(it.key, it.value.read, it.value.write, localFeedTypes)
         } ?: return null
 
@@ -690,17 +686,17 @@ class Account(
         }
     }
 
-    fun isHidden(user: User) = user.pubkeyHex in hiddenUsers || user.pubkeyHex in transientHiddenUsers
+    fun isHidden(user: UserInterface) = user.pubkeyHex()in hiddenUsers || user.pubkeyHex()in transientHiddenUsers
 
     fun followingKeySet(): Set<HexKey> {
-        return userProfile().cachedFollowingKeySet() ?: emptySet()
+        return userProfile().cachedFollowingKeySet()
     }
 
     fun followingTagSet(): Set<HexKey> {
-        return userProfile().cachedFollowingTagSet() ?: emptySet()
+        return userProfile().cachedFollowingTagSet()
     }
 
-    fun isAcceptable(user: User): Boolean {
+    fun isAcceptable(user: UserInterface): Boolean {
         return !isHidden(user) && // if user hasn't hided this author
             user.reportsBy(userProfile()).isEmpty() && // if user has not reported this post
             user.countReportAuthorsBy(followingKeySet()) < 5
@@ -712,11 +708,11 @@ class Account(
     }
 
     fun isFollowing(user: User): Boolean {
-        return user.pubkeyHex in followingKeySet()
+        return user.pubkeyHex()in followingKeySet()
     }
 
     fun isAcceptable(note: Note): Boolean {
-        return note.author?.let { isAcceptable(it) } ?: true && // if user hasn't hided this author
+        return note.author?.let { isAcceptable(it) } ?: true && // if user didn't hide this author
             isAcceptableDirect(note) &&
             (
                 note.event !is RepostEvent ||
@@ -725,7 +721,9 @@ class Account(
     }
 
     fun getRelevantReports(note: Note): Set<Note> {
-        val followsPlusMe = userProfile().latestContactList?.verifiedFollowKeySetAndMe ?: emptySet()
+        val followsPlusMe = userProfile()
+            .latestContactList()
+            ?.verifiedFollowKeySetAndMe ?: emptySet()
 
         val innerReports = if (note.event is RepostEvent) {
             note.replyTo?.map { getRelevantReports(it) }?.flatten() ?: emptyList()
@@ -761,7 +759,7 @@ class Account(
     init {
         backupContactList?.let {
             println("Loading saved contacts ${it.toJson()}")
-            if (userProfile().latestContactList == null) {
+            if (userProfile().latestContactList() == null) {
                 LocalCache.consume(it)
             }
         }
@@ -775,7 +773,7 @@ class Account(
 
         // saves contact list for the next time.
         userProfile().live().follows.observeForever {
-            updateContactListTo(userProfile().latestContactList)
+            updateContactListTo(userProfile().latestContactList())
         }
 
         // imports transient blocks due to spam.
@@ -784,7 +782,7 @@ class Account(
                 it.cache.spamMessages.snapshot().values.forEach {
                     if (it.pubkeyHex !in transientHiddenUsers && it.duplicatedMessages.size >= 5) {
                         val userToBlock = LocalCache.getOrCreateUser(it.pubkeyHex)
-                        if (userToBlock != userProfile() && userToBlock.pubkeyHex !in followingKeySet()) {
+                        if (userToBlock != userProfile() && userToBlock.pubkeyHex() !in followingKeySet()) {
                             transientHiddenUsers = transientHiddenUsers + it.pubkeyHex
                         }
                     }

@@ -49,10 +49,7 @@ import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.google.accompanist.pager.rememberPagerState
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.*
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
@@ -231,7 +228,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                             },
                             {
                                 val userState by baseUser.live().bookmarks.observeAsState()
-                                val bookmarkList = userState?.user?.latestBookmarkList
+                                val bookmarkList = userState?.user?.latestBookmarkList()
                                 val userBookmarks =
                                     (bookmarkList?.taggedEvents()?.count() ?: 0) + (bookmarkList?.taggedAddresses()?.count() ?: 0)
 
@@ -239,16 +236,16 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                             },
                             {
                                 val userState by baseUser.live().reports.observeAsState()
-                                val userReports = userState?.user?.reports?.values?.flatten()?.count()
+                                val userReports = userState?.user?.reports()?.values?.flatten()?.count()
 
                                 Text(text = "$userReports ${stringResource(R.string.reports)}")
                             },
                             {
                                 val userState by baseUser.live().relays.observeAsState()
-                                val userRelaysBeingUsed = userState?.user?.relaysBeingUsed?.size ?: "--"
+                                val userRelaysBeingUsed = userState?.user?.relaysBeingUsed()?.size ?: "--"
 
                                 val userStateRelayInfo by baseUser.live().relayInfo.observeAsState()
-                                val userRelays = userStateRelayInfo?.user?.latestContactList?.relays()?.size ?: "--"
+                                val userRelays = userStateRelayInfo?.user?.latestContactList()?.relays()?.size ?: "--"
 
                                 Text(text = "$userRelaysBeingUsed / $userRelays ${stringResource(R.string.relays)}")
                             }
@@ -288,7 +285,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
 
 @Composable
 private fun ProfileHeader(
-    baseUser: User,
+    baseUser: UserInterface,
     navController: NavController,
     account: Account,
     accountViewModel: AccountViewModel
@@ -358,7 +355,7 @@ private fun ProfileHeader(
                         }
                     },
                     onLongClick = {
-                        ResizeImage(it.info?.picture, 100.dp).proxyUrl()?.let { it1 ->
+                        ResizeImage(it.info()?.picture, 100.dp).proxyUrl()?.let { it1 ->
                             clipboardManager.setText(
                                 AnnotatedString(it1)
                             )
@@ -384,7 +381,7 @@ private fun ProfileHeader(
 
                     if (account.isHidden(baseUser)) {
                         ShowUserButton {
-                            account.showUser(baseUser.pubkeyHex)
+                            account.showUser(baseUser.pubkeyHex())
                         }
                     } else if (accountUser.isFollowingCached(baseUser)) {
                         UnfollowButton { coroutineScope.launch(Dispatchers.IO) { account.unfollow(baseUser) } }
@@ -407,7 +404,7 @@ private fun ProfileHeader(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewModel: AccountViewModel, navController: NavController) {
+private fun DrawAdditionalInfo(baseUser: UserInterface, account: Account, accountViewModel: AccountViewModel, navController: NavController) {
     val userState by baseUser.live().metadata.observeAsState()
     val user = userState?.user ?: return
 
@@ -460,7 +457,7 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewMode
         }
     }
 
-    userBadge.acceptedBadges?.let { note ->
+    userBadge.acceptedBadges()?.let { note ->
         (note.event as? BadgeProfilesEvent)?.let { event ->
             FlowRow(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 5.dp)) {
                 event.badgeAwardEvents().forEach { badgeAwardEvent ->
@@ -480,7 +477,7 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewMode
 
     DisplayNip05ProfileStatus(user)
 
-    val website = user.info?.website
+    val website = user.info()?.website
     if (!website.isNullOrEmpty()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
@@ -501,7 +498,7 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewMode
 
     var zapExpanded by remember { mutableStateOf(false) }
 
-    val lud16 = user.info?.lud16?.trim() ?: user.info?.lud06?.trim()
+    val lud16 = user.info()?.lud16?.trim() ?: user.info()?.lud06?.trim()
 
     if (!lud16.isNullOrEmpty()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -524,14 +521,14 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewMode
 
         if (zapExpanded) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 5.dp)) {
-                InvoiceRequest(lud16, baseUser.pubkeyHex, account) {
+                InvoiceRequest(lud16, baseUser.pubkeyHex(), account) {
                     zapExpanded = false
                 }
             }
         }
     }
 
-    val identities = user.info?.latestMetadata?.identityClaims()
+    val identities = user.info()?.latestMetadata?.identityClaims()
     if (!identities.isNullOrEmpty()) {
         identities.forEach { identity: IdentityClaim ->
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -554,7 +551,7 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewMode
         }
     }
 
-    user.info?.about?.let {
+    user.info()?.about?.let {
         Row(
             modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)
         ) {
@@ -634,11 +631,11 @@ fun BadgeThumb(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun DrawBanner(baseUser: User) {
+private fun DrawBanner(baseUser: UserInterface) {
     val userState by baseUser.live().metadata.observeAsState()
     val user = userState?.user ?: return
 
-    val banner = user.info?.banner
+    val banner = user.info()?.banner
     val clipboardManager = LocalClipboardManager.current
     var zoomImageDialogOpen by remember { mutableStateOf(false) }
 
@@ -715,7 +712,7 @@ fun TabNotesConversations(accountViewModel: AccountViewModel, navController: Nav
 }
 
 @Composable
-fun TabBookmarks(baseUser: User, accountViewModel: AccountViewModel, navController: NavController) {
+fun TabBookmarks(baseUser: UserInterface, accountViewModel: AccountViewModel, navController: NavController) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val userState by baseUser.live().bookmarks.observeAsState()
     if (accountState != null) {
@@ -736,7 +733,7 @@ fun TabBookmarks(baseUser: User, accountViewModel: AccountViewModel, navControll
 }
 
 @Composable
-fun TabFollows(baseUser: User, accountViewModel: AccountViewModel, navController: NavController) {
+fun TabFollows(baseUser: UserInterface, accountViewModel: AccountViewModel, navController: NavController) {
     val feedViewModel: NostrUserProfileFollowsUserFeedViewModel = viewModel()
 
     val userState by baseUser.live().follows.observeAsState()
@@ -755,7 +752,7 @@ fun TabFollows(baseUser: User, accountViewModel: AccountViewModel, navController
 }
 
 @Composable
-fun TabFollowers(baseUser: User, accountViewModel: AccountViewModel, navController: NavController) {
+fun TabFollowers(baseUser: UserInterface, accountViewModel: AccountViewModel, navController: NavController) {
     val feedViewModel: NostrUserProfileFollowersUserFeedViewModel = viewModel()
 
     val userState by baseUser.live().follows.observeAsState()
@@ -774,7 +771,7 @@ fun TabFollowers(baseUser: User, accountViewModel: AccountViewModel, navControll
 }
 
 @Composable
-fun TabReceivedZaps(baseUser: User, accountViewModel: AccountViewModel, navController: NavController) {
+fun TabReceivedZaps(baseUser: UserInterface, accountViewModel: AccountViewModel, navController: NavController) {
     val feedViewModel: NostrUserProfileZapsFeedViewModel = viewModel()
 
     val userState by baseUser.live().zaps.observeAsState()
@@ -793,7 +790,7 @@ fun TabReceivedZaps(baseUser: User, accountViewModel: AccountViewModel, navContr
 }
 
 @Composable
-fun TabReports(baseUser: User, accountViewModel: AccountViewModel, navController: NavController) {
+fun TabReports(baseUser: UserInterface, accountViewModel: AccountViewModel, navController: NavController) {
     val feedViewModel: NostrUserProfileReportFeedViewModel = viewModel()
 
     val userState by baseUser.live().reports.observeAsState()
@@ -812,7 +809,7 @@ fun TabReports(baseUser: User, accountViewModel: AccountViewModel, navController
 }
 
 @Composable
-fun TabRelays(user: User, accountViewModel: AccountViewModel) {
+fun TabRelays(user: UserInterface, accountViewModel: AccountViewModel) {
     val feedViewModel: RelayFeedViewModel = viewModel()
 
     val lifeCycleOwner = LocalLifecycleOwner.current
@@ -847,9 +844,7 @@ fun TabRelays(user: User, accountViewModel: AccountViewModel) {
 }
 
 @Composable
-private fun NPubCopyButton(
-    user: User
-) {
+private fun NPubCopyButton(user: UserInterface) {
     val clipboardManager = LocalClipboardManager.current
     var popupExpanded by remember { mutableStateOf(false) }
 
@@ -882,12 +877,12 @@ private fun NPubCopyButton(
 }
 
 @Composable
-private fun MessageButton(user: User, navController: NavController) {
+private fun MessageButton(user: UserInterface, navController: NavController) {
     Button(
         modifier = Modifier
             .padding(horizontal = 3.dp)
             .width(50.dp),
-        onClick = { navController.navigate("Room/${user.pubkeyHex}") },
+        onClick = { navController.navigate("Room/${user.pubkeyHex()}") },
         shape = RoundedCornerShape(20.dp),
         colors = ButtonDefaults
             .buttonColors(
@@ -981,7 +976,7 @@ fun ShowUserButton(onClick: () -> Unit) {
 }
 
 @Composable
-fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () -> Unit, accountViewModel: AccountViewModel) {
+fun UserProfileDropDownMenu(user: UserInterface, popupExpanded: Boolean, onDismiss: () -> Unit, accountViewModel: AccountViewModel) {
     val clipboardManager = LocalClipboardManager.current
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return

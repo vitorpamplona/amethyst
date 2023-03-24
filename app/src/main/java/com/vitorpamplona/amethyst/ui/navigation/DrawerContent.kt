@@ -47,7 +47,7 @@ import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.UserInterface
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountBackupDialog
@@ -100,7 +100,7 @@ fun DrawerContent(
 }
 
 @Composable
-fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffoldState: ScaffoldState, navController: NavController) {
+fun ProfileContent(baseAccountUser: UserInterface, modifier: Modifier = Modifier, scaffoldState: ScaffoldState, navController: NavController) {
     val coroutineScope = rememberCoroutineScope()
 
     val accountUserState by baseAccountUser.live().metadata.observeAsState()
@@ -110,7 +110,7 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
     val accountUserFollows = accountUserFollowsState?.user ?: return
 
     Box {
-        val banner = accountUser.info?.banner
+        val banner = accountUser.info()?.banner
         if (!banner.isNullOrBlank()) {
             AsyncImage(
                 model = banner,
@@ -133,7 +133,7 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
 
         Column(modifier = modifier) {
             RobohashAsyncImageProxy(
-                robot = accountUser.pubkeyHex,
+                robot = accountUser.pubkeyHex(),
                 model = ResizeImage(accountUser.profilePicture(), 100.dp),
                 contentDescription = stringResource(id = R.string.profile_image),
                 modifier = Modifier
@@ -144,7 +144,7 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
                     .background(MaterialTheme.colors.background)
                     .clickable(onClick = {
                         accountUser.let {
-                            navController.navigate("User/${it.pubkeyHex}")
+                            navController.navigate("User/${it.pubkeyHex()}")
                         }
                         coroutineScope.launch {
                             scaffoldState.drawerState.close()
@@ -158,7 +158,7 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
                         .padding(top = 7.dp)
                         .clickable(onClick = {
                             accountUser.let {
-                                navController.navigate("User/${it.pubkeyHex}")
+                                navController.navigate("User/${it.pubkeyHex()}")
                             }
                             coroutineScope.launch {
                                 scaffoldState.drawerState.close()
@@ -176,7 +176,7 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
                         .padding(top = 15.dp)
                         .clickable(onClick = {
                             accountUser.let {
-                                navController.navigate("User/${it.pubkeyHex}")
+                                navController.navigate("User/${it.pubkeyHex()}")
                             }
                             coroutineScope.launch {
                                 scaffoldState.drawerState.close()
@@ -189,7 +189,7 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
                     .padding(top = 15.dp)
                     .clickable(onClick = {
                         accountUser.let {
-                            navController.navigate("User/${it.pubkeyHex}")
+                            navController.navigate("User/${it.pubkeyHex()}")
                         }
                         coroutineScope.launch {
                             scaffoldState.drawerState.close()
@@ -212,7 +212,7 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun ListContent(
-    accountUser: User?,
+    accountUser: UserInterface?,
     navController: NavHostController,
     scaffoldState: ScaffoldState,
     sheetState: ModalBottomSheetState,
@@ -230,7 +230,7 @@ fun ListContent(
                 tint = MaterialTheme.colors.primary,
                 navController = navController,
                 scaffoldState = scaffoldState,
-                route = "User/${accountUser.pubkeyHex}"
+                route = "User/${accountUser.pubkeyHex()}"
             )
 
             NavigationRow(
@@ -324,7 +324,7 @@ fun IconRow(title: String, icon: Int, tint: Color, onClick: () -> Unit) {
 }
 
 @Composable
-fun BottomContent(user: User, scaffoldState: ScaffoldState, navController: NavController) {
+fun BottomContent(user: UserInterface, scaffoldState: ScaffoldState, navController: NavController) {
     val coroutineScope = rememberCoroutineScope()
 
     // store the dialog open or close state
