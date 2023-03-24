@@ -14,6 +14,7 @@ import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -47,16 +48,17 @@ fun PollNote(
     val consensusThreshold = pollEvent.consensusThreshold()
 
     pollEvent.pollOptions().forEach { poll_op ->
-        Row(Modifier.fillMaxWidth()) {
-            val modifier = Modifier
-                .weight(1f)
-                .border(BorderStroke(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.32f)))
-                .padding(4.dp)
-
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
             TranslateableRichTextViewer(
                 poll_op.value,
                 canPreview,
-                modifier,
+                modifier = Modifier
+                    .weight(1f)
+                    .border(BorderStroke(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.32f)))
+                    .padding(4.dp),
                 pollEvent.tags(),
                 backgroundColor,
                 accountViewModel,
@@ -97,6 +99,7 @@ fun ZapVote(
     val isVoteAmountAtomic = valueMaximum != null && valueMinimum != null && valueMinimum == valueMaximum
 
     Row(
+        verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .then(Modifier.size(20.dp))
             .combinedClickable(
@@ -163,7 +166,7 @@ fun ZapVote(
             )
         }
 
-        if (zappedNote?.isPollOptionZapped(pollOption) == true) {
+        if (zappedNote?.isPollOptionZappedBy(pollOption, account.userProfile()) == true) {
             Icon(
                 imageVector = Icons.Default.Bolt,
                 contentDescription = stringResource(R.string.zaps),
@@ -188,7 +191,7 @@ fun ZapVote(
     )
 }
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ZapVoteAmountChoicePopup(
     baseNote: Note,
@@ -259,8 +262,8 @@ fun ZapVoteAmountChoicePopup(
         Surface {
             Row(
                 horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .background(MaterialTheme.colors.primary)
                     .padding(10.dp)
             ) {
                 OutlinedTextField(
@@ -283,10 +286,11 @@ fun ZapVoteAmountChoicePopup(
                     }
                 )
 
-                if (amount != null && isValidAmount) {
-                    Button(
-                        modifier = Modifier.padding(horizontal = 3.dp),
-                        onClick = {
+                Button(
+                    modifier = Modifier.padding(horizontal = 3.dp),
+                    enabled = isValidAmount,
+                    onClick = {
+                        if (amount != null) {
                             accountViewModel.zap(
                                 baseNote,
                                 amount * 1000,
@@ -295,20 +299,22 @@ fun ZapVoteAmountChoicePopup(
                                 context,
                                 onError
                             )
-                            onDismiss()
-                        },
-                        shape = RoundedCornerShape(20.dp),
-                        colors = ButtonDefaults
-                            .buttonColors(
-                                backgroundColor = MaterialTheme.colors.primary
-                            )
-                    ) {
-                        Text(
-                            "⚡ ${showAmount(amount.toBigDecimal().setScale(1))}",
-                            color = Color.White,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.combinedClickable(
-                                onClick = {
+                        }
+                        onDismiss()
+                    },
+                    shape = RoundedCornerShape(20.dp),
+                    colors = ButtonDefaults
+                        .buttonColors(
+                            backgroundColor = MaterialTheme.colors.primary
+                        )
+                ) {
+                    Text(
+                        "⚡ ${showAmount(amount?.toBigDecimal()?.setScale(1))}",
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.combinedClickable(
+                            onClick = {
+                                if (amount != null) {
                                     accountViewModel.zap(
                                         baseNote,
                                         amount * 1000,
@@ -317,12 +323,12 @@ fun ZapVoteAmountChoicePopup(
                                         context,
                                         onError
                                     )
-                                    onDismiss()
-                                },
-                                onLongClick = {}
-                            )
+                                }
+                                onDismiss()
+                            },
+                            onLongClick = {}
                         )
-                    }
+                    )
                 }
             }
         }
