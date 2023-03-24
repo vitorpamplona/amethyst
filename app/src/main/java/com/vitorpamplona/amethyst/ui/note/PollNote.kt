@@ -1,13 +1,11 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import android.widget.Toast
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.border
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
@@ -15,17 +13,18 @@ import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
@@ -34,6 +33,7 @@ import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import kotlinx.coroutines.launch
+import java.util.*
 
 @Composable
 fun PollNote(
@@ -44,6 +44,7 @@ fun PollNote(
     navController: NavController
 ) {
     val pollEvent = note.event as PollNoteEvent
+    val consensusThreshold = pollEvent.consensusThreshold()
 
     pollEvent.pollOptions().forEach { poll_op ->
         Row(Modifier.fillMaxWidth()) {
@@ -86,6 +87,15 @@ fun ZapVote(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    val pollEvent = baseNote.event as PollNoteEvent
+    val valueMaximum = pollEvent.valueMaximum()
+    val valueMinimum = pollEvent.valueMinimum()
+
+    val isPollClosed: Boolean = pollEvent.closedAt()?.let { // allow 2 minute leeway for zap to propagate
+        baseNote.createdAt()?.plus(it * (86400 + 120))!! > Date().time / 1000
+    } == true
+    val isVoteAmountAtomic = valueMaximum != null && valueMinimum != null && valueMinimum == valueMaximum
+
     Row(
         modifier = Modifier
             .then(Modifier.size(20.dp))
@@ -104,10 +114,20 @@ fun ZapVote(
                                 )
                                 .show()
                         }
-                    } else if (account.zapAmountChoices.size == 1) {
+                    } else if (isPollClosed) {
+                        scope.launch {
+                            Toast
+                                .makeText(
+                                    context,
+                                    context.getString(R.string.poll_is_closed),
+                                    Toast.LENGTH_SHORT
+                                )
+                                .show()
+                        }
+                    } else if (isVoteAmountAtomic) {
                         accountViewModel.zap(
                             baseNote,
-                            account.zapAmountChoices.first() * 1000,
+                            valueMaximum!!.toLong() * 1000,
                             pollOption,
                             "",
                             context
@@ -118,7 +138,7 @@ fun ZapVote(
                                     .show()
                             }
                         }
-                    } else if (account.zapAmountChoices.size > 1) {
+                    } else {
                         wantsToZap = true
                     }
                 },
@@ -130,6 +150,8 @@ fun ZapVote(
                 baseNote,
                 accountViewModel,
                 pollOption,
+                valueMinimum,
+                valueMaximum,
                 onDismiss = {
                     wantsToZap = false
                 },
@@ -141,7 +163,7 @@ fun ZapVote(
             )
         }
 
-        if (zappedNote?.isZappedBy(account.userProfile()) == true) {
+        if (zappedNote?.isPollOptionZapped(pollOption) == true) {
             Icon(
                 imageVector = Icons.Default.Bolt,
                 contentDescription = stringResource(R.string.zaps),
@@ -159,7 +181,7 @@ fun ZapVote(
     }
 
     Text(
-        showAmount(zappedNote?.zappedAmount()),
+        showAmount(zappedNote?.zappedPollOptionAmount(pollOption)),
         fontSize = 14.sp,
         color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
         modifier = modifier
@@ -172,45 +194,135 @@ fun ZapVoteAmountChoicePopup(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     pollOption: Int,
+    valueMinimum: Int?,
+    valueMaximum: Int?,
     onDismiss: () -> Unit,
     onError: (text: String) -> Unit
 ) {
     val context = LocalContext.current
 
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
+    var textAmount by rememberSaveable { mutableStateOf("") }
 
-    Popup(
-        alignment = Alignment.BottomCenter,
-        offset = IntOffset(0, -50),
-        onDismissRequest = { onDismiss() }
+    val placeHolderText = if (valueMinimum == null && valueMaximum == null) {
+        stringResource(R.string.sats)
+    } else if (valueMinimum == null) {
+        "1—$valueMaximum " + stringResource(R.string.sats)
+    } else if (valueMaximum == null) {
+        ">$valueMinimum " + stringResource(R.string.sats)
+    } else {
+        "$valueMinimum—$valueMaximum " + stringResource(R.string.sats)
+    }
+
+    val amount = if (textAmount.isEmpty()) { null } else {
+        try {
+            textAmount.toLong()
+        } catch (e: Exception) { null }
+    }
+
+    var isValidAmount = false
+    if (amount == null) {
+        isValidAmount = false
+    } else if (valueMinimum == null && valueMaximum == null) {
+        if (amount > 0) {
+            isValidAmount = true
+        }
+    } else if (valueMinimum == null) {
+        if (amount > 0 && amount <= valueMaximum!!) {
+            isValidAmount = true
+        }
+    } else if (valueMaximum == null) {
+        if (amount >= valueMinimum) {
+            isValidAmount = true
+        }
+    } else {
+        if ((valueMinimum <= amount) && (amount <= valueMaximum)) {
+            isValidAmount = true
+        }
+    }
+
+    val colorInValid = TextFieldDefaults.outlinedTextFieldColors(
+        focusedBorderColor = MaterialTheme.colors.error,
+        unfocusedBorderColor = Color.Red
+    )
+    val colorValid = TextFieldDefaults.outlinedTextFieldColors(
+        focusedBorderColor = MaterialTheme.colors.primary,
+        unfocusedBorderColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+    )
+
+    Dialog(
+        onDismissRequest = { onDismiss() },
+        properties = DialogProperties(
+            dismissOnClickOutside = true,
+            usePlatformDefaultWidth = false
+        )
     ) {
-        FlowRow(horizontalArrangement = Arrangement.Center) {
-            account.zapAmountChoices.forEach { amountInSats ->
-                Button(
-                    modifier = Modifier.padding(horizontal = 3.dp),
-                    onClick = {
-                        accountViewModel.zap(baseNote, amountInSats * 1000, pollOption, "", context, onError)
-                        onDismiss()
+        Surface {
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier
+                    .background(MaterialTheme.colors.primary)
+                    .padding(10.dp)
+            ) {
+                OutlinedTextField(
+                    value = textAmount,
+                    onValueChange = { textAmount = it },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.width(150.dp),
+                    colors = if (isValidAmount) colorValid else colorInValid,
+                    label = {
+                        Text(
+                            text = stringResource(R.string.poll_zap_amount),
+                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                        )
                     },
-                    shape = RoundedCornerShape(20.dp),
-                    colors = ButtonDefaults
-                        .buttonColors(
-                            backgroundColor = MaterialTheme.colors.primary
+                    placeholder = {
+                        Text(
+                            text = placeHolderText,
+                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                         )
-                ) {
-                    Text(
-                        "⚡ ${showAmount(amountInSats.toBigDecimal().setScale(1))}",
-                        color = Color.White,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.combinedClickable(
-                            onClick = {
-                                accountViewModel.zap(baseNote, amountInSats * 1000, pollOption, "", context, onError)
-                                onDismiss()
-                            },
-                            onLongClick = {}
+                    }
+                )
+
+                if (amount != null && isValidAmount) {
+                    Button(
+                        modifier = Modifier.padding(horizontal = 3.dp),
+                        onClick = {
+                            accountViewModel.zap(
+                                baseNote,
+                                amount * 1000,
+                                pollOption,
+                                "",
+                                context,
+                                onError
+                            )
+                            onDismiss()
+                        },
+                        shape = RoundedCornerShape(20.dp),
+                        colors = ButtonDefaults
+                            .buttonColors(
+                                backgroundColor = MaterialTheme.colors.primary
+                            )
+                    ) {
+                        Text(
+                            "⚡ ${showAmount(amount.toBigDecimal().setScale(1))}",
+                            color = Color.White,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.combinedClickable(
+                                onClick = {
+                                    accountViewModel.zap(
+                                        baseNote,
+                                        amount * 1000,
+                                        pollOption,
+                                        "",
+                                        context,
+                                        onError
+                                    )
+                                    onDismiss()
+                                },
+                                onLongClick = {}
+                            )
                         )
-                    )
+                    }
                 }
             }
         }

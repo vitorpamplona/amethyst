@@ -1,4 +1,4 @@
-package com.vitorpamplona.amethyst.ui.components
+package com.vitorpamplona.amethyst.ui.actions
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -21,7 +21,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.actions.NewPollViewModel
 
 @Composable
 fun NewPollVoteValueRange(pollViewModel: NewPollViewModel) {
@@ -93,7 +92,7 @@ fun NewPollVoteValueRange(pollViewModel: NewPollViewModel) {
             },
             placeholder = {
                 Text(
-                    text = stringResource(R.string.poll_zap_amount),
+                    text = stringResource(R.string.sats),
                     color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                 )
             }
@@ -112,7 +111,7 @@ fun NewPollVoteValueRange(pollViewModel: NewPollViewModel) {
             },
             placeholder = {
                 Text(
-                    text = stringResource(R.string.poll_zap_amount),
+                    text = stringResource(R.string.sats),
                     color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                 )
             }

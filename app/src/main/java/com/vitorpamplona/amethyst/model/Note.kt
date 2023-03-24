@@ -237,6 +237,21 @@ open class Note(val idHex: String) {
             }.sumOf { it }
     }
 
+    fun zappedPollOptionAmount(option: Int): BigDecimal {
+        return zaps.mapNotNull { it.value?.event }
+            .filterIsInstance<LnZapEvent>()
+            .mapNotNull {
+                val zappedOption = it.zappedPollOption()
+                if (zappedOption == option) {
+                    it.amount
+                } else { null }
+            }.sumOf { it }
+    }
+
+    fun isPollOptionZapped(option: Int): Boolean {
+        return zappedPollOptionAmount(option).toInt() > 0
+    }
+
     fun hasAnyReports(): Boolean {
         val dayAgo = Date().time / 1000 - 24 * 60 * 60
         return reports.isNotEmpty() ||

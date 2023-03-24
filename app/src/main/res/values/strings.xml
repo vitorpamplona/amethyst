@@ -231,8 +231,9 @@
     <string name="poll_zap_value_max">Zap maximum</string>
     <string name="poll_consensus_threshold">Consensus</string>
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
-    <string name="poll_zap_amount">sats</string>
     <string name="poll_closing_time">Close after</string>
     <string name="poll_closing_time_days">days</string>
+    <string name="poll_is_closed">Poll is closed to new votes</string>
+    <string name="poll_zap_amount">Zap amount</string>
 
 </resources>
