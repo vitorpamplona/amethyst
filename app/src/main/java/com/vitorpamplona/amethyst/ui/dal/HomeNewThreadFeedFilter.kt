@@ -17,7 +17,7 @@ object HomeNewThreadFeedFilter : FeedFilter<Note>() {
 
         val notes = LocalCache.notes.values
             .filter { it ->
-                (it.event is TextNoteEvent || it.event is RepostEvent || it.event is LongTextNoteEvent) &&
+                (it.event is TextNoteEvent || it.event is RepostEvent) &&
                     (it.author?.pubkeyHex in followingKeySet || (it.event?.isTaggedHashes(followingTagSet) ?: false)) &&
                     // && account.isAcceptable(it)  // This filter follows only. No need to check if acceptable
                     it.author?.let { !account.isHidden(it) } ?: true &&
@@ -26,7 +26,7 @@ object HomeNewThreadFeedFilter : FeedFilter<Note>() {
 
         val longFormNotes = LocalCache.addressables.values
             .filter { it ->
-                (it.event is TextNoteEvent || it.event is RepostEvent || it.event is LongTextNoteEvent) &&
+                (it.event is LongTextNoteEvent) &&
                     (it.author?.pubkeyHex in followingKeySet || (it.event?.isTaggedHashes(followingTagSet) ?: false)) &&
                     // && account.isAcceptable(it)  // This filter follows only. No need to check if acceptable
                     it.author?.let { !account.isHidden(it) } ?: true &&
