@@ -64,6 +64,7 @@ import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
 import com.vitorpamplona.amethyst.ui.dal.UserProfileBookmarksFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileConversationsFeedFilter
@@ -393,7 +394,7 @@ private fun ProfileHeader(
                 }
             }
 
-            DrawAdditionalInfo(baseUser, account, navController)
+            DrawAdditionalInfo(baseUser, account, accountViewModel, navController)
 
             Divider(modifier = Modifier.padding(top = 6.dp))
         }
@@ -406,7 +407,7 @@ private fun ProfileHeader(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun DrawAdditionalInfo(baseUser: User, account: Account, navController: NavController) {
+private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewModel: AccountViewModel, navController: NavController) {
     val userState by baseUser.live().metadata.observeAsState()
     val user = userState?.user ?: return
 
@@ -554,11 +555,18 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, navController: 
     }
 
     user.info?.about?.let {
-        Text(
-            it,
-            color = MaterialTheme.colors.onSurface,
+        Row(
             modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)
-        )
+        ) {
+            TranslateableRichTextViewer(
+                content = it,
+                canPreview = false,
+                tags = null,
+                backgroundColor = MaterialTheme.colors.background,
+                accountViewModel = accountViewModel,
+                navController = navController
+            )
+        }
     }
 }
 
