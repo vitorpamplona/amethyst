@@ -131,6 +131,20 @@ fun RichTextViewer(
                 )
             }
         } else {
+            val imagesForPager = mutableListOf<String>()
+
+            content.split('\n').forEach { paragraph ->
+                paragraph.split(' ').forEach { word: String ->
+                    // sequence of images will render in a slideview
+                    if (isValidURL(word)) {
+                        val removedParamsFromUrl = word.split("?")[0].lowercase()
+                        if (imageExtension.matcher(removedParamsFromUrl).matches()) {
+                            imagesForPager.add(word)
+                        }
+                    }
+                }
+            }
+
             // FlowRow doesn't work well with paragraphs. So we need to split them
             content.split('\n').forEach { paragraph ->
                 FlowRow() {
@@ -140,17 +154,18 @@ fun RichTextViewer(
                             // Explicit URL
                             val lnInvoice = LnInvoiceUtil.findInvoice(word)
                             val lnWithdrawal = LnWithdrawalUtil.findWithdrawal(word)
-                            if (lnInvoice != null) {
-                                InvoicePreview(lnInvoice)
-                            } else if (isValidURL(word)) {
+
+                            if (isValidURL(word)) {
                                 val removedParamsFromUrl = word.split("?")[0].lowercase()
                                 if (imageExtension.matcher(removedParamsFromUrl).matches()) {
-                                    ZoomableImageView(word)
+                                    ZoomableImageView(word, imagesForPager)
                                 } else if (videoExtension.matcher(removedParamsFromUrl).matches()) {
                                     VideoView(word)
                                 } else {
                                     UrlPreview(word, "$word ")
                                 }
+                            } else if (lnInvoice != null) {
+                                InvoicePreview(lnInvoice)
                             } else if (lnWithdrawal != null) {
                                 ClickableWithdrawal(withdrawalString = lnWithdrawal)
                             } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {

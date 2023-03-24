@@ -104,6 +104,8 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-runtime-ktx:$lifecycle_version"
     implementation "androidx.lifecycle:lifecycle-livedata:$lifecycle_version"
 
+    implementation "net.engawapg.lib:zoomable:1.4.0"
+
     // Biometrics
     implementation "androidx.biometric:biometric-ktx:1.2.0-alpha05"
 
