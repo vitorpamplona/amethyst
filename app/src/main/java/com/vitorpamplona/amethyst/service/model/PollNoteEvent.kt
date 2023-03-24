@@ -36,17 +36,20 @@ class PollNoteEvent(
             .forEach { map[it[1].toInt()] = it[2] }
         return map
     }
-    fun valueMaximum(): Int? = tags.filter { it.firstOrNull() == VALUE_MAXIMUM }
-        .getOrNull(1)?.getOrNull(1)?.toInt()
 
-    fun valueMinimum(): Int? = tags.filter { it.firstOrNull() == VALUE_MINIMUM }
-        .getOrNull(1)?.getOrNull(1)?.toInt()
+    fun getTagInt(property: String): Int? {
+        val tagList = tags.filter {
+            it.firstOrNull() == property
+        }
+        val tag = tagList.getOrNull(0)
+        val s = tag?.getOrNull(1)
 
-    fun consensusThreshold(): Int? = tags.filter { it.firstOrNull() == CONSENSUS_THRESHOLD }
-        .getOrNull(1)?.getOrNull(1)?.toInt()
-
-    fun closedAt(): Int? = tags.filter { it.firstOrNull() == CLOSED_AT }
-        .getOrNull(1)?.getOrNull(1)?.toInt()
+        return if (s.isNullOrBlank() || s == "null") {
+            null
+        } else {
+            s.toInt()
+        }
+    }
 
     companion object {
         const val kind = 6969

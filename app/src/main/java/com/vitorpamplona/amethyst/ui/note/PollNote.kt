@@ -26,10 +26,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.model.PollNoteEvent
 import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -44,10 +44,10 @@ fun PollNote(
     accountViewModel: AccountViewModel,
     navController: NavController
 ) {
-    val pollEvent = note.event as PollNoteEvent
-    val consensusThreshold = pollEvent.consensusThreshold()
+    val pollViewModel: PollNoteViewModel = viewModel()
+    pollViewModel.load(note)
 
-    pollEvent.pollOptions().forEach { poll_op ->
+    pollViewModel.pollEvent?.pollOptions()?.forEach { poll_op ->
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
@@ -56,16 +56,16 @@ fun PollNote(
                 poll_op.value,
                 canPreview,
                 modifier = Modifier
-                    .weight(1f)
+                    .width(250.dp)
                     .border(BorderStroke(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.32f)))
                     .padding(4.dp),
-                pollEvent.tags(),
+                pollViewModel.pollEvent?.tags(),
                 backgroundColor,
                 accountViewModel,
                 navController
             )
 
-            ZapVote(note, accountViewModel, poll_op.key)
+            ZapVote(note, accountViewModel, pollViewModel, poll_op.key)
         }
     }
 }
@@ -75,6 +75,7 @@ fun PollNote(
 fun ZapVote(
     baseNote: Note,
     accountViewModel: AccountViewModel,
+    pollViewModel: PollNoteViewModel,
     pollOption: Int,
     modifier: Modifier = Modifier
 ) {
@@ -88,15 +89,6 @@ fun ZapVote(
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-
-    val pollEvent = baseNote.event as PollNoteEvent
-    val valueMaximum = pollEvent.valueMaximum()
-    val valueMinimum = pollEvent.valueMinimum()
-
-    val isPollClosed: Boolean = pollEvent.closedAt()?.let { // allow 2 minute leeway for zap to propagate
-        baseNote.createdAt()?.plus(it * (86400 + 120))!! > Date().time / 1000
-    } == true
-    val isVoteAmountAtomic = valueMaximum != null && valueMinimum != null && valueMinimum == valueMaximum
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -117,7 +109,7 @@ fun ZapVote(
                                 )
                                 .show()
                         }
-                    } else if (isPollClosed) {
+                    } else if (pollViewModel.isPollClosed) {
                         scope.launch {
                             Toast
                                 .makeText(
@@ -127,10 +119,10 @@ fun ZapVote(
                                 )
                                 .show()
                         }
-                    } else if (isVoteAmountAtomic) {
+                    } else if (pollViewModel.isVoteAmountAtomic) {
                         accountViewModel.zap(
                             baseNote,
-                            valueMaximum!!.toLong() * 1000,
+                            pollViewModel.valueMaximum!!.toLong() * 1000,
                             pollOption,
                             "",
                             context
@@ -152,9 +144,8 @@ fun ZapVote(
             ZapVoteAmountChoicePopup(
                 baseNote,
                 accountViewModel,
+                pollViewModel,
                 pollOption,
-                valueMinimum,
-                valueMaximum,
                 onDismiss = {
                     wantsToZap = false
                 },
@@ -183,12 +174,14 @@ fun ZapVote(
         }
     }
 
-    Text(
-        showAmount(zappedNote?.zappedPollOptionAmount(pollOption)),
-        fontSize = 14.sp,
-        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-        modifier = modifier
-    )
+    if (zappedNote?.isZappedBy(account.userProfile()) == true) {
+        Text(
+            showAmount(zappedNote.zappedPollOptionAmount(pollOption)),
+            fontSize = 14.sp,
+            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+            modifier = modifier
+        )
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -196,52 +189,14 @@ fun ZapVote(
 fun ZapVoteAmountChoicePopup(
     baseNote: Note,
     accountViewModel: AccountViewModel,
+    pollViewModel: PollNoteViewModel,
     pollOption: Int,
-    valueMinimum: Int?,
-    valueMaximum: Int?,
     onDismiss: () -> Unit,
     onError: (text: String) -> Unit
 ) {
     val context = LocalContext.current
 
     var textAmount by rememberSaveable { mutableStateOf("") }
-
-    val placeHolderText = if (valueMinimum == null && valueMaximum == null) {
-        stringResource(R.string.sats)
-    } else if (valueMinimum == null) {
-        "1—$valueMaximum " + stringResource(R.string.sats)
-    } else if (valueMaximum == null) {
-        ">$valueMinimum " + stringResource(R.string.sats)
-    } else {
-        "$valueMinimum—$valueMaximum " + stringResource(R.string.sats)
-    }
-
-    val amount = if (textAmount.isEmpty()) { null } else {
-        try {
-            textAmount.toLong()
-        } catch (e: Exception) { null }
-    }
-
-    var isValidAmount = false
-    if (amount == null) {
-        isValidAmount = false
-    } else if (valueMinimum == null && valueMaximum == null) {
-        if (amount > 0) {
-            isValidAmount = true
-        }
-    } else if (valueMinimum == null) {
-        if (amount > 0 && amount <= valueMaximum!!) {
-            isValidAmount = true
-        }
-    } else if (valueMaximum == null) {
-        if (amount >= valueMinimum) {
-            isValidAmount = true
-        }
-    } else {
-        if ((valueMinimum <= amount) && (amount <= valueMaximum)) {
-            isValidAmount = true
-        }
-    }
 
     val colorInValid = TextFieldDefaults.outlinedTextFieldColors(
         focusedBorderColor = MaterialTheme.colors.error,
@@ -266,12 +221,14 @@ fun ZapVoteAmountChoicePopup(
                 modifier = Modifier
                     .padding(10.dp)
             ) {
+                val amount = pollViewModel.amount(textAmount)
+
                 OutlinedTextField(
                     value = textAmount,
                     onValueChange = { textAmount = it },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.width(150.dp),
-                    colors = if (isValidAmount) colorValid else colorInValid,
+                    colors = if (pollViewModel.isValidAmount(amount)) colorValid else colorInValid,
                     label = {
                         Text(
                             text = stringResource(R.string.poll_zap_amount),
@@ -280,7 +237,7 @@ fun ZapVoteAmountChoicePopup(
                     },
                     placeholder = {
                         Text(
-                            text = placeHolderText,
+                            text = pollViewModel.voteAmountPlaceHolderText(context),
                             color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                         )
                     }
@@ -288,7 +245,7 @@ fun ZapVoteAmountChoicePopup(
 
                 Button(
                     modifier = Modifier.padding(horizontal = 3.dp),
-                    enabled = isValidAmount,
+                    enabled = pollViewModel.isValidAmount(amount),
                     onClick = {
                         if (amount != null) {
                             accountViewModel.zap(
