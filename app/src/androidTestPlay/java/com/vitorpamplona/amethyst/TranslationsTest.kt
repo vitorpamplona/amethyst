@@ -77,4 +77,13 @@ class TranslationsTest {
             "pt"
         )
     }
+
+    @Test
+    fun testNostrEvents() {
+        assertTranslateContains(
+            "nostr:nevent1qqs0tsw8hjacs4fppgdg7f5yhgwwfkyua4xcs3re9wwkpkk2qeu6mhql22rcy",
+            "sure, nostr:nevent1qqs0tsw8hjacs4fppgdg7f5yhgwwfkyua4xcs3re9wwkpkk2qeu6mhql22rcy",
+            "en"
+        )
+    }
 }

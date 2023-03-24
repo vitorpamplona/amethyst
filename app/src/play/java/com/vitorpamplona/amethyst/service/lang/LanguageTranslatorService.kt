@@ -102,7 +102,7 @@ object LanguageTranslatorService {
         while (matcher.find()) {
             try {
                 val tag = matcher.group()
-                val short = "Amethysttagindexer$counter"
+                val short = "Amethystmindexer$counter"
                 returningList.put(short, tag)
             } catch (e: Exception) {
             }
