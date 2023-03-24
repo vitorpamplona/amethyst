@@ -49,23 +49,23 @@ class NewRelayListViewModel : ViewModel() {
                     val localInfoFeedTypes = account.localRelays.filter { localRelay -> localRelay.url == it.key }.firstOrNull()?.feedTypes ?: FeedType.values().toSet()
 
                     val errorCounter = liveRelay?.errorCounter ?: 0
-                    val eventDownloadCounter = liveRelay?.eventDownloadCounter ?: 0
-                    val eventUploadCounter = liveRelay?.eventUploadCounter ?: 0
+                    val eventDownloadCounter = liveRelay?.eventDownloadCounterInBytes ?: 0
+                    val eventUploadCounter = liveRelay?.eventUploadCounterInBytes ?: 0
                     val spamCounter = liveRelay?.spamCounter ?: 0
 
                     RelaySetupInfo(it.key, it.value.read, it.value.write, errorCounter, eventDownloadCounter, eventUploadCounter, spamCounter, localInfoFeedTypes)
-                }.sortedBy { it.downloadCount }.reversed()
+                }.sortedBy { it.downloadCountInBytes }.reversed()
             } else {
                 account.localRelays.map {
                     val liveRelay = RelayPool.getRelay(it.url)
 
                     val errorCounter = liveRelay?.errorCounter ?: 0
-                    val eventDownloadCounter = liveRelay?.eventDownloadCounter ?: 0
-                    val eventUploadCounter = liveRelay?.eventUploadCounter ?: 0
+                    val eventDownloadCounter = liveRelay?.eventDownloadCounterInBytes ?: 0
+                    val eventUploadCounter = liveRelay?.eventUploadCounterInBytes ?: 0
                     val spamCounter = liveRelay?.spamCounter ?: 0
 
                     RelaySetupInfo(it.url, it.read, it.write, errorCounter, eventDownloadCounter, eventUploadCounter, spamCounter, it.feedTypes)
-                }.sortedBy { it.downloadCount }.reversed()
+                }.sortedBy { it.downloadCountInBytes }.reversed()
             }
         }
     }

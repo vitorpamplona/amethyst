@@ -150,27 +150,27 @@ fun ServerConfigHeader() {
 
             Column(Modifier.weight(1.4f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Spacer(modifier = Modifier.size(25.dp))
+                    Spacer(modifier = Modifier.size(30.dp))
 
                     Text(
-                        text = stringResource(R.string.posts),
+                        text = stringResource(R.string.bytes),
                         maxLines = 1,
                         fontSize = 14.sp,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1.2f),
                         color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                     )
 
-                    Spacer(modifier = Modifier.size(10.dp))
+                    Spacer(modifier = Modifier.size(5.dp))
 
                     Text(
-                        text = stringResource(id = R.string.posts),
+                        text = stringResource(id = R.string.bytes),
                         maxLines = 1,
                         fontSize = 14.sp,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1.2f),
                         color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                     )
 
-                    Spacer(modifier = Modifier.size(10.dp))
+                    Spacer(modifier = Modifier.size(5.dp))
 
                     Text(
                         text = stringResource(R.string.errors),
@@ -371,10 +371,10 @@ fun ServerConfig(
                             }
 
                             Text(
-                                text = "${countToHumanReadable(item.downloadCount)}",
+                                text = "${countToHumanReadable(item.downloadCountInBytes)}",
                                 maxLines = 1,
-                                fontSize = 14.sp,
-                                modifier = Modifier.weight(1f),
+                                fontSize = 12.sp,
+                                modifier = Modifier.weight(1.2f),
                                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                             )
 
@@ -399,10 +399,10 @@ fun ServerConfig(
                             }
 
                             Text(
-                                text = "${countToHumanReadable(item.uploadCount)}",
+                                text = "${countToHumanReadable(item.uploadCountInBytes)}",
                                 maxLines = 1,
-                                fontSize = 14.sp,
-                                modifier = Modifier.weight(1f),
+                                fontSize = 12.sp,
+                                modifier = Modifier.weight(1.2f),
                                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                             )
 
@@ -418,7 +418,7 @@ fun ServerConfig(
                             Text(
                                 text = "${countToHumanReadable(item.errorCount)}",
                                 maxLines = 1,
-                                fontSize = 14.sp,
+                                fontSize = 12.sp,
                                 modifier = Modifier.weight(1f),
                                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                             )
@@ -433,7 +433,7 @@ fun ServerConfig(
                             Text(
                                 text = "${countToHumanReadable(item.spamCount)}",
                                 maxLines = 1,
-                                fontSize = 14.sp,
+                                fontSize = 12.sp,
                                 modifier = Modifier.weight(1f),
                                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                             )

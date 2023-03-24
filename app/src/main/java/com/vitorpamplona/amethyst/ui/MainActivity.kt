@@ -1,8 +1,11 @@
 package com.vitorpamplona.amethyst.ui
 
+import android.content.Context
+import android.content.Intent
 import android.os.Build.VERSION.SDK_INT
 import android.os.Bundle
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
@@ -34,6 +37,8 @@ class MainActivity : FragmentActivity() {
         val startingPage = when (nip19?.type) {
             Nip19.Type.USER -> "User/${nip19.hex}"
             Nip19.Type.NOTE -> "Note/${nip19.hex}"
+            Nip19.Type.EVENT -> "Event/${nip19.hex}"
+            Nip19.Type.ADDRESS -> "Note/${nip19.hex}"
             else -> null
         }
 
@@ -92,5 +97,15 @@ class MainActivity : FragmentActivity() {
         super.onTrimMemory(level)
         println("Trim Memory $level")
         ServiceManager.cleanUp()
+    }
+}
+
+class GetMediaActivityResultContract : ActivityResultContracts.GetContent() {
+
+    override fun createIntent(context: Context, input: String): Intent {
+        return super.createIntent(context, input).apply {
+            // Force only images and videos to be selectable
+            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/*", "video/*"))
+        }
     }
 }

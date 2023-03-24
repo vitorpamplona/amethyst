@@ -79,7 +79,11 @@ private fun lightenColor(color: Color, amount: Float): Color {
 
 val externalLinkForNote = { note: Note ->
     if (note is AddressableNote) {
-        "https://habla.news/a/${note.address().toNAddr()}"
+        if (note.event?.getReward() != null) {
+            "https://nostrbounties.com/b/${note.address().toNAddr()}"
+        } else {
+            "https://habla.news/a/${note.address().toNAddr()}"
+        }
     } else {
         "https://snort.social/e/${note.idNote()}"
     }

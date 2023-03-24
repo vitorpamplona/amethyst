@@ -1,5 +1,7 @@
 package com.vitorpamplona.amethyst.service.model
 
+import com.linkedin.urls.detection.UrlDetector
+import com.linkedin.urls.detection.UrlDetectorOptions
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.findHashtags
@@ -18,7 +20,15 @@ class TextNoteEvent(
     companion object {
         const val kind = 1
 
-        fun create(msg: String, replyTos: List<String>?, mentions: List<String>?, addresses: List<ATag>?, privateKey: ByteArray, createdAt: Long = Date().time / 1000): TextNoteEvent {
+        fun create(
+            msg: String,
+            replyTos: List<String>?,
+            mentions: List<String>?,
+            addresses: List<ATag>?,
+            extraTags: List<String>?,
+            privateKey: ByteArray,
+            createdAt: Long = Date().time / 1000
+        ): TextNoteEvent {
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf<List<String>>()
             replyTos?.forEach {
@@ -33,9 +43,19 @@ class TextNoteEvent(
             findHashtags(msg).forEach {
                 tags.add(listOf("t", it))
             }
+            extraTags?.forEach {
+                tags.add(listOf("t", it))
+            }
+            findURLs(msg).forEach {
+                tags.add(listOf("r", it))
+            }
             val id = generateId(pubKey, createdAt, kind, tags, msg)
             val sig = Utils.sign(id, privateKey)
             return TextNoteEvent(id.toHexKey(), pubKey, createdAt, tags, msg, sig.toHexKey())
         }
     }
+}
+
+fun findURLs(text: String): List<String> {
+    return UrlDetector(text, UrlDetectorOptions.Default).detect().map { it.originalUrl }
 }

@@ -37,6 +37,7 @@ import com.halilibo.richtext.ui.resolveDefaults
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.checkForHashtagWithIcon
 import com.vitorpamplona.amethyst.service.lnurl.LnInvoiceUtil
+import com.vitorpamplona.amethyst.service.lnurl.LnWithdrawalUtil
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -68,6 +69,8 @@ fun isValidURL(url: String?): Boolean {
     }
 }
 
+val richTextDefaults = RichTextStyle().resolveDefaults()
+
 @Composable
 fun RichTextViewer(
     content: String,
@@ -78,8 +81,8 @@ fun RichTextViewer(
     accountViewModel: AccountViewModel,
     navController: NavController
 ) {
-    val myMarkDownStyle = RichTextStyle().resolveDefaults().copy(
-        codeBlockStyle = RichTextStyle().resolveDefaults().codeBlockStyle?.copy(
+    val myMarkDownStyle = richTextDefaults.copy(
+        codeBlockStyle = richTextDefaults.codeBlockStyle?.copy(
             textStyle = TextStyle(
                 fontFamily = FontFamily.Monospace,
                 fontSize = 14.sp
@@ -99,7 +102,7 @@ fun RichTextViewer(
                         .compositeOver(backgroundColor)
                 )
         ),
-        stringStyle = RichTextStyle().resolveDefaults().stringStyle?.copy(
+        stringStyle = richTextDefaults.stringStyle?.copy(
             linkStyle = SpanStyle(
                 textDecoration = TextDecoration.Underline,
                 color = MaterialTheme.colors.primary
@@ -128,6 +131,20 @@ fun RichTextViewer(
                 )
             }
         } else {
+            val imagesForPager = mutableListOf<String>()
+
+            content.split('\n').forEach { paragraph ->
+                paragraph.split(' ').forEach { word: String ->
+                    // sequence of images will render in a slideview
+                    if (isValidURL(word)) {
+                        val removedParamsFromUrl = word.split("?")[0].lowercase()
+                        if (imageExtension.matcher(removedParamsFromUrl).matches()) {
+                            imagesForPager.add(word)
+                        }
+                    }
+                }
+            }
+
             // FlowRow doesn't work well with paragraphs. So we need to split them
             content.split('\n').forEach { paragraph ->
                 FlowRow() {
@@ -136,17 +153,21 @@ fun RichTextViewer(
                         if (canPreview) {
                             // Explicit URL
                             val lnInvoice = LnInvoiceUtil.findInvoice(word)
-                            if (lnInvoice != null) {
-                                InvoicePreview(lnInvoice)
-                            } else if (isValidURL(word)) {
+                            val lnWithdrawal = LnWithdrawalUtil.findWithdrawal(word)
+
+                            if (isValidURL(word)) {
                                 val removedParamsFromUrl = word.split("?")[0].lowercase()
                                 if (imageExtension.matcher(removedParamsFromUrl).matches()) {
-                                    ZoomableImageView(word)
+                                    ZoomableImageView(word, imagesForPager)
                                 } else if (videoExtension.matcher(removedParamsFromUrl).matches()) {
                                     VideoView(word)
                                 } else {
-                                    UrlPreview(word, word)
+                                    UrlPreview(word, "$word ")
                                 }
+                            } else if (lnInvoice != null) {
+                                InvoicePreview(lnInvoice)
+                            } else if (lnWithdrawal != null) {
+                                ClickableWithdrawal(withdrawalString = lnWithdrawal)
                             } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
                                 ClickableEmail(word)
                             } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {

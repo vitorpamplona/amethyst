@@ -67,7 +67,7 @@ open class Note(val idHex: String) {
         return channelHex?.let { LocalCache.checkGetOrCreateChannel(it) }
     }
 
-    open fun address() = (event as? LongTextNoteEvent)?.address()
+    open fun address(): ATag? = null
 
     open fun createdAt() = event?.createdAt()
 
@@ -233,6 +233,35 @@ open class Note(val idHex: String) {
             .mapNotNull {
                 it.amount
             }.sumOf { it }
+    }
+
+    fun hasPledgeBy(user: User): Boolean {
+        return replies
+            .filter { it.event?.isTaggedHash("bounty-added-reward") ?: false }
+            .any {
+                val pledgeValue = try {
+                    BigDecimal(it.event?.content())
+                } catch (e: Exception) {
+                    null
+                    // do nothing if it can't convert to bigdecimal
+                }
+
+                pledgeValue != null && it.author == user
+            }
+    }
+
+    fun pledgedAmountByOthers(): BigDecimal {
+        return replies
+            .filter { it.event?.isTaggedHash("bounty-added-reward") ?: false }
+            .mapNotNull {
+                try {
+                    BigDecimal(it.event?.content())
+                } catch (e: Exception) {
+                    null
+                    // do nothing if it can't convert to bigdecimal
+                }
+            }
+            .sumOf { it }
     }
 
     fun hasAnyReports(): Boolean {

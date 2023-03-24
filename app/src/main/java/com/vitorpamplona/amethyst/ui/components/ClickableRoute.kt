@@ -12,6 +12,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
+import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 
 @Composable
@@ -47,10 +48,27 @@ fun ClickableRoute(
 
         if (note.event is ChannelCreateEvent) {
             CreateClickableText(note.idDisplayNote(), nip19.additionalChars, "Channel/${nip19.hex}", navController)
+        } else if (note.event is PrivateDmEvent) {
+            CreateClickableText(note.idDisplayNote(), nip19.additionalChars, "Room/${note.author?.pubkeyHex}", navController)
         } else if (channel != null) {
             CreateClickableText(channel.toBestDisplayName(), nip19.additionalChars, "Channel/${note.channel()?.idHex}", navController)
         } else {
             CreateClickableText(note.idDisplayNote(), nip19.additionalChars, "Note/${nip19.hex}", navController)
+        }
+    } else if (nip19.type == Nip19.Type.EVENT) {
+        val noteBase = LocalCache.getOrCreateNote(nip19.hex)
+        val noteState by noteBase.live().metadata.observeAsState()
+        val note = noteState?.note ?: return
+        val channel = note.channel()
+
+        if (note.event is ChannelCreateEvent) {
+            CreateClickableText(note.idDisplayNote(), nip19.additionalChars, "Channel/${nip19.hex}", navController)
+        } else if (note.event is PrivateDmEvent) {
+            CreateClickableText(note.idDisplayNote(), nip19.additionalChars, "Room/${note.author?.pubkeyHex}", navController)
+        } else if (channel != null) {
+            CreateClickableText(channel.toBestDisplayName(), nip19.additionalChars, "Channel/${note.channel()?.idHex}", navController)
+        } else {
+            CreateClickableText(note.idDisplayNote(), nip19.additionalChars, "Event/${nip19.hex}", navController)
         }
     } else {
         Text(

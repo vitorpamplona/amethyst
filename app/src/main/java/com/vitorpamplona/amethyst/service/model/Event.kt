@@ -9,6 +9,7 @@ import fr.acinq.secp256k1.Secp256k1
 import nostr.postr.Utils
 import nostr.postr.toHex
 import java.lang.reflect.Type
+import java.math.BigDecimal
 import java.security.MessageDigest
 import java.util.*
 
@@ -47,13 +48,21 @@ open class Event(
         if (aTagValue != null) ATag.parse(aTagValue, relay) else null
     }
 
-    fun hashtags() = tags.filter { it.firstOrNull() == "t" }.mapNotNull { it.getOrNull(1) }
+    override fun hashtags() = tags.filter { it.firstOrNull() == "t" }.mapNotNull { it.getOrNull(1) }
 
     override fun isTaggedUser(idHex: String) = tags.any { it.getOrNull(0) == "p" && it.getOrNull(1) == idHex }
 
     override fun isTaggedHash(hashtag: String) = tags.any { it.getOrNull(0) == "t" && it.getOrNull(1).equals(hashtag, true) }
     override fun isTaggedHashes(hashtags: Set<String>) = tags.any { it.getOrNull(0) == "t" && it.getOrNull(1)?.lowercase() in hashtags }
     override fun firstIsTaggedHashes(hashtags: Set<String>) = tags.firstOrNull { it.getOrNull(0) == "t" && it.getOrNull(1)?.lowercase() in hashtags }?.getOrNull(1)
+
+    override fun getReward(): BigDecimal? {
+        return try {
+            tags.filter { it.firstOrNull() == "reward" }.mapNotNull { BigDecimal(it.getOrNull(1)) }.firstOrNull()
+        } catch (e: Exception) {
+            null
+        }
+    }
 
     /**
      * Checks if the ID is correct and then if the pubKey's secret key signed the event.

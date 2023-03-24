@@ -10,8 +10,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
@@ -42,6 +44,7 @@ import coil.compose.AsyncImage
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -50,6 +53,7 @@ import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
+import com.vitorpamplona.amethyst.service.model.EventInterface
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
@@ -65,9 +69,11 @@ import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
+import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Following
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.math.BigDecimal
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -273,15 +279,8 @@ fun NoteCompose(
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                             )
-                        }
-
-                        val firstTag = noteEvent.firstIsTaggedHashes(account.followingTagSet())
-                        if (firstTag != null) {
-                            ClickableText(
-                                text = AnnotatedString(" #$firstTag"),
-                                onClick = { navController.navigate("Hashtag/$firstTag") },
-                                style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(alpha = 0.52f))
-                            )
+                        } else {
+                            DisplayFollowingHashtagsInPost(noteEvent, account, navController)
                         }
 
                         Text(
@@ -306,7 +305,14 @@ fun NoteCompose(
                     }
 
                     if (note.author != null && !makeItShort && !isQuotedNote) {
-                        ObserveDisplayNip05Status(note.author!!)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            ObserveDisplayNip05Status(note.author!!, Modifier.weight(1f))
+
+                            val baseReward = noteEvent.getReward()
+                            if (baseReward != null) {
+                                DisplayReward(baseReward, baseNote, account, navController)
+                            }
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(3.dp))
@@ -394,7 +400,7 @@ fun NoteCompose(
                             thickness = 0.25.dp
                         )
                     } else if (noteEvent is LongTextNoteEvent) {
-                        LongFormHeader(noteEvent)
+                        LongFormHeader(noteEvent, note, account.userProfile())
 
                         ReactionsRow(note, accountViewModel)
 
@@ -473,15 +479,26 @@ fun NoteCompose(
                             !noteForReports.hasAnyReports()
 
                         if (eventContent != null) {
-                            TranslateableRichTextViewer(
-                                eventContent,
-                                canPreview = canPreview && !makeItShort,
-                                Modifier.fillMaxWidth(),
-                                noteEvent.tags(),
-                                backgroundColor,
-                                accountViewModel,
-                                navController
-                            )
+                            if (makeItShort && note.author == account.userProfile()) {
+                                Text(
+                                    text = eventContent,
+                                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            } else {
+                                TranslateableRichTextViewer(
+                                    eventContent,
+                                    canPreview = canPreview && !makeItShort,
+                                    Modifier.fillMaxWidth(),
+                                    noteEvent.tags(),
+                                    backgroundColor,
+                                    accountViewModel,
+                                    navController
+                                )
+
+                                DisplayUncitedHashtags(noteEvent, eventContent, navController)
+                            }
                         }
 
                         if (!makeItShort) {
@@ -496,6 +513,130 @@ fun NoteCompose(
 
                     NoteQuickActionMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun DisplayFollowingHashtagsInPost(
+    noteEvent: EventInterface,
+    account: Account,
+    navController: NavController
+) {
+    Column() {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            val firstTag =
+                noteEvent.firstIsTaggedHashes(account.followingTagSet())
+            if (firstTag != null) {
+                ClickableText(
+                    text = AnnotatedString(" #$firstTag"),
+                    onClick = { navController.navigate("Hashtag/$firstTag") },
+                    style = LocalTextStyle.current.copy(
+                        color = MaterialTheme.colors.primary.copy(
+                            alpha = 0.52f
+                        )
+                    )
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun DisplayUncitedHashtags(
+    noteEvent: EventInterface,
+    eventContent: String,
+    navController: NavController
+) {
+    val hashtags = noteEvent.hashtags()
+    if (hashtags.isNotEmpty()) {
+        FlowRow(
+            modifier = Modifier.padding(top = 5.dp)
+        ) {
+            hashtags.forEach { hashtag ->
+                if (!eventContent.contains(hashtag, true)) {
+                    ClickableText(
+                        text = AnnotatedString("#$hashtag "),
+                        onClick = { navController.navigate("Hashtag/$hashtag") },
+                        style = LocalTextStyle.current.copy(
+                            color = MaterialTheme.colors.primary.copy(
+                                alpha = 0.52f
+                            )
+                        )
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DisplayReward(
+    baseReward: BigDecimal,
+    baseNote: Note,
+    account: Account,
+    navController: NavController
+) {
+    var popupExpanded by remember { mutableStateOf(false) }
+
+    Column() {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.clickable { popupExpanded = true }
+        ) {
+            ClickableText(
+                text = AnnotatedString("#bounty"),
+                onClick = { navController.navigate("Hashtag/bounty") },
+                style = LocalTextStyle.current.copy(
+                    color = MaterialTheme.colors.primary.copy(
+                        alpha = 0.52f
+                    )
+                )
+            )
+
+            val repliesState by baseNote.live().replies.observeAsState()
+            val replyNote = repliesState?.note
+
+            if (replyNote?.hasPledgeBy(account.userProfile()) == true) {
+                Icon(
+                    imageVector = Icons.Default.Bolt,
+                    contentDescription = stringResource(R.string.zaps),
+                    modifier = Modifier.size(20.dp),
+                    tint = BitcoinOrange
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Bolt,
+                    contentDescription = stringResource(R.string.zaps),
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                )
+            }
+
+            var rewardAmount by remember {
+                mutableStateOf<BigDecimal?>(
+                    baseReward
+                )
+            }
+
+            LaunchedEffect(key1 = repliesState) {
+                withContext(Dispatchers.IO) {
+                    replyNote?.pledgedAmountByOthers()?.let {
+                        rewardAmount = baseReward.add(it)
+                    }
+                }
+            }
+
+            Text(
+                showAmount(rewardAmount),
+                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+            )
+        }
+
+        if (popupExpanded) {
+            AddBountyAmountDialog(baseNote, account) {
+                popupExpanded = false
             }
         }
     }
@@ -565,7 +706,7 @@ fun BadgeDisplay(baseNote: Note) {
 }
 
 @Composable
-private fun LongFormHeader(noteEvent: LongTextNoteEvent) {
+private fun LongFormHeader(noteEvent: LongTextNoteEvent, note: Note, loggedIn: User) {
     Row(
         modifier = Modifier
             .clip(shape = RoundedCornerShape(15.dp))
@@ -586,6 +727,35 @@ private fun LongFormHeader(noteEvent: LongTextNoteEvent) {
                     contentScale = ContentScale.FillWidth,
                     modifier = Modifier.fillMaxWidth()
                 )
+            } ?: Box() {
+                note.author?.info?.banner?.let {
+                    AsyncImage(
+                        model = it,
+                        contentDescription = stringResource(
+                            R.string.preview_card_image_for,
+                            it
+                        ),
+                        contentScale = ContentScale.FillWidth,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } ?: Image(
+                    painter = painterResource(R.drawable.profile_banner),
+                    contentDescription = stringResource(R.string.profile_banner),
+                    contentScale = ContentScale.FillWidth,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(150.dp)
+                )
+
+                Box(
+                    Modifier
+                        .width(75.dp)
+                        .height(75.dp)
+                        .padding(10.dp)
+                        .align(Alignment.BottomStart)
+                ) {
+                    NoteAuthorPicture(baseNote = note, baseUserAccount = loggedIn, size = 55.dp)
+                }
             }
 
             noteEvent.title()?.let {
@@ -610,6 +780,16 @@ private fun LongFormHeader(noteEvent: LongTextNoteEvent) {
                     overflow = TextOverflow.Ellipsis
                 )
             }
+                ?: Text(
+                    text = noteEvent.content.take(200),
+                    style = MaterialTheme.typography.caption,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
+                    color = Color.Gray,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
+                )
         }
     }
 }

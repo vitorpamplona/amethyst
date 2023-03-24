@@ -7,7 +7,7 @@ import java.util.regex.Pattern
 
 object Nip19 {
     enum class Type {
-        USER, NOTE, RELAY, ADDRESS
+        USER, NOTE, EVENT, RELAY, ADDRESS
     }
 
     val nip19regex = Pattern.compile("(nostr:)?@?(nsec1|npub1|nevent1|naddr1|note1|nprofile1|nrelay1)([qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)(.*)", Pattern.CASE_INSENSITIVE)
@@ -76,7 +76,7 @@ object Nip19 {
             ?.get(0)
             ?.toString(Charsets.UTF_8)
 
-        return Return(Type.USER, hex, relay)
+        return Return(Type.EVENT, hex, relay)
     }
 
     private fun nrelay(bytes: ByteArray): Return? {

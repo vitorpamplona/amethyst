@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.qrcode
 
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -19,6 +20,8 @@ fun NIP19QrCodeScanner(onScan: (String?) -> Unit) {
             val startingPage = when (nip19?.type) {
                 Nip19.Type.USER -> "User/${nip19.hex}"
                 Nip19.Type.NOTE -> "Note/${nip19.hex}"
+                Nip19.Type.EVENT -> "Event/${nip19.hex}"
+                Nip19.Type.ADDRESS -> "Note/${nip19.hex}"
                 else -> null
             }
 
@@ -28,6 +31,7 @@ fun NIP19QrCodeScanner(onScan: (String?) -> Unit) {
                 onScan(null)
             }
         } catch (e: Throwable) {
+            Log.e("NIP19 Scanner", "Error parsing $it", e)
             // QR can be anything, do not throw errors.
             onScan(null)
         }

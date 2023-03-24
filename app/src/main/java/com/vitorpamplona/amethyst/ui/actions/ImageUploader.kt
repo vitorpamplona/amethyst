@@ -19,13 +19,16 @@ object ImageUploader {
         onError: (Throwable) -> Unit
     ) {
         val contentType = contentResolver.getType(uri)
+        val category = contentType?.toMediaType()?.toString()?.split("/")?.get(0) ?: "image"
+
+        val url = if (category == "image") "https://api.imgur.com/3/image" else "https://api.imgur.com/3/upload"
 
         val client = OkHttpClient.Builder().build()
 
         val requestBody: RequestBody = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
             .addFormDataPart(
-                "image",
+                category,
                 "${UUID.randomUUID()}",
                 object : RequestBody() {
                     override fun contentType(): MediaType? =
@@ -46,7 +49,7 @@ object ImageUploader {
         val request: Request = Request.Builder()
             .header("Authorization", "Client-ID e6aea87296f3f96")
             .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
-            .url("https://api.imgur.com/3/image")
+            .url(url)
             .post(requestBody)
             .build()
 
