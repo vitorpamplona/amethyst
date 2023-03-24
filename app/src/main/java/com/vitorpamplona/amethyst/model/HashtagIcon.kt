@@ -13,6 +13,7 @@ fun checkForHashtagWithIcon(tag: String): HashtagIcon? {
         "amethyst" -> HashtagIcon(R.drawable.amethyst, "Amethyst", Color.Unspecified, Modifier.padding(3.dp, 2.dp, 0.dp, 0.dp))
         "plebs", "pleb", "plebchain" -> HashtagIcon(R.drawable.plebs, "Pleb", Color.Unspecified, Modifier.padding(1.dp, 2.dp, 0.dp, 1.dp))
         "coffee", "coffeechain" -> HashtagIcon(R.drawable.coffee, "Coffee", Color.Unspecified, Modifier.padding(1.dp, 2.dp, 0.dp, 0.dp))
+        "skullofsatoshi" -> HashtagIcon(R.drawable.skull, "Coffee", Color.Unspecified, Modifier.padding(1.dp, 2.dp, 0.dp, 0.dp))
 
         else -> null
     }
