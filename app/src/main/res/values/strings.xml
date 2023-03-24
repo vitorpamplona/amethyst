@@ -263,4 +263,6 @@
     <string name="wallet_connect_service_relay">Wallet Connect Relay</string>
 
     <string name="pledge_amount_in_sats">Pledge Amount in Sats</string>
+
+    <string name="looking_for_event">"Looking for Event %1$s"</string>
 </resources>

@@ -69,4 +69,12 @@ class NIP19ParserTest {
         assertEquals("30023:46fcbe3065eaf1ae7811465924e48923363ff3f526bd6f73d7c184b16bd8ce4d:1679509418", result?.hex)
         assertEquals(null, result?.relay)
     }
+
+    @Test
+    fun nEventParserTest() {
+        val result = Nip19.uriToRoute("nostr:nevent1qqs0tsw8hjacs4fppgdg7f5yhgwwfkyua4xcs3re9wwkpkk2qeu6mhql22rcy")
+        assertEquals(Nip19.Type.EVENT, result?.type)
+        assertEquals("f5c1c7bcbb8855210a1a8f2684ba1ce4d89ced4d8844792b9d60daca0679addc", result?.hex)
+        assertEquals(null, result?.relay)
+    }
 }

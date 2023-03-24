@@ -87,6 +87,12 @@ sealed class Route(
         icon = R.drawable.ic_moments,
         arguments = listOf(navArgument("id") { type = NavType.StringType })
     )
+
+    object Event : Route(
+        route = "Event/{id}",
+        icon = R.drawable.ic_moments,
+        arguments = listOf(navArgument("id") { type = NavType.StringType })
+    )
 }
 
 // **

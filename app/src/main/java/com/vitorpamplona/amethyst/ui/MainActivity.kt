@@ -37,6 +37,8 @@ class MainActivity : FragmentActivity() {
         val startingPage = when (nip19?.type) {
             Nip19.Type.USER -> "User/${nip19.hex}"
             Nip19.Type.NOTE -> "Note/${nip19.hex}"
+            Nip19.Type.EVENT -> "Event/${nip19.hex}"
+            Nip19.Type.ADDRESS -> "Note/${nip19.hex}"
             else -> null
         }
 

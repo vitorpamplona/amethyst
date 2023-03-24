@@ -87,6 +87,8 @@ class NewPostViewModel : ViewModel() {
                     addUserToMentions(LocalCache.getOrCreateUser(results.key.hex))
                 } else if (results?.key?.type == Nip19.Type.NOTE) {
                     addNoteToReplyTos(LocalCache.getOrCreateNote(results.key.hex))
+                } else if (results?.key?.type == Nip19.Type.EVENT) {
+                    addNoteToReplyTos(LocalCache.getOrCreateNote(results.key.hex))
                 } else if (results?.key?.type == Nip19.Type.ADDRESS) {
                     val note = LocalCache.checkGetOrCreateAddressableNote(results.key.hex)
                     if (note != null) {
@@ -105,6 +107,10 @@ class NewPostViewModel : ViewModel() {
 
                     "#[${tagIndex(user)}]${results.restOfWord}"
                 } else if (results?.key?.type == Nip19.Type.NOTE) {
+                    val note = LocalCache.getOrCreateNote(results.key.hex)
+
+                    "#[${tagIndex(note)}]${results.restOfWord}"
+                } else if (results?.key?.type == Nip19.Type.EVENT) {
                     val note = LocalCache.getOrCreateNote(results.key.hex)
 
                     "#[${tagIndex(note)}]${results.restOfWord}"
