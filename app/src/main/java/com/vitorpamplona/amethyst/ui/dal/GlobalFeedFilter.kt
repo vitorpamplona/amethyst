@@ -27,6 +27,10 @@ object GlobalFeedFilter : FeedFilter<Note>() {
                     (it.author?.pubkeyHex !in followUsers)
             }
             .filter { account.isAcceptable(it) }
+            .filter {
+                // Do not show notes with the creation time exceeding the current time, as they will always stay at the top of the global feed, which is cheating.
+                it.createdAt()!! <= System.currentTimeMillis() / 1000
+            }
             .toList()
 
         val longFormNotes = LocalCache.addressables.values
@@ -41,6 +45,10 @@ object GlobalFeedFilter : FeedFilter<Note>() {
                     (it.author?.pubkeyHex !in followUsers)
             }
             .filter { account.isAcceptable(it) }
+            .filter {
+                // Do not show notes with the creation time exceeding the current time, as they will always stay at the top of the global feed, which is cheating.
+                it.createdAt()!! <= System.currentTimeMillis() / 1000
+            }
             .toList()
 
         return (notes + longFormNotes)
