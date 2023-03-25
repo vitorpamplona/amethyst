@@ -19,7 +19,7 @@ import com.google.android.exoplayer2.ui.StyledPlayerView
 import com.vitorpamplona.amethyst.VideoCache
 
 @Composable
-fun VideoView(videoUri: String) {
+fun VideoView(videoUri: String, onDialog: ((Boolean) -> Unit)? = null) {
     val context = LocalContext.current
 
     val exoPlayer = remember {
@@ -49,6 +49,11 @@ fun VideoView(videoUri: String) {
                     ViewGroup.LayoutParams.WRAP_CONTENT
                 )
                 resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
+                onDialog?.let { innerOnDialog ->
+                    setFullscreenButtonClickListener {
+                        innerOnDialog(it)
+                    }
+                }
             }
         }
     )

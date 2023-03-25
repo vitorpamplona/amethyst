@@ -46,24 +46,28 @@ fun ZoomableImageView(word: String, images: List<String> = listOf(word)) {
         mutableStateOf(false)
     }
 
-    AsyncImage(
-        model = word,
-        contentDescription = word,
-        contentScale = ContentScale.FillWidth,
-        modifier = Modifier
-            .padding(top = 4.dp)
-            .fillMaxWidth()
-            .clip(shape = RoundedCornerShape(15.dp))
-            .border(
-                1.dp,
-                MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
-                RoundedCornerShape(15.dp)
-            )
-            .combinedClickable(
-                onClick = { dialogOpen = true },
-                onLongClick = { clipboardManager.setText(AnnotatedString(word)) }
-            )
-    )
+    if (imageExtension.matcher(word).matches()) {
+        AsyncImage(
+            model = word,
+            contentDescription = word,
+            contentScale = ContentScale.FillWidth,
+            modifier = Modifier
+                .padding(top = 4.dp)
+                .fillMaxWidth()
+                .clip(shape = RoundedCornerShape(15.dp))
+                .border(
+                    1.dp,
+                    MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
+                    RoundedCornerShape(15.dp)
+                )
+                .combinedClickable(
+                    onClick = { dialogOpen = true },
+                    onLongClick = { clipboardManager.setText(AnnotatedString(word)) }
+                )
+        )
+    } else {
+        VideoView(word) { dialogOpen = true }
+    }
 
     if (dialogOpen) {
         ZoomableImageDialog(word, images, onDismiss = { dialogOpen = false })
@@ -78,14 +82,11 @@ fun ZoomableImageDialog(imageUrl: String, allImages: List<String> = listOf(image
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background) {
-            Column(
-                modifier = Modifier.padding(10.dp)
-            ) {
+            Column() {
                 var pagerState: PagerState = remember { PagerState() }
 
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth(),
+                    modifier = Modifier.padding(10.dp).fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -99,27 +100,31 @@ fun ZoomableImageDialog(imageUrl: String, allImages: List<String> = listOf(image
                         pagerState = pagerState,
                         itemsCount = allImages.size,
                         itemContent = { index ->
-                            AsyncImage(
-                                model = allImages[index],
-                                contentDescription = stringResource(id = R.string.profile_image),
-                                contentScale = ContentScale.FillWidth,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .zoomable(rememberZoomState())
-                            )
+                            RenderImageOrVideo(allImages[index])
                         }
                     )
                 } else {
-                    AsyncImage(
-                        model = imageUrl,
-                        contentDescription = stringResource(id = R.string.profile_image),
-                        contentScale = ContentScale.FillWidth,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .zoomable(rememberZoomState())
-                    )
+                    RenderImageOrVideo(imageUrl)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun RenderImageOrVideo(imageUrl: String) {
+    if (imageExtension.matcher(imageUrl).matches()) {
+        AsyncImage(
+            model = imageUrl,
+            contentDescription = stringResource(id = R.string.profile_image),
+            contentScale = ContentScale.FillWidth,
+            modifier = Modifier
+                .fillMaxSize()
+                .zoomable(rememberZoomState())
+        )
+    } else {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize(1f)) {
+            VideoView(imageUrl)
         }
     }
 }

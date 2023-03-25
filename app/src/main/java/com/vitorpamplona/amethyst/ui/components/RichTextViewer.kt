@@ -141,6 +141,9 @@ fun RichTextViewer(
                         if (imageExtension.matcher(removedParamsFromUrl).matches()) {
                             imagesForPager.add(word)
                         }
+                        if (videoExtension.matcher(removedParamsFromUrl).matches()) {
+                            imagesForPager.add(word)
+                        }
                     }
                 }
             }
@@ -160,7 +163,7 @@ fun RichTextViewer(
                                 if (imageExtension.matcher(removedParamsFromUrl).matches()) {
                                     ZoomableImageView(word, imagesForPager)
                                 } else if (videoExtension.matcher(removedParamsFromUrl).matches()) {
-                                    VideoView(word)
+                                    ZoomableImageView(word, imagesForPager)
                                 } else {
                                     UrlPreview(word, "$word ")
                                 }
