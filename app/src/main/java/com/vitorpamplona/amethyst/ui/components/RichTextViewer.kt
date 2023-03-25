@@ -172,6 +172,8 @@ fun RichTextViewer(
                                 ClickableEmail(word)
                             } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
                                 ClickablePhone(word)
+                            } else if (isBechLink(word)) {
+                                BechLink(word, navController)
                             } else if (noProtocolUrlValidator.matcher(word).matches()) {
                                 val matcher = noProtocolUrlValidator.matcher(word)
                                 matcher.find()
@@ -184,8 +186,6 @@ fun RichTextViewer(
                                 TagLink(word, tags, canPreview, backgroundColor, accountViewModel, navController)
                             } else if (hashTagsPattern.matcher(word).matches()) {
                                 HashTag(word, accountViewModel, navController)
-                            } else if (isBechLink(word)) {
-                                BechLink(word, navController)
                             } else {
                                 Text(
                                     text = "$word ",
@@ -199,6 +199,8 @@ fun RichTextViewer(
                                 ClickableEmail(word)
                             } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
                                 ClickablePhone(word)
+                            } else if (isBechLink(word)) {
+                                BechLink(word, navController)
                             } else if (noProtocolUrlValidator.matcher(word).matches()) {
                                 val matcher = noProtocolUrlValidator.matcher(word)
                                 matcher.find()
@@ -211,8 +213,6 @@ fun RichTextViewer(
                                 TagLink(word, tags, canPreview, backgroundColor, accountViewModel, navController)
                             } else if (hashTagsPattern.matcher(word).matches()) {
                                 HashTag(word, accountViewModel, navController)
-                            } else if (isBechLink(word)) {
-                                BechLink(word, navController)
                             } else {
                                 Text(
                                     text = "$word ",
