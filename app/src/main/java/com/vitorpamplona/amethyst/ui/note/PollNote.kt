@@ -26,7 +26,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
@@ -44,21 +43,19 @@ fun PollNote(
     accountViewModel: AccountViewModel,
     navController: NavController
 ) {
-    val pollViewModel: PollNoteViewModel = viewModel()
+    val pollViewModel = PollNoteViewModel()
     pollViewModel.load(note)
 
     pollViewModel.pollEvent?.pollOptions()?.forEach { poll_op ->
         Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
+            verticalAlignment = Alignment.CenterVertically
         ) {
             TranslateableRichTextViewer(
                 poll_op.value,
                 canPreview,
                 modifier = Modifier
                     .width(250.dp)
-                    .border(BorderStroke(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.32f)))
-                    .padding(4.dp),
+                    .border(BorderStroke(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.32f))),
                 pollViewModel.pollEvent?.tags(),
                 backgroundColor,
                 accountViewModel,
@@ -66,6 +63,18 @@ fun PollNote(
             )
 
             ZapVote(note, accountViewModel, pollViewModel, poll_op.key)
+        }
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // only show tallies after user has zapped note
+            if (note.isZappedBy(accountViewModel.userProfile())) {
+                LinearProgressIndicator(
+                    modifier = Modifier.width(250.dp),
+                    progress = pollViewModel.optionVoteTally(poll_op.key)
+                )
+            }
         }
     }
 }
@@ -119,7 +128,7 @@ fun ZapVote(
                                 )
                                 .show()
                         }
-                    } else if (pollViewModel.isVoteAmountAtomic) {
+                    } else if (pollViewModel.isVoteAmountAtomic()) {
                         accountViewModel.zap(
                             baseNote,
                             pollViewModel.valueMaximum!!.toLong() * 1000,
@@ -174,6 +183,7 @@ fun ZapVote(
         }
     }
 
+    // only show tallies after a user has zapped note
     if (zappedNote?.isZappedBy(account.userProfile()) == true) {
         Text(
             showAmount(zappedNote.zappedPollOptionAmount(pollOption)),
@@ -196,7 +206,7 @@ fun ZapVoteAmountChoicePopup(
 ) {
     val context = LocalContext.current
 
-    var textAmount by rememberSaveable { mutableStateOf("") }
+    var inputAmountText by rememberSaveable { mutableStateOf("") }
 
     val colorInValid = TextFieldDefaults.outlinedTextFieldColors(
         focusedBorderColor = MaterialTheme.colors.error,
@@ -221,14 +231,14 @@ fun ZapVoteAmountChoicePopup(
                 modifier = Modifier
                     .padding(10.dp)
             ) {
-                val amount = pollViewModel.amount(textAmount)
+                val amount = pollViewModel.inputAmountLong(inputAmountText)
 
                 OutlinedTextField(
-                    value = textAmount,
-                    onValueChange = { textAmount = it },
+                    value = inputAmountText,
+                    onValueChange = { inputAmountText = it },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.width(150.dp),
-                    colors = if (pollViewModel.isValidAmount(amount)) colorValid else colorInValid,
+                    colors = if (pollViewModel.isValidInputAmount(amount)) colorValid else colorInValid,
                     label = {
                         Text(
                             text = stringResource(R.string.poll_zap_amount),
@@ -245,7 +255,7 @@ fun ZapVoteAmountChoicePopup(
 
                 Button(
                     modifier = Modifier.padding(horizontal = 3.dp),
-                    enabled = pollViewModel.isValidAmount(amount),
+                    enabled = pollViewModel.isValidInputAmount(amount),
                     onClick = {
                         if (amount != null) {
                             accountViewModel.zap(
