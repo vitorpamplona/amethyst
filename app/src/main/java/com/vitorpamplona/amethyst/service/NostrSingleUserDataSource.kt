@@ -34,13 +34,16 @@ object NostrSingleUserDataSource : NostrDataSource("SingleUserFeed") {
                 filter = JsonFilter(
                     kinds = listOf(ReportEvent.kind),
                     tags = mapOf("p" to listOf(it.pubkeyHex)),
-                    since = it.latestReportTime
+                    since = it.latestEOSEs
                 )
             )
         }
     }
 
-    val userChannel = requestNewChannel() {
+    val userChannel = requestNewChannel() { time, relayUrl ->
+        usersToWatch.forEach {
+            it.latestEOSEs = it.latestEOSEs + Pair(relayUrl, time)
+        }
         // Many relays operate with limits in the amount of filters.
         // As information comes, the filters will be rotated to get more data.
         invalidateFilters()

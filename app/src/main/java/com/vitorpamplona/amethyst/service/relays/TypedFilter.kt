@@ -40,9 +40,15 @@ class TypedFilter(
                 jsonObject.add("#${kv.key}", JsonArray().apply { kv.value.forEach { add(it) } })
             }
         }
+        /*
+        Does not include since in the json comparison
         filter.since?.run {
-            jsonObject.addProperty("since", filter.since)
-        }
+            val jsonObjectSince = JsonObject()
+            entries.forEach { sincePairs ->
+                jsonObjectSince.addProperty(sincePairs.key, "${sincePairs.value}")
+            }
+            jsonObject.add("since", jsonObjectSince)
+        }*/
         filter.until?.run {
             jsonObject.addProperty("until", filter.until)
         }

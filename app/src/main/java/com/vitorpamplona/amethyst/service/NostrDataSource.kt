@@ -117,7 +117,7 @@ abstract class NostrDataSource(val debugName: String) {
 
             if (type == Relay.Type.EOSE && channel != null) {
                 // updates a per subscripton since date
-                subscriptions[channel]?.updateEOSE(Date().time / 1000)
+                subscriptions[channel]?.updateEOSE(Date().time / 1000, relay.url)
             }
         }
 
@@ -142,7 +142,7 @@ abstract class NostrDataSource(val debugName: String) {
         }
     }
 
-    fun requestNewChannel(onEOSE: ((Long) -> Unit)? = null): Subscription {
+    fun requestNewChannel(onEOSE: ((Long, String) -> Unit)? = null): Subscription {
         val newSubscription = Subscription(UUID.randomUUID().toString().substring(0, 4), onEOSE)
         subscriptions = subscriptions + Pair(newSubscription.id, newSubscription)
         return newSubscription

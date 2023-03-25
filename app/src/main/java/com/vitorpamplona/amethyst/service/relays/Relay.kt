@@ -92,6 +92,11 @@ class Relay(
                                 // Log.w("Relay", "Relay onEVENT $url, $channel")
                                 eventDownloadCounterInBytes += text.bytesUsedInMemory()
                                 val event = Event.fromJson(msg[2], Client.lenient)
+
+                                if (event.kind == 23195 || event.kind == 23196) {
+                                    println("AAAAA ${event.toJson()}")
+                                }
+
                                 listeners.forEach { it.onEvent(this@Relay, channel, event) }
                             }
                             "EOSE" -> listeners.forEach {
@@ -183,8 +188,8 @@ class Relay(
                     val filters = Client.getSubscriptionFilters(requestId).filter { activeTypes.intersect(it.types).isNotEmpty() }
                     if (filters.isNotEmpty()) {
                         val request =
-                            """["REQ","$requestId",${filters.take(10).joinToString(",") { it.filter.toJson() }}]"""
-                        // println("FILTERSSENT ${url} ${request}")
+                            """["REQ","$requestId",${filters.take(10).joinToString(",") { it.filter.toJson(url) }}]"""
+                        // println("FILTERSSENT $url $request")
                         socket?.send(request)
                         eventUploadCounterInBytes += request.bytesUsedInMemory()
                     }

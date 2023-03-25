@@ -7,12 +7,12 @@ import java.util.UUID
 
 data class Subscription(
     val id: String = UUID.randomUUID().toString().substring(0, 4),
-    val onEOSE: ((Long) -> Unit)? = null
+    val onEOSE: ((Long, String) -> Unit)? = null
 ) {
     var typedFilters: List<TypedFilter>? = null // Inactive when null
 
-    fun updateEOSE(l: Long) {
-        onEOSE?.let { it(l) }
+    fun updateEOSE(time: Long, relay: String) {
+        onEOSE?.let { it(time, relay) }
     }
 
     fun toJson(): String {
