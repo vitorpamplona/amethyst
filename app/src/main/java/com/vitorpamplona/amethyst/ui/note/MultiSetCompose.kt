@@ -230,13 +230,13 @@ fun FastNoteAuthorPicture(
     val showFollowingMark = userAccount.isFollowingCached(user) || user == userAccount
 
     UserPicture(
-        userHex = user.pubkeyHex(),
+        userHex = user.pubkeyHex,
         userPicture = user.profilePicture(),
         showFollowingMark = showFollowingMark,
         size = size,
         modifier = pictureModifier,
         onClick = {
-            navController.navigate("User/${user.pubkeyHex()}")
+            navController.navigate("User/${user.pubkeyHex}")
         }
     )
 }

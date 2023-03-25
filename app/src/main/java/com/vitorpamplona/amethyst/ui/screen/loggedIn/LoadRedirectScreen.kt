@@ -40,7 +40,7 @@ fun LoadRedirectScreen(eventId: String?, accountViewModel: AccountViewModel, nav
             navController.navigate("Channel/${note.idHex}")
         } else if (event is PrivateDmEvent) {
             navController.backQueue.removeLast()
-            navController.navigate("Room/${note.author?.pubkeyHex()}")
+            navController.navigate("Room/${note.author?.pubkeyHex}")
         } else if (channel != null) {
             navController.backQueue.removeLast()
             navController.navigate("Channel/${channel.idHex}")

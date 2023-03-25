@@ -96,7 +96,7 @@ fun ObserveDisplayNip05Status(baseUser: UserInterface, columnModifier: Modifier 
 
     user.nip05()?.let { nip05 ->
         if (nip05.split("@").size == 2) {
-            val nip05Verified by nip05VerificationAsAState(user.info()!!, user.pubkeyHex())
+            val nip05Verified by nip05VerificationAsAState(user.info!!, user.pubkeyHex)
             Column(modifier = columnModifier) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (nip05.split("@")[0] != "_") {
@@ -156,7 +156,7 @@ fun DisplayNip05ProfileStatus(user: UserInterface) {
 
     user.nip05()?.let { nip05 ->
         if (nip05.split("@").size == 2) {
-            val nip05Verified by nip05VerificationAsAState(user.info()!!, user.pubkeyHex())
+            val nip05Verified by nip05VerificationAsAState(user.info!!, user.pubkeyHex)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (nip05Verified == null) {
                     Icon(

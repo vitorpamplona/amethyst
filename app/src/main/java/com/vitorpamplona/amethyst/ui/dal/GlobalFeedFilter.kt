@@ -24,7 +24,7 @@ object GlobalFeedFilter : FeedFilter<Note>() {
                 // does not show events already in the public chat list
                 (it.channel() == null || it.channel() !in followChannels) &&
                     // does not show people the user already follows
-                    (it.author?.pubkeyHex() !in followUsers)
+                    (it.author?.pubkeyHex !in followUsers)
             }
             .filter { account.isAcceptable(it) }
             .filter {
@@ -42,7 +42,7 @@ object GlobalFeedFilter : FeedFilter<Note>() {
                 // does not show events already in the public chat list
                 (it.channel() == null || it.channel() !in followChannels) &&
                     // does not show people the user already follows
-                    (it.author?.pubkeyHex() !in followUsers)
+                    (it.author?.pubkeyHex !in followUsers)
             }
             .filter { account.isAcceptable(it) }
             .filter {

@@ -27,7 +27,7 @@ object NostrChatroomDataSource : NostrDataSource("ChatroomFeed") {
                 filter = JsonFilter(
                     kinds = listOf(PrivateDmEvent.kind),
                     authors = listOf(myPeer.pubkeyHex),
-                    tags = mapOf("p" to listOf(account.userProfile().pubkeyHex()))
+                    tags = mapOf("p" to listOf(account.userProfile().pubkeyHex))
                 )
             )
         } else {
@@ -43,7 +43,7 @@ object NostrChatroomDataSource : NostrDataSource("ChatroomFeed") {
                 types = setOf(FeedType.PRIVATE_DMS),
                 filter = JsonFilter(
                     kinds = listOf(PrivateDmEvent.kind),
-                    authors = listOf(account.userProfile().pubkeyHex()),
+                    authors = listOf(account.userProfile().pubkeyHex),
                     tags = mapOf("p" to listOf(myPeer.pubkeyHex))
                 )
             )

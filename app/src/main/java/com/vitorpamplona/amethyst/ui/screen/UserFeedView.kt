@@ -78,7 +78,7 @@ private fun FeedLoaded(
         ),
         state = listState
     ) {
-        itemsIndexed(state.feed.value, key = { _, item -> item.pubkeyHex() }) { _, item ->
+        itemsIndexed(state.feed.value, key = { _, item -> item.pubkeyHex }) { _, item ->
             UserCompose(item, accountViewModel = accountViewModel, navController = navController)
         }
     }

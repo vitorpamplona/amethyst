@@ -61,7 +61,7 @@ fun ZapNoteCompose(baseNote: Pair<Note, Note>, accountViewModel: AccountViewMode
         Column(
             modifier =
             Modifier.clickable(
-                onClick = { navController.navigate("User/${baseAuthor.pubkeyHex()}") }
+                onClick = { navController.navigate("User/${baseAuthor.pubkeyHex}") }
             ),
             verticalArrangement = Arrangement.Center
         ) {
@@ -85,7 +85,7 @@ fun ZapNoteCompose(baseNote: Pair<Note, Note>, accountViewModel: AccountViewMode
                     val user = baseAuthorState?.user ?: return
 
                     Text(
-                        user.info()?.about ?: "",
+                        user.info?.about ?: "",
                         color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -115,7 +115,7 @@ fun ZapNoteCompose(baseNote: Pair<Note, Note>, accountViewModel: AccountViewMode
                 Column(modifier = Modifier.padding(start = 10.dp)) {
                     if (account.isHidden(baseAuthor)) {
                         ShowUserButton {
-                            account.showUser(baseAuthor.pubkeyHex())
+                            account.showUser(baseAuthor.pubkeyHex)
                         }
                     } else if (userFollows.isFollowingCached(baseAuthor)) {
                         UnfollowButton { coroutineScope.launch(Dispatchers.IO) { account.unfollow(baseAuthor) } }

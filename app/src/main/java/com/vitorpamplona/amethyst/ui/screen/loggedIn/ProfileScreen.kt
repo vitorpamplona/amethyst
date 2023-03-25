@@ -228,7 +228,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                             },
                             {
                                 val userState by baseUser.live().bookmarks.observeAsState()
-                                val bookmarkList = userState?.user?.latestBookmarkList()
+                                val bookmarkList = userState?.user?.latestBookmarkList
                                 val userBookmarks =
                                     (bookmarkList?.taggedEvents()?.count() ?: 0) + (bookmarkList?.taggedAddresses()?.count() ?: 0)
 
@@ -236,16 +236,16 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                             },
                             {
                                 val userState by baseUser.live().reports.observeAsState()
-                                val userReports = userState?.user?.reports()?.values?.flatten()?.count()
+                                val userReports = userState?.user?.reports?.values?.flatten()?.count()
 
                                 Text(text = "$userReports ${stringResource(R.string.reports)}")
                             },
                             {
                                 val userState by baseUser.live().relays.observeAsState()
-                                val userRelaysBeingUsed = userState?.user?.relaysBeingUsed()?.size ?: "--"
+                                val userRelaysBeingUsed = userState?.user?.relaysBeingUsed?.size ?: "--"
 
                                 val userStateRelayInfo by baseUser.live().relayInfo.observeAsState()
-                                val userRelays = userStateRelayInfo?.user?.latestContactList()?.relays()?.size ?: "--"
+                                val userRelays = userStateRelayInfo?.user?.latestContactList?.relays()?.size ?: "--"
 
                                 Text(text = "$userRelaysBeingUsed / $userRelays ${stringResource(R.string.relays)}")
                             }
@@ -355,7 +355,7 @@ private fun ProfileHeader(
                         }
                     },
                     onLongClick = {
-                        ResizeImage(it.info()?.picture, 100.dp).proxyUrl()?.let { it1 ->
+                        ResizeImage(it.info?.picture, 100.dp).proxyUrl()?.let { it1 ->
                             clipboardManager.setText(
                                 AnnotatedString(it1)
                             )
@@ -381,7 +381,7 @@ private fun ProfileHeader(
 
                     if (account.isHidden(baseUser)) {
                         ShowUserButton {
-                            account.showUser(baseUser.pubkeyHex())
+                            account.showUser(baseUser.pubkeyHex)
                         }
                     } else if (accountUser.isFollowingCached(baseUser)) {
                         UnfollowButton { coroutineScope.launch(Dispatchers.IO) { account.unfollow(baseUser) } }
@@ -457,7 +457,7 @@ private fun DrawAdditionalInfo(baseUser: UserInterface, account: Account, accoun
         }
     }
 
-    userBadge.acceptedBadges()?.let { note ->
+    userBadge.acceptedBadges?.let { note ->
         (note.event as? BadgeProfilesEvent)?.let { event ->
             FlowRow(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 5.dp)) {
                 event.badgeAwardEvents().forEach { badgeAwardEvent ->
@@ -477,7 +477,7 @@ private fun DrawAdditionalInfo(baseUser: UserInterface, account: Account, accoun
 
     DisplayNip05ProfileStatus(user)
 
-    val website = user.info()?.website
+    val website = user.info?.website
     if (!website.isNullOrEmpty()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
@@ -498,7 +498,7 @@ private fun DrawAdditionalInfo(baseUser: UserInterface, account: Account, accoun
 
     var zapExpanded by remember { mutableStateOf(false) }
 
-    val lud16 = user.info()?.lud16?.trim() ?: user.info()?.lud06?.trim()
+    val lud16 = user.info?.lud16?.trim() ?: user.info?.lud06?.trim()
 
     if (!lud16.isNullOrEmpty()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -521,14 +521,14 @@ private fun DrawAdditionalInfo(baseUser: UserInterface, account: Account, accoun
 
         if (zapExpanded) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 5.dp)) {
-                InvoiceRequest(lud16, baseUser.pubkeyHex(), account) {
+                InvoiceRequest(lud16, baseUser.pubkeyHex, account) {
                     zapExpanded = false
                 }
             }
         }
     }
 
-    val identities = user.info()?.latestMetadata?.identityClaims()
+    val identities = user.info?.latestMetadata?.identityClaims()
     if (!identities.isNullOrEmpty()) {
         identities.forEach { identity: IdentityClaim ->
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -551,7 +551,7 @@ private fun DrawAdditionalInfo(baseUser: UserInterface, account: Account, accoun
         }
     }
 
-    user.info()?.about?.let {
+    user.info?.about?.let {
         Row(
             modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)
         ) {
@@ -635,7 +635,7 @@ private fun DrawBanner(baseUser: UserInterface) {
     val userState by baseUser.live().metadata.observeAsState()
     val user = userState?.user ?: return
 
-    val banner = user.info()?.banner
+    val banner = user.info?.banner
     val clipboardManager = LocalClipboardManager.current
     var zoomImageDialogOpen by remember { mutableStateOf(false) }
 
@@ -882,7 +882,7 @@ private fun MessageButton(user: UserInterface, navController: NavController) {
         modifier = Modifier
             .padding(horizontal = 3.dp)
             .width(50.dp),
-        onClick = { navController.navigate("Room/${user.pubkeyHex()}") },
+        onClick = { navController.navigate("Room/${user.pubkeyHex}") },
         shape = RoundedCornerShape(20.dp),
         colors = ButtonDefaults
             .buttonColors(

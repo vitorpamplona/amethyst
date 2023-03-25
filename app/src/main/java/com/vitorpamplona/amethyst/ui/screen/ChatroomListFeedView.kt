@@ -113,7 +113,7 @@ private fun FeedLoaded(
                                 userToComposeOn = replyAuthorBase
                             }
                         }
-                        "Room/${userToComposeOn.pubkeyHex()}"
+                        "Room/${userToComposeOn.pubkeyHex}"
                     }
 
                     notificationCache.cache.markAsRead(route, it.createdAt())

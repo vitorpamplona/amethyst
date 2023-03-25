@@ -4,60 +4,26 @@ import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.Relay
-import com.vitorpamplona.amethyst.ui.note.toShortenHex
-import fr.acinq.secp256k1.Hex
 import kotlinx.coroutines.*
 import nostr.postr.Bech32
-import nostr.postr.toNpub
 import java.math.BigDecimal
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.regex.Pattern
 
 val lnurlpPattern = Pattern.compile("(?i:http|https):\\/\\/((.+)\\/)*\\.well-known\\/lnurlp\\/(.*)")
 
-class User(val pubkeyHex: String) : UserInterface {
-    var info: UserMetadata? = null
-
-    var latestContactList: ContactListEvent? = null
-    var latestBookmarkList: BookmarkListEvent? = null
-
-    var notes = setOf<Note>()
-        private set
-
-    var reports = mapOf<UserInterface, Set<Note>>()
-        private set
-
-    var latestReportTime: Long = 0
-
-    var zaps = mapOf<Note, Note?>()
-        private set
-
-    var relaysBeingUsed = mapOf<String, RelayInfo>()
-        private set
-
-    var privateChatrooms = mapOf<UserInterface, Chatroom>()
-        private set
-
-    var acceptedBadges: AddressableNote? = null
-
-    var liveSet: UserLiveSet? = null
-
-    override fun info(): UserMetadata? = info
-    override fun latestContactList(): ContactListEvent? = latestContactList
-    override fun latestBookmarkList(): BookmarkListEvent? = latestBookmarkList
-    override fun zaps(): Map<Note, Note?> = zaps
-    override fun notes(): Set<Note> = notes
-    override fun reports(): Map<UserInterface, Set<Note>> = reports
-    override fun latestReportTime(): Long = latestReportTime
-    override fun relaysBeingUsed(): Map<String, RelayInfo> = relaysBeingUsed
-    override fun privateChatrooms(): Map<UserInterface, Chatroom> = privateChatrooms
-    override fun acceptedBadges(): AddressableNote? = acceptedBadges
-    override fun liveSet(): UserLiveSet? = liveSet
-    override fun pubkeyHex() = pubkeyHex
-
-    override fun pubkey() = Hex.decode(pubkeyHex)
-    override fun pubkeyNpub() = pubkey().toNpub()
-    override fun pubkeyDisplayHex() = pubkeyNpub().toShortenHex()
+class User(override val pubkeyHex: String) : UserInterface {
+    override var info: UserMetadata? = null
+    override var latestContactList: ContactListEvent? = null
+    override var latestBookmarkList: BookmarkListEvent? = null
+    override var notes = setOf<Note>()
+    override var reports = mapOf<UserInterface, Set<Note>>()
+    override var latestReportTime: Long = 0
+    override var zaps = mapOf<Note, Note?>()
+    override var relaysBeingUsed = mapOf<String, RelayInfo>()
+    override var privateChatrooms = mapOf<UserInterface, Chatroom>()
+    override var acceptedBadges: AddressableNote? = null
+    override var liveSet: UserLiveSet? = null
 
     override fun toString(): String = pubkeyHex
 
@@ -181,11 +147,11 @@ class User(val pubkeyHex: String) : UserInterface {
     }
 
     override fun reportAuthorsBy(users: Set<HexKey>): List<UserInterface> {
-        return reports.keys.filter { it.pubkeyHex()in users }
+        return reports.keys.filter { it.pubkeyHex in users }
     }
 
     override fun countReportAuthorsBy(users: Set<HexKey>): Int {
-        return reports.keys.count { it.pubkeyHex() in users }
+        return reports.keys.count { it.pubkeyHex in users }
     }
 
     override fun reportsBy(users: Set<HexKey>): List<Note> {
@@ -261,7 +227,7 @@ class User(val pubkeyHex: String) : UserInterface {
 
     override fun isFollowing(user: UserInterface): Boolean {
         return latestContactList?.unverifiedFollowKeySet()?.toSet()?.let {
-            return user.pubkeyHex()in it
+            return user.pubkeyHex in it
         } ?: false
     }
 
@@ -279,7 +245,7 @@ class User(val pubkeyHex: String) : UserInterface {
 
     override fun isFollowingCached(user: UserInterface): Boolean {
         return latestContactList?.verifiedFollowKeySet?.let {
-            return user.pubkeyHex()in it
+            return user.pubkeyHex in it
         } ?: false
     }
 

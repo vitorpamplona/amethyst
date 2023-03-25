@@ -11,32 +11,21 @@ import nostr.postr.toNpub
 import java.math.BigDecimal
 
 interface UserInterface {
+    val pubkeyHex: String
 
-    fun info(): UserMetadata?
+    var info: UserMetadata?
+    var latestContactList: ContactListEvent?
+    var latestBookmarkList: BookmarkListEvent?
+    var zaps: Map<Note, Note?>
+    var relaysBeingUsed: Map<String, RelayInfo>
+    var notes: Set<Note>
+    var reports: Map<UserInterface, Set<Note>>
+    var latestReportTime: Long
+    var privateChatrooms: Map<UserInterface, Chatroom>
+    var acceptedBadges: AddressableNote?
+    var liveSet: UserLiveSet?
 
-    fun latestContactList(): ContactListEvent?
-
-    fun latestBookmarkList(): BookmarkListEvent?
-
-    fun zaps(): Map<Note, Note?>
-
-    fun relaysBeingUsed(): Map<String, RelayInfo>
-
-    fun notes(): Set<Note>
-
-    fun reports(): Map<UserInterface, Set<Note>>
-
-    fun latestReportTime(): Long
-
-    fun privateChatrooms(): Map<UserInterface, Chatroom>
-
-    fun acceptedBadges(): AddressableNote?
-
-    fun liveSet(): UserLiveSet?
-
-    fun pubkeyHex(): String
-
-    fun pubkey() = Hex.decode(pubkeyHex())
+    fun pubkey() = Hex.decode(pubkeyHex)
 
     fun pubkeyNpub() = pubkey().toNpub()
 

@@ -50,8 +50,8 @@ class AccountViewModel(private val account: Account) : ViewModel() {
     }
 
     suspend fun zap(note: Note, amount: Long, message: String, context: Context, onError: (String) -> Unit, onProgress: (percent: Float) -> Unit) {
-        val lud16 = note.author?.info()?.lud16?.trim()
-            ?: note.author?.info()?.lud06?.trim()
+        val lud16 = note.author?.info?.lud16?.trim()
+            ?: note.author?.info?.lud06?.trim()
 
         if (lud16.isNullOrBlank()) {
             onError(context.getString(R.string.user_does_not_have_a_lightning_address_setup_to_receive_sats))
@@ -140,11 +140,11 @@ class AccountViewModel(private val account: Account) : ViewModel() {
     }
 
     fun hide(user: UserInterface) {
-        account.hideUser(user.pubkeyHex())
+        account.hideUser(user.pubkeyHex)
     }
 
     fun show(user: UserInterface) {
-        account.showUser(user.pubkeyHex())
+        account.showUser(user.pubkeyHex)
     }
 
     fun translateTo(lang: Locale) {

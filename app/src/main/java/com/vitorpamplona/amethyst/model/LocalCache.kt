@@ -139,7 +139,7 @@ object LocalCache {
     fun consume(event: MetadataEvent) {
         // new event
         val oldUser = getOrCreateUser(event.pubKey)
-        if (oldUser.info() == null || event.createdAt > oldUser.info()!!.updatedMetadataAt) {
+        if (oldUser.info == null || event.createdAt > oldUser.info!!.updatedMetadataAt) {
             val newUser = try {
                 metadataParser.readValue(
                     ByteArrayInputStream(event.content.toByteArray(Charsets.UTF_8)),
@@ -160,7 +160,7 @@ object LocalCache {
 
     fun consume(event: BookmarkListEvent) {
         val user = getOrCreateUser(event.pubKey)
-        if (user.latestBookmarkList() == null || event.createdAt > user.latestBookmarkList()!!.createdAt) {
+        if (user.latestBookmarkList == null || event.createdAt > user.latestBookmarkList!!.createdAt) {
             if (event.dTag() == "bookmark") {
                 user.updateBookmark(event)
             }
@@ -304,7 +304,7 @@ object LocalCache {
         val user = getOrCreateUser(event.pubKey)
         val follows = event.unverifiedFollowKeySet()
 
-        if (event.createdAt > (user.latestContactList()?.createdAt ?: 0) && !follows.isNullOrEmpty()) {
+        if (event.createdAt > (user.latestContactList?.createdAt ?: 0) && !follows.isNullOrEmpty()) {
             // Saves relay list only if it's a user that is currently been seen
             user.updateContactList(event)
 
@@ -346,7 +346,7 @@ object LocalCache {
 
         event.deleteEvents().mapNotNull { notes[it] }.forEach { deleteNote ->
             // must be the same author
-            if (deleteNote.author?.pubkeyHex() == event.pubKey) {
+            if (deleteNote.author?.pubkeyHex == event.pubKey) {
                 deleteNote.author?.removeNote(deleteNote)
 
                 // reverts the add

@@ -253,7 +253,7 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
                 }
             }
 
-            itemsIndexed(searchResults.value, key = { _, item -> "u" + item.pubkeyHex() }) { _, item ->
+            itemsIndexed(searchResults.value, key = { _, item -> "u" + item.pubkeyHex }) { _, item ->
                 UserCompose(item, accountViewModel = accountViewModel, navController = navController)
             }
 
@@ -366,7 +366,7 @@ fun UserLine(
                 val user = userState?.user ?: return
 
                 Text(
-                    user.info()?.about?.take(100) ?: "",
+                    user.info?.about?.take(100) ?: "",
                     color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis

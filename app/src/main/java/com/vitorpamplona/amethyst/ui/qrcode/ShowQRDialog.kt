@@ -81,7 +81,7 @@ fun ShowQRDialog(user: UserInterface, onScan: (String) -> Unit, onClose: () -> U
                         Column(modifier = Modifier.fillMaxWidth()) {
                             Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
                                 RobohashAsyncImageProxy(
-                                    robot = user.pubkeyHex(),
+                                    robot = user.pubkeyHex,
                                     model = ResizeImage(user.profilePicture(), 100.dp),
                                     contentDescription = stringResource(R.string.profile_image),
                                     modifier = Modifier

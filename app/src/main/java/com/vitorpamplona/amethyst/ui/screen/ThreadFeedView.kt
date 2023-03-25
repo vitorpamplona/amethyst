@@ -238,7 +238,7 @@ fun NoteMaster(
                     .padding(start = 12.dp, end = 12.dp)
                     .clickable(onClick = {
                         note.author?.let {
-                            navController.navigate("User/${it.pubkeyHex()}")
+                            navController.navigate("User/${it.pubkeyHex}")
                         }
                     })
             ) {

@@ -32,7 +32,7 @@ class NewRelayListViewModel : ViewModel() {
 
     fun clear() {
         _relays.update {
-            var relayFile = account.userProfile().latestContactList()?.relays()
+            var relayFile = account.userProfile().latestContactList?.relays()
 
             // Ugly, but forces nostr.band as the only search-supporting relay today.
             // TODO: Remove when search becomes more available.

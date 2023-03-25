@@ -198,7 +198,7 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
                     modifier = Modifier
                 ) {
                     RobohashAsyncImageProxy(
-                        robot = accountUser.pubkeyHex(),
+                        robot = accountUser.pubkeyHex,
                         model = ResizeImage(accountUser.profilePicture(), 34.dp),
                         contentDescription = stringResource(id = R.string.profile_image),
                         modifier = Modifier

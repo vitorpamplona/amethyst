@@ -200,7 +200,7 @@ fun ChatroomMessageCompose(
                                     modifier = Modifier.padding(top = 5.dp)
                                 ) {
                                     RobohashAsyncImageProxy(
-                                        robot = author.pubkeyHex(),
+                                        robot = author.pubkeyHex,
                                         model = ResizeImage(author.profilePicture(), 25.dp),
                                         contentDescription = stringResource(id = R.string.profile_image),
                                         modifier = Modifier
@@ -209,7 +209,7 @@ fun ChatroomMessageCompose(
                                             .clip(shape = CircleShape)
                                             .clickable(onClick = {
                                                 author.let {
-                                                    navController.navigate("User/${it.pubkeyHex()}")
+                                                    navController.navigate("User/${it.pubkeyHex}")
                                                 }
                                             })
                                     )
@@ -219,7 +219,7 @@ fun ChatroomMessageCompose(
                                         fontWeight = FontWeight.Bold,
                                         modifier = Modifier.clickable(onClick = {
                                             author.let {
-                                                navController.navigate("User/${it.pubkeyHex()}")
+                                                navController.navigate("User/${it.pubkeyHex}")
                                             }
                                         })
                                     )

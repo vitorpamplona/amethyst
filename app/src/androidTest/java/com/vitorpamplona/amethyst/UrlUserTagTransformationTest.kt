@@ -28,7 +28,7 @@ class UrlUserTagTransformationTest {
     fun transformationText() {
         val user = LocalCache.getOrCreateUser(decodePublicKey("npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z").toHexKey())
         (user as User).info = UserMetadata()
-        user.info()?.displayName = "Vitor Pamplona"
+        user.info?.displayName = "Vitor Pamplona"
 
         val transformedText = buildAnnotatedStringWithUrlHighlighting(
             AnnotatedString("New Hey @npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z"),
@@ -62,7 +62,7 @@ class UrlUserTagTransformationTest {
     fun transformationTextTwoKeys() {
         val user = LocalCache.getOrCreateUser(decodePublicKey("npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z").toHexKey())
         (user as User).info = UserMetadata()
-        user.info()?.displayName = "Vitor Pamplona"
+        user.info?.displayName = "Vitor Pamplona"
 
         val transformedText = buildAnnotatedStringWithUrlHighlighting(
             AnnotatedString("New Hey @npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z and @npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z"),

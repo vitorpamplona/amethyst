@@ -12,7 +12,7 @@ object UserProfileReportsFeedFilter : FeedFilter<Note>() {
     }
 
     override fun feed(): List<Note> {
-        return user?.reports()
+        return user?.reports
             ?.values
             ?.flatten()
             ?.sortedBy { it.createdAt() }

@@ -10,7 +10,7 @@ object ChatroomListKnownFeedFilter : FeedFilter<Note>() {
     override fun feed(): List<Note> {
         val me = account.userProfile()
 
-        val privateChatrooms = account.userProfile().privateChatrooms()
+        val privateChatrooms = account.userProfile().privateChatrooms
         val messagingWith = privateChatrooms.keys.filter {
             me.hasSentMessagesTo(it) && account.isAcceptable(it)
         }

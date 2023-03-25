@@ -50,10 +50,10 @@ class RelayFeedViewModel : ViewModel() {
 
     fun refresh() {
         viewModelScope.launch(Dispatchers.Default) {
-            val beingUsed = currentUser?.relaysBeingUsed()?.values ?: emptyList()
-            val beingUsedSet = currentUser?.relaysBeingUsed()?.keys ?: emptySet()
+            val beingUsed = currentUser?.relaysBeingUsed?.values ?: emptyList()
+            val beingUsedSet = currentUser?.relaysBeingUsed?.keys ?: emptySet()
 
-            val newRelaysFromRecord = currentUser?.latestContactList()?.relays()?.entries?.mapNotNull {
+            val newRelaysFromRecord = currentUser?.latestContactList?.relays()?.entries?.mapNotNull {
                 if (it.key !in beingUsedSet) {
                     RelayInfo(it.key, 0, 0)
                 } else {

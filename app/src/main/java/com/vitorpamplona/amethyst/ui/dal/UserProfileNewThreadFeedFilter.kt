@@ -14,7 +14,7 @@ object UserProfileNewThreadFeedFilter : FeedFilter<Note>() {
     override fun feed(): List<Note> {
         val longFormNotes = LocalCache.addressables.values.filter { it.author == user }
 
-        return user?.notes()
+        return user?.notes
             ?.plus(longFormNotes)
             ?.filter { account?.isAcceptable(it) == true && it.isNewThread() }
             ?.sortedBy { it.createdAt() }

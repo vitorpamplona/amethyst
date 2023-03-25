@@ -37,7 +37,7 @@ fun UserCompose(baseUser: UserInterface, accountViewModel: AccountViewModel, nav
     Column(
         modifier =
         Modifier.clickable(
-            onClick = { navController.navigate("User/${baseUser.pubkeyHex()}") }
+            onClick = { navController.navigate("User/${baseUser.pubkeyHex}") }
         )
     ) {
         Row(
@@ -60,7 +60,7 @@ fun UserCompose(baseUser: UserInterface, accountViewModel: AccountViewModel, nav
                 val user = baseUserState?.user ?: return
 
                 Text(
-                    user.info()?.about ?: "",
+                    user.info?.about ?: "",
                     color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -70,7 +70,7 @@ fun UserCompose(baseUser: UserInterface, accountViewModel: AccountViewModel, nav
             Column(modifier = Modifier.padding(start = 10.dp)) {
                 if (account.isHidden(baseUser)) {
                     ShowUserButton {
-                        account.showUser(baseUser.pubkeyHex())
+                        account.showUser(baseUser.pubkeyHex)
                     }
                 } else if (userFollows.isFollowingCached(baseUser)) {
                     UnfollowButton { coroutineScope.launch(Dispatchers.IO) { account.unfollow(baseUser) } }

@@ -20,7 +20,7 @@ object ChatroomFeedFilter : FeedFilter<Note>() {
 
         val messages = myAccount
             .userProfile()
-            .privateChatrooms()[myUser] ?: return emptyList()
+            .privateChatrooms[myUser] ?: return emptyList()
 
         return messages.roomMessages
             .filter { myAccount.isAcceptable(it) }

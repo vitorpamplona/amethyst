@@ -21,7 +21,7 @@ import com.vitorpamplona.amethyst.model.*
 @Composable
 fun ReplyInformation(replyTo: List<Note>?, mentions: List<UserInterface>?, account: Account, navController: NavController) {
     ReplyInformation(replyTo, mentions, account) {
-        navController.navigate("User/${it.pubkeyHex()}")
+        navController.navigate("User/${it.pubkeyHex}")
     }
 }
 
@@ -107,7 +107,7 @@ fun ReplyInformationChannel(replyTo: List<Note>?, mentions: List<UserInterface>?
         mentions,
         channel,
         onUserTagClick = {
-            navController.navigate("User/${it.pubkeyHex()}")
+            navController.navigate("User/${it.pubkeyHex}")
         },
         onChannelTagClick = {
             navController.navigate("Channel/${it.idHex}")

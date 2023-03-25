@@ -13,12 +13,12 @@ object NostrSingleUserDataSource : NostrDataSource("SingleUserFeed") {
     fun createUserFilter(): List<TypedFilter>? {
         if (usersToWatch.isEmpty()) return null
 
-        return usersToWatch.filter { it.info()?.latestMetadata == null }.map {
+        return usersToWatch.filter { it.info?.latestMetadata == null }.map {
             TypedFilter(
                 types = FeedType.values().toSet(),
                 filter = JsonFilter(
                     kinds = listOf(MetadataEvent.kind),
-                    authors = listOf(it.pubkeyHex()),
+                    authors = listOf(it.pubkeyHex),
                     limit = 1
                 )
             )
@@ -33,8 +33,8 @@ object NostrSingleUserDataSource : NostrDataSource("SingleUserFeed") {
                 types = FeedType.values().toSet(),
                 filter = JsonFilter(
                     kinds = listOf(ReportEvent.kind),
-                    tags = mapOf("p" to listOf(it.pubkeyHex())),
-                    since = it.latestReportTime()
+                    tags = mapOf("p" to listOf(it.pubkeyHex)),
+                    since = it.latestReportTime
                 )
             )
         }

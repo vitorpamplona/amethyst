@@ -24,7 +24,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
             types = FeedType.values().toSet(),
             filter = JsonFilter(
                 kinds = listOf(ContactListEvent.kind),
-                authors = listOf(account.userProfile().pubkeyHex()),
+                authors = listOf(account.userProfile().pubkeyHex),
                 limit = 1
             )
         )
@@ -35,7 +35,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
             types = FeedType.values().toSet(),
             filter = JsonFilter(
                 kinds = listOf(MetadataEvent.kind),
-                authors = listOf(account.userProfile().pubkeyHex()),
+                authors = listOf(account.userProfile().pubkeyHex),
                 limit = 1
             )
         )
@@ -46,7 +46,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
             types = FeedType.values().toSet(),
             filter = JsonFilter(
                 kinds = listOf(BadgeProfilesEvent.kind),
-                authors = listOf(account.userProfile().pubkeyHex()),
+                authors = listOf(account.userProfile().pubkeyHex),
                 limit = 1
             )
         )
@@ -57,7 +57,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
             types = FeedType.values().toSet(),
             filter = JsonFilter(
                 kinds = listOf(BookmarkListEvent.kind),
-                authors = listOf(account.userProfile().pubkeyHex()),
+                authors = listOf(account.userProfile().pubkeyHex),
                 limit = 1
             )
         )
@@ -68,7 +68,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
             types = FeedType.values().toSet(),
             filter = JsonFilter(
                 kinds = listOf(ReportEvent.kind),
-                authors = listOf(account.userProfile().pubkeyHex())
+                authors = listOf(account.userProfile().pubkeyHex)
             )
         )
     }
@@ -85,7 +85,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                 ChannelMessageEvent.kind,
                 BadgeAwardEvent.kind
             ),
-            tags = mapOf("p" to listOf(account.userProfile().pubkeyHex())),
+            tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
             limit = 200
         )
     )

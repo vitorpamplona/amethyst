@@ -214,11 +214,11 @@ open class Note(val idHex: String) {
     }
 
     fun reportAuthorsBy(users: Set<HexKey>): List<UserInterface> {
-        return reports.keys.filter { it.pubkeyHex() in users }
+        return reports.keys.filter { it.pubkeyHex in users }
     }
 
     fun countReportAuthorsBy(users: Set<HexKey>): Int {
-        return reports.keys.count { it.pubkeyHex()in users }
+        return reports.keys.count { it.pubkeyHex in users }
     }
 
     fun reportsBy(users: Set<HexKey>): List<Note> {
@@ -268,7 +268,7 @@ open class Note(val idHex: String) {
         val dayAgo = Date().time / 1000 - 24 * 60 * 60
         return reports.isNotEmpty() ||
             (
-                author?.reports()
+                author?.reports
                     ?.values
                     ?.any {
                         it.firstOrNull { (it.createdAt() ?: 0) > dayAgo } != null

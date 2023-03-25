@@ -33,7 +33,7 @@ object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
             types = FeedType.values().toSet(),
             filter = JsonFilter(
                 kinds = listOf(MetadataEvent.kind),
-                authors = listOf(it.pubkeyHex()),
+                authors = listOf(it.pubkeyHex),
                 limit = 1
             )
         )
@@ -44,7 +44,7 @@ object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
             types = FeedType.values().toSet(),
             filter = JsonFilter(
                 kinds = listOf(TextNoteEvent.kind, RepostEvent.kind, LongTextNoteEvent.kind),
-                authors = listOf(it.pubkeyHex()),
+                authors = listOf(it.pubkeyHex),
                 limit = 200
             )
         )
@@ -55,7 +55,7 @@ object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
             types = FeedType.values().toSet(),
             filter = JsonFilter(
                 kinds = listOf(LnZapEvent.kind),
-                tags = mapOf("p" to listOf(it.pubkeyHex()))
+                tags = mapOf("p" to listOf(it.pubkeyHex))
             )
         )
     }
@@ -65,7 +65,7 @@ object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
             types = FeedType.values().toSet(),
             filter = JsonFilter(
                 kinds = listOf(ContactListEvent.kind),
-                authors = listOf(it.pubkeyHex()),
+                authors = listOf(it.pubkeyHex),
                 limit = 1
             )
         )
@@ -76,7 +76,7 @@ object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
             types = FeedType.values().toSet(),
             filter = JsonFilter(
                 kinds = listOf(ContactListEvent.kind),
-                tags = mapOf("p" to listOf(it.pubkeyHex()))
+                tags = mapOf("p" to listOf(it.pubkeyHex))
             )
         )
     }
@@ -86,7 +86,7 @@ object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
             types = FeedType.values().toSet(),
             filter = JsonFilter(
                 kinds = listOf(BadgeProfilesEvent.kind),
-                authors = listOf(it.pubkeyHex()),
+                authors = listOf(it.pubkeyHex),
                 limit = 1
             )
         )
@@ -97,7 +97,7 @@ object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
             types = FeedType.values().toSet(),
             filter = JsonFilter(
                 kinds = listOf(BookmarkListEvent.kind),
-                authors = listOf(it.pubkeyHex()),
+                authors = listOf(it.pubkeyHex),
                 limit = 1
             )
         )
@@ -108,7 +108,7 @@ object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
             types = FeedType.values().toSet(),
             filter = JsonFilter(
                 kinds = listOf(BadgeAwardEvent.kind),
-                tags = mapOf("p" to listOf(it.pubkeyHex())),
+                tags = mapOf("p" to listOf(it.pubkeyHex)),
                 limit = 20
             )
         )

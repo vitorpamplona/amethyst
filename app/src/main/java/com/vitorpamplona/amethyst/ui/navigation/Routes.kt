@@ -133,7 +133,7 @@ private fun messagesHasNewItems(account: Account, cache: NotificationCache): Boo
         it.createdAt() != null && it.channel() == null && it.author != account.userProfile()
     } ?: return false
 
-    val lastTime = cache.load("Room/${note.author?.pubkeyHex()}")
+    val lastTime = cache.load("Room/${note.author?.pubkeyHex}")
 
     return (note.createdAt() ?: 0) > lastTime
 }

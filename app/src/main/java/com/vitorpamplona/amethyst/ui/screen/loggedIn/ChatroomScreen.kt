@@ -209,7 +209,7 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
 fun ChatroomHeader(baseUser: UserInterface, accountUser: UserInterface, navController: NavController) {
     Column(
         modifier = Modifier.clickable(
-            onClick = { navController.navigate("User/${baseUser.pubkeyHex()}") }
+            onClick = { navController.navigate("User/${baseUser.pubkeyHex}") }
         )
     ) {
         Column(modifier = Modifier.padding(12.dp)) {

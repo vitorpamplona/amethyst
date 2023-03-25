@@ -166,7 +166,7 @@ fun NoteCompose(
                                 navController.navigate("Channel/${it.idHex}")
                             }
                         } else if (noteEvent is PrivateDmEvent) {
-                            navController.navigate("Room/${note.author?.pubkeyHex()}") {
+                            navController.navigate("Room/${note.author?.pubkeyHex}") {
                                 launchSingleTop = true
                             }
                         } else {
@@ -441,7 +441,7 @@ fun NoteCompose(
                             thickness = 0.25.dp
                         )
                     } else if (noteEvent is PrivateDmEvent &&
-                        noteEvent.recipientPubKey() != account.userProfile().pubkeyHex() &&
+                        noteEvent.recipientPubKey() != account.userProfile().pubkeyHex &&
                         note.author != account.userProfile()
                     ) {
                         val recepient = noteEvent.recipientPubKey()?.let { LocalCache.checkGetOrCreateUser(it) }
@@ -725,7 +725,7 @@ private fun LongFormHeader(noteEvent: LongTextNoteEvent, note: Note, loggedIn: U
                     modifier = Modifier.fillMaxWidth()
                 )
             } ?: Box() {
-                note.author?.info()?.banner?.let {
+                note.author?.info?.banner?.let {
                     AsyncImage(
                         model = it,
                         contentDescription = stringResource(
@@ -857,7 +857,7 @@ fun NoteAuthorPicture(
     pictureModifier: Modifier = Modifier
 ) {
     NoteAuthorPicture(note, userAccount, size, pictureModifier) {
-        navController.navigate("User/${it.pubkeyHex()}")
+        navController.navigate("User/${it.pubkeyHex}")
     }
 }
 
@@ -904,7 +904,7 @@ fun UserPicture(
     pictureModifier: Modifier = Modifier
 ) {
     UserPicture(user, userAccount, size, pictureModifier) {
-        navController.navigate("User/${it.pubkeyHex()}")
+        navController.navigate("User/${it.pubkeyHex}")
     }
 }
 
@@ -926,7 +926,7 @@ fun UserPicture(
     val showFollowingMark = accountUser.isFollowingCached(user) || user == accountUser
 
     UserPicture(
-        userHex = user.pubkeyHex(),
+        userHex = user.pubkeyHex,
         userPicture = user.profilePicture(),
         showFollowingMark = showFollowingMark,
         size = size,

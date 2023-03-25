@@ -110,7 +110,7 @@ fun ProfileContent(baseAccountUser: UserInterface, modifier: Modifier = Modifier
     val accountUserFollows = accountUserFollowsState?.user ?: return
 
     Box {
-        val banner = accountUser.info()?.banner
+        val banner = accountUser.info?.banner
         if (!banner.isNullOrBlank()) {
             AsyncImage(
                 model = banner,
@@ -133,7 +133,7 @@ fun ProfileContent(baseAccountUser: UserInterface, modifier: Modifier = Modifier
 
         Column(modifier = modifier) {
             RobohashAsyncImageProxy(
-                robot = accountUser.pubkeyHex(),
+                robot = accountUser.pubkeyHex,
                 model = ResizeImage(accountUser.profilePicture(), 100.dp),
                 contentDescription = stringResource(id = R.string.profile_image),
                 modifier = Modifier
@@ -144,7 +144,7 @@ fun ProfileContent(baseAccountUser: UserInterface, modifier: Modifier = Modifier
                     .background(MaterialTheme.colors.background)
                     .clickable(onClick = {
                         accountUser.let {
-                            navController.navigate("User/${it.pubkeyHex()}")
+                            navController.navigate("User/${it.pubkeyHex}")
                         }
                         coroutineScope.launch {
                             scaffoldState.drawerState.close()
@@ -158,7 +158,7 @@ fun ProfileContent(baseAccountUser: UserInterface, modifier: Modifier = Modifier
                         .padding(top = 7.dp)
                         .clickable(onClick = {
                             accountUser.let {
-                                navController.navigate("User/${it.pubkeyHex()}")
+                                navController.navigate("User/${it.pubkeyHex}")
                             }
                             coroutineScope.launch {
                                 scaffoldState.drawerState.close()
@@ -176,7 +176,7 @@ fun ProfileContent(baseAccountUser: UserInterface, modifier: Modifier = Modifier
                         .padding(top = 15.dp)
                         .clickable(onClick = {
                             accountUser.let {
-                                navController.navigate("User/${it.pubkeyHex()}")
+                                navController.navigate("User/${it.pubkeyHex}")
                             }
                             coroutineScope.launch {
                                 scaffoldState.drawerState.close()
@@ -189,7 +189,7 @@ fun ProfileContent(baseAccountUser: UserInterface, modifier: Modifier = Modifier
                     .padding(top = 15.dp)
                     .clickable(onClick = {
                         accountUser.let {
-                            navController.navigate("User/${it.pubkeyHex()}")
+                            navController.navigate("User/${it.pubkeyHex}")
                         }
                         coroutineScope.launch {
                             scaffoldState.drawerState.close()
@@ -230,7 +230,7 @@ fun ListContent(
                 tint = MaterialTheme.colors.primary,
                 navController = navController,
                 scaffoldState = scaffoldState,
-                route = "User/${accountUser.pubkeyHex()}"
+                route = "User/${accountUser.pubkeyHex}"
             )
 
             NavigationRow(

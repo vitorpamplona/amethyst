@@ -18,7 +18,7 @@ object NotificationFeedFilter : FeedFilter<Note>() {
                     it.event !is LnZapRequestEvent &&
                     it.event !is BadgeDefinitionEvent &&
                     it.event !is BadgeProfilesEvent &&
-                    it.event?.isTaggedUser(loggedInUser.pubkeyHex()) ?: false &&
+                    it.event?.isTaggedUser(loggedInUser.pubkeyHex) ?: false &&
                     (it.author == null || (!account.isHidden(it.author!!) && it.author != loggedInUser))
             }
             .filter { it ->
