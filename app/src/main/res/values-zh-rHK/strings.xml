@@ -93,7 +93,7 @@
     <string name="upload_image">上傳圖片</string>
     <string name="uploading">上傳中…</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">用户尚未設置閃電地址以接收聰</string>
-    <string name="reply_here">"🔏 這裏回覆… "</string>
+    <string name="reply_here">"🔏 在此回覆… "</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">複製筆記ID到剪貼板，供分享</string>
     <string name="copy_channel_id_note_to_the_clipboard">複製頻道ID（筆記）到剪貼板</string>
     <string name="edits_the_channel_metadata">編輯頻道元數據</string>
