@@ -1,8 +1,6 @@
 package com.vitorpamplona.amethyst.ui.note
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.*
@@ -33,14 +31,14 @@ class PollNoteViewModel : ViewModel() {
 
     val isVoteAmountAtomic = valueMaximum != null && valueMinimum != null && valueMinimum == valueMaximum
 
-    fun voteAmountPlaceHolderText(ctx: Context): String = if (valueMinimum == null && valueMaximum == null) {
-        ctx.getString(R.string.sats)
+    fun voteAmountPlaceHolderText(sats: String): String = if (valueMinimum == null && valueMaximum == null) {
+        sats
     } else if (valueMinimum == null) {
-        "1—$valueMaximum " + ctx.getString(R.string.sats)
+        "1—$valueMaximum $sats"
     } else if (valueMaximum == null) {
-        ">$valueMinimum " + ctx.getString(R.string.sats)
+        ">$valueMinimum $sats"
     } else {
-        "$valueMinimum—$valueMaximum " + ctx.getString(R.string.sats)
+        "$valueMinimum—$valueMaximum $sats"
     }
 
     fun amount(textAmount: String) = if (textAmount.isEmpty()) { null } else {

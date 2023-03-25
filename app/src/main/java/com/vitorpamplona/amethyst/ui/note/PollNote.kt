@@ -237,7 +237,7 @@ fun ZapVoteAmountChoicePopup(
                     },
                     placeholder = {
                         Text(
-                            text = pollViewModel.voteAmountPlaceHolderText(context),
+                            text = pollViewModel.voteAmountPlaceHolderText(context.getString(R.string.sats)),
                             color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                         )
                     }
