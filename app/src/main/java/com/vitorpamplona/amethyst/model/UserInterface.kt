@@ -5,9 +5,6 @@ import com.vitorpamplona.amethyst.service.model.ContactListEvent
 import com.vitorpamplona.amethyst.service.model.MetadataEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.relays.Relay
-import com.vitorpamplona.amethyst.ui.note.toShortenHex
-import fr.acinq.secp256k1.Hex
-import nostr.postr.toNpub
 import java.math.BigDecimal
 
 interface UserInterface {
@@ -25,11 +22,11 @@ interface UserInterface {
     var acceptedBadges: AddressableNote?
     var liveSet: UserLiveSet?
 
-    fun pubkey() = Hex.decode(pubkeyHex)
+    fun pubkey(): ByteArray
 
-    fun pubkeyNpub() = pubkey().toNpub()
+    fun pubkeyNpub(): String
 
-    fun pubkeyDisplayHex() = pubkeyNpub().toShortenHex()
+    fun pubkeyDisplayHex(): String
 
     fun toBestDisplayName(): String
 

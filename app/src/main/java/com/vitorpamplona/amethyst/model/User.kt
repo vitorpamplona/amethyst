@@ -4,8 +4,11 @@ import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.Relay
+import com.vitorpamplona.amethyst.ui.note.toShortenHex
+import fr.acinq.secp256k1.Hex
 import kotlinx.coroutines.*
 import nostr.postr.Bech32
+import nostr.postr.toNpub
 import java.math.BigDecimal
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.regex.Pattern
@@ -26,6 +29,12 @@ class User(override val pubkeyHex: String) : UserInterface {
     override var liveSet: UserLiveSet? = null
 
     override fun toString(): String = pubkeyHex
+
+    override fun pubkey(): ByteArray = Hex.decode(pubkeyHex)
+
+    override fun pubkeyNpub(): String = pubkey().toNpub()
+
+    override fun pubkeyDisplayHex(): String = pubkeyNpub().toShortenHex()
 
     override fun toBestDisplayName(): String {
         return bestDisplayName() ?: bestUsername() ?: pubkeyDisplayHex()
