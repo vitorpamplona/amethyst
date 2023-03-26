@@ -5,6 +5,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.LnZapEventInterface
 import com.vitorpamplona.amethyst.service.model.zaps.UserZaps
+import com.vitorpamplona.amethyst.service.model.zaps.ZapAmount
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.Assert
@@ -39,7 +40,7 @@ class UserZapsTest {
         Assert.assertEquals(zapAuthor, actual.first().first)
         Assert.assertEquals(
             BigDecimal(200),
-            (actual.first().second.event as LnZapEventInterface).amount()
+            (actual.first().second.event as LnZapEventInterface).amount().total()
         )
     }
 
@@ -60,33 +61,34 @@ class UserZapsTest {
         Assert.assertEquals(zapAuthorNote2, actual[0].first)
         Assert.assertEquals(
             BigDecimal(200),
-            (actual[0].second.event as LnZapEventInterface).amount()
+            (actual[0].second.event as LnZapEventInterface).amount().total()
         )
 
         Assert.assertEquals(zapAuthorNote1, actual[1].first)
         Assert.assertEquals(
             BigDecimal(100),
-            (actual[1].second.event as LnZapEventInterface).amount()
+            (actual[1].second.event as LnZapEventInterface).amount().total()
         )
     }
 
     @Test
-    fun multiple_zap_requests_by_same_users() {
-        val zapAuthorNote = mockNoteAuthor("user-1")
+    fun group_multiple_zap_requests_by_same_users() {
+        val zapAuthorNote1 = mockNoteAuthor("user-1")
+        val zapAuthorNote2 = mockNoteAuthor("user-1")
 
         val zaps: Map<Note, Note?> = mapOf(
-            zapAuthorNote to mockNoteZap(amount = 100),
-            zapAuthorNote to mockNoteZap(amount = 200)
+            zapAuthorNote1 to mockNoteZap(amount = 100),
+            zapAuthorNote2 to mockNoteZap(amount = 200)
         )
 
         val actual = UserZaps.forProfileFeed(zaps)
 
         Assert.assertEquals(1, actual.count())
 
-        Assert.assertEquals(zapAuthorNote, actual[0].first)
+        Assert.assertEquals(zapAuthorNote1, actual[0].first)
         Assert.assertEquals(
             BigDecimal(300),
-            (actual[0].second.event as LnZapEventInterface).amount()
+            (actual[0].second.event as LnZapEventInterface).amount().total()
         )
     }
 
@@ -101,8 +103,10 @@ class UserZapsTest {
     }
 
     private fun mockNoteZap(amount: Int): Note {
+        val zapAmount = ZapAmount(amount.toBigDecimal())
+
         val lnZapEvent = mockk<LnZapEventInterface>()
-        every { lnZapEvent.amount() } returns amount.toBigDecimal()
+        every { lnZapEvent.amount() } returns zapAmount
 
         val zapNote = mockk<Note>()
         every { zapNote.event } returns lnZapEvent

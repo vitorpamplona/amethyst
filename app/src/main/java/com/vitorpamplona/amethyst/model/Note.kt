@@ -224,9 +224,8 @@ open class Note(val idHex: String) {
     fun zappedAmount(): BigDecimal {
         return zaps.mapNotNull { it.value?.event }
             .filterIsInstance<LnZapEvent>()
-            .mapNotNull {
-                it.amount
-            }.sumOf { it }
+            .mapNotNull { it.amount }
+            .sumOf { it }
     }
 
     fun hasPledgeBy(user: User): Boolean {

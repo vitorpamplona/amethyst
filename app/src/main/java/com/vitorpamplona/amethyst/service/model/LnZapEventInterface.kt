@@ -1,6 +1,6 @@
 package com.vitorpamplona.amethyst.service.model
 
-import java.math.BigDecimal
+import com.vitorpamplona.amethyst.service.model.zaps.ZapAmountInterface
 
 interface LnZapEventInterface : EventInterface {
 
@@ -10,7 +10,7 @@ interface LnZapEventInterface : EventInterface {
 
     fun taggedAddresses(): List<ATag>
 
-    fun amount(): BigDecimal?
+    fun amount(): ZapAmountInterface
 
     fun containedPost(): Event?
 }
