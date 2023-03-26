@@ -50,9 +50,9 @@ object UserZaps {
     private fun calculateTotalAmount(notes: Map<Note, Note?>): BigDecimal {
         var totalAmount = BigDecimal(0)
         for ((_, note) in notes) {
-            val t = (note?.event as LnZapEventInterface).amount().total()
-            if (t !== null) {
-                totalAmount = totalAmount.add(t)
+            val currentTotal = (note?.event as LnZapEventInterface).amount()?.total()
+            if (currentTotal !== null) {
+                totalAmount = totalAmount.add(currentTotal)
             }
         }
         return totalAmount

@@ -224,7 +224,7 @@ open class Note(val idHex: String) {
     fun zappedAmount(): BigDecimal {
         return zaps.mapNotNull { it.value?.event }
             .filterIsInstance<LnZapEvent>()
-            .mapNotNull { it.amount }
+            .mapNotNull { it.amount()?.total() }
             .sumOf { it }
     }
 

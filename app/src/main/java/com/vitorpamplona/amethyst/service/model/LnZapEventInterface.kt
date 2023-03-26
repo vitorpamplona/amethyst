@@ -10,7 +10,7 @@ interface LnZapEventInterface : EventInterface {
 
     fun taggedAddresses(): List<ATag>
 
-    fun amount(): ZapAmountInterface
+    fun amount(): ZapAmountInterface?
 
     fun containedPost(): Event?
 }

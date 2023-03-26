@@ -96,7 +96,7 @@ fun ZapNoteCompose(baseNote: Pair<Note, Note>, accountViewModel: AccountViewMode
 
                 LaunchedEffect(key1 = noteZap) {
                     withContext(Dispatchers.IO) {
-                        zapAmount = (noteZap.event as? LnZapEvent)?.amount
+                        zapAmount = (noteZap.event as? LnZapEvent)?.amount()?.total()
                     }
                 }
 

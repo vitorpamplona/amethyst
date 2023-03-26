@@ -40,7 +40,7 @@ class UserZapsTest {
         Assert.assertEquals(zapAuthor, actual.first().first)
         Assert.assertEquals(
             BigDecimal(200),
-            (actual.first().second.event as LnZapEventInterface).amount().total()
+            (actual.first().second.event as LnZapEventInterface).amount()?.total()
         )
     }
 
@@ -61,13 +61,13 @@ class UserZapsTest {
         Assert.assertEquals(zapAuthorNote2, actual[0].first)
         Assert.assertEquals(
             BigDecimal(200),
-            (actual[0].second.event as LnZapEventInterface).amount().total()
+            (actual[0].second.event as LnZapEventInterface).amount()?.total()
         )
 
         Assert.assertEquals(zapAuthorNote1, actual[1].first)
         Assert.assertEquals(
             BigDecimal(100),
-            (actual[1].second.event as LnZapEventInterface).amount().total()
+            (actual[1].second.event as LnZapEventInterface).amount()?.total()
         )
     }
 
@@ -88,7 +88,7 @@ class UserZapsTest {
         Assert.assertEquals(zapAuthorNote1, actual[0].first)
         Assert.assertEquals(
             BigDecimal(300),
-            (actual[0].second.event as LnZapEventInterface).amount().total()
+            (actual[0].second.event as LnZapEventInterface).amount()?.total()
         )
     }
 

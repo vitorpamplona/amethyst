@@ -24,14 +24,15 @@ class LnZapEvent(
         .filter { it.firstOrNull() == "p" }
         .mapNotNull { it.getOrNull(1) }
 
-    override fun amount(): ZapAmountInterface {
-        return ZapAmount(amount)
+    override fun amount(): ZapAmountInterface? {
+        return amount
     }
 
     // Keeps this as a field because it's a heavier function used everywhere.
     val amount by lazy {
         try {
-            lnInvoice()?.let { LnInvoiceUtil.getAmountInSats(it) }
+            val a = lnInvoice()?.let { LnInvoiceUtil.getAmountInSats(it) }
+            ZapAmount(a)
         } catch (e: Exception) {
             Log.e("LnZapEvent", "Failed to Parse LnInvoice ${description()}", e)
             null

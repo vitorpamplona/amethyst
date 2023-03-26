@@ -2,11 +2,7 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
-import com.vitorpamplona.amethyst.service.model.BookmarkListEvent
-import com.vitorpamplona.amethyst.service.model.ContactListEvent
-import com.vitorpamplona.amethyst.service.model.LnZapEvent
-import com.vitorpamplona.amethyst.service.model.MetadataEvent
-import com.vitorpamplona.amethyst.service.model.ReportEvent
+import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
@@ -159,10 +155,9 @@ class User(val pubkeyHex: String) {
 
     fun zappedAmount(): BigDecimal {
         return zaps.mapNotNull { it.value?.event }
-            .filterIsInstance<LnZapEvent>()
-            .mapNotNull {
-                it.amount
-            }.sumOf { it }
+            .filterIsInstance<LnZapEventInterface>()
+            .mapNotNull { it.amount()?.total() }
+            .sumOf { it }
     }
 
     fun reportsBy(user: User): Set<Note> {
