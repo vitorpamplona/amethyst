@@ -1,12 +1,7 @@
 package com.vitorpamplona.amethyst.ui.components
 
 import android.content.res.Resources
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.Divider
 import androidx.compose.material.DropdownMenu
@@ -103,7 +98,8 @@ fun TranslateableRichTextViewer(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 5.dp)
+                        .padding(top = 5.dp),
+                    horizontalArrangement = Arrangement.End
                 ) {
                     val clickableTextStyle =
                         SpanStyle(color = MaterialTheme.colors.primary.copy(alpha = 0.52f))

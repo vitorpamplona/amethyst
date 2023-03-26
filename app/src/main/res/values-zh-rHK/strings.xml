@@ -93,7 +93,7 @@
     <string name="upload_image">上傳圖片</string>
     <string name="uploading">上傳中…</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">用户尚未設置閃電地址以接收聰</string>
-    <string name="reply_here">"回覆這裏.. "</string>
+    <string name="reply_here">"🔏 在此回覆… "</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">複製筆記ID到剪貼板，供分享</string>
     <string name="copy_channel_id_note_to_the_clipboard">複製頻道ID（筆記）到剪貼板</string>
     <string name="edits_the_channel_metadata">編輯頻道元數據</string>
@@ -171,6 +171,7 @@
     <string name="mark_all_known_as_read">將所有已知內容標記為已讀</string>
     <string name="mark_all_new_as_read">將所有新內容標記為已讀</string>
     <string name="mark_all_as_read">將所有內容標記為已讀</string>
+    <string name="backup_keys">備份密匙</string>
     <string name="account_backup_tips_md" tools:ignore="Typos">
         ## 備份與安全提示
         \n\n您的帳户由一個私人密鑰保護。 密鑰是以**nsec1**開頭的長隨機字符串。任何擁有您的私人密鑰的人都可以使用您的身份發佈內容。
@@ -190,6 +191,15 @@
     <string name="copied_user_id_to_clipboard" tools:ignore="Typos">複製作者的 @npub 到剪貼板</string>
     <string name="copied_note_id_to_clipboard" tools:ignore="Typos">複製文章ID (@note1) 到剪貼板</string>
     <string name="select_text_dialog_top">選擇文本</string>
+    <string name="private_conversation_notification">"&lt;無法解密私人消息&gt;\n\n您被%1$s和%2$s之間的私人/加密會話引用。"</string>
+    <string name="account_switch_add_account_dialog_title">添加新賬户</string>
+    <string name="drawer_accounts">賬户</string>
+    <string name="account_switch_select_account">選擇賬户</string>
+    <string name="account_switch_add_account_btn">添加新賬户</string>
+    <string name="account_switch_active_account">活躍賬户</string>
+    <string name="account_switch_has_private_key">具有私鑰</string>
+    <string name="account_switch_pubkey_only">只讀，無私鑰</string>
+    <string name="back">返回</string>
     <string name="quick_action_select">選擇</string>
     <string name="quick_action_share_browser_link">分享瀏覽網址</string>
     <string name="quick_action_share">分享</string>
@@ -201,4 +211,41 @@
     <string name="quick_action_follow">關注</string>
     <string name="quick_action_request_deletion_alert_title">請求刪貼</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst 將請求您的記錄從當前連接的中繼器中刪除。不能保證您發佈的筆記將被永久從那些中繼器或其他存儲筆記的中繼器中刪除。</string>
+    <string name="quick_action_block_dialog_btn">阻止</string>
+    <string name="quick_action_delete_dialog_btn">刪除</string>
+    <string name="quick_action_block">隱藏</string>
+    <string name="quick_action_report">舉報</string>
+    <string name="quick_action_delete_button">刪除</string>
+    <string name="quick_action_dont_show_again_button">不再次顯示</string>
+    <string name="report_dialog_spam">垃圾信息或詐騙</string>
+    <string name="report_dialog_profanity">不文明用語或仇恨行為</string>
+    <string name="report_dialog_impersonation">惡意冒充</string>
+    <string name="report_dialog_nudity">暴露裸露或噁心內容</string>
+    <string name="report_dialog_illegal">違規行為</string>
+    <string name="report_dialog_blocking_a_user">阻止一位用户將會隱藏他/她的內容在您的應用中。您的記錄仍然是公開可見的，包括被您阻止的用户。阻止的用户將會列在安全過濾器屏幕上。</string>
+    <string name="report_dialog_block_hide_user_btn">
+		<![CDATA[阻止並隱藏用户]]>
+	</string>
+    <string name="report_dialog_report_btn">違規報告</string>
+    <string name="report_dialog_reminder_public">所有舉報都將被公開可見</string>
+    <string name="report_dialog_additional_reason_placeholder">可選擇提供關於您的舉報的額外背景...</string>
+    <string name="report_dialog_additional_reason_label">其他背景</string>
+    <string name="report_dialog_select_reason_label">理由</string>
+    <string name="report_dialog_select_reason_placeholder">選擇一個理由...</string>
+    <string name="report_dialog_post_report_btn">發佈舉報</string>
+    <string name="report_dialog_title">阻止與舉報</string>
+    <string name="block_only">僅阻止</string>
+    <string name="bookmarks">書籤</string>
+    <string name="private_bookmarks">私人書籤</string>
+    <string name="public_bookmarks">公開書籤</string>
+    <string name="add_to_private_bookmarks">添加到私人書籤</string>
+    <string name="add_to_public_bookmarks">添加到公開書籤</string>
+    <string name="remove_from_private_bookmarks">從私人書籤中移除</string>
+    <string name="remove_from_public_bookmarks">從公開書籤中移除</string>
+    <string name="wallet_connect_service">錢包綁定服務</string>
+    <string name="wallet_connect_service_explainer">使用您的私鑰在不離開應用程序的情況下支付 zaps。 任何具有訪問 Nostr 私鑰的人都可以使用您的錢包餘額。要保留您的資金避免損失，如果可能，請使用私人中繼器。中繼器操作員可以看到您的付款元數據。</string>
+    <string name="wallet_connect_service_pubkey">錢包綁定公鑰</string>
+    <string name="wallet_connect_service_relay">錢包綁定中繼</string>
+    <string name="pledge_amount_in_sats">聰數量</string>
+    <string name="looking_for_event">“正在查找事件%1$s”</string>
 </resources>
