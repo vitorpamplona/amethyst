@@ -98,8 +98,7 @@ fun TranslateableRichTextViewer(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 5.dp),
-                    horizontalArrangement = Arrangement.End
+                        .padding(top = 5.dp)
                 ) {
                     val clickableTextStyle =
                         SpanStyle(color = MaterialTheme.colors.primary.copy(alpha = 0.52f))
