@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.service.zaps
 
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.LnZapEventInterface
 import com.vitorpamplona.amethyst.service.model.zaps.UserZaps
 import io.mockk.every
@@ -25,11 +26,11 @@ class UserZapsTest {
 
     @Test
     fun avoid_duplicates_with_same_zap_request() {
-        val zapRequest = mockk<Note>()
+        val zapRequest = mockNoteAuthor("user-1")
 
         val zaps: Map<Note, Note?> = mapOf(
-            zapRequest to mockZapNoteWith("user-1", amount = 100),
-            zapRequest to mockZapNoteWith("user-1", amount = 200)
+            zapRequest to mockNoteZap(amount = 100),
+            zapRequest to mockNoteZap(amount = 200)
         )
 
         val actual = UserZaps.forProfileFeed(zaps)
@@ -42,10 +43,46 @@ class UserZapsTest {
         )
     }
 
-    private fun mockZapNoteWith(pubkey: HexKey, amount: Int): Note {
+    @Test
+    fun multiple_zap_requests_by_different_users() {
+        val zapRequest1 = mockNoteAuthor("user-1")
+        val zapRequest2 = mockNoteAuthor("user-2")
+
+        val zaps: Map<Note, Note?> = mapOf(
+            zapRequest1 to mockNoteZap(amount = 100),
+            zapRequest2 to mockNoteZap(amount = 200)
+        )
+
+        val actual = UserZaps.forProfileFeed(zaps)
+
+        Assert.assertEquals(2, actual.count())
+
+        Assert.assertEquals(zapRequest2, actual[0].first)
+        Assert.assertEquals(
+            BigDecimal(200),
+            (actual[0].second.event as LnZapEventInterface).amount()
+        )
+
+        Assert.assertEquals(zapRequest1, actual[1].first)
+        Assert.assertEquals(
+            BigDecimal(100),
+            (actual[1].second.event as LnZapEventInterface).amount()
+        )
+    }
+
+    private fun mockNoteAuthor(pubkeyHex: HexKey): Note {
+        val author = mockk<User>()
+        every { author.pubkeyHex } returns pubkeyHex
+
+        val zapNote = mockk<Note>()
+        every { zapNote.author } returns author
+
+        return zapNote
+    }
+
+    private fun mockNoteZap(amount: Int): Note {
         val lnZapEvent = mockk<LnZapEventInterface>()
         every { lnZapEvent.amount() } returns amount.toBigDecimal()
-        every { lnZapEvent.pubKey() } returns pubkey
 
         val zapNote = mockk<Note>()
         every { zapNote.event } returns lnZapEvent
