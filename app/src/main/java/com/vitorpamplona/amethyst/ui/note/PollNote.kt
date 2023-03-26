@@ -47,6 +47,8 @@ fun PollNote(
     pollViewModel.load(note)
 
     pollViewModel.pollEvent?.pollOptions()?.forEach { poll_op ->
+        val optionTally = pollViewModel.optionVoteTally(poll_op.key)
+
         Row(
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -55,7 +57,9 @@ fun PollNote(
                 canPreview,
                 modifier = Modifier
                     .width(250.dp)
-                    .border(BorderStroke(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.32f))),
+                    .padding(0.dp) // padding outside border
+                    .border(BorderStroke(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.32f)))
+                    .padding(4.dp), // padding between border and text
                 pollViewModel.pollEvent?.tags(),
                 backgroundColor,
                 accountViewModel,
@@ -72,7 +76,13 @@ fun PollNote(
             if (note.isZappedBy(accountViewModel.userProfile())) {
                 LinearProgressIndicator(
                     modifier = Modifier.width(250.dp),
-                    progress = pollViewModel.optionVoteTally(poll_op.key)
+                    color = if (
+                        pollViewModel.consensusThreshold != null &&
+                        optionTally >= pollViewModel.consensusThreshold!!
+                    ) {
+                        Color.Green
+                    } else { MaterialTheme.colors.primary },
+                    progress = optionTally
                 )
             }
         }
@@ -128,7 +138,7 @@ fun ZapVote(
                                 )
                                 .show()
                         }
-                    } else if (pollViewModel.isVoteAmountAtomic()) {
+                    } else if (pollViewModel.isVoteAmountAtomic) {
                         accountViewModel.zap(
                             baseNote,
                             pollViewModel.valueMaximum!!.toLong() * 1000,
@@ -231,14 +241,14 @@ fun ZapVoteAmountChoicePopup(
                 modifier = Modifier
                     .padding(10.dp)
             ) {
-                val amount = pollViewModel.inputAmountLong(inputAmountText)
+                val amount = pollViewModel.inputVoteAmountLong(inputAmountText)
 
                 OutlinedTextField(
                     value = inputAmountText,
                     onValueChange = { inputAmountText = it },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.width(150.dp),
-                    colors = if (pollViewModel.isValidInputAmount(amount)) colorValid else colorInValid,
+                    colors = if (pollViewModel.isValidInputVoteAmount(amount)) colorValid else colorInValid,
                     label = {
                         Text(
                             text = stringResource(R.string.poll_zap_amount),
@@ -255,7 +265,7 @@ fun ZapVoteAmountChoicePopup(
 
                 Button(
                     modifier = Modifier.padding(horizontal = 3.dp),
-                    enabled = pollViewModel.isValidInputAmount(amount),
+                    enabled = pollViewModel.isValidInputVoteAmount(amount),
                     onClick = {
                         if (amount != null) {
                             accountViewModel.zap(

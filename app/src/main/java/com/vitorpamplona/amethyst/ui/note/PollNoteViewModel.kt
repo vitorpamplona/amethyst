@@ -16,7 +16,7 @@ class PollNoteViewModel {
     var valueMaximum: Int? = null
     private var valueMinimum: Int? = null
     private var closedAt: Int? = null
-    private var consensusThreshold: Int? = null
+    var consensusThreshold: Float? = null
 
     fun load(note: Note?) {
         pollNote = note
@@ -24,7 +24,7 @@ class PollNoteViewModel {
         pollOptions = pollEvent?.pollOptions()
         valueMaximum = pollEvent?.getTagInt(VALUE_MAXIMUM)
         valueMinimum = pollEvent?.getTagInt(VALUE_MINIMUM)
-        consensusThreshold = pollEvent?.getTagInt(CONSENSUS_THRESHOLD)
+        consensusThreshold = pollEvent?.getTagInt(CONSENSUS_THRESHOLD)?.toFloat()?.div(100)
         closedAt = pollEvent?.getTagInt(CLOSED_AT)
     }
 
@@ -32,7 +32,7 @@ class PollNoteViewModel {
         pollNote?.createdAt()?.plus(it * (86400 + 120))!! > Date().time / 1000
     } == true
 
-    fun isVoteAmountAtomic(): Boolean = valueMaximum != null && valueMinimum != null && valueMinimum == valueMaximum
+    val isVoteAmountAtomic = valueMaximum != null && valueMinimum != null && valueMinimum == valueMaximum
 
     fun voteAmountPlaceHolderText(sats: String): String = if (valueMinimum == null && valueMaximum == null) {
         sats
@@ -44,13 +44,13 @@ class PollNoteViewModel {
         "$valueMinimum—$valueMaximum $sats"
     }
 
-    fun inputAmountLong(textAmount: String) = if (textAmount.isEmpty()) { null } else {
+    fun inputVoteAmountLong(textAmount: String) = if (textAmount.isEmpty()) { null } else {
         try {
             textAmount.toLong()
         } catch (e: Exception) { null }
     }
 
-    fun isValidInputAmount(amount: Long?): Boolean {
+    fun isValidInputVoteAmount(amount: Long?): Boolean {
         if (amount == null) {
             return false
         } else if (valueMinimum == null && valueMaximum == null) {
@@ -83,7 +83,7 @@ class PollNoteViewModel {
     private fun zappedVoteTotal(): Float {
         var total = 0f
         pollOptions?.keys?.forEach {
-            total += zappedPollOptionAmount(it).toFloat() ?: 0f
+            total += zappedPollOptionAmount(it).toFloat()
         }
         return total
     }
@@ -103,8 +103,8 @@ class PollNoteViewModel {
     }
 
     fun zappedPollOptionAmount(option: Int): BigDecimal {
-        if (pollNote != null) {
-            return pollNote!!.zaps.mapNotNull { it.value?.event }
+        return if (pollNote != null) {
+            pollNote!!.zaps.mapNotNull { it.value?.event }
                 .filterIsInstance<LnZapEvent>()
                 .mapNotNull {
                     val zappedOption = it.zappedPollOption()
@@ -112,6 +112,8 @@ class PollNoteViewModel {
                         it.amount
                     } else { null }
                 }.sumOf { it }
-        } else { return BigDecimal(0) }
+        } else {
+            BigDecimal(0)
+        }
     }
 }
