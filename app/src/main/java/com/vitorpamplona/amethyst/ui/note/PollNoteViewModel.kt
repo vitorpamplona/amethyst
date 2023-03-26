@@ -2,7 +2,9 @@ package com.vitorpamplona.amethyst.ui.note
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.*
+import java.math.BigDecimal
 import java.util.*
 
 class PollNoteViewModel {
@@ -72,7 +74,7 @@ class PollNoteViewModel {
     }
 
     fun optionVoteTally(op: Int): Float {
-        val tally = pollNote?.zappedPollOptionAmount(op)?.toFloat()?.div(zappedVoteTotal()) ?: 0f
+        val tally = zappedPollOptionAmount(op).toFloat().div(zappedVoteTotal())
         return if (tally.isNaN()) { // catch div by 0
             0f
         } else { tally }
@@ -81,8 +83,35 @@ class PollNoteViewModel {
     private fun zappedVoteTotal(): Float {
         var total = 0f
         pollOptions?.keys?.forEach {
-            total += pollNote?.zappedPollOptionAmount(it)?.toFloat() ?: 0f
+            total += zappedPollOptionAmount(it).toFloat() ?: 0f
         }
         return total
+    }
+
+    fun isPollOptionZappedBy(option: Int, user: User): Boolean {
+        if (pollNote?.zaps?.any { it.key.author == user } == true) {
+            pollNote!!.zaps.mapNotNull { it.value?.event }
+                .filterIsInstance<LnZapEvent>()
+                .map {
+                    val zappedOption = it.zappedPollOption()
+                    if (zappedOption == option) {
+                        return true
+                    }
+                }
+        }
+        return false
+    }
+
+    fun zappedPollOptionAmount(option: Int): BigDecimal {
+        if (pollNote != null) {
+            return pollNote!!.zaps.mapNotNull { it.value?.event }
+                .filterIsInstance<LnZapEvent>()
+                .mapNotNull {
+                    val zappedOption = it.zappedPollOption()
+                    if (zappedOption == option) {
+                        it.amount
+                    } else { null }
+                }.sumOf { it }
+        } else { return BigDecimal(0) }
     }
 }

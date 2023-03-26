@@ -203,20 +203,6 @@ open class Note(val idHex: String) {
         return zaps.any { it.key.author == user }
     }
 
-    fun isPollOptionZappedBy(option: Int, user: User): Boolean {
-        if (zaps.any { it.key.author == user }) {
-            zaps.mapNotNull { it.value?.event }
-                .filterIsInstance<LnZapEvent>()
-                .map {
-                    val zappedOption = it.zappedPollOption()
-                    if (zappedOption == option) {
-                        return true
-                    }
-                }
-        }
-        return false
-    }
-
     fun isReactedBy(user: User): Boolean {
         return reactions.any { it.author == user }
     }
@@ -248,17 +234,6 @@ open class Note(val idHex: String) {
             .filterIsInstance<LnZapEvent>()
             .mapNotNull {
                 it.amount
-            }.sumOf { it }
-    }
-
-    fun zappedPollOptionAmount(option: Int): BigDecimal {
-        return zaps.mapNotNull { it.value?.event }
-            .filterIsInstance<LnZapEvent>()
-            .mapNotNull {
-                val zappedOption = it.zappedPollOption()
-                if (zappedOption == option) {
-                    it.amount
-                } else { null }
             }.sumOf { it }
     }
 

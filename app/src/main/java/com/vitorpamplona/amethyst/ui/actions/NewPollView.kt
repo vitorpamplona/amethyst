@@ -114,7 +114,7 @@ fun NewPollView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                             }
 
                             Text(stringResource(R.string.poll_heading_required))
-                            NewPollRecipientsField(pollViewModel, account)
+                            // NewPollRecipientsField(pollViewModel, account)
                             NewPollPrimaryDescription(pollViewModel)
                             pollViewModel.pollOptions.values.forEachIndexed { index, element ->
                                 NewPollOption(pollViewModel, index)

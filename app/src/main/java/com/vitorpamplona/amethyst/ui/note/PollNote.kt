@@ -166,7 +166,7 @@ fun ZapVote(
             )
         }
 
-        if (zappedNote?.isPollOptionZappedBy(pollOption, account.userProfile()) == true) {
+        if (pollViewModel.isPollOptionZappedBy(pollOption, account.userProfile())) {
             Icon(
                 imageVector = Icons.Default.Bolt,
                 contentDescription = stringResource(R.string.zaps),
@@ -186,7 +186,7 @@ fun ZapVote(
     // only show tallies after a user has zapped note
     if (zappedNote?.isZappedBy(account.userProfile()) == true) {
         Text(
-            showAmount(zappedNote.zappedPollOptionAmount(pollOption)),
+            showAmount(pollViewModel.zappedPollOptionAmount(pollOption)),
             fontSize = 14.sp,
             color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
             modifier = modifier
