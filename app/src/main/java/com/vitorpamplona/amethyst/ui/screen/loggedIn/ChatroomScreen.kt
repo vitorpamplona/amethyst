@@ -77,7 +77,7 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
         val lifeCycleOwner = LocalLifecycleOwner.current
 
         LaunchedEffect(userId) {
-            feedViewModel.refresh()
+            feedViewModel.invalidateData()
             chatRoomScreenModel.imageUploadingError.collect { error ->
                 Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
             }
@@ -88,7 +88,7 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
                 if (event == Lifecycle.Event.ON_RESUME) {
                     println("Private Message Start")
                     NostrChatroomDataSource.start()
-                    feedViewModel.refresh()
+                    feedViewModel.invalidateData()
                 }
                 if (event == Lifecycle.Event.ON_PAUSE) {
                     println("Private Message Stop")
@@ -180,7 +180,7 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
                                 account.sendPrivateMessage(chatRoomScreenModel.message.text, userId, replyTo.value)
                                 chatRoomScreenModel.message = TextFieldValue("")
                                 replyTo.value = null
-                                feedViewModel.refresh() // Don't wait a full second before updating
+                                feedViewModel.invalidateData() // Don't wait a full second before updating
                             },
                             isActive = chatRoomScreenModel.message.text.isNotBlank() && !chatRoomScreenModel.isUploadingImage,
                             modifier = Modifier.padding(end = 10.dp)

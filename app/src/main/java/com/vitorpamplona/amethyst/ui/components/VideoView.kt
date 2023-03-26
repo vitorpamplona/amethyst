@@ -26,14 +26,30 @@ fun VideoView(videoUri: String, onDialog: ((Boolean) -> Unit)? = null) {
         ExoPlayer.Builder(context).build().apply {
             repeatMode = Player.REPEAT_MODE_ALL
             videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+            setMediaSource(
+                ProgressiveMediaSource.Factory(VideoCache.get(context.applicationContext)).createMediaSource(MediaItem.fromUri(videoUri))
+            )
+            prepare()
+        }
+    }
+
+    val playerView = remember {
+        StyledPlayerView(context).apply {
+            player = exoPlayer
+            layoutParams = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
+            onDialog?.let { innerOnDialog ->
+                setFullscreenButtonClickListener {
+                    innerOnDialog(it)
+                }
+            }
         }
     }
 
     DisposableEffect(exoPlayer) {
-        exoPlayer.setMediaSource(
-            ProgressiveMediaSource.Factory(VideoCache.get(context.applicationContext)).createMediaSource(MediaItem.fromUri(videoUri))
-        )
-        exoPlayer.prepare()
         onDispose {
             exoPlayer.release()
         }
@@ -42,19 +58,7 @@ fun VideoView(videoUri: String, onDialog: ((Boolean) -> Unit)? = null) {
     AndroidView(
         modifier = Modifier.fillMaxWidth(),
         factory = {
-            StyledPlayerView(context).apply {
-                player = exoPlayer
-                layoutParams = FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-                )
-                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
-                onDialog?.let { innerOnDialog ->
-                    setFullscreenButtonClickListener {
-                        innerOnDialog(it)
-                    }
-                }
-            }
+            playerView
         }
     )
 }

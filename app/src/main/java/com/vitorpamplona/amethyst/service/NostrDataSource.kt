@@ -27,16 +27,13 @@ import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.Subscription
+import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.util.Date
 import java.util.UUID
-import java.util.concurrent.atomic.AtomicBoolean
 
 abstract class NostrDataSource(val debugName: String) {
     private var subscriptions = mapOf<String, Subscription>()
@@ -154,24 +151,16 @@ abstract class NostrDataSource(val debugName: String) {
     }
 
     // Refreshes observers in batches.
-    var handlerWaiting = AtomicBoolean()
-
-    fun invalidateFilters() {
-        if (handlerWaiting.getAndSet(true)) return
-
+    private val bundler = BundledUpdate(250, Dispatchers.IO) {
         println("DataSource: ${this.javaClass.simpleName} InvalidateFilters")
 
-        val scope = CoroutineScope(Job() + Dispatchers.IO)
-        scope.launch {
-            try {
-                delay(200)
-                resetFiltersSuspend()
-            } finally {
-                withContext(NonCancellable) {
-                    handlerWaiting.set(false)
-                }
-            }
-        }
+        // adds the time to perform the refresh into this delay
+        // holding off new updates in case of heavy refresh routines.
+        resetFiltersSuspend()
+    }
+
+    fun invalidateFilters() {
+        bundler.invalidate()
     }
 
     fun resetFilters() {

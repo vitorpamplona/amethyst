@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.service.relays.Relay
+import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import fr.acinq.secp256k1.Hex
 import kotlinx.coroutines.*
 import nostr.postr.toNpub
@@ -35,7 +36,6 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicBoolean
 
 object LocalCache {
     val metadataParser = jacksonObjectMapper()
@@ -745,23 +745,14 @@ class LocalCacheLiveData(val cache: LocalCache) :
     LiveData<LocalCacheState>(LocalCacheState(cache)) {
 
     // Refreshes observers in batches.
-    var handlerWaiting = AtomicBoolean()
+    private val bundler = BundledUpdate(300, Dispatchers.Main) {
+        if (hasActiveObservers()) {
+            refresh()
+        }
+    }
 
     fun invalidateData() {
-        if (!hasActiveObservers()) return
-        if (handlerWaiting.getAndSet(true)) return
-
-        val scope = CoroutineScope(Job() + Dispatchers.Main)
-        scope.launch {
-            try {
-                delay(50)
-                refresh()
-            } finally {
-                withContext(NonCancellable) {
-                    handlerWaiting.set(false)
-                }
-            }
-        }
+        bundler.invalidate()
     }
 
     private fun refresh() {

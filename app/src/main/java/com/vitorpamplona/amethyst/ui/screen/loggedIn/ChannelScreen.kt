@@ -97,6 +97,8 @@ fun ChannelScreen(
         val channelState by NostrChannelDataSource.channel!!.live.observeAsState()
         val channel = channelState?.channel ?: return
 
+        ChannelFeedFilter.loadMessagesBetween(account, channelId)
+
         val feedViewModel: NostrChannelFeedViewModel = viewModel()
         val lifeCycleOwner = LocalLifecycleOwner.current
 
@@ -214,7 +216,7 @@ fun ChannelScreen(
                                 account.sendChannelMessage(channelScreenModel.message.text, channel.idHex, replyTo.value, null)
                                 channelScreenModel.message = TextFieldValue("")
                                 replyTo.value = null
-                                feedViewModel.refresh() // Don't wait a full second before updating
+                                feedViewModel.invalidateData() // Don't wait a full second before updating
                             },
                             isActive = channelScreenModel.message.text.isNotBlank() && !channelScreenModel.isUploadingImage,
                             modifier = Modifier.padding(end = 10.dp)

@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.LocalCacheState
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HiddenAccountsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowersFeedFilter
@@ -12,14 +13,10 @@ import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowsFeedFilter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.util.concurrent.atomic.AtomicBoolean
 
 class NostrUserProfileFollowsUserFeedViewModel : UserFeedViewModel(UserProfileFollowsFeedFilter)
 class NostrUserProfileFollowersUserFeedViewModel : UserFeedViewModel(UserProfileFollowersFeedFilter)
@@ -29,7 +26,7 @@ open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel() {
     private val _feedContent = MutableStateFlow<UserFeedState>(UserFeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
 
-    fun refresh() {
+    private fun refresh() {
         val scope = CoroutineScope(Job() + Dispatchers.Default)
         scope.launch {
             refreshSuspended()
@@ -65,23 +62,14 @@ open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel() {
         }
     }
 
-    var handlerWaiting = AtomicBoolean()
+    private val bundler = BundledUpdate(250, Dispatchers.IO) {
+        // adds the time to perform the refresh into this delay
+        // holding off new updates in case of heavy refresh routines.
+        refreshSuspended()
+    }
 
     fun invalidateData() {
-        if (handlerWaiting.getAndSet(true)) return
-
-        val scope = CoroutineScope(Job() + Dispatchers.Default)
-        scope.launch {
-            try {
-                delay(50)
-                refresh()
-            } finally {
-                withContext(NonCancellable) {
-                    handlerWaiting.set(false)
-                }
-            }
-            handlerWaiting.set(false)
-        }
+        bundler.invalidate()
     }
 
     private val cacheListener: (LocalCacheState) -> Unit = {

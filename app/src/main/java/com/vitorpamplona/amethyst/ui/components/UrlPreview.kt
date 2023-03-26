@@ -18,16 +18,16 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun UrlPreview(url: String, urlText: String) {
-//    val default = UrlCachedPreviewer.cache[url]?.let {
-//        if (it.url == url) {
-//            UrlPreviewState.Loaded(it)
-//        } else {
-//            UrlPreviewState.Empty
-//        }
-//    } ?: UrlPreviewState.Loading
+    val default = UrlCachedPreviewer.cache[url]?.let {
+        if (it.allFetchComplete() && it.url == url) {
+            UrlPreviewState.Loaded(it)
+        } else {
+            UrlPreviewState.Empty
+        }
+    } ?: UrlPreviewState.Loading
     val context = LocalContext.current
 
-    var urlPreviewState by remember { mutableStateOf<UrlPreviewState>(UrlPreviewState.Loading) }
+    var urlPreviewState by remember { mutableStateOf<UrlPreviewState>(default) }
 
     // Doesn't use a viewModel because of viewModel reusing issues (too many UrlPreview are created).
     LaunchedEffect(url) {

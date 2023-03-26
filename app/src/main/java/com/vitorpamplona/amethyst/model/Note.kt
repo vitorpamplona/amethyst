@@ -4,21 +4,15 @@ import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.Relay
+import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import fr.acinq.secp256k1.Hex
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Date
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.regex.Pattern
 
 val tagSearch = Pattern.compile("(?:\\s|\\A)\\#\\[([0-9]+)\\]")
@@ -378,23 +372,14 @@ class NoteLiveSet(u: Note) {
 
 class NoteLiveData(val note: Note) : LiveData<NoteState>(NoteState(note)) {
     // Refreshes observers in batches.
-    var handlerWaiting = AtomicBoolean()
+    private val bundler = BundledUpdate(300, Dispatchers.Main) {
+        if (hasActiveObservers()) {
+            refresh()
+        }
+    }
 
     fun invalidateData() {
-        if (!hasActiveObservers()) return
-        if (handlerWaiting.getAndSet(true)) return
-
-        val scope = CoroutineScope(Job() + Dispatchers.Main)
-        scope.launch {
-            try {
-                delay(100)
-                refresh()
-            } finally {
-                withContext(NonCancellable) {
-                    handlerWaiting.set(false)
-                }
-            }
-        }
+        bundler.invalidate()
     }
 
     private fun refresh() {

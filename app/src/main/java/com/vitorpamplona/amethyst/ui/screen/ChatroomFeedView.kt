@@ -29,7 +29,7 @@ fun ChatroomFeedView(viewModel: FeedViewModel, accountViewModel: AccountViewMode
 
     LaunchedEffect(isRefreshing) {
         if (isRefreshing) {
-            viewModel.refresh()
+            viewModel.invalidateData()
             isRefreshing = false
         }
     }

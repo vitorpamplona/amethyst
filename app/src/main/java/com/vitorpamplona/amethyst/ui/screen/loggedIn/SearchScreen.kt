@@ -46,6 +46,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
@@ -62,7 +63,7 @@ import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.FeedView
-import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrGlobalFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -79,17 +80,20 @@ import kotlinx.coroutines.channels.Channel as CoroutineChannel
 @Composable
 fun SearchScreen(
     accountViewModel: AccountViewModel,
-    feedViewModel: FeedViewModel,
     navController: NavController,
     scrollToTop: Boolean = false
 ) {
     val lifeCycleOwner = LocalLifecycleOwner.current
     val account = accountViewModel.accountLiveData.value?.account ?: return
 
+    GlobalFeedFilter.account = account
+
+    val feedViewModel: NostrGlobalFeedViewModel = viewModel()
+
     LaunchedEffect(accountViewModel) {
         GlobalFeedFilter.account = account
         NostrGlobalDataSource.resetFilters()
-        feedViewModel.refresh()
+        feedViewModel.invalidateData()
     }
 
     DisposableEffect(accountViewModel) {
@@ -98,7 +102,7 @@ fun SearchScreen(
                 println("Global Start")
                 NostrGlobalDataSource.start()
                 NostrSearchEventOrUserDataSource.start()
-                feedViewModel.refresh()
+                feedViewModel.invalidateData()
             }
             if (event == Lifecycle.Event.ON_PAUSE) {
                 println("Global Stop")

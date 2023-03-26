@@ -37,7 +37,7 @@ fun CardFeedView(viewModel: CardFeedViewModel, accountViewModel: AccountViewMode
     val feedState by viewModel.feedContent.collectAsState()
 
     var refreshing by remember { mutableStateOf(false) }
-    val refresh = { refreshing = true; viewModel.refresh(); refreshing = false }
+    val refresh = { refreshing = true; viewModel.invalidateData(); refreshing = false }
     val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = refresh)
 
     Box(Modifier.pullRefresh(pullRefreshState)) {

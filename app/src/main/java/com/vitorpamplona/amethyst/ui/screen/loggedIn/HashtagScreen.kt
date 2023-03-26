@@ -39,6 +39,7 @@ fun HashtagScreen(tag: String?, accountViewModel: AccountViewModel, navControlle
     val lifeCycleOwner = LocalLifecycleOwner.current
 
     if (tag != null) {
+        HashtagFeedFilter.loadHashtag(account, tag)
         val feedViewModel: NostrHashtagFeedViewModel = viewModel()
 
         LaunchedEffect(tag) {

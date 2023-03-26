@@ -4,14 +4,8 @@ import android.util.Log
 import android.util.LruCache
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.model.Event
-import kotlinx.coroutines.CoroutineScope
+import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.util.concurrent.atomic.AtomicBoolean
 
 data class Spammer(val pubkeyHex: HexKey, var duplicatedMessages: Set<HexKey>)
 
@@ -60,23 +54,14 @@ class AntiSpamFilter {
 class AntiSpamLiveData(val cache: AntiSpamFilter) : LiveData<AntiSpamState>(AntiSpamState(cache)) {
 
     // Refreshes observers in batches.
-    var handlerWaiting = AtomicBoolean()
+    private val bundler = BundledUpdate(300, Dispatchers.Main) {
+        if (hasActiveObservers()) {
+            refresh()
+        }
+    }
 
     fun invalidateData() {
-        if (!hasActiveObservers()) return
-        if (handlerWaiting.getAndSet(true)) return
-
-        val scope = CoroutineScope(Job() + Dispatchers.Main)
-        scope.launch {
-            try {
-                delay(100)
-                refresh()
-            } finally {
-                withContext(NonCancellable) {
-                    handlerWaiting.set(false)
-                }
-            }
-        }
+        bundler.invalidate()
     }
 
     private fun refresh() {

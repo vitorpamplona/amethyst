@@ -2,19 +2,11 @@ package com.vitorpamplona.amethyst.ui.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.rememberPagerState
-import com.vitorpamplona.amethyst.ui.dal.GlobalFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.HomeConversationsFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.HomeNewThreadFeedFilter
-import com.vitorpamplona.amethyst.ui.screen.NostrGlobalFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.BookmarkListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelScreen
@@ -36,16 +28,6 @@ fun AppNavigation(
     accountViewModel: AccountViewModel,
     nextPage: String? = null
 ) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
-
-    GlobalFeedFilter.account = account
-    HomeNewThreadFeedFilter.account = account
-    HomeConversationsFeedFilter.account = account
-
-    val globalFeedViewModel: NostrGlobalFeedViewModel = viewModel()
-    val homeFeedViewModel: NostrHomeFeedViewModel = viewModel()
-    val homeRepliesFeedViewModel: NostrHomeRepliesFeedViewModel = viewModel()
     val homePagerState = rememberPagerState()
 
     NavHost(navController, startDestination = Route.Home.route) {
@@ -53,7 +35,6 @@ fun AppNavigation(
             composable(route.route, route.arguments, content = {
                 SearchScreen(
                     accountViewModel = accountViewModel,
-                    feedViewModel = globalFeedViewModel,
                     navController = navController,
                     scrollToTop = it.arguments?.getBoolean("scrollToTop") ?: false
                 )
@@ -65,8 +46,6 @@ fun AppNavigation(
                 HomeScreen(
                     accountViewModel = accountViewModel,
                     navController = navController,
-                    homeFeedViewModel = homeFeedViewModel,
-                    repliesFeedViewModel = homeRepliesFeedViewModel,
                     pagerState = homePagerState,
                     scrollToTop = it.arguments?.getBoolean("scrollToTop") ?: false
                 )

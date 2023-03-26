@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.LocalCacheState
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.dal.BookmarkPrivateFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.BookmarkPublicFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ChannelFeedFilter
@@ -24,14 +25,10 @@ import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.util.concurrent.atomic.AtomicBoolean
 
 class NostrChannelFeedViewModel : FeedViewModel(ChannelFeedFilter)
 class NostrChatRoomFeedViewModel : FeedViewModel(ChatroomFeedFilter)
@@ -58,7 +55,7 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
         return localFilter.loadTop()
     }
 
-    fun refresh() {
+    private fun refresh() {
         val scope = CoroutineScope(Job() + Dispatchers.Default)
         scope.launch {
             refreshSuspended()
@@ -94,24 +91,14 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
         }
     }
 
-    private var handlerWaiting = AtomicBoolean()
+    private val bundler = BundledUpdate(250, Dispatchers.IO) {
+        // adds the time to perform the refresh into this delay
+        // holding off new updates in case of heavy refresh routines.
+        refreshSuspended()
+    }
 
     fun invalidateData() {
-        if (handlerWaiting.getAndSet(true)) return
-
-        val scope = CoroutineScope(Job() + Dispatchers.Default)
-        scope.launch {
-            try {
-                delay(50)
-                // adds the time to perform the refresh into this delay
-                // holding off new updates in case of heavy refresh routines.
-                refreshSuspended()
-            } finally {
-                withContext(NonCancellable) {
-                    handlerWaiting.set(false)
-                }
-            }
-        }
+        bundler.invalidate()
     }
 
     private val cacheListener: (LocalCacheState) -> Unit = {

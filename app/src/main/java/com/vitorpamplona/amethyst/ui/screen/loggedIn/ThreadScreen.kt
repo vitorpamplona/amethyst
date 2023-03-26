@@ -27,11 +27,12 @@ fun ThreadScreen(noteId: String?, accountViewModel: AccountViewModel, navControl
     val lifeCycleOwner = LocalLifecycleOwner.current
 
     if (account != null && noteId != null) {
+        ThreadFeedFilter.loadThread(noteId)
         val feedViewModel: NostrThreadFeedViewModel = viewModel()
 
         LaunchedEffect(noteId) {
-            ThreadFeedFilter.loadThread(noteId)
             NostrThreadDataSource.loadThread(noteId)
+            ThreadFeedFilter.loadThread(noteId)
             feedViewModel.invalidateData()
         }
 
@@ -39,9 +40,9 @@ fun ThreadScreen(noteId: String?, accountViewModel: AccountViewModel, navControl
             val observer = LifecycleEventObserver { _, event ->
                 if (event == Lifecycle.Event.ON_RESUME) {
                     println("Thread Start")
-                    ThreadFeedFilter.loadThread(noteId)
                     NostrThreadDataSource.loadThread(noteId)
                     NostrThreadDataSource.start()
+                    ThreadFeedFilter.loadThread(noteId)
                     feedViewModel.invalidateData()
                 }
                 if (event == Lifecycle.Event.ON_PAUSE) {

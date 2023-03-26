@@ -681,7 +681,7 @@ fun TabNotesNewThreads(accountViewModel: AccountViewModel, navController: NavCon
         val feedViewModel: NostrUserProfileNewThreadsFeedViewModel = viewModel()
 
         LaunchedEffect(Unit) {
-            feedViewModel.refresh()
+            feedViewModel.invalidateData()
         }
 
         Column(Modifier.fillMaxHeight()) {
@@ -701,7 +701,7 @@ fun TabNotesConversations(accountViewModel: AccountViewModel, navController: Nav
         val feedViewModel: NostrUserProfileConversationsFeedViewModel = viewModel()
 
         LaunchedEffect(Unit) {
-            feedViewModel.refresh()
+            feedViewModel.invalidateData()
         }
 
         Column(Modifier.fillMaxHeight()) {
@@ -722,7 +722,7 @@ fun TabBookmarks(baseUser: User, accountViewModel: AccountViewModel, navControll
         val feedViewModel: NostrUserProfileBookmarksFeedViewModel = viewModel()
 
         LaunchedEffect(userState) {
-            feedViewModel.refresh()
+            feedViewModel.invalidateData()
         }
 
         Column(Modifier.fillMaxHeight()) {

@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen
 
+import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -12,19 +13,18 @@ import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
+import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.time.ExperimentalTime
+import kotlin.time.measureTimedValue
 
 class NotificationViewModel : CardFeedViewModel(NotificationFeedFilter)
 
@@ -34,7 +34,7 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>) : ViewModel() {
 
     private var lastNotes: List<Note>? = null
 
-    fun refresh() {
+    private fun refresh() {
         val scope = CoroutineScope(Job() + Dispatchers.Default)
         scope.launch {
             refreshSuspended()
@@ -138,22 +138,18 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>) : ViewModel() {
         }
     }
 
-    var handlerWaiting = AtomicBoolean()
+    @OptIn(ExperimentalTime::class)
+    private val bundler = BundledUpdate(250, Dispatchers.IO) {
+        // adds the time to perform the refresh into this delay
+        // holding off new updates in case of heavy refresh routines.
+        val (value, elapsed) = measureTimedValue {
+            refreshSuspended()
+        }
+        Log.d("Time", "${this.javaClass.simpleName} Card update $elapsed")
+    }
 
     fun invalidateData() {
-        if (handlerWaiting.getAndSet(true)) return
-
-        val scope = CoroutineScope(Job() + Dispatchers.Default)
-        scope.launch {
-            try {
-                delay(150)
-                refresh()
-            } finally {
-                withContext(NonCancellable) {
-                    handlerWaiting.set(false)
-                }
-            }
-        }
+        bundler.invalidate()
     }
 
     private val cacheListener: (LocalCacheState) -> Unit = {

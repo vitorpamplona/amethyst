@@ -26,19 +26,14 @@ import com.vitorpamplona.amethyst.model.RelayInfo
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
+import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.RelayCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.util.concurrent.atomic.AtomicBoolean
 
 class RelayFeedViewModel : ViewModel() {
     val order = compareByDescending<RelayInfo> { it.lastEvent }.thenByDescending { it.counter }.thenBy { it.url }
@@ -50,21 +45,25 @@ class RelayFeedViewModel : ViewModel() {
 
     fun refresh() {
         viewModelScope.launch(Dispatchers.Default) {
-            val beingUsed = currentUser?.relaysBeingUsed?.values ?: emptyList()
-            val beingUsedSet = currentUser?.relaysBeingUsed?.keys ?: emptySet()
-
-            val newRelaysFromRecord = currentUser?.latestContactList?.relays()?.entries?.mapNotNull {
-                if (it.key !in beingUsedSet) {
-                    RelayInfo(it.key, 0, 0)
-                } else {
-                    null
-                }
-            } ?: emptyList()
-
-            val newList = (beingUsed + newRelaysFromRecord).sortedWith(order)
-
-            _feedContent.update { newList }
+            refreshSuspended()
         }
+    }
+
+    fun refreshSuspended() {
+        val beingUsed = currentUser?.relaysBeingUsed?.values ?: emptyList()
+        val beingUsedSet = currentUser?.relaysBeingUsed?.keys ?: emptySet()
+
+        val newRelaysFromRecord = currentUser?.latestContactList?.relays()?.entries?.mapNotNull {
+            if (it.key !in beingUsedSet) {
+                RelayInfo(it.key, 0, 0)
+            } else {
+                null
+            }
+        } ?: emptyList()
+
+        val newList = (beingUsed + newRelaysFromRecord).sortedWith(order)
+
+        _feedContent.update { newList }
     }
 
     val listener: (UserState) -> Unit = {
@@ -84,23 +83,14 @@ class RelayFeedViewModel : ViewModel() {
         currentUser = null
     }
 
-    var handlerWaiting = AtomicBoolean()
+    private val bundler = BundledUpdate(250, Dispatchers.IO) {
+        // adds the time to perform the refresh into this delay
+        // holding off new updates in case of heavy refresh routines.
+        refreshSuspended()
+    }
 
-    private fun invalidateData() {
-        if (handlerWaiting.getAndSet(true)) return
-
-        val scope = CoroutineScope(Job() + Dispatchers.Default)
-        scope.launch {
-            try {
-                delay(50)
-                refresh()
-            } finally {
-                withContext(NonCancellable) {
-                    handlerWaiting.set(false)
-                }
-            }
-            handlerWaiting.set(false)
-        }
+    fun invalidateData() {
+        bundler.invalidate()
     }
 }
 

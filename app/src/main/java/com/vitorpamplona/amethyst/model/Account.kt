@@ -24,18 +24,13 @@ import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.RelayPool
-import kotlinx.coroutines.CoroutineScope
+import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import nostr.postr.Persona
 import java.util.Locale
-import java.util.concurrent.atomic.AtomicBoolean
 
 val DefaultChannels = setOf(
     "25e5c82273a271cb1a840d0060391a0bf4965cafeb029d5ab55350b418953fbb", // -> Anigma's Nostr
@@ -795,22 +790,15 @@ class Account(
 }
 
 class AccountLiveData(private val account: Account) : LiveData<AccountState>(AccountState(account)) {
-    var handlerWaiting = AtomicBoolean()
+    // Refreshes observers in batches.
+    private val bundler = BundledUpdate(300, Dispatchers.Default) {
+        if (hasActiveObservers()) {
+            refresh()
+        }
+    }
 
     fun invalidateData() {
-        if (handlerWaiting.getAndSet(true)) return
-
-        val scope = CoroutineScope(Job() + Dispatchers.Default)
-        scope.launch {
-            try {
-                delay(100)
-                refresh()
-            } finally {
-                withContext(NonCancellable) {
-                    handlerWaiting.set(false)
-                }
-            }
-        }
+        bundler.invalidate()
     }
 
     fun refresh() {

@@ -141,7 +141,7 @@ fun TabKnown(
     LaunchedEffect(accountViewModel) {
         NostrChatroomListDataSource.account = account
         NostrChatroomListDataSource.start()
-        feedViewModel.refresh()
+        feedViewModel.invalidateData()
     }
 
     val lifeCycleOwner = LocalLifecycleOwner.current
@@ -150,7 +150,7 @@ fun TabKnown(
             if (event == Lifecycle.Event.ON_RESUME) {
                 NostrChatroomListDataSource.account = account
                 NostrChatroomListDataSource.start()
-                feedViewModel.refresh()
+                feedViewModel.invalidateData()
             }
         }
 
@@ -184,7 +184,7 @@ fun TabNew(
     LaunchedEffect(accountViewModel) {
         NostrChatroomListDataSource.account = account
         NostrChatroomListDataSource.start()
-        feedViewModel.refresh()
+        feedViewModel.invalidateData()
     }
 
     val lifeCycleOwner = LocalLifecycleOwner.current
@@ -193,7 +193,7 @@ fun TabNew(
             if (event == Lifecycle.Event.ON_RESUME) {
                 NostrChatroomListDataSource.account = account
                 NostrChatroomListDataSource.start()
-                feedViewModel.refresh()
+                feedViewModel.invalidateData()
             }
         }
 

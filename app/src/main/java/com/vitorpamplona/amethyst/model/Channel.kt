@@ -3,8 +3,10 @@ package com.vitorpamplona.amethyst.model
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleChannelDataSource
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
+import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import fr.acinq.secp256k1.Hex
+import kotlinx.coroutines.Dispatchers
 import java.util.concurrent.ConcurrentHashMap
 
 class Channel(val idHex: String) {
@@ -36,7 +38,7 @@ class Channel(val idHex: String) {
         this.info = channelInfo
         this.updatedMetadataAt = updatedAt
 
-        live.refresh()
+        live.invalidateData()
     }
 
     fun profilePicture(): String? {
@@ -71,7 +73,18 @@ class Channel(val idHex: String) {
 }
 
 class ChannelLiveData(val channel: Channel) : LiveData<ChannelState>(ChannelState(channel)) {
-    fun refresh() {
+    // Refreshes observers in batches.
+    private val bundler = BundledUpdate(300, Dispatchers.Main) {
+        if (hasActiveObservers()) {
+            refresh()
+        }
+    }
+
+    fun invalidateData() {
+        bundler.invalidate()
+    }
+
+    private fun refresh() {
         postValue(ChannelState(channel))
     }
 

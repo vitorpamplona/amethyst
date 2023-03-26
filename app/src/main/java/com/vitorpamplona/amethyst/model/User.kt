@@ -8,19 +8,13 @@ import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.MetadataEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.relays.Relay
+import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import fr.acinq.secp256k1.Hex
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import nostr.postr.Bech32
 import nostr.postr.toNpub
 import java.math.BigDecimal
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.regex.Pattern
 
 val lnurlpPattern = Pattern.compile("(?i:http|https):\\/\\/((.+)\\/)*\\.well-known\\/lnurlp\\/(.*)")
@@ -400,24 +394,15 @@ class UserMetadata {
 }
 
 class UserLiveData(val user: User) : LiveData<UserState>(UserState(user)) {
-
     // Refreshes observers in batches.
-    var handlerWaiting = AtomicBoolean()
+    private val bundler = BundledUpdate(300, Dispatchers.Main) {
+        if (hasActiveObservers()) {
+            refresh()
+        }
+    }
 
     fun invalidateData() {
-        if (handlerWaiting.getAndSet(true)) return
-
-        val scope = CoroutineScope(Job() + Dispatchers.Main)
-        scope.launch {
-            try {
-                delay(100)
-                refresh()
-            } finally {
-                withContext(NonCancellable) {
-                    handlerWaiting.set(false)
-                }
-            }
-        }
+        bundler.invalidate()
     }
 
     private fun refresh() {
