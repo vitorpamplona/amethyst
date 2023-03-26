@@ -422,7 +422,8 @@ fun ZapReaction(
                 Spacer(Modifier.width(3.dp))
                 CircularProgressIndicator(
                     progress = zappingProgress,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(14.dp),
+                    strokeWidth = 2.dp
                 )
             }
         }
