@@ -169,13 +169,9 @@ fun NoteCompose(
                                 navController.navigate("Channel/${it.idHex}")
                             }
                         } else if (noteEvent is PrivateDmEvent) {
-                            navController.navigate("Room/${note.author?.pubkeyHex}") {
-                                launchSingleTop = true
-                            }
+                            navController.navigate("Room/${note.author?.pubkeyHex}")
                         } else {
-                            navController.navigate("Note/${note.idHex}") {
-                                launchSingleTop = true
-                            }
+                            navController.navigate("Note/${note.idHex}")
                         }
                     },
                     onLongClick = { popupExpanded = true }
