@@ -1,6 +1,6 @@
 package com.vitorpamplona.amethyst.service.model
 
-import com.vitorpamplona.amethyst.service.model.zaps.ZapAmountInterface
+import com.vitorpamplona.amethyst.service.model.zaps.ZapAmount
 
 interface LnZapEventInterface : EventInterface {
 
@@ -10,7 +10,7 @@ interface LnZapEventInterface : EventInterface {
 
     fun taggedAddresses(): List<ATag>
 
-    fun amount(): ZapAmountInterface?
+    fun amount(): ZapAmount?
 
     fun containedPost(): Event?
 }

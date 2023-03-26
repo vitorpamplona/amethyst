@@ -4,7 +4,6 @@ import android.util.Log
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.service.lnurl.LnInvoiceUtil
 import com.vitorpamplona.amethyst.service.model.zaps.ZapAmount
-import com.vitorpamplona.amethyst.service.model.zaps.ZapAmountInterface
 import com.vitorpamplona.amethyst.service.relays.Client
 
 class LnZapEvent(
@@ -24,7 +23,7 @@ class LnZapEvent(
         .filter { it.firstOrNull() == "p" }
         .mapNotNull { it.getOrNull(1) }
 
-    override fun amount(): ZapAmountInterface? {
+    override fun amount(): ZapAmount? {
         return amount
     }
 
