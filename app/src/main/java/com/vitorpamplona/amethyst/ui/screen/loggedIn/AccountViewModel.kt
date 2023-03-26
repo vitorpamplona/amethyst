@@ -60,7 +60,7 @@ class AccountViewModel(private val account: Account) : ViewModel() {
             return
         }
 
-        val zapRequest = account.createZapRequestFor(note)
+        val zapRequest = account.createZapRequestFor(note, message)
 
         onProgress(0.10f)
 

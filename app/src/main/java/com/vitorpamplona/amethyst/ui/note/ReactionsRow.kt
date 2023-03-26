@@ -303,10 +303,11 @@ fun ZapReaction(
 
     val zapsState by baseNote.live().zaps.observeAsState()
     val zappedNote = zapsState?.note
+    val zapMessage = ""
 
     var wantsToZap by remember { mutableStateOf(false) }
     var wantsToChangeZapAmount by remember { mutableStateOf(false) }
-
+    var wantsToSetZapOptions by remember { mutableStateOf(false) }
     val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -347,7 +348,7 @@ fun ZapReaction(
                             accountViewModel.zap(
                                 baseNote,
                                 account.zapAmountChoices.first() * 1000,
-                                "",
+                                zapMessage,
                                 context,
                                 onError = {
                                     scope.launch {
@@ -370,6 +371,9 @@ fun ZapReaction(
                 },
                 onLongClick = {
                     wantsToChangeZapAmount = true
+                },
+                onDoubleClick = {
+                    wantsToSetZapOptions = true
                 }
             )
     ) {
@@ -400,6 +404,10 @@ fun ZapReaction(
         }
         if (wantsToChangeZapAmount) {
             UpdateZapAmountDialog({ wantsToChangeZapAmount = false }, account = account)
+        }
+
+        if (wantsToSetZapOptions) {
+            ZapOptionsDialog({ wantsToSetZapOptions = false }, account = account, accountViewModel, baseNote)
         }
 
         if (zappedNote?.isZappedBy(account.userProfile()) == true) {
@@ -530,7 +538,7 @@ fun ZapAmountChoicePopup(
 
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
-
+    val zapMessage = ""
     val scope = rememberCoroutineScope()
 
     Popup(
@@ -547,7 +555,7 @@ fun ZapAmountChoicePopup(
                             accountViewModel.zap(
                                 baseNote,
                                 amountInSats * 1000,
-                                "",
+                                zapMessage,
                                 context,
                                 onError,
                                 onProgress
@@ -571,7 +579,7 @@ fun ZapAmountChoicePopup(
                                     accountViewModel.zap(
                                         baseNote,
                                         amountInSats * 1000,
-                                        "",
+                                        zapMessage,
                                         context,
                                         onError,
                                         onProgress
