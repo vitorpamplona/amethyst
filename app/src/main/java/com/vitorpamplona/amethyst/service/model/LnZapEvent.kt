@@ -58,6 +58,17 @@ class LnZapEvent(
         .mapNotNull { it.getOrNull(1) }
         .firstOrNull()
 
+    override fun clone(): LnZapEventInterface {
+        return LnZapEvent(
+            this.id,
+            this.pubKey,
+            this.createdAt,
+            this.tags,
+            this.content,
+            this.sig
+        )
+    }
+
     companion object {
         const val kind = 9735
     }

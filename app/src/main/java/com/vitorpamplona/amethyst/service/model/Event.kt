@@ -63,6 +63,17 @@ open class Event(
             null
         }
     }
+    override fun clone(): EventInterface {
+        return Event(
+            this.id,
+            this.pubKey,
+            this.createdAt,
+            this.kind,
+            this.tags,
+            this.content,
+            this.sig
+        )
+    }
 
     /**
      * Checks if the ID is correct and then if the pubKey's secret key signed the event.

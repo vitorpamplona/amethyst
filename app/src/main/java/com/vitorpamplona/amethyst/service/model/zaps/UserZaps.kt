@@ -35,10 +35,8 @@ object UserZaps {
 
     private fun aggregateZapAmounts(notesGroupedByAuthor: Map<String, Map<Note, Note?>>): Map<Note, Note?> {
         val authorToZap = mutableMapOf<Note, Note?>()
-
         for ((_, notes) in notesGroupedByAuthor) {
-            val firstZapNote = notes.values.first()
-
+            val firstZapNote = notes.values.first()?.clone()
             ((firstZapNote?.event as LnZapEventInterface).amount() as ZapAmount).amount =
                 calculateTotalAmount(notes)
 

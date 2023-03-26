@@ -14,11 +14,6 @@ import java.math.BigDecimal
 
 class UserZapsTest {
     @Test
-    fun nothing() {
-        Assert.assertEquals(1, 1)
-    }
-
-    @Test
     fun user_without_zaps() {
         val actual = UserZaps.forProfileFeed(zaps = null)
 
@@ -98,6 +93,7 @@ class UserZapsTest {
 
         val zapNote = mockk<Note>()
         every { zapNote.author } returns author
+        every { zapNote.clone() } returns zapNote
 
         return zapNote
     }
@@ -110,6 +106,7 @@ class UserZapsTest {
 
         val zapNote = mockk<Note>()
         every { zapNote.event } returns lnZapEvent
+        every { zapNote.clone() } returns zapNote
 
         return zapNote
     }

@@ -12,7 +12,7 @@ import java.math.BigDecimal
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.Date
+import java.util.*
 import java.util.regex.Pattern
 
 val tagSearch = Pattern.compile("(?:\\s|\\A)\\#\\[([0-9]+)\\]")
@@ -344,6 +344,23 @@ open class Note(val idHex: String) {
         if (liveSet != null && liveSet?.isInUse() == false) {
             liveSet = null
         }
+    }
+
+    fun clone(): Note {
+        val c = Note(this.idHex)
+        c.event = this.event?.clone()
+        // TODO: not implemented the clones() bellow
+//        c.author = this.author
+//        c.replyTo = this.replyTo
+//        c.replies = this.replies
+//        c.reactions = this.reactions
+//        c.boosts = this.boosts
+//        c.reports = this.reports
+//        c.zaps = this.zaps
+//        c.relays = this.relays
+//        c.lastReactionsDownloadTime = this.lastReactionsDownloadTime
+
+        return c
     }
 }
 

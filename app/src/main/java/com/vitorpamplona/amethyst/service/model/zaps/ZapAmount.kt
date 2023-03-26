@@ -7,9 +7,6 @@ interface ZapAmountInterface {
 }
 
 class ZapAmount(var amount: BigDecimal?) : ZapAmountInterface {
-    fun set(newAmount: BigDecimal) {
-        amount = newAmount
-    }
 
     override fun total(): BigDecimal? {
         return amount
