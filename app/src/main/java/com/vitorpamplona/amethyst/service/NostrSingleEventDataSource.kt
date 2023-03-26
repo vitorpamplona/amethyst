@@ -33,10 +33,7 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
 
         val now = Date().time / 1000
 
-        return addressesToWatch.filter {
-            val lastTime = it.lastReactionsDownloadTime
-            lastTime == null || lastTime < (now - 10)
-        }.mapNotNull {
+        return addressesToWatch.mapNotNull {
             it.address()?.let { aTag ->
                 TypedFilter(
                     types = FeedType.values().toSet(),
@@ -64,10 +61,7 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
 
         val now = Date().time / 1000
 
-        return addressesToWatch.filter {
-            val lastTime = it.lastReactionsDownloadTime
-            lastTime == null || lastTime < (now - 10)
-        }.mapNotNull {
+        return addressesToWatch.mapNotNull {
             it.address()?.let { aTag ->
                 TypedFilter(
                     types = FeedType.values().toSet(),
@@ -90,10 +84,7 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
 
         val now = Date().time / 1000
 
-        return reactionsToWatch.filter {
-            val lastTime = it.lastReactionsDownloadTime
-            lastTime == null || lastTime < (now - 10)
-        }.map {
+        return reactionsToWatch.map {
             TypedFilter(
                 types = FeedType.values().toSet(),
                 filter = JsonFilter(
@@ -145,9 +136,9 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
         )
     }
 
-    val singleEventChannel = requestNewChannel { time ->
+    val singleEventChannel = requestNewChannel { time, relayUrl ->
         eventsToWatch.forEach {
-            it.lastReactionsDownloadTime = time
+            it.lastReactionsDownloadTime = it.lastReactionsDownloadTime + Pair(relayUrl, time)
         }
         // Many relays operate with limits in the amount of filters.
         // As information comes, the filters will be rotated to get more data.

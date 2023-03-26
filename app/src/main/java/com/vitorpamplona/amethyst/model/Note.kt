@@ -46,7 +46,7 @@ open class Note(val idHex: String) {
     var relays = setOf<String>()
         private set
 
-    var lastReactionsDownloadTime: Long? = null
+    var lastReactionsDownloadTime: Map<String, Long> = emptyMap()
 
     fun id() = Hex.decode(idHex)
     open fun idNote() = id().toNote()

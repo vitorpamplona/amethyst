@@ -31,7 +31,7 @@ class User(val pubkeyHex: String) {
     var reports = mapOf<User, Set<Note>>()
         private set
 
-    var latestReportTime: Long = 0
+    var latestEOSEs: Map<String, Long> = emptyMap()
 
     var zaps = mapOf<Note, Note?>()
         private set
@@ -123,11 +123,6 @@ class User(val pubkeyHex: String) {
         } else if (reports[author]?.contains(note) == false) {
             reports = reports + Pair(author, (reports[author] ?: emptySet()) + note)
             liveSet?.reports?.invalidateData()
-        }
-
-        val reportTime = note.createdAt() ?: 0
-        if (reportTime > latestReportTime) {
-            latestReportTime = reportTime
         }
     }
 
