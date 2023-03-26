@@ -28,11 +28,11 @@ class PollNoteViewModel {
         closedAt = pollEvent?.getTagInt(CLOSED_AT)
     }
 
+    fun isVoteAmountAtomic() = valueMaximum != null && valueMinimum != null && valueMinimum == valueMaximum
+
     val isPollClosed: Boolean = closedAt?.let { // allow 2 minute leeway for zap to propagate
         pollNote?.createdAt()?.plus(it * (86400 + 120))!! > Date().time / 1000
     } == true
-
-    val isVoteAmountAtomic = valueMaximum != null && valueMinimum != null && valueMinimum == valueMaximum
 
     fun voteAmountPlaceHolderText(sats: String): String = if (valueMinimum == null && valueMaximum == null) {
         sats

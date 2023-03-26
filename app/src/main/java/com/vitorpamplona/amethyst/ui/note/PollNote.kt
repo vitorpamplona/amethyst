@@ -138,7 +138,16 @@ fun ZapVote(
                                 )
                                 .show()
                         }
-                    } else if (pollViewModel.isVoteAmountAtomic) {
+                    } else if (pollViewModel.isVoteAmountAtomic()) {
+                        // only allow one vote per option when min==max, i.e. atomic vote amount specified
+                        if (pollViewModel.isPollOptionZappedBy(pollOption, account.userProfile())) {
+                            scope.launch {
+                                Toast
+                                    .makeText(context, R.string.one_vote_per_user_on_atomic_votes, Toast.LENGTH_SHORT)
+                                    .show()
+                            }
+                            return@combinedClickable
+                        }
                         accountViewModel.zap(
                             baseNote,
                             pollViewModel.valueMaximum!!.toLong() * 1000,
@@ -263,11 +272,12 @@ fun ZapVoteAmountChoicePopup(
                     }
                 )
 
+                val isValidInputAmount = pollViewModel.isValidInputVoteAmount(amount)
                 Button(
                     modifier = Modifier.padding(horizontal = 3.dp),
-                    enabled = pollViewModel.isValidInputVoteAmount(amount),
+                    enabled = isValidInputAmount,
                     onClick = {
-                        if (amount != null) {
+                        if (amount != null && isValidInputAmount) {
                             accountViewModel.zap(
                                 baseNote,
                                 amount * 1000,
@@ -276,8 +286,8 @@ fun ZapVoteAmountChoicePopup(
                                 context,
                                 onError
                             )
+                            onDismiss()
                         }
-                        onDismiss()
                     },
                     shape = RoundedCornerShape(20.dp),
                     colors = ButtonDefaults
@@ -291,7 +301,7 @@ fun ZapVoteAmountChoicePopup(
                         textAlign = TextAlign.Center,
                         modifier = Modifier.combinedClickable(
                             onClick = {
-                                if (amount != null) {
+                                if (amount != null && isValidInputAmount) {
                                     accountViewModel.zap(
                                         baseNote,
                                         amount * 1000,
@@ -300,8 +310,8 @@ fun ZapVoteAmountChoicePopup(
                                         context,
                                         onError
                                     )
+                                    onDismiss()
                                 }
-                                onDismiss()
                             },
                             onLongClick = {}
                         )

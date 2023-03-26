@@ -235,5 +235,6 @@
     <string name="poll_closing_time_days">days</string>
     <string name="poll_is_closed">Poll is closed to new votes</string>
     <string name="poll_zap_amount">Zap amount</string>
+    <string name="one_vote_per_user_on_atomic_votes">Only one vote per user is allowed on this type of poll</string>
 
 </resources>
