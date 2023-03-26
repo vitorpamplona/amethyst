@@ -33,22 +33,36 @@ fun AppNavigation(
     NavHost(navController, startDestination = Route.Home.route) {
         Route.Search.let { route ->
             composable(route.route, route.arguments, content = {
+                val scrollToTop = it.arguments?.getBoolean("scrollToTop") ?: false
+
                 SearchScreen(
                     accountViewModel = accountViewModel,
                     navController = navController,
-                    scrollToTop = it.arguments?.getBoolean("scrollToTop") ?: false
+                    scrollToTop = scrollToTop
                 )
+
+                // Avoids running scroll to top when back button is pressed
+                if (scrollToTop) {
+                    it.arguments?.remove("scrollToTop")
+                }
             })
         }
 
         Route.Home.let { route ->
             composable(route.route, route.arguments, content = {
+                val scrollToTop = it.arguments?.getBoolean("scrollToTop") ?: false
+
                 HomeScreen(
                     accountViewModel = accountViewModel,
                     navController = navController,
                     pagerState = homePagerState,
-                    scrollToTop = it.arguments?.getBoolean("scrollToTop") ?: false
+                    scrollToTop = scrollToTop
                 )
+
+                // Avoids running scroll to top when back button is pressed
+                if (scrollToTop) {
+                    it.arguments?.remove("scrollToTop")
+                }
             })
         }
 
