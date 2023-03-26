@@ -130,17 +130,14 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
                                     NostrChannelDataSource.printCounter()
                                     NostrChatroomDataSource.printCounter()
                                     NostrChatroomListDataSource.printCounter()
-
                                     NostrGlobalDataSource.printCounter()
+                                    NostrHashtagDataSource.printCounter()
                                     NostrHomeDataSource.printCounter()
-
-                                    NostrSingleEventDataSource.printCounter()
                                     NostrSearchEventOrUserDataSource.printCounter()
                                     NostrSingleChannelDataSource.printCounter()
+                                    NostrSingleEventDataSource.printCounter()
                                     NostrSingleUserDataSource.printCounter()
                                     NostrThreadDataSource.printCounter()
-                                    NostrHashtagDataSource.printCounter()
-
                                     NostrUserProfileDataSource.printCounter()
 
                                     Log.d("STATE DUMP", "Connected Relays: " + RelayPool.connectedRelays())

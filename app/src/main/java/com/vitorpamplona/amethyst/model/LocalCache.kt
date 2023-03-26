@@ -724,7 +724,7 @@ object LocalCache {
     fun pruneContactLists(userAccount: Account) {
         var removingContactList = 0
         users.values.forEach {
-            if (it != userAccount.userProfile() && (it.liveSet == null || it.liveSet?.isInUse() == false)) {
+            if (it != userAccount.userProfile() && (it.liveSet == null || it.liveSet?.isInUse() == false) && it.latestContactList != null) {
                 it.latestContactList = null
                 removingContactList++
             }
