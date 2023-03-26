@@ -26,17 +26,17 @@ class UserZapsTest {
 
     @Test
     fun avoid_duplicates_with_same_zap_request() {
-        val zapRequest = mockNoteAuthor("user-1")
+        val zapAuthor = mockNoteAuthor("user-1")
 
         val zaps: Map<Note, Note?> = mapOf(
-            zapRequest to mockNoteZap(amount = 100),
-            zapRequest to mockNoteZap(amount = 200)
+            zapAuthor to mockNoteZap(amount = 100),
+            zapAuthor to mockNoteZap(amount = 200)
         )
 
         val actual = UserZaps.forProfileFeed(zaps)
 
         Assert.assertEquals(1, actual.count())
-        Assert.assertEquals(zapRequest, actual.first().first)
+        Assert.assertEquals(zapAuthor, actual.first().first)
         Assert.assertEquals(
             BigDecimal(200),
             (actual.first().second.event as LnZapEventInterface).amount()
@@ -45,28 +45,48 @@ class UserZapsTest {
 
     @Test
     fun multiple_zap_requests_by_different_users() {
-        val zapRequest1 = mockNoteAuthor("user-1")
-        val zapRequest2 = mockNoteAuthor("user-2")
+        val zapAuthorNote1 = mockNoteAuthor("user-1")
+        val zapAuthorNote2 = mockNoteAuthor("user-2")
 
         val zaps: Map<Note, Note?> = mapOf(
-            zapRequest1 to mockNoteZap(amount = 100),
-            zapRequest2 to mockNoteZap(amount = 200)
+            zapAuthorNote1 to mockNoteZap(amount = 100),
+            zapAuthorNote2 to mockNoteZap(amount = 200)
         )
 
         val actual = UserZaps.forProfileFeed(zaps)
 
         Assert.assertEquals(2, actual.count())
 
-        Assert.assertEquals(zapRequest2, actual[0].first)
+        Assert.assertEquals(zapAuthorNote2, actual[0].first)
         Assert.assertEquals(
             BigDecimal(200),
             (actual[0].second.event as LnZapEventInterface).amount()
         )
 
-        Assert.assertEquals(zapRequest1, actual[1].first)
+        Assert.assertEquals(zapAuthorNote1, actual[1].first)
         Assert.assertEquals(
             BigDecimal(100),
             (actual[1].second.event as LnZapEventInterface).amount()
+        )
+    }
+
+    @Test
+    fun multiple_zap_requests_by_same_users() {
+        val zapAuthorNote = mockNoteAuthor("user-1")
+
+        val zaps: Map<Note, Note?> = mapOf(
+            zapAuthorNote to mockNoteZap(amount = 100),
+            zapAuthorNote to mockNoteZap(amount = 200)
+        )
+
+        val actual = UserZaps.forProfileFeed(zaps)
+
+        Assert.assertEquals(1, actual.count())
+
+        Assert.assertEquals(zapAuthorNote, actual[0].first)
+        Assert.assertEquals(
+            BigDecimal(300),
+            (actual[0].second.event as LnZapEventInterface).amount()
         )
     }
 
