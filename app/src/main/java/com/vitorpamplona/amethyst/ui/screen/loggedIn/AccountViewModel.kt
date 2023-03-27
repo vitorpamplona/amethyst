@@ -77,7 +77,7 @@ class AccountViewModel(private val account: Account) : ViewModel() {
 
                     // Awaits for the event to come back to LocalCache.
                     viewModelScope.launch(Dispatchers.IO) {
-                        delay(1000)
+                        delay(5000)
                         onProgress(0f)
                     }
                 } else {

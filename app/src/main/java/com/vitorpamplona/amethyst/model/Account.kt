@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
+import com.vitorpamplona.amethyst.ui.note.Nip47URI
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -56,7 +57,7 @@ class Account(
     var languagePreferences: Map<String, String> = mapOf(),
     var translateTo: String = Locale.getDefault().language,
     var zapAmountChoices: List<Long> = listOf(500L, 1000L, 5000L),
-    var zapPaymentRequest: Contact? = null,
+    var zapPaymentRequest: Nip47URI? = null,
     var hideDeleteRequestDialog: Boolean = false,
     var hideBlockAlertDialog: Boolean = false,
     var backupContactList: ContactListEvent? = null
@@ -169,7 +170,7 @@ class Account(
         if (!isWriteable()) return
 
         zapPaymentRequest?.let {
-            val event = LnZapPaymentRequestEvent.create(lnInvoice, it.pubKeyHex, loggedIn.privKey!!)
+            val event = LnZapPaymentRequestEvent.create(lnInvoice, it.pubKeyHex, it.secret?.toByteArray() ?: loggedIn.privKey!!)
 
             Client.send(event, it.relayUri)
         }
@@ -572,7 +573,7 @@ class Account(
         saveable.invalidateData()
     }
 
-    fun changeZapPaymentRequest(newServer: Contact?) {
+    fun changeZapPaymentRequest(newServer: Nip47URI?) {
         zapPaymentRequest = newServer
         live.invalidateData()
         saveable.invalidateData()

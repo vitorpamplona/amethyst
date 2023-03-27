@@ -1,20 +1,12 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.app.Activity
-import android.app.KeyguardManager
 import android.content.Context
 import android.content.ContextWrapper
-import android.content.Intent
-import android.os.Build
 import android.widget.Toast
-import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.biometric.BiometricManager
-import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
-import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
-import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -54,6 +46,7 @@ import com.halilibo.richtext.ui.resolveDefaults
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
+import com.vitorpamplona.amethyst.ui.note.authenticate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import nostr.postr.toNsec
@@ -122,7 +115,14 @@ private fun NSecCopyButton(
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
-            authenticatedCopyNSec(context, scope, account, clipboardManager, keyguardLauncher)
+            authenticate(
+                title = context.getString(R.string.copy_my_secret_key),
+                context = context,
+                scope = scope,
+                keyguardLauncher = keyguardLauncher
+            ) {
+                copyNSec(context, scope, account, clipboardManager)
+            }
         },
         shape = RoundedCornerShape(20.dp),
         colors = ButtonDefaults.buttonColors(
@@ -149,90 +149,6 @@ fun Context.getFragmentActivity(): FragmentActivity? {
         currentContext = currentContext.baseContext
     }
     return null
-}
-
-private fun authenticatedCopyNSec(
-    context: Context,
-    scope: CoroutineScope,
-    account: Account,
-    clipboardManager: ClipboardManager,
-    keyguardLauncher: ManagedActivityResultLauncher<Intent, ActivityResult>
-) {
-    val fragmentContext = context.getFragmentActivity()!!
-    val keyguardManager =
-        fragmentContext.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
-
-    if (!keyguardManager.isDeviceSecure) {
-        copyNSec(context, scope, account, clipboardManager)
-        return
-    }
-
-    @Suppress("DEPRECATION")
-    fun keyguardPrompt() {
-        val intent = keyguardManager.createConfirmDeviceCredentialIntent(
-            context.getString(R.string.app_name_release),
-            context.getString(R.string.copy_my_secret_key)
-        )
-
-        keyguardLauncher.launch(intent)
-    }
-
-    if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
-        keyguardPrompt()
-        return
-    }
-
-    val biometricManager = BiometricManager.from(context)
-    val authenticators = BIOMETRIC_STRONG or DEVICE_CREDENTIAL
-
-    val promptInfo = BiometricPrompt.PromptInfo.Builder()
-        .setTitle(context.getString(R.string.app_name_release))
-        .setSubtitle(context.getString(R.string.copy_my_secret_key))
-        .setAllowedAuthenticators(authenticators)
-        .build()
-
-    val biometricPrompt = BiometricPrompt(
-        fragmentContext,
-        object : BiometricPrompt.AuthenticationCallback() {
-            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                super.onAuthenticationError(errorCode, errString)
-
-                when (errorCode) {
-                    BiometricPrompt.ERROR_NEGATIVE_BUTTON -> keyguardPrompt()
-                    BiometricPrompt.ERROR_LOCKOUT -> keyguardPrompt()
-                    else ->
-                        scope.launch {
-                            Toast.makeText(
-                                context,
-                                "${context.getString(R.string.biometric_error)}: $errString",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
-                }
-            }
-
-            override fun onAuthenticationFailed() {
-                super.onAuthenticationFailed()
-                scope.launch {
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.biometric_authentication_failed),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
-
-            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                super.onAuthenticationSucceeded(result)
-                copyNSec(context, scope, account, clipboardManager)
-            }
-        }
-    )
-
-    when (biometricManager.canAuthenticate(authenticators)) {
-        BiometricManager.BIOMETRIC_SUCCESS -> biometricPrompt.authenticate(promptInfo)
-        else -> keyguardPrompt()
-    }
 }
 
 private fun copyNSec(
