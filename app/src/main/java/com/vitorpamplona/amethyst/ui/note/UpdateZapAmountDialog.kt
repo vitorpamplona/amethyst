@@ -115,7 +115,11 @@ class UpdateZapAmountViewModel : ViewModel() {
 
         if (walletConnectRelay.text.isNotBlank() && walletConnectPubkey.text.isNotBlank()) {
             val unverifiedPrivKey = walletConnectSecret.text.ifBlank { null }
-            val privKey = unverifiedPrivKey?.let { decodePublicKey(it).toHexKey() }
+            val privKey = try {
+                unverifiedPrivKey?.let { decodePublicKey(it).toHexKey() }
+            } catch (e: Exception) {
+                null
+            }
 
             account?.changeZapPaymentRequest(
                 Nip47URI(
