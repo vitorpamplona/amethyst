@@ -389,7 +389,11 @@ private fun ProfileHeader(
                     } else if (accountUser.isFollowingCached(baseUser)) {
                         UnfollowButton { coroutineScope.launch(Dispatchers.IO) { account.unfollow(baseUser) } }
                     } else {
-                        FollowButton { coroutineScope.launch(Dispatchers.IO) { account.follow(baseUser) } }
+                        if (baseUser.isFollowingCached(accountUser)) {
+                            FollowButton({ coroutineScope.launch(Dispatchers.IO) { account.follow(baseUser) } }, R.string.follow_back)
+                        } else {
+                            FollowButton({ coroutineScope.launch(Dispatchers.IO) { account.follow(baseUser) } }, R.string.follow)
+                        }
                     }
                 }
             }
@@ -949,7 +953,7 @@ fun UnfollowButton(onClick: () -> Unit) {
 }
 
 @Composable
-fun FollowButton(onClick: () -> Unit) {
+fun FollowButton(onClick: () -> Unit, text: Int = R.string.follow) {
     Button(
         modifier = Modifier.padding(start = 3.dp),
         onClick = onClick,
@@ -960,7 +964,7 @@ fun FollowButton(onClick: () -> Unit) {
             ),
         contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
     ) {
-        Text(text = stringResource(R.string.follow), color = Color.White, textAlign = TextAlign.Center)
+        Text(text = stringResource(text), color = Color.White, textAlign = TextAlign.Center)
     }
 }
 
