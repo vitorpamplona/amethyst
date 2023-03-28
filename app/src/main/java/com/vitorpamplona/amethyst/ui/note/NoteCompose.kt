@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.note
 
 import android.content.Intent
 import android.graphics.Bitmap
+import android.util.Log
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -77,10 +78,46 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 import kotlin.math.ceil
+import kotlin.time.ExperimentalTime
+import kotlin.time.measureTimedValue
+
+@OptIn(ExperimentalFoundationApi::class, ExperimentalTime::class)
+@Composable
+fun NoteCompose(
+    baseNote: Note,
+    routeForLastRead: String? = null,
+    modifier: Modifier = Modifier,
+    isBoostedNote: Boolean = false,
+    isQuotedNote: Boolean = false,
+    unPackReply: Boolean = true,
+    makeItShort: Boolean = false,
+    addMarginTop: Boolean = true,
+    parentBackgroundColor: Color? = null,
+    accountViewModel: AccountViewModel,
+    navController: NavController
+) {
+    val (value, elapsed) = measureTimedValue {
+        NoteComposeInner(
+            baseNote,
+            routeForLastRead,
+            modifier,
+            isBoostedNote,
+            isQuotedNote,
+            unPackReply,
+            makeItShort,
+            addMarginTop,
+            parentBackgroundColor,
+            accountViewModel,
+            navController
+        )
+    }
+
+    Log.d("Time", "Note Compose in $elapsed for ${baseNote.event?.content()?.split("\n")?.get(0)?.take(100)}")
+}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun NoteCompose(
+fun NoteComposeInner(
     baseNote: Note,
     routeForLastRead: String? = null,
     modifier: Modifier = Modifier,

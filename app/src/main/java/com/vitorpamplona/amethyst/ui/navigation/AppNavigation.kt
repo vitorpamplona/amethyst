@@ -2,11 +2,21 @@ package com.vitorpamplona.amethyst.ui.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.rememberPagerState
+import com.vitorpamplona.amethyst.ui.dal.GlobalFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.HomeConversationsFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.HomeNewThreadFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.NostrGlobalFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NotificationViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.BookmarkListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelScreen
@@ -30,12 +40,29 @@ fun AppNavigation(
 ) {
     val homePagerState = rememberPagerState()
 
+    // Avoids creating ViewModels for performance reasons (up to 1 second delays)
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val account = accountState?.account ?: return
+
+    HomeNewThreadFeedFilter.account = account
+    HomeConversationsFeedFilter.account = account
+
+    val homeFeedViewModel: NostrHomeFeedViewModel = viewModel()
+    val repliesFeedViewModel: NostrHomeRepliesFeedViewModel = viewModel()
+
+    GlobalFeedFilter.account = account
+    val searchFeedViewModel: NostrGlobalFeedViewModel = viewModel()
+
+    NotificationFeedFilter.account = account
+    val notifFeedViewModel: NotificationViewModel = viewModel()
+
     NavHost(navController, startDestination = Route.Home.route) {
         Route.Search.let { route ->
             composable(route.route, route.arguments, content = {
                 val scrollToTop = it.arguments?.getBoolean("scrollToTop") ?: false
 
                 SearchScreen(
+                    searchFeedViewModel = searchFeedViewModel,
                     accountViewModel = accountViewModel,
                     navController = navController,
                     scrollToTop = scrollToTop
@@ -53,6 +80,8 @@ fun AppNavigation(
                 val scrollToTop = it.arguments?.getBoolean("scrollToTop") ?: false
 
                 HomeScreen(
+                    homeFeedViewModel = homeFeedViewModel,
+                    repliesFeedViewModel = repliesFeedViewModel,
                     accountViewModel = accountViewModel,
                     navController = navController,
                     pagerState = homePagerState,
@@ -67,7 +96,7 @@ fun AppNavigation(
         }
 
         composable(Route.Message.route, content = { ChatroomListScreen(accountViewModel, navController) })
-        composable(Route.Notification.route, content = { NotificationScreen(accountViewModel, navController) })
+        composable(Route.Notification.route, content = { NotificationScreen(notifFeedViewModel, accountViewModel, navController) })
         composable(Route.BlockedUsers.route, content = { HiddenUsersScreen(accountViewModel, navController) })
         composable(Route.Bookmarks.route, content = { BookmarkListScreen(accountViewModel, navController) })
 

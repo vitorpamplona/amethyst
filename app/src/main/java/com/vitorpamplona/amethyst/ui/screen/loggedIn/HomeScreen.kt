@@ -18,7 +18,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
@@ -38,6 +37,8 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalPagerApi::class)
 @Composable
 fun HomeScreen(
+    homeFeedViewModel: NostrHomeFeedViewModel,
+    repliesFeedViewModel: NostrHomeRepliesFeedViewModel,
     accountViewModel: AccountViewModel,
     navController: NavController,
     pagerState: PagerState,
@@ -45,12 +46,6 @@ fun HomeScreen(
 ) {
     val coroutineScope = rememberCoroutineScope()
     val account = accountViewModel.accountLiveData.value?.account ?: return
-
-    HomeNewThreadFeedFilter.account = account
-    HomeConversationsFeedFilter.account = account
-
-    val homeFeedViewModel: NostrHomeFeedViewModel = viewModel()
-    val repliesFeedViewModel: NostrHomeRepliesFeedViewModel = viewModel()
 
     LaunchedEffect(accountViewModel) {
         HomeNewThreadFeedFilter.account = account
@@ -64,6 +59,8 @@ fun HomeScreen(
     DisposableEffect(accountViewModel) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
+                HomeNewThreadFeedFilter.account = account
+                HomeConversationsFeedFilter.account = account
                 NostrHomeDataSource.resetFilters()
                 homeFeedViewModel.invalidateData()
                 repliesFeedViewModel.invalidateData()
