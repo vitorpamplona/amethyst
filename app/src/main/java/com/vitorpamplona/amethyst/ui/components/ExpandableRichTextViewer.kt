@@ -54,24 +54,23 @@ fun ExpandableRichTextViewer(
         content.take(whereToCut)
     }
 
-    Box(contentAlignment = Alignment.BottomCenter) {
-        // CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    Box {
         RichTextViewer(
             text,
             canPreview,
-            modifier,
+            modifier.align(Alignment.TopStart),
             tags,
             backgroundColor,
             accountViewModel,
             navController
         )
-        // }
 
         if (content.length > whereToCut && !showFullText) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
+                    .align(Alignment.BottomCenter)
                     .fillMaxWidth()
                     .background(
                         brush = Brush.verticalGradient(
