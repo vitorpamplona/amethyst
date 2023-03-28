@@ -43,8 +43,10 @@ fun ExpandableRichTextViewer(
     var showFullText by remember { mutableStateOf(false) }
 
     // Cuts the text in the first space after 350
-    val firstSpaceAfterCut = content.indexOf(' ', SHORT_TEXT_LENGTH)
-    val whereToCut = if (firstSpaceAfterCut < 0) SHORT_TEXT_LENGTH else firstSpaceAfterCut
+    val firstSpaceAfterCut = content.indexOf(' ', SHORT_TEXT_LENGTH).let { if (it < 0) content.length else it }
+    val firstNewLineAfterCut = content.indexOf('\n', SHORT_TEXT_LENGTH).let { if (it < 0) content.length else it }
+
+    val whereToCut = minOf(firstSpaceAfterCut, firstNewLineAfterCut)
 
     val text = if (showFullText) {
         content
@@ -52,24 +54,23 @@ fun ExpandableRichTextViewer(
         content.take(whereToCut)
     }
 
-    Box(contentAlignment = Alignment.BottomCenter) {
-        // CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    Box {
         RichTextViewer(
             text,
             canPreview,
-            modifier,
+            modifier.align(Alignment.TopStart),
             tags,
             backgroundColor,
             accountViewModel,
             navController
         )
-        // }
 
         if (content.length > whereToCut && !showFullText) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
+                    .align(Alignment.BottomCenter)
                     .fillMaxWidth()
                     .background(
                         brush = Brush.verticalGradient(

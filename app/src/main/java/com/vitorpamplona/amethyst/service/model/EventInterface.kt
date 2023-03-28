@@ -32,4 +32,5 @@ interface EventInterface {
     fun hashtags(): List<String>
 
     fun getReward(): BigDecimal?
+    fun getPoWRank(): Int
 }

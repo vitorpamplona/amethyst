@@ -56,6 +56,27 @@ open class Event(
     override fun isTaggedHashes(hashtags: Set<String>) = tags.any { it.getOrNull(0) == "t" && it.getOrNull(1)?.lowercase() in hashtags }
     override fun firstIsTaggedHashes(hashtags: Set<String>) = tags.firstOrNull { it.getOrNull(0) == "t" && it.getOrNull(1)?.lowercase() in hashtags }?.getOrNull(1)
 
+    override fun getPoWRank(): Int {
+        var rank = 0
+        for (i in 0..id.length) {
+            if (id[i] == '0') {
+                rank += 4
+            } else if (id[i] in '4'..'7') {
+                rank += 1
+                break
+            } else if (id[i] in '2'..'3') {
+                rank += 2
+                break
+            } else if (id[i] == '1') {
+                rank += 3
+                break
+            } else {
+                break
+            }
+        }
+        return rank
+    }
+
     override fun getReward(): BigDecimal? {
         return try {
             tags.filter { it.firstOrNull() == "reward" }.mapNotNull { BigDecimal(it.getOrNull(1)) }.firstOrNull()

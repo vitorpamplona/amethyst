@@ -8,10 +8,10 @@ import com.google.gson.reflect.TypeToken
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.model.toByteArray
-import com.vitorpamplona.amethyst.service.model.Contact
 import com.vitorpamplona.amethyst.service.model.ContactListEvent
 import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.Event.Companion.getRefinedEvent
+import com.vitorpamplona.amethyst.ui.note.Nip47URI
 import fr.acinq.secp256k1.Hex
 import nostr.postr.Persona
 import nostr.postr.toHex
@@ -215,7 +215,7 @@ object LocalPreferences {
 
             val zapPaymentRequestServer = try {
                 getString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, null)?.let {
-                    gson.fromJson(it, Contact::class.java)
+                    gson.fromJson(it, Nip47URI::class.java)
                 }
             } catch (e: Throwable) {
                 e.printStackTrace()

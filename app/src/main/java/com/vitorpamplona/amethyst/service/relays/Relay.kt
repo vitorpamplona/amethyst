@@ -83,6 +83,8 @@ class Relay(
                 }
 
                 override fun onMessage(webSocket: WebSocket, text: String) {
+                    eventDownloadCounterInBytes += text.bytesUsedInMemory()
+
                     try {
                         val msg = Event.gson.fromJson(text, JsonElement::class.java).asJsonArray
                         val type = msg[0].asString
@@ -90,14 +92,7 @@ class Relay(
                         when (type) {
                             "EVENT" -> {
                                 // Log.w("Relay", "Relay onEVENT $url, $channel")
-                                eventDownloadCounterInBytes += text.bytesUsedInMemory()
-                                val event = Event.fromJson(msg[2], Client.lenient)
-
-                                if (event.kind == 23195 || event.kind == 23196) {
-                                    println("AAAAA ${event.toJson()}")
-                                }
-
-                                listeners.forEach { it.onEvent(this@Relay, channel, event) }
+                                listeners.forEach { it.onEvent(this@Relay, channel, Event.fromJson(msg[2], Client.lenient)) }
                             }
                             "EOSE" -> listeners.forEach {
                                 // Log.w("Relay", "Relay onEOSE $url, $channel")
@@ -105,7 +100,6 @@ class Relay(
                             }
                             "NOTICE" -> listeners.forEach {
                                 // Log.w("Relay", "Relay onNotice $url, $channel")
-                                // "channel" being the second string in the string array ...
                                 it.onError(this@Relay, channel, Error("Relay sent notice: " + channel))
                             }
                             "OK" -> listeners.forEach {

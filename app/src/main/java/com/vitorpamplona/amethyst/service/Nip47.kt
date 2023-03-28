@@ -3,11 +3,12 @@ package com.vitorpamplona.amethyst.ui.note
 import android.net.Uri
 import com.vitorpamplona.amethyst.model.decodePublicKey
 import com.vitorpamplona.amethyst.model.toHexKey
-import com.vitorpamplona.amethyst.service.model.Contact
+
+data class Nip47URI(val pubKeyHex: String, val relayUri: String?, val secret: String?)
 
 // Rename to the corect nip number when ready.
 object Nip47 {
-    fun parse(uri: String): Contact? {
+    fun parse(uri: String): Nip47URI {
         // nostrwalletconnect://b889ff5b1513b641e2a139f661a661364979c5beee91842f8f0ef42ab558e9d4?relay=wss%3A%2F%2Frelay.damus.io&metadata=%7B%22name%22%3A%22Example%22%7D
 
         val url = Uri.parse(uri)
@@ -25,7 +26,8 @@ object Nip47 {
         }
 
         val relay = url.getQueryParameter("relay")
+        val secret = url.getQueryParameter("secret")
 
-        return Contact(pubkeyHex, relay)
+        return Nip47URI(pubkeyHex, relay, secret)
     }
 }

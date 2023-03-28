@@ -259,9 +259,12 @@
     <string name="remove_from_public_bookmarks">Remove from Public Bookmarks</string>
 
     <string name="wallet_connect_service">Wallet Connect Service</string>
-    <string name="wallet_connect_service_explainer">Uses your private key to pay zaps without leaving the app. Anyone with access to your Nostr private key will be able to spend your wallet\'s balance. Only keep funds you are ok to lose and use a private relay if possible. The relay operator can see your payments metadata.</string>
+    <string name="wallet_connect_service_explainer">Authorizes a Nostr Secret to pay zaps without leaving the app. Keep the secret safe and use a private relay if possible</string>
     <string name="wallet_connect_service_pubkey">Wallet Connect Pubkey</string>
     <string name="wallet_connect_service_relay">Wallet Connect Relay</string>
+    <string name="wallet_connect_service_secret">Wallet Connect Secret</string>
+    <string name="wallet_connect_service_show_secret">Show secret key</string>
+    <string name="wallet_connect_service_secret_placeholder">nsec / hex private key</string>
 
     <string name="pledge_amount_in_sats">Pledge Amount in Sats</string>
 
