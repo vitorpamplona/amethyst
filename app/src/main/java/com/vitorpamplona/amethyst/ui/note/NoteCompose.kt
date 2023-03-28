@@ -4,6 +4,8 @@ import android.content.Intent
 import android.graphics.Bitmap
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,7 +15,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
@@ -75,6 +76,7 @@ import com.vitorpamplona.amethyst.ui.theme.Following
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.math.BigDecimal
+import kotlin.math.ceil
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -817,28 +819,35 @@ private fun RelayBadges(baseNote: Note) {
 
     var expanded by remember { mutableStateOf(false) }
 
-    val relaysToDisplay = if (expanded) noteRelays else noteRelays.take(3)
+    val relaysToDisplay = (if (expanded) noteRelays else noteRelays.take(3)).toList()
+    val height = (ceil(relaysToDisplay.size / 3.0f) * 17).dp
 
     val uri = LocalUriHandler.current
 
-    FlowRow(Modifier.padding(top = 10.dp, start = 5.dp, end = 4.dp)) {
-        relaysToDisplay.forEach {
-            val url = it.removePrefix("wss://").removePrefix("ws://")
-            Box(
-                Modifier
-                    .size(15.dp)
-                    .padding(1.dp)
-            ) {
+    Spacer(Modifier.height(10.dp))
+
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(3),
+        contentPadding = PaddingValues(start = 4.dp, end = 4.dp),
+        modifier = Modifier.height(height),
+        userScrollEnabled = false
+    ) {
+        items(relaysToDisplay.size) {
+            val url = relaysToDisplay[it].removePrefix("wss://").removePrefix("ws://")
+
+            Box(Modifier.padding(1.dp).size(15.dp)) {
                 RobohashFallbackAsyncImage(
                     robot = "https://$url/favicon.ico",
                     model = "https://$url/favicon.ico",
                     contentDescription = stringResource(R.string.relay_icon),
                     colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }),
                     modifier = Modifier
-                        .fillMaxSize(1f)
+                        .width(13.dp)
+                        .height(13.dp)
                         .clip(shape = CircleShape)
+                        // .border(1.dp, Color.Red)
                         .background(MaterialTheme.colors.background)
-                        .clickable(onClick = { uri.openUri("https://" + url) })
+                        .clickable(onClick = { uri.openUri("https://$url") })
                 )
             }
         }
