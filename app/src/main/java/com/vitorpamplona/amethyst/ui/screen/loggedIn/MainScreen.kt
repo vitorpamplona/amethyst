@@ -13,8 +13,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
-import com.vitorpamplona.amethyst.buttons.FabColumn
 import com.vitorpamplona.amethyst.buttons.NewChannelButton
+import com.vitorpamplona.amethyst.ui.buttons.FabColumn
 import com.vitorpamplona.amethyst.ui.navigation.*
 import com.vitorpamplona.amethyst.ui.screen.AccountState
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
