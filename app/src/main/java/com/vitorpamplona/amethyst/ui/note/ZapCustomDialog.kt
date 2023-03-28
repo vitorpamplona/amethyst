@@ -43,7 +43,6 @@ class ZapOptionstViewModel : ViewModel() {
     }
 
     fun cancel() {
-        customAmount = TextFieldValue("")
     }
 }
 
