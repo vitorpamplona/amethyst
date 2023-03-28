@@ -36,6 +36,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.graphics.get
@@ -308,6 +309,11 @@ fun NoteCompose(
                             if (baseReward != null) {
                                 DisplayReward(baseReward, baseNote, account, navController)
                             }
+
+                            val pow = noteEvent.getPoWRank()
+                            if (pow > 1) {
+                                DisplayPoW(pow)
+                            }
                         }
                     }
 
@@ -565,6 +571,20 @@ fun DisplayUncitedHashtags(
             }
         }
     }
+}
+
+@Composable
+fun DisplayPoW(
+    pow: Int
+) {
+    Text(
+        "PoW-$pow",
+        color = MaterialTheme.colors.primary.copy(
+            alpha = 0.52f
+        ),
+        fontSize = 14.sp,
+        fontWeight = FontWeight.Bold
+    )
 }
 
 @Composable
