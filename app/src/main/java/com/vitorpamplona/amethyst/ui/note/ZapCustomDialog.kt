@@ -1,20 +1,9 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import android.widget.Toast
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.Button
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedTextField
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
+import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -25,10 +14,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.ViewModel
@@ -39,24 +31,29 @@ import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+
 class ZapOptionstViewModel : ViewModel() {
     private var account: Account? = null
 
-    var CustomAmount by mutableStateOf(TextFieldValue(""))
-    var CustomMessage by mutableStateOf(TextFieldValue(""))
+    var customAmount by mutableStateOf(TextFieldValue("1000"))
+    var customMessage by mutableStateOf(TextFieldValue(""))
 
     fun load(account: Account) {
         this.account = account
     }
 
     fun cancel() {
-        CustomAmount = TextFieldValue("")
+        customAmount = TextFieldValue("")
     }
+}
+
+fun isNumeric(toCheck: String): Boolean {
+    return toCheck.toLongOrNull() != null
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ZapOptionsDialog(onClose: () -> Unit, account: Account, accountViewModel: AccountViewModel, baseNote: Note) {
+fun ZapCustomDialog(onClose: () -> Unit, account: Account, accountViewModel: AccountViewModel, baseNote: Note) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val postViewModel: ZapOptionstViewModel = viewModel()
@@ -88,15 +85,37 @@ fun ZapOptionsDialog(onClose: () -> Unit, account: Account, accountViewModel: Ac
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 5.dp),
+                    horizontalArrangement = Arrangement.Start,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        painter = painterResource(com.vitorpamplona.amethyst.R.drawable.zap),
+                        null,
+                        modifier = Modifier.size(20.dp),
+                        tint = Color.Unspecified
+                    )
+                    Text(
+                        text = "Custom Zap",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.W500,
+                        modifier = Modifier.padding(start = 10.dp)
+                    )
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 5.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     OutlinedTextField(
                         // stringResource(R.string.new_amount_in_sats
                         label = { Text(text = "Custom Amount") },
-                        value = postViewModel.CustomAmount,
+                        value = postViewModel.customAmount,
                         onValueChange = {
-                            postViewModel.CustomAmount = it
+                            if (isNumeric(it.text)) {
+                                postViewModel.customAmount = it
+                            }
                         },
                         keyboardOptions = KeyboardOptions.Default.copy(
                             capitalization = KeyboardCapitalization.None,
@@ -104,7 +123,7 @@ fun ZapOptionsDialog(onClose: () -> Unit, account: Account, accountViewModel: Ac
                         ),
                         placeholder = {
                             Text(
-                                text = postViewModel.CustomAmount.text,
+                                text = postViewModel.customAmount.text,
                                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                             )
                         },
@@ -125,9 +144,9 @@ fun ZapOptionsDialog(onClose: () -> Unit, account: Account, accountViewModel: Ac
                     OutlinedTextField(
                         // stringResource(R.string.new_amount_in_sats
                         label = { Text(text = "Message") },
-                        value = postViewModel.CustomMessage,
+                        value = postViewModel.customMessage,
                         onValueChange = {
-                            postViewModel.CustomMessage = it
+                            postViewModel.customMessage = it
                         },
                         keyboardOptions = KeyboardOptions.Default.copy(
                             capitalization = KeyboardCapitalization.None,
@@ -135,7 +154,7 @@ fun ZapOptionsDialog(onClose: () -> Unit, account: Account, accountViewModel: Ac
                         ),
                         placeholder = {
                             Text(
-                                text = postViewModel.CustomMessage.text,
+                                text = postViewModel.customMessage.text,
                                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                             )
                         },
@@ -150,20 +169,15 @@ fun ZapOptionsDialog(onClose: () -> Unit, account: Account, accountViewModel: Ac
                             scope.launch(Dispatchers.IO) {
                                 accountViewModel.zap(
                                     baseNote,
-                                    postViewModel.CustomAmount.text.toLong() * 1000,
-                                    postViewModel.CustomMessage.text,
+                                    postViewModel.customAmount.text.toLong() * 1000,
+                                    postViewModel.customMessage.text,
                                     context,
                                     onError = {
-                                        scope.launch {
-                                            // zappingProgress = 0f
-                                            Toast
-                                                .makeText(context, it, Toast.LENGTH_SHORT)
-                                                .show()
-                                        }
+                                        Toast
+                                            .makeText(context, it, Toast.LENGTH_SHORT).show()
                                     },
                                     onProgress = {
                                         scope.launch(Dispatchers.Main) {
-                                            // zappingProgress = it
                                         }
                                     }
                                 )
@@ -171,7 +185,7 @@ fun ZapOptionsDialog(onClose: () -> Unit, account: Account, accountViewModel: Ac
                             onClose()
                         }
                     ) {
-                        Text(text = "Zap", color = Color.White)
+                        Text(text = "⚡Zap ", color = Color.White)
                     }
                 }
             }

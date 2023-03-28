@@ -307,7 +307,7 @@ fun ZapReaction(
 
     var wantsToZap by remember { mutableStateOf(false) }
     var wantsToChangeZapAmount by remember { mutableStateOf(false) }
-    var wantsToSetZapOptions by remember { mutableStateOf(false) }
+    var wantsToSetCustomZap by remember { mutableStateOf(false) }
     val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -373,7 +373,7 @@ fun ZapReaction(
                     wantsToChangeZapAmount = true
                 },
                 onDoubleClick = {
-                    wantsToSetZapOptions = true
+                    wantsToSetCustomZap = true
                 }
             )
     ) {
@@ -406,8 +406,8 @@ fun ZapReaction(
             UpdateZapAmountDialog({ wantsToChangeZapAmount = false }, account = account)
         }
 
-        if (wantsToSetZapOptions) {
-            ZapOptionsDialog({ wantsToSetZapOptions = false }, account = account, accountViewModel, baseNote)
+        if (wantsToSetCustomZap) {
+            ZapCustomDialog({ wantsToSetCustomZap = false }, account = account, accountViewModel, baseNote)
         }
 
         if (zappedNote?.isZappedBy(account.userProfile()) == true) {
