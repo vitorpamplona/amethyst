@@ -92,13 +92,7 @@ class Relay(
                         when (type) {
                             "EVENT" -> {
                                 // Log.w("Relay", "Relay onEVENT $url, $channel")
-                                val event = Event.fromJson(msg[2], Client.lenient)
-
-                                if (event.kind == 23195 || event.kind == 23196) {
-                                    println("AAAAA ${event.toJson()}")
-                                }
-
-                                listeners.forEach { it.onEvent(this@Relay, channel, event) }
+                                listeners.forEach { it.onEvent(this@Relay, channel, Event.fromJson(msg[2], Client.lenient)) }
                             }
                             "EOSE" -> listeners.forEach {
                                 // Log.w("Relay", "Relay onEOSE $url, $channel")
@@ -106,7 +100,6 @@ class Relay(
                             }
                             "NOTICE" -> listeners.forEach {
                                 // Log.w("Relay", "Relay onNotice $url, $channel")
-                                // "channel" being the second string in the string array ...
                                 it.onError(this@Relay, channel, Error("Relay sent notice: " + channel))
                             }
                             "OK" -> listeners.forEach {
