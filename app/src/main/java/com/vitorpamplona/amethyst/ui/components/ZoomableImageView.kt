@@ -28,10 +28,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
+import coil.compose.AsyncImagePainter
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.PagerState
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
+import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.actions.SaveToGallery
 import net.engawapg.lib.zoomable.rememberZoomState
 import net.engawapg.lib.zoomable.zoomable
@@ -44,6 +46,11 @@ fun ZoomableImageView(word: String, images: List<String> = listOf(word)) {
     // store the dialog open or close state
     var dialogOpen by remember {
         mutableStateOf(false)
+    }
+
+    // store the dialog open or close state
+    var imageState by remember {
+        mutableStateOf<AsyncImagePainter.State?>(null)
     }
 
     if (imageExtension.matcher(word).matches()) {
@@ -63,8 +70,19 @@ fun ZoomableImageView(word: String, images: List<String> = listOf(word)) {
                 .combinedClickable(
                     onClick = { dialogOpen = true },
                     onLongClick = { clipboardManager.setText(AnnotatedString(word)) }
-                )
+                ),
+            onLoading = {
+                imageState = it
+            },
+            onSuccess = {
+                imageState = it
+            }
         )
+
+        if (imageState !is AsyncImagePainter.State.Success) {
+            ClickableUrl(urlText = "$word ", url = word)
+            LoadingAnimation(indicatorSize = 15.dp)
+        }
     } else {
         VideoView(word) { dialogOpen = true }
     }
@@ -86,7 +104,9 @@ fun ZoomableImageDialog(imageUrl: String, allImages: List<String> = listOf(image
                 var pagerState: PagerState = remember { PagerState() }
 
                 Row(
-                    modifier = Modifier.padding(10.dp).fillMaxWidth(),
+                    modifier = Modifier
+                        .padding(10.dp)
+                        .fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
