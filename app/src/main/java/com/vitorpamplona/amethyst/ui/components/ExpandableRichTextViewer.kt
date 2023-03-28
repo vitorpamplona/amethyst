@@ -43,8 +43,10 @@ fun ExpandableRichTextViewer(
     var showFullText by remember { mutableStateOf(false) }
 
     // Cuts the text in the first space after 350
-    val firstSpaceAfterCut = content.indexOf(' ', SHORT_TEXT_LENGTH)
-    val whereToCut = if (firstSpaceAfterCut < 0) SHORT_TEXT_LENGTH else firstSpaceAfterCut
+    val firstSpaceAfterCut = content.indexOf(' ', SHORT_TEXT_LENGTH).let { if (it < 0) content.length else it }
+    val firstNewLineAfterCut = content.indexOf('\n', SHORT_TEXT_LENGTH).let { if (it < 0) content.length else it }
+
+    val whereToCut = minOf(firstSpaceAfterCut, firstNewLineAfterCut)
 
     val text = if (showFullText) {
         content
