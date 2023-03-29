@@ -46,7 +46,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
@@ -79,6 +78,7 @@ import kotlinx.coroutines.channels.Channel as CoroutineChannel
 
 @Composable
 fun SearchScreen(
+    searchFeedViewModel: NostrGlobalFeedViewModel,
     accountViewModel: AccountViewModel,
     navController: NavController,
     scrollToTop: Boolean = false
@@ -88,21 +88,20 @@ fun SearchScreen(
 
     GlobalFeedFilter.account = account
 
-    val feedViewModel: NostrGlobalFeedViewModel = viewModel()
-
     LaunchedEffect(accountViewModel) {
         GlobalFeedFilter.account = account
         NostrGlobalDataSource.resetFilters()
-        feedViewModel.invalidateData()
+        searchFeedViewModel.invalidateData()
     }
 
     DisposableEffect(accountViewModel) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Global Start")
+                GlobalFeedFilter.account = account
                 NostrGlobalDataSource.start()
                 NostrSearchEventOrUserDataSource.start()
-                feedViewModel.invalidateData()
+                searchFeedViewModel.invalidateData()
             }
             if (event == Lifecycle.Event.ON_PAUSE) {
                 println("Global Stop")
@@ -123,7 +122,7 @@ fun SearchScreen(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
             SearchBar(accountViewModel, navController)
-            FeedView(feedViewModel, accountViewModel, navController, null, ScrollStateKeys.GLOBAL_SCREEN, scrollToTop)
+            FeedView(searchFeedViewModel, accountViewModel, navController, null, ScrollStateKeys.GLOBAL_SCREEN, scrollToTop)
         }
     }
 }
