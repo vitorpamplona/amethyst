@@ -49,6 +49,9 @@ class NewPostViewModel : ViewModel() {
                     this.mentions = currentMentions.plus(replyUser)
                 }
             }
+        } ?: {
+            replyTos = null
+            mentions = null
         }
 
         quote?.let {
