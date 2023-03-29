@@ -347,6 +347,7 @@ fun ZapReaction(
                             accountViewModel.zap(
                                 baseNote,
                                 account.zapAmountChoices.first() * 1000,
+                                null,
                                 "",
                                 context,
                                 onError = {
@@ -547,6 +548,7 @@ fun ZapAmountChoicePopup(
                             accountViewModel.zap(
                                 baseNote,
                                 amountInSats * 1000,
+                                null,
                                 "",
                                 context,
                                 onError,
@@ -571,6 +573,7 @@ fun ZapAmountChoicePopup(
                                     accountViewModel.zap(
                                         baseNote,
                                         amountInSats * 1000,
+                                        null,
                                         "",
                                         context,
                                         onError,

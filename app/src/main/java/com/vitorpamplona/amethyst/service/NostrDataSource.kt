@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.service
 
 import android.util.Log
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
 import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
@@ -90,6 +91,7 @@ abstract class NostrDataSource(val debugName: String) {
                             LocalCache.consume(event)
                         }
                         is TextNoteEvent -> LocalCache.consume(event, relay)
+                        is PollNoteEvent -> LocalCache.consume(event, relay)
                         else -> {
                             Log.w("Event Not Supported", event.toJson())
                         }

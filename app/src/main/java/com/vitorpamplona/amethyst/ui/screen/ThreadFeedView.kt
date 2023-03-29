@@ -21,6 +21,7 @@ import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.SnackbarDefaults.backgroundColor
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
@@ -53,8 +54,10 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
+import com.vitorpamplona.amethyst.service.model.PollNoteEvent
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
-import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
+import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.ui.note.*
 import com.vitorpamplona.amethyst.ui.note.BadgeDisplay
 import com.vitorpamplona.amethyst.ui.note.BlankNote
 import com.vitorpamplona.amethyst.ui.note.DisplayFollowingHashtagsInPost
@@ -344,7 +347,7 @@ fun NoteMaster(
                         !noteForReports.hasAnyReports()
 
                     if (eventContent != null) {
-                        TranslateableRichTextViewer(
+                        TranslatableRichTextViewer(
                             eventContent,
                             canPreview,
                             Modifier.fillMaxWidth(),
@@ -355,6 +358,16 @@ fun NoteMaster(
                         )
 
                         DisplayUncitedHashtags(noteEvent, eventContent, navController)
+
+                        if (noteEvent is PollNoteEvent) {
+                            PollNote(
+                                note,
+                                canPreview,
+                                backgroundColor,
+                                accountViewModel,
+                                navController
+                            )
+                        }
                     }
 
                     ReactionsRow(note, accountViewModel)

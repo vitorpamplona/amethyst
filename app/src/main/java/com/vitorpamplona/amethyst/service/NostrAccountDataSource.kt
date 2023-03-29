@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
 import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
 import com.vitorpamplona.amethyst.service.model.BookmarkListEvent
@@ -78,6 +79,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
         filter = JsonFilter(
             kinds = listOf(
                 TextNoteEvent.kind,
+                PollNoteEvent.kind,
                 ReactionEvent.kind,
                 RepostEvent.kind,
                 ReportEvent.kind,

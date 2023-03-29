@@ -52,7 +52,7 @@ class AccountViewModel(private val account: Account) : ViewModel() {
         account.delete(account.boostsTo(note))
     }
 
-    suspend fun zap(note: Note, amount: Long, message: String, context: Context, onError: (String) -> Unit, onProgress: (percent: Float) -> Unit) {
+    fun zap(note: Note, amount: Long, pollOption: Int?, message: String, context: Context, onError: (String) -> Unit, onProgress: (percent: Float) -> Unit) {
         val lud16 = note.author?.info?.lud16?.trim() ?: note.author?.info?.lud06?.trim()
 
         if (lud16.isNullOrBlank()) {
@@ -60,7 +60,7 @@ class AccountViewModel(private val account: Account) : ViewModel() {
             return
         }
 
-        val zapRequest = account.createZapRequestFor(note)
+        val zapRequest = account.createZapRequestFor(note, pollOption)
 
         onProgress(0.10f)
 

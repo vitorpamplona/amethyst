@@ -5,6 +5,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
+import com.vitorpamplona.amethyst.service.model.PollNoteEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 
 object GlobalFeedFilter : FeedFilter<Note>() {
@@ -17,7 +18,7 @@ object GlobalFeedFilter : FeedFilter<Note>() {
         val notes = LocalCache.notes.values
             .asSequence()
             .filter {
-                (it.event is TextNoteEvent || it.event is LongTextNoteEvent || it.event is ChannelMessageEvent) &&
+                (it.event is TextNoteEvent || it.event is LongTextNoteEvent || it.event is PollNoteEvent || it.event is ChannelMessageEvent) &&
                     it.replyTo.isNullOrEmpty()
             }
             .filter {

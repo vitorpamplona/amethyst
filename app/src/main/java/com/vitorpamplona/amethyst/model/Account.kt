@@ -30,7 +30,11 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import com.vitorpamplona.amethyst.service.model.*
+import com.vitorpamplona.amethyst.service.relays.*
+import kotlinx.coroutines.*
 import nostr.postr.Persona
+import java.util.*
 import java.util.Locale
 
 val DefaultChannels = setOf(
@@ -152,13 +156,18 @@ class Account(
         }
     }
 
-    fun createZapRequestFor(note: Note): LnZapRequestEvent? {
+    fun createZapRequestFor(note: Note, pollOption: Int?): LnZapRequestEvent? {
         if (!isWriteable()) return null
 
-        note.event?.let {
-            return LnZapRequestEvent.create(it, userProfile().latestContactList?.relays()?.keys?.ifEmpty { null } ?: localRelays.map { it.url }.toSet(), loggedIn.privKey!!)
+        note.event?.let { event ->
+            return LnZapRequestEvent.create(
+                event,
+                userProfile().latestContactList?.relays()?.keys?.ifEmpty { null }
+                    ?: localRelays.map { it.url }.toSet(),
+                loggedIn.privKey!!,
+                pollOption
+            )
         }
-
         return null
     }
 
@@ -369,6 +378,39 @@ class Account(
             privateKey = loggedIn.privKey!!
         )
 
+        Client.send(signedEvent)
+        LocalCache.consume(signedEvent)
+    }
+
+    fun sendPoll(
+        message: String,
+        replyTo: List<Note>?,
+        mentions: List<User>?,
+        pollOptions: Map<Int, String>,
+        valueMaximum: Int?,
+        valueMinimum: Int?,
+        consensusThreshold: Int?,
+        closedAt: Int?
+    ) {
+        if (!isWriteable()) return
+
+        val repliesToHex = replyTo?.map { it.idHex }
+        val mentionsHex = mentions?.map { it.pubkeyHex }
+        val addresses = replyTo?.mapNotNull { it.address() }
+
+        val signedEvent = PollNoteEvent.create(
+            msg = message,
+            replyTos = repliesToHex,
+            mentions = mentionsHex,
+            addresses = addresses,
+            privateKey = loggedIn.privKey!!,
+            pollOptions = pollOptions,
+            valueMaximum = valueMaximum,
+            valueMinimum = valueMinimum,
+            consensusThreshold = consensusThreshold,
+            closedAt = closedAt
+        )
+        println("Sending new PollNoteEvent: %s".format(signedEvent.toJson()))
         Client.send(signedEvent)
         LocalCache.consume(signedEvent)
     }
@@ -716,7 +758,7 @@ class Account(
             isAcceptableDirect(note) &&
             (
                 note.event !is RepostEvent ||
-                    (note.event is RepostEvent && note.replyTo?.firstOrNull { isAcceptableDirect(it) } != null)
+                    (note.replyTo?.firstOrNull { isAcceptableDirect(it) } != null)
                 ) // is not a reaction about a blocked post
     }
 

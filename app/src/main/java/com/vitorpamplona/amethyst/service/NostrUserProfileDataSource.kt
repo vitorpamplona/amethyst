@@ -11,6 +11,7 @@ import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.MetadataEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
+import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
@@ -43,7 +44,7 @@ object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
         TypedFilter(
             types = FeedType.values().toSet(),
             filter = JsonFilter(
-                kinds = listOf(TextNoteEvent.kind, RepostEvent.kind, LongTextNoteEvent.kind),
+                kinds = listOf(TextNoteEvent.kind, RepostEvent.kind, LongTextNoteEvent.kind, PollNoteEvent.kind),
                 authors = listOf(it.pubkeyHex),
                 limit = 200
             )

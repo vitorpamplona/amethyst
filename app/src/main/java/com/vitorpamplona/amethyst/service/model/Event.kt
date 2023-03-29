@@ -227,6 +227,7 @@ open class Event(
             LnZapRequestEvent.kind -> LnZapRequestEvent(id, pubKey, createdAt, tags, content, sig)
             LongTextNoteEvent.kind -> LongTextNoteEvent(id, pubKey, createdAt, tags, content, sig)
             MetadataEvent.kind -> MetadataEvent(id, pubKey, createdAt, tags, content, sig)
+            PollNoteEvent.kind -> PollNoteEvent(id, pubKey, createdAt, tags, content, sig)
             PrivateDmEvent.kind -> PrivateDmEvent(id, pubKey, createdAt, tags, content, sig)
             ReactionEvent.kind -> ReactionEvent(id, pubKey, createdAt, tags, content, sig)
             RecommendRelayEvent.kind -> RecommendRelayEvent(id, pubKey, createdAt, tags, content, sig, lenient)

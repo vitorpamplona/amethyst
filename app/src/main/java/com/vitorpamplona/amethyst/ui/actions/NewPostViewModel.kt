@@ -19,9 +19,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 
-class NewPostViewModel : ViewModel() {
-    private var account: Account? = null
-    private var originalNote: Note? = null
+open class NewPostViewModel : ViewModel() {
+    var account: Account? = null
+    var originalNote: Note? = null
 
     var mentions by mutableStateOf<List<User>?>(null)
     var replyTos by mutableStateOf<List<Note>?>(null)
@@ -34,7 +34,7 @@ class NewPostViewModel : ViewModel() {
     var userSuggestions by mutableStateOf<List<User>>(emptyList())
     var userSuggestionAnchor: TextRange? = null
 
-    fun load(account: Account, replyingTo: Note?, quote: Note?) {
+    open fun load(account: Account, replyingTo: Note?, quote: Note?) {
         originalNote = replyingTo
         replyingTo?.let { replyNote ->
             this.replyTos = (replyNote.replyTo ?: emptyList()).plus(replyNote)
@@ -58,21 +58,21 @@ class NewPostViewModel : ViewModel() {
         this.account = account
     }
 
-    fun addUserToMentions(user: User) {
+    open fun addUserToMentions(user: User) {
         mentions = if (mentions?.contains(user) == true) mentions else mentions?.plus(user) ?: listOf(user)
     }
 
-    fun addNoteToReplyTos(note: Note) {
+    open fun addNoteToReplyTos(note: Note) {
         note.author?.let { addUserToMentions(it) }
         replyTos = if (replyTos?.contains(note) == true) replyTos else replyTos?.plus(note) ?: listOf(note)
     }
 
-    fun tagIndex(user: User): Int {
+    open fun tagIndex(user: User): Int {
         // Postr Events assembles replies before mentions in the tag order
         return (if (originalNote?.channel() != null) 1 else 0) + (replyTos?.size ?: 0) + (mentions?.indexOf(user) ?: 0)
     }
 
-    fun tagIndex(note: Note): Int {
+    open fun tagIndex(note: Note): Int {
         // Postr Events assembles replies before mentions in the tag order
         return (if (originalNote?.channel() != null) 1 else 0) + (replyTos?.indexOf(note) ?: 0)
     }
@@ -163,14 +163,14 @@ class NewPostViewModel : ViewModel() {
         )
     }
 
-    fun cancel() {
+    open fun cancel() {
         message = TextFieldValue("")
         urlPreview = null
         isUploadingImage = false
         mentions = null
     }
 
-    fun findUrlInMessage(): String? {
+    open fun findUrlInMessage(): String? {
         return message.text.split('\n').firstNotNullOfOrNull { paragraph ->
             paragraph.split(' ').firstOrNull { word: String ->
                 isValidURL(word) || noProtocolUrlValidator.matcher(word).matches()
@@ -178,11 +178,11 @@ class NewPostViewModel : ViewModel() {
         }
     }
 
-    fun removeFromReplyList(it: User) {
+    open fun removeFromReplyList(it: User) {
         mentions = mentions?.minus(it)
     }
 
-    fun updateMessage(it: TextFieldValue) {
+    open fun updateMessage(it: TextFieldValue) {
         message = it
         urlPreview = findUrlInMessage()
 
@@ -197,7 +197,7 @@ class NewPostViewModel : ViewModel() {
         }
     }
 
-    fun autocompleteWithUser(item: User) {
+    open fun autocompleteWithUser(item: User) {
         userSuggestionAnchor?.let {
             val lastWord = message.text.substring(0, it.end).substringAfterLast("\n").substringAfterLast(" ")
             val lastWordStart = it.end - lastWord.length
