@@ -370,7 +370,7 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, account: Account) {
                             onValueChange = { postViewModel.walletConnectRelay = it },
                             placeholder = {
                                 Text(
-                                    text = "relay.server.com",
+                                    text = "wss://relay.server.com",
                                     color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                                     maxLines = 1
                                 )
