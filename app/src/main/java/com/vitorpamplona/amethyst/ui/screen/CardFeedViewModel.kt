@@ -160,7 +160,12 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>) : ViewModel() {
         LocalCache.live.observeForever(cacheListener)
     }
 
+    fun clear() {
+        lastNotes = null
+    }
+
     override fun onCleared() {
+        clear()
         LocalCache.live.removeObserver(cacheListener)
         super.onCleared()
     }

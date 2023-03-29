@@ -53,8 +53,12 @@ fun AppNavigation(
     GlobalFeedFilter.account = account
     val searchFeedViewModel: NostrGlobalFeedViewModel = viewModel()
 
+    val restartNotificationList = NotificationFeedFilter.isDifferentAccount(account)
+
     NotificationFeedFilter.account = account
     val notifFeedViewModel: NotificationViewModel = viewModel()
+
+    if (restartNotificationList) notifFeedViewModel.clear()
 
     NavHost(navController, startDestination = Route.Home.route) {
         Route.Search.let { route ->
