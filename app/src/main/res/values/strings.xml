@@ -269,4 +269,7 @@
     <string name="pledge_amount_in_sats">Pledge Amount in Sats</string>
 
     <string name="looking_for_event">"Looking for Event %1$s"</string>
+
+    <string name="custom_zaps_add_a_message">Add a public message</string>
+    <string name="custom_zaps_add_a_message_example">Thank you for all your work!</string>
 </resources>
