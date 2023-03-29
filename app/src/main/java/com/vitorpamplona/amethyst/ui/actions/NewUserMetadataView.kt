@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.actions
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
@@ -30,9 +32,14 @@ import com.vitorpamplona.amethyst.model.Account
 @Composable
 fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
     val postViewModel: NewUserMetadataViewModel = viewModel()
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         postViewModel.load(account)
+
+        postViewModel.imageUploadingError.collect { error ->
+            Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+        }
     }
 
     Dialog(
@@ -141,6 +148,15 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                             )
                         },
+                        leadingIcon = {
+                            UploadFromGallery(
+                                isUploading = postViewModel.isUploadingImageForPicture,
+                                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                                modifier = Modifier.padding(start = 5.dp)
+                            ) {
+                                postViewModel.uploadForPicture(it, context)
+                            }
+                        },
                         singleLine = true
                     )
 
@@ -156,6 +172,15 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                                 text = "https://mywebsite.com/mybanner.jpg",
                                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                             )
+                        },
+                        leadingIcon = {
+                            UploadFromGallery(
+                                isUploading = postViewModel.isUploadingImageForBanner,
+                                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                                modifier = Modifier.padding(start = 5.dp)
+                            ) {
+                                postViewModel.uploadForBanner(it, context)
+                            }
                         },
                         singleLine = true
                     )
