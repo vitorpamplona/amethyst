@@ -5,15 +5,24 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 
-object HomeConversationsFeedFilter : FeedFilter<Note>() {
+object HomeConversationsFeedFilter : AdditiveFeedFilter<Note>() {
     lateinit var account: Account
 
     override fun feed(): List<Note> {
+        return sort(applyFilter(LocalCache.notes.values))
+    }
+
+    override fun applyFilter(collection: Set<Note>): List<Note> {
+        return applyFilter(collection)
+    }
+
+    private fun applyFilter(collection: Collection<Note>): List<Note> {
         val user = account.userProfile()
         val followingKeySet = user.cachedFollowingKeySet()
         val followingTagSet = user.cachedFollowingTagSet()
 
-        return LocalCache.notes.values
+        return collection
+            .asSequence()
             .filter {
                 (it.event is TextNoteEvent) &&
                     (it.author?.pubkeyHex in followingKeySet || (it.event?.isTaggedHashes(followingTagSet) ?: false)) &&
@@ -21,7 +30,10 @@ object HomeConversationsFeedFilter : FeedFilter<Note>() {
                     it.author?.let { !account.isHidden(it) } ?: true &&
                     !it.isNewThread()
             }
-            .sortedBy { it.createdAt() }
-            .reversed()
+            .toList()
+    }
+
+    override fun sort(collection: List<Note>): List<Note> {
+        return collection.sortedBy { it.createdAt() }.reversed()
     }
 }

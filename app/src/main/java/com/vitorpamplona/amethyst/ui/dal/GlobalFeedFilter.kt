@@ -7,18 +7,28 @@ import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 
-object GlobalFeedFilter : FeedFilter<Note>() {
+object GlobalFeedFilter : AdditiveFeedFilter<Note>() {
     lateinit var account: Account
 
     override fun feed(): List<Note> {
+        val notes = applyFilter(LocalCache.notes.values)
+        val longFormNotes = applyFilter(LocalCache.addressables.values)
+
+        return sort(notes + longFormNotes)
+    }
+
+    override fun applyFilter(collection: Set<Note>): List<Note> {
+        return applyFilter(collection)
+    }
+
+    private fun applyFilter(collection: Collection<Note>): List<Note> {
         val followChannels = account.followingChannels()
         val followUsers = account.followingKeySet()
 
-        val notes = LocalCache.notes.values
+        return collection
             .asSequence()
             .filter {
-                (it.event is TextNoteEvent || it.event is LongTextNoteEvent || it.event is ChannelMessageEvent) &&
-                    it.replyTo.isNullOrEmpty()
+                (it.event is TextNoteEvent || it.event is LongTextNoteEvent || it.event is ChannelMessageEvent) && it.replyTo.isNullOrEmpty()
             }
             .filter {
                 // does not show events already in the public chat list
@@ -32,27 +42,9 @@ object GlobalFeedFilter : FeedFilter<Note>() {
                 it.createdAt()!! <= System.currentTimeMillis() / 1000
             }
             .toList()
+    }
 
-        val longFormNotes = LocalCache.addressables.values
-            .asSequence()
-            .filter {
-                (it.event is LongTextNoteEvent) && it.replyTo.isNullOrEmpty()
-            }
-            .filter {
-                // does not show events already in the public chat list
-                (it.channel() == null || it.channel() !in followChannels) &&
-                    // does not show people the user already follows
-                    (it.author?.pubkeyHex !in followUsers)
-            }
-            .filter { account.isAcceptable(it) }
-            .filter {
-                // Do not show notes with the creation time exceeding the current time, as they will always stay at the top of the global feed, which is cheating.
-                it.createdAt()!! <= System.currentTimeMillis() / 1000
-            }
-            .toList()
-
-        return (notes + longFormNotes)
-            .sortedBy { it.createdAt() }
-            .reversed()
+    override fun sort(collection: List<Note>): List<Note> {
+        return collection.sortedBy { it.createdAt() }.reversed()
     }
 }

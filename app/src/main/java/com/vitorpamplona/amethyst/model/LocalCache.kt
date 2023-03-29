@@ -27,7 +27,7 @@ import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.service.relays.Relay
-import com.vitorpamplona.amethyst.ui.components.BundledUpdate
+import com.vitorpamplona.amethyst.ui.components.BundledInsert
 import fr.acinq.secp256k1.Hex
 import kotlinx.coroutines.*
 import nostr.postr.toNpub
@@ -208,7 +208,7 @@ object LocalCache {
             it.addReply(note)
         }
 
-        refreshObservers()
+        refreshObservers(note)
     }
 
     fun consume(event: LongTextNoteEvent, relay: Relay?) {
@@ -237,7 +237,7 @@ object LocalCache {
 
             author.addNote(note)
 
-            refreshObservers()
+            refreshObservers(note)
         }
     }
 
@@ -251,7 +251,7 @@ object LocalCache {
         if (event.createdAt > (note.createdAt() ?: 0)) {
             note.loadEvent(event, author, emptyList<Note>())
 
-            refreshObservers()
+            refreshObservers(note)
         }
     }
 
@@ -269,8 +269,6 @@ object LocalCache {
             note.loadEvent(event, author, replyTo)
 
             author.updateAcceptedBadges(note)
-
-            refreshObservers()
         }
     }
 
@@ -292,7 +290,7 @@ object LocalCache {
             it.addReply(note)
         }
 
-        refreshObservers()
+        refreshObservers(note)
     }
 
     @Suppress("UNUSED_PARAMETER")
@@ -338,7 +336,7 @@ object LocalCache {
             recipient.addMessage(author, note)
         }
 
-        refreshObservers()
+        refreshObservers(note)
     }
 
     fun consume(event: DeletionEvent) {
@@ -386,7 +384,7 @@ object LocalCache {
         }
 
         if (deletedAtLeastOne) {
-            live.invalidateData()
+            // refreshObservers()
         }
     }
 
@@ -412,7 +410,7 @@ object LocalCache {
             it.addBoost(note)
         }
 
-        refreshObservers()
+        refreshObservers(note)
     }
 
     fun consume(event: ReactionEvent) {
@@ -450,6 +448,8 @@ object LocalCache {
                 it.addReport(note)
             }
         }
+
+        refreshObservers(note)
     }
 
     fun consume(event: ReportEvent, relay: Relay?) {
@@ -480,6 +480,8 @@ object LocalCache {
         repliesTo.forEach {
             it.addReport(note)
         }
+
+        refreshObservers(note)
     }
 
     fun consume(event: ChannelCreateEvent) {
@@ -496,7 +498,7 @@ object LocalCache {
             oldChannel.addNote(note)
             note.loadEvent(event, author, emptyList())
 
-            refreshObservers()
+            refreshObservers(note)
         }
     }
 
@@ -516,7 +518,7 @@ object LocalCache {
                 oldChannel.addNote(note)
                 note.loadEvent(event, author, emptyList())
 
-                refreshObservers()
+                refreshObservers(note)
             }
         } else {
             // Log.d("MT","Relay sent a previous Metadata Event ${oldUser.toBestDisplayName()} ${formattedDateTime(event.createdAt)} > ${formattedDateTime(oldUser.updatedAt)}")
@@ -563,7 +565,7 @@ object LocalCache {
             it.addReply(note)
         }
 
-        refreshObservers()
+        refreshObservers(note)
     }
 
     @Suppress("UNUSED_PARAMETER")
@@ -606,6 +608,8 @@ object LocalCache {
         mentions.forEach {
             it.addZap(zapRequest, note)
         }
+
+        refreshObservers(note)
     }
 
     fun consume(event: LnZapRequestEvent) {
@@ -629,6 +633,8 @@ object LocalCache {
         mentions.forEach {
             it.addZap(note, null)
         }
+
+        refreshObservers(note)
     }
 
     fun findUsersStartingWith(username: String): List<User> {
@@ -734,30 +740,23 @@ object LocalCache {
     }
 
     // Observers line up here.
-    val live: LocalCacheLiveData = LocalCacheLiveData(this)
+    val live: LocalCacheLiveData = LocalCacheLiveData()
 
-    private fun refreshObservers() {
-        live.invalidateData()
+    private fun refreshObservers(newNote: Note) {
+        live.invalidateData(newNote)
     }
 }
 
-class LocalCacheLiveData(val cache: LocalCache) :
-    LiveData<LocalCacheState>(LocalCacheState(cache)) {
+class LocalCacheLiveData : LiveData<Set<Note>>() {
 
     // Refreshes observers in batches.
-    private val bundler = BundledUpdate(300, Dispatchers.Main) {
-        if (hasActiveObservers()) {
-            refresh()
+    private val bundler = BundledInsert<Note>(300, Dispatchers.Main)
+
+    fun invalidateData(newNote: Note) {
+        bundler.invalidateList(newNote) { bundledNewNotes ->
+            if (hasActiveObservers()) {
+                postValue(bundledNewNotes)
+            }
         }
     }
-
-    fun invalidateData() {
-        bundler.invalidate()
-    }
-
-    private fun refresh() {
-        postValue(LocalCacheState(cache))
-    }
 }
-
-class LocalCacheState(val cache: LocalCache)

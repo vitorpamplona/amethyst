@@ -3,7 +3,7 @@ package com.vitorpamplona.amethyst.ui.screen
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.LocalCacheState
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
@@ -36,7 +36,7 @@ open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel() {
     private fun refreshSuspended() {
         val notes = dataSource.loadTop()
 
-        val oldNotesState = feedContent.value
+        val oldNotesState = _feedContent.value
         if (oldNotesState is UserFeedState.Loaded) {
             // Using size as a proxy for has changed.
             if (notes != oldNotesState.feed.value) {
@@ -50,7 +50,7 @@ open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel() {
     private fun updateFeed(notes: List<User>) {
         val scope = CoroutineScope(Job() + Dispatchers.Main)
         scope.launch {
-            val currentState = feedContent.value
+            val currentState = _feedContent.value
             if (notes.isEmpty()) {
                 _feedContent.update { UserFeedState.Empty }
             } else if (currentState is UserFeedState.Loaded) {
@@ -72,7 +72,7 @@ open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel() {
         bundler.invalidate()
     }
 
-    private val cacheListener: (LocalCacheState) -> Unit = {
+    private val cacheListener: (Set<Note>) -> Unit = { newNotes ->
         invalidateData()
     }
 

@@ -8,14 +8,27 @@ import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 
-object HashtagFeedFilter : FeedFilter<Note>() {
+object HashtagFeedFilter : AdditiveFeedFilter<Note>() {
     lateinit var account: Account
     var tag: String? = null
 
+    fun loadHashtag(account: Account, tag: String?) {
+        this.account = account
+        this.tag = tag
+    }
+
     override fun feed(): List<Note> {
+        return sort(applyFilter(LocalCache.notes.values))
+    }
+
+    override fun applyFilter(collection: Set<Note>): List<Note> {
+        return applyFilter(collection)
+    }
+
+    private fun applyFilter(collection: Collection<Note>): List<Note> {
         val myTag = tag ?: return emptyList()
 
-        return LocalCache.notes.values
+        return collection
             .asSequence()
             .filter {
                 (
@@ -27,13 +40,10 @@ object HashtagFeedFilter : FeedFilter<Note>() {
                     it.event?.isTaggedHash(myTag) == true
             }
             .filter { account.isAcceptable(it) }
-            .sortedBy { it.createdAt() }
             .toList()
-            .reversed()
     }
 
-    fun loadHashtag(account: Account, tag: String?) {
-        this.account = account
-        this.tag = tag
+    override fun sort(collection: List<Note>): List<Note> {
+        return collection.sortedBy { it.createdAt() }.reversed()
     }
 }

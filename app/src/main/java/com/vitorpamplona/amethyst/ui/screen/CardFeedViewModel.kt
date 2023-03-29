@@ -4,7 +4,6 @@ import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.LocalCacheState
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
@@ -47,7 +46,7 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>) : ViewModel() {
 
         val lastNotesCopy = lastNotes
 
-        val oldNotesState = feedContent.value
+        val oldNotesState = _feedContent.value
         if (lastNotesCopy != null && oldNotesState is CardFeedState.Loaded) {
             val newCards = convertToCard(notes.minus(lastNotesCopy))
             if (newCards.isNotEmpty()) {
@@ -125,7 +124,7 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>) : ViewModel() {
     private fun updateFeed(notes: List<Card>) {
         val scope = CoroutineScope(Job() + Dispatchers.Main)
         scope.launch {
-            val currentState = feedContent.value
+            val currentState = _feedContent.value
 
             if (notes.isEmpty()) {
                 _feedContent.update { CardFeedState.Empty }
@@ -152,7 +151,7 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>) : ViewModel() {
         bundler.invalidate()
     }
 
-    private val cacheListener: (LocalCacheState) -> Unit = {
+    private val cacheListener: (Set<Note>) -> Unit = { newNotes ->
         invalidateData()
     }
 

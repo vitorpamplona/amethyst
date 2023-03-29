@@ -5,7 +5,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 
-object ChatroomFeedFilter : FeedFilter<Note>() {
+object ChatroomFeedFilter : AdditiveFeedFilter<Note>() {
     var account: Account? = null
     var withUser: User? = null
 
@@ -29,5 +29,24 @@ object ChatroomFeedFilter : FeedFilter<Note>() {
             .filter { myAccount.isAcceptable(it) }
             .sortedBy { it.createdAt() }
             .reversed()
+    }
+
+    override fun applyFilter(collection: Set<Note>): List<Note> {
+        val myAccount = account
+        val myUser = withUser
+
+        if (myAccount == null || myUser == null) return emptyList()
+
+        val messages = myAccount
+            .userProfile()
+            .privateChatrooms[myUser] ?: return emptyList()
+
+        return collection
+            .filter { it in messages.roomMessages }
+            .filter { account?.isAcceptable(it) == true }
+    }
+
+    override fun sort(collection: List<Note>): List<Note> {
+        return collection.sortedBy { it.createdAt() }.reversed()
     }
 }

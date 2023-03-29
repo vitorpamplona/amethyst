@@ -7,34 +7,38 @@ import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 
-object HomeNewThreadFeedFilter : FeedFilter<Note>() {
+object HomeNewThreadFeedFilter : AdditiveFeedFilter<Note>() {
     lateinit var account: Account
 
     override fun feed(): List<Note> {
+        val notes = applyFilter(LocalCache.notes.values)
+        val longFormNotes = applyFilter(LocalCache.addressables.values)
+
+        return sort(notes + longFormNotes)
+    }
+
+    override fun applyFilter(collection: Set<Note>): List<Note> {
+        return applyFilter(collection)
+    }
+
+    private fun applyFilter(collection: Collection<Note>): List<Note> {
         val user = account.userProfile()
         val followingKeySet = user.cachedFollowingKeySet()
         val followingTagSet = user.cachedFollowingTagSet()
 
-        val notes = LocalCache.notes.values
+        return collection
+            .asSequence()
             .filter { it ->
-                (it.event is TextNoteEvent || it.event is RepostEvent) &&
+                (it.event is TextNoteEvent || it.event is RepostEvent || it.event is LongTextNoteEvent) &&
                     (it.author?.pubkeyHex in followingKeySet || (it.event?.isTaggedHashes(followingTagSet) ?: false)) &&
                     // && account.isAcceptable(it)  // This filter follows only. No need to check if acceptable
                     it.author?.let { !account.isHidden(it) } ?: true &&
                     it.isNewThread()
             }
+            .toList()
+    }
 
-        val longFormNotes = LocalCache.addressables.values
-            .filter { it ->
-                (it.event is LongTextNoteEvent) &&
-                    (it.author?.pubkeyHex in followingKeySet || (it.event?.isTaggedHashes(followingTagSet) ?: false)) &&
-                    // && account.isAcceptable(it)  // This filter follows only. No need to check if acceptable
-                    it.author?.let { !account.isHidden(it) } ?: true &&
-                    it.isNewThread()
-            }
-
-        return (notes + longFormNotes)
-            .sortedBy { it.createdAt() }
-            .reversed()
+    override fun sort(collection: List<Note>): List<Note> {
+        return collection.sortedBy { it.createdAt() }.reversed()
     }
 }
