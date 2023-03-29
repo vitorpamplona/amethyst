@@ -192,8 +192,8 @@
     <string name="new_badge_award_notif">Új Jelvényt kapott</string>
     <string name="award_granted_to">Kitüntetésben részesült</string>
     <string name="copied_note_text_to_clipboard">Bejegyzés vágólapra helyezve</string>
-    <string name="copied_user_id_to_clipboard" tools:ignore="Typos">A szerző @npub-ja vágólapra helyezve</string>
-    <string name="copied_note_id_to_clipboard" tools:ignore="Typos">A bejegyzés azonosítója (@note1) vágólapra helyezve</string>
+    <string name="copied_user_id_to_clipboard">A szerző @npub-ja vágólapra helyezve</string>
+    <string name="copied_note_id_to_clipboard">A bejegyzés azonosítója (@note1) vágólapra helyezve</string>
     <string name="select_text_dialog_top">Szöveg Kijelölése</string>
     <string name="github" translatable="false">Github Gist w/ Proof</string>
     <string name="telegram" translatable="false">Telegram</string>
@@ -262,7 +262,7 @@
     <string name="wallet_connect_service_show_secret">Titkos Kulcs Megjelenítése</string>
     <string name="wallet_connect_service_secret_placeholder">nsec / hex privát kulcs</string>
 
-    <string name="pledge_amount_in_sats">Hozzájárulás összege sats-ban/string>
+    <string name="pledge_amount_in_sats">Hozzájárulás összege sats-ban</string>
 
     <string name="looking_for_event">"%1$s esemény keresése"</string>
 </resources>
