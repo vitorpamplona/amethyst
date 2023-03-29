@@ -430,12 +430,13 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewMode
                 fontSize = 25.sp
             )
         }
-
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
         user.bestUsername()?.let {
             Text(
                 "@$it",
                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-                modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp)
+                modifier = Modifier.padding(top = 1.dp, bottom = 1.dp)
             )
         }
     }
