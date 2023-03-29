@@ -114,20 +114,38 @@ class UpdateZapAmountViewModel : ViewModel() {
         account?.changeZapAmounts(amountSet)
 
         if (walletConnectRelay.text.isNotBlank() && walletConnectPubkey.text.isNotBlank()) {
+            val pubkeyHex = try {
+                decodePublicKey(walletConnectPubkey.text.trim()).toHexKey()
+            } catch (e: Exception) {
+                null
+            }
+
+            val relayUrl = walletConnectRelay.text.ifBlank { null }?.let {
+                var addedWSS =
+                    if (!it.startsWith("wss://") && !it.startsWith("ws://")) "wss://$it" else it
+                if (addedWSS.endsWith("/")) addedWSS = addedWSS.dropLast(1)
+
+                addedWSS
+            }
+
             val unverifiedPrivKey = walletConnectSecret.text.ifBlank { null }
-            val privKey = try {
+            val privKeyHex = try {
                 unverifiedPrivKey?.let { decodePublicKey(it).toHexKey() }
             } catch (e: Exception) {
                 null
             }
 
-            account?.changeZapPaymentRequest(
-                Nip47URI(
-                    walletConnectPubkey.text,
-                    walletConnectRelay.text.ifBlank { null },
-                    privKey
+            if (pubkeyHex != null) {
+                account?.changeZapPaymentRequest(
+                    Nip47URI(
+                        pubkeyHex,
+                        relayUrl,
+                        privKeyHex
+                    )
                 )
-            )
+            } else {
+                account?.changeZapPaymentRequest(null)
+            }
         } else {
             account?.changeZapPaymentRequest(null)
         }
