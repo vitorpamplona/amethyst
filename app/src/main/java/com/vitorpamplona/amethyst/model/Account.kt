@@ -152,11 +152,11 @@ class Account(
         }
     }
 
-    fun createZapRequestFor(note: Note): LnZapRequestEvent? {
+    fun createZapRequestFor(note: Note, message: String = ""): LnZapRequestEvent? {
         if (!isWriteable()) return null
 
         note.event?.let {
-            return LnZapRequestEvent.create(it, userProfile().latestContactList?.relays()?.keys?.ifEmpty { null } ?: localRelays.map { it.url }.toSet(), loggedIn.privKey!!)
+            return LnZapRequestEvent.create(it, userProfile().latestContactList?.relays()?.keys?.ifEmpty { null } ?: localRelays.map { it.url }.toSet(), loggedIn.privKey!!, message)
         }
 
         return null
@@ -180,10 +180,10 @@ class Account(
         return createZapRequestFor(user.pubkeyHex)
     }
 
-    fun createZapRequestFor(userPubKeyHex: String): LnZapRequestEvent? {
+    fun createZapRequestFor(userPubKeyHex: String, message: String = ""): LnZapRequestEvent? {
         if (!isWriteable()) return null
 
-        return LnZapRequestEvent.create(userPubKeyHex, userProfile().latestContactList?.relays()?.keys?.ifEmpty { null } ?: localRelays.map { it.url }.toSet(), loggedIn.privKey!!)
+        return LnZapRequestEvent.create(userPubKeyHex, userProfile().latestContactList?.relays()?.keys?.ifEmpty { null } ?: localRelays.map { it.url }.toSet(), loggedIn.privKey!!, message)
     }
 
     fun report(note: Note, type: ReportEvent.ReportType, content: String = "") {

@@ -23,9 +23,10 @@ class LnZapRequestEvent(
             originalNote: EventInterface,
             relays: Set<String>,
             privateKey: ByteArray,
+            message: String,
             createdAt: Long = Date().time / 1000
         ): LnZapRequestEvent {
-            val content = ""
+            val content = message
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             var tags = listOf(
                 listOf("e", originalNote.id()),
@@ -45,9 +46,10 @@ class LnZapRequestEvent(
             userHex: String,
             relays: Set<String>,
             privateKey: ByteArray,
+            message: String,
             createdAt: Long = Date().time / 1000
         ): LnZapRequestEvent {
-            val content = ""
+            val content = message
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             val tags = listOf(
                 listOf("p", userHex),
