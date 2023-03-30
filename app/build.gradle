@@ -110,7 +110,7 @@ dependencies {
     implementation "androidx.biometric:biometric-ktx:1.2.0-alpha05"
 
     // Bitcoin secp256k1 bindings to Android
-    implementation 'fr.acinq.secp256k1:secp256k1-kmp-jni-android:0.7.1'
+    implementation 'fr.acinq.secp256k1:secp256k1-kmp-jni-android:0.8.0'
 
     // Nostr Base Protocol
     implementation('com.github.vitorpamplona.NostrPostr:nostrpostrlib:master-SNAPSHOT') {
@@ -133,14 +133,14 @@ dependencies {
     implementation 'androidx.security:security-crypto-ktx:1.1.0-alpha05'
 
     // view videos
-    implementation 'com.google.android.exoplayer:exoplayer:2.18.4'
+    implementation 'com.google.android.exoplayer:exoplayer:2.18.5'
 
     // Load images from the web.
-    implementation "io.coil-kt:coil-compose:2.2.2"
+    implementation "io.coil-kt:coil-compose:$coil_version"
     // view gifs
-    implementation "io.coil-kt:coil-gif:2.2.2"
+    implementation "io.coil-kt:coil-gif:$coil_version"
     // view svgs
-    implementation("io.coil-kt:coil-svg:2.2.2")
+    implementation "io.coil-kt:coil-svg:$coil_version"
 
     // Rendering clickable text
     implementation "com.google.accompanist:accompanist-flowlayout:$accompanist_version"
