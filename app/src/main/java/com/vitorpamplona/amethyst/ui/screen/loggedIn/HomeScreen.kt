@@ -11,7 +11,11 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
@@ -28,6 +32,7 @@ import com.vitorpamplona.amethyst.service.NostrHomeDataSource
 import com.vitorpamplona.amethyst.ui.dal.HomeConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountDialog
 import com.vitorpamplona.amethyst.ui.screen.FeedView
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
@@ -42,10 +47,12 @@ fun HomeScreen(
     accountViewModel: AccountViewModel,
     navController: NavController,
     pagerState: PagerState,
-    scrollToTop: Boolean = false
+    scrollToTop: Boolean = false,
+    nip47: String? = null
 ) {
     val coroutineScope = rememberCoroutineScope()
     val account = accountViewModel.accountLiveData.value?.account ?: return
+    var wantsToAddNip47 by remember { mutableStateOf<String?>(nip47) }
 
     LaunchedEffect(accountViewModel) {
         HomeNewThreadFeedFilter.account = account
@@ -53,6 +60,10 @@ fun HomeScreen(
         NostrHomeDataSource.resetFilters()
         homeFeedViewModel.invalidateData()
         repliesFeedViewModel.invalidateData()
+    }
+
+    if (wantsToAddNip47 != null) {
+        UpdateZapAmountDialog({ wantsToAddNip47 = null }, account = account, wantsToAddNip47)
     }
 
     val lifeCycleOwner = LocalLifecycleOwner.current

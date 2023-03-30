@@ -1,8 +1,12 @@
 package com.vitorpamplona.amethyst.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -39,6 +43,7 @@ fun AppNavigation(
     nextPage: String? = null
 ) {
     val homePagerState = rememberPagerState()
+    var actionableNextPage by remember { mutableStateOf<String?>(nextPage) }
 
     // Avoids creating ViewModels for performance reasons (up to 1 second delays)
     val accountState by accountViewModel.accountLiveData.observeAsState()
@@ -76,8 +81,9 @@ fun AppNavigation(
         }
 
         Route.Home.let { route ->
-            composable(route.route, route.arguments, content = {
+            composable(route.route, route.arguments, content = { it ->
                 val scrollToTop = it.arguments?.getBoolean("scrollToTop") ?: false
+                val nip47 = it.arguments?.getString("nip47")
 
                 HomeScreen(
                     homeFeedViewModel = homeFeedViewModel,
@@ -85,12 +91,16 @@ fun AppNavigation(
                     accountViewModel = accountViewModel,
                     navController = navController,
                     pagerState = homePagerState,
-                    scrollToTop = scrollToTop
+                    scrollToTop = scrollToTop,
+                    nip47 = nip47
                 )
 
                 // Avoids running scroll to top when back button is pressed
                 if (scrollToTop) {
                     it.arguments?.remove("scrollToTop")
+                }
+                if (nip47 != null) {
+                    it.arguments?.remove("nip47")
                 }
             })
         }
@@ -178,7 +188,10 @@ fun AppNavigation(
         }
     }
 
-    if (nextPage != null) {
-        navController.navigate(nextPage)
+    actionableNextPage?.let {
+        LaunchedEffect(it) {
+            navController.navigate(it)
+        }
+        actionableNextPage = null
     }
 }

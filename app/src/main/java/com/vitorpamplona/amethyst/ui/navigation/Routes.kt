@@ -24,9 +24,12 @@ sealed class Route(
         get() = route.substringBefore("?")
 
     object Home : Route(
-        route = "Home?scrollToTop={scrollToTop}",
+        route = "Home?scrollToTop={scrollToTop}&nip47={nip47}",
         icon = R.drawable.ic_home,
-        arguments = listOf(navArgument("scrollToTop") { type = NavType.BoolType; defaultValue = false }),
+        arguments = listOf(
+            navArgument("scrollToTop") { type = NavType.BoolType; defaultValue = false },
+            navArgument("nip47") { type = NavType.StringType; nullable = true; defaultValue = null }
+        ),
         hasNewItems = { accountViewModel, cache -> homeHasNewItems(accountViewModel, cache) }
     )
 
