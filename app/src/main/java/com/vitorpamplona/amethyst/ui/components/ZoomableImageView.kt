@@ -10,8 +10,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.InlineTextContent
+import androidx.compose.foundation.text.appendInlineContent
+import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
+import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -24,7 +28,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
@@ -81,7 +90,36 @@ fun ZoomableImageView(word: String, images: List<String> = listOf(word)) {
 
         if (imageState !is AsyncImagePainter.State.Success) {
             ClickableUrl(urlText = "$word ", url = word)
-            LoadingAnimation(indicatorSize = 15.dp)
+
+            val myId = "inlineContent"
+            val emptytext = buildAnnotatedString {
+                withStyle(
+                    LocalTextStyle.current.copy(color = MaterialTheme.colors.primary).toSpanStyle()
+                ) {
+                    append("")
+                    appendInlineContent(myId, "[icon]")
+                }
+            }
+            val inlineContent = mapOf(
+                Pair(
+                    myId,
+                    InlineTextContent(
+                        Placeholder(
+                            width = 17.sp,
+                            height = 17.sp,
+                            placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+                        )
+                    ) {
+                        LoadingAnimation()
+                    }
+                )
+            )
+
+            // Empty Text for Size of Icon
+            Text(
+                text = emptytext,
+                inlineContent = inlineContent
+            )
         }
     } else {
         VideoView(word) { dialogOpen = true }
