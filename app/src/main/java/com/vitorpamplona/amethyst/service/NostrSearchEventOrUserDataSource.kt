@@ -35,25 +35,25 @@ object NostrSearchEventOrUserDataSource : NostrDataSource("SingleEventFeed") {
             null
         }
 
-        if (hexToWatch == null) {
-            return null
-        }
-
         // downloads all the reactions to a given event.
-        return listOf(
-            TypedFilter(
-                types = FeedType.values().toSet(),
-                filter = JsonFilter(
-                    ids = listOfNotNull(hexToWatch)
+        return listOfNotNull(
+            hexToWatch?.let {
+                TypedFilter(
+                    types = FeedType.values().toSet(),
+                    filter = JsonFilter(
+                        ids = listOfNotNull(hexToWatch)
+                    )
                 )
-            ),
-            TypedFilter(
-                types = FeedType.values().toSet(),
-                filter = JsonFilter(
-                    kinds = listOf(MetadataEvent.kind),
-                    authors = listOfNotNull(hexToWatch)
+            },
+            hexToWatch?.let {
+                TypedFilter(
+                    types = FeedType.values().toSet(),
+                    filter = JsonFilter(
+                        kinds = listOf(MetadataEvent.kind),
+                        authors = listOfNotNull(hexToWatch)
+                    )
                 )
-            ),
+            },
             TypedFilter(
                 types = FeedType.values().toSet(),
                 filter = JsonFilter(
