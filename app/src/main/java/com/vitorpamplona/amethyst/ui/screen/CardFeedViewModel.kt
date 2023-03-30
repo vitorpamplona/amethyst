@@ -110,7 +110,7 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>) : ViewModel() {
             val reactionsInCard = reactionsPerEvent[baseNote] ?: emptyList()
             val zapsInCard = zapsPerEvent[baseNote] ?: emptyMap()
 
-            val singleList = (boostsInCard + zapsInCard.values + reactionsInCard).sortedBy { it.createdAt() }
+            val singleList = (boostsInCard + zapsInCard.values + reactionsInCard).sortedBy { it.createdAt() }.reversed()
             singleList.chunked(50).map { chunk ->
                 MultiSetCard(
                     baseNote,
