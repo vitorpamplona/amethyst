@@ -100,14 +100,21 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>) : ViewModel() {
             }
 
         val allBaseNotes = zapsPerEvent.keys + boostsPerEvent.keys + reactionsPerEvent.keys
-        val multiCards = allBaseNotes.map {
-            MultiSetCard(
-                it,
-                boostsPerEvent.get(it) ?: emptyList(),
-                reactionsPerEvent.get(it) ?: emptyList(),
-                zapsPerEvent.get(it) ?: emptyMap()
-            )
-        }
+        val multiCards = allBaseNotes.map { baseNote ->
+            val boostsInCard = boostsPerEvent[baseNote] ?: emptyList()
+            val reactionsInCard = reactionsPerEvent[baseNote] ?: emptyList()
+            val zapsInCard = zapsPerEvent[baseNote] ?: emptyMap()
+
+            val singleList = (boostsInCard + zapsInCard.values + reactionsInCard).sortedBy { it.createdAt() }
+            singleList.chunked(50).map { chunk ->
+                MultiSetCard(
+                    baseNote,
+                    boostsInCard.filter { it in chunk },
+                    reactionsInCard.filter { it in chunk },
+                    zapsInCard.filter { it.value in chunk }
+                )
+            }
+        }.flatten()
 
         val textNoteCards = notes.filter { it.event !is ReactionEvent && it.event !is RepostEvent && it.event !is LnZapEvent }.map {
             if (it.event is PrivateDmEvent) {
