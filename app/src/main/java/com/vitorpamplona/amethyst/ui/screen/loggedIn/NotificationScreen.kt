@@ -30,6 +30,10 @@ fun NotificationScreen(
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
+    if (scrollToTop) {
+        notifFeedViewModel.clear()
+    }
+
     LaunchedEffect(accountViewModel) {
         NotificationFeedFilter.account = account
         notifFeedViewModel.invalidateData()

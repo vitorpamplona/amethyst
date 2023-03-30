@@ -173,6 +173,7 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>) : ViewModel() {
     }
 
     fun clear() {
+        lastAccount = null
         lastNotes = null
     }
 
