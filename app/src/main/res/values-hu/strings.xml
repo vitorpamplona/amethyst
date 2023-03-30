@@ -265,4 +265,7 @@
     <string name="pledge_amount_in_sats">Hozzájárulás összege sats-ban</string>
 
     <string name="looking_for_event">"%1$s esemény keresése"</string>
+
+    <string name="custom_zaps_add_a_message">Nyilvános üzenet hozzáadása</string>
+    <string name="custom_zaps_add_a_message_example">Köszönöm a kemény munkát!</string>
 </resources>
