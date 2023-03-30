@@ -53,12 +53,8 @@ fun AppNavigation(
     GlobalFeedFilter.account = account
     val searchFeedViewModel: NostrGlobalFeedViewModel = viewModel()
 
-    val restartNotificationList = NotificationFeedFilter.isDifferentAccount(account)
-
     NotificationFeedFilter.account = account
     val notifFeedViewModel: NotificationViewModel = viewModel()
-
-    if (restartNotificationList) notifFeedViewModel.clear()
 
     NavHost(navController, startDestination = Route.Home.route) {
         Route.Search.let { route ->
@@ -99,8 +95,25 @@ fun AppNavigation(
             })
         }
 
+        Route.Notification.let { route ->
+            composable(route.route, route.arguments, content = {
+                val scrollToTop = it.arguments?.getBoolean("scrollToTop") ?: false
+
+                NotificationScreen(
+                    notifFeedViewModel = notifFeedViewModel,
+                    accountViewModel = accountViewModel,
+                    navController = navController,
+                    scrollToTop = scrollToTop
+                )
+
+                // Avoids running scroll to top when back button is pressed
+                if (scrollToTop) {
+                    it.arguments?.remove("scrollToTop")
+                }
+            })
+        }
+
         composable(Route.Message.route, content = { ChatroomListScreen(accountViewModel, navController) })
-        composable(Route.Notification.route, content = { NotificationScreen(notifFeedViewModel, accountViewModel, navController) })
         composable(Route.BlockedUsers.route, content = { HiddenUsersScreen(accountViewModel, navController) })
         composable(Route.Bookmarks.route, content = { BookmarkListScreen(accountViewModel, navController) })
 

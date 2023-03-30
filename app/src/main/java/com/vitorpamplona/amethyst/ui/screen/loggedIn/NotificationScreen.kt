@@ -18,9 +18,15 @@ import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.CardFeedView
 import com.vitorpamplona.amethyst.ui.screen.NotificationViewModel
+import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 
 @Composable
-fun NotificationScreen(notifFeedViewModel: NotificationViewModel, accountViewModel: AccountViewModel, navController: NavController) {
+fun NotificationScreen(
+    notifFeedViewModel: NotificationViewModel,
+    accountViewModel: AccountViewModel,
+    navController: NavController,
+    scrollToTop: Boolean = false
+) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
@@ -48,7 +54,14 @@ fun NotificationScreen(notifFeedViewModel: NotificationViewModel, accountViewMod
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            CardFeedView(notifFeedViewModel, accountViewModel = accountViewModel, navController, Route.Notification.route)
+            CardFeedView(
+                viewModel = notifFeedViewModel,
+                accountViewModel = accountViewModel,
+                navController = navController,
+                routeForLastRead = Route.Notification.base,
+                scrollStateKey = ScrollStateKeys.NOTIFICATION_SCREEN,
+                scrollToTop = scrollToTop
+            )
         }
     }
 }

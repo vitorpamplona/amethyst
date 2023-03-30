@@ -37,8 +37,9 @@ sealed class Route(
     )
 
     object Notification : Route(
-        route = "Notification",
+        route = "Notification?scrollToTop={scrollToTop}",
         icon = R.drawable.ic_notifications,
+        arguments = listOf(navArgument("scrollToTop") { type = NavType.BoolType; defaultValue = false }),
         hasNewItems = { accountViewModel, cache -> notificationHasNewItems(accountViewModel, cache) }
     )
 
