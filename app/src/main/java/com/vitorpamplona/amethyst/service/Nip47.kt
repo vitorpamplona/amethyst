@@ -1,10 +1,11 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import android.net.Uri
+import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.decodePublicKey
 import com.vitorpamplona.amethyst.model.toHexKey
 
-data class Nip47URI(val pubKeyHex: String, val relayUri: String?, val secret: String?)
+data class Nip47URI(val pubKeyHex: HexKey, val relayUri: String?, val secret: HexKey?)
 
 // Rename to the corect nip number when ready.
 object Nip47 {

@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.ui.screen
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.LocalCacheState
 import com.vitorpamplona.amethyst.model.Note
@@ -32,6 +33,7 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>) : ViewModel() {
     private val _feedContent = MutableStateFlow<CardFeedState>(CardFeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
 
+    private var lastAccount: Account? = null
     private var lastNotes: List<Note>? = null
 
     private fun refresh() {
@@ -45,18 +47,21 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>) : ViewModel() {
     private fun refreshSuspended() {
         val notes = dataSource.loadTop()
 
-        val lastNotesCopy = lastNotes
+        val thisAccount = (dataSource as? NotificationFeedFilter)?.account
+        val lastNotesCopy = if (thisAccount == lastAccount) lastNotes else null
 
         val oldNotesState = feedContent.value
         if (lastNotesCopy != null && oldNotesState is CardFeedState.Loaded) {
             val newCards = convertToCard(notes.minus(lastNotesCopy))
             if (newCards.isNotEmpty()) {
                 lastNotes = notes
+                lastAccount = (dataSource as? NotificationFeedFilter)?.account
                 updateFeed((oldNotesState.feed.value + newCards).distinctBy { it.id() }.sortedBy { it.createdAt() }.reversed())
             }
         } else {
             val cards = convertToCard(notes)
             lastNotes = notes
+            lastAccount = (dataSource as? NotificationFeedFilter)?.account
             updateFeed(cards)
         }
     }
@@ -100,14 +105,21 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>) : ViewModel() {
             }
 
         val allBaseNotes = zapsPerEvent.keys + boostsPerEvent.keys + reactionsPerEvent.keys
-        val multiCards = allBaseNotes.map {
-            MultiSetCard(
-                it,
-                boostsPerEvent.get(it) ?: emptyList(),
-                reactionsPerEvent.get(it) ?: emptyList(),
-                zapsPerEvent.get(it) ?: emptyMap()
-            )
-        }
+        val multiCards = allBaseNotes.map { baseNote ->
+            val boostsInCard = boostsPerEvent[baseNote] ?: emptyList()
+            val reactionsInCard = reactionsPerEvent[baseNote] ?: emptyList()
+            val zapsInCard = zapsPerEvent[baseNote] ?: emptyMap()
+
+            val singleList = (boostsInCard + zapsInCard.values + reactionsInCard).sortedBy { it.createdAt() }.reversed()
+            singleList.chunked(50).map { chunk ->
+                MultiSetCard(
+                    baseNote,
+                    boostsInCard.filter { it in chunk },
+                    reactionsInCard.filter { it in chunk },
+                    zapsInCard.filter { it.value in chunk }
+                )
+            }
+        }.flatten()
 
         val textNoteCards = notes.filter { it.event !is ReactionEvent && it.event !is RepostEvent && it.event !is LnZapEvent }.map {
             if (it.event is PrivateDmEvent) {
@@ -160,7 +172,13 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>) : ViewModel() {
         LocalCache.live.observeForever(cacheListener)
     }
 
+    fun clear() {
+        lastAccount = null
+        lastNotes = null
+    }
+
     override fun onCleared() {
+        clear()
         LocalCache.live.removeObserver(cacheListener)
         super.onCleared()
     }

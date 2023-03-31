@@ -346,7 +346,7 @@ fun NoteComposeInner(
                             }
 
                             val pow = noteEvent.getPoWRank()
-                            if (pow > 1) {
+                            if (pow > 20) {
                                 DisplayPoW(pow)
                             }
                         }

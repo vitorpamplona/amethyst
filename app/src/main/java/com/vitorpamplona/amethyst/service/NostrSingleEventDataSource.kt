@@ -71,8 +71,6 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
             return null
         }
 
-        val now = Date().time / 1000
-
         return reactionsToWatch.map {
             TypedFilter(
                 types = FeedType.values().toSet(),
@@ -142,7 +140,7 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
         val addresses = createAddressFilter()
         val addressReactions = createTagToAddressFilter()
 
-        singleEventChannel.typedFilters = listOfNotNull(reactions, missing, addresses, addressReactions).flatten().ifEmpty { null }
+        singleEventChannel.typedFilters = listOfNotNull(missing, addresses, reactions, addressReactions).flatten().ifEmpty { null }
     }
 
     fun add(eventId: Note) {

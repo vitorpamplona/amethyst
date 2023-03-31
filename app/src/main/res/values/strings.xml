@@ -285,4 +285,7 @@
     <string name="one_vote_per_user_on_atomic_votes">Only one vote per user is allowed on this type of poll</string>
 
     <string name="looking_for_event">"Looking for Event %1$s"</string>
+
+    <string name="custom_zaps_add_a_message">Add a public message</string>
+    <string name="custom_zaps_add_a_message_example">Thank you for all your work!</string>
 </resources>

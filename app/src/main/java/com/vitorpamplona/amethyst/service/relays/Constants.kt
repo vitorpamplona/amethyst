@@ -4,6 +4,7 @@ import com.vitorpamplona.amethyst.model.RelaySetupInfo
 
 object Constants {
     val activeTypes = setOf(FeedType.FOLLOWS, FeedType.PRIVATE_DMS)
+    val activeTypesChats = setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.PRIVATE_DMS)
     val activeTypesGlobalChats = setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.PRIVATE_DMS, FeedType.GLOBAL)
     val activeTypesSearch = setOf(FeedType.SEARCH)
 
@@ -14,16 +15,18 @@ object Constants {
     }
 
     val defaultRelays = arrayOf(
-        // Free relays
-        RelaySetupInfo("wss://nostr.bitcoiner.social", read = true, write = true, feedTypes = activeTypes),
-        RelaySetupInfo("wss://relay.nostr.bg", read = true, write = true, feedTypes = activeTypes),
+        // Free relays for DMs and Follows
+        RelaySetupInfo("wss://no.str.cr", read = true, write = true, feedTypes = activeTypes),
         RelaySetupInfo("wss://relay.snort.social", read = true, write = true, feedTypes = activeTypes),
         RelaySetupInfo("wss://relay.damus.io", read = true, write = true, feedTypes = activeTypes),
-        RelaySetupInfo("wss://nostr.oxtr.dev", read = true, write = true, feedTypes = activeTypes),
-        RelaySetupInfo("wss://nostr-pub.wellorder.net", read = true, write = true, feedTypes = activeTypes),
-        RelaySetupInfo("wss://nostr.mom", read = true, write = true, feedTypes = activeTypes),
-        RelaySetupInfo("wss://no.str.cr", read = true, write = true, feedTypes = activeTypes),
-        RelaySetupInfo("wss://nos.lol", read = true, write = true, feedTypes = activeTypes),
+
+        // Chats
+        RelaySetupInfo("wss://nostr.bitcoiner.social", read = true, write = true, feedTypes = activeTypesChats),
+        RelaySetupInfo("wss://relay.nostr.bg", read = true, write = true, feedTypes = activeTypesChats),
+        RelaySetupInfo("wss://nostr.oxtr.dev", read = true, write = true, feedTypes = activeTypesChats),
+        RelaySetupInfo("wss://nostr-pub.wellorder.net", read = true, write = true, feedTypes = activeTypesChats),
+        RelaySetupInfo("wss://nostr.mom", read = true, write = true, feedTypes = activeTypesChats),
+        RelaySetupInfo("wss://nos.lol", read = true, write = true, feedTypes = activeTypesChats),
 
         // Less Reliable
         // NewRelayListViewModel.Relay("wss://nostr.orangepill.dev", read = true, write = true, feedTypes = activeTypes),

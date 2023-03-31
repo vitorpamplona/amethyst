@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.ui.note.*
 import com.vitorpamplona.amethyst.ui.note.BadgeDisplay
 import com.vitorpamplona.amethyst.ui.note.BlankNote
 import com.vitorpamplona.amethyst.ui.note.DisplayFollowingHashtagsInPost
+import com.vitorpamplona.amethyst.ui.note.DisplayPoW
 import com.vitorpamplona.amethyst.ui.note.DisplayReward
 import com.vitorpamplona.amethyst.ui.note.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.note.HiddenNote
@@ -285,6 +286,11 @@ fun NoteMaster(
                         val baseReward = noteEvent.getReward()
                         if (baseReward != null) {
                             DisplayReward(baseReward, baseNote, account, navController)
+                        }
+
+                        val pow = noteEvent.getPoWRank()
+                        if (pow > 20) {
+                            DisplayPoW(pow)
                         }
                     }
                 }

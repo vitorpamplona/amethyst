@@ -60,7 +60,7 @@ class AccountViewModel(private val account: Account) : ViewModel() {
             return
         }
 
-        val zapRequest = account.createZapRequestFor(note, pollOption)
+        val zapRequest = account.createZapRequestFor(note, pollOption, message)
 
         onProgress(0.10f)
 

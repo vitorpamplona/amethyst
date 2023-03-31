@@ -130,7 +130,7 @@ fun InvoiceRequest(lud16: String, toUserPubKeyHex: String, account: Account, onC
             Button(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
                 onClick = {
-                    val zapRequest = account.createZapRequestFor(toUserPubKeyHex)
+                    val zapRequest = account.createZapRequestFor(toUserPubKeyHex, message)
 
                     LightningAddressResolver().lnAddressInvoice(
                         lud16,

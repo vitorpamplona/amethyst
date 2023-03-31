@@ -24,9 +24,10 @@ class LnZapRequestEvent(
             relays: Set<String>,
             privateKey: ByteArray,
             pollOption: Int?,
+            message: String,
             createdAt: Long = Date().time / 1000
         ): LnZapRequestEvent {
-            val content = ""
+            val content = message
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             var tags = listOf(
                 listOf("e", originalNote.id()),
@@ -49,14 +50,19 @@ class LnZapRequestEvent(
             userHex: String,
             relays: Set<String>,
             privateKey: ByteArray,
+            pollOption: Int?,
+            message: String,
             createdAt: Long = Date().time / 1000
         ): LnZapRequestEvent {
-            val content = ""
+            val content = message
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
-            val tags = listOf(
+            var tags = listOf(
                 listOf("p", userHex),
                 listOf("relays") + relays
             )
+            if (pollOption != null && pollOption >= 0) {
+                tags = tags + listOf(listOf(POLL_OPTION, pollOption.toString()))
+            }
             val id = generateId(pubKey, createdAt, kind, tags, content)
             val sig = Utils.sign(id, privateKey)
             return LnZapRequestEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())

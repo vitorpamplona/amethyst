@@ -11,6 +11,7 @@ private data class ScrollState(val index: Int, val scrollOffset: Int)
 
 object ScrollStateKeys {
     const val GLOBAL_SCREEN = "Global"
+    const val NOTIFICATION_SCREEN = "Notifications"
     val HOME_FOLLOWS = Route.Home.base + "Follows"
     val HOME_REPLIES = Route.Home.base + "FollowsReplies"
 }

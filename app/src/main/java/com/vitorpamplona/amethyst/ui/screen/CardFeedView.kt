@@ -13,6 +13,7 @@ import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,7 +34,14 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun CardFeedView(viewModel: CardFeedViewModel, accountViewModel: AccountViewModel, navController: NavController, routeForLastRead: String) {
+fun CardFeedView(
+    viewModel: CardFeedViewModel,
+    accountViewModel: AccountViewModel,
+    navController: NavController,
+    routeForLastRead: String,
+    scrollStateKey: String? = null,
+    scrollToTop: Boolean = false
+) {
     val feedState by viewModel.feedContent.collectAsState()
 
     var refreshing by remember { mutableStateOf(false) }
@@ -57,10 +65,12 @@ fun CardFeedView(viewModel: CardFeedViewModel, accountViewModel: AccountViewMode
                     is CardFeedState.Loaded -> {
                         refreshing = false
                         FeedLoaded(
-                            state,
-                            accountViewModel,
-                            navController,
-                            routeForLastRead
+                            state = state,
+                            accountViewModel = accountViewModel,
+                            navController = navController,
+                            routeForLastRead = routeForLastRead,
+                            scrollStateKey = scrollStateKey,
+                            scrollToTop = scrollToTop
                         )
                     }
                     CardFeedState.Loading -> {
@@ -79,9 +89,21 @@ private fun FeedLoaded(
     state: CardFeedState.Loaded,
     accountViewModel: AccountViewModel,
     navController: NavController,
-    routeForLastRead: String
+    routeForLastRead: String,
+    scrollStateKey: String?,
+    scrollToTop: Boolean = false
 ) {
-    val listState = rememberLazyListState()
+    val listState = if (scrollStateKey != null) {
+        rememberForeverLazyListState(scrollStateKey)
+    } else {
+        rememberLazyListState()
+    }
+
+    if (scrollToTop) {
+        LaunchedEffect(Unit) {
+            listState.scrollToItem(index = 0)
+        }
+    }
 
     LazyColumn(
         contentPadding = PaddingValues(

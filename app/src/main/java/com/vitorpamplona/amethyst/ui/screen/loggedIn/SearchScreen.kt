@@ -140,6 +140,9 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
 
     val onlineSearch = NostrSearchEventOrUserDataSource
 
+    val dbState = LocalCache.live.observeAsState()
+    val db = dbState.value ?: return
+
     val isTrailingIconVisible by remember {
         derivedStateOf {
             searchValue.isNotBlank()
@@ -149,6 +152,18 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
     // Create a channel for processing search queries.
     val searchTextChanges = remember {
         CoroutineChannel<String>(CoroutineChannel.CONFLATED)
+    }
+
+    LaunchedEffect(db) {
+        if (searchValue.length > 1) {
+            withContext(Dispatchers.IO) {
+                searchResults.value = LocalCache.findUsersStartingWith(searchValue)
+                searchResultsNotes.value =
+                    LocalCache.findNotesStartingWith(searchValue).sortedBy { it.createdAt() }
+                        .reversed()
+                searchResultsChannels.value = LocalCache.findChannelsStartingWith(searchValue)
+            }
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -161,7 +176,7 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
                 .collectLatest {
                     hashtagResults.value = findHashtags(it)
 
-                    if (it.removePrefix("npub").removePrefix("note").length >= 4) {
+                    if (it.length >= 4) {
                         onlineSearch.search(it.trim())
                     }
 

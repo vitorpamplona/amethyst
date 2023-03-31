@@ -45,4 +45,8 @@ object NotificationFeedFilter : FeedFilter<Note>() {
             .toList()
             .reversed()
     }
+
+    fun isDifferentAccount(account: Account): Boolean {
+        return this::account.isInitialized && this.account != account
+    }
 }
