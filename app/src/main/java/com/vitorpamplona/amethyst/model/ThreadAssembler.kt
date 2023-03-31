@@ -53,6 +53,7 @@ class ThreadAssembler {
                 val threadRoot = searchRoot(note, thread) ?: note
 
                 loadDown(threadRoot, thread)
+                loadDown(note, thread)
 
                 thread.toSet()
             } else {
