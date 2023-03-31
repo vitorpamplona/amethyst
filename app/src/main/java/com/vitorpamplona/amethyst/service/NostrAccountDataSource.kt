@@ -12,12 +12,15 @@ import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
+import com.vitorpamplona.amethyst.service.relays.EOSETime
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 
 object NostrAccountDataSource : NostrDataSource("AccountData") {
     lateinit var account: Account
+
+    var latestEOSEs: Map<String, EOSETime> = emptyMap()
 
     fun createAccountContactListFilter(): TypedFilter {
         return TypedFilter(
@@ -68,7 +71,8 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
             types = FeedType.values().toSet(),
             filter = JsonFilter(
                 kinds = listOf(ReportEvent.kind),
-                authors = listOf(account.userProfile().pubkeyHex)
+                authors = listOf(account.userProfile().pubkeyHex),
+                since = latestEOSEs
             )
         )
     }
@@ -86,11 +90,19 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                 BadgeAwardEvent.kind
             ),
             tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
-            limit = 200
+            limit = 400,
+            since = latestEOSEs
         )
     )
 
-    val accountChannel = requestNewChannel()
+    val accountChannel = requestNewChannel { time, relayUrl ->
+        val eose = latestEOSEs[relayUrl]
+        if (eose == null) {
+            latestEOSEs = latestEOSEs + Pair(relayUrl, EOSETime(time))
+        } else {
+            eose.time = time
+        }
+    }
 
     override fun updateChannelFilters() {
         // gets everthing about the user logged in

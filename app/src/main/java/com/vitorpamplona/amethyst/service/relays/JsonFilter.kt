@@ -6,12 +6,14 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import java.util.*
 
+class EOSETime(var time: Long)
+
 class JsonFilter(
     val ids: List<String>? = null,
     val authors: List<String>? = null,
     val kinds: List<Int>? = null,
     val tags: Map<String, List<String>>? = null,
-    val since: Map<String, Long>? = null,
+    val since: Map<String, EOSETime>? = null,
     val until: Long? = null,
     val limit: Int? = null,
     val search: String? = null
@@ -37,7 +39,7 @@ class JsonFilter(
                 if (forRelay != null) {
                     val relaySince = get(forRelay)
                     if (relaySince != null) {
-                        jsonObject.addProperty("since", relaySince)
+                        jsonObject.addProperty("since", relaySince.time)
                     }
                 } else {
                     val jsonObjectSince = JsonObject()

@@ -7,6 +7,7 @@ import com.vitorpamplona.amethyst.service.model.ContactListEvent
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.MetadataEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
+import com.vitorpamplona.amethyst.service.relays.EOSETime
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
@@ -31,7 +32,7 @@ class User(val pubkeyHex: String) {
     var reports = mapOf<User, Set<Note>>()
         private set
 
-    var latestEOSEs: Map<String, Long> = emptyMap()
+    var latestEOSEs: Map<String, EOSETime> = emptyMap()
 
     var zaps = mapOf<Note, Note?>()
         private set

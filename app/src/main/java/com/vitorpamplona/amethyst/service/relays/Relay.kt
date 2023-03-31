@@ -40,6 +40,8 @@ class Relay(
 
     var closingTime = 0L
 
+    var afterEOSE = false
+
     fun register(listener: Listener) {
         listeners = listeners.plus(listener)
     }
@@ -74,6 +76,7 @@ class Relay(
             val listener = object : WebSocketListener() {
 
                 override fun onOpen(webSocket: WebSocket, response: Response) {
+                    afterEOSE = false
                     isReady = true
                     ping = response.receivedResponseAtMillis - response.sentRequestAtMillis
                     // Log.w("Relay", "Relay OnOpen, Loading All subscriptions $url")
@@ -89,12 +92,19 @@ class Relay(
                         val msg = Event.gson.fromJson(text, JsonElement::class.java).asJsonArray
                         val type = msg[0].asString
                         val channel = msg[1].asString
+
                         when (type) {
                             "EVENT" -> {
                                 // Log.w("Relay", "Relay onEVENT $url, $channel")
-                                listeners.forEach { it.onEvent(this@Relay, channel, Event.fromJson(msg[2], Client.lenient)) }
+                                listeners.forEach {
+                                    it.onEvent(this@Relay, channel, Event.fromJson(msg[2], Client.lenient))
+                                    if (afterEOSE) {
+                                        it.onRelayStateChange(this@Relay, Type.EOSE, channel)
+                                    }
+                                }
                             }
                             "EOSE" -> listeners.forEach {
+                                afterEOSE = true
                                 // Log.w("Relay", "Relay onEOSE $url, $channel")
                                 it.onRelayStateChange(this@Relay, Type.EOSE, channel)
                             }
@@ -136,6 +146,7 @@ class Relay(
                 override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
                     socket = null
                     isReady = false
+                    afterEOSE = false
                     closingTime = Date().time / 1000
                     listeners.forEach { it.onRelayStateChange(this@Relay, Type.DISCONNECT, null) }
                 }
@@ -147,6 +158,7 @@ class Relay(
                     // Failures disconnect the relay.
                     socket = null
                     isReady = false
+                    afterEOSE = false
                     closingTime = Date().time / 1000
 
                     Log.w("Relay", "Relay onFailure $url, ${response?.message} $response")
@@ -161,6 +173,7 @@ class Relay(
         } catch (e: Exception) {
             errorCounter++
             isReady = false
+            afterEOSE = false
             closingTime = Date().time / 1000
             Log.e("Relay", "Relay Invalid $url")
             e.printStackTrace()
@@ -173,6 +186,7 @@ class Relay(
         socket?.close(1000, "Normal close")
         socket = null
         isReady = false
+        afterEOSE = false
     }
 
     fun sendFilter(requestId: String) {
@@ -186,6 +200,7 @@ class Relay(
                         // println("FILTERSSENT $url $request")
                         socket?.send(request)
                         eventUploadCounterInBytes += request.bytesUsedInMemory()
+                        afterEOSE = false
                     }
                 }
             } else {
