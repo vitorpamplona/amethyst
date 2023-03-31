@@ -53,7 +53,11 @@ class ThreadAssembler {
                 val threadRoot = searchRoot(note, thread) ?: note
 
                 loadDown(threadRoot, thread)
-                loadDown(note, thread)
+                // adds the replies of the note in case the search for Root
+                // did not added them.
+                note.replies.forEach {
+                    loadDown(it, thread)
+                }
 
                 thread.toSet()
             } else {
