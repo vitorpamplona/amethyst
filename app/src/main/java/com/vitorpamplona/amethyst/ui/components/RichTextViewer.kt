@@ -46,8 +46,8 @@ import java.net.URISyntaxException
 import java.net.URL
 import java.util.regex.Pattern
 
-val imageExtension = Pattern.compile("(.*/)*.+\\.(png|jpg|gif|bmp|jpeg|webp|svg)$", Pattern.CASE_INSENSITIVE)
-val videoExtension = Pattern.compile("(.*/)*.+\\.(mp4|avi|wmv|mpg|amv|webm|mov)$", Pattern.CASE_INSENSITIVE)
+val imageExtensions = listOf("png", "jpg", "gif", "bmp", "jpeg", "webp", "svg")
+val videoExtensions = listOf("mp4", "avi", "wmv", "mpg", "amv", "webm", "mov")
 
 // Group 1 = url, group 4 additional chars
 val noProtocolUrlValidator = Pattern.compile("(([\\w\\d-]+\\.)*[a-zA-Z][\\w-]+[\\.\\:]\\w+([\\/\\?\\=\\&\\#\\.]?[\\w-]+)*\\/?)(.*)")
@@ -138,10 +138,10 @@ fun RichTextViewer(
                     // sequence of images will render in a slideview
                     if (isValidURL(word)) {
                         val removedParamsFromUrl = word.split("?")[0].lowercase()
-                        if (imageExtension.matcher(removedParamsFromUrl).matches()) {
+                        if (imageExtensions.any { word.endsWith(it, true) }) {
                             imagesForPager.add(word)
                         }
-                        if (videoExtension.matcher(removedParamsFromUrl).matches()) {
+                        if (videoExtensions.any { word.endsWith(it, true) }) {
                             imagesForPager.add(word)
                         }
                     }
@@ -160,9 +160,9 @@ fun RichTextViewer(
 
                             if (isValidURL(word)) {
                                 val removedParamsFromUrl = word.split("?")[0].lowercase()
-                                if (imageExtension.matcher(removedParamsFromUrl).matches()) {
+                                if (imageExtensions.any { word.endsWith(it, true) }) {
                                     ZoomableImageView(word, imagesForPager)
-                                } else if (videoExtension.matcher(removedParamsFromUrl).matches()) {
+                                } else if (videoExtensions.any { word.endsWith(it, true) }) {
                                     ZoomableImageView(word, imagesForPager)
                                 } else {
                                     UrlPreview(word, "$word ")
