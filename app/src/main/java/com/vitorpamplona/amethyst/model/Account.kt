@@ -3,22 +3,7 @@ package com.vitorpamplona.amethyst.model
 import android.content.res.Resources
 import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
-import com.vitorpamplona.amethyst.service.model.BookmarkListEvent
-import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
-import com.vitorpamplona.amethyst.service.model.Contact
-import com.vitorpamplona.amethyst.service.model.ContactListEvent
-import com.vitorpamplona.amethyst.service.model.DeletionEvent
-import com.vitorpamplona.amethyst.service.model.IdentityClaim
-import com.vitorpamplona.amethyst.service.model.LnZapPaymentRequestEvent
-import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
-import com.vitorpamplona.amethyst.service.model.MetadataEvent
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
-import com.vitorpamplona.amethyst.service.model.ReactionEvent
-import com.vitorpamplona.amethyst.service.model.ReportEvent
-import com.vitorpamplona.amethyst.service.model.RepostEvent
-import com.vitorpamplona.amethyst.service.model.TextNoteEvent
+import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.relays.FeedType
@@ -30,11 +15,7 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import com.vitorpamplona.amethyst.service.model.*
-import com.vitorpamplona.amethyst.service.relays.*
-import kotlinx.coroutines.*
 import nostr.postr.Persona
-import java.util.*
 import java.util.Locale
 
 val DefaultChannels = setOf(
@@ -165,12 +146,10 @@ class Account(
                 userProfile().latestContactList?.relays()?.keys?.ifEmpty { null }
                     ?: localRelays.map { it.url }.toSet(),
                 loggedIn.privKey!!,
-                pollOption
+                pollOption,
+                message
             )
-        /*note.event?.let {
-            return LnZapRequestEvent.create(it, userProfile().latestContactList?.relays()?.keys?.ifEmpty { null } ?: localRelays.map { it.url }.toSet(), loggedIn.privKey!!, message)
-        }*/
-
+        }
         return null
     }
 
@@ -189,13 +168,18 @@ class Account(
     }
 
     fun createZapRequestFor(user: User): LnZapRequestEvent? {
-        return createZapRequestFor(user.pubkeyHex)
+        return createZapRequestFor(user)
     }
 
     fun createZapRequestFor(userPubKeyHex: String, message: String = ""): LnZapRequestEvent? {
         if (!isWriteable()) return null
 
-        return LnZapRequestEvent.create(userPubKeyHex, userProfile().latestContactList?.relays()?.keys?.ifEmpty { null } ?: localRelays.map { it.url }.toSet(), loggedIn.privKey!!, message)
+        return LnZapRequestEvent.create(
+            userPubKeyHex,
+            userProfile().latestContactList?.relays()?.keys?.ifEmpty { null } ?: localRelays.map { it.url }.toSet(),
+            loggedIn.privKey!!,
+            message
+        )
     }
 
     fun report(note: Note, type: ReportEvent.ReportType, content: String = "") {
