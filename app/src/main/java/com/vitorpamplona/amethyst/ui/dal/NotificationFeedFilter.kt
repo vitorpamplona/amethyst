@@ -23,7 +23,9 @@ object NotificationFeedFilter : FeedFilter<Note>() {
             }
             .filter { it ->
                 it.event !is TextNoteEvent ||
-                    it.replyTo?.any { it.author == loggedInUser } == true ||
+                    (it.event as? TextNoteEvent)?.taggedEvents()?.any {
+                    LocalCache.checkGetOrCreateNote(it)?.author == loggedInUser
+                } == true ||
                     loggedInUser in it.directlyCiteUsers()
             }
             .filter {
