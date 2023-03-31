@@ -138,5 +138,5 @@ object ImageSaver {
         MediaScannerConnection.scanFile(context, arrayOf(outputFile.toString()), null, null)
     }
 
-    private const val PICTURES_SUBDIRECTORY = "Amethyst " + BuildConfig.VERSION_NAME
+    private const val PICTURES_SUBDIRECTORY = "Amethyst"
 }
