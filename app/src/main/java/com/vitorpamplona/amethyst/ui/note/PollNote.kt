@@ -131,7 +131,7 @@ fun ZapVote(
                                 )
                                 .show()
                         }
-                    } else if (pollViewModel.isPollClosed) {
+                    } else if (pollViewModel.isPollClosed()) {
                         scope.launch {
                             Toast
                                 .makeText(
