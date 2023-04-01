@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.model
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.model.*
+import com.vitorpamplona.amethyst.service.relays.EOSETime
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
@@ -46,7 +47,7 @@ open class Note(val idHex: String) {
     var relays = setOf<String>()
         private set
 
-    var lastReactionsDownloadTime: Map<String, Long> = emptyMap()
+    var lastReactionsDownloadTime: Map<String, EOSETime> = emptyMap()
 
     fun id() = Hex.decode(idHex)
     open fun idNote() = id().toNote()
