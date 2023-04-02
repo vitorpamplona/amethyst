@@ -187,7 +187,7 @@ object LocalCache {
         // Already processed this event.
         if (note.event != null) return
 
-        if (antiSpam.isSpam(event)) {
+        if (antiSpam.isSpam(event, relay)) {
             relay?.let {
                 it.spamCounter++
             }
@@ -223,7 +223,7 @@ object LocalCache {
         // Already processed this event.
         if (note.event?.id() == event.id()) return
 
-        if (antiSpam.isSpam(event)) {
+        if (antiSpam.isSpam(event, relay)) {
             relay?.let {
                 it.spamCounter++
             }
@@ -543,7 +543,7 @@ object LocalCache {
         // Already processed this event.
         if (note.event != null) return
 
-        if (antiSpam.isSpam(event)) {
+        if (antiSpam.isSpam(event, relay)) {
             relay?.let {
                 it.spamCounter++
             }
