@@ -30,8 +30,8 @@ object NotificationFeedFilter : FeedFilter<Note>() {
             }
             .filter { it ->
                 it.event !is PollNoteEvent ||
-                it.replyTo?.any { it.author == account.userProfile() } == true ||
-                account.userProfile() in it.directlyCiteUsers()
+                    it.replyTo?.any { it.author == account.userProfile() } == true ||
+                    account.userProfile() in it.directlyCiteUsers()
             }
             .filter {
                 it.event !is ReactionEvent ||
