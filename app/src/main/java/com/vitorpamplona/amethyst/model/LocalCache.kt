@@ -302,12 +302,10 @@ object LocalCache {
 
     fun consume(event: ContactListEvent) {
         val user = getOrCreateUser(event.pubKey)
-        val follows = event.unverifiedFollowKeySet()
 
-        if (event.createdAt > (user.latestContactList?.createdAt ?: 0) && !follows.isNullOrEmpty()) {
-            // Saves relay list only if it's a user that is currently been seen
+        // avoids processing empty contact lists.
+        if (event.createdAt > (user.latestContactList?.createdAt ?: 0) && !event.tags.isEmpty()) {
             user.updateContactList(event)
-
             // Log.d("CL", "AAA ${user.toBestDisplayName()} ${follows.size}")
         }
     }
