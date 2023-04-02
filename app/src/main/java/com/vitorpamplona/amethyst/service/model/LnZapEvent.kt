@@ -36,6 +36,10 @@ class LnZapEvent(
             null
         }
     }
+    override fun message(): String {
+        return message
+    }
+    val message = content
 
     override fun containedPost(): Event? = try {
         description()?.let {
