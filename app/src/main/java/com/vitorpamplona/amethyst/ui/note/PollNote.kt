@@ -150,27 +150,7 @@ fun ZapVote(
                                     .show()
                             }
                             return@combinedClickable
-                        }
-                        accountViewModel.zap(
-                            baseNote,
-                            pollViewModel.valueMaximum!!.toLong() * 1000,
-                            pollOption,
-                            "",
-                            context,
-                            onError = {
-                                scope.launch {
-                                    zappingProgress = 0f
-                                    Toast
-                                        .makeText(context, it, Toast.LENGTH_SHORT)
-                                        .show()
-                                }
-                            },
-                            onProgress = {
-                                scope.launch(Dispatchers.Main) {
-                                    zappingProgress = it
-                                }
-                            }
-                        )
+                        } else { wantsToZap = true }
                     } else {
                         wantsToZap = true
                     }
@@ -266,27 +246,30 @@ fun ZapVoteAmountChoicePopup(
                 modifier = Modifier
                     .padding(10.dp)
             ) {
-                val amount = pollViewModel.inputVoteAmountLong(inputAmountText)
+                var amount = pollViewModel.inputVoteAmountLong(inputAmountText)
 
-                OutlinedTextField(
-                    value = inputAmountText,
-                    onValueChange = { inputAmountText = it },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.width(150.dp),
-                    colors = if (pollViewModel.isValidInputVoteAmount(amount)) colorValid else colorInValid,
-                    label = {
-                        Text(
-                            text = stringResource(R.string.poll_zap_amount),
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                        )
-                    },
-                    placeholder = {
-                        Text(
-                            text = pollViewModel.voteAmountPlaceHolderText(context.getString(R.string.sats)),
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                        )
-                    }
-                )
+                // only prompt for input amount if vote is not atomic
+                if (!pollViewModel.isVoteAmountAtomic()) {
+                    OutlinedTextField(
+                        value = inputAmountText,
+                        onValueChange = { inputAmountText = it },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.width(150.dp),
+                        colors = if (pollViewModel.isValidInputVoteAmount(amount)) colorValid else colorInValid,
+                        label = {
+                            Text(
+                                text = stringResource(R.string.poll_zap_amount),
+                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                            )
+                        },
+                        placeholder = {
+                            Text(
+                                text = pollViewModel.voteAmountPlaceHolderText(context.getString(R.string.sats)),
+                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                            )
+                        }
+                    )
+                } else { amount = pollViewModel.valueMaximum?.toLong() }
 
                 val isValidInputAmount = pollViewModel.isValidInputVoteAmount(amount)
                 Button(
