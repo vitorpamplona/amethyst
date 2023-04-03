@@ -273,7 +273,7 @@ class User(val pubkeyHex: String) {
     }
 
     fun transientFollowerCount(): Int {
-        return LocalCache.users.values.count { it.latestContactList?.let { pubkeyHex in it.unverifiedFollowKeySet() } ?: false }
+        return LocalCache.users.values.count { it.latestContactList?.isTaggedUser(pubkeyHex) ?: false }
     }
 
     fun cachedFollowingKeySet(): Set<HexKey> {
@@ -289,7 +289,7 @@ class User(val pubkeyHex: String) {
     }
 
     fun cachedFollowerCount(): Int {
-        return LocalCache.users.values.count { it.latestContactList?.let { pubkeyHex in it.unverifiedFollowKeySet() } ?: false }
+        return LocalCache.users.values.count { it.latestContactList?.isTaggedUser(pubkeyHex) ?: false }
     }
 
     fun hasSentMessagesTo(user: User?): Boolean {
