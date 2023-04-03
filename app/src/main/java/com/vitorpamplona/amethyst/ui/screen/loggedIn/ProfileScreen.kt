@@ -73,6 +73,7 @@ import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileZapsFeedFilter
+import com.vitorpamplona.amethyst.ui.navigation.ShowQRDialog
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.screen.FeedView
@@ -450,16 +451,41 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewMode
 
         IconButton(
             modifier = Modifier
-                .size(30.dp)
+                .size(25.dp)
                 .padding(start = 5.dp),
             onClick = { clipboardManager.setText(AnnotatedString(user.pubkeyNpub())); }
         ) {
             Icon(
                 imageVector = Icons.Default.ContentCopy,
                 null,
-                modifier = Modifier
-                    .padding(end = 5.dp)
-                    .size(15.dp),
+                modifier = Modifier.size(15.dp),
+                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+            )
+        }
+
+        var dialogOpen by remember {
+            mutableStateOf(false)
+        }
+
+        if (dialogOpen) {
+            ShowQRDialog(
+                user,
+                onScan = {
+                    dialogOpen = false
+                    navController.navigate(it)
+                },
+                onClose = { dialogOpen = false }
+            )
+        }
+
+        IconButton(
+            modifier = Modifier.size(25.dp),
+            onClick = { dialogOpen = true }
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_qrcode),
+                null,
+                modifier = Modifier.size(15.dp),
                 tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
             )
         }
