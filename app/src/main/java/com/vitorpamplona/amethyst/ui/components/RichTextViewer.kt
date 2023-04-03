@@ -15,7 +15,6 @@ import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -138,10 +137,10 @@ fun RichTextViewer(
                     // sequence of images will render in a slideview
                     if (isValidURL(word)) {
                         val removedParamsFromUrl = word.split("?")[0].lowercase()
-                        if (imageExtensions.any { word.endsWith(it, true) }) {
+                        if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
                             imagesForPager.add(word)
                         }
-                        if (videoExtensions.any { word.endsWith(it, true) }) {
+                        if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
                             imagesForPager.add(word)
                         }
                     }
@@ -155,28 +154,59 @@ fun RichTextViewer(
                     s.forEach { word: String ->
                         if (canPreview) {
                             // Explicit URL
-                            val lnInvoice = LnInvoiceUtil.findInvoice(word)
-                            val lnWithdrawal = LnWithdrawalUtil.findWithdrawal(word)
-
                             if (isValidURL(word)) {
                                 val removedParamsFromUrl = word.split("?")[0].lowercase()
-                                if (imageExtensions.any { word.endsWith(it, true) }) {
+                                if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
                                     ZoomableImageView(word, imagesForPager)
-                                } else if (videoExtensions.any { word.endsWith(it, true) }) {
+                                } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
                                     ZoomableImageView(word, imagesForPager)
                                 } else {
                                     UrlPreview(word, "$word ")
                                 }
-                            } else if (lnInvoice != null) {
-                                InvoicePreview(lnInvoice)
-                            } else if (lnWithdrawal != null) {
-                                ClickableWithdrawal(withdrawalString = lnWithdrawal)
+                            } else if (word.startsWith("lnbc", true)) {
+                                val lnInvoice = LnInvoiceUtil.findInvoice(word)
+                                if (lnInvoice != null) {
+                                    InvoicePreview(lnInvoice)
+                                } else {
+                                    Text(
+                                        text = "$word ",
+                                        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+                                    )
+                                }
+                            } else if (word.startsWith("lnurl", true)) {
+                                val lnWithdrawal = LnWithdrawalUtil.findWithdrawal(word)
+                                if (lnWithdrawal != null) {
+                                    ClickableWithdrawal(withdrawalString = lnWithdrawal)
+                                } else {
+                                    Text(
+                                        text = "$word ",
+                                        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+                                    )
+                                }
                             } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
                                 ClickableEmail(word)
-                            } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
+                            } else if (word.length > 6 && Patterns.PHONE.matcher(word).matches()) {
                                 ClickablePhone(word)
                             } else if (isBechLink(word)) {
                                 BechLink(word, navController)
+                            } else if (word.startsWith("#")) {
+                                if (tagIndex.matcher(word).matches() && tags != null) {
+                                    TagLink(
+                                        word,
+                                        tags,
+                                        canPreview,
+                                        backgroundColor,
+                                        accountViewModel,
+                                        navController
+                                    )
+                                } else if (hashTagsPattern.matcher(word).matches()) {
+                                    HashTag(word, accountViewModel, navController)
+                                } else {
+                                    Text(
+                                        text = "$word ",
+                                        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+                                    )
+                                }
                             } else if (noProtocolUrlValidator.matcher(word).matches()) {
                                 val matcher = noProtocolUrlValidator.matcher(word)
                                 matcher.find()
@@ -185,10 +215,6 @@ fun RichTextViewer(
 
                                 ClickableUrl(url, "https://$url")
                                 Text("$additionalChars ")
-                            } else if (tagIndex.matcher(word).matches() && tags != null) {
-                                TagLink(word, tags, canPreview, backgroundColor, accountViewModel, navController)
-                            } else if (hashTagsPattern.matcher(word).matches()) {
-                                HashTag(word, accountViewModel, navController)
                             } else {
                                 Text(
                                     text = "$word ",
@@ -198,12 +224,40 @@ fun RichTextViewer(
                         } else {
                             if (isValidURL(word)) {
                                 ClickableUrl("$word ", word)
+                            } else if (word.startsWith("lnurl", true)) {
+                                val lnWithdrawal = LnWithdrawalUtil.findWithdrawal(word)
+                                if (lnWithdrawal != null) {
+                                    ClickableWithdrawal(withdrawalString = lnWithdrawal)
+                                } else {
+                                    Text(
+                                        text = "$word ",
+                                        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+                                    )
+                                }
                             } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
                                 ClickableEmail(word)
                             } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
                                 ClickablePhone(word)
                             } else if (isBechLink(word)) {
                                 BechLink(word, navController)
+                            } else if (word.startsWith("#")) {
+                                if (tagIndex.matcher(word).matches() && tags != null) {
+                                    TagLink(
+                                        word,
+                                        tags,
+                                        canPreview,
+                                        backgroundColor,
+                                        accountViewModel,
+                                        navController
+                                    )
+                                } else if (hashTagsPattern.matcher(word).matches()) {
+                                    HashTag(word, accountViewModel, navController)
+                                } else {
+                                    Text(
+                                        text = "$word ",
+                                        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+                                    )
+                                }
                             } else if (noProtocolUrlValidator.matcher(word).matches()) {
                                 val matcher = noProtocolUrlValidator.matcher(word)
                                 matcher.find()
@@ -212,10 +266,6 @@ fun RichTextViewer(
 
                                 ClickableUrl(url, "https://$url")
                                 Text("$additionalChars ")
-                            } else if (tagIndex.matcher(word).matches() && tags != null) {
-                                TagLink(word, tags, canPreview, backgroundColor, accountViewModel, navController)
-                            } else if (hashTagsPattern.matcher(word).matches()) {
-                                HashTag(word, accountViewModel, navController)
                             } else {
                                 Text(
                                     text = "$word ",
@@ -235,9 +285,9 @@ private fun isArabic(text: String): Boolean {
 }
 
 fun isBechLink(word: String): Boolean {
-    val cleaned = word.removePrefix("@").removePrefix("nostr:").removePrefix("@")
+    val cleaned = word.removePrefix("@").removePrefix("nostr:").removePrefix("@").take(7).lowercase()
 
-    return listOf("npub1", "naddr1", "note1", "nprofile1", "nevent1").any { cleaned.startsWith(it, true) }
+    return listOf("npub1", "naddr1", "note1", "nprofile1", "nevent1").any { cleaned.startsWith(it) }
 }
 
 @Composable
@@ -340,14 +390,8 @@ fun TagLink(word: String, tags: List<List<String>>, canPreview: Boolean, backgro
         if (tags[index][0] == "p") {
             val baseUser = LocalCache.checkGetOrCreateUser(tags[index][1])
             if (baseUser != null) {
-                val userState = baseUser.live().metadata.observeAsState()
-                val user = userState.value?.user
-                if (user != null) {
-                    ClickableUserTag(user, navController)
-                    Text(text = "$extraCharacters ")
-                } else {
-                    Text(text = "$word ")
-                }
+                ClickableUserTag(baseUser, navController)
+                Text(text = "$extraCharacters ")
             } else {
                 // if here the tag is not a valid Nostr Hex
                 Text(text = "$word ")

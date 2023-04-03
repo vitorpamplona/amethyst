@@ -38,7 +38,7 @@ class LnZapEvent(
     }
 
     override fun containedPost(): Event? = try {
-        description()?.let {
+        description()?.ifBlank { null }?.let {
             fromJson(it, Client.lenient)
         }
     } catch (e: Exception) {
