@@ -134,22 +134,24 @@ fun LoginPage(
                                 }
                             )
                         }
-                        if (dialogOpen) {
-                            SimpleQrCodeScanner {
-                                dialogOpen = false
-                                if (!it.isNullOrEmpty()) {
-                                    key.value = TextFieldValue(it)
-                                }
+                    }
+                },
+                leadingIcon = {
+                    if (dialogOpen) {
+                        SimpleQrCodeScanner {
+                            dialogOpen = false
+                            if (!it.isNullOrEmpty()) {
+                                key.value = TextFieldValue(it)
                             }
                         }
-                        IconButton(onClick = { dialogOpen = true }) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_qrcode),
-                                null,
-                                modifier = Modifier.size(24.dp),
-                                tint = MaterialTheme.colors.primary
-                            )
-                        }
+                    }
+                    IconButton(onClick = { dialogOpen = true }) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_qrcode),
+                            null,
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colors.primary
+                        )
                     }
                 },
                 visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
