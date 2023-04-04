@@ -269,14 +269,14 @@ private fun AddPollButton(
                 painter = painterResource(R.drawable.ic_poll),
                 null,
                 modifier = Modifier.size(20.dp),
-                tint = Color.White
+                tint = MaterialTheme.colors.onBackground
             )
         } else {
             Icon(
                 painter = painterResource(R.drawable.ic_lists),
                 null,
                 modifier = Modifier.size(20.dp),
-                tint = Color.White
+                tint = MaterialTheme.colors.onBackground
             )
         }
     }
