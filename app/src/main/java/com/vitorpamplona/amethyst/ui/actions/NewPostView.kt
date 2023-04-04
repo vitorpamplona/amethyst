@@ -1,6 +1,8 @@
 package com.vitorpamplona.amethyst.ui.actions
 
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -104,8 +106,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                 postViewModel.sendPost()
                                 onClose()
                             },
-                            isActive = postViewModel.message.text.isNotBlank() &&
-                                !postViewModel.isUploadingImage
+                            isActive = postViewModel.canPost()
                         )
                     }
 
@@ -160,6 +161,26 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                 visualTransformation = UrlUserTagTransformation(MaterialTheme.colors.primary),
                                 textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
                             )
+
+                            if (postViewModel.wantsPoll) {
+                                postViewModel.pollOptions.values.forEachIndexed { index, element ->
+                                    NewPollOption(postViewModel, index)
+                                }
+
+                                Button(
+                                    onClick = { postViewModel.pollOptions[postViewModel.pollOptions.size] = "" },
+                                    border = BorderStroke(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.32f)),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        contentColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                    )
+                                ) {
+                                    Image(
+                                        painterResource(id = android.R.drawable.ic_input_add),
+                                        contentDescription = "Add poll option button",
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
 
                             val myUrlPreview = postViewModel.urlPreview
                             if (myUrlPreview != null) {
@@ -217,14 +238,46 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                     Row(modifier = Modifier.fillMaxWidth()) {
                         UploadFromGallery(
                             isUploading = postViewModel.isUploadingImage,
-                            tint = MaterialTheme.colors.primary,
+                            tint = MaterialTheme.colors.onBackground,
                             modifier = Modifier.padding(bottom = 10.dp)
                         ) {
                             postViewModel.upload(it, context)
                         }
+
+                        AddPollButton(postViewModel.wantsPoll) {
+                            postViewModel.wantsPoll = !postViewModel.wantsPoll
+                        }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun AddPollButton(
+    isPollActive: Boolean,
+    onClick: () -> Unit
+) {
+    IconButton(
+        onClick = {
+            onClick()
+        }
+    ) {
+        if (!isPollActive) {
+            Icon(
+                painter = painterResource(R.drawable.ic_poll),
+                null,
+                modifier = Modifier.size(20.dp),
+                tint = Color.White
+            )
+        } else {
+            Icon(
+                painter = painterResource(R.drawable.ic_lists),
+                null,
+                modifier = Modifier.size(20.dp),
+                tint = Color.White
+            )
         }
     }
 }

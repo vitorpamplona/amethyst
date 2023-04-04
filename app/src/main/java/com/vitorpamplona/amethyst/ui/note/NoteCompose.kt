@@ -524,17 +524,6 @@ fun NoteComposeInner(
 
                                 DisplayUncitedHashtags(noteEvent, eventContent, navController)
                             }
-/*
-                            TranslateableRichTextViewer(
-                                eventContent,
-                                canPreview = canPreview && !makeItShort,
-                                Modifier.fillMaxWidth(),
-                                noteEvent.tags(),
-                                backgroundColor,
-                                accountViewModel,
-                                navController
-                            )
-*/
 
                             if (noteEvent is PollNoteEvent) {
                                 PollNote(

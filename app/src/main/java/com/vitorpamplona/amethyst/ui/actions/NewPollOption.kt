@@ -1,20 +1,20 @@
 package com.vitorpamplona.amethyst.ui.actions
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 
 @Composable
-fun NewPollOption(pollViewModel: NewPollViewModel, optionIndex: Int) {
+fun NewPollOption(pollViewModel: NewPostViewModel, optionIndex: Int) {
     val colorInValid = TextFieldDefaults.outlinedTextFieldColors(
         focusedBorderColor = MaterialTheme.colors.error,
         unfocusedBorderColor = Color.Red
@@ -25,14 +25,26 @@ fun NewPollOption(pollViewModel: NewPollViewModel, optionIndex: Int) {
     )
 
     Row {
+        val deleteIcon: @Composable (() -> Unit) = {
+            IconButton(
+                onClick = {
+                    pollViewModel.pollOptions.remove(optionIndex)
+                }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = stringResource(R.string.clear)
+                )
+            }
+        }
+
         OutlinedTextField(
-            modifier = Modifier
-                .weight(1F),
+            modifier = Modifier.weight(1F),
             value = pollViewModel.pollOptions[optionIndex] ?: "",
             onValueChange = { pollViewModel.pollOptions[optionIndex] = it },
             label = {
                 Text(
-                    text = stringResource(R.string.poll_option_index).format(optionIndex),
+                    text = stringResource(R.string.poll_option_index).format(optionIndex + 1),
                     color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                 )
             },
@@ -42,31 +54,17 @@ fun NewPollOption(pollViewModel: NewPollViewModel, optionIndex: Int) {
                     color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                 )
             },
-            colors = if (pollViewModel.pollOptions[optionIndex]?.isNotEmpty() == true) colorValid else colorInValid
+            keyboardOptions = KeyboardOptions.Default.copy(
+                capitalization = KeyboardCapitalization.Sentences
+            ),
+            // colors = if (pollViewModel.pollOptions[optionIndex]?.isNotEmpty() == true) colorValid else colorInValid,
+            trailingIcon = if (optionIndex > 1) deleteIcon else null
         )
-        if (optionIndex > 1) {
-            Button(
-                modifier = Modifier
-                    .padding(start = 6.dp, top = 2.dp)
-                    .imePadding(),
-                onClick = { pollViewModel.pollOptions.remove(optionIndex) },
-                border = BorderStroke(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.32f)),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                )
-            ) {
-                Image(
-                    painterResource(id = android.R.drawable.ic_delete),
-                    contentDescription = "Remove poll option button",
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-        }
     }
 }
 
 @Preview
 @Composable
 fun NewPollOptionPreview() {
-    NewPollOption(NewPollViewModel(), 0)
+    NewPollOption(NewPostViewModel(), 0)
 }

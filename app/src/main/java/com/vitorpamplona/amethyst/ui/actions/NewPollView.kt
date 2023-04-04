@@ -33,7 +33,7 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun NewPollView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = null, account: Account) {
-    val pollViewModel: NewPollViewModel = viewModel()
+    val pollViewModel: NewPostViewModel = viewModel()
 
     val context = LocalContext.current
 
@@ -84,7 +84,7 @@ fun NewPollView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
 
                         PollButton(
                             onPost = {
-                                pollViewModel.sendPoll()
+                                pollViewModel.sendPost()
                                 onClose()
                             },
                             isActive = pollViewModel.message.text.isNotBlank() &&

@@ -3,8 +3,11 @@ package com.vitorpamplona.amethyst.ui.actions
 import android.content.Context
 import android.net.Uri
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
@@ -33,6 +36,21 @@ open class NewPostViewModel : ViewModel() {
 
     var userSuggestions by mutableStateOf<List<User>>(emptyList())
     var userSuggestionAnchor: TextRange? = null
+
+    // Polls
+    var wantsPoll by mutableStateOf(false)
+    var zapRecipients = mutableStateListOf<HexKey>()
+    var pollOptions = newStateMapPollOptions()
+    var valueMaximum: Int? = null
+    var valueMinimum: Int? = null
+    var consensusThreshold: Int? = null
+    var closedAt: Int? = null
+
+    var isValidRecipients = mutableStateOf(true)
+    var isValidvalueMaximum = mutableStateOf(true)
+    var isValidvalueMinimum = mutableStateOf(true)
+    var isValidConsensusThreshold = mutableStateOf(true)
+    var isValidClosedAt = mutableStateOf(true)
 
     open fun load(account: Account, replyingTo: Note?, quote: Note?) {
         originalNote = replyingTo
@@ -130,16 +148,15 @@ open class NewPostViewModel : ViewModel() {
             }.joinToString(" ")
         }.joinToString("\n")
 
-        if (originalNote?.channel() != null) {
+        if (wantsPoll) {
+            account?.sendPoll(newMessage, replyTos, mentions, pollOptions, valueMaximum, valueMinimum, consensusThreshold, closedAt)
+        } else if (originalNote?.channel() != null) {
             account?.sendChannelMessage(newMessage, originalNote!!.channel()!!.idHex, originalNote!!, mentions)
         } else {
             account?.sendPost(newMessage, replyTos, mentions)
         }
 
-        message = TextFieldValue("")
-        urlPreview = null
-        isUploadingImage = false
-        mentions = null
+        cancel()
     }
 
     fun upload(it: Uri, context: Context) {
@@ -171,6 +188,14 @@ open class NewPostViewModel : ViewModel() {
         urlPreview = null
         isUploadingImage = false
         mentions = null
+
+        wantsPoll = false
+        zapRecipients = mutableStateListOf<HexKey>()
+        pollOptions = newStateMapPollOptions()
+        valueMaximum = null
+        valueMinimum = null
+        consensusThreshold = null
+        closedAt = null
     }
 
     open fun findUrlInMessage(): String? {
@@ -213,5 +238,14 @@ open class NewPostViewModel : ViewModel() {
             userSuggestionAnchor = null
             userSuggestions = emptyList()
         }
+    }
+
+    private fun newStateMapPollOptions(): SnapshotStateMap<Int, String> {
+        return mutableStateMapOf(Pair(0, ""), Pair(1, ""))
+    }
+
+    fun canPost(): Boolean {
+        return message.text.isNotBlank() && !isUploadingImage &&
+            (!wantsPoll || pollOptions.values.all { it.isNotEmpty() })
     }
 }
