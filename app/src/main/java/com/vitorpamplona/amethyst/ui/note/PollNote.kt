@@ -107,11 +107,11 @@ fun PollNote(
                                     )
                                 }
 
-                                Column(modifier = Modifier.fillMaxWidth().padding(10.dp)) {
+                                Column(modifier = Modifier.fillMaxWidth().padding(15.dp)) {
                                     TranslatableRichTextViewer(
                                         poll_op.value,
                                         canPreview,
-                                        Modifier.padding(vertical = 5.dp),
+                                        Modifier,
                                         pollViewModel.pollEvent?.tags(),
                                         backgroundColor,
                                         accountViewModel,
@@ -144,7 +144,7 @@ fun PollNote(
                             TranslatableRichTextViewer(
                                 poll_op.value,
                                 canPreview,
-                                Modifier.padding(vertical = 5.dp, horizontal = 10.dp),
+                                Modifier.padding(15.dp),
                                 pollViewModel.pollEvent?.tags(),
                                 backgroundColor,
                                 accountViewModel,
