@@ -79,7 +79,7 @@ fun TranslatableRichTextViewer(
 
     val toBeViewed = if (showOriginal) content else translatedTextState.value.result ?: content
 
-    Column(modifier = Modifier.padding(top = 5.dp)) {
+    Column() {
         ExpandableRichTextViewer(
             toBeViewed,
             canPreview,
