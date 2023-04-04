@@ -232,7 +232,7 @@ object LocalCache {
         // Already processed this event.
         if (note.event != null) return
 
-        if (antiSpam.isSpam(event)) {
+        if (antiSpam.isSpam(event, relay)) {
             relay?.let {
                 it.spamCounter++
             }
