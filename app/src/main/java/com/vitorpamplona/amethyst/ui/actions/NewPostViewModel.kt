@@ -251,4 +251,8 @@ open class NewPostViewModel : ViewModel() {
         return message.text.isNotBlank() && !isUploadingImage &&
             (!wantsPoll || pollOptions.values.all { it.isNotEmpty() })
     }
+
+    fun canUsePoll(): Boolean {
+        return originalNote?.event !is PrivateDmEvent && originalNote?.channel() == null
+    }
 }

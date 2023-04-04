@@ -286,7 +286,7 @@ fun ChatroomMessageCompose(
                                         TranslatableRichTextViewer(
                                             eventContent,
                                             canPreview,
-                                            Modifier,
+                                            Modifier.padding(top = 5.dp),
                                             note.event?.tags(),
                                             backgroundBubbleColor,
                                             accountViewModel,
@@ -296,7 +296,7 @@ fun ChatroomMessageCompose(
                                         TranslatableRichTextViewer(
                                             stringResource(R.string.could_not_decrypt_the_message),
                                             true,
-                                            Modifier,
+                                            Modifier.padding(top = 5.dp),
                                             note.event?.tags(),
                                             backgroundBubbleColor,
                                             accountViewModel,
