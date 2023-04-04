@@ -167,7 +167,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                     if (isValidURL(myUrlPreview)) {
                                         val removedParamsFromUrl =
                                             myUrlPreview.split("?")[0].lowercase()
-                                        if (imageExtensions.any { removedParamsFromUrl.endsWith(it, true) }) {
+                                        if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
                                             AsyncImage(
                                                 model = myUrlPreview,
                                                 contentDescription = myUrlPreview,
@@ -182,7 +182,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                                         RoundedCornerShape(15.dp)
                                                     )
                                             )
-                                        } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it, true) }) {
+                                        } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
                                             VideoView(myUrlPreview)
                                         } else {
                                             UrlPreview(myUrlPreview, myUrlPreview)

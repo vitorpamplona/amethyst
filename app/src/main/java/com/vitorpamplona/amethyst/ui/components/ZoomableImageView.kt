@@ -62,7 +62,8 @@ fun ZoomableImageView(word: String, images: List<String> = listOf(word)) {
         mutableStateOf<AsyncImagePainter.State?>(null)
     }
 
-    if (imageExtensions.any { word.endsWith(it, true) }) {
+    val removedParamsFromUrl = word.split("?")[0].lowercase()
+    if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
         AsyncImage(
             model = word,
             contentDescription = word,
@@ -171,7 +172,8 @@ fun ZoomableImageDialog(imageUrl: String, allImages: List<String> = listOf(image
 
 @Composable
 private fun RenderImageOrVideo(imageUrl: String) {
-    if (imageExtensions.any { imageUrl.endsWith(it, true) }) {
+    val removedParamsFromUrl = imageUrl.split("?")[0].lowercase()
+    if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
         AsyncImage(
             model = imageUrl,
             contentDescription = stringResource(id = R.string.profile_image),

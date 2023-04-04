@@ -36,6 +36,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import java.util.*
 
@@ -51,6 +52,9 @@ fun LoginPage(
     var termsAcceptanceIsRequired by remember { mutableStateOf("") }
     val uri = LocalUriHandler.current
     val context = LocalContext.current
+    var dialogOpen by remember {
+        mutableStateOf(false)
+    }
 
     Column(
         modifier = Modifier
@@ -117,16 +121,36 @@ fun LoginPage(
                     )
                 },
                 trailingIcon = {
-                    IconButton(onClick = { showPassword = !showPassword }) {
-                        Icon(
-                            imageVector = if (showPassword) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                            contentDescription = if (showPassword) {
-                                stringResource(R.string.show_password)
-                            } else {
-                                stringResource(
-                                    R.string.hide_password
-                                )
+                    Row {
+                        IconButton(onClick = { showPassword = !showPassword }) {
+                            Icon(
+                                imageVector = if (showPassword) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                                contentDescription = if (showPassword) {
+                                    stringResource(R.string.show_password)
+                                } else {
+                                    stringResource(
+                                        R.string.hide_password
+                                    )
+                                }
+                            )
+                        }
+                    }
+                },
+                leadingIcon = {
+                    if (dialogOpen) {
+                        SimpleQrCodeScanner {
+                            dialogOpen = false
+                            if (!it.isNullOrEmpty()) {
+                                key.value = TextFieldValue(it)
                             }
+                        }
+                    }
+                    IconButton(onClick = { dialogOpen = true }) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_qrcode),
+                            null,
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colors.primary
                         )
                     }
                 },

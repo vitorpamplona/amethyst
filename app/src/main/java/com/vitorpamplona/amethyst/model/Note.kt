@@ -155,6 +155,7 @@ open class Note(val idHex: String) {
         }
     }
 
+    @Synchronized
     fun addZap(zapRequest: Note, zap: Note?) {
         if (zapRequest !in zaps.keys) {
             zaps = zaps + Pair(zapRequest, zap)
