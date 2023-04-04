@@ -282,6 +282,7 @@ fun ZapVote(
         clickablePrepend()
 
         if (pollViewModel.isPollOptionZappedBy(pollOption, accountViewModel.userProfile())) {
+            zappingProgress = 1f
             Icon(
                 imageVector = Icons.Default.Bolt,
                 contentDescription = stringResource(R.string.zaps),
@@ -289,12 +290,21 @@ fun ZapVote(
                 tint = BitcoinOrange
             )
         } else {
-            Icon(
-                imageVector = Icons.Outlined.Bolt,
-                contentDescription = stringResource(id = R.string.zaps),
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-            )
+            if (zappingProgress < 0.1 || zappingProgress > 0.99) {
+                Icon(
+                    imageVector = Icons.Outlined.Bolt,
+                    contentDescription = stringResource(id = R.string.zaps),
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                )
+            } else {
+                Spacer(Modifier.width(3.dp))
+                CircularProgressIndicator(
+                    progress = zappingProgress,
+                    modifier = Modifier.size(14.dp),
+                    strokeWidth = 2.dp
+                )
+            }
         }
     }
 
