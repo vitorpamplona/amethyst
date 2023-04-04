@@ -94,7 +94,7 @@ class PollNoteViewModel {
                 .filterIsInstance<LnZapEvent>()
                 .map {
                     val zappedOption = it.zappedPollOption()
-                    if (zappedOption == option && it.zappedRequestAuthor() == user.pubkeyHex ) {
+                    if (zappedOption == option && it.zappedRequestAuthor() == user.pubkeyHex) {
                         return true
                     }
                 }
