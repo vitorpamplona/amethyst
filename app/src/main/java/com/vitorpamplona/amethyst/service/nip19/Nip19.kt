@@ -19,7 +19,10 @@ object Nip19 {
 
         try {
             val matcher = nip19regex.matcher(uri)
-            matcher.find()
+            if (!matcher.find()) {
+                return null
+            }
+
             val uriScheme = matcher.group(1) // nostr:
             val type = matcher.group(2) // npub1
             val key = matcher.group(3) // bech32
