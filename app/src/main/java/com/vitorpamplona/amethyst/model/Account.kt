@@ -419,12 +419,12 @@ class Account(
         LocalCache.consume(signedEvent, null)
     }
 
-    fun sendPrivateMessage(message: String, toUser: String, replyingTo: Note? = null) {
+    fun sendPrivateMessage(message: String, toUser: String, replyingTo: Note? = null, mentions: List<User>?) {
         if (!isWriteable()) return
         val user = LocalCache.users[toUser] ?: return
 
         val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
-        val mentionsHex = emptyList<String>()
+        val mentionsHex = mentions?.map { it.pubkeyHex }
 
         val signedEvent = PrivateDmEvent.create(
             recipientPubKey = user.pubkey(),

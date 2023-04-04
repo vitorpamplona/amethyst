@@ -13,6 +13,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.*
+import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.ui.components.isValidURL
@@ -152,6 +153,8 @@ open class NewPostViewModel : ViewModel() {
             account?.sendPoll(newMessage, replyTos, mentions, pollOptions, valueMaximum, valueMinimum, consensusThreshold, closedAt)
         } else if (originalNote?.channel() != null) {
             account?.sendChannelMessage(newMessage, originalNote!!.channel()!!.idHex, originalNote!!, mentions)
+        } else if (originalNote?.event is PrivateDmEvent) {
+            account?.sendPrivateMessage(newMessage, originalNote!!.author!!.pubkeyHex, originalNote!!, mentions)
         } else {
             account?.sendPost(newMessage, replyTos, mentions)
         }
