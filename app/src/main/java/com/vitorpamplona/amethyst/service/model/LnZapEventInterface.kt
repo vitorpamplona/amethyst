@@ -10,6 +10,8 @@ interface LnZapEventInterface : EventInterface {
 
     fun zappedAuthor(): List<String>
 
+    fun zappedRequestAuthor(): String?
+
     fun taggedAddresses(): List<ATag>
 
     fun amount(): BigDecimal?

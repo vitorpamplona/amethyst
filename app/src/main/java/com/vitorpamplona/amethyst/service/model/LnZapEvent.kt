@@ -27,6 +27,8 @@ class LnZapEvent(
         .filter { it.firstOrNull() == "p" }
         .mapNotNull { it.getOrNull(1) }
 
+    override fun zappedRequestAuthor(): String? = containedPost()?.pubKey()
+
     override fun amount(): BigDecimal? {
         return amount
     }
