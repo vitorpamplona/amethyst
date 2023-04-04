@@ -106,8 +106,15 @@ Build the app:
 ```
 
 ## Installing on device
+
+For the F-Droid build:
 ```bash
-./gradlew installDebug
+./gradlew installFdroidDebug
+```
+
+For the Play build:
+```bash
+./gradlew installPlayDebug
 ```
 
 ## How to Deploy
