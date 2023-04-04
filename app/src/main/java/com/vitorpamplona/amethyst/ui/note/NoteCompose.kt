@@ -371,6 +371,7 @@ fun NoteComposeInner(
                         } else {
                             ReplyInformation(note.replyTo, sortedMentions, account, navController)
                         }
+                        Spacer(modifier = Modifier.height(5.dp))
                     } else if (!makeItShort && noteEvent is ChannelMessageEvent && (note.replyTo != null || noteEvent.mentions() != null)) {
                         val sortedMentions = noteEvent.mentions()
                             .mapNotNull { LocalCache.checkGetOrCreateUser(it) }
@@ -380,6 +381,7 @@ fun NoteComposeInner(
                         note.channel()?.let {
                             ReplyInformationChannel(note.replyTo, sortedMentions, it, navController)
                         }
+                        Spacer(modifier = Modifier.height(5.dp))
                     }
 
                     if (noteEvent is ReactionEvent || noteEvent is RepostEvent) {
