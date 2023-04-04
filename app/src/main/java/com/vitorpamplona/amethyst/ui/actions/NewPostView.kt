@@ -244,8 +244,10 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                             postViewModel.upload(it, context)
                         }
 
-                        AddPollButton(postViewModel.wantsPoll) {
-                            postViewModel.wantsPoll = !postViewModel.wantsPoll
+                        if (postViewModel.canUsePoll()) {
+                            AddPollButton(postViewModel.wantsPoll) {
+                                postViewModel.wantsPoll = !postViewModel.wantsPoll
+                            }
                         }
                     }
                 }
