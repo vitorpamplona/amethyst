@@ -107,7 +107,7 @@ fun PollNote(
                                     )
                                 }
 
-                                Column(modifier = Modifier.fillMaxWidth()) {
+                                Column(modifier = Modifier.fillMaxWidth().padding(10.dp)) {
                                     TranslatableRichTextViewer(
                                         poll_op.value,
                                         canPreview,

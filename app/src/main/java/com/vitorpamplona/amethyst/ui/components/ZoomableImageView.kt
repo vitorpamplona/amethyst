@@ -69,7 +69,6 @@ fun ZoomableImageView(word: String, images: List<String> = listOf(word)) {
             contentDescription = word,
             contentScale = ContentScale.FillWidth,
             modifier = Modifier
-                .padding(top = 4.dp)
                 .fillMaxWidth()
                 .clip(shape = RoundedCornerShape(15.dp))
                 .border(
