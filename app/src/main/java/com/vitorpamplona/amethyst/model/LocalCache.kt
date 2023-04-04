@@ -4,28 +4,7 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.vitorpamplona.amethyst.service.model.ATag
-import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
-import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
-import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
-import com.vitorpamplona.amethyst.service.model.BookmarkListEvent
-import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.service.model.ChannelHideMessageEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMuteUserEvent
-import com.vitorpamplona.amethyst.service.model.ContactListEvent
-import com.vitorpamplona.amethyst.service.model.DeletionEvent
-import com.vitorpamplona.amethyst.service.model.LnZapEvent
-import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
-import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
-import com.vitorpamplona.amethyst.service.model.MetadataEvent
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
-import com.vitorpamplona.amethyst.service.model.ReactionEvent
-import com.vitorpamplona.amethyst.service.model.RecommendRelayEvent
-import com.vitorpamplona.amethyst.service.model.ReportEvent
-import com.vitorpamplona.amethyst.service.model.RepostEvent
-import com.vitorpamplona.amethyst.service.model.TextNoteEvent
+import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import fr.acinq.secp256k1.Hex
@@ -239,6 +218,42 @@ object LocalCache {
 
             refreshObservers()
         }
+    }
+
+    fun consume(event: PollNoteEvent, relay: Relay? = null) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        if (antiSpam.isSpam(event)) {
+            relay?.let {
+                it.spamCounter++
+            }
+            return
+        }
+
+        val replyTo = event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+
+        note.loadEvent(event, author, replyTo)
+
+        // Log.d("TN", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${note.event?.content()?.take(100)} ${formattedDateTime(event.createdAt)}")
+
+        // Prepares user's profile view.
+        author.addNote(note)
+
+        // Counts the replies
+        replyTo.forEach {
+            it.addReply(note)
+        }
+
+        refreshObservers()
     }
 
     fun consume(event: BadgeDefinitionEvent) {
@@ -640,6 +655,7 @@ object LocalCache {
     fun findNotesStartingWith(text: String): List<Note> {
         return notes.values.filter {
             (it.event is TextNoteEvent && it.event?.content()?.contains(text, true) ?: false) ||
+                (it.event is PollNoteEvent && it.event?.content()?.contains(text, true) ?: false) ||
                 (it.event is ChannelMessageEvent && it.event?.content()?.contains(text, true) ?: false) ||
                 it.idHex.startsWith(text, true) ||
                 it.idNote().startsWith(text, true)

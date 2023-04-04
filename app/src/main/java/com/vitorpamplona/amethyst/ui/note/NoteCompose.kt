@@ -51,24 +51,8 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
-import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
-import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
-import com.vitorpamplona.amethyst.service.model.EventInterface
-import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
-import com.vitorpamplona.amethyst.service.model.ReactionEvent
-import com.vitorpamplona.amethyst.service.model.ReportEvent
-import com.vitorpamplona.amethyst.service.model.RepostEvent
-import com.vitorpamplona.amethyst.service.model.TextNoteEvent
-import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
-import com.vitorpamplona.amethyst.ui.components.ResizeImage
-import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
-import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
-import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
-import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
+import com.vitorpamplona.amethyst.service.model.*
+import com.vitorpamplona.amethyst.ui.components.*
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
@@ -490,7 +474,7 @@ fun NoteComposeInner(
                     ) {
                         val recepient = noteEvent.recipientPubKey()?.let { LocalCache.checkGetOrCreateUser(it) }
 
-                        TranslateableRichTextViewer(
+                        TranslatableRichTextViewer(
                             stringResource(
                                 id = R.string.private_conversation_notification,
                                 "@${note.author?.pubkeyNpub()}",
@@ -528,7 +512,7 @@ fun NoteComposeInner(
                                     overflow = TextOverflow.Ellipsis
                                 )
                             } else {
-                                TranslateableRichTextViewer(
+                                TranslatableRichTextViewer(
                                     eventContent,
                                     canPreview = canPreview && !makeItShort,
                                     Modifier.fillMaxWidth(),
@@ -539,6 +523,27 @@ fun NoteComposeInner(
                                 )
 
                                 DisplayUncitedHashtags(noteEvent, eventContent, navController)
+                            }
+/*
+                            TranslateableRichTextViewer(
+                                eventContent,
+                                canPreview = canPreview && !makeItShort,
+                                Modifier.fillMaxWidth(),
+                                noteEvent.tags(),
+                                backgroundColor,
+                                accountViewModel,
+                                navController
+                            )
+*/
+
+                            if (noteEvent is PollNoteEvent) {
+                                PollNote(
+                                    note,
+                                    canPreview = canPreview && !makeItShort,
+                                    backgroundColor,
+                                    accountViewModel,
+                                    navController
+                                )
                             }
                         }
 

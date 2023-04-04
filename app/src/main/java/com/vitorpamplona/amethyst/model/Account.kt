@@ -3,22 +3,7 @@ package com.vitorpamplona.amethyst.model
 import android.content.res.Resources
 import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
-import com.vitorpamplona.amethyst.service.model.BookmarkListEvent
-import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
-import com.vitorpamplona.amethyst.service.model.Contact
-import com.vitorpamplona.amethyst.service.model.ContactListEvent
-import com.vitorpamplona.amethyst.service.model.DeletionEvent
-import com.vitorpamplona.amethyst.service.model.IdentityClaim
-import com.vitorpamplona.amethyst.service.model.LnZapPaymentRequestEvent
-import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
-import com.vitorpamplona.amethyst.service.model.MetadataEvent
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
-import com.vitorpamplona.amethyst.service.model.ReactionEvent
-import com.vitorpamplona.amethyst.service.model.ReportEvent
-import com.vitorpamplona.amethyst.service.model.RepostEvent
-import com.vitorpamplona.amethyst.service.model.TextNoteEvent
+import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.relays.FeedType
@@ -152,13 +137,19 @@ class Account(
         }
     }
 
-    fun createZapRequestFor(note: Note, message: String = ""): LnZapRequestEvent? {
+    fun createZapRequestFor(note: Note, pollOption: Int?, message: String = ""): LnZapRequestEvent? {
         if (!isWriteable()) return null
 
-        note.event?.let {
-            return LnZapRequestEvent.create(it, userProfile().latestContactList?.relays()?.keys?.ifEmpty { null } ?: localRelays.map { it.url }.toSet(), loggedIn.privKey!!, message)
+        note.event?.let { event ->
+            return LnZapRequestEvent.create(
+                event,
+                userProfile().latestContactList?.relays()?.keys?.ifEmpty { null }
+                    ?: localRelays.map { it.url }.toSet(),
+                loggedIn.privKey!!,
+                pollOption,
+                message
+            )
         }
-
         return null
     }
 
@@ -177,13 +168,18 @@ class Account(
     }
 
     fun createZapRequestFor(user: User): LnZapRequestEvent? {
-        return createZapRequestFor(user.pubkeyHex)
+        return createZapRequestFor(user)
     }
 
     fun createZapRequestFor(userPubKeyHex: String, message: String = ""): LnZapRequestEvent? {
         if (!isWriteable()) return null
 
-        return LnZapRequestEvent.create(userPubKeyHex, userProfile().latestContactList?.relays()?.keys?.ifEmpty { null } ?: localRelays.map { it.url }.toSet(), loggedIn.privKey!!, message)
+        return LnZapRequestEvent.create(
+            userPubKeyHex,
+            userProfile().latestContactList?.relays()?.keys?.ifEmpty { null } ?: localRelays.map { it.url }.toSet(),
+            loggedIn.privKey!!,
+            message
+        )
     }
 
     fun report(note: Note, type: ReportEvent.ReportType, content: String = "") {
@@ -369,6 +365,39 @@ class Account(
             privateKey = loggedIn.privKey!!
         )
 
+        Client.send(signedEvent)
+        LocalCache.consume(signedEvent)
+    }
+
+    fun sendPoll(
+        message: String,
+        replyTo: List<Note>?,
+        mentions: List<User>?,
+        pollOptions: Map<Int, String>,
+        valueMaximum: Int?,
+        valueMinimum: Int?,
+        consensusThreshold: Int?,
+        closedAt: Int?
+    ) {
+        if (!isWriteable()) return
+
+        val repliesToHex = replyTo?.map { it.idHex }
+        val mentionsHex = mentions?.map { it.pubkeyHex }
+        val addresses = replyTo?.mapNotNull { it.address() }
+
+        val signedEvent = PollNoteEvent.create(
+            msg = message,
+            replyTos = repliesToHex,
+            mentions = mentionsHex,
+            addresses = addresses,
+            privateKey = loggedIn.privKey!!,
+            pollOptions = pollOptions,
+            valueMaximum = valueMaximum,
+            valueMinimum = valueMinimum,
+            consensusThreshold = consensusThreshold,
+            closedAt = closedAt
+        )
+        println("Sending new PollNoteEvent: %s".format(signedEvent.toJson()))
         Client.send(signedEvent)
         LocalCache.consume(signedEvent)
     }
@@ -716,7 +745,7 @@ class Account(
             isAcceptableDirect(note) &&
             (
                 note.event !is RepostEvent ||
-                    (note.event is RepostEvent && note.replyTo?.firstOrNull { isAcceptableDirect(it) } != null)
+                    (note.replyTo?.firstOrNull { isAcceptableDirect(it) } != null)
                 ) // is not a reaction about a blocked post
     }
 

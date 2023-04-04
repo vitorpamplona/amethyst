@@ -6,6 +6,8 @@ interface LnZapEventInterface : EventInterface {
 
     fun zappedPost(): List<String>
 
+    fun zappedPollOption(): Int?
+
     fun zappedAuthor(): List<String>
 
     fun taggedAddresses(): List<ATag>

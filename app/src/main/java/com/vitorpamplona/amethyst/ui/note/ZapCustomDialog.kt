@@ -94,6 +94,7 @@ fun ZapCustomDialog(onClose: () -> Unit, account: Account, accountViewModel: Acc
                             accountViewModel.zap(
                                 baseNote,
                                 postViewModel.value()!! * 1000L,
+                                null,
                                 postViewModel.customMessage.text,
                                 context,
                                 onError = {

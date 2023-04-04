@@ -60,7 +60,7 @@ import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
-import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
+import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -283,7 +283,7 @@ fun ChatroomMessageCompose(
                                         !noteForReports.hasAnyReports()
 
                                     if (eventContent != null) {
-                                        TranslateableRichTextViewer(
+                                        TranslatableRichTextViewer(
                                             eventContent,
                                             canPreview,
                                             Modifier,
@@ -293,7 +293,7 @@ fun ChatroomMessageCompose(
                                             navController
                                         )
                                     } else {
-                                        TranslateableRichTextViewer(
+                                        TranslatableRichTextViewer(
                                             stringResource(R.string.could_not_decrypt_the_message),
                                             true,
                                             Modifier,

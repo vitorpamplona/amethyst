@@ -64,7 +64,7 @@ import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
-import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
+import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
 import com.vitorpamplona.amethyst.ui.dal.UserProfileBookmarksFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileConversationsFeedFilter
@@ -589,7 +589,7 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewMode
         Row(
             modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)
         ) {
-            TranslateableRichTextViewer(
+            TranslatableRichTextViewer(
                 content = it,
                 canPreview = false,
                 tags = null,

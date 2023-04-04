@@ -267,6 +267,22 @@
     <string name="wallet_connect_service_secret_placeholder">nsec / hex private key</string>
 
     <string name="pledge_amount_in_sats">Pledge Amount in Sats</string>
+    <string name="post_poll">Post Poll</string>
+    <string name="poll_heading_required">Required fields:</string>
+    <string name="poll_zap_recipients">Zap recipients</string>
+    <string name="poll_primary_description">Primary poll description…</string>
+    <string name="poll_option_index">Option %s</string>
+    <string name="poll_option_description">Poll option description</string>
+    <string name="poll_heading_optional">Optional fields:</string>
+    <string name="poll_zap_value_min">Zap minimum</string>
+    <string name="poll_zap_value_max">Zap maximum</string>
+    <string name="poll_consensus_threshold">Consensus</string>
+    <string name="poll_consensus_threshold_percent">(0–100)%</string>
+    <string name="poll_closing_time">Close after</string>
+    <string name="poll_closing_time_days">days</string>
+    <string name="poll_is_closed">Poll is closed to new votes</string>
+    <string name="poll_zap_amount">Zap amount</string>
+    <string name="one_vote_per_user_on_atomic_votes">Only one vote per user is allowed on this type of poll</string>
 
     <string name="looking_for_event">"Looking for Event %1$s"</string>
 
