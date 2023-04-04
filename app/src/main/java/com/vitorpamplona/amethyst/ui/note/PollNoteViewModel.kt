@@ -14,7 +14,7 @@ class PollNoteViewModel {
     var pollEvent: PollNoteEvent? = null
     private var pollOptions: Map<Int, String>? = null
     var valueMaximum: Int? = null
-    private var valueMinimum: Int? = null
+    var valueMinimum: Int? = null
     private var closedAt: Int? = null
     var consensusThreshold: Float? = null
 

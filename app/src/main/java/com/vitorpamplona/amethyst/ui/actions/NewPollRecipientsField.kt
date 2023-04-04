@@ -9,10 +9,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.ui.actions.NewPollViewModel
+import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 
 @Composable
-fun NewPollRecipientsField(pollViewModel: NewPollViewModel, account: Account) {
+fun NewPollRecipientsField(pollViewModel: NewPostViewModel, account: Account) {
     // if no recipients, add user's pubkey
     if (pollViewModel.zapRecipients.isEmpty()) {
         pollViewModel.zapRecipients.add(account.userProfile().pubkeyHex)

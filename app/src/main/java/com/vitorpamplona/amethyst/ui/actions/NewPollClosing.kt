@@ -21,10 +21,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.actions.NewPollViewModel
+import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 
 @Composable
-fun NewPollClosing(pollViewModel: NewPollViewModel) {
+fun NewPollClosing(pollViewModel: NewPostViewModel) {
     var text by rememberSaveable { mutableStateOf("") }
 
     pollViewModel.isValidClosedAt.value = true
@@ -75,5 +75,5 @@ fun NewPollClosing(pollViewModel: NewPollViewModel) {
 @Preview
 @Composable
 fun NewPollClosingPreview() {
-    NewPollClosing(NewPollViewModel())
+    NewPollClosing(NewPostViewModel())
 }

@@ -23,7 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.vitorpamplona.amethyst.buttons.NewChannelButton
-import com.vitorpamplona.amethyst.ui.buttons.FabColumn
+import com.vitorpamplona.amethyst.ui.buttons.NewNoteButton
 import com.vitorpamplona.amethyst.ui.navigation.*
 import com.vitorpamplona.amethyst.ui.navigation.AccountSwitchBottomSheet
 import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
@@ -91,7 +91,7 @@ fun FloatingButtons(navController: NavHostController, accountViewModel: AccountS
                     // Does nothing.
                 }
                 is AccountState.LoggedIn -> {
-                    FabColumn(state.account)
+                    NewNoteButton(state.account)
                 }
             }
         }

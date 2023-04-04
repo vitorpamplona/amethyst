@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 
 @Composable
-fun NewPollVoteValueRange(pollViewModel: NewPollViewModel) {
+fun NewPollVoteValueRange(pollViewModel: NewPostViewModel) {
     var textMax by rememberSaveable { mutableStateOf("") }
     var textMin by rememberSaveable { mutableStateOf("") }
 
@@ -122,5 +122,5 @@ fun NewPollVoteValueRange(pollViewModel: NewPollViewModel) {
 @Preview
 @Composable
 fun NewPollVoteValueRangePreview() {
-    NewPollVoteValueRange(NewPollViewModel())
+    NewPollVoteValueRange(NewPostViewModel())
 }

@@ -17,12 +17,12 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.actions.NewPollViewModel
+import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun NewPollPrimaryDescription(pollViewModel: NewPollViewModel) {
+fun NewPollPrimaryDescription(pollViewModel: NewPostViewModel) {
     // initialize focus reference to be able to request focus programmatically
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
