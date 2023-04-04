@@ -38,7 +38,7 @@ import kotlinx.coroutines.withContext
 import java.util.Locale
 
 @Composable
-fun TranslateableRichTextViewer(
+fun TranslatableRichTextViewer(
     content: String,
     canPreview: Boolean,
     modifier: Modifier = Modifier,

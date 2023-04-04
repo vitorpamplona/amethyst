@@ -397,7 +397,7 @@ class Account(
             consensusThreshold = consensusThreshold,
             closedAt = closedAt
         )
-        println("Sending new PollNoteEvent: %s".format(signedEvent.toJson()))
+        // println("Sending new PollNoteEvent: %s".format(signedEvent.toJson()))
         Client.send(signedEvent)
         LocalCache.consume(signedEvent)
     }
