@@ -158,7 +158,7 @@ fun LoginPage(
                 keyboardActions = KeyboardActions(
                     onGo = {
                         try {
-                            accountViewModel.login(key.value.text)
+                            accountViewModel.startUI(key.value.text)
                         } catch (e: Exception) {
                             errorMessage = context.getString(R.string.invalid_key)
                         }
@@ -237,7 +237,7 @@ fun LoginPage(
 
                         if (acceptedTerms.value && key.value.text.isNotBlank()) {
                             try {
-                                accountViewModel.login(key.value.text)
+                                accountViewModel.startUI(key.value.text)
                             } catch (e: Exception) {
                                 errorMessage = context.getString(R.string.invalid_key)
                             }

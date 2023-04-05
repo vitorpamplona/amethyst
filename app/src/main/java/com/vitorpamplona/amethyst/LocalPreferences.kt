@@ -27,10 +27,7 @@ private const val DEBUG_PREFERENCES_NAME = "debug_prefs"
 
 data class AccountInfo(
     val npub: String,
-    val hasPrivKey: Boolean,
-    val current: Boolean,
-    val displayName: String?,
-    val profilePicture: String?
+    val hasPrivKey: Boolean = false
 )
 
 private object PrefKeys {
@@ -38,8 +35,6 @@ private object PrefKeys {
     const val SAVED_ACCOUNTS = "all_saved_accounts"
     const val NOSTR_PRIVKEY = "nostr_privkey"
     const val NOSTR_PUBKEY = "nostr_pubkey"
-    const val DISPLAY_NAME = "display_name"
-    const val PROFILE_PICTURE_URL = "profile_picture"
     const val FOLLOWING_CHANNELS = "following_channels"
     const val HIDDEN_USERS = "hidden_users"
     const val RELAYS = "relays"
@@ -59,53 +54,73 @@ private val gson = GsonBuilder().create()
 object LocalPreferences {
     private const val comma = ","
 
-    private var currentAccount: String?
-        get() = encryptedPreferences().getString(PrefKeys.CURRENT_ACCOUNT, null)
-        set(npub) {
-            val prefs = encryptedPreferences()
-            prefs.edit().apply {
+    private var _currentAccount: String? = null
+
+    private fun currentAccount(): String? {
+        if (_currentAccount == null) {
+            _currentAccount = encryptedPreferences().getString(PrefKeys.CURRENT_ACCOUNT, null)
+        }
+        return _currentAccount
+    }
+
+    private fun updateCurrentAccount(npub: String) {
+        if (_currentAccount != npub) {
+            _currentAccount = npub
+
+            encryptedPreferences().edit().apply {
                 putString(PrefKeys.CURRENT_ACCOUNT, npub)
             }.apply()
         }
+    }
 
-    private val savedAccounts: List<String>
-        get() = encryptedPreferences()
-            .getString(PrefKeys.SAVED_ACCOUNTS, null)?.split(comma) ?: listOf()
+    private var _savedAccounts: List<String>? = null
+
+    private fun savedAccounts(): List<String> {
+        if (_savedAccounts == null) {
+            _savedAccounts = encryptedPreferences()
+                .getString(PrefKeys.SAVED_ACCOUNTS, null)?.split(comma) ?: listOf()
+        }
+        return _savedAccounts!!
+    }
+
+    private fun updateSavedAccounts(accounts: List<String>) {
+        if (_savedAccounts != accounts) {
+            _savedAccounts = accounts
+
+            encryptedPreferences().edit().apply {
+                putString(PrefKeys.SAVED_ACCOUNTS, accounts.joinToString(comma).ifBlank { null })
+            }.apply()
+        }
+    }
 
     private val prefsDirPath: String
         get() = "${Amethyst.instance.filesDir.parent}/shared_prefs/"
 
     private fun addAccount(npub: String) {
-        val accounts = savedAccounts.toMutableList()
+        val accounts = savedAccounts().toMutableList()
         if (npub !in accounts) {
             accounts.add(npub)
+            updateSavedAccounts(accounts)
         }
-        val prefs = encryptedPreferences()
-        prefs.edit().apply {
-            putString(PrefKeys.SAVED_ACCOUNTS, accounts.joinToString(comma).ifBlank { null })
-        }.apply()
     }
 
     private fun setCurrentAccount(account: Account) {
         val npub = account.userProfile().pubkeyNpub()
-        currentAccount = npub
+        updateCurrentAccount(npub)
         addAccount(npub)
     }
 
     fun switchToAccount(npub: String) {
-        currentAccount = npub
+        updateCurrentAccount(npub)
     }
 
     /**
      * Removes the account from the app level shared preferences
      */
     private fun removeAccount(npub: String) {
-        val accounts = savedAccounts.toMutableList()
+        val accounts = savedAccounts().toMutableList()
         if (accounts.remove(npub)) {
-            val prefs = encryptedPreferences()
-            prefs.edit().apply {
-                putString(PrefKeys.SAVED_ACCOUNTS, accounts.joinToString(comma).ifBlank { null })
-            }.apply()
+            updateSavedAccounts(accounts)
         }
     }
 
@@ -145,11 +160,11 @@ object LocalPreferences {
         removeAccount(npub)
         deleteUserPreferenceFile(npub)
 
-        if (savedAccounts.isEmpty()) {
+        if (savedAccounts().isEmpty()) {
             val appPrefs = encryptedPreferences()
             appPrefs.edit().clear().apply()
-        } else if (currentAccount == npub) {
-            currentAccount = savedAccounts.elementAt(0)
+        } else if (currentAccount() == npub) {
+            updateCurrentAccount(savedAccounts().elementAt(0))
         }
     }
 
@@ -159,17 +174,8 @@ object LocalPreferences {
     }
 
     fun allSavedAccounts(): List<AccountInfo> {
-        return savedAccounts.map { npub ->
-            val prefs = encryptedPreferences(npub)
-            val hasPrivKey = prefs.getString(PrefKeys.NOSTR_PRIVKEY, null) != null
-
-            AccountInfo(
-                npub = npub,
-                hasPrivKey = hasPrivKey,
-                current = npub == currentAccount,
-                displayName = prefs.getString(PrefKeys.DISPLAY_NAME, null),
-                profilePicture = prefs.getString(PrefKeys.PROFILE_PICTURE_URL, null)
-            )
+        return savedAccounts().map { npub ->
+            AccountInfo(npub = npub)
         }
     }
 
@@ -189,13 +195,11 @@ object LocalPreferences {
             putString(PrefKeys.LATEST_CONTACT_LIST, Event.gson.toJson(account.backupContactList))
             putBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, account.hideDeleteRequestDialog)
             putBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, account.hideBlockAlertDialog)
-            putString(PrefKeys.DISPLAY_NAME, account.userProfile().toBestDisplayName())
-            putString(PrefKeys.PROFILE_PICTURE_URL, account.userProfile().profilePicture())
         }.apply()
     }
 
     fun loadFromEncryptedStorage(): Account? {
-        encryptedPreferences(currentAccount).apply {
+        encryptedPreferences(currentAccount()).apply {
             val pubKey = getString(PrefKeys.NOSTR_PUBKEY, null) ?: return null
             val privKey = getString(PrefKeys.NOSTR_PRIVKEY, null)
             val followingChannels = getStringSet(PrefKeys.FOLLOWING_CHANNELS, null) ?: setOf()
@@ -247,7 +251,7 @@ object LocalPreferences {
             val hideDeleteRequestDialog = getBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, false)
             val hideBlockAlertDialog = getBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, false)
 
-            return Account(
+            val a = Account(
                 Persona(privKey = privKey?.toByteArray(), pubKey = pubKey.toByteArray()),
                 followingChannels,
                 hiddenUsers,
@@ -261,23 +265,25 @@ object LocalPreferences {
                 hideBlockAlertDialog,
                 latestContactList
             )
+
+            return a
         }
     }
 
     fun saveLastRead(route: String, timestampInSecs: Long) {
-        encryptedPreferences(currentAccount).edit().apply {
+        encryptedPreferences(currentAccount()).edit().apply {
             putLong(PrefKeys.LAST_READ(route), timestampInSecs)
         }.apply()
     }
 
     fun loadLastRead(route: String): Long {
-        encryptedPreferences(currentAccount).run {
+        encryptedPreferences(currentAccount()).run {
             return getLong(PrefKeys.LAST_READ(route), 0)
         }
     }
 
     fun migrateSingleUserPrefs() {
-        if (currentAccount != null) return
+        if (currentAccount() != null) return
 
         val pubkey = encryptedPreferences().getString(PrefKeys.NOSTR_PUBKEY, null) ?: return
         val npub = Hex.decode(pubkey).toNpub()
@@ -314,6 +320,6 @@ object LocalPreferences {
 
         encryptedPreferences().edit().clear().apply()
         addAccount(npub)
-        currentAccount = npub
+        updateCurrentAccount(npub)
     }
 }

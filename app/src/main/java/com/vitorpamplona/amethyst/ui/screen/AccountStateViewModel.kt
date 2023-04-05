@@ -35,11 +35,11 @@ class AccountStateViewModel() : ViewModel() {
 
     private fun tryLoginExistingAccount() {
         LocalPreferences.loadFromEncryptedStorage()?.let {
-            login(it)
+            startUI(it)
         }
     }
 
-    fun login(key: String) {
+    fun startUI(key: String) {
         val pattern = Pattern.compile(".+@.+\\.[a-z]+")
         val parsed = Nip19.uriToRoute(key)
         val pubKeyParsed = parsed?.hex?.toByteArray()
@@ -56,7 +56,8 @@ class AccountStateViewModel() : ViewModel() {
                 Account(Persona(Hex.decode(key)))
             }
 
-        login(account)
+        LocalPreferences.updatePrefsForLogin(account)
+        startUI(account)
     }
 
     fun switchUser(npub: String) {
@@ -67,24 +68,22 @@ class AccountStateViewModel() : ViewModel() {
 
     fun newKey() {
         val account = Account(Persona())
-        login(account)
+        // saves to local preferences
+        LocalPreferences.updatePrefsForLogin(account)
+        startUI(account)
     }
 
     @OptIn(DelicateCoroutinesApi::class)
-    fun login(account: Account) {
-        LocalPreferences.updatePrefsForLogin(account)
-
+    fun startUI(account: Account) {
         if (account.loggedIn.privKey != null) {
             _accountContent.update { AccountState.LoggedIn(account) }
         } else {
             _accountContent.update { AccountState.LoggedInViewOnly(account) }
         }
-
         val scope = CoroutineScope(Job() + Dispatchers.IO)
         scope.launch {
             ServiceManager.start(account)
         }
-
         GlobalScope.launch(Dispatchers.Main) {
             account.saveable.observeForever(saveListener)
         }
