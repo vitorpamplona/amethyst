@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.compose.runtime.MutableState
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
 
 abstract class Card() {
     abstract fun createdAt(): Long
@@ -38,6 +39,14 @@ class ZapSetCard(val note: Note, val zapEvents: Map<Note, Note>) : Card() {
         return createdAt
     }
     override fun id() = note.idHex + "Z" + createdAt
+}
+
+class ZapUserSetCard(val user: User, val zapEvents: Map<Note, Note>) : Card() {
+    val createdAt = zapEvents.maxOf { it.value.createdAt() ?: 0 }
+    override fun createdAt(): Long {
+        return createdAt
+    }
+    override fun id() = user.pubkeyHex + "U" + createdAt
 }
 
 class MultiSetCard(val note: Note, val boostEvents: List<Note>, val likeEvents: List<Note>, val zapEvents: Map<Note, Note>) : Card() {

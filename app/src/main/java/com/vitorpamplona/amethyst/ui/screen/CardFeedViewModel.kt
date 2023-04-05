@@ -7,6 +7,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.LocalCacheState
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
@@ -78,7 +79,7 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>) : ViewModel() {
             }
 
         // val reactionCards = reactionsPerEvent.map { LikeSetCard(it.key, it.value) }
-
+        val zapsPerUser = mutableMapOf<User, MutableMap<Note, Note>>()
         val zapsPerEvent = mutableMapOf<Note, MutableMap<Note, Note>>()
         notes
             .filter { it.event is LnZapEvent }
@@ -88,6 +89,20 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>) : ViewModel() {
                     val zapRequest = zappedPost.zaps.filter { it.value == zapEvent }.keys.firstOrNull()
                     if (zapRequest != null) {
                         zapsPerEvent.getOrPut(zappedPost, { mutableMapOf() }).put(zapRequest, zapEvent)
+                    }
+                } else {
+                    val event = (zapEvent.event as LnZapEvent)
+                    val author = event.zappedAuthor().mapNotNull {
+                        LocalCache.checkGetOrCreateUser(
+                            it
+                        )
+                    }.firstOrNull()
+                    if (author != null) {
+                        val zapRequest = author.zaps.filter { it.value == zapEvent }.keys.firstOrNull()
+                        if (zapRequest != null) {
+                            zapsPerUser.getOrPut(author, { mutableMapOf() })
+                                .put(zapRequest, zapEvent)
+                        }
                     }
                 }
             }
@@ -121,6 +136,13 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>) : ViewModel() {
             }
         }.flatten()
 
+        val userZaps = zapsPerUser.map {
+            ZapUserSetCard(
+                it.key,
+                it.value
+            )
+        }
+
         val textNoteCards = notes.filter { it.event !is ReactionEvent && it.event !is RepostEvent && it.event !is LnZapEvent }.map {
             if (it.event is PrivateDmEvent) {
                 MessageSetCard(it)
@@ -131,7 +153,7 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>) : ViewModel() {
             }
         }
 
-        return (multiCards + textNoteCards).sortedBy { it.createdAt() }.reversed()
+        return (multiCards + textNoteCards + userZaps).sortedBy { it.createdAt() }.reversed()
     }
 
     private fun updateFeed(notes: List<Card>) {
