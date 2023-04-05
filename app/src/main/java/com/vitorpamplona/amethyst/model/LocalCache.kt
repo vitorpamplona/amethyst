@@ -17,9 +17,11 @@ import java.time.format.DateTimeFormatter
 import java.util.concurrent.ConcurrentHashMap
 
 object LocalCache {
-    val metadataParser = jacksonObjectMapper()
-        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-        .readerFor(UserMetadata::class.java)
+    val metadataParser by lazy {
+        jacksonObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            .readerFor(UserMetadata::class.java)
+    }
 
     val antiSpam = AntiSpamFilter()
 
