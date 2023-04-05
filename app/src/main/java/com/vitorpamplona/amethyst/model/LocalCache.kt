@@ -25,10 +25,10 @@ object LocalCache {
 
     val antiSpam = AntiSpamFilter()
 
-    val users = ConcurrentHashMap<HexKey, User>()
-    val notes = ConcurrentHashMap<HexKey, Note>()
+    val users = ConcurrentHashMap<HexKey, User>(5000)
+    val notes = ConcurrentHashMap<HexKey, Note>(5000)
     val channels = ConcurrentHashMap<HexKey, Channel>()
-    val addressables = ConcurrentHashMap<String, AddressableNote>()
+    val addressables = ConcurrentHashMap<String, AddressableNote>(100)
 
     fun checkGetOrCreateUser(key: String): User? {
         if (isValidHexNpub(key)) {
@@ -602,8 +602,7 @@ object LocalCache {
         val repliesTo = event.zappedPost().mapNotNull { checkGetOrCreateNote(it) } +
             event.taggedAddresses().map { getOrCreateAddressableNote(it) } +
             (
-                (zapRequest?.event as? LnZapRequestEvent)?.taggedAddresses()
-                    ?.map { getOrCreateAddressableNote(it) } ?: emptySet<Note>()
+                (zapRequest?.event as? LnZapRequestEvent)?.taggedAddresses()?.map { getOrCreateAddressableNote(it) } ?: emptySet<Note>()
                 )
 
         note.loadEvent(event, author, repliesTo)
