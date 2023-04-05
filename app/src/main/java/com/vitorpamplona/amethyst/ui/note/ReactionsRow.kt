@@ -64,7 +64,6 @@ import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 import java.math.RoundingMode
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
@@ -125,7 +124,7 @@ fun ReplyReaction(
     val scope = rememberCoroutineScope()
 
     IconButton(
-        modifier = Modifier.then(Modifier.size(20.dp)),
+        modifier = Modifier.size(20.dp),
         onClick = {
             if (accountViewModel.isWriteable()) {
                 onPress()
@@ -460,7 +459,7 @@ private fun ViewCountReaction(baseNote: Note, textModifier: Modifier = Modifier)
     val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
 
     IconButton(
-        modifier = Modifier.then(Modifier.size(20.dp)),
+        modifier = Modifier.size(20.dp),
         onClick = { uri.openUri("https://counter.amethyst.social/${baseNote.idHex}/") }
     ) {
         Icon(
@@ -475,7 +474,6 @@ private fun ViewCountReaction(baseNote: Note, textModifier: Modifier = Modifier)
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
                 .data("https://counter.amethyst.social/${baseNote.idHex}.svg?label=+&color=00000000")
-                .crossfade(true)
                 .diskCachePolicy(CachePolicy.DISABLED)
                 .memoryCachePolicy(CachePolicy.ENABLED)
                 .build(),

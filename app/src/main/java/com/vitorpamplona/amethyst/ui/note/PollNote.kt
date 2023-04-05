@@ -2,7 +2,6 @@ package com.vitorpamplona.amethyst.ui.note
 
 import android.widget.Toast
 import androidx.compose.foundation.*
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -10,7 +9,6 @@ import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.outlined.Bolt
-import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -188,8 +186,8 @@ fun ZapVote(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.combinedClickable(
             role = Role.Button,
-            interactionSource = remember { MutableInteractionSource() },
-            indication = rememberRipple(bounded = false, radius = 24.dp),
+            // interactionSource = remember { MutableInteractionSource() },
+            // indication = rememberRipple(bounded = false, radius = 24.dp),
             onClick = {
                 if (!accountViewModel.isWriteable()) {
                     scope.launch {
