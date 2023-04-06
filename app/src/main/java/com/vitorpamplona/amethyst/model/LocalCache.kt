@@ -565,9 +565,9 @@ object LocalCache {
             return
         }
 
-        val replyTo = event.replyTos()
+        val replyTo = event.tagsWithoutCitations()
+            .filter { it != event.channel() }
             .mapNotNull { checkGetOrCreateNote(it) }
-            .filter { it.event !is ChannelCreateEvent }
 
         note.loadEvent(event, author, replyTo)
 

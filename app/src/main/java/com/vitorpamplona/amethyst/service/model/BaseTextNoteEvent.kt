@@ -13,7 +13,7 @@ open class BaseTextNoteEvent(
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
     fun mentions() = taggedUsers()
-    fun replyTos() = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
+    open fun replyTos() = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
 
     fun findCitations(): Set<String> {
         var citations = mutableSetOf<String>()

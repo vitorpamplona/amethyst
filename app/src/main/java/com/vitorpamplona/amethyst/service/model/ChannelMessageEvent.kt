@@ -12,11 +12,10 @@ class ChannelMessageEvent(
     tags: List<List<String>>,
     content: String,
     sig: HexKey
-) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
+) : BaseTextNoteEvent(id, pubKey, createdAt, kind, tags, content, sig) {
 
     fun channel() = tags.firstOrNull { it[0] == "e" && it.size > 3 && it[3] == "root" }?.getOrNull(1) ?: tags.firstOrNull { it.firstOrNull() == "e" }?.getOrNull(1)
-    fun replyTos() = tags.filter { it.getOrNull(1) != channel() }.mapNotNull { it.getOrNull(1) }
-    fun mentions() = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
+    override fun replyTos() = tags.filter { it.firstOrNull() == "e" && it.getOrNull(1) != channel() }.mapNotNull { it.getOrNull(1) }
 
     companion object {
         const val kind = 42
