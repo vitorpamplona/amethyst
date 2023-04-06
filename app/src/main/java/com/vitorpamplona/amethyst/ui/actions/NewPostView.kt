@@ -315,7 +315,6 @@ private fun AddPollButton(
     }
 }
 
-
 @Composable
 private fun AddLnInvoiceButton(
     isLnInvoiceActive: Boolean,

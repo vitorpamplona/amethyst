@@ -560,7 +560,10 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewMode
 
         if (zapExpanded) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 5.dp)) {
-                InvoiceRequest(lud16, baseUser.pubkeyHex, account,
+                InvoiceRequest(
+                    lud16,
+                    baseUser.pubkeyHex,
+                    account,
                     onSuccess = {
                         // pay directly
                         if (account.hasWalletConnectSetup()) {
