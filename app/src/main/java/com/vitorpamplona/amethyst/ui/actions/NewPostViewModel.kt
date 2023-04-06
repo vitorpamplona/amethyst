@@ -53,6 +53,10 @@ open class NewPostViewModel : ViewModel() {
     var isValidConsensusThreshold = mutableStateOf(true)
     var isValidClosedAt = mutableStateOf(true)
 
+    // Invoices
+    var wantsInvoice by mutableStateOf(false)
+
+
     open fun load(account: Account, replyingTo: Note?, quote: Note?) {
         originalNote = replyingTo
         replyingTo?.let { replyNote ->
@@ -199,6 +203,8 @@ open class NewPostViewModel : ViewModel() {
         valueMinimum = null
         consensusThreshold = null
         closedAt = null
+
+        wantsInvoice = false
     }
 
     open fun findUrlInMessage(): String? {
@@ -248,11 +254,15 @@ open class NewPostViewModel : ViewModel() {
     }
 
     fun canPost(): Boolean {
-        return message.text.isNotBlank() && !isUploadingImage &&
+        return message.text.isNotBlank() && !isUploadingImage && !wantsInvoice &&
             (!wantsPoll || pollOptions.values.all { it.isNotEmpty() })
     }
 
     fun canUsePoll(): Boolean {
         return originalNote?.event !is PrivateDmEvent && originalNote?.channel() == null
+    }
+
+    fun canAddLnInvoice(): Boolean {
+        return account?.userProfile()?.info?.lnAddress() != null
     }
 }

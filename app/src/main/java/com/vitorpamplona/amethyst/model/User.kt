@@ -387,6 +387,10 @@ class UserMetadata {
         return listOfNotNull(name, username, display_name, displayName, nip05, lud06, lud16)
             .any { it.startsWith(prefix, true) }
     }
+
+    fun lnAddress(): String? {
+        return (lud16?.trim() ?: lud06?.trim())?.ifBlank { null }
+    }
 }
 
 class UserLiveData(val user: User) : LiveData<UserState>(UserState(user)) {

@@ -12,6 +12,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -29,6 +31,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -182,6 +185,28 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                 }
                             }
 
+                            val user = postViewModel.account?.userProfile()
+                            val lud16 = user?.info?.lnAddress()
+
+                            if (lud16 != null && user != null && postViewModel.wantsInvoice) {
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 5.dp)) {
+                                    InvoiceRequest(
+                                        lud16,
+                                        user.pubkeyHex,
+                                        account,
+                                        stringResource(id = R.string.lightning_invoice),
+                                        stringResource(id = R.string.lightning_create_and_add_invoice),
+                                        onSuccess = {
+                                            postViewModel.message = TextFieldValue(postViewModel.message.text + "\n\n" + it)
+                                            postViewModel.wantsInvoice = false
+                                        },
+                                        onClose = {
+                                            postViewModel.wantsInvoice = false
+                                        }
+                                    )
+                                }
+                            }
+
                             val myUrlPreview = postViewModel.urlPreview
                             if (myUrlPreview != null) {
                                 Row(modifier = Modifier.padding(top = 5.dp)) {
@@ -249,6 +274,12 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                 postViewModel.wantsPoll = !postViewModel.wantsPoll
                             }
                         }
+
+                        if (postViewModel.canAddLnInvoice()) {
+                            AddLnInvoiceButton(postViewModel.wantsInvoice) {
+                                postViewModel.wantsInvoice = !postViewModel.wantsInvoice
+                            }
+                        }
                     }
                 }
             }
@@ -279,6 +310,35 @@ private fun AddPollButton(
                 null,
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colors.onBackground
+            )
+        }
+    }
+}
+
+
+@Composable
+private fun AddLnInvoiceButton(
+    isLnInvoiceActive: Boolean,
+    onClick: () -> Unit
+) {
+    IconButton(
+        onClick = {
+            onClick()
+        }
+    ) {
+        if (!isLnInvoiceActive) {
+            Icon(
+                imageVector = Icons.Default.MonetizationOn,
+                null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colors.onBackground
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Default.MonetizationOn,
+                null,
+                modifier = Modifier.size(20.dp),
+                tint = Color.Green.copy(alpha = 0.52f)
             )
         }
     }

@@ -1,5 +1,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.*
@@ -27,6 +29,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalUriHandler
@@ -39,6 +42,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -421,6 +425,7 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewMode
 
     val uri = LocalUriHandler.current
     val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
 
     Row(verticalAlignment = Alignment.Bottom) {
         user.bestDisplayName()?.let {
@@ -555,9 +560,22 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewMode
 
         if (zapExpanded) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 5.dp)) {
-                InvoiceRequest(lud16, baseUser.pubkeyHex, account) {
-                    zapExpanded = false
-                }
+                InvoiceRequest(lud16, baseUser.pubkeyHex, account,
+                    onSuccess = {
+                        // pay directly
+                        if (account.hasWalletConnectSetup()) {
+                            account.sendZapPaymentRequestFor(it)
+                        } else {
+                            runCatching {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("lightning:$it"))
+                                ContextCompat.startActivity(context, intent, null)
+                            }
+                        }
+                    },
+                    onClose = {
+                        zapExpanded = false
+                    }
+                )
             }
         }
     }
