@@ -188,7 +188,13 @@ fun RichTextViewer(
                             } else if (word.length > 6 && Patterns.PHONE.matcher(word).matches()) {
                                 ClickablePhone(word)
                             } else if (isBechLink(word)) {
-                                BechLink(word, navController)
+                                BechLink(
+                                    word,
+                                    canPreview,
+                                    backgroundColor,
+                                    accountViewModel,
+                                    navController
+                                )
                             } else if (word.startsWith("#")) {
                                 if (tagIndex.matcher(word).matches() && tags != null) {
                                     TagLink(
@@ -239,7 +245,13 @@ fun RichTextViewer(
                             } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
                                 ClickablePhone(word)
                             } else if (isBechLink(word)) {
-                                BechLink(word, navController)
+                                BechLink(
+                                    word,
+                                    canPreview,
+                                    backgroundColor,
+                                    accountViewModel,
+                                    navController
+                                )
                             } else if (word.startsWith("#")) {
                                 if (tagIndex.matcher(word).matches() && tags != null) {
                                     TagLink(
@@ -285,19 +297,48 @@ private fun isArabic(text: String): Boolean {
 }
 
 fun isBechLink(word: String): Boolean {
-    val cleaned = word.removePrefix("@").removePrefix("nostr:").removePrefix("@").take(7).lowercase()
+    val cleaned = word.lowercase().removePrefix("@").removePrefix("nostr:").removePrefix("@").take(7)
 
     return listOf("npub1", "naddr1", "note1", "nprofile1", "nevent1").any { cleaned.startsWith(it) }
 }
 
 @Composable
-fun BechLink(word: String, navController: NavController) {
+fun BechLink(word: String, canPreview: Boolean, backgroundColor: Color, accountViewModel: AccountViewModel, navController: NavController) {
     val nip19Route = Nip19.uriToRoute(word)
 
     if (nip19Route == null) {
         Text(text = "$word ")
     } else {
-        ClickableRoute(nip19Route, navController)
+        if (nip19Route.type == Nip19.Type.NOTE || nip19Route.type == Nip19.Type.EVENT || nip19Route.type == Nip19.Type.ADDRESS) {
+            val note = LocalCache.checkGetOrCreateNote(nip19Route.hex)
+            if (note != null) {
+                if (canPreview) {
+                    NoteCompose(
+                        baseNote = note,
+                        accountViewModel = accountViewModel,
+                        modifier = Modifier
+                            .padding(top = 2.dp, bottom = 0.dp, start = 0.dp, end = 0.dp)
+                            .fillMaxWidth()
+                            .clip(shape = RoundedCornerShape(15.dp))
+                            .border(
+                                1.dp,
+                                MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
+                                RoundedCornerShape(15.dp)
+                            ),
+                        parentBackgroundColor = MaterialTheme.colors.onSurface.copy(alpha = 0.05f)
+                            .compositeOver(backgroundColor),
+                        isQuotedNote = true,
+                        navController = navController
+                    )
+                } else {
+                    ClickableRoute(nip19Route, navController)
+                }
+            } else {
+                ClickableRoute(nip19Route, navController)
+            }
+        } else {
+            ClickableRoute(nip19Route, navController)
+        }
     }
 }
 
