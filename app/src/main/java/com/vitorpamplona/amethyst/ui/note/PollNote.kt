@@ -71,7 +71,7 @@ fun PollNote(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(vertical = 3.dp)
         ) {
-            if (zappedNote.author == account.userProfile() || zappedNote.isZappedBy(account.userProfile()) == true) {
+            if (zappedNote.author == account.userProfile() || zappedNote.isZappedBy(account.userProfile())) {
                 ZapVote(
                     baseNote,
                     accountViewModel,
@@ -205,6 +205,16 @@ fun ZapVote(
                             .makeText(
                                 context,
                                 context.getString(R.string.poll_is_closed),
+                                Toast.LENGTH_SHORT
+                            )
+                            .show()
+                    }
+                } else if (zappedNote?.author == account.userProfile()) {
+                    scope.launch {
+                        Toast
+                            .makeText(
+                                context,
+                                context.getString(R.string.poll_author_no_vote),
                                 Toast.LENGTH_SHORT
                             )
                             .show()
