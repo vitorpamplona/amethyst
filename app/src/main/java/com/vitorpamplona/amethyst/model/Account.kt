@@ -402,10 +402,11 @@ class Account(
         LocalCache.consume(signedEvent)
     }
 
-    fun sendChannelMessage(message: String, toChannel: String, replyingTo: Note? = null, mentions: List<User>?) {
+    fun sendChannelMessage(message: String, toChannel: String, replyTo: List<Note>?, mentions: List<User>?) {
         if (!isWriteable()) return
 
-        val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
+        // val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
+        val repliesToHex = replyTo?.map { it.idHex }
         val mentionsHex = mentions?.map { it.pubkeyHex }
 
         val signedEvent = ChannelMessageEvent.create(
