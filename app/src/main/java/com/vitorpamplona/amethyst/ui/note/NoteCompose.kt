@@ -566,11 +566,15 @@ fun DisplayFollowingHashtagsInPost(
     account: Account,
     navController: NavController
 ) {
+    var firstTag by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(key1 = noteEvent) {
+        firstTag = noteEvent.firstIsTaggedHashes(account.followingTagSet())
+    }
+
     Column() {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            val firstTag =
-                noteEvent.firstIsTaggedHashes(account.followingTagSet())
-            if (firstTag != null) {
+            firstTag?.let {
                 ClickableText(
                     text = AnnotatedString(" #$firstTag"),
                     onClick = { navController.navigate("Hashtag/$firstTag") },
