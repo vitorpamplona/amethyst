@@ -207,7 +207,20 @@ fun NoteComposeInner(
                                 navController.navigate("Channel/${it.idHex}")
                             }
                         } else if (noteEvent is PrivateDmEvent) {
-                            navController.navigate("Room/${note.author?.pubkeyHex}")
+                            val replyAuthorBase =
+                                (note.event as? PrivateDmEvent)
+                                    ?.recipientPubKey()
+                                    ?.let { LocalCache.getOrCreateUser(it) }
+
+                            var userToComposeOn = note.author!!
+
+                            if (replyAuthorBase != null) {
+                                if (note.author == accountViewModel.userProfile()) {
+                                    userToComposeOn = replyAuthorBase
+                                }
+                            }
+
+                            navController.navigate("Room/${userToComposeOn.pubkeyHex}")
                         } else {
                             navController.navigate("Note/${note.idHex}")
                         }
