@@ -63,6 +63,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 import java.math.RoundingMode
+import kotlin.math.roundToInt
 
 @Composable
 fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel) {
@@ -604,9 +605,9 @@ fun showCount(count: Int?): String {
     if (count == 0) return ""
 
     return when {
-        count >= 1000000000 -> "${Math.round(count / 1000000000f)}G"
-        count >= 1000000 -> "${Math.round(count / 1000000f)}M"
-        count >= 1000 -> "${Math.round(count / 1000f)}k"
+        count >= 1000000000 -> "${(count / 1000000000f).roundToInt()}G"
+        count >= 1000000 -> "${(count / 1000000f).roundToInt()}M"
+        count >= 1000 -> "${(count / 1000f).roundToInt()}k"
         else -> "$count"
     }
 }
