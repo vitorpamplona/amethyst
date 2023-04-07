@@ -324,7 +324,7 @@ fun NoteComposeInner(
                         )
 
                         IconButton(
-                            modifier = Modifier.then(Modifier.size(24.dp)),
+                            modifier = Modifier.size(24.dp),
                             onClick = { moreActionsExpanded = true }
                         ) {
                             Icon(
