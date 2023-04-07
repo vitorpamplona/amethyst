@@ -38,23 +38,23 @@ open class Event(
 
     override fun toJson(): String = gson.toJson(this)
 
-    fun taggedUsers() = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
-    fun taggedEvents() = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
+    fun taggedUsers() = tags.filter { it.size > 1 && it[0] == "p" }.map { it[1] }
+    fun taggedEvents() = tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }
 
-    fun taggedAddresses() = tags.filter { it.firstOrNull() == "a" }.mapNotNull {
-        val aTagValue = it.getOrNull(1)
+    fun taggedAddresses() = tags.filter { it.size > 1 && it[0] == "a" }.mapNotNull {
+        val aTagValue = it[1]
         val relay = it.getOrNull(2)
 
-        if (aTagValue != null) ATag.parse(aTagValue, relay) else null
+        ATag.parse(aTagValue, relay)
     }
 
-    override fun hashtags() = tags.filter { it.firstOrNull() == "t" }.mapNotNull { it.getOrNull(1) }
+    override fun hashtags() = tags.filter { it.size > 1 && it[0] == "t" }.map { it[1] }
 
-    override fun isTaggedUser(idHex: String) = tags.any { it.getOrNull(0) == "p" && it.getOrNull(1) == idHex }
+    override fun isTaggedUser(idHex: String) = tags.any { it.size > 1 && it[0] == "p" && it[1] == idHex }
 
-    override fun isTaggedHash(hashtag: String) = tags.any { it.getOrNull(0) == "t" && it.getOrNull(1).equals(hashtag, true) }
-    override fun isTaggedHashes(hashtags: Set<String>) = tags.any { it.getOrNull(0) == "t" && it.getOrNull(1)?.lowercase() in hashtags }
-    override fun firstIsTaggedHashes(hashtags: Set<String>) = tags.firstOrNull { it.getOrNull(0) == "t" && it.getOrNull(1)?.lowercase() in hashtags }?.getOrNull(1)
+    override fun isTaggedHash(hashtag: String) = tags.any { it.size > 1 && it[0] == "t" && it[1].equals(hashtag, true) }
+    override fun isTaggedHashes(hashtags: Set<String>) = tags.any { it.size > 1 && it[0] == "t" && it[1].lowercase() in hashtags }
+    override fun firstIsTaggedHashes(hashtags: Set<String>) = tags.firstOrNull { it.size > 1 && it[0] == "t" && it[1].lowercase() in hashtags }?.getOrNull(1)
 
     override fun getPoWRank(): Int {
         var rank = 0
@@ -79,7 +79,7 @@ open class Event(
 
     override fun getReward(): BigDecimal? {
         return try {
-            tags.filter { it.firstOrNull() == "reward" }.mapNotNull { BigDecimal(it.getOrNull(1)) }.firstOrNull()
+            tags.filter { it.firstOrNull() == "reward" }.mapNotNull { it.getOrNull(1)?.let { BigDecimal(it) } }.firstOrNull()
         } catch (e: Exception) {
             null
         }
