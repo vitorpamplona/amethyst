@@ -437,11 +437,11 @@ fun TagLink(word: String, tags: List<List<String>>, canPreview: Boolean, backgro
 
                 if (tag.size > 1) {
                     if (tag[0] == "p") {
-                        LocalCache.checkGetOrCreateUser(tags[index][1])?.let {
+                        LocalCache.checkGetOrCreateUser(tag[1])?.let {
                             baseUserPair = Pair(it, suffix)
                         }
                     } else if (tag[0] == "e" || tag[0] == "a") {
-                        LocalCache.checkGetOrCreateNote(tags[index][1])?.let {
+                        LocalCache.checkGetOrCreateNote(tag[1])?.let {
                             baseNotePair = Pair(it, suffix)
                         }
                     }
