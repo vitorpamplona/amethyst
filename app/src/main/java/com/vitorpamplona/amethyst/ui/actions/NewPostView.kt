@@ -13,7 +13,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MonetizationOn
+import androidx.compose.material.icons.filled.CurrencyBitcoin
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.ui.components.*
 import com.vitorpamplona.amethyst.ui.note.ReplyInformation
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.UserLine
+import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -327,17 +328,17 @@ private fun AddLnInvoiceButton(
     ) {
         if (!isLnInvoiceActive) {
             Icon(
-                imageVector = Icons.Default.MonetizationOn,
+                imageVector = Icons.Default.CurrencyBitcoin,
                 null,
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colors.onBackground
             )
         } else {
             Icon(
-                imageVector = Icons.Default.MonetizationOn,
+                imageVector = Icons.Default.CurrencyBitcoin,
                 null,
                 modifier = Modifier.size(20.dp),
-                tint = Color.Green.copy(alpha = 0.52f)
+                tint = BitcoinOrange
             )
         }
     }
