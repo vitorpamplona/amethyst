@@ -82,40 +82,6 @@ fun RichTextViewer(
     accountViewModel: AccountViewModel,
     navController: NavController
 ) {
-    val myMarkDownStyle = richTextDefaults.copy(
-        codeBlockStyle = richTextDefaults.codeBlockStyle?.copy(
-            textStyle = TextStyle(
-                fontFamily = FontFamily.Monospace,
-                fontSize = 14.sp
-            ),
-            modifier = Modifier
-                .padding(0.dp)
-                .fillMaxWidth()
-                .clip(shape = RoundedCornerShape(15.dp))
-                .border(
-                    1.dp,
-                    MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
-                    RoundedCornerShape(15.dp)
-                )
-                .background(
-                    MaterialTheme.colors.onSurface
-                        .copy(alpha = 0.05f)
-                        .compositeOver(backgroundColor)
-                )
-        ),
-        stringStyle = richTextDefaults.stringStyle?.copy(
-            linkStyle = SpanStyle(
-                textDecoration = TextDecoration.Underline,
-                color = MaterialTheme.colors.primary
-            ),
-            codeStyle = SpanStyle(
-                fontFamily = FontFamily.Monospace,
-                fontSize = 14.sp,
-                background = MaterialTheme.colors.onSurface.copy(alpha = 0.22f).compositeOver(backgroundColor)
-            )
-        )
-    )
-
     Column(modifier = modifier) {
         if (content.startsWith("# ") ||
             content.contains("##") ||
@@ -123,6 +89,40 @@ fun RichTextViewer(
             content.contains("__") ||
             content.contains("```")
         ) {
+            val myMarkDownStyle = richTextDefaults.copy(
+                codeBlockStyle = richTextDefaults.codeBlockStyle?.copy(
+                    textStyle = TextStyle(
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 14.sp
+                    ),
+                    modifier = Modifier
+                        .padding(0.dp)
+                        .fillMaxWidth()
+                        .clip(shape = RoundedCornerShape(15.dp))
+                        .border(
+                            1.dp,
+                            MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
+                            RoundedCornerShape(15.dp)
+                        )
+                        .background(
+                            MaterialTheme.colors.onSurface
+                                .copy(alpha = 0.05f)
+                                .compositeOver(backgroundColor)
+                        )
+                ),
+                stringStyle = richTextDefaults.stringStyle?.copy(
+                    linkStyle = SpanStyle(
+                        textDecoration = TextDecoration.Underline,
+                        color = MaterialTheme.colors.primary
+                    ),
+                    codeStyle = SpanStyle(
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 14.sp,
+                        background = MaterialTheme.colors.onSurface.copy(alpha = 0.22f).compositeOver(backgroundColor)
+                    )
+                )
+            )
+
             MaterialRichText(
                 style = myMarkDownStyle
             ) {
@@ -301,7 +301,7 @@ fun BechLink(word: String, canPreview: Boolean, backgroundColor: Color, accountV
                         baseNotePair = Pair(note, it.additionalChars)
                     }
                 } else {
-                    nip19Route = nip19Route
+                    nip19Route = it
                 }
             }
         }
