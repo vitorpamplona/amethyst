@@ -116,6 +116,7 @@ fun NoteComposeInner(
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
+    val loggedIn = account.userProfile()
 
     val noteState by baseNote.live().metadata.observeAsState()
     val note = noteState?.note
@@ -135,8 +136,8 @@ fun NoteComposeInner(
 
     LaunchedEffect(key1 = noteReportsState) {
         withContext(Dispatchers.IO) {
-            canPreview = note?.author === account.userProfile() ||
-                (note?.author?.let { account.userProfile().isFollowingCached(it) } ?: true) ||
+            canPreview = note?.author === loggedIn ||
+                (note?.author?.let { loggedIn.isFollowingCached(it) } ?: true) ||
                 !noteForReports.hasAnyReports()
 
             isAcceptable = account.isAcceptable(noteForReports)
@@ -158,7 +159,7 @@ fun NoteComposeInner(
         if (!account.isHidden(noteForReports.author!!)) {
             HiddenNote(
                 account.getRelevantReports(noteForReports),
-                account.userProfile(),
+                loggedIn,
                 modifier,
                 isBoostedNote,
                 navController,
@@ -231,7 +232,7 @@ fun NoteComposeInner(
                                 .width(55.dp)
                                 .padding(0.dp)
                         ) {
-                            NoteAuthorPicture(note, navController, account.userProfile(), 55.dp)
+                            NoteAuthorPicture(note, navController, loggedIn, 55.dp)
 
                             if (noteEvent is RepostEvent) {
                                 note.replyTo?.lastOrNull()?.let {
@@ -244,7 +245,7 @@ fun NoteComposeInner(
                                         NoteAuthorPicture(
                                             it,
                                             navController,
-                                            account.userProfile(),
+                                            loggedIn,
                                             35.dp,
                                             pictureModifier = Modifier.border(2.dp, MaterialTheme.colors.background, CircleShape)
                                         )
@@ -299,7 +300,7 @@ fun NoteComposeInner(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (isQuotedNote) {
-                            NoteAuthorPicture(note, navController, account.userProfile(), 25.dp)
+                            NoteAuthorPicture(note, navController, loggedIn, 25.dp)
                             Spacer(Modifier.padding(horizontal = 5.dp))
                             NoteUsernameDisplay(note, Modifier.weight(1f))
                         } else {
@@ -384,7 +385,7 @@ fun NoteComposeInner(
                         val sortedMentions = noteEvent.mentions()
                             .mapNotNull { LocalCache.checkGetOrCreateUser(it) }
                             .toSet()
-                            .sortedBy { account.userProfile().isFollowingCached(it) }
+                            .sortedBy { loggedIn.isFollowingCached(it) }
 
                         note.channel()?.let {
                             ReplyInformationChannel(note.replyTo, sortedMentions, it, navController)
@@ -435,7 +436,7 @@ fun NoteComposeInner(
                             thickness = 0.25.dp
                         )
                     } else if (noteEvent is LongTextNoteEvent) {
-                        LongFormHeader(noteEvent, note, account.userProfile())
+                        LongFormHeader(noteEvent, note, loggedIn)
 
                         ReactionsRow(note, accountViewModel)
 
@@ -453,7 +454,7 @@ fun NoteComposeInner(
                                     UserPicture(
                                         user = it,
                                         navController = navController,
-                                        userAccount = account.userProfile(),
+                                        userAccount = loggedIn,
                                         size = 35.dp
                                     )
                                 }
@@ -479,8 +480,8 @@ fun NoteComposeInner(
                             thickness = 0.25.dp
                         )
                     } else if (noteEvent is PrivateDmEvent &&
-                        noteEvent.recipientPubKey() != account.userProfile().pubkeyHex &&
-                        note.author != account.userProfile()
+                        noteEvent.recipientPubKey() != loggedIn.pubkeyHex &&
+                        note.author !== loggedIn
                     ) {
                         val recepient = noteEvent.recipientPubKey()?.let { LocalCache.checkGetOrCreateUser(it) }
 
@@ -510,7 +511,7 @@ fun NoteComposeInner(
                         val eventContent = accountViewModel.decrypt(note)
 
                         if (eventContent != null) {
-                            if (makeItShort && note.author == account.userProfile()) {
+                            if (makeItShort && note.author == loggedIn) {
                                 Text(
                                     text = eventContent,
                                     color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
