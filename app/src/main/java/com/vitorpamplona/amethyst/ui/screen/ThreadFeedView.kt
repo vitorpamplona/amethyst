@@ -365,7 +365,7 @@ fun NoteMaster(
                             navController
                         )
 
-                        DisplayUncitedHashtags(noteEvent, eventContent, navController)
+                        DisplayUncitedHashtags(noteEvent.hashtags(), eventContent, navController)
 
                         if (noteEvent is PollNoteEvent) {
                             PollNote(
