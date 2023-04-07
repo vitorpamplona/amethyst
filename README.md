@@ -167,6 +167,12 @@ Information shared on nostr should be assumed permanent for privacy purposes. Th
 
 [Issues](https://github.com/vitorpamplona/amethyst/issues) and [pull requests](https://github.com/vitorpamplona/amethyst/pulls) are very welcome.
 
+## Contributors
+
+<a align="center" href="https://github.com/vitorpamplona/amethyst/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=vitorpamplona/amethyst" />
+</a>
+
 # MIT License
 
 Copyright (c) 2023 Vitor Pamplona
