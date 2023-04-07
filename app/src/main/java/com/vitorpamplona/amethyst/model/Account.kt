@@ -716,7 +716,8 @@ class Account(
         }
     }
 
-    fun isHidden(user: User) = user.pubkeyHex in hiddenUsers || user.pubkeyHex in transientHiddenUsers
+    fun isHidden(user: User) = isHidden(user.pubkeyHex)
+    fun isHidden(userHex: String) = userHex in hiddenUsers || userHex in transientHiddenUsers
 
     fun followingKeySet(): Set<HexKey> {
         return userProfile().cachedFollowingKeySet() ?: emptySet()
