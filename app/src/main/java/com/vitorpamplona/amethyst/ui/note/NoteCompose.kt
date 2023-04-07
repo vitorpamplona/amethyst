@@ -65,7 +65,7 @@ import kotlin.math.ceil
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTimedValue
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalTime::class)
+@OptIn(ExperimentalTime::class)
 @Composable
 fun NoteCompose(
     baseNote: Note,
@@ -130,6 +130,19 @@ fun NoteComposeInner(
 
     var moreActionsExpanded by remember { mutableStateOf(false) }
 
+    var isAcceptable by remember { mutableStateOf(true) }
+    var canPreview by remember { mutableStateOf(true) }
+
+    LaunchedEffect(key1 = noteReportsState) {
+        withContext(Dispatchers.IO) {
+            canPreview = note?.author === account.userProfile() ||
+                (note?.author?.let { account.userProfile().isFollowingCached(it) } ?: true) ||
+                !noteForReports.hasAnyReports()
+
+            isAcceptable = account.isAcceptable(noteForReports)
+        }
+    }
+
     val noteEvent = note?.event
     val baseChannel = note?.channel()
 
@@ -141,7 +154,7 @@ fun NoteComposeInner(
             ),
             isBoostedNote
         )
-    } else if (!account.isAcceptable(noteForReports) && !showHiddenNote) {
+    } else if (!isAcceptable && !showHiddenNote) {
         if (!account.isHidden(noteForReports.author!!)) {
             HiddenNote(
                 account.getRelevantReports(noteForReports),
@@ -343,11 +356,6 @@ fun NoteComposeInner(
                     Spacer(modifier = Modifier.height(3.dp))
 
                     if (!makeItShort && noteEvent is TextNoteEvent && (note.replyTo != null || noteEvent.mentions().isNotEmpty())) {
-                        val sortedMentions = noteEvent.mentions()
-                            .mapNotNull { LocalCache.checkGetOrCreateUser(it) }
-                            .toSet()
-                            .sortedBy { account.userProfile().isFollowingCached(it) }
-
                         val replyingDirectlyTo = note.replyTo?.lastOrNull()
                         if (replyingDirectlyTo != null && unPackReply) {
                             NoteCompose(
@@ -369,7 +377,7 @@ fun NoteComposeInner(
                                 navController = navController
                             )
                         } else {
-                            ReplyInformation(note.replyTo, sortedMentions, account, navController)
+                            ReplyInformation(note.replyTo, noteEvent.mentions(), account, navController)
                         }
                         Spacer(modifier = Modifier.height(5.dp))
                     } else if (!makeItShort && noteEvent is ChannelMessageEvent && (note.replyTo != null || noteEvent.mentions().isNotEmpty())) {
@@ -501,10 +509,6 @@ fun NoteComposeInner(
                     } else {
                         val eventContent = accountViewModel.decrypt(note)
 
-                        val canPreview = note.author == account.userProfile() ||
-                            (note.author?.let { account.userProfile().isFollowingCached(it) } ?: true) ||
-                            !noteForReports.hasAnyReports()
-
                         if (eventContent != null) {
                             if (makeItShort && note.author == account.userProfile()) {
                                 Text(
@@ -524,7 +528,7 @@ fun NoteComposeInner(
                                     navController
                                 )
 
-                                DisplayUncitedHashtags(noteEvent, eventContent, navController)
+                                DisplayUncitedHashtags(noteEvent.hashtags(), eventContent, navController)
                             }
 
                             if (noteEvent is PollNoteEvent) {
@@ -582,11 +586,10 @@ fun DisplayFollowingHashtagsInPost(
 
 @Composable
 fun DisplayUncitedHashtags(
-    noteEvent: EventInterface,
+    hashtags: List<String>,
     eventContent: String,
     navController: NavController
 ) {
-    val hashtags = noteEvent.hashtags()
     if (hashtags.isNotEmpty()) {
         FlowRow(
             modifier = Modifier.padding(top = 5.dp)
@@ -868,7 +871,11 @@ private fun RelayBadges(baseNote: Note) {
         items(relaysToDisplay.size) {
             val url = relaysToDisplay[it].removePrefix("wss://").removePrefix("ws://")
 
-            Box(Modifier.padding(1.dp).size(15.dp)) {
+            Box(
+                Modifier
+                    .padding(1.dp)
+                    .size(15.dp)
+            ) {
                 RobohashFallbackAsyncImage(
                     robot = "https://$url/favicon.ico",
                     model = "https://$url/favicon.ico",

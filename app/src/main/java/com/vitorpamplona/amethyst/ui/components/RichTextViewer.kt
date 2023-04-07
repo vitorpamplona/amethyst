@@ -2,7 +2,6 @@ package com.vitorpamplona.amethyst.ui.components
 
 import android.util.Log
 import android.util.Patterns
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -14,7 +13,7 @@ import androidx.compose.material.Icon
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -34,12 +33,15 @@ import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.material.MaterialRichText
 import com.halilibo.richtext.ui.resolveDefaults
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.checkForHashtagWithIcon
-import com.vitorpamplona.amethyst.service.lnurl.LnInvoiceUtil
 import com.vitorpamplona.amethyst.service.lnurl.LnWithdrawalUtil
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.net.MalformedURLException
 import java.net.URISyntaxException
 import java.net.URL
@@ -114,7 +116,7 @@ fun RichTextViewer(
         )
     )
 
-    Column(modifier = modifier.animateContentSize()) {
+    Column(modifier = modifier) {
         if (content.startsWith("# ") ||
             content.contains("##") ||
             content.contains("**") ||
@@ -164,25 +166,9 @@ fun RichTextViewer(
                                     UrlPreview(word, "$word ")
                                 }
                             } else if (word.startsWith("lnbc", true)) {
-                                val lnInvoice = LnInvoiceUtil.findInvoice(word)
-                                if (lnInvoice != null) {
-                                    InvoicePreview(lnInvoice)
-                                } else {
-                                    Text(
-                                        text = "$word ",
-                                        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-                                    )
-                                }
+                                MayBeInvoicePreview(word)
                             } else if (word.startsWith("lnurl", true)) {
-                                val lnWithdrawal = LnWithdrawalUtil.findWithdrawal(word)
-                                if (lnWithdrawal != null) {
-                                    ClickableWithdrawal(withdrawalString = lnWithdrawal)
-                                } else {
-                                    Text(
-                                        text = "$word ",
-                                        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-                                    )
-                                }
+                                MayBeWithdrawal(word)
                             } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
                                 ClickableEmail(word)
                             } else if (word.length > 6 && Patterns.PHONE.matcher(word).matches()) {
@@ -304,67 +290,90 @@ fun isBechLink(word: String): Boolean {
 
 @Composable
 fun BechLink(word: String, canPreview: Boolean, backgroundColor: Color, accountViewModel: AccountViewModel, navController: NavController) {
-    val nip19Route = Nip19.uriToRoute(word)
+    var nip19Route by remember { mutableStateOf<Nip19.Return?>(null) }
+    var baseNotePair by remember { mutableStateOf<Pair<Note, String?>?>(null) }
 
-    if (nip19Route == null) {
-        Text(text = "$word ")
-    } else {
-        if (nip19Route.type == Nip19.Type.NOTE || nip19Route.type == Nip19.Type.EVENT || nip19Route.type == Nip19.Type.ADDRESS) {
-            val note = LocalCache.checkGetOrCreateNote(nip19Route.hex)
-            if (note != null) {
-                if (canPreview) {
-                    NoteCompose(
-                        baseNote = note,
-                        accountViewModel = accountViewModel,
-                        modifier = Modifier
-                            .padding(top = 2.dp, bottom = 0.dp, start = 0.dp, end = 0.dp)
-                            .fillMaxWidth()
-                            .clip(shape = RoundedCornerShape(15.dp))
-                            .border(
-                                1.dp,
-                                MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
-                                RoundedCornerShape(15.dp)
-                            ),
-                        parentBackgroundColor = MaterialTheme.colors.onSurface.copy(alpha = 0.05f)
-                            .compositeOver(backgroundColor),
-                        isQuotedNote = true,
-                        navController = navController
-                    )
+    LaunchedEffect(key1 = word) {
+        withContext(Dispatchers.IO) {
+            Nip19.uriToRoute(word)?.let {
+                if (it.type == Nip19.Type.NOTE || it.type == Nip19.Type.EVENT || it.type == Nip19.Type.ADDRESS) {
+                    LocalCache.checkGetOrCreateNote(it.hex)?.let { note ->
+                        baseNotePair = Pair(note, it.additionalChars)
+                    }
                 } else {
-                    ClickableRoute(nip19Route, navController)
+                    nip19Route = nip19Route
                 }
-            } else {
-                ClickableRoute(nip19Route, navController)
             }
-        } else {
-            ClickableRoute(nip19Route, navController)
         }
+    }
+
+    if (canPreview) {
+        baseNotePair?.let {
+            NoteCompose(
+                baseNote = it.first,
+                accountViewModel = accountViewModel,
+                modifier = Modifier
+                    .padding(top = 2.dp, bottom = 0.dp, start = 0.dp, end = 0.dp)
+                    .fillMaxWidth()
+                    .clip(shape = RoundedCornerShape(15.dp))
+                    .border(
+                        1.dp,
+                        MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
+                        RoundedCornerShape(15.dp)
+                    ),
+                parentBackgroundColor = MaterialTheme.colors.onSurface.copy(alpha = 0.05f)
+                    .compositeOver(backgroundColor),
+                isQuotedNote = true,
+                navController = navController
+            )
+            Text(
+                "${it.second} "
+            )
+        } ?: nip19Route?.let {
+            ClickableRoute(it, navController)
+        }
+            ?: Text(text = "$word ")
+    } else {
+        nip19Route?.let {
+            ClickableRoute(it, navController)
+        }
+            ?: Text(text = "$word ")
     }
 }
 
 @Composable
 fun HashTag(word: String, accountViewModel: AccountViewModel, navController: NavController) {
-    val hashtagMatcher = hashTagsPattern.matcher(word)
+    var tagSuffixPair by remember { mutableStateOf<Pair<String, String?>?>(null) }
 
-    val (tag, suffix) = try {
-        hashtagMatcher.find()
-        Pair(hashtagMatcher.group(1), hashtagMatcher.group(2))
-    } catch (e: Exception) {
-        Log.e("Hashtag Parser", "Couldn't link hashtag $word", e)
-        Pair(null, null)
+    LaunchedEffect(key1 = word) {
+        withContext(Dispatchers.IO) {
+            val hashtagMatcher = hashTagsPattern.matcher(word)
+
+            val (myTag, mySuffix) = try {
+                hashtagMatcher.find()
+                Pair(hashtagMatcher.group(1), hashtagMatcher.group(2))
+            } catch (e: Exception) {
+                Log.e("Hashtag Parser", "Couldn't link hashtag $word", e)
+                Pair(null, null)
+            }
+
+            if (myTag != null) {
+                tagSuffixPair = Pair(myTag, mySuffix)
+            }
+        }
     }
 
-    if (tag != null) {
-        val hashtagIcon = checkForHashtagWithIcon(tag)
+    tagSuffixPair?.let { tagPair ->
+        val hashtagIcon = checkForHashtagWithIcon(tagPair.first)
         ClickableText(
             text = buildAnnotatedString {
                 withStyle(
                     LocalTextStyle.current.copy(color = MaterialTheme.colors.primary).toSpanStyle()
                 ) {
-                    append("#$tag")
+                    append("#${tagPair.first}")
                 }
             },
-            onClick = { navController.navigate("Hashtag/$tag") }
+            onClick = { navController.navigate("Hashtag/${tagPair.first}") }
         )
 
         if (hashtagIcon != null) {
@@ -387,14 +396,12 @@ fun HashTag(word: String, accountViewModel: AccountViewModel, navController: Nav
                             placeholderVerticalAlign = PlaceholderVerticalAlign.Center
                         )
                     ) {
-                        if (hashtagIcon != null) {
-                            Icon(
-                                painter = painterResource(hashtagIcon.icon),
-                                contentDescription = hashtagIcon.description,
-                                tint = hashtagIcon.color,
-                                modifier = hashtagIcon.modifier
-                            )
-                        }
+                        Icon(
+                            painter = painterResource(hashtagIcon.icon),
+                            contentDescription = hashtagIcon.description,
+                            tint = hashtagIcon.color,
+                            modifier = hashtagIcon.modifier
+                        )
                     }
                 )
             )
@@ -405,69 +412,80 @@ fun HashTag(word: String, accountViewModel: AccountViewModel, navController: Nav
                 inlineContent = inlineContent
             )
         }
-        Text(text = "$suffix ")
-    } else {
-        Text(text = "$word ")
-    }
+        tagPair.second?.ifBlank { null }?.let {
+            Text(text = "$it ")
+        }
+    } ?: Text(text = "$word ")
 }
 
 @Composable
 fun TagLink(word: String, tags: List<List<String>>, canPreview: Boolean, backgroundColor: Color, accountViewModel: AccountViewModel, navController: NavController) {
-    val matcher = tagIndex.matcher(word)
+    var baseUserPair by remember { mutableStateOf<Pair<User, String?>?>(null) }
+    var baseNotePair by remember { mutableStateOf<Pair<Note, String?>?>(null) }
 
-    val (index, extraCharacters) = try {
-        matcher.find()
-        Pair(matcher.group(1)?.toInt(), matcher.group(2) ?: "")
-    } catch (e: Exception) {
-        Log.w("Tag Parser", "Couldn't link tag $word", e)
-        Pair(null, null)
-    }
-
-    if (index == null) {
-        return Text(text = "$word ")
-    }
-
-    if (index >= 0 && index < tags.size) {
-        if (tags[index][0] == "p") {
-            val baseUser = LocalCache.checkGetOrCreateUser(tags[index][1])
-            if (baseUser != null) {
-                ClickableUserTag(baseUser, navController)
-                Text(text = "$extraCharacters ")
-            } else {
-                // if here the tag is not a valid Nostr Hex
-                Text(text = "$word ")
+    LaunchedEffect(key1 = word) {
+        withContext(Dispatchers.IO) {
+            val matcher = tagIndex.matcher(word)
+            val (index, suffix) = try {
+                matcher.find()
+                Pair(matcher.group(1)?.toInt(), matcher.group(2) ?: "")
+            } catch (e: Exception) {
+                Log.w("Tag Parser", "Couldn't link tag $word", e)
+                Pair(null, null)
             }
-        } else if (tags[index][0] == "e") {
-            val note = LocalCache.checkGetOrCreateNote(tags[index][1])
-            if (note != null) {
-                if (canPreview) {
-                    NoteCompose(
-                        baseNote = note,
-                        accountViewModel = accountViewModel,
-                        modifier = Modifier
-                            .padding(top = 2.dp, bottom = 0.dp, start = 0.dp, end = 0.dp)
-                            .fillMaxWidth()
-                            .clip(shape = RoundedCornerShape(15.dp))
-                            .border(
-                                1.dp,
-                                MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
-                                RoundedCornerShape(15.dp)
-                            ),
-                        parentBackgroundColor = MaterialTheme.colors.onSurface.copy(alpha = 0.05f)
-                            .compositeOver(backgroundColor),
-                        isQuotedNote = true,
-                        navController = navController
-                    )
-                } else {
-                    ClickableNoteTag(note, navController)
-                    Text(text = "$extraCharacters ")
+
+            if (index != null && index >= 0 && index < tags.size) {
+                val tag = tags[index]
+
+                if (tag.size > 1) {
+                    if (tag[0] == "p") {
+                        LocalCache.checkGetOrCreateUser(tags[index][1])?.let {
+                            baseUserPair = Pair(it, suffix)
+                        }
+                    } else if (tag[0] == "e" || tag[0] == "a") {
+                        LocalCache.checkGetOrCreateNote(tags[index][1])?.let {
+                            baseNotePair = Pair(it, suffix)
+                        }
+                    }
                 }
-            } else {
-                // if here the tag is not a valid Nostr Hex
-                Text(text = "$word ")
+            }
+        }
+    }
+
+    baseUserPair?.let {
+        ClickableUserTag(it.first, navController)
+        Text(text = "${it.second} ")
+    }
+
+    baseNotePair?.let {
+        if (canPreview) {
+            NoteCompose(
+                baseNote = it.first,
+                accountViewModel = accountViewModel,
+                modifier = Modifier
+                    .padding(top = 2.dp, bottom = 0.dp, start = 0.dp, end = 0.dp)
+                    .fillMaxWidth()
+                    .clip(shape = RoundedCornerShape(15.dp))
+                    .border(
+                        1.dp,
+                        MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
+                        RoundedCornerShape(15.dp)
+                    ),
+                parentBackgroundColor = MaterialTheme.colors.onSurface.copy(alpha = 0.05f)
+                    .compositeOver(backgroundColor),
+                isQuotedNote = true,
+                navController = navController
+            )
+            it.second?.ifBlank { null }?.let {
+                Text(text = "$it ")
             }
         } else {
-            Text(text = "$word ")
+            ClickableNoteTag(it.first, navController)
+            Text(text = "${it.second} ")
         }
+    }
+
+    if (baseNotePair == null && baseUserPair == null) {
+        Text(text = "$word ")
     }
 }
