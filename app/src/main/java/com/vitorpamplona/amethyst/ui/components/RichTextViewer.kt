@@ -283,7 +283,7 @@ private fun isArabic(text: String): Boolean {
 }
 
 fun isBechLink(word: String): Boolean {
-    val cleaned = word.lowercase().removePrefix("@").removePrefix("nostr:").removePrefix("@").take(7)
+    val cleaned = word.lowercase().removePrefix("@").removePrefix("nostr:").removePrefix("@")
 
     return listOf("npub1", "naddr1", "note1", "nprofile1", "nevent1").any { cleaned.startsWith(it) }
 }
@@ -331,13 +331,11 @@ fun BechLink(word: String, canPreview: Boolean, backgroundColor: Color, accountV
             )
         } ?: nip19Route?.let {
             ClickableRoute(it, navController)
-        }
-            ?: Text(text = "$word ")
+        } ?: Text(text = "$word ")
     } else {
         nip19Route?.let {
             ClickableRoute(it, navController)
-        }
-            ?: Text(text = "$word ")
+        } ?: Text(text = "$word ")
     }
 }
 
@@ -412,10 +410,11 @@ fun HashTag(word: String, accountViewModel: AccountViewModel, navController: Nav
                 inlineContent = inlineContent
             )
         }
-        tagPair.second?.ifBlank { null }?.let {
+        tagPair.second?.ifBlank { "" }?.let {
             Text(text = "$it ")
         }
     } ?: Text(text = "$word ")
+
 }
 
 @Composable
