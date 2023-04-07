@@ -38,6 +38,7 @@ open class NewPostViewModel : ViewModel() {
     var userSuggestionAnchor: TextRange? = null
 
     // Polls
+    var canUsePoll by mutableStateOf(false)
     var wantsPoll by mutableStateOf(false)
     var zapRecipients = mutableStateListOf<HexKey>()
     var pollOptions = newStateMapPollOptions()
@@ -53,6 +54,7 @@ open class NewPostViewModel : ViewModel() {
     var isValidClosedAt = mutableStateOf(true)
 
     // Invoices
+    var canAddInvoice by mutableStateOf(false)
     var wantsInvoice by mutableStateOf(false)
 
     open fun load(account: Account, replyingTo: Note?, quote: Note?) {
@@ -78,6 +80,9 @@ open class NewPostViewModel : ViewModel() {
         quote?.let {
             message = TextFieldValue(message.text + "\n\n@${it.idNote()}")
         }
+
+        canAddInvoice = account.userProfile().info?.lnAddress() != null
+        canUsePoll = originalNote?.event !is PrivateDmEvent && originalNote?.channel() == null
 
         this.account = account
     }
@@ -189,13 +194,5 @@ open class NewPostViewModel : ViewModel() {
     fun canPost(): Boolean {
         return message.text.isNotBlank() && !isUploadingImage && !wantsInvoice &&
             (!wantsPoll || pollOptions.values.all { it.isNotEmpty() })
-    }
-
-    fun canUsePoll(): Boolean {
-        return originalNote?.event !is PrivateDmEvent && originalNote?.channel() == null
-    }
-
-    fun canAddLnInvoice(): Boolean {
-        return account?.userProfile()?.info?.lnAddress() != null
     }
 }
