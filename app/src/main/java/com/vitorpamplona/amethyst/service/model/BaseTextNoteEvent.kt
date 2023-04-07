@@ -15,6 +15,26 @@ open class BaseTextNoteEvent(
     fun mentions() = taggedUsers()
     open fun replyTos() = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
 
+    private var citedUsersCache: Set<HexKey>? = null
+
+    fun citedUsers(): Set<HexKey> {
+        citedUsersCache?.let { return it }
+
+        val matcher = tagSearch.matcher(content)
+        val returningList = mutableSetOf<String>()
+        while (matcher.find()) {
+            try {
+                val tag = matcher.group(1)?.let { tags[it.toInt()] }
+                if (tag != null && tag.size > 1 && tag[0] == "p") {
+                    returningList.add(tag[1])
+                }
+            } catch (e: Exception) {
+            }
+        }
+        citedUsersCache = returningList
+        return returningList
+    }
+
     fun findCitations(): Set<String> {
         var citations = mutableSetOf<String>()
         // Removes citations from replies:
@@ -22,10 +42,10 @@ open class BaseTextNoteEvent(
         while (matcher.find()) {
             try {
                 val tag = matcher.group(1)?.let { tags[it.toInt()] }
-                if (tag != null && tag[0] == "e") {
+                if (tag != null && tag.size > 1 && tag[0] == "e") {
                     citations.add(tag[1])
                 }
-                if (tag != null && tag[0] == "a") {
+                if (tag != null && tag.size > 1 && tag[0] == "a") {
                     citations.add(tag[1])
                 }
             } catch (e: Exception) {

@@ -57,7 +57,7 @@ open class Note(val idHex: String) {
         val channelHex =
             (event as? ChannelMessageEvent)?.channel()
                 ?: (event as? ChannelMetadataEvent)?.channel()
-                ?: (event as? ChannelCreateEvent)?.let { it.id }
+                ?: (event as? ChannelCreateEvent)?.id
 
         return channelHex?.let { LocalCache.checkGetOrCreateChannel(it) }
     }
@@ -268,45 +268,6 @@ open class Note(val idHex: String) {
                     it.firstOrNull { (it.createdAt() ?: 0) > dayAgo } != null
                 } ?: false
                 )
-    }
-
-    fun directlyCiteUsersHex(): Set<HexKey> {
-        val matcher = tagSearch.matcher(event?.content() ?: "")
-        val returningList = mutableSetOf<String>()
-        while (matcher.find()) {
-            try {
-                val tag = matcher.group(1)?.let { event?.tags()?.get(it.toInt()) }
-                if (tag != null && tag[0] == "p") {
-                    returningList.add(tag[1])
-                }
-            } catch (e: Exception) {
-            }
-        }
-        return returningList
-    }
-
-    fun directlyCiteUsers(): Set<User> {
-        val matcher = tagSearch.matcher(event?.content() ?: "")
-        val returningList = mutableSetOf<User>()
-        while (matcher.find()) {
-            try {
-                val tag = matcher.group(1)?.let { event?.tags()?.get(it.toInt()) }
-                if (tag != null && tag[0] == "p") {
-                    LocalCache.checkGetOrCreateUser(tag[1])?.let {
-                        returningList.add(it)
-                    }
-                }
-            } catch (e: Exception) {
-            }
-        }
-        return returningList
-    }
-
-    fun directlyCites(userProfile: User): Boolean {
-        return author == userProfile ||
-            (userProfile in directlyCiteUsers()) ||
-            (event is ReactionEvent && replyTo?.lastOrNull()?.directlyCites(userProfile) == true) ||
-            (event is RepostEvent && replyTo?.lastOrNull()?.directlyCites(userProfile) == true)
     }
 
     fun isNewThread(): Boolean {
