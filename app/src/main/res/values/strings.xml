@@ -290,4 +290,5 @@
     <string name="custom_zaps_add_a_message_example">Thank you for all your work!</string>
 
     <string name="lightning_create_and_add_invoice">Create and Add</string>
+    <string name="poll_author_no_vote">Poll authors can\'t vote in their own polls.</string>
 </resources>
