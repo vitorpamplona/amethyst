@@ -414,7 +414,6 @@ fun HashTag(word: String, accountViewModel: AccountViewModel, navController: Nav
             Text(text = "$it ")
         }
     } ?: Text(text = "$word ")
-
 }
 
 @Composable
