@@ -1087,6 +1087,13 @@ fun UserPicture(
     }
 }
 
+data class DropDownParams(
+    val isFollowingAuthor: Boolean,
+    val isPrivateBookmarkNote: Boolean,
+    val isPublicBookmarkNote: Boolean,
+    val isLoggedUser: Boolean
+)
+
 @Composable
 fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, accountViewModel: AccountViewModel) {
     val clipboardManager = LocalClipboardManager.current
@@ -1094,11 +1101,26 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
     val actContext = LocalContext.current
     var reportDialogShowing by remember { mutableStateOf(false) }
 
+    var state by remember {
+        mutableStateOf<DropDownParams>(
+            DropDownParams(false, false, false, false)
+        )
+    }
+
+    LaunchedEffect(key1 = note) {
+        state = DropDownParams(
+            accountViewModel.isFollowing(note.author),
+            accountViewModel.isInPrivateBookmarks(note),
+            accountViewModel.isInPublicBookmarks(note),
+            accountViewModel.isLoggedUser(note.author)
+        )
+    }
+
     DropdownMenu(
         expanded = popupExpanded,
         onDismissRequest = onDismiss
     ) {
-        if (!accountViewModel.isFollowing(note.author)) {
+        if (!state.isFollowingAuthor) {
             DropdownMenuItem(onClick = {
                 accountViewModel.follow(
                     note.author ?: return@DropdownMenuItem
@@ -1135,7 +1157,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
             Text(stringResource(R.string.quick_action_share))
         }
         Divider()
-        if (accountViewModel.isInPrivateBookmarks(note)) {
+        if (state.isPrivateBookmarkNote) {
             DropdownMenuItem(onClick = { accountViewModel.removePrivateBookmark(note); onDismiss() }) {
                 Text(stringResource(R.string.remove_from_private_bookmarks))
             }
@@ -1144,7 +1166,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
                 Text(stringResource(R.string.add_to_private_bookmarks))
             }
         }
-        if (accountViewModel.isInPublicBookmarks(note)) {
+        if (state.isPublicBookmarkNote) {
             DropdownMenuItem(onClick = { accountViewModel.removePublicBookmark(note); onDismiss() }) {
                 Text(stringResource(R.string.remove_from_public_bookmarks))
             }
@@ -1158,7 +1180,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
             Text(stringResource(R.string.broadcast))
         }
         Divider()
-        if (accountViewModel.isLoggedUser(note.author)) {
+        if (state.isLoggedUser) {
             DropdownMenuItem(onClick = { accountViewModel.delete(note); onDismiss() }) {
                 Text(stringResource(R.string.request_deletion))
             }
