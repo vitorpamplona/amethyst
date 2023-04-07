@@ -194,15 +194,15 @@ open class Note(val idHex: String) {
 
     fun isZappedBy(user: User): Boolean {
         // Zaps who the requester was the user
-        return zaps.any { it.key.author == user }
+        return zaps.any { it.key.author === user }
     }
 
     fun isReactedBy(user: User): Boolean {
-        return reactions.any { it.author == user }
+        return reactions.any { it.author === user }
     }
 
     fun isBoostedBy(user: User): Boolean {
-        return boosts.any { it.author == user }
+        return boosts.any { it.author === user }
     }
 
     fun reportsBy(user: User): Set<Note> {
