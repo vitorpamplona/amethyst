@@ -195,4 +195,17 @@ open class NewPostViewModel : ViewModel() {
         return message.text.isNotBlank() && !isUploadingImage && !wantsInvoice &&
             (!wantsPoll || pollOptions.values.all { it.isNotEmpty() })
     }
+
+    fun includePollHashtagInMessage(include: Boolean, hashtag: String) {
+        if (include) {
+            updateMessage(TextFieldValue(message.text + " $hashtag"))
+        } else {
+            updateMessage(
+                TextFieldValue(
+                    message.text.replace(" $hashtag", "")
+                        .replace(hashtag, "")
+                )
+            )
+        }
+    }
 }

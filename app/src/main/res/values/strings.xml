@@ -291,4 +291,5 @@
 
     <string name="lightning_create_and_add_invoice">Create and Add</string>
     <string name="poll_author_no_vote">Poll authors can\'t vote in their own polls.</string>
+    <string name="poll_hashtag" translatable="false">#zappoll</string>
 </resources>
