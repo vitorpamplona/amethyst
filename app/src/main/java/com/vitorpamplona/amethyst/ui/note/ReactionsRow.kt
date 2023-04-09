@@ -55,6 +55,7 @@ import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -363,7 +364,8 @@ fun ZapReaction(
                                     scope.launch(Dispatchers.Main) {
                                         zappingProgress = it
                                     }
-                                }
+                                },
+                                type = LnZapEvent.ZapType.PUBLIC
                             )
                         }
                     } else if (account.zapAmountChoices.size > 1) {
@@ -559,7 +561,8 @@ fun ZapAmountChoicePopup(
                                 zapMessage,
                                 context,
                                 onError,
-                                onProgress
+                                onProgress,
+                                LnZapEvent.ZapType.PUBLIC
                             )
                             onDismiss()
                         }
@@ -584,7 +587,8 @@ fun ZapAmountChoicePopup(
                                         zapMessage,
                                         context,
                                         onError,
-                                        onProgress
+                                        onProgress,
+                                        LnZapEvent.ZapType.PUBLIC
                                     )
                                     onDismiss()
                                 }

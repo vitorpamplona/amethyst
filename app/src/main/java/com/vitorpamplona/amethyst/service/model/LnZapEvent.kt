@@ -69,4 +69,11 @@ class LnZapEvent(
     companion object {
         const val kind = 9735
     }
+
+    enum class ZapType() {
+        PUBLIC,
+        PRIVATE, // not implemented
+        ANONYMOUS, // not implemented
+        NONZAP
+    }
 }

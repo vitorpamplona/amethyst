@@ -14,6 +14,7 @@ import com.vitorpamplona.amethyst.model.AccountState
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -52,7 +53,7 @@ class AccountViewModel(private val account: Account) : ViewModel() {
         account.delete(account.boostsTo(note))
     }
 
-    fun zap(note: Note, amount: Long, pollOption: Int?, message: String, context: Context, onError: (String) -> Unit, onProgress: (percent: Float) -> Unit) {
+    fun zap(note: Note, amount: Long, pollOption: Int?, message: String, context: Context, onError: (String) -> Unit, onProgress: (percent: Float) -> Unit, type: LnZapEvent.ZapType) {
         val lud16 = note.author?.info?.lud16?.trim() ?: note.author?.info?.lud06?.trim()
 
         if (lud16.isNullOrBlank()) {
@@ -60,7 +61,12 @@ class AccountViewModel(private val account: Account) : ViewModel() {
             return
         }
 
-        val zapRequest = account.createZapRequestFor(note, pollOption, message)
+        var zapRequest = account.createZapRequestFor(note, pollOption, message)
+        var zapRequestJson = zapRequest?.toJson()
+
+        if (type == LnZapEvent.ZapType.NONZAP) {
+            zapRequestJson = ""
+        }
 
         onProgress(0.10f)
 
@@ -68,7 +74,7 @@ class AccountViewModel(private val account: Account) : ViewModel() {
             lud16,
             amount,
             message,
-            zapRequest?.toJson(),
+            zapRequestJson,
             onSuccess = {
                 onProgress(0.7f)
                 if (account.hasWalletConnectSetup()) {
