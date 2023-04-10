@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material.*
 import androidx.compose.material.DrawerValue
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.MaterialTheme
@@ -22,7 +23,8 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.vitorpamplona.amethyst.buttons.NewChannelButton
-import com.vitorpamplona.amethyst.buttons.NewNoteButton
+import com.vitorpamplona.amethyst.ui.buttons.NewNoteButton
+import com.vitorpamplona.amethyst.ui.navigation.*
 import com.vitorpamplona.amethyst.ui.navigation.AccountSwitchBottomSheet
 import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.AppNavigation
@@ -64,7 +66,7 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
                 DrawerContent(navController, scaffoldState, sheetState, accountViewModel)
             },
             floatingActionButton = {
-                FloatingButton(navController, accountStateViewModel)
+                FloatingButtons(navController, accountStateViewModel)
             },
             scaffoldState = scaffoldState
         ) {
@@ -76,7 +78,7 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
 }
 
 @Composable
-fun FloatingButton(navController: NavHostController, accountViewModel: AccountStateViewModel) {
+fun FloatingButtons(navController: NavHostController, accountViewModel: AccountStateViewModel) {
     val accountState by accountViewModel.accountContent.collectAsState()
 
     if (currentRoute(navController)?.substringBefore("?") == Route.Home.base) {

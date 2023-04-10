@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
 import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
 import com.vitorpamplona.amethyst.service.model.BookmarkListEvent
@@ -12,12 +13,15 @@ import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
+import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 
 object NostrAccountDataSource : NostrDataSource("AccountData") {
     lateinit var account: Account
+
+    val latestEOSEs = EOSEAccount()
 
     fun createAccountContactListFilter(): TypedFilter {
         return TypedFilter(
@@ -68,7 +72,8 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
             types = FeedType.values().toSet(),
             filter = JsonFilter(
                 kinds = listOf(ReportEvent.kind),
-                authors = listOf(account.userProfile().pubkeyHex)
+                authors = listOf(account.userProfile().pubkeyHex),
+                since = latestEOSEs.users[account.userProfile()]?.relayList
             )
         )
     }
@@ -78,6 +83,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
         filter = JsonFilter(
             kinds = listOf(
                 TextNoteEvent.kind,
+                PollNoteEvent.kind,
                 ReactionEvent.kind,
                 RepostEvent.kind,
                 ReportEvent.kind,
@@ -86,11 +92,14 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                 BadgeAwardEvent.kind
             ),
             tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
-            limit = 200
+            limit = 400,
+            since = latestEOSEs.users[account.userProfile()]?.relayList
         )
     )
 
-    val accountChannel = requestNewChannel()
+    val accountChannel = requestNewChannel { time, relayUrl ->
+        latestEOSEs.addOrUpdate(account.userProfile(), relayUrl, time)
+    }
 
     override fun updateChannelFilters() {
         // gets everthing about the user logged in

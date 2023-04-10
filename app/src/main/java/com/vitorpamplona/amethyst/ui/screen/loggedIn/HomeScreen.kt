@@ -11,14 +11,17 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
@@ -29,6 +32,7 @@ import com.vitorpamplona.amethyst.service.NostrHomeDataSource
 import com.vitorpamplona.amethyst.ui.dal.HomeConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountDialog
 import com.vitorpamplona.amethyst.ui.screen.FeedView
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
@@ -38,19 +42,17 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalPagerApi::class)
 @Composable
 fun HomeScreen(
+    homeFeedViewModel: NostrHomeFeedViewModel,
+    repliesFeedViewModel: NostrHomeRepliesFeedViewModel,
     accountViewModel: AccountViewModel,
     navController: NavController,
     pagerState: PagerState,
-    scrollToTop: Boolean = false
+    scrollToTop: Boolean = false,
+    nip47: String? = null
 ) {
     val coroutineScope = rememberCoroutineScope()
     val account = accountViewModel.accountLiveData.value?.account ?: return
-
-    HomeNewThreadFeedFilter.account = account
-    HomeConversationsFeedFilter.account = account
-
-    val homeFeedViewModel: NostrHomeFeedViewModel = viewModel()
-    val repliesFeedViewModel: NostrHomeRepliesFeedViewModel = viewModel()
+    var wantsToAddNip47 by remember { mutableStateOf<String?>(nip47) }
 
     LaunchedEffect(accountViewModel) {
         HomeNewThreadFeedFilter.account = account
@@ -60,10 +62,16 @@ fun HomeScreen(
         repliesFeedViewModel.invalidateData()
     }
 
+    if (wantsToAddNip47 != null) {
+        UpdateZapAmountDialog({ wantsToAddNip47 = null }, account = account, wantsToAddNip47)
+    }
+
     val lifeCycleOwner = LocalLifecycleOwner.current
     DisposableEffect(accountViewModel) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
+                HomeNewThreadFeedFilter.account = account
+                HomeConversationsFeedFilter.account = account
                 NostrHomeDataSource.resetFilters()
                 homeFeedViewModel.invalidateData()
                 repliesFeedViewModel.invalidateData()

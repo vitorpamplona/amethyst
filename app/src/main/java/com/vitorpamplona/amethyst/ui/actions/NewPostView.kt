@@ -1,6 +1,8 @@
 package com.vitorpamplona.amethyst.ui.actions
 
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,6 +12,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CurrencyBitcoin
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -27,6 +31,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -40,6 +45,7 @@ import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.ui.components.*
 import com.vitorpamplona.amethyst.ui.note.ReplyInformation
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.UserLine
+import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -104,8 +110,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                 postViewModel.sendPost()
                                 onClose()
                             },
-                            isActive = postViewModel.message.text.isNotBlank() &&
-                                !postViewModel.isUploadingImage
+                            isActive = postViewModel.canPost()
                         )
                     }
 
@@ -161,13 +166,55 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                 textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
                             )
 
+                            if (postViewModel.wantsPoll) {
+                                postViewModel.pollOptions.values.forEachIndexed { index, element ->
+                                    NewPollOption(postViewModel, index)
+                                }
+
+                                Button(
+                                    onClick = { postViewModel.pollOptions[postViewModel.pollOptions.size] = "" },
+                                    border = BorderStroke(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.32f)),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        contentColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                    )
+                                ) {
+                                    Image(
+                                        painterResource(id = android.R.drawable.ic_input_add),
+                                        contentDescription = "Add poll option button",
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+
+                            val user = postViewModel.account?.userProfile()
+                            val lud16 = user?.info?.lnAddress()
+
+                            if (lud16 != null && user != null && postViewModel.wantsInvoice) {
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 5.dp)) {
+                                    InvoiceRequest(
+                                        lud16,
+                                        user.pubkeyHex,
+                                        account,
+                                        stringResource(id = R.string.lightning_invoice),
+                                        stringResource(id = R.string.lightning_create_and_add_invoice),
+                                        onSuccess = {
+                                            postViewModel.message = TextFieldValue(postViewModel.message.text + "\n\n" + it)
+                                            postViewModel.wantsInvoice = false
+                                        },
+                                        onClose = {
+                                            postViewModel.wantsInvoice = false
+                                        }
+                                    )
+                                }
+                            }
+
                             val myUrlPreview = postViewModel.urlPreview
                             if (myUrlPreview != null) {
                                 Row(modifier = Modifier.padding(top = 5.dp)) {
                                     if (isValidURL(myUrlPreview)) {
                                         val removedParamsFromUrl =
                                             myUrlPreview.split("?")[0].lowercase()
-                                        if (imageExtension.matcher(removedParamsFromUrl).matches()) {
+                                        if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
                                             AsyncImage(
                                                 model = myUrlPreview,
                                                 contentDescription = myUrlPreview,
@@ -182,9 +229,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                                         RoundedCornerShape(15.dp)
                                                     )
                                             )
-                                        } else if (videoExtension.matcher(removedParamsFromUrl)
-                                            .matches()
-                                        ) {
+                                        } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
                                             VideoView(myUrlPreview)
                                         } else {
                                             UrlPreview(myUrlPreview, myUrlPreview)
@@ -219,14 +264,84 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                     Row(modifier = Modifier.fillMaxWidth()) {
                         UploadFromGallery(
                             isUploading = postViewModel.isUploadingImage,
-                            tint = MaterialTheme.colors.primary,
+                            tint = MaterialTheme.colors.onBackground,
                             modifier = Modifier.padding(bottom = 10.dp)
                         ) {
                             postViewModel.upload(it, context)
                         }
+
+                        if (postViewModel.canUsePoll) {
+                            val hashtag = stringResource(R.string.poll_hashtag)
+                            AddPollButton(postViewModel.wantsPoll) {
+                                postViewModel.wantsPoll = !postViewModel.wantsPoll
+                                postViewModel.includePollHashtagInMessage(postViewModel.wantsPoll, hashtag)
+                            }
+                        }
+
+                        if (postViewModel.canAddInvoice) {
+                            AddLnInvoiceButton(postViewModel.wantsInvoice) {
+                                postViewModel.wantsInvoice = !postViewModel.wantsInvoice
+                            }
+                        }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun AddPollButton(
+    isPollActive: Boolean,
+    onClick: () -> Unit
+) {
+    IconButton(
+        onClick = {
+            onClick()
+        }
+    ) {
+        if (!isPollActive) {
+            Icon(
+                painter = painterResource(R.drawable.ic_poll),
+                null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colors.onBackground
+            )
+        } else {
+            Icon(
+                painter = painterResource(R.drawable.ic_lists),
+                null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colors.onBackground
+            )
+        }
+    }
+}
+
+@Composable
+private fun AddLnInvoiceButton(
+    isLnInvoiceActive: Boolean,
+    onClick: () -> Unit
+) {
+    IconButton(
+        onClick = {
+            onClick()
+        }
+    ) {
+        if (!isLnInvoiceActive) {
+            Icon(
+                imageVector = Icons.Default.CurrencyBitcoin,
+                null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colors.onBackground
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Default.CurrencyBitcoin,
+                null,
+                modifier = Modifier.size(20.dp),
+                tint = BitcoinOrange
+            )
         }
     }
 }

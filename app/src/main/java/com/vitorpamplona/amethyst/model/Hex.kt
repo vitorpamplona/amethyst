@@ -38,14 +38,14 @@ fun HexKey.toDisplayHexKey(): String {
 }
 
 fun decodePublicKey(key: String): ByteArray {
+    val parsed = Nip19.uriToRoute(key)
+    val pubKeyParsed = parsed?.hex?.toByteArray()
+
     return if (key.startsWith("nsec")) {
         Persona(privKey = key.bechToBytes()).pubKey
-    } else if (key.startsWith("npub")) {
-        key.bechToBytes()
-    } else if (key.startsWith("note")) {
-        key.bechToBytes()
-    } else { // if (pattern.matcher(key).matches()) {
-        // } else {
+    } else if (pubKeyParsed != null) {
+        pubKeyParsed
+    } else {
         Hex.decode(key)
     }
 }

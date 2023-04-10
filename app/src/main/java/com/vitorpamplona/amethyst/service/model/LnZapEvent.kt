@@ -19,9 +19,15 @@ class LnZapEvent(
         .filter { it.firstOrNull() == "e" }
         .mapNotNull { it.getOrNull(1) }
 
+    override fun zappedPollOption(): Int? = containedPost()?.tags
+        ?.filter { it.firstOrNull() == POLL_OPTION }
+        ?.getOrNull(0)?.getOrNull(1)?.toInt()
+
     override fun zappedAuthor() = tags
         .filter { it.firstOrNull() == "p" }
         .mapNotNull { it.getOrNull(1) }
+
+    override fun zappedRequestAuthor(): String? = containedPost()?.pubKey()
 
     override fun amount(): ZapAmount? {
         return amount
@@ -37,9 +43,13 @@ class LnZapEvent(
             null
         }
     }
+    override fun message(): String {
+        return message
+    }
+    val message = content
 
     override fun containedPost(): Event? = try {
-        description()?.let {
+        description()?.ifBlank { null }?.let {
             fromJson(it, Client.lenient)
         }
     } catch (e: Exception) {
@@ -70,5 +80,12 @@ class LnZapEvent(
 
     companion object {
         const val kind = 9735
+    }
+
+    enum class ZapType() {
+        PUBLIC,
+        PRIVATE, // not yet implemented
+        ANONYMOUS,
+        NONZAP
     }
 }

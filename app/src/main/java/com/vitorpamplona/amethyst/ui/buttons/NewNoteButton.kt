@@ -1,4 +1,4 @@
-package com.vitorpamplona.amethyst.buttons
+package com.vitorpamplona.amethyst.ui.buttons
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size

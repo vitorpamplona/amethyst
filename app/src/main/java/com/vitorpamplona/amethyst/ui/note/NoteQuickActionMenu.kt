@@ -109,8 +109,6 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
     var showDeleteAlertDialog by remember { mutableStateOf(false) }
     var showBlockAlertDialog by remember { mutableStateOf(false) }
     var showReportDialog by remember { mutableStateOf(false) }
-    val isOwnNote = accountViewModel.isLoggedUser(note.author)
-    val isFollowingUser = !isOwnNote && accountViewModel.isFollowing(note.author!!)
 
     val backgroundColor = if (MaterialTheme.colors.isLight) {
         MaterialTheme.colors.primary
@@ -129,6 +127,9 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
     }
 
     if (popupExpanded) {
+        val isOwnNote = accountViewModel.isLoggedUser(note.author)
+        val isFollowingUser = !isOwnNote && accountViewModel.isFollowing(note.author!!)
+
         Popup(onDismissRequest = onDismiss) {
             Card(
                 modifier = Modifier.shadow(elevation = 6.dp, shape = cardShape),

@@ -4,6 +4,15 @@
 
 Amethyst brings the best social network to your Android phone. Just insert your Nostr private key and start posting. 
 
+[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
+     alt="Get it on F-Droid"
+     height="80">](https://f-droid.org/packages/com.vitorpamplona.amethyst/)
+[<img src="https://play.google.com/intl/en_us/badges/images/generic/en-play-badge.png"
+     alt="Get it on Google Play"
+     height="80">](https://play.google.com/store/apps/details?id=com.vitorpamplona.amethyst)
+
+Or get the latest APK from the [Releases Section](https://github.com/vitorpamplona/amethyst/releases/latest).
+
 # Current Features
 
 - [x] Event Builders / WebSocket Subscriptions (NIP-01, NIP-15)
@@ -50,6 +59,7 @@ Amethyst brings the best social network to your Android phone. Just insert your 
 - [ ] Delegated Event Signing (NIP-26)
 - [ ] Account Creation / Backup Guidance (NIP-06)
 - [ ] Message Sent feedback (NIP-20)
+- [ ] Polls (NIP-69)
 
 # Development Overview
 
@@ -105,8 +115,15 @@ Build the app:
 ```
 
 ## Installing on device
+
+For the F-Droid build:
 ```bash
-./gradlew installDebug
+./gradlew installFdroidDebug
+```
+
+For the Play build:
+```bash
+./gradlew installPlayDebug
 ```
 
 ## How to Deploy
@@ -149,6 +166,12 @@ Information shared on nostr should be assumed permanent for privacy purposes. Th
 # Contributing
 
 [Issues](https://github.com/vitorpamplona/amethyst/issues) and [pull requests](https://github.com/vitorpamplona/amethyst/pulls) are very welcome.
+
+## Contributors
+
+<a align="center" href="https://github.com/vitorpamplona/amethyst/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=vitorpamplona/amethyst" />
+</a>
 
 # MIT License
 

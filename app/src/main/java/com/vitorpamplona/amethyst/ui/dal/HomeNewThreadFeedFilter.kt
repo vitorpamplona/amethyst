@@ -4,6 +4,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
+import com.vitorpamplona.amethyst.service.model.PollNoteEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 
@@ -17,10 +18,10 @@ object HomeNewThreadFeedFilter : FeedFilter<Note>() {
 
         val notes = LocalCache.notes.values
             .filter { it ->
-                (it.event is TextNoteEvent || it.event is RepostEvent) &&
+                (it.event is TextNoteEvent || it.event is RepostEvent || it.event is PollNoteEvent) &&
                     (it.author?.pubkeyHex in followingKeySet || (it.event?.isTaggedHashes(followingTagSet) ?: false)) &&
                     // && account.isAcceptable(it)  // This filter follows only. No need to check if acceptable
-                    it.author?.let { !account.isHidden(it) } ?: true &&
+                    it.author?.let { !account.isHidden(it.pubkeyHex) } ?: true &&
                     it.isNewThread()
             }
 
@@ -29,7 +30,7 @@ object HomeNewThreadFeedFilter : FeedFilter<Note>() {
                 (it.event is LongTextNoteEvent) &&
                     (it.author?.pubkeyHex in followingKeySet || (it.event?.isTaggedHashes(followingTagSet) ?: false)) &&
                     // && account.isAcceptable(it)  // This filter follows only. No need to check if acceptable
-                    it.author?.let { !account.isHidden(it) } ?: true &&
+                    it.author?.let { !account.isHidden(it.pubkeyHex) } ?: true &&
                     it.isNewThread()
             }
 

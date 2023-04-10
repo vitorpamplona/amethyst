@@ -1,11 +1,12 @@
 buildscript {
     ext {
-        fragment_version = "1.5.5"
-        lifecycle_version = '2.6.0'
-        compose_ui_version = '1.4.0-rc01'
+        fragment_version = "1.5.6"
+        lifecycle_version = '2.6.1'
+        compose_ui_version = '1.5.0-alpha01'
         nav_version = "2.5.3"
         room_version = "2.4.3"
-        accompanist_version = "0.28.0"
+        accompanist_version = '0.30.0'
+        coil_version = '2.3.0'
     }
 }// Top-level build file where you can add configuration options common to all sub-projects/modules.
 plugins {

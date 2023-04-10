@@ -122,6 +122,7 @@
     <string name="send_a_direct_message">Send a Direct Message</string>
     <string name="edits_the_user_s_metadata">Edits the User\'s Metadata</string>
     <string name="follow">Follow</string>
+    <string name="follow_back">Follow back</string>
     <string name="unblock">Unblock</string>
     <string name="copy_user_id">Copy User ID</string>
     <string name="unblock_user">Unblock User</string>
@@ -258,11 +259,37 @@
     <string name="remove_from_public_bookmarks">Remove from Public Bookmarks</string>
 
     <string name="wallet_connect_service">Wallet Connect Service</string>
-    <string name="wallet_connect_service_explainer">Uses your private key to pay zaps without leaving the app. Anyone with access to your Nostr private key will be able to spend your wallet\'s balance. Only keep funds you are ok to lose and use a private relay if possible. The relay operator can see your payments metadata.</string>
+    <string name="wallet_connect_service_explainer">Authorizes a Nostr Secret to pay zaps without leaving the app. Keep the secret safe and use a private relay if possible</string>
     <string name="wallet_connect_service_pubkey">Wallet Connect Pubkey</string>
     <string name="wallet_connect_service_relay">Wallet Connect Relay</string>
+    <string name="wallet_connect_service_secret">Wallet Connect Secret</string>
+    <string name="wallet_connect_service_show_secret">Show secret key</string>
+    <string name="wallet_connect_service_secret_placeholder">nsec / hex private key</string>
 
     <string name="pledge_amount_in_sats">Pledge Amount in Sats</string>
+    <string name="post_poll">Post Poll</string>
+    <string name="poll_heading_required">Required fields:</string>
+    <string name="poll_zap_recipients">Zap recipients</string>
+    <string name="poll_primary_description">Primary poll description…</string>
+    <string name="poll_option_index">Option %s</string>
+    <string name="poll_option_description">Poll option description</string>
+    <string name="poll_heading_optional">Optional fields:</string>
+    <string name="poll_zap_value_min">Zap minimum</string>
+    <string name="poll_zap_value_max">Zap maximum</string>
+    <string name="poll_consensus_threshold">Consensus</string>
+    <string name="poll_consensus_threshold_percent">(0–100)%</string>
+    <string name="poll_closing_time">Close after</string>
+    <string name="poll_closing_time_days">days</string>
+    <string name="poll_is_closed">Poll is closed to new votes</string>
+    <string name="poll_zap_amount">Zap amount</string>
+    <string name="one_vote_per_user_on_atomic_votes">Only one vote per user is allowed on this type of poll</string>
 
     <string name="looking_for_event">"Looking for Event %1$s"</string>
+
+    <string name="custom_zaps_add_a_message">Add a public message</string>
+    <string name="custom_zaps_add_a_message_example">Thank you for all your work!</string>
+
+    <string name="lightning_create_and_add_invoice">Create and Add</string>
+    <string name="poll_author_no_vote">Poll authors can\'t vote in their own polls.</string>
+    <string name="poll_hashtag" translatable="false">#zappoll</string>
 </resources>

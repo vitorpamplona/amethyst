@@ -25,7 +25,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -67,17 +66,9 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 10.dp),
-                    verticalArrangement = Arrangement.SpaceBetween
+                    verticalArrangement = Arrangement.SpaceAround
                 ) {
                     if (presenting) {
-                        Row(
-                            horizontalArrangement = Arrangement.Center,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 30.dp, vertical = 10.dp)
-                        ) {
-                        }
-
                         Column(modifier = Modifier.fillMaxWidth()) {
                             Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
                                 RobohashAsyncImageProxy(
@@ -95,22 +86,10 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
                             Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
                                 Text(
                                     user.bestDisplayName() ?: "",
-                                    modifier = Modifier.padding(top = 7.dp),
+                                    modifier = Modifier.padding(top = 5.dp),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 18.sp
                                 )
-                            }
-                            Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-                                Text(" @${user.bestUsername()}", color = Color.LightGray)
-                            }
-
-                            Row(
-                                horizontalArrangement = Arrangement.Center,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 35.dp, vertical = 10.dp)
-                            ) {
-                                QrCodeDrawer("nostr:${user.pubkeyNpub()}")
                             }
                         }
 
@@ -118,7 +97,16 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
                             horizontalArrangement = Arrangement.Center,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 30.dp, vertical = 10.dp)
+                                .padding(horizontal = 35.dp)
+                        ) {
+                            QrCodeDrawer("nostr:${user.pubkeyNpub()}")
+                        }
+
+                        Row(
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 30.dp)
                         ) {
                             Button(
                                 onClick = { presenting = false },

@@ -24,14 +24,15 @@ interface EventInterface {
 
     fun hasValidSignature(): Boolean
 
-    fun isTaggedUser(loggedInUser: String): Boolean
+    fun isTaggedUser(idHex: String): Boolean
 
     fun isTaggedHash(hashtag: String): Boolean
-    fun isTaggedHashes(hashtag: Set<String>): Boolean
-    fun firstIsTaggedHashes(hashtag: Set<String>): String?
+    fun isTaggedHashes(hashtags: Set<String>): Boolean
+    fun firstIsTaggedHashes(hashtags: Set<String>): String?
     fun hashtags(): List<String>
 
     fun getReward(): BigDecimal?
+    fun getPoWRank(): Int
 
     fun clone(): EventInterface
 }

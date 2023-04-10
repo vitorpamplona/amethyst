@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
+import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.PostButton
 import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
@@ -213,7 +214,9 @@ fun ChannelScreen(
                     trailingIcon = {
                         PostButton(
                             onPost = {
-                                account.sendChannelMessage(channelScreenModel.message.text, channel.idHex, replyTo.value, null)
+                                val tagger = NewMessageTagger(channel, listOfNotNull(replyTo.value?.author), listOfNotNull(replyTo.value), channelScreenModel.message.text)
+                                tagger.run()
+                                account.sendChannelMessage(tagger.message, channel.idHex, tagger.replyTos, tagger.mentions)
                                 channelScreenModel.message = TextFieldValue("")
                                 replyTo.value = null
                                 feedViewModel.invalidateData() // Don't wait a full second before updating

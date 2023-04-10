@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.service
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.MetadataEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
+import com.vitorpamplona.amethyst.service.relays.EOSETime
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
@@ -34,13 +35,22 @@ object NostrSingleUserDataSource : NostrDataSource("SingleUserFeed") {
                 filter = JsonFilter(
                     kinds = listOf(ReportEvent.kind),
                     tags = mapOf("p" to listOf(it.pubkeyHex)),
-                    since = it.latestReportTime
+                    since = it.latestEOSEs
                 )
             )
         }
     }
 
-    val userChannel = requestNewChannel() {
+    val userChannel = requestNewChannel() { time, relayUrl ->
+        usersToWatch.forEach {
+            val eose = it.latestEOSEs[relayUrl]
+            if (eose == null) {
+                it.latestEOSEs = it.latestEOSEs + Pair(relayUrl, EOSETime(time))
+            } else {
+                eose.time = time
+            }
+        }
+
         // Many relays operate with limits in the amount of filters.
         // As information comes, the filters will be rotated to get more data.
         invalidateFilters()

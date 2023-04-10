@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.model
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.model.*
+import com.vitorpamplona.amethyst.service.relays.EOSETime
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
@@ -27,7 +28,7 @@ class User(val pubkeyHex: String) {
     var reports = mapOf<User, Set<Note>>()
         private set
 
-    var latestReportTime: Long = 0
+    var latestEOSEs: Map<String, EOSETime> = emptyMap()
 
     var zaps = mapOf<Note, Note?>()
         private set
@@ -119,11 +120,6 @@ class User(val pubkeyHex: String) {
         } else if (reports[author]?.contains(note) == false) {
             reports = reports + Pair(author, (reports[author] ?: emptySet()) + note)
             liveSet?.reports?.invalidateData()
-        }
-
-        val reportTime = note.createdAt() ?: 0
-        if (reportTime > latestReportTime) {
-            latestReportTime = reportTime
         }
     }
 
@@ -272,7 +268,7 @@ class User(val pubkeyHex: String) {
     }
 
     fun transientFollowerCount(): Int {
-        return LocalCache.users.values.count { it.latestContactList?.let { pubkeyHex in it.unverifiedFollowKeySet() } ?: false }
+        return LocalCache.users.values.count { it.latestContactList?.isTaggedUser(pubkeyHex) ?: false }
     }
 
     fun cachedFollowingKeySet(): Set<HexKey> {
@@ -288,7 +284,7 @@ class User(val pubkeyHex: String) {
     }
 
     fun cachedFollowerCount(): Int {
-        return LocalCache.users.values.count { it.latestContactList?.let { pubkeyHex in it.unverifiedFollowKeySet() } ?: false }
+        return LocalCache.users.values.count { it.latestContactList?.isTaggedUser(pubkeyHex) ?: false }
     }
 
     fun hasSentMessagesTo(user: User?): Boolean {
@@ -385,6 +381,10 @@ class UserMetadata {
     fun anyNameStartsWith(prefix: String): Boolean {
         return listOfNotNull(name, username, display_name, displayName, nip05, lud06, lud16)
             .any { it.startsWith(prefix, true) }
+    }
+
+    fun lnAddress(): String? {
+        return (lud16?.trim() ?: lud06?.trim())?.ifBlank { null }
     }
 }
 

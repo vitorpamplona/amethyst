@@ -43,6 +43,13 @@
                 <data android:scheme="nostr" />
             </intent-filter>
 
+            <intent-filter android:label="Amethyst">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="nostrwalletconnect" />
+            </intent-filter>
+
             <meta-data
                 android:name="android.app.lib_name"
                 android:value="" />

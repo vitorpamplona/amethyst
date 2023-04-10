@@ -4,28 +4,7 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.vitorpamplona.amethyst.service.model.ATag
-import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
-import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
-import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
-import com.vitorpamplona.amethyst.service.model.BookmarkListEvent
-import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.service.model.ChannelHideMessageEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMuteUserEvent
-import com.vitorpamplona.amethyst.service.model.ContactListEvent
-import com.vitorpamplona.amethyst.service.model.DeletionEvent
-import com.vitorpamplona.amethyst.service.model.LnZapEvent
-import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
-import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
-import com.vitorpamplona.amethyst.service.model.MetadataEvent
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
-import com.vitorpamplona.amethyst.service.model.ReactionEvent
-import com.vitorpamplona.amethyst.service.model.RecommendRelayEvent
-import com.vitorpamplona.amethyst.service.model.ReportEvent
-import com.vitorpamplona.amethyst.service.model.RepostEvent
-import com.vitorpamplona.amethyst.service.model.TextNoteEvent
+import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import fr.acinq.secp256k1.Hex
@@ -38,16 +17,18 @@ import java.time.format.DateTimeFormatter
 import java.util.concurrent.ConcurrentHashMap
 
 object LocalCache {
-    val metadataParser = jacksonObjectMapper()
-        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-        .readerFor(UserMetadata::class.java)
+    val metadataParser by lazy {
+        jacksonObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            .readerFor(UserMetadata::class.java)
+    }
 
     val antiSpam = AntiSpamFilter()
 
-    val users = ConcurrentHashMap<HexKey, User>()
-    val notes = ConcurrentHashMap<HexKey, Note>()
+    val users = ConcurrentHashMap<HexKey, User>(5000)
+    val notes = ConcurrentHashMap<HexKey, Note>(5000)
     val channels = ConcurrentHashMap<HexKey, Channel>()
-    val addressables = ConcurrentHashMap<String, AddressableNote>()
+    val addressables = ConcurrentHashMap<String, AddressableNote>(100)
 
     fun checkGetOrCreateUser(key: String): User? {
         if (isValidHexNpub(key)) {
@@ -187,7 +168,7 @@ object LocalCache {
         // Already processed this event.
         if (note.event != null) return
 
-        if (antiSpam.isSpam(event)) {
+        if (antiSpam.isSpam(event, relay)) {
             relay?.let {
                 it.spamCounter++
             }
@@ -223,7 +204,7 @@ object LocalCache {
         // Already processed this event.
         if (note.event?.id() == event.id()) return
 
-        if (antiSpam.isSpam(event)) {
+        if (antiSpam.isSpam(event, relay)) {
             relay?.let {
                 it.spamCounter++
             }
@@ -239,6 +220,42 @@ object LocalCache {
 
             refreshObservers()
         }
+    }
+
+    fun consume(event: PollNoteEvent, relay: Relay? = null) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        if (antiSpam.isSpam(event, relay)) {
+            relay?.let {
+                it.spamCounter++
+            }
+            return
+        }
+
+        val replyTo = event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+
+        note.loadEvent(event, author, replyTo)
+
+        // Log.d("TN", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${note.event?.content()?.take(100)} ${formattedDateTime(event.createdAt)}")
+
+        // Prepares user's profile view.
+        author.addNote(note)
+
+        // Counts the replies
+        replyTo.forEach {
+            it.addReply(note)
+        }
+
+        refreshObservers()
     }
 
     fun consume(event: BadgeDefinitionEvent) {
@@ -302,12 +319,10 @@ object LocalCache {
 
     fun consume(event: ContactListEvent) {
         val user = getOrCreateUser(event.pubKey)
-        val follows = event.unverifiedFollowKeySet()
 
-        if (event.createdAt > (user.latestContactList?.createdAt ?: 0) && !follows.isNullOrEmpty()) {
-            // Saves relay list only if it's a user that is currently been seen
+        // avoids processing empty contact lists.
+        if (event.createdAt > (user.latestContactList?.createdAt ?: 0) && !event.tags.isEmpty()) {
             user.updateContactList(event)
-
             // Log.d("CL", "AAA ${user.toBestDisplayName()} ${follows.size}")
         }
     }
@@ -543,16 +558,16 @@ object LocalCache {
         // Already processed this event.
         if (note.event != null) return
 
-        if (antiSpam.isSpam(event)) {
+        if (antiSpam.isSpam(event, relay)) {
             relay?.let {
                 it.spamCounter++
             }
             return
         }
 
-        val replyTo = event.replyTos()
+        val replyTo = event.tagsWithoutCitations()
+            .filter { it != event.channel() }
             .mapNotNull { checkGetOrCreateNote(it) }
-            .filter { it.event !is ChannelCreateEvent }
 
         note.loadEvent(event, author, replyTo)
 
@@ -587,8 +602,7 @@ object LocalCache {
         val repliesTo = event.zappedPost().mapNotNull { checkGetOrCreateNote(it) } +
             event.taggedAddresses().map { getOrCreateAddressableNote(it) } +
             (
-                (zapRequest?.event as? LnZapRequestEvent)?.taggedAddresses()
-                    ?.map { getOrCreateAddressableNote(it) } ?: emptySet<Note>()
+                (zapRequest?.event as? LnZapRequestEvent)?.taggedAddresses()?.map { getOrCreateAddressableNote(it) } ?: emptySet<Note>()
                 )
 
         note.loadEvent(event, author, repliesTo)
@@ -642,6 +656,7 @@ object LocalCache {
     fun findNotesStartingWith(text: String): List<Note> {
         return notes.values.filter {
             (it.event is TextNoteEvent && it.event?.content()?.contains(text, true) ?: false) ||
+                (it.event is PollNoteEvent && it.event?.content()?.contains(text, true) ?: false) ||
                 (it.event is ChannelMessageEvent && it.event?.content()?.contains(text, true) ?: false) ||
                 it.idHex.startsWith(text, true) ||
                 it.idNote().startsWith(text, true)
@@ -724,7 +739,7 @@ object LocalCache {
     fun pruneContactLists(userAccount: Account) {
         var removingContactList = 0
         users.values.forEach {
-            if (it != userAccount.userProfile() && (it.liveSet == null || it.liveSet?.isInUse() == false)) {
+            if (it != userAccount.userProfile() && (it.liveSet == null || it.liveSet?.isInUse() == false) && it.latestContactList != null) {
                 it.latestContactList = null
                 removingContactList++
             }

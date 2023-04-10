@@ -13,30 +13,38 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.CardFeedView
 import com.vitorpamplona.amethyst.ui.screen.NotificationViewModel
+import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 
 @Composable
-fun NotificationScreen(accountViewModel: AccountViewModel, navController: NavController) {
+fun NotificationScreen(
+    notifFeedViewModel: NotificationViewModel,
+    accountViewModel: AccountViewModel,
+    navController: NavController,
+    scrollToTop: Boolean = false
+) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
-    NotificationFeedFilter.account = account
-    val feedViewModel: NotificationViewModel = viewModel()
+    if (scrollToTop) {
+        notifFeedViewModel.clear()
+    }
 
     LaunchedEffect(accountViewModel) {
-        feedViewModel.invalidateData()
+        NotificationFeedFilter.account = account
+        notifFeedViewModel.invalidateData()
     }
 
     val lifeCycleOwner = LocalLifecycleOwner.current
     DisposableEffect(accountViewModel) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                feedViewModel.invalidateData()
+                NotificationFeedFilter.account = account
+                notifFeedViewModel.invalidateData()
             }
         }
 
@@ -50,7 +58,14 @@ fun NotificationScreen(accountViewModel: AccountViewModel, navController: NavCon
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            CardFeedView(feedViewModel, accountViewModel = accountViewModel, navController, Route.Notification.route)
+            CardFeedView(
+                viewModel = notifFeedViewModel,
+                accountViewModel = accountViewModel,
+                navController = navController,
+                routeForLastRead = Route.Notification.base,
+                scrollStateKey = ScrollStateKeys.NOTIFICATION_SCREEN,
+                scrollToTop = scrollToTop
+            )
         }
     }
 }
