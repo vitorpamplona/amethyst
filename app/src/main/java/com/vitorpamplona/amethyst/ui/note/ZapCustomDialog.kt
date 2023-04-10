@@ -5,12 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -27,15 +22,16 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class ZapOptionstViewModel : ViewModel() {
     private var account: Account? = null
-
-    var customAmount by mutableStateOf(TextFieldValue("1000"))
+    var customAmount by mutableStateOf(TextFieldValue("21"))
     var customMessage by mutableStateOf(TextFieldValue(""))
 
     fun load(account: Account) {
@@ -63,10 +59,20 @@ fun ZapCustomDialog(onClose: () -> Unit, account: Account, accountViewModel: Acc
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val postViewModel: ZapOptionstViewModel = viewModel()
-
     LaunchedEffect(account) {
         postViewModel.load(account)
     }
+
+    var zappingProgress by remember { mutableStateOf(0f) }
+
+    val zapTypes = listOf(
+        Pair(LnZapEvent.ZapType.PUBLIC, "Public"),
+        Pair(LnZapEvent.ZapType.ANONYMOUS, "Anonymous"),
+        Pair(LnZapEvent.ZapType.NONZAP, "Non-Zap")
+    )
+
+    val zapOptions = zapTypes.map { it.second }
+    var selectedZapType by remember { mutableStateOf(zapTypes[0]) }
 
     Dialog(
         onDismissRequest = { onClose() },
@@ -98,6 +104,7 @@ fun ZapCustomDialog(onClose: () -> Unit, account: Account, accountViewModel: Acc
                                 postViewModel.customMessage.text,
                                 context,
                                 onError = {
+                                    zappingProgress = 0f
                                     scope.launch {
                                         Toast
                                             .makeText(context, it, Toast.LENGTH_SHORT).show()
@@ -105,8 +112,10 @@ fun ZapCustomDialog(onClose: () -> Unit, account: Account, accountViewModel: Acc
                                 },
                                 onProgress = {
                                     scope.launch(Dispatchers.Main) {
+                                        zappingProgress = it
                                     }
-                                }
+                                },
+                                zapType = selectedZapType.first
                             )
                         }
                         onClose()
@@ -174,6 +183,15 @@ fun ZapCustomDialog(onClose: () -> Unit, account: Account, accountViewModel: Acc
                             .weight(1f)
                     )
                 }
+                TextSpinner(
+                    label = "Zap Type",
+                    placeholder = "Public",
+                    options = zapOptions,
+                    onSelect = {
+                        selectedZapType = zapTypes[it]
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
     }

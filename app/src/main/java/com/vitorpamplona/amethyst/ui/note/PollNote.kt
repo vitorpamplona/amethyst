@@ -31,6 +31,7 @@ import androidx.compose.ui.window.Popup
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -251,7 +252,8 @@ fun ZapVote(
                                 scope.launch(Dispatchers.Main) {
                                     zappingProgress = it
                                 }
-                            }
+                            },
+                            zapType = LnZapEvent.ZapType.PUBLIC
                         )
                     }
                 } else {
@@ -378,7 +380,8 @@ fun FilteredZapAmountChoicePopup(
                                 zapMessage,
                                 context,
                                 onError,
-                                onProgress
+                                onProgress,
+                                LnZapEvent.ZapType.PUBLIC
                             )
                             onDismiss()
                         }
@@ -403,7 +406,8 @@ fun FilteredZapAmountChoicePopup(
                                         zapMessage,
                                         context,
                                         onError,
-                                        onProgress
+                                        onProgress,
+                                        LnZapEvent.ZapType.PUBLIC
                                     )
                                     onDismiss()
                                 }
@@ -495,7 +499,8 @@ fun ZapVoteAmountChoicePopup(
                                 "",
                                 context,
                                 onError,
-                                onProgress
+                                onProgress,
+                                LnZapEvent.ZapType.PUBLIC
                             )
                             onDismiss()
                         }
@@ -520,7 +525,8 @@ fun ZapVoteAmountChoicePopup(
                                         "",
                                         context,
                                         onError,
-                                        onProgress
+                                        onProgress,
+                                        LnZapEvent.ZapType.PUBLIC
                                     )
                                     onDismiss()
                                 }

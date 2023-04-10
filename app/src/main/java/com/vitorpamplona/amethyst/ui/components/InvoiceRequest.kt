@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import kotlinx.coroutines.launch
 
 @Composable
@@ -135,7 +136,7 @@ fun InvoiceRequest(
             Button(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
                 onClick = {
-                    val zapRequest = account.createZapRequestFor(toUserPubKeyHex, message)
+                    val zapRequest = account.createZapRequestFor(toUserPubKeyHex, message, LnZapEvent.ZapType.PUBLIC)
 
                     LightningAddressResolver().lnAddressInvoice(
                         lud16,
