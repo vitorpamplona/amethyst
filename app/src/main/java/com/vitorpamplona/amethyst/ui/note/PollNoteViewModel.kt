@@ -105,11 +105,11 @@ class PollNoteViewModel {
     fun zappedPollOptionAmount(option: Int): BigDecimal {
         return if (pollNote != null) {
             pollNote!!.zaps.mapNotNull { it.value?.event }
-                .filterIsInstance<LnZapEvent>()
+                .filterIsInstance<LnZapEventInterface>()
                 .mapNotNull {
                     val zappedOption = it.zappedPollOption()
                     if (zappedOption == option) {
-                        it.amount
+                        it.amount()?.total()
                     } else { null }
                 }.sumOf { it }
         } else {
