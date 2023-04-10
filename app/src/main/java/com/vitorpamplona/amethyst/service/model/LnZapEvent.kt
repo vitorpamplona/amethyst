@@ -72,8 +72,8 @@ class LnZapEvent(
 
     enum class ZapType() {
         PUBLIC,
-        PRIVATE, // not implemented
-        ANONYMOUS, // not implemented
+        PRIVATE, // not yet implemented
+        ANONYMOUS,
         NONZAP
     }
 }
