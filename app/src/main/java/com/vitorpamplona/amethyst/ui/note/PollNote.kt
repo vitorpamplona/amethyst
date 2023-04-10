@@ -253,7 +253,7 @@ fun ZapVote(
                                     zappingProgress = it
                                 }
                             },
-                            type = LnZapEvent.ZapType.PUBLIC
+                            zapType = LnZapEvent.ZapType.PUBLIC
                         )
                     }
                 } else {

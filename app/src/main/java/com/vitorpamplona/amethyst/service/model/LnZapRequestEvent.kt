@@ -25,10 +25,12 @@ class LnZapRequestEvent(
             privateKey: ByteArray,
             pollOption: Int?,
             message: String,
+            zapType: LnZapEvent.ZapType,
             createdAt: Long = Date().time / 1000
         ): LnZapRequestEvent {
             val content = message
-            val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
+            var privkey = privateKey
+            var pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             var tags = listOf(
                 listOf("e", originalNote.id()),
                 listOf("p", originalNote.pubKey()),
@@ -40,9 +42,13 @@ class LnZapRequestEvent(
             if (pollOption != null && pollOption >= 0) {
                 tags = tags + listOf(listOf(POLL_OPTION, pollOption.toString()))
             }
-
+            if (zapType == LnZapEvent.ZapType.ANONYMOUS) {
+                tags = tags + listOf(listOf("anon", ""))
+                privkey = Utils.privkeyCreate()
+                pubKey = Utils.pubkeyCreate(privkey).toHexKey()
+            }
             val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = Utils.sign(id, privateKey)
+            val sig = Utils.sign(id, privkey)
             return LnZapRequestEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
         }
 
@@ -51,17 +57,24 @@ class LnZapRequestEvent(
             relays: Set<String>,
             privateKey: ByteArray,
             message: String,
+            zapType: LnZapEvent.ZapType,
             createdAt: Long = Date().time / 1000
         ): LnZapRequestEvent {
             val content = message
-            val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
-            val tags = listOf(
+            var privkey = privateKey
+            var pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
+            var tags = listOf(
                 listOf("p", userHex),
                 listOf("relays") + relays
             )
+            if (zapType == LnZapEvent.ZapType.ANONYMOUS) {
+                tags = tags + listOf(listOf("anon", ""))
+                privkey = Utils.privkeyCreate()
+                pubKey = Utils.pubkeyCreate(privkey).toHexKey()
+            }
 
             val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = Utils.sign(id, privateKey)
+            val sig = Utils.sign(id, privkey)
             return LnZapRequestEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
         }
     }

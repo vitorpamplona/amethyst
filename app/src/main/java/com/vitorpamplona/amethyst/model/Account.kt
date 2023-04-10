@@ -137,7 +137,7 @@ class Account(
         }
     }
 
-    fun createZapRequestFor(note: Note, pollOption: Int?, message: String = ""): LnZapRequestEvent? {
+    fun createZapRequestFor(note: Note, pollOption: Int?, message: String = "", zapType: LnZapEvent.ZapType): LnZapRequestEvent? {
         if (!isWriteable()) return null
 
         note.event?.let { event ->
@@ -147,7 +147,8 @@ class Account(
                     ?: localRelays.map { it.url }.toSet(),
                 loggedIn.privKey!!,
                 pollOption,
-                message
+                message,
+                zapType
             )
         }
         return null
@@ -171,14 +172,15 @@ class Account(
         return createZapRequestFor(user)
     }
 
-    fun createZapRequestFor(userPubKeyHex: String, message: String = ""): LnZapRequestEvent? {
+    fun createZapRequestFor(userPubKeyHex: String, message: String = "", zapType: LnZapEvent.ZapType): LnZapRequestEvent? {
         if (!isWriteable()) return null
 
         return LnZapRequestEvent.create(
             userPubKeyHex,
             userProfile().latestContactList?.relays()?.keys?.ifEmpty { null } ?: localRelays.map { it.url }.toSet(),
             loggedIn.privKey!!,
-            message
+            message,
+            zapType
         )
     }
 

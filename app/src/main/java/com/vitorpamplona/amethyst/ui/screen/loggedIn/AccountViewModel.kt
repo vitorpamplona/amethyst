@@ -53,7 +53,7 @@ class AccountViewModel(private val account: Account) : ViewModel() {
         account.delete(account.boostsTo(note))
     }
 
-    fun zap(note: Note, amount: Long, pollOption: Int?, message: String, context: Context, onError: (String) -> Unit, onProgress: (percent: Float) -> Unit, type: LnZapEvent.ZapType) {
+    fun zap(note: Note, amount: Long, pollOption: Int?, message: String, context: Context, onError: (String) -> Unit, onProgress: (percent: Float) -> Unit, zapType: LnZapEvent.ZapType) {
         val lud16 = note.author?.info?.lud16?.trim() ?: note.author?.info?.lud06?.trim()
 
         if (lud16.isNullOrBlank()) {
@@ -61,11 +61,13 @@ class AccountViewModel(private val account: Account) : ViewModel() {
             return
         }
 
-        var zapRequest = account.createZapRequestFor(note, pollOption, message)
-        var zapRequestJson = zapRequest?.toJson()
+        var zapRequestJson = ""
 
-        if (type == LnZapEvent.ZapType.NONZAP) {
-            zapRequestJson = ""
+        if (zapType != LnZapEvent.ZapType.NONZAP) {
+            val zapRequest = account.createZapRequestFor(note, pollOption, message, zapType)
+            if (zapRequest != null) {
+                zapRequestJson = zapRequest.toJson()
+            }
         }
 
         onProgress(0.10f)
