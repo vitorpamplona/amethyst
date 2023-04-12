@@ -365,7 +365,7 @@ fun ZapReaction(
                                         zappingProgress = it
                                     }
                                 },
-                                type = LnZapEvent.ZapType.PUBLIC
+                                zapType = LnZapEvent.ZapType.PUBLIC
                             )
                         }
                     } else if (account.zapAmountChoices.size > 1) {

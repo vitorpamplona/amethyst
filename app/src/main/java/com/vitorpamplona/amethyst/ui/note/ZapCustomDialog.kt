@@ -59,7 +59,6 @@ fun ZapCustomDialog(onClose: () -> Unit, account: Account, accountViewModel: Acc
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val postViewModel: ZapOptionstViewModel = viewModel()
-    postViewModel.load(account)
     LaunchedEffect(account) {
         postViewModel.load(account)
     }
@@ -68,6 +67,7 @@ fun ZapCustomDialog(onClose: () -> Unit, account: Account, accountViewModel: Acc
 
     val zapTypes = listOf(
         Pair(LnZapEvent.ZapType.PUBLIC, "Public"),
+        Pair(LnZapEvent.ZapType.ANONYMOUS, "Anonymous"),
         Pair(LnZapEvent.ZapType.NONZAP, "Non-Zap")
     )
 
@@ -115,7 +115,7 @@ fun ZapCustomDialog(onClose: () -> Unit, account: Account, accountViewModel: Acc
                                         zappingProgress = it
                                     }
                                 },
-                                type = selectedZapType.first
+                                zapType = selectedZapType.first
                             )
                         }
                         onClose()

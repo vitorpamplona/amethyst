@@ -271,8 +271,10 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                         }
 
                         if (postViewModel.canUsePoll) {
+                            val hashtag = stringResource(R.string.poll_hashtag)
                             AddPollButton(postViewModel.wantsPoll) {
                                 postViewModel.wantsPoll = !postViewModel.wantsPoll
+                                postViewModel.includePollHashtagInMessage(postViewModel.wantsPoll, hashtag)
                             }
                         }
 
