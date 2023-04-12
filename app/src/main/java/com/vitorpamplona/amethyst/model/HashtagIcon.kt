@@ -18,7 +18,7 @@ fun checkForHashtagWithIcon(tag: String): HashtagIcon? {
         "dogstr", "npups" -> HashtagIcon(R.drawable.dogstr, "Dogstr", Color.Unspecified, Modifier.padding(0.dp, 0.dp, 0.dp, 0.dp))
         "catstr", "catestr" -> HashtagIcon(R.drawable.catstr, "Catstr", Color.Unspecified, Modifier.padding(1.dp, 4.dp, 0.dp, 1.dp))
         "babechain", "kiss" -> HashtagIcon(R.drawable.kiss, "Babechain", Color.Unspecified, Modifier.padding(1.dp, 0.dp, 0.dp, 0.dp))
-        "grownostr" -> HashtagIcon(R.drawable.grownostr, "GrowNostr", Color.Unspecified, Modifier.padding(1.dp, 0.dp, 0.dp, 0.dp))
+        "grownostr", "#permies", "#perma", "#permaculture", "#gardening", "#garden" -> HashtagIcon(R.drawable.grownostr, "GrowNostr", Color.Unspecified, Modifier.padding(1.dp, 0.dp, 0.dp, 0.dp))
         else -> null
     }
 }
