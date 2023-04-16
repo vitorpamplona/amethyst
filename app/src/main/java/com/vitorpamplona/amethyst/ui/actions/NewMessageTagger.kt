@@ -53,7 +53,6 @@ class NewMessageTagger(var channel: Channel?, var mentions: List<User>?, var rep
         message = message.split('\n').map { paragraph: String ->
             paragraph.split(' ').map { word: String ->
                 val results = parseDirtyWordForKey(word)
-
                 if (results?.key?.type == Nip19.Type.USER) {
                     val user = LocalCache.getOrCreateUser(results.key.hex)
 
