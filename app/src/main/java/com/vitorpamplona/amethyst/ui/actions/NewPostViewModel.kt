@@ -79,6 +79,7 @@ open class NewPostViewModel : ViewModel() {
 
         quote?.let {
             message = TextFieldValue(message.text + "\n\n@${it.idNote()}")
+            this.replyTos = emptyList<Note>()
         }
 
         canAddInvoice = account.userProfile().info?.lnAddress() != null
