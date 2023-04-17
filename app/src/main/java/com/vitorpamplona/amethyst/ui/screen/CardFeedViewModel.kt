@@ -8,13 +8,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.LocalCacheState
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
-import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
-import com.vitorpamplona.amethyst.service.model.LnZapEvent
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
-import com.vitorpamplona.amethyst.service.model.ReactionEvent
-import com.vitorpamplona.amethyst.service.model.RepostEvent
+import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
@@ -88,6 +82,8 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>) : ViewModel() {
                 if (zappedPost != null) {
                     val zapRequest = zappedPost.zaps.filter { it.value == zapEvent }.keys.firstOrNull()
                     if (zapRequest != null) {
+                        // var newZapRequestEvent = LocalCache.checkPrivateZap(zapRequest.event as Event)
+                        // zapRequest.event = newZapRequestEvent
                         zapsPerEvent.getOrPut(zappedPost, { mutableMapOf() }).put(zapRequest, zapEvent)
                     }
                 } else {

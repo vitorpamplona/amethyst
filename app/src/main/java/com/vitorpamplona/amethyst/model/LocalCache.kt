@@ -7,6 +7,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
+import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
 import fr.acinq.secp256k1.Hex
 import kotlinx.coroutines.*
 import nostr.postr.toNpub
@@ -622,6 +623,27 @@ object LocalCache {
         }
     }
 
+    fun checkPrivateZap(zaprequest: Event): Event {
+        var anonTag = zaprequest.tags.firstOrNull { t -> t.count() >= 2 && t[0] == "anon" }
+        if (anonTag != null && anonTag.size > 1) {
+            var encnote = anonTag?.elementAt(1)
+            if (encnote != null && encnote != "") {
+                try {
+                    val loggedInUserHex = NotificationFeedFilter.account.loggedIn.privKey!! // Replace without Filter
+                    var note = LnZapRequestEvent.decrypt_privatezap_message(encnote, loggedInUserHex, zaprequest.pubKey.toByteArray())
+                    var decryptedEvent = Event.fromJson(note)
+                    if (decryptedEvent.kind == 9733) {
+                        zaprequest.pubKey = decryptedEvent.pubKey
+                        zaprequest.content = decryptedEvent.content
+                        // return decryptedEvent
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+        return zaprequest
+    }
     fun consume(event: LnZapRequestEvent) {
         val note = getOrCreateNote(event.id)
 

@@ -18,5 +18,4 @@ interface LnZapEventInterface : EventInterface {
 
     fun containedPost(): Event?
 
-    fun message(): String
 }

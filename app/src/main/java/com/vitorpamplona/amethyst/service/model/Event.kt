@@ -15,11 +15,11 @@ import java.util.*
 
 open class Event(
     val id: HexKey,
-    @SerializedName("pubkey") val pubKey: HexKey,
+    @SerializedName("pubkey") var pubKey: HexKey,
     @SerializedName("created_at") val createdAt: Long,
     val kind: Int,
     val tags: List<List<String>>,
-    val content: String,
+    var content: String,
     val sig: HexKey
 ) : EventInterface {
     override fun id(): HexKey = id
