@@ -582,7 +582,9 @@ fun DisplayFollowingHashtagsInPost(
     var firstTag by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(key1 = noteEvent) {
-        firstTag = noteEvent.firstIsTaggedHashes(account.followingTagSet())
+        withContext(Dispatchers.IO) {
+            firstTag = noteEvent.firstIsTaggedHashes(account.followingTagSet())
+        }
     }
 
     Column() {
