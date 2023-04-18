@@ -9,7 +9,7 @@ object GlobalFeedFilter : FeedFilter<Note>() {
     lateinit var account: Account
 
     override fun feed(): List<Note> {
-        val followChannels = account.followingChannels()
+        val followChannels = account.followingChannels
         val followUsers = account.followingKeySet()
         val now = System.currentTimeMillis() / 1000
 
@@ -19,7 +19,7 @@ object GlobalFeedFilter : FeedFilter<Note>() {
                 it.event is BaseTextNoteEvent && it.replyTo.isNullOrEmpty()
             }
             .filter {
-                val channel = it.channel()
+                val channel = it.channelHex()
                 // does not show events already in the public chat list
                 (channel == null || channel !in followChannels) &&
                     // does not show people the user already follows
@@ -38,7 +38,7 @@ object GlobalFeedFilter : FeedFilter<Note>() {
                 it.event is LongTextNoteEvent && it.replyTo.isNullOrEmpty()
             }
             .filter {
-                val channel = it.channel()
+                val channel = it.channelHex()
                 // does not show events already in the public chat list
                 (channel == null || channel !in followChannels) &&
                     // does not show people the user already follows
