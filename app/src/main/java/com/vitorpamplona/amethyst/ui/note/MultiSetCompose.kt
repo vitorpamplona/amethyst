@@ -244,7 +244,7 @@ fun FastNoteAuthorPicture(
     val userState by author.live().metadata.observeAsState()
     val user = userState?.user ?: return
 
-    val showFollowingMark = userAccount.isFollowingCached(user) || user == userAccount
+    val showFollowingMark = userAccount.isFollowingCached(user) || user === userAccount
 
     UserPicture(
         userHex = user.pubkeyHex,
