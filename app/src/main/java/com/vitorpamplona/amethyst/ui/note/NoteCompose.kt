@@ -1110,12 +1110,14 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
     }
 
     LaunchedEffect(key1 = note) {
-        state = DropDownParams(
-            accountViewModel.isFollowing(note.author),
-            accountViewModel.isInPrivateBookmarks(note),
-            accountViewModel.isInPublicBookmarks(note),
-            accountViewModel.isLoggedUser(note.author)
-        )
+        withContext(Dispatchers.IO) {
+            state = DropDownParams(
+                accountViewModel.isFollowing(note.author),
+                accountViewModel.isInPrivateBookmarks(note),
+                accountViewModel.isInPublicBookmarks(note),
+                accountViewModel.isLoggedUser(note.author)
+            )
+        }
     }
 
     DropdownMenu(
