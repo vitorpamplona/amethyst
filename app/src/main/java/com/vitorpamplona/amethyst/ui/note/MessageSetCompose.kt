@@ -48,7 +48,7 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, isInnerNote: Boolean = fal
     } else {
         var isNew by remember { mutableStateOf<Boolean>(false) }
 
-        LaunchedEffect(key1 = messageSetCard) {
+        LaunchedEffect(key1 = messageSetCard.createdAt()) {
             withContext(Dispatchers.IO) {
                 isNew =
                     messageSetCard.createdAt() > NotificationCache.load(routeForLastRead)

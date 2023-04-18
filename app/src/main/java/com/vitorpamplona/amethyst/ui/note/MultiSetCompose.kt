@@ -61,7 +61,7 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
     } else {
         var isNew by remember { mutableStateOf<Boolean>(false) }
 
-        LaunchedEffect(key1 = multiSetCard) {
+        LaunchedEffect(key1 = multiSetCard.createdAt()) {
             withContext(Dispatchers.IO) {
                 isNew = multiSetCard.createdAt > NotificationCache.load(routeForLastRead)
 
