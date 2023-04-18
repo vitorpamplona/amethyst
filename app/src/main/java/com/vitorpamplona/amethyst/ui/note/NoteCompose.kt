@@ -96,7 +96,7 @@ fun NoteCompose(
         )
     }
 
-    Log.d("Time", "Note Compose in $elapsed for ${baseNote.event?.kind()} ${baseNote.event?.content()?.split("\n")?.get(0)?.take(100)}")
+    Log.d("Time", "Note Compose in $elapsed for ${baseNote.idHex} ${baseNote.event?.kind()} ${baseNote.event?.content()?.split("\n")?.get(0)?.take(100)}")
 }
 
 @OptIn(ExperimentalFoundationApi::class)
