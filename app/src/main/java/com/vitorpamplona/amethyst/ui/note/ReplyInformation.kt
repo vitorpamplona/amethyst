@@ -16,14 +16,15 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.Channel
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.*
 
 @Composable
-fun ReplyInformation(replyTo: List<Note>?, mentions: List<User>?, account: Account, navController: NavController) {
-    ReplyInformation(replyTo, mentions, account) {
+fun ReplyInformation(replyTo: List<Note>?, mentions: List<String>, account: Account, navController: NavController) {
+    val sortedMentions = mentions.mapNotNull { LocalCache.checkGetOrCreateUser(it) }
+        .toSet()
+        .sortedBy { account.userProfile().isFollowingCached(it) }
+
+    ReplyInformation(replyTo, sortedMentions, account) {
         navController.navigate("User/${it.pubkeyHex}")
     }
 }

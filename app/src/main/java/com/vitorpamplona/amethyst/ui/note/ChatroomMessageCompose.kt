@@ -60,7 +60,7 @@ import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
-import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
+import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -230,17 +230,15 @@ fun ChatroomMessageCompose(
                             if (!innerQuote && !replyTo.isNullOrEmpty()) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     replyTo.toSet().mapIndexed { _, note ->
-                                        if (note.event != null) {
-                                            ChatroomMessageCompose(
-                                                note,
-                                                null,
-                                                innerQuote = true,
-                                                parentBackgroundColor = backgroundBubbleColor,
-                                                accountViewModel = accountViewModel,
-                                                navController = navController,
-                                                onWantsToReply = onWantsToReply
-                                            )
-                                        }
+                                        ChatroomMessageCompose(
+                                            note,
+                                            null,
+                                            innerQuote = true,
+                                            parentBackgroundColor = backgroundBubbleColor,
+                                            accountViewModel = accountViewModel,
+                                            navController = navController,
+                                            onWantsToReply = onWantsToReply
+                                        )
                                     }
                                 }
                             }
@@ -248,30 +246,32 @@ fun ChatroomMessageCompose(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 val event = note.event
                                 if (event is ChannelCreateEvent) {
+                                    val channelInfo = event.channelInfo()
                                     Text(
                                         text = note.author?.toBestDisplayName()
                                             .toString() + " ${stringResource(R.string.created)} " + (
-                                            event.channelInfo().name
+                                            channelInfo.name
                                                 ?: ""
                                             ) + " ${stringResource(R.string.with_description_of)} '" + (
-                                            event.channelInfo().about
+                                            channelInfo.about
                                                 ?: ""
                                             ) + "', ${stringResource(R.string.and_picture)} '" + (
-                                            event.channelInfo().picture
+                                            channelInfo.picture
                                                 ?: ""
                                             ) + "'"
                                     )
                                 } else if (event is ChannelMetadataEvent) {
+                                    val channelInfo = event.channelInfo()
                                     Text(
                                         text = note.author?.toBestDisplayName()
                                             .toString() + " ${stringResource(R.string.changed_chat_name_to)} '" + (
-                                            event.channelInfo().name
+                                            channelInfo.name
                                                 ?: ""
                                             ) + "$', {stringResource(R.string.description_to)} '" + (
-                                            event.channelInfo().about
+                                            channelInfo.about
                                                 ?: ""
                                             ) + "', ${stringResource(R.string.and_picture_to)} '" + (
-                                            event.channelInfo().picture
+                                            channelInfo.picture
                                                 ?: ""
                                             ) + "'"
                                     )
@@ -283,20 +283,20 @@ fun ChatroomMessageCompose(
                                         !noteForReports.hasAnyReports()
 
                                     if (eventContent != null) {
-                                        TranslateableRichTextViewer(
+                                        TranslatableRichTextViewer(
                                             eventContent,
                                             canPreview,
-                                            Modifier,
+                                            Modifier.padding(top = 5.dp),
                                             note.event?.tags(),
                                             backgroundBubbleColor,
                                             accountViewModel,
                                             navController
                                         )
                                     } else {
-                                        TranslateableRichTextViewer(
+                                        TranslatableRichTextViewer(
                                             stringResource(R.string.could_not_decrypt_the_message),
                                             true,
-                                            Modifier,
+                                            Modifier.padding(top = 5.dp),
                                             note.event?.tags(),
                                             backgroundBubbleColor,
                                             accountViewModel,

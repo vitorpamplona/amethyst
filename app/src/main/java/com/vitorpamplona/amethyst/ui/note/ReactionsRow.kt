@@ -55,6 +55,7 @@ import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -63,8 +64,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 import java.math.RoundingMode
+import kotlin.math.roundToInt
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
@@ -125,7 +126,7 @@ fun ReplyReaction(
     val scope = rememberCoroutineScope()
 
     IconButton(
-        modifier = Modifier.then(Modifier.size(20.dp)),
+        modifier = Modifier.size(20.dp),
         onClick = {
             if (accountViewModel.isWriteable()) {
                 onPress()
@@ -303,10 +304,11 @@ fun ZapReaction(
 
     val zapsState by baseNote.live().zaps.observeAsState()
     val zappedNote = zapsState?.note
+    val zapMessage = ""
 
     var wantsToZap by remember { mutableStateOf(false) }
     var wantsToChangeZapAmount by remember { mutableStateOf(false) }
-
+    var wantsToSetCustomZap by remember { mutableStateOf(false) }
     val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -347,7 +349,8 @@ fun ZapReaction(
                             accountViewModel.zap(
                                 baseNote,
                                 account.zapAmountChoices.first() * 1000,
-                                "",
+                                null,
+                                zapMessage,
                                 context,
                                 onError = {
                                     scope.launch {
@@ -361,7 +364,8 @@ fun ZapReaction(
                                     scope.launch(Dispatchers.Main) {
                                         zappingProgress = it
                                     }
-                                }
+                                },
+                                zapType = LnZapEvent.ZapType.PUBLIC
                             )
                         }
                     } else if (account.zapAmountChoices.size > 1) {
@@ -370,6 +374,9 @@ fun ZapReaction(
                 },
                 onLongClick = {
                     wantsToChangeZapAmount = true
+                },
+                onDoubleClick = {
+                    wantsToSetCustomZap = true
                 }
             )
     ) {
@@ -400,6 +407,10 @@ fun ZapReaction(
         }
         if (wantsToChangeZapAmount) {
             UpdateZapAmountDialog({ wantsToChangeZapAmount = false }, account = account)
+        }
+
+        if (wantsToSetCustomZap) {
+            ZapCustomDialog({ wantsToSetCustomZap = false }, account = account, accountViewModel, baseNote)
         }
 
         if (zappedNote?.isZappedBy(account.userProfile()) == true) {
@@ -451,7 +462,7 @@ private fun ViewCountReaction(baseNote: Note, textModifier: Modifier = Modifier)
     val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
 
     IconButton(
-        modifier = Modifier.then(Modifier.size(20.dp)),
+        modifier = Modifier.size(20.dp),
         onClick = { uri.openUri("https://counter.amethyst.social/${baseNote.idHex}/") }
     ) {
         Icon(
@@ -466,7 +477,6 @@ private fun ViewCountReaction(baseNote: Note, textModifier: Modifier = Modifier)
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
                 .data("https://counter.amethyst.social/${baseNote.idHex}.svg?label=+&color=00000000")
-                .crossfade(true)
                 .diskCachePolicy(CachePolicy.DISABLED)
                 .memoryCachePolicy(CachePolicy.ENABLED)
                 .build(),
@@ -530,7 +540,7 @@ fun ZapAmountChoicePopup(
 
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
-
+    val zapMessage = ""
     val scope = rememberCoroutineScope()
 
     Popup(
@@ -547,10 +557,12 @@ fun ZapAmountChoicePopup(
                             accountViewModel.zap(
                                 baseNote,
                                 amountInSats * 1000,
-                                "",
+                                null,
+                                zapMessage,
                                 context,
                                 onError,
-                                onProgress
+                                onProgress,
+                                LnZapEvent.ZapType.PUBLIC
                             )
                             onDismiss()
                         }
@@ -571,10 +583,12 @@ fun ZapAmountChoicePopup(
                                     accountViewModel.zap(
                                         baseNote,
                                         amountInSats * 1000,
-                                        "",
+                                        null,
+                                        zapMessage,
                                         context,
                                         onError,
-                                        onProgress
+                                        onProgress,
+                                        LnZapEvent.ZapType.PUBLIC
                                     )
                                     onDismiss()
                                 }
@@ -595,9 +609,9 @@ fun showCount(count: Int?): String {
     if (count == 0) return ""
 
     return when {
-        count >= 1000000000 -> "${Math.round(count / 1000000000f)}G"
-        count >= 1000000 -> "${Math.round(count / 1000000f)}M"
-        count >= 1000 -> "${Math.round(count / 1000f)}k"
+        count >= 1000000000 -> "${(count / 1000000000f).roundToInt()}G"
+        count >= 1000000 -> "${(count / 1000000f).roundToInt()}M"
+        count >= 1000 -> "${(count / 1000f).roundToInt()}k"
         else -> "$count"
     }
 }

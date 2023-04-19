@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.toByteArray
+import com.vitorpamplona.amethyst.service.nip19.Nip19
 import fr.acinq.secp256k1.Hex
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -33,18 +35,20 @@ class AccountStateViewModel() : ViewModel() {
 
     private fun tryLoginExistingAccount() {
         LocalPreferences.loadFromEncryptedStorage()?.let {
-            login(it)
+            startUI(it)
         }
     }
 
-    fun login(key: String) {
+    fun startUI(key: String) {
         val pattern = Pattern.compile(".+@.+\\.[a-z]+")
+        val parsed = Nip19.uriToRoute(key)
+        val pubKeyParsed = parsed?.hex?.toByteArray()
 
         val account =
             if (key.startsWith("nsec")) {
                 Account(Persona(privKey = key.bechToBytes()))
-            } else if (key.startsWith("npub")) {
-                Account(Persona(pubKey = key.bechToBytes()))
+            } else if (pubKeyParsed != null) {
+                Account(Persona(pubKey = pubKeyParsed))
             } else if (pattern.matcher(key).matches()) {
                 // Evaluate NIP-5
                 Account(Persona())
@@ -52,7 +56,8 @@ class AccountStateViewModel() : ViewModel() {
                 Account(Persona(Hex.decode(key)))
             }
 
-        login(account)
+        LocalPreferences.updatePrefsForLogin(account)
+        startUI(account)
     }
 
     fun switchUser(npub: String) {
@@ -63,24 +68,22 @@ class AccountStateViewModel() : ViewModel() {
 
     fun newKey() {
         val account = Account(Persona())
-        login(account)
+        // saves to local preferences
+        LocalPreferences.updatePrefsForLogin(account)
+        startUI(account)
     }
 
     @OptIn(DelicateCoroutinesApi::class)
-    fun login(account: Account) {
-        LocalPreferences.updatePrefsForLogin(account)
-
+    fun startUI(account: Account) {
         if (account.loggedIn.privKey != null) {
             _accountContent.update { AccountState.LoggedIn(account) }
         } else {
             _accountContent.update { AccountState.LoggedInViewOnly(account) }
         }
-
         val scope = CoroutineScope(Job() + Dispatchers.IO)
         scope.launch {
             ServiceManager.start(account)
         }
-
         GlobalScope.launch(Dispatchers.Main) {
             account.saveable.observeForever(saveListener)
         }

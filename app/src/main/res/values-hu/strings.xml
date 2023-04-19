@@ -22,6 +22,7 @@
     <string name="copy_user_pubkey">A felhasználó PubKulcs másolása</string>
     <string name="copy_note_id">A bejegyzés azonosítójának másolása</string>
     <string name="broadcast">Közvetít</string>
+    <string name="request_deletion">Törlés Kérése</string>
     <string name="block_hide_user"><![CDATA[Tiltás és Felhasználó elrejtése]]></string>
     <string name="report_spam_scam">Spam / Csalás bejelentés</string>
     <string name="report_impersonation">Megszemélyesítés bejelentés</string>
@@ -72,6 +73,7 @@
     <string name="failed_to_upload_the_image">Nem sikerült feltölteni a képet</string>
     <string name="relay_address">Csomópont Címe</string>
     <string name="posts">Hozzászólások</string>
+    <string name="bytes">Bájtok</string>
     <string name="errors">Hibák</string>
     <string name="home_feed">Hírfolyamod</string>
     <string name="private_message_feed">Privát Üzenetek listája</string>
@@ -119,6 +121,7 @@
     <string name="send_a_direct_message">Közvetlen üzenet küldése</string>
     <string name="edits_the_user_s_metadata">Szerkeszti a felhasználó metaadatait</string>
     <string name="follow">Követés</string>
+    <string name="follow_back">Visszakövetem</string>
     <string name="unblock">Tiltás feloldása</string>
     <string name="copy_user_id">Felhasználói azonosító másolása</string>
     <string name="unblock_user">Felhasználó feloldása</string>
@@ -172,6 +175,7 @@
     <string name="mark_all_known_as_read">Az összes ismert megjelölése olvasottként</string>
     <string name="mark_all_new_as_read">Az összes új megjelölése olvasottként</string>
     <string name="mark_all_as_read">Összes megjelölése olvasottként</string>
+    <string name="backup_keys">Biztonsági Kulcsok</string>
     <string name="account_backup_tips_md">
         ## Kulcs- és biztonsági mentési tippek
         \n\nFiókját titkos kulcs védi. A kulcs egy hosszú véletlenszerű karakterlánc, amely **nsec1**-el kezdődik. Bárki, aki az Ön titkos kulcsához hozzáfér, az Ön személyazonosságának használatával bármilyen tartalmat közzétehet.
@@ -187,4 +191,102 @@
     <string name="badge_award_image_for">"Kitűző %1$s"</string>
     <string name="new_badge_award_notif">Új Jelvényt kapott</string>
     <string name="award_granted_to">Kitüntetésben részesült</string>
+    <string name="copied_note_text_to_clipboard">Bejegyzés vágólapra helyezve</string>
+    <string name="copied_user_id_to_clipboard">A szerző @npub-ja vágólapra helyezve</string>
+    <string name="copied_note_id_to_clipboard">A bejegyzés azonosítója (@note1) vágólapra helyezve</string>
+    <string name="select_text_dialog_top">Szöveg Kijelölése</string>
+    <string name="github" translatable="false">Github Gist w/ Proof</string>
+    <string name="telegram" translatable="false">Telegram</string>
+    <string name="mastodon" translatable="false">Mastodon Post ID w/ Proof</string>
+    <string name="twitter" translatable="false">Twitter Status w/ Proof</string>
+    <string name="github_proof_url_template" translatable="false">https://gist.github.com/&lt;user&gt;/&lt;gist&gt;</string>
+    <string name="telegram_proof_url_template" translatable="false">https://t.me/&lt;proof post&gt;</string>
+    <string name="mastodon_proof_url_template" translatable="false">https://&lt;server&gt;/&lt;user&gt;/&lt;proof post&gt;</string>
+    <string name="twitter_proof_url_template" translatable="false">https://twitter.com/&lt;user&gt;/status/&lt;proof post&gt;</string>
+    <string name="private_conversation_notification">"&lt;Nem sikerült a privát üzenetet visszafejteni&gt;\n\nTéged egy privát/titkosított beszélgetésben %1$s és %2$s idéztek."</string>
+    <string name="account_switch_add_account_dialog_title">Új Fiók Hozzáadása</string>
+    <string name="drawer_accounts">Fiókok</string>
+    <string name="account_switch_select_account">Fiók Kiválasztása</string>
+    <string name="account_switch_add_account_btn">Új Fiók Hozzáadása</string>
+    <string name="account_switch_active_account">Aktív fiók</string>
+    <string name="account_switch_has_private_key">Tartalmaz privát kulcsot</string>
+    <string name="account_switch_pubkey_only">Csak olvasásra, nincs privát kulcs</string>
+    <string name="back">Vissza</string>
+    <string name="quick_action_select">Kiválaszt</string>
+    <string name="quick_action_share_browser_link">Link megosztása</string>
+    <string name="quick_action_share">Megosztás</string>
+    <string name="quick_action_copy_user_id">Szerző azonosító</string>
+    <string name="quick_action_copy_note_id">Bejegyzés azonosító</string>
+    <string name="quick_action_copy_text">Szöveg Másolása</string>
+    <string name="quick_action_delete">Törlés</string>
+    <string name="quick_action_unfollow">Kikövetés</string>
+    <string name="quick_action_follow">Követem</string>
+    <string name="quick_action_request_deletion_alert_title">Törlés Kérése</string>
+    <string name="quick_action_request_deletion_alert_body">Az Amethyst kérni fogja, hogy töröljék a bejegyzésed azokról a csomópontokról, amelyekhez jelenleg csatlakozol. Nincs garancia arra, hogy a bejegyzésed ezekről a csomópontokról vagy más közvetítőkből (ahol tárolni lehet) véglegesen törlődik.</string>
+    <string name="quick_action_block_dialog_btn">Tiltás</string>
+    <string name="quick_action_delete_dialog_btn">Törlés</string>
+    <string name="quick_action_block">Tiltás</string>
+    <string name="quick_action_report">Jelentés</string>
+    <string name="quick_action_delete_button">Törlés</string>
+    <string name="quick_action_dont_show_again_button">Ne mutasd újra</string>
+    <string name="report_dialog_spam">Spam vagy átverés</string>
+    <string name="report_dialog_profanity">Trágárság vagy gyűlöletkeltő magatartás</string>
+    <string name="report_dialog_impersonation">Rosszindulatú megszemélyesítés</string>
+    <string name="report_dialog_nudity">Meztelenség vagy pornográf tartalom</string>
+    <string name="report_dialog_illegal">Illegális viselkedés</string>
+    <string name="report_dialog_blocking_a_user">Az alkalmazásban egy felhasználó letiltása minden hozzá köthető tartalmat elrejt. Jegyzeteid továbbra is nyilvánosan megtekinthetők, beleértve a letiltott személyek számára is. A letiltott felhasználók a Biztonsági szűrők felületen jelennek meg.</string>
+    <string name="report_dialog_block_hide_user_btn"><![CDATA[Felhasználó Tiltása és Elrejtése]]></string>
+    <string name="report_dialog_report_btn">Visszaélés jelentése</string>
+    <string name="report_dialog_reminder_public">Minden közzétett jelentés nyilvánosan látható lesz.</string>
+    <string name="report_dialog_additional_reason_placeholder">Opcionálisan a jelentéséhez további kontextust addhat…</string>
+    <string name="report_dialog_additional_reason_label">További kontextus</string>
+    <string name="report_dialog_select_reason_label">Ok</string>
+    <string name="report_dialog_select_reason_placeholder">Válassz egy okot…</string>
+    <string name="report_dialog_post_report_btn">Jelentés Elküldése</string>
+    <string name="report_dialog_title">Tiltás és Jelentés</string>
+    <string name="block_only">Tiltás</string>
+
+    <string name="bookmarks">Könyvjelzők</string>
+    <string name="private_bookmarks">Privát Könyvjelzők</string>
+    <string name="public_bookmarks">Publikus Könyvjelzők</string>
+    <string name="add_to_private_bookmarks">Hozzáadás a Privát Könyvjelzőimhez</string>
+    <string name="add_to_public_bookmarks">Hozzáadás a Publikus Könyvjelzőimhez</string>
+    <string name="remove_from_private_bookmarks">Törlés a Privát Könyvjelzőimből</string>
+    <string name="remove_from_public_bookmarks">Törlés a Publikus Könyvjelzőimből</string>
+
+    <string name="wallet_connect_service">Wallet Connect Szolgáltatás</string>
+    <string name="wallet_connect_service_explainer">Engedélyezed a Nostr Secret-et, hogy az alkalmazás elhagyása nélkül Zap-ot küldjön. Tartsa a titkot biztonságban, és ha lehetséges, privát csomópontot használjon</string>
+    <string name="wallet_connect_service_pubkey">Wallet Connect Publikus Kulcs</string>
+    <string name="wallet_connect_service_relay">Wallet Connect Csomópont</string>
+    <string name="wallet_connect_service_secret">Wallet Connect Titok</string>
+    <string name="wallet_connect_service_show_secret">Titkos Kulcs Megjelenítése</string>
+    <string name="wallet_connect_service_secret_placeholder">nsec / hex privát kulcs</string>
+
+    <string name="pledge_amount_in_sats">Hozzájárulás összege sats-ban</string>
+    <string name="post_poll">Szavazás Létrehozása</string>
+    <string name="poll_heading_required">Szükséges mezők:</string>
+    <string name="poll_zap_recipients">Zap-et kapják</string>
+    <string name="poll_primary_description">Szavazás elsődleges leírása…</string>
+    <string name="poll_option_index">Szavazás %s megoszlása</string>
+    <string name="poll_option_description">Szavazás opcióinak leírása</string>
+    <string name="poll_heading_optional">Kiegészítő mezők:</string>
+    <string name="poll_zap_value_min">Zap minimum</string>
+    <string name="poll_zap_value_max">Zap maximum</string>
+    <string name="poll_consensus_threshold">Konszenzus</string>
+    <string name="poll_consensus_threshold_percent">(0–100)%</string>
+    <string name="poll_closing_time">Szavazás lezárása</string>
+    <string name="poll_closing_time_days">napok</string>
+    <string name="poll_is_closed">A szavazásra nem lehet már új szavazatot leadni</string>
+    <string name="poll_zap_amount">Zap összege</string>
+    <string name="one_vote_per_user_on_atomic_votes">Az ilyen típusú szavazásokon felhasználónként csak egy szavazat engedélyezett</string>
+
+
+    <string name="looking_for_event">"%1$s esemény keresése"</string>
+
+    <string name="custom_zaps_add_a_message">Nyilvános üzenet hozzáadása</string>
+    <string name="custom_zaps_add_a_message_example">Köszönöm a kemény munkát!</string>
+
+    <string name="lightning_create_and_add_invoice">Létrehoz és Hozzáad</string>
+    <string name="poll_author_no_vote">A szavazás létrehozója sajátjára nem szavazhat.</string>
+    <string name="poll_hashtag" translatable="false">#zappoll</string>
 </resources>

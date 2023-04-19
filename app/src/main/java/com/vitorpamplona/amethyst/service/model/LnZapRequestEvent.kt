@@ -13,8 +13,10 @@ class LnZapRequestEvent(
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
-    fun zappedPost() = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
-    fun zappedAuthor() = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
+
+    fun zappedPost() = tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }
+
+    fun zappedAuthor() = tags.filter { it.size > 1 && it[0] == "p" }.map { it[1] }
 
     companion object {
         const val kind = 9734
@@ -23,10 +25,14 @@ class LnZapRequestEvent(
             originalNote: EventInterface,
             relays: Set<String>,
             privateKey: ByteArray,
+            pollOption: Int?,
+            message: String,
+            zapType: LnZapEvent.ZapType,
             createdAt: Long = Date().time / 1000
         ): LnZapRequestEvent {
-            val content = ""
-            val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
+            val content = message
+            var privkey = privateKey
+            var pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             var tags = listOf(
                 listOf("e", originalNote.id()),
                 listOf("p", originalNote.pubKey()),
@@ -35,9 +41,16 @@ class LnZapRequestEvent(
             if (originalNote is LongTextNoteEvent) {
                 tags = tags + listOf(listOf("a", originalNote.address().toTag()))
             }
-
+            if (pollOption != null && pollOption >= 0) {
+                tags = tags + listOf(listOf(POLL_OPTION, pollOption.toString()))
+            }
+            if (zapType == LnZapEvent.ZapType.ANONYMOUS) {
+                tags = tags + listOf(listOf("anon", ""))
+                privkey = Utils.privkeyCreate()
+                pubKey = Utils.pubkeyCreate(privkey).toHexKey()
+            }
             val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = Utils.sign(id, privateKey)
+            val sig = Utils.sign(id, privkey)
             return LnZapRequestEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
         }
 
@@ -45,16 +58,25 @@ class LnZapRequestEvent(
             userHex: String,
             relays: Set<String>,
             privateKey: ByteArray,
+            message: String,
+            zapType: LnZapEvent.ZapType,
             createdAt: Long = Date().time / 1000
         ): LnZapRequestEvent {
-            val content = ""
-            val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
-            val tags = listOf(
+            val content = message
+            var privkey = privateKey
+            var pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
+            var tags = listOf(
                 listOf("p", userHex),
                 listOf("relays") + relays
             )
+            if (zapType == LnZapEvent.ZapType.ANONYMOUS) {
+                tags = tags + listOf(listOf("anon", ""))
+                privkey = Utils.privkeyCreate()
+                pubKey = Utils.pubkeyCreate(privkey).toHexKey()
+            }
+
             val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = Utils.sign(id, privateKey)
+            val sig = Utils.sign(id, privkey)
             return LnZapRequestEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
         }
     }
@@ -89,7 +111,11 @@ class LnZapRequestEvent(
     "wss://nostr.bitcoiner.social",
     "ws://monad.jb55.com:8080",
     "wss://relay.snort.social"
+  ],
+  [
+    "poll_option", "n"
   ]
-  ]
+  ],
+  "ots": <base64-encoded OTS file data> // TODO
 }
 */

@@ -1,13 +1,20 @@
 package com.vitorpamplona.amethyst.ui.actions
 
+import android.content.Context
+import android.net.Uri
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.model.GitHubIdentity
 import com.vitorpamplona.amethyst.service.model.MastodonIdentity
 import com.vitorpamplona.amethyst.service.model.TwitterIdentity
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.launch
 import java.io.ByteArrayInputStream
 import java.io.StringWriter
 
@@ -29,6 +36,10 @@ class NewUserMetadataViewModel : ViewModel() {
     val twitter = mutableStateOf("")
     val github = mutableStateOf("")
     val mastodon = mutableStateOf("")
+
+    var isUploadingImageForPicture by mutableStateOf(false)
+    var isUploadingImageForBanner by mutableStateOf(false)
+    val imageUploadingError = MutableSharedFlow<String?>()
 
     fun load(account: Account) {
         this.account = account
@@ -126,5 +137,50 @@ class NewUserMetadataViewModel : ViewModel() {
         twitter.value = ""
         github.value = ""
         mastodon.value = ""
+    }
+
+    fun uploadForPicture(uri: Uri, context: Context) {
+        upload(
+            uri,
+            context,
+            onUploading = {
+                isUploadingImageForPicture = it
+            },
+            onUploaded = {
+                picture.value = it
+            }
+        )
+    }
+
+    fun uploadForBanner(uri: Uri, context: Context) {
+        upload(
+            uri,
+            context,
+            onUploading = {
+                isUploadingImageForBanner = it
+            },
+            onUploaded = {
+                banner.value = it
+            }
+        )
+    }
+
+    fun upload(it: Uri, context: Context, onUploading: (Boolean) -> Unit, onUploaded: (String) -> Unit) {
+        onUploading(true)
+
+        ImageUploader.uploadImage(
+            uri = it,
+            contentResolver = context.contentResolver,
+            onSuccess = { imageUrl ->
+                onUploading(false)
+                onUploaded(imageUrl)
+            },
+            onError = {
+                onUploading(false)
+                viewModelScope.launch {
+                    imageUploadingError.emit("Failed to upload the image / video")
+                }
+            }
+        )
     }
 }

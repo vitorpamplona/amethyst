@@ -3,7 +3,9 @@ package com.vitorpamplona.amethyst.service
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
+import com.vitorpamplona.amethyst.service.model.PollNoteEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
+import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
@@ -14,6 +16,8 @@ import kotlinx.coroutines.launch
 
 object NostrHomeDataSource : NostrDataSource("HomeFeed") {
     lateinit var account: Account
+
+    val latestEOSEs = EOSEAccount()
 
     private val cacheListener: (UserState) -> Unit = {
         invalidateFilters()
@@ -51,9 +55,10 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
         return TypedFilter(
             types = setOf(FeedType.FOLLOWS),
             filter = JsonFilter(
-                kinds = listOf(TextNoteEvent.kind, LongTextNoteEvent.kind),
+                kinds = listOf(TextNoteEvent.kind, LongTextNoteEvent.kind, PollNoteEvent.kind),
                 authors = followSet,
-                limit = 400
+                limit = 400,
+                since = latestEOSEs.users[account.userProfile()]?.relayList
             )
         )
     }
@@ -72,12 +77,15 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
                         listOf(it, it.lowercase(), it.uppercase(), it.capitalize())
                     }.flatten()
                 ),
-                limit = 100
+                limit = 100,
+                since = latestEOSEs.users[account.userProfile()]?.relayList
             )
         )
     }
 
-    val followAccountChannel = requestNewChannel()
+    val followAccountChannel = requestNewChannel { time, relayUrl ->
+        latestEOSEs.addOrUpdate(account.userProfile(), relayUrl, time)
+    }
 
     override fun updateChannelFilters() {
         followAccountChannel.typedFilters = listOfNotNull(createFollowAccountsFilter(), createFollowTagsFilter()).ifEmpty { null }

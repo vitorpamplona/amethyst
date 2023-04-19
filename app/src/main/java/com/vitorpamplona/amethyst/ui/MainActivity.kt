@@ -21,6 +21,8 @@ import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.service.relays.Client
+import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.note.Nip47
 import com.vitorpamplona.amethyst.ui.screen.AccountScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
@@ -28,6 +30,8 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,6 +44,14 @@ class MainActivity : FragmentActivity() {
             Nip19.Type.EVENT -> "Event/${nip19.hex}"
             Nip19.Type.ADDRESS -> "Note/${nip19.hex}"
             else -> null
+        } ?: try {
+            intent?.data?.toString()?.let {
+                Nip47.parse(it)
+                val encodedUri = URLEncoder.encode(it, StandardCharsets.UTF_8.toString())
+                Route.Home.base + "?nip47=" + encodedUri
+            }
+        } catch (e: Exception) {
+            null
         }
 
         Coil.setImageLoader {

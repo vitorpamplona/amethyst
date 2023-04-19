@@ -8,11 +8,11 @@ abstract class FeedFilter<T> {
     @OptIn(ExperimentalTime::class)
     fun loadTop(): List<T> {
         val (feed, elapsed) = measureTimedValue {
-            feed().take(1000)
+            feed()
         }
 
         Log.d("Time", "${this.javaClass.simpleName} Feed in $elapsed with ${feed.size} objects")
-        return feed
+        return feed.take(1000)
     }
 
     abstract fun feed(): List<T>

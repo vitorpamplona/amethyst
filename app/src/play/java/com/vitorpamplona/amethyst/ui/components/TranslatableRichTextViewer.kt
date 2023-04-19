@@ -38,7 +38,7 @@ import kotlinx.coroutines.withContext
 import java.util.Locale
 
 @Composable
-fun TranslateableRichTextViewer(
+fun TranslatableRichTextViewer(
     content: String,
     canPreview: Boolean,
     modifier: Modifier = Modifier,
@@ -79,7 +79,7 @@ fun TranslateableRichTextViewer(
 
     val toBeViewed = if (showOriginal) content else translatedTextState.value.result ?: content
 
-    Column(modifier = Modifier.padding(top = 5.dp)) {
+    Column() {
         ExpandableRichTextViewer(
             toBeViewed,
             canPreview,

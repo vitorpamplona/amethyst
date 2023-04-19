@@ -2,19 +2,8 @@ package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
-import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
-import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
-import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
-import com.vitorpamplona.amethyst.service.model.LnZapEvent
-import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
-import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
-import com.vitorpamplona.amethyst.service.model.ReactionEvent
-import com.vitorpamplona.amethyst.service.model.ReportEvent
-import com.vitorpamplona.amethyst.service.model.RepostEvent
-import com.vitorpamplona.amethyst.service.model.TextNoteEvent
+import com.vitorpamplona.amethyst.service.model.*
+import com.vitorpamplona.amethyst.service.relays.EOSETime
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
@@ -42,7 +31,8 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
                             TextNoteEvent.kind, LongTextNoteEvent.kind,
                             ReactionEvent.kind, RepostEvent.kind, ReportEvent.kind,
                             LnZapEvent.kind, LnZapRequestEvent.kind,
-                            BadgeAwardEvent.kind, BadgeDefinitionEvent.kind, BadgeProfilesEvent.kind
+                            BadgeAwardEvent.kind, BadgeDefinitionEvent.kind, BadgeProfilesEvent.kind,
+                            PollNoteEvent.kind
                         ),
                         tags = mapOf("a" to listOf(aTag.toTag())),
                         since = it.lastReactionsDownloadTime
@@ -82,8 +72,6 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
             return null
         }
 
-        val now = Date().time / 1000
-
         return reactionsToWatch.map {
             TypedFilter(
                 types = FeedType.values().toSet(),
@@ -95,7 +83,8 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
                         RepostEvent.kind,
                         ReportEvent.kind,
                         LnZapEvent.kind,
-                        LnZapRequestEvent.kind
+                        LnZapRequestEvent.kind,
+                        PollNoteEvent.kind
                     ),
                     tags = mapOf("e" to listOf(it.idHex)),
                     since = it.lastReactionsDownloadTime
@@ -128,7 +117,8 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
                 filter = JsonFilter(
                     kinds = listOf(
                         TextNoteEvent.kind, LongTextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind, LnZapEvent.kind, LnZapRequestEvent.kind,
-                        ChannelMessageEvent.kind, ChannelCreateEvent.kind, ChannelMetadataEvent.kind, BadgeDefinitionEvent.kind, BadgeAwardEvent.kind, BadgeProfilesEvent.kind
+                        ChannelMessageEvent.kind, ChannelCreateEvent.kind, ChannelMetadataEvent.kind, BadgeDefinitionEvent.kind, BadgeAwardEvent.kind, BadgeProfilesEvent.kind,
+                        PollNoteEvent.kind, PrivateDmEvent.kind
                     ),
                     ids = interestedEvents.toList()
                 )
@@ -138,8 +128,14 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
 
     val singleEventChannel = requestNewChannel { time, relayUrl ->
         eventsToWatch.forEach {
-            it.lastReactionsDownloadTime = it.lastReactionsDownloadTime + Pair(relayUrl, time)
+            val eose = it.lastReactionsDownloadTime[relayUrl]
+            if (eose == null) {
+                it.lastReactionsDownloadTime = it.lastReactionsDownloadTime + Pair(relayUrl, EOSETime(time))
+            } else {
+                eose.time = time
+            }
         }
+
         // Many relays operate with limits in the amount of filters.
         // As information comes, the filters will be rotated to get more data.
         invalidateFilters()
@@ -151,7 +147,7 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
         val addresses = createAddressFilter()
         val addressReactions = createTagToAddressFilter()
 
-        singleEventChannel.typedFilters = listOfNotNull(reactions, missing, addresses, addressReactions).flatten().ifEmpty { null }
+        singleEventChannel.typedFilters = listOfNotNull(missing, addresses, reactions, addressReactions).flatten().ifEmpty { null }
     }
 
     fun add(eventId: Note) {

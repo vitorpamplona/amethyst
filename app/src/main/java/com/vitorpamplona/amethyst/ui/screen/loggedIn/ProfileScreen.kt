@@ -1,5 +1,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.*
@@ -27,6 +29,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalUriHandler
@@ -39,6 +42,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -64,7 +68,7 @@ import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
-import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
+import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
 import com.vitorpamplona.amethyst.ui.dal.UserProfileBookmarksFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileConversationsFeedFilter
@@ -73,6 +77,7 @@ import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileZapsFeedFilter
+import com.vitorpamplona.amethyst.ui.navigation.ShowQRDialog
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.screen.FeedView
@@ -420,6 +425,7 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewMode
 
     val uri = LocalUriHandler.current
     val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
 
     Row(verticalAlignment = Alignment.Bottom) {
         user.bestDisplayName()?.let {
@@ -430,12 +436,13 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewMode
                 fontSize = 25.sp
             )
         }
-
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
         user.bestUsername()?.let {
             Text(
                 "@$it",
                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-                modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp)
+                modifier = Modifier.padding(top = 1.dp, bottom = 1.dp)
             )
         }
     }
@@ -449,16 +456,41 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewMode
 
         IconButton(
             modifier = Modifier
-                .size(30.dp)
+                .size(25.dp)
                 .padding(start = 5.dp),
             onClick = { clipboardManager.setText(AnnotatedString(user.pubkeyNpub())); }
         ) {
             Icon(
                 imageVector = Icons.Default.ContentCopy,
                 null,
-                modifier = Modifier
-                    .padding(end = 5.dp)
-                    .size(15.dp),
+                modifier = Modifier.size(15.dp),
+                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+            )
+        }
+
+        var dialogOpen by remember {
+            mutableStateOf(false)
+        }
+
+        if (dialogOpen) {
+            ShowQRDialog(
+                user,
+                onScan = {
+                    dialogOpen = false
+                    navController.navigate(it)
+                },
+                onClose = { dialogOpen = false }
+            )
+        }
+
+        IconButton(
+            modifier = Modifier.size(25.dp),
+            onClick = { dialogOpen = true }
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_qrcode),
+                null,
+                modifier = Modifier.size(15.dp),
                 tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
             )
         }
@@ -528,9 +560,25 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewMode
 
         if (zapExpanded) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 5.dp)) {
-                InvoiceRequest(lud16, baseUser.pubkeyHex, account) {
-                    zapExpanded = false
-                }
+                InvoiceRequest(
+                    lud16,
+                    baseUser.pubkeyHex,
+                    account,
+                    onSuccess = {
+                        // pay directly
+                        if (account.hasWalletConnectSetup()) {
+                            account.sendZapPaymentRequestFor(it)
+                        } else {
+                            runCatching {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("lightning:$it"))
+                                ContextCompat.startActivity(context, intent, null)
+                            }
+                        }
+                    },
+                    onClose = {
+                        zapExpanded = false
+                    }
+                )
             }
         }
     }
@@ -562,7 +610,7 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewMode
         Row(
             modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)
         ) {
-            TranslateableRichTextViewer(
+            TranslatableRichTextViewer(
                 content = it,
                 canPreview = false,
                 tags = null,

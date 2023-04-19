@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -24,10 +23,8 @@ import androidx.compose.material.TextButton
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.RadioButtonChecked
-import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -45,14 +42,15 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.decodePublicKey
+import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.LoginPage
-import nostr.postr.bechToBytes
-import nostr.postr.toHex
 
 @Composable
 fun AccountSwitchBottomSheet(
@@ -82,90 +80,101 @@ fun AccountSwitchBottomSheet(
         accounts.forEach { acc ->
             val current = accountUser.pubkeyNpub() == acc.npub
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            val baseUser = try {
+                LocalCache.getOrCreateUser(decodePublicKey(acc.npub).toHexKey())
+            } catch (e: Exception) {
+                null
+            }
+
+            if (baseUser != null) {
+                val userState by baseUser.live().metadata.observeAsState()
+                val user = userState?.user ?: return
+
                 Row(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable {
-                            accountStateViewModel.switchUser(acc.npub)
-                        },
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
                         modifier = Modifier
-                            .padding(16.dp, 16.dp)
-                            .weight(1f),
+                            .weight(1f)
+                            .clickable {
+                                accountStateViewModel.switchUser(acc.npub)
+                            },
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
+                        Row(
                             modifier = Modifier
-                                .width(55.dp)
-                                .padding(0.dp)
+                                .padding(16.dp, 16.dp)
+                                .weight(1f),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            RobohashAsyncImageProxy(
-                                robot = acc.npub.bechToBytes("npub").toHex(),
-                                model = ResizeImage(acc.profilePicture, 55.dp),
-                                contentDescription = stringResource(R.string.profile_image),
-                                modifier = Modifier
-                                    .width(55.dp)
-                                    .height(55.dp)
-                                    .clip(shape = CircleShape)
-                            )
                             Box(
                                 modifier = Modifier
-                                    .size(20.dp)
-                                    .align(Alignment.TopEnd)
+                                    .width(55.dp)
+                                    .padding(0.dp)
                             ) {
-                                if (acc.hasPrivKey) {
+                                RobohashAsyncImageProxy(
+                                    robot = user.pubkeyHex,
+                                    model = ResizeImage(user.profilePicture(), 55.dp),
+                                    contentDescription = stringResource(R.string.profile_image),
+                                    modifier = Modifier
+                                        .width(55.dp)
+                                        .height(55.dp)
+                                        .clip(shape = CircleShape)
+                                )/*
+                                Box(
+                                    modifier = Modifier
+                                        .size(20.dp)
+                                        .align(Alignment.TopEnd)
+                                ) {
+                                    if (acc.hasPrivKey) {
+                                        Icon(
+                                            imageVector = Icons.Default.Key,
+                                            contentDescription = stringResource(R.string.account_switch_has_private_key),
+                                            modifier = Modifier.size(20.dp),
+                                            tint = MaterialTheme.colors.primary
+                                        )
+                                    } else {
+                                        Icon(
+                                            imageVector = Icons.Default.Visibility,
+                                            contentDescription = stringResource(R.string.account_switch_pubkey_only),
+                                            modifier = Modifier.size(20.dp),
+                                            tint = MaterialTheme.colors.primary
+                                        )
+                                    }
+                                }*/
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                val npubShortHex = acc.npub.toShortenHex()
+
+                                user.bestDisplayName()?.let {
+                                    Text(it)
+                                }
+
+                                Text(npubShortHex)
+                            }
+                            Column(modifier = Modifier.width(32.dp)) {
+                                if (current) {
                                     Icon(
-                                        imageVector = Icons.Default.Key,
-                                        contentDescription = stringResource(R.string.account_switch_has_private_key),
-                                        modifier = Modifier.size(20.dp),
-                                        tint = MaterialTheme.colors.primary
-                                    )
-                                } else {
-                                    Icon(
-                                        imageVector = Icons.Default.Visibility,
-                                        contentDescription = stringResource(R.string.account_switch_pubkey_only),
-                                        modifier = Modifier.size(20.dp),
-                                        tint = MaterialTheme.colors.primary
+                                        imageVector = Icons.Default.RadioButtonChecked,
+                                        contentDescription = stringResource(R.string.account_switch_active_account),
+                                        tint = MaterialTheme.colors.secondary
                                     )
                                 }
                             }
                         }
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            val npubShortHex = acc.npub.toShortenHex()
-
-                            if (acc.displayName != null && acc.displayName != npubShortHex) {
-                                Text(acc.displayName)
-                            }
-
-                            Text(npubShortHex)
-                        }
-                        Column(modifier = Modifier.width(32.dp)) {
-                            if (current) {
-                                Icon(
-                                    imageVector = Icons.Default.RadioButtonChecked,
-                                    contentDescription = stringResource(R.string.account_switch_active_account),
-                                    tint = MaterialTheme.colors.secondary
-                                )
-                            }
-                        }
                     }
-                }
 
-                IconButton(
-                    onClick = { accountStateViewModel.logOff(acc.npub) }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Logout,
-                        contentDescription = stringResource(R.string.log_out),
-                        tint = MaterialTheme.colors.onSurface
-                    )
+                    IconButton(
+                        onClick = { accountStateViewModel.logOff(acc.npub) }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Logout,
+                            contentDescription = stringResource(R.string.log_out),
+                            tint = MaterialTheme.colors.onSurface
+                        )
+                    }
                 }
             }
         }

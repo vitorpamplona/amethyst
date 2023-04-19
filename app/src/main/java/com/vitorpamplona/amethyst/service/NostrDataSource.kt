@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.service
 
 import android.util.Log
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
 import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
@@ -75,7 +76,7 @@ abstract class NostrDataSource(val debugName: String) {
                         is DeletionEvent -> LocalCache.consume(event)
 
                         is LnZapEvent -> {
-                            event.containedPost()?.let { onEvent(it, subscriptionId, relay) }
+                            event.zapRequest?.let { onEvent(it, subscriptionId, relay) }
                             LocalCache.consume(event)
                         }
                         is LnZapRequestEvent -> LocalCache.consume(event)
@@ -90,6 +91,7 @@ abstract class NostrDataSource(val debugName: String) {
                             LocalCache.consume(event)
                         }
                         is TextNoteEvent -> LocalCache.consume(event, relay)
+                        is PollNoteEvent -> LocalCache.consume(event, relay)
                         else -> {
                             Log.w("Event Not Supported", event.toJson())
                         }
@@ -152,7 +154,7 @@ abstract class NostrDataSource(val debugName: String) {
 
     // Refreshes observers in batches.
     private val bundler = BundledUpdate(250, Dispatchers.IO) {
-        println("DataSource: ${this.javaClass.simpleName} InvalidateFilters")
+        // println("DataSource: ${this.javaClass.simpleName} InvalidateFilters")
 
         // adds the time to perform the refresh into this delay
         // holding off new updates in case of heavy refresh routines.

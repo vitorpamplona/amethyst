@@ -49,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -114,20 +115,38 @@ class UpdateZapAmountViewModel : ViewModel() {
         account?.changeZapAmounts(amountSet)
 
         if (walletConnectRelay.text.isNotBlank() && walletConnectPubkey.text.isNotBlank()) {
+            val pubkeyHex = try {
+                decodePublicKey(walletConnectPubkey.text.trim()).toHexKey()
+            } catch (e: Exception) {
+                null
+            }
+
+            val relayUrl = walletConnectRelay.text.ifBlank { null }?.let {
+                var addedWSS =
+                    if (!it.startsWith("wss://") && !it.startsWith("ws://")) "wss://$it" else it
+                if (addedWSS.endsWith("/")) addedWSS = addedWSS.dropLast(1)
+
+                addedWSS
+            }
+
             val unverifiedPrivKey = walletConnectSecret.text.ifBlank { null }
-            val privKey = try {
+            val privKeyHex = try {
                 unverifiedPrivKey?.let { decodePublicKey(it).toHexKey() }
             } catch (e: Exception) {
                 null
             }
 
-            account?.changeZapPaymentRequest(
-                Nip47URI(
-                    walletConnectPubkey.text,
-                    walletConnectRelay.text.ifBlank { null },
-                    privKey
+            if (pubkeyHex != null) {
+                account?.changeZapPaymentRequest(
+                    Nip47URI(
+                        pubkeyHex,
+                        relayUrl,
+                        privKeyHex
+                    )
                 )
-            )
+            } else {
+                account?.changeZapPaymentRequest(null)
+            }
         } else {
             account?.changeZapPaymentRequest(null)
         }
@@ -147,17 +166,40 @@ class UpdateZapAmountViewModel : ViewModel() {
                 walletConnectSecret.text != (account?.zapPaymentRequest?.secret ?: "")
             )
     }
+
+    fun updateNIP47(uri: String) {
+        val contact = Nip47.parse(uri)
+        if (contact != null) {
+            walletConnectPubkey =
+                TextFieldValue(contact.pubKeyHex)
+            walletConnectRelay =
+                TextFieldValue(contact.relayUri ?: "")
+            walletConnectSecret =
+                TextFieldValue(contact.secret ?: "")
+        }
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun UpdateZapAmountDialog(onClose: () -> Unit, account: Account) {
+fun UpdateZapAmountDialog(onClose: () -> Unit, account: Account, nip47uri: String? = null) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val postViewModel: UpdateZapAmountViewModel = viewModel()
+    val uri = LocalUriHandler.current
 
     LaunchedEffect(account) {
         postViewModel.load(account)
+        if (nip47uri != null) {
+            try {
+                postViewModel.updateNIP47(nip47uri)
+            } catch (e: IllegalArgumentException) {
+                scope.launch {
+                    Toast.makeText(context, e.message, Toast.LENGTH_SHORT)
+                        .show()
+                }
+            }
+        }
     }
 
     Dialog(
@@ -281,6 +323,18 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, account: Account) {
                             stringResource(id = R.string.wallet_connect_service),
                             Modifier.weight(1f)
                         )
+
+                        IconButton(onClick = {
+                            runCatching { uri.openUri("https://nwc.getalby.com/apps/new?c=Amethyst") }
+                        }) {
+                            Icon(
+                                painter = painterResource(R.drawable.alby),
+                                null,
+                                modifier = Modifier.size(24.dp),
+                                tint = Color.Unspecified
+                            )
+                        }
+
                         IconButton(onClick = {
                             qrScanning = true
                         }) {
@@ -312,15 +366,7 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, account: Account) {
                             qrScanning = false
                             if (!it.isNullOrEmpty()) {
                                 try {
-                                    val contact = Nip47.parse(it)
-                                    if (contact != null) {
-                                        postViewModel.walletConnectPubkey =
-                                            TextFieldValue(contact.pubKeyHex)
-                                        postViewModel.walletConnectRelay =
-                                            TextFieldValue(contact.relayUri ?: "")
-                                        postViewModel.walletConnectSecret =
-                                            TextFieldValue(contact.secret ?: "")
-                                    }
+                                    postViewModel.updateNIP47(it)
                                 } catch (e: IllegalArgumentException) {
                                     scope.launch {
                                         Toast.makeText(context, e.message, Toast.LENGTH_SHORT)
@@ -370,7 +416,7 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, account: Account) {
                             onValueChange = { postViewModel.walletConnectRelay = it },
                             placeholder = {
                                 Text(
-                                    text = "relay.server.com",
+                                    text = "wss://relay.server.com",
                                     color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                                     maxLines = 1
                                 )

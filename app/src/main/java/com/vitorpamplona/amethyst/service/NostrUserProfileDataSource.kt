@@ -2,15 +2,7 @@ package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
-import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
-import com.vitorpamplona.amethyst.service.model.BookmarkListEvent
-import com.vitorpamplona.amethyst.service.model.ContactListEvent
-import com.vitorpamplona.amethyst.service.model.LnZapEvent
-import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
-import com.vitorpamplona.amethyst.service.model.MetadataEvent
-import com.vitorpamplona.amethyst.service.model.RepostEvent
-import com.vitorpamplona.amethyst.service.model.TextNoteEvent
+import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
@@ -43,7 +35,7 @@ object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
         TypedFilter(
             types = FeedType.values().toSet(),
             filter = JsonFilter(
-                kinds = listOf(TextNoteEvent.kind, RepostEvent.kind, LongTextNoteEvent.kind),
+                kinds = listOf(TextNoteEvent.kind, RepostEvent.kind, LongTextNoteEvent.kind, PollNoteEvent.kind),
                 authors = listOf(it.pubkeyHex),
                 limit = 200
             )

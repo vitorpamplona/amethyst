@@ -3,22 +3,7 @@ package com.vitorpamplona.amethyst.model
 import android.content.res.Resources
 import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
-import com.vitorpamplona.amethyst.service.model.BookmarkListEvent
-import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
-import com.vitorpamplona.amethyst.service.model.Contact
-import com.vitorpamplona.amethyst.service.model.ContactListEvent
-import com.vitorpamplona.amethyst.service.model.DeletionEvent
-import com.vitorpamplona.amethyst.service.model.IdentityClaim
-import com.vitorpamplona.amethyst.service.model.LnZapPaymentRequestEvent
-import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
-import com.vitorpamplona.amethyst.service.model.MetadataEvent
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
-import com.vitorpamplona.amethyst.service.model.ReactionEvent
-import com.vitorpamplona.amethyst.service.model.ReportEvent
-import com.vitorpamplona.amethyst.service.model.RepostEvent
-import com.vitorpamplona.amethyst.service.model.TextNoteEvent
+import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.relays.FeedType
@@ -69,8 +54,14 @@ class Account(
     val liveLanguages: AccountLiveData = AccountLiveData(this)
     val saveable: AccountLiveData = AccountLiveData(this)
 
+    var userProfileCache: User? = null
+
     fun userProfile(): User {
-        return LocalCache.getOrCreateUser(loggedIn.pubKey.toHexKey())
+        return userProfileCache ?: run {
+            val myUser: User = LocalCache.getOrCreateUser(loggedIn.pubKey.toHexKey())
+            userProfileCache = myUser
+            myUser
+        }
     }
 
     fun followingChannels(): List<Channel> {
@@ -152,13 +143,20 @@ class Account(
         }
     }
 
-    fun createZapRequestFor(note: Note): LnZapRequestEvent? {
+    fun createZapRequestFor(note: Note, pollOption: Int?, message: String = "", zapType: LnZapEvent.ZapType): LnZapRequestEvent? {
         if (!isWriteable()) return null
 
-        note.event?.let {
-            return LnZapRequestEvent.create(it, userProfile().latestContactList?.relays()?.keys?.ifEmpty { null } ?: localRelays.map { it.url }.toSet(), loggedIn.privKey!!)
+        note.event?.let { event ->
+            return LnZapRequestEvent.create(
+                event,
+                userProfile().latestContactList?.relays()?.keys?.ifEmpty { null }
+                    ?: localRelays.map { it.url }.toSet(),
+                loggedIn.privKey!!,
+                pollOption,
+                message,
+                zapType
+            )
         }
-
         return null
     }
 
@@ -177,13 +175,19 @@ class Account(
     }
 
     fun createZapRequestFor(user: User): LnZapRequestEvent? {
-        return createZapRequestFor(user.pubkeyHex)
+        return createZapRequestFor(user)
     }
 
-    fun createZapRequestFor(userPubKeyHex: String): LnZapRequestEvent? {
+    fun createZapRequestFor(userPubKeyHex: String, message: String = "", zapType: LnZapEvent.ZapType): LnZapRequestEvent? {
         if (!isWriteable()) return null
 
-        return LnZapRequestEvent.create(userPubKeyHex, userProfile().latestContactList?.relays()?.keys?.ifEmpty { null } ?: localRelays.map { it.url }.toSet(), loggedIn.privKey!!)
+        return LnZapRequestEvent.create(
+            userPubKeyHex,
+            userProfile().latestContactList?.relays()?.keys?.ifEmpty { null } ?: localRelays.map { it.url }.toSet(),
+            loggedIn.privKey!!,
+            message,
+            zapType
+        )
     }
 
     fun report(note: Note, type: ReportEvent.ReportType, content: String = "") {
@@ -373,10 +377,44 @@ class Account(
         LocalCache.consume(signedEvent)
     }
 
-    fun sendChannelMessage(message: String, toChannel: String, replyingTo: Note? = null, mentions: List<User>?) {
+    fun sendPoll(
+        message: String,
+        replyTo: List<Note>?,
+        mentions: List<User>?,
+        pollOptions: Map<Int, String>,
+        valueMaximum: Int?,
+        valueMinimum: Int?,
+        consensusThreshold: Int?,
+        closedAt: Int?
+    ) {
         if (!isWriteable()) return
 
-        val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
+        val repliesToHex = replyTo?.map { it.idHex }
+        val mentionsHex = mentions?.map { it.pubkeyHex }
+        val addresses = replyTo?.mapNotNull { it.address() }
+
+        val signedEvent = PollNoteEvent.create(
+            msg = message,
+            replyTos = repliesToHex,
+            mentions = mentionsHex,
+            addresses = addresses,
+            privateKey = loggedIn.privKey!!,
+            pollOptions = pollOptions,
+            valueMaximum = valueMaximum,
+            valueMinimum = valueMinimum,
+            consensusThreshold = consensusThreshold,
+            closedAt = closedAt
+        )
+        // println("Sending new PollNoteEvent: %s".format(signedEvent.toJson()))
+        Client.send(signedEvent)
+        LocalCache.consume(signedEvent)
+    }
+
+    fun sendChannelMessage(message: String, toChannel: String, replyTo: List<Note>?, mentions: List<User>?) {
+        if (!isWriteable()) return
+
+        // val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
+        val repliesToHex = replyTo?.map { it.idHex }
         val mentionsHex = mentions?.map { it.pubkeyHex }
 
         val signedEvent = ChannelMessageEvent.create(
@@ -390,12 +428,12 @@ class Account(
         LocalCache.consume(signedEvent, null)
     }
 
-    fun sendPrivateMessage(message: String, toUser: String, replyingTo: Note? = null) {
+    fun sendPrivateMessage(message: String, toUser: String, replyingTo: Note? = null, mentions: List<User>?) {
         if (!isWriteable()) return
         val user = LocalCache.users[toUser] ?: return
 
         val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
-        val mentionsHex = emptyList<String>()
+        val mentionsHex = mentions?.map { it.pubkeyHex }
 
         val signedEvent = PrivateDmEvent.create(
             recipientPubKey = user.pubkey(),
@@ -686,7 +724,8 @@ class Account(
         }
     }
 
-    fun isHidden(user: User) = user.pubkeyHex in hiddenUsers || user.pubkeyHex in transientHiddenUsers
+    fun isHidden(user: User) = isHidden(user.pubkeyHex)
+    fun isHidden(userHex: String) = userHex in hiddenUsers || userHex in transientHiddenUsers
 
     fun followingKeySet(): Set<HexKey> {
         return userProfile().cachedFollowingKeySet() ?: emptySet()
@@ -716,7 +755,7 @@ class Account(
             isAcceptableDirect(note) &&
             (
                 note.event !is RepostEvent ||
-                    (note.event is RepostEvent && note.replyTo?.firstOrNull { isAcceptableDirect(it) } != null)
+                    (note.replyTo?.firstOrNull { isAcceptableDirect(it) } != null)
                 ) // is not a reaction about a blocked post
     }
 
