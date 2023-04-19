@@ -54,8 +54,14 @@ class Account(
     val liveLanguages: AccountLiveData = AccountLiveData(this)
     val saveable: AccountLiveData = AccountLiveData(this)
 
+    var userProfileCache: User? = null
+
     fun userProfile(): User {
-        return LocalCache.getOrCreateUser(loggedIn.pubKey.toHexKey())
+        return userProfileCache ?: run {
+            val myUser: User = LocalCache.getOrCreateUser(loggedIn.pubKey.toHexKey())
+            userProfileCache = myUser
+            myUser
+        }
     }
 
     fun followingChannels(): List<Channel> {

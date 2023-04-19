@@ -43,7 +43,7 @@ fun ZapUserSetCompose(zapSetCard: ZapUserSetCard, isInnerNote: Boolean = false, 
 
     var isNew by remember { mutableStateOf<Boolean>(false) }
 
-    LaunchedEffect(key1 = zapSetCard) {
+    LaunchedEffect(key1 = zapSetCard.createdAt()) {
         withContext(Dispatchers.IO) {
             isNew = zapSetCard.createdAt > NotificationCache.load(routeForLastRead)
 

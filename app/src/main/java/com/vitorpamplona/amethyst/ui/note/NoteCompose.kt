@@ -96,7 +96,7 @@ fun NoteCompose(
         )
     }
 
-    Log.d("Time", "Note Compose in $elapsed for ${baseNote.event?.kind()} ${baseNote.event?.content()?.split("\n")?.get(0)?.take(100)}")
+    Log.d("Time", "Note Compose in $elapsed for ${baseNote.idHex} ${baseNote.event?.kind()} ${baseNote.event?.content()?.split("\n")?.get(0)?.take(100)}")
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -582,7 +582,9 @@ fun DisplayFollowingHashtagsInPost(
     var firstTag by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(key1 = noteEvent) {
-        firstTag = noteEvent.firstIsTaggedHashes(account.followingTagSet())
+        withContext(Dispatchers.IO) {
+            firstTag = noteEvent.firstIsTaggedHashes(account.followingTagSet())
+        }
     }
 
     Column() {
@@ -1108,12 +1110,14 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
     }
 
     LaunchedEffect(key1 = note) {
-        state = DropDownParams(
-            accountViewModel.isFollowing(note.author),
-            accountViewModel.isInPrivateBookmarks(note),
-            accountViewModel.isInPublicBookmarks(note),
-            accountViewModel.isLoggedUser(note.author)
-        )
+        withContext(Dispatchers.IO) {
+            state = DropDownParams(
+                accountViewModel.isFollowing(note.author),
+                accountViewModel.isInPrivateBookmarks(note),
+                accountViewModel.isInPublicBookmarks(note),
+                accountViewModel.isLoggedUser(note.author)
+            )
+        }
     }
 
     DropdownMenu(

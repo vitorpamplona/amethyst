@@ -595,7 +595,7 @@ object LocalCache {
         // Already processed this event.
         if (note.event != null) return
 
-        val zapRequest = event.containedPost()?.id?.let { getOrCreateNote(it) }
+        val zapRequest = event.zapRequest?.id?.let { getOrCreateNote(it) }
 
         val author = getOrCreateUser(event.pubKey)
         val mentions = event.zappedAuthor().mapNotNull { checkGetOrCreateUser(it) }
