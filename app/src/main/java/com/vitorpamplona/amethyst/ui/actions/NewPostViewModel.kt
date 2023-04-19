@@ -72,7 +72,7 @@ open class NewPostViewModel : ViewModel() {
                     this.mentions = currentMentions.plus(replyUser)
                 }
             }
-        } ?: {
+        } ?: run {
             replyTos = null
             mentions = null
         }
