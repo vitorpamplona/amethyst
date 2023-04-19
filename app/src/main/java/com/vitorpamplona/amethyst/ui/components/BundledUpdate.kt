@@ -57,9 +57,9 @@ class BundledInsert<T>(
     private var atomicSet = AtomicReference<Set<T>>(setOf<T>())
 
     fun invalidateList(newObject: T, onUpdate: (Set<T>) -> Unit) {
-        // atomicSet.updateAndGet() {
-        //    it + newObject
-        // }
+        atomicSet.updateAndGet() {
+            it + newObject
+        }
 
         if (onlyOneInBlock.getAndSet(true)) {
             return
@@ -68,10 +68,9 @@ class BundledInsert<T>(
         val scope = CoroutineScope(Job() + dispatcher)
         scope.launch {
             try {
-                // onUpdate(atomicSet.getAndSet(emptySet()))
-                onUpdate(emptySet())
+                onUpdate(atomicSet.getAndSet(emptySet()))
                 delay(delay)
-                // onUpdate(atomicSet.getAndSet(emptySet()))
+                onUpdate(atomicSet.getAndSet(emptySet()))
             } finally {
                 withContext(NonCancellable) {
                     onlyOneInBlock.set(false)
