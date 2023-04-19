@@ -255,7 +255,7 @@ object LocalCache {
             it.addReply(note)
         }
 
-        refreshObservers()
+        refreshObservers(note)
     }
 
     fun consume(event: BadgeDefinitionEvent) {
