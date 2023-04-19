@@ -23,14 +23,14 @@ object NotificationFeedFilter : AdditiveFeedFilter<Note>() {
 
         return collection.filter {
             it.event !is ChannelCreateEvent &&
-                    it.event !is ChannelMetadataEvent &&
-                    it.event !is LnZapRequestEvent &&
-                    it.event !is BadgeDefinitionEvent &&
-                    it.event !is BadgeProfilesEvent &&
-                    it.author !== loggedInUser &&
-                    it.event?.isTaggedUser(loggedInUserHex) ?: false &&
-                    (it.author == null || !account.isHidden(it.author!!.pubkeyHex)) &&
-                    tagsAnEventByUser(it, loggedInUser)
+                it.event !is ChannelMetadataEvent &&
+                it.event !is LnZapRequestEvent &&
+                it.event !is BadgeDefinitionEvent &&
+                it.event !is BadgeProfilesEvent &&
+                it.author !== loggedInUser &&
+                it.event?.isTaggedUser(loggedInUserHex) ?: false &&
+                (it.author == null || !account.isHidden(it.author!!.pubkeyHex)) &&
+                tagsAnEventByUser(it, loggedInUser)
         }
     }
 
