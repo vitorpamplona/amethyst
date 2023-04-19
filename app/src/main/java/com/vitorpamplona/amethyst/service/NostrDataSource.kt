@@ -76,7 +76,7 @@ abstract class NostrDataSource(val debugName: String) {
                         is DeletionEvent -> LocalCache.consume(event)
 
                         is LnZapEvent -> {
-                            event.containedPost()?.let { onEvent(it, subscriptionId, relay) }
+                            event.zapRequest?.let { onEvent(it, subscriptionId, relay) }
                             LocalCache.consume(event)
                         }
                         is LnZapRequestEvent -> LocalCache.consume(event)
