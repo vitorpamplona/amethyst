@@ -18,14 +18,14 @@ object HashtagFeedFilter : AdditiveFeedFilter<Note>() {
     }
 
     override fun feed(): List<Note> {
-        return sort(applyFilter(LocalCache.notes.values))
+        return sort(innerApplyFilter(LocalCache.notes.values))
     }
 
     override fun applyFilter(collection: Set<Note>): List<Note> {
         return applyFilter(collection)
     }
 
-    private fun applyFilter(collection: Collection<Note>): List<Note> {
+    private fun innerApplyFilter(collection: Collection<Note>): List<Note> {
         val myTag = tag ?: return emptyList()
 
         return collection

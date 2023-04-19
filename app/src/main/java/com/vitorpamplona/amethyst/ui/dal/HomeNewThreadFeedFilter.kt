@@ -12,17 +12,17 @@ object HomeNewThreadFeedFilter : AdditiveFeedFilter<Note>() {
     lateinit var account: Account
 
     override fun feed(): List<Note> {
-        val notes = applyFilter(LocalCache.notes.values)
-        val longFormNotes = applyFilter(LocalCache.addressables.values)
+        val notes = innerApplyFilter(LocalCache.notes.values)
+        val longFormNotes = innerApplyFilter(LocalCache.addressables.values)
 
         return sort(notes + longFormNotes)
     }
 
     override fun applyFilter(collection: Set<Note>): List<Note> {
-        return applyFilter(collection)
+        return innerApplyFilter(collection)
     }
 
-    private fun applyFilter(collection: Collection<Note>): List<Note> {
+    private fun innerApplyFilter(collection: Collection<Note>): List<Note> {
         val user = account.userProfile()
         val followingKeySet = user.cachedFollowingKeySet()
         val followingTagSet = user.cachedFollowingTagSet()
