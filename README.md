@@ -85,7 +85,7 @@ Lastly, the user's account information (priv key/pub key) is stored in the Andro
 ## Setup
 
 Make sure to have the following pre-requisites installed:
-1. Java 11
+1. Java 17
 2. Android Studio
 3. Android 8.0+ Phone or Emulation setup
 
