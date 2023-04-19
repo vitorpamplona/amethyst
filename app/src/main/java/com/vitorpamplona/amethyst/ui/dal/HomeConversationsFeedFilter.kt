@@ -13,11 +13,11 @@ object HomeConversationsFeedFilter : AdditiveFeedFilter<Note>() {
         return sort(innerApplyFilter(LocalCache.notes.values))
     }
 
-    override fun applyFilter(collection: Set<Note>): List<Note> {
+    override fun applyFilter(collection: Set<Note>): Set<Note> {
         return innerApplyFilter(collection)
     }
 
-    private fun innerApplyFilter(collection: Collection<Note>): List<Note> {
+    private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val user = account.userProfile()
         val followingKeySet = user.cachedFollowingKeySet()
         val followingTagSet = user.cachedFollowingTagSet()
@@ -31,10 +31,10 @@ object HomeConversationsFeedFilter : AdditiveFeedFilter<Note>() {
                     it.author?.let { !account.isHidden(it) } ?: true &&
                     !it.isNewThread()
             }
-            .toList()
+            .toSet()
     }
 
-    override fun sort(collection: List<Note>): List<Note> {
+    override fun sort(collection: Set<Note>): List<Note> {
         return collection.sortedBy { it.createdAt() }.reversed()
     }
 }

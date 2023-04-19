@@ -14,7 +14,9 @@ import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
+import com.vitorpamplona.amethyst.ui.components.BundledInsert
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
+import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
 import kotlinx.coroutines.CoroutineScope
@@ -29,7 +31,7 @@ import kotlin.time.measureTimedValue
 
 class NotificationViewModel : CardFeedViewModel(NotificationFeedFilter)
 
-open class CardFeedViewModel(val dataSource: FeedFilter<Note>) : ViewModel() {
+open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
     private val _feedContent = MutableStateFlow<CardFeedState>(CardFeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
 
@@ -45,9 +47,9 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>) : ViewModel() {
 
     @Synchronized
     private fun refreshSuspended() {
-        val notes = dataSource.loadTop()
+        val notes = localFilter.loadTop()
 
-        val thisAccount = (dataSource as? NotificationFeedFilter)?.account
+        val thisAccount = (localFilter as? NotificationFeedFilter)?.account
         val lastNotesCopy = if (thisAccount == lastAccount) lastNotes else null
 
         val oldNotesState = _feedContent.value
@@ -55,18 +57,18 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>) : ViewModel() {
             val newCards = convertToCard(notes.minus(lastNotesCopy))
             if (newCards.isNotEmpty()) {
                 lastNotes = notes
-                lastAccount = (dataSource as? NotificationFeedFilter)?.account
+                lastAccount = (localFilter as? NotificationFeedFilter)?.account
                 updateFeed((oldNotesState.feed.value + newCards).distinctBy { it.id() }.sortedBy { it.createdAt() }.reversed())
             }
         } else {
             val cards = convertToCard(notes)
             lastNotes = notes
-            lastAccount = (dataSource as? NotificationFeedFilter)?.account
+            lastAccount = (localFilter as? NotificationFeedFilter)?.account
             updateFeed(cards)
         }
     }
 
-    private fun convertToCard(notes: List<Note>): List<Card> {
+    private fun convertToCard(notes: Collection<Note>): List<Card> {
         val reactionsPerEvent = mutableMapOf<Note, MutableList<Note>>()
         notes
             .filter { it.event is ReactionEvent }
@@ -171,6 +173,28 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>) : ViewModel() {
         }
     }
 
+    fun refreshFromOldState(newItems: Set<Note>) {
+        val oldNotesState = _feedContent.value
+
+        val thisAccount = (localFilter as? NotificationFeedFilter)?.account
+        val lastNotesCopy = if (thisAccount == lastAccount) lastNotes else null
+
+        if (lastNotesCopy != null && localFilter is AdditiveFeedFilter && oldNotesState is CardFeedState.Loaded) {
+            val filteredNewList = localFilter.applyFilter(newItems)
+            val actuallyNew = filteredNewList.minus(lastNotesCopy)
+
+            val newCards = convertToCard(actuallyNew)
+            if (newCards.isNotEmpty()) {
+                lastNotes = lastNotesCopy + newItems
+                lastAccount = (localFilter as? NotificationFeedFilter)?.account
+                updateFeed((oldNotesState.feed.value + newCards).distinctBy { it.id() }.sortedBy { it.createdAt() }.reversed())
+            }
+        } else {
+            // Refresh Everything
+            refreshSuspended()
+        }
+    }
+
     @OptIn(ExperimentalTime::class)
     private val bundler = BundledUpdate(250, Dispatchers.IO) {
         // adds the time to perform the refresh into this delay
@@ -180,13 +204,29 @@ open class CardFeedViewModel(val dataSource: FeedFilter<Note>) : ViewModel() {
         }
         Log.d("Time", "${this.javaClass.simpleName} Card update $elapsed")
     }
+    private val bundlerInsert = BundledInsert<Set<Note>>(250, Dispatchers.IO)
 
     fun invalidateData() {
         bundler.invalidate()
     }
 
+    @OptIn(ExperimentalTime::class)
+    fun invalidateInsertData(newItems: Set<Note>) {
+        bundlerInsert.invalidateList(newItems) {
+            val (value, elapsed) = measureTimedValue {
+                refreshFromOldState(it.flatten().toSet())
+            }
+            Log.d("Time", "${this.javaClass.simpleName} Card additive update $elapsed")
+        }
+    }
+
     private val cacheListener: (Set<Note>) -> Unit = { newNotes ->
-        invalidateData()
+        if (localFilter is AdditiveFeedFilter && _feedContent.value is CardFeedState.Loaded) {
+            invalidateInsertData(newNotes)
+        } else {
+            // Refresh Everything
+            invalidateData()
+        }
     }
 
     init {

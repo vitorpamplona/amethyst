@@ -21,12 +21,12 @@ object HashtagFeedFilter : AdditiveFeedFilter<Note>() {
         return sort(innerApplyFilter(LocalCache.notes.values))
     }
 
-    override fun applyFilter(collection: Set<Note>): List<Note> {
+    override fun applyFilter(collection: Set<Note>): Set<Note> {
         return applyFilter(collection)
     }
 
-    private fun innerApplyFilter(collection: Collection<Note>): List<Note> {
-        val myTag = tag ?: return emptyList()
+    private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
+        val myTag = tag ?: return emptySet()
 
         return collection
             .asSequence()
@@ -40,10 +40,10 @@ object HashtagFeedFilter : AdditiveFeedFilter<Note>() {
                     it.event?.isTaggedHash(myTag) == true
             }
             .filter { account.isAcceptable(it) }
-            .toList()
+            .toSet()
     }
 
-    override fun sort(collection: List<Note>): List<Note> {
+    override fun sort(collection: Set<Note>): List<Note> {
         return collection.sortedBy { it.createdAt() }.reversed()
     }
 }

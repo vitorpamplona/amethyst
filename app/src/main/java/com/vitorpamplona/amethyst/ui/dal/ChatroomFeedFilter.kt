@@ -31,22 +31,22 @@ object ChatroomFeedFilter : AdditiveFeedFilter<Note>() {
             .reversed()
     }
 
-    override fun applyFilter(collection: Set<Note>): List<Note> {
+    override fun applyFilter(collection: Set<Note>): Set<Note> {
         val myAccount = account
         val myUser = withUser
 
-        if (myAccount == null || myUser == null) return emptyList()
+        if (myAccount == null || myUser == null) return emptySet()
 
         val messages = myAccount
             .userProfile()
-            .privateChatrooms[myUser] ?: return emptyList()
+            .privateChatrooms[myUser] ?: return emptySet()
 
         return collection
-            .filter { it in messages.roomMessages }
-            .filter { account?.isAcceptable(it) == true }
+            .filter { it in messages.roomMessages && account?.isAcceptable(it) == true }
+            .toSet()
     }
 
-    override fun sort(collection: List<Note>): List<Note> {
+    override fun sort(collection: Set<Note>): List<Note> {
         return collection.sortedBy { it.createdAt() }.reversed()
     }
 }

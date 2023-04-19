@@ -15,11 +15,11 @@ object GlobalFeedFilter : AdditiveFeedFilter<Note>() {
         return sort(notes + longFormNotes)
     }
 
-    override fun applyFilter(collection: Set<Note>): List<Note> {
+    override fun applyFilter(collection: Set<Note>): Set<Note> {
         return innerApplyFilter(collection)
     }
 
-    private fun innerApplyFilter(collection: Collection<Note>): List<Note> {
+    private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val followChannels = account.followingChannels
         val followUsers = account.followingKeySet()
         val now = System.currentTimeMillis() / 1000
@@ -41,10 +41,10 @@ object GlobalFeedFilter : AdditiveFeedFilter<Note>() {
                 // Do not show notes with the creation time exceeding the current time, as they will always stay at the top of the global feed, which is cheating.
                 it.createdAt()!! <= now
             }
-            .toList()
+            .toSet()
     }
 
-    override fun sort(collection: List<Note>): List<Note> {
+    override fun sort(collection: Set<Note>): List<Note> {
         return collection.sortedBy { it.createdAt() }.reversed()
     }
 }

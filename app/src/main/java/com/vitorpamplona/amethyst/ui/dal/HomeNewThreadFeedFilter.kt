@@ -18,11 +18,11 @@ object HomeNewThreadFeedFilter : AdditiveFeedFilter<Note>() {
         return sort(notes + longFormNotes)
     }
 
-    override fun applyFilter(collection: Set<Note>): List<Note> {
+    override fun applyFilter(collection: Set<Note>): Set<Note> {
         return innerApplyFilter(collection)
     }
 
-    private fun innerApplyFilter(collection: Collection<Note>): List<Note> {
+    private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val user = account.userProfile()
         val followingKeySet = user.cachedFollowingKeySet()
         val followingTagSet = user.cachedFollowingTagSet()
@@ -36,10 +36,10 @@ object HomeNewThreadFeedFilter : AdditiveFeedFilter<Note>() {
                     it.author?.let { !account.isHidden(it.pubkeyHex) } ?: true &&
                     it.isNewThread()
             }
-            .toList()
+            .toSet()
     }
 
-    override fun sort(collection: List<Note>): List<Note> {
+    override fun sort(collection: Set<Note>): List<Note> {
         return collection.sortedBy { it.createdAt() }.reversed()
     }
 }

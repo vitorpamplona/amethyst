@@ -23,13 +23,13 @@ object ChannelFeedFilter : AdditiveFeedFilter<Note>() {
             .reversed()
     }
 
-    override fun applyFilter(collection: Set<Note>): List<Note> {
+    override fun applyFilter(collection: Set<Note>): Set<Note> {
         return collection
-            .filter { it.idHex in channel.notes.keys }
-            .filter { account.isAcceptable(it) }
+            .filter { it.idHex in channel.notes.keys && account.isAcceptable(it) }
+            .toSet()
     }
 
-    override fun sort(collection: List<Note>): List<Note> {
+    override fun sort(collection: Set<Note>): List<Note> {
         return collection.sortedBy { it.createdAt() }.reversed()
     }
 }
