@@ -72,14 +72,13 @@ open class NewPostViewModel : ViewModel() {
                     this.mentions = currentMentions.plus(replyUser)
                 }
             }
-        } ?: {
+        } ?: run {
             replyTos = null
             mentions = null
         }
 
         quote?.let {
             message = TextFieldValue(message.text + "\n\n@${it.idNote()}")
-            this.replyTos = emptyList<Note>()
         }
 
         canAddInvoice = account.userProfile().info?.lnAddress() != null
