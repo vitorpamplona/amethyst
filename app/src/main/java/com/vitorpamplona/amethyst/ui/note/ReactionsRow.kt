@@ -9,11 +9,12 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
@@ -87,26 +88,38 @@ fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel) {
         NewPostView({ wantsToQuote = null }, null, wantsToQuote, account)
     }
 
-    Row(
-        modifier = Modifier
-            .padding(top = 8.dp)
-            .fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+    Spacer(modifier = Modifier.height(8.dp))
+
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(5),
+        modifier = Modifier.height(20.dp),
+        userScrollEnabled = false,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalArrangement = Arrangement.Center
     ) {
-        ReplyReaction(baseNote, accountViewModel, Modifier.weight(1f)) {
-            wantsToReplyTo = baseNote
+        items(5) {
+            when (it) {
+                0 -> Row(verticalAlignment = CenterVertically) {
+                    ReplyReaction(baseNote, accountViewModel) {
+                        wantsToReplyTo = baseNote
+                    }
+                }
+                1 -> Row(verticalAlignment = CenterVertically) {
+                    BoostReaction(baseNote, accountViewModel) {
+                        wantsToQuote = baseNote
+                    }
+                }
+                2 -> Row(verticalAlignment = CenterVertically) {
+                    LikeReaction(baseNote, accountViewModel)
+                }
+                3 -> Row(verticalAlignment = CenterVertically) {
+                    ZapReaction(baseNote, accountViewModel)
+                }
+                4 -> Row(verticalAlignment = CenterVertically) {
+                    ViewCountReaction(baseNote.idHex)
+                }
+            }
         }
-
-        BoostReaction(baseNote, accountViewModel, Modifier.weight(1f)) {
-            wantsToQuote = baseNote
-        }
-
-        LikeReaction(baseNote, accountViewModel, Modifier.weight(1f))
-
-        ZapReaction(baseNote, accountViewModel, Modifier.weight(1f))
-
-        ViewCountReaction(baseNote, Modifier.weight(1f))
     }
 }
 
@@ -114,14 +127,12 @@ fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel) {
 fun ReplyReaction(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    textModifier: Modifier = Modifier,
     showCounter: Boolean = true,
     onPress: () -> Unit
 ) {
     val repliesState by baseNote.live().replies.observeAsState()
     val replies = repliesState?.note?.replies ?: emptySet()
 
-    val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -141,29 +152,32 @@ fun ReplyReaction(
             }
         }
     ) {
-        Icon(
-            painter = painterResource(R.drawable.ic_comment),
-            null,
-            modifier = Modifier.size(15.dp),
-            tint = grayTint
-        )
+        ReplyIcon()
     }
 
     if (showCounter) {
         Text(
             " ${showCount(replies.size)}",
             fontSize = 14.sp,
-            color = grayTint,
-            modifier = textModifier
+            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
         )
     }
+}
+
+@Composable
+private fun ReplyIcon() {
+    Icon(
+        painter = painterResource(R.drawable.ic_comment),
+        null,
+        modifier = Modifier.size(15.dp),
+        tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+    )
 }
 
 @Composable
 private fun BoostReaction(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    textModifier: Modifier = Modifier,
     onQuotePress: () -> Unit
 ) {
     val boostsState by baseNote.live().boosts.observeAsState()
@@ -229,16 +243,14 @@ private fun BoostReaction(
     Text(
         " ${showCount(boostedNote?.boosts?.size)}",
         fontSize = 14.sp,
-        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-        modifier = textModifier
+        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
     )
 }
 
 @Composable
 fun LikeReaction(
     baseNote: Note,
-    accountViewModel: AccountViewModel,
-    textModifier: Modifier = Modifier
+    accountViewModel: AccountViewModel
 ) {
     val reactionsState by baseNote.live().reactions.observeAsState()
     val reactedNote = reactionsState?.note ?: return
@@ -287,8 +299,7 @@ fun LikeReaction(
     Text(
         " ${showCount(reactedNote.reactions.size)}",
         fontSize = 14.sp,
-        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-        modifier = textModifier
+        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
     )
 }
 
@@ -457,13 +468,13 @@ fun ZapReaction(
 }
 
 @Composable
-private fun ViewCountReaction(baseNote: Note, textModifier: Modifier = Modifier) {
+private fun ViewCountReaction(idHex: String) {
     val uri = LocalUriHandler.current
     val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
 
     IconButton(
         modifier = Modifier.size(20.dp),
-        onClick = { uri.openUri("https://counter.amethyst.social/${baseNote.idHex}/") }
+        onClick = { uri.openUri("https://counter.amethyst.social/$idHex/") }
     ) {
         Icon(
             imageVector = Icons.Outlined.BarChart,
@@ -473,10 +484,10 @@ private fun ViewCountReaction(baseNote: Note, textModifier: Modifier = Modifier)
         )
     }
 
-    Row(modifier = textModifier) {
+    Row() {
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
-                .data("https://counter.amethyst.social/${baseNote.idHex}.svg?label=+&color=00000000")
+                .data("https://counter.amethyst.social/$idHex.svg?label=+&color=00000000")
                 .diskCachePolicy(CachePolicy.DISABLED)
                 .memoryCachePolicy(CachePolicy.ENABLED)
                 .build(),
