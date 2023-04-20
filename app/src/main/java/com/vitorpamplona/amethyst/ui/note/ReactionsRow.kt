@@ -13,8 +13,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
@@ -90,35 +88,25 @@ fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel) {
 
     Spacer(modifier = Modifier.height(8.dp))
 
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(5),
-        modifier = Modifier.height(20.dp),
-        userScrollEnabled = false,
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalArrangement = Arrangement.Center
-    ) {
-        items(5) {
-            when (it) {
-                0 -> Row(verticalAlignment = CenterVertically) {
-                    ReplyReaction(baseNote, accountViewModel) {
-                        wantsToReplyTo = baseNote
-                    }
-                }
-                1 -> Row(verticalAlignment = CenterVertically) {
-                    BoostReaction(baseNote, accountViewModel) {
-                        wantsToQuote = baseNote
-                    }
-                }
-                2 -> Row(verticalAlignment = CenterVertically) {
-                    LikeReaction(baseNote, accountViewModel)
-                }
-                3 -> Row(verticalAlignment = CenterVertically) {
-                    ZapReaction(baseNote, accountViewModel)
-                }
-                4 -> Row(verticalAlignment = CenterVertically) {
-                    ViewCountReaction(baseNote.idHex)
-                }
+    Row(verticalAlignment = CenterVertically) {
+        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
+            ReplyReaction(baseNote, accountViewModel) {
+                wantsToReplyTo = baseNote
             }
+        }
+        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
+            BoostReaction(baseNote, accountViewModel) {
+                wantsToQuote = baseNote
+            }
+        }
+        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
+            LikeReaction(baseNote, accountViewModel)
+        }
+        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
+            ZapReaction(baseNote, accountViewModel)
+        }
+        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
+            ViewCountReaction(baseNote.idHex)
         }
     }
 }
