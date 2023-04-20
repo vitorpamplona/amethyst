@@ -151,10 +151,6 @@ dependencies {
     // Permission to upload pictures:
     implementation "com.google.accompanist:accompanist-permissions:$accompanist_version"
 
-    // tabs for user profiles
-    implementation "com.google.accompanist:accompanist-pager:$accompanist_version" // Pager
-    implementation "com.google.accompanist:accompanist-pager-indicators:$accompanist_version"
-
     // Parses URLs from Text:
     implementation "io.github.url-detector:url-detector:0.1.23"
 
