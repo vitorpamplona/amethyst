@@ -76,7 +76,7 @@ object Client : RelayPool.Listener {
                 }
             } else {
                 /** temporary connection */
-                Relay(relay, false, true, emptySet()).requestAndWatch() {
+                Relay(relay, false, true, emptySet(), false).requestAndWatch() {
                     it.send(signedEvent)
                     it.disconnect()
                 }

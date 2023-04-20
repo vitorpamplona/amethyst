@@ -10,7 +10,7 @@ object Constants {
 
     fun convertDefaultRelays(): Array<Relay> {
         return defaultRelays.map {
-            Relay(it.url, it.read, it.write, it.feedTypes)
+            Relay(it.url, it.read, it.write, it.feedTypes, false)
         }.toTypedArray()
     }
 

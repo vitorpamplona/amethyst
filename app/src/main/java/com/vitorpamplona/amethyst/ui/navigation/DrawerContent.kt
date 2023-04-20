@@ -46,6 +46,7 @@ import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
@@ -100,7 +101,12 @@ fun DrawerContent(
 }
 
 @Composable
-fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffoldState: ScaffoldState, navController: NavController) {
+fun ProfileContent(
+    baseAccountUser: User,
+    modifier: Modifier = Modifier,
+    scaffoldState: ScaffoldState,
+    navController: NavController
+) {
     val coroutineScope = rememberCoroutineScope()
 
     val accountUserState by baseAccountUser.live().metadata.observeAsState()
@@ -197,11 +203,17 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
                     })
             ) {
                 Row() {
-                    Text("${accountUserFollows.cachedFollowCount() ?: "--"}", fontWeight = FontWeight.Bold)
+                    Text(
+                        "${accountUserFollows.cachedFollowCount() ?: "--"}",
+                        fontWeight = FontWeight.Bold
+                    )
                     Text(stringResource(R.string.following))
                 }
                 Row(modifier = Modifier.padding(start = 10.dp)) {
-                    Text("${accountUserFollows.cachedFollowerCount() ?: "--"}", fontWeight = FontWeight.Bold)
+                    Text(
+                        "${accountUserFollows.cachedFollowerCount() ?: "--"}",
+                        fontWeight = FontWeight.Bold
+                    )
                     Text(stringResource(R.string.followers))
                 }
             }
@@ -221,6 +233,7 @@ fun ListContent(
 ) {
     val coroutineScope = rememberCoroutineScope()
     var backupDialogOpen by remember { mutableStateOf(false) }
+    var checked by remember { mutableStateOf(account.useProxy) }
 
     Column(modifier = modifier.fillMaxHeight()) {
         if (accountUser != null) {
@@ -257,6 +270,19 @@ fun ListContent(
             icon = R.drawable.ic_key,
             tint = MaterialTheme.colors.onBackground,
             onClick = { backupDialogOpen = true }
+        )
+
+        IconRow(
+            title = "Enable Tor",
+            icon = R.drawable.ic_topics,
+            tint = MaterialTheme.colors.onBackground,
+            onClick = {
+                checked = !checked
+                println("changed tor to $checked")
+                account.useProxy = checked
+                ServiceManager.pause()
+                ServiceManager.start()
+            }
         )
 
         Spacer(modifier = Modifier.weight(1f))

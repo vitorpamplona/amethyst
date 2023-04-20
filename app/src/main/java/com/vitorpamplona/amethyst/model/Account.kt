@@ -45,7 +45,8 @@ class Account(
     var zapPaymentRequest: Nip47URI? = null,
     var hideDeleteRequestDialog: Boolean = false,
     var hideBlockAlertDialog: Boolean = false,
-    var backupContactList: ContactListEvent? = null
+    var backupContactList: ContactListEvent? = null,
+    var useProxy: Boolean = false
 ) {
     var transientHiddenUsers: Set<String> = setOf()
 
@@ -692,7 +693,7 @@ class Account(
     fun activeRelays(): Array<Relay>? {
         var usersRelayList = userProfile().latestContactList?.relays()?.map {
             val localFeedTypes = localRelays.firstOrNull() { localRelay -> localRelay.url == it.key }?.feedTypes ?: FeedType.values().toSet()
-            Relay(it.key, it.value.read, it.value.write, localFeedTypes)
+            Relay(it.key, it.value.read, it.value.write, localFeedTypes, useProxy)
         } ?: return null
 
         // Ugly, but forces nostr.band as the only search-supporting relay today.
@@ -702,7 +703,8 @@ class Account(
                 Constants.forcedRelayForSearch.url,
                 Constants.forcedRelayForSearch.read,
                 Constants.forcedRelayForSearch.write,
-                Constants.forcedRelayForSearch.feedTypes
+                Constants.forcedRelayForSearch.feedTypes,
+                useProxy
             )
         }
 
@@ -711,7 +713,7 @@ class Account(
 
     fun convertLocalRelays(): Array<Relay> {
         return localRelays.map {
-            Relay(it.url, it.read, it.write, it.feedTypes)
+            Relay(it.url, it.read, it.write, it.feedTypes, useProxy)
         }.toTypedArray()
     }
 
