@@ -32,6 +32,8 @@ import com.halilibo.richtext.markdown.MarkdownParseOptions
 import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.material.MaterialRichText
 import com.halilibo.richtext.ui.resolveDefaults
+import com.linkedin.urls.detection.UrlDetector
+import com.linkedin.urls.detection.UrlDetectorOptions
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -132,22 +134,13 @@ fun RichTextViewer(
                 )
             }
         } else {
-            val imagesForPager = mutableListOf<String>()
-
-            content.split('\n').forEach { paragraph ->
-                paragraph.split(' ').forEach { word: String ->
-                    // sequence of images will render in a slideview
-                    if (isValidURL(word)) {
-                        val removedParamsFromUrl = word.split("?")[0].lowercase()
-                        if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-                            imagesForPager.add(word)
-                        }
-                        if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-                            imagesForPager.add(word)
-                        }
-                    }
-                }
+            val urls = UrlDetector(content, UrlDetectorOptions.Default).detect()
+            val urlSet = urls.mapTo(LinkedHashSet(urls.size)) { it.originalUrl }
+            val imagesForPager = urlSet.filter { fullUrl ->
+                val removedParamsFromUrl = fullUrl.split("?")[0].lowercase()
+                imageExtensions.any { removedParamsFromUrl.endsWith(it) } || videoExtensions.any { removedParamsFromUrl.endsWith(it) }
             }
+            val imagesForPagerSet = imagesForPager.toSet()
 
             // FlowRow doesn't work well with paragraphs. So we need to split them
             content.split('\n').forEach { paragraph ->
@@ -156,15 +149,10 @@ fun RichTextViewer(
                     s.forEach { word: String ->
                         if (canPreview) {
                             // Explicit URL
-                            if (isValidURL(word)) {
-                                val removedParamsFromUrl = word.split("?")[0].lowercase()
-                                if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-                                    ZoomableImageView(word, imagesForPager)
-                                } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-                                    ZoomableImageView(word, imagesForPager)
-                                } else {
-                                    UrlPreview(word, "$word ")
-                                }
+                            if (imagesForPagerSet.contains(word)) {
+                                ZoomableImageView(word, imagesForPager)
+                            } else if (urlSet.contains(word)) {
+                                UrlPreview(word, "$word ")
                             } else if (word.startsWith("lnbc", true)) {
                                 MayBeInvoicePreview(word)
                             } else if (word.startsWith("lnurl", true)) {
@@ -214,7 +202,7 @@ fun RichTextViewer(
                                 )
                             }
                         } else {
-                            if (isValidURL(word)) {
+                            if (urlSet.contains(word)) {
                                 ClickableUrl("$word ", word)
                             } else if (word.startsWith("lnurl", true)) {
                                 val lnWithdrawal = LnWithdrawalUtil.findWithdrawal(word)
