@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import nostr.postr.Persona
 import nostr.postr.bechToBytes
+import java.net.InetSocketAddress
+import java.net.Proxy
 import java.util.regex.Pattern
 
 class AccountStateViewModel() : ViewModel() {
@@ -39,21 +41,22 @@ class AccountStateViewModel() : ViewModel() {
         }
     }
 
-    fun startUI(key: String) {
+    fun startUI(key: String, useProxy: Boolean) {
         val pattern = Pattern.compile(".+@.+\\.[a-z]+")
         val parsed = Nip19.uriToRoute(key)
         val pubKeyParsed = parsed?.hex?.toByteArray()
+        var proxy = if (useProxy) Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", 9050)) else null
 
         val account =
             if (key.startsWith("nsec")) {
-                Account(Persona(privKey = key.bechToBytes()))
+                Account(Persona(privKey = key.bechToBytes()), proxy = proxy)
             } else if (pubKeyParsed != null) {
-                Account(Persona(pubKey = pubKeyParsed))
+                Account(Persona(pubKey = pubKeyParsed), proxy = proxy)
             } else if (pattern.matcher(key).matches()) {
                 // Evaluate NIP-5
-                Account(Persona())
+                Account(Persona(), proxy = proxy)
             } else {
-                Account(Persona(Hex.decode(key)))
+                Account(Persona(Hex.decode(key)), proxy = proxy)
             }
 
         LocalPreferences.updatePrefsForLogin(account)
@@ -66,8 +69,9 @@ class AccountStateViewModel() : ViewModel() {
         tryLoginExistingAccount()
     }
 
-    fun newKey() {
-        val account = Account(Persona())
+    fun newKey(useProxy: Boolean) {
+        var proxy = if (useProxy) Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", 9050)) else null
+        val account = Account(Persona(), proxy = proxy)
         // saves to local preferences
         LocalPreferences.updatePrefsForLogin(account)
         startUI(account)

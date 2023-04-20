@@ -10,7 +10,6 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
-import java.net.InetSocketAddress
 import java.net.Proxy
 import java.util.Date
 
@@ -23,10 +22,8 @@ class Relay(
     var read: Boolean = true,
     var write: Boolean = true,
     var activeTypes: Set<FeedType> = FeedType.values().toSet(),
-    useProxy: Boolean
+    proxy: Proxy?
 ) {
-    private var proxy = if (useProxy) Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", 9050)) else null
-
     private val httpClient = OkHttpClient.Builder()
         .proxy(proxy)
         .followRedirects(true)

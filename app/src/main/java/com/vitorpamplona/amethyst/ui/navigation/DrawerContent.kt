@@ -54,6 +54,8 @@ import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountBackupDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.launch
+import java.net.InetSocketAddress
+import java.net.Proxy
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
@@ -233,7 +235,7 @@ fun ListContent(
 ) {
     val coroutineScope = rememberCoroutineScope()
     var backupDialogOpen by remember { mutableStateOf(false) }
-    var checked by remember { mutableStateOf(account.useProxy) }
+    var checked by remember { mutableStateOf(account.proxy != null) }
 
     Column(modifier = modifier.fillMaxHeight()) {
         if (accountUser != null) {
@@ -279,7 +281,7 @@ fun ListContent(
             onClick = {
                 checked = !checked
                 println("changed tor to $checked")
-                account.useProxy = checked
+                account.proxy = if (checked) Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", 9050)) else null
                 ServiceManager.pause()
                 ServiceManager.start()
             }

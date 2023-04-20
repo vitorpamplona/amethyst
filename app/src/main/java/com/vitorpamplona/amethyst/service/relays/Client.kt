@@ -76,7 +76,8 @@ object Client : RelayPool.Listener {
                 }
             } else {
                 /** temporary connection */
-                Relay(relay, false, true, emptySet(), false).requestAndWatch() {
+                /** TODO: set the proxy for this temporary connection */
+                Relay(relay, false, true, emptySet(), null).requestAndWatch() {
                     it.send(signedEvent)
                     it.disconnect()
                 }
