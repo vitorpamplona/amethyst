@@ -180,7 +180,7 @@ fun RichTextViewer(
                                         navController
                                     )
                                 } else if (hashTagsPattern.matcher(word).matches()) {
-                                    HashTag(word, accountViewModel, navController)
+                                    HashTag(word, navController)
                                 } else {
                                     Text(
                                         text = "$word ",
@@ -193,8 +193,15 @@ fun RichTextViewer(
                                 val url = matcher.group(1) // url
                                 val additionalChars = matcher.group(4) ?: "" // additional chars
 
-                                ClickableUrl(url, "https://$url")
-                                Text("$additionalChars ")
+                                if (url != null) {
+                                    ClickableUrl(url, "https://$url")
+                                    Text("$additionalChars ")
+                                } else {
+                                    Text(
+                                        text = "$word ",
+                                        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+                                    )
+                                }
                             } else {
                                 Text(
                                     text = "$word ",
@@ -237,7 +244,7 @@ fun RichTextViewer(
                                         navController
                                     )
                                 } else if (hashTagsPattern.matcher(word).matches()) {
-                                    HashTag(word, accountViewModel, navController)
+                                    HashTag(word, navController)
                                 } else {
                                     Text(
                                         text = "$word ",
@@ -250,8 +257,15 @@ fun RichTextViewer(
                                 val url = matcher.group(1) // url
                                 val additionalChars = matcher.group(4) ?: "" // additional chars
 
-                                ClickableUrl(url, "https://$url")
-                                Text("$additionalChars ")
+                                if (url != null) {
+                                    ClickableUrl(url, "https://$url")
+                                    Text("$additionalChars ")
+                                } else {
+                                    Text(
+                                        text = "$word ",
+                                        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+                                    )
+                                }
                             } else {
                                 Text(
                                     text = "$word ",
@@ -328,7 +342,7 @@ fun BechLink(word: String, canPreview: Boolean, backgroundColor: Color, accountV
 }
 
 @Composable
-fun HashTag(word: String, accountViewModel: AccountViewModel, navController: NavController) {
+fun HashTag(word: String, navController: NavController) {
     var tagSuffixPair by remember { mutableStateOf<Pair<String, String?>?>(null) }
 
     LaunchedEffect(key1 = word) {

@@ -25,7 +25,7 @@ object NostrThreadDataSource : NostrDataSource("SingleThreadFeed") {
         )
     }
 
-    val loadEventsChannel = requestNewChannel() { eoseTime, relay ->
+    val loadEventsChannel = requestNewChannel() { _, _ ->
         // Many relays operate with limits in the amount of filters.
         // As information comes, the filters will be rotated to get more data.
         invalidateFilters()

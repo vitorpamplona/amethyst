@@ -728,11 +728,11 @@ class Account(
     fun isHidden(userHex: String) = userHex in hiddenUsers || userHex in transientHiddenUsers
 
     fun followingKeySet(): Set<HexKey> {
-        return userProfile().cachedFollowingKeySet() ?: emptySet()
+        return userProfile().cachedFollowingKeySet()
     }
 
     fun followingTagSet(): Set<HexKey> {
-        return userProfile().cachedFollowingTagSet() ?: emptySet()
+        return userProfile().cachedFollowingTagSet()
     }
 
     fun isAcceptable(user: User): Boolean {

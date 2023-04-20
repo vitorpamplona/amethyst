@@ -700,11 +700,6 @@ object LocalCache {
                 notes.remove(it.idHex)
                 // Doesn't need to clean up the replies and mentions.. Too small to matter.
 
-                // reverts the add
-                val mentions =
-                    it.event?.tags()?.filter { it.firstOrNull() == "p" }?.mapNotNull { it.getOrNull(1) }
-                        ?.mapNotNull { checkGetOrCreateUser(it) }
-
                 // Counts the replies
                 it.replyTo?.forEach { _ ->
                     it.removeReply(it)
