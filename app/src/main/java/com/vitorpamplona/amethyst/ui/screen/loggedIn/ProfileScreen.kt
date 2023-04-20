@@ -655,6 +655,7 @@ fun BadgeThumb(
         if (image == null) {
             RobohashAsyncImage(
                 robot = "authornotfound",
+                robotSize = size,
                 contentDescription = stringResource(R.string.unknown_author),
                 modifier = pictureModifier
                     .width(size)
@@ -664,6 +665,7 @@ fun BadgeThumb(
         } else {
             RobohashFallbackAsyncImage(
                 robot = note.idHex,
+                robotSize = size,
                 model = image,
                 contentDescription = stringResource(id = R.string.profile_image),
                 modifier = pictureModifier
