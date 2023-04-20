@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.navigation
 
 import android.graphics.Rect
+import android.util.Log
 import android.view.ViewTreeObserver
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -42,6 +43,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.time.ExperimentalTime
+import kotlin.time.measureTimedValue
 
 val bottomNavigationItems = listOf(
     Route.Home,
@@ -135,66 +138,75 @@ fun AppBottomBar(navController: NavHostController, accountViewModel: AccountView
     }
 }
 
+@OptIn(ExperimentalTime::class)
 @Composable
 private fun NotifiableIcon(route: Route, selected: Boolean, accountViewModel: AccountViewModel) {
-    Box(Modifier.size(if ("Home" == route.base) 25.dp else 23.dp)) {
-        Icon(
-            painter = painterResource(id = route.icon),
-            contentDescription = null,
-            modifier = Modifier.size(if ("Home" == route.base) 24.dp else 20.dp),
-            tint = if (selected) MaterialTheme.colors.primary else Color.Unspecified
-        )
+    println("Notifiable Icon")
 
-        val accountState by accountViewModel.accountLiveData.observeAsState()
-        val account = accountState?.account ?: return
+    val (value, elapsed) = measureTimedValue {
+        Box(Modifier.size(if ("Home" == route.base) 25.dp else 23.dp)) {
+            Icon(
+                painter = painterResource(id = route.icon),
+                contentDescription = null,
+                modifier = Modifier.size(if ("Home" == route.base) 24.dp else 20.dp),
+                tint = if (selected) MaterialTheme.colors.primary else Color.Unspecified
+            )
 
-        // Notification
-        val dbState = LocalCache.live.observeAsState()
-        val db = dbState.value ?: return
+            println("Notifiable Icon")
 
-        val notifState = NotificationCache.live.observeAsState()
-        val notif = notifState.value ?: return
+            val accountState by accountViewModel.accountLiveData.observeAsState()
+            val account = accountState?.account ?: return
 
-        var hasNewItems by remember { mutableStateOf<Boolean>(false) }
+            // Notification
+            val dbState = LocalCache.live.observeAsState()
+            val db = dbState.value ?: return
 
-        LaunchedEffect(key1 = notif) {
-            withContext(Dispatchers.IO) {
-                hasNewItems = route.hasNewItems(account, notif.cache)
+            val notifState = NotificationCache.live.observeAsState()
+            val notif = notifState.value ?: return
+
+            var hasNewItems by remember { mutableStateOf<Boolean>(false) }
+
+            LaunchedEffect(key1 = notif) {
+                withContext(Dispatchers.IO) {
+                    hasNewItems = route.hasNewItems(account, notif.cache, emptySet())
+                }
             }
-        }
 
-        LaunchedEffect(key1 = db) {
-            withContext(Dispatchers.IO) {
-                hasNewItems = route.hasNewItems(account, notif.cache)
+            LaunchedEffect(key1 = db) {
+                withContext(Dispatchers.IO) {
+                    hasNewItems = route.hasNewItems(account, notif.cache, db)
+                }
             }
-        }
 
-        if (hasNewItems) {
-            Box(
-                Modifier
-                    .width(10.dp)
-                    .height(10.dp)
-                    .align(Alignment.TopEnd)
-            ) {
+            if (hasNewItems) {
                 Box(
-                    modifier = Modifier
+                    Modifier
                         .width(10.dp)
                         .height(10.dp)
-                        .clip(shape = CircleShape)
-                        .background(MaterialTheme.colors.primary),
-                    contentAlignment = Alignment.TopEnd
+                        .align(Alignment.TopEnd)
                 ) {
-                    Text(
-                        "",
-                        color = Color.White,
-                        textAlign = TextAlign.Center,
-                        fontSize = 12.sp,
+                    Box(
                         modifier = Modifier
-                            .wrapContentHeight()
-                            .align(Alignment.TopEnd)
-                    )
+                            .width(10.dp)
+                            .height(10.dp)
+                            .clip(shape = CircleShape)
+                            .background(MaterialTheme.colors.primary),
+                        contentAlignment = Alignment.TopEnd
+                    ) {
+                        Text(
+                            "",
+                            color = Color.White,
+                            textAlign = TextAlign.Center,
+                            fontSize = 12.sp,
+                            modifier = Modifier
+                                .wrapContentHeight()
+                                .align(Alignment.TopEnd)
+                        )
+                    }
                 }
             }
         }
     }
+
+    Log.d("Notification time", "$elapsed")
 }
