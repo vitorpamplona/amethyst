@@ -496,13 +496,13 @@ fun NoteComposeInner(
                         noteEvent.recipientPubKey() != loggedIn.pubkeyHex &&
                         note.author !== loggedIn
                     ) {
-                        val recepient = noteEvent.recipientPubKey()?.let { LocalCache.checkGetOrCreateUser(it) }
+                        val recipient = noteEvent.recipientPubKey()?.let { LocalCache.checkGetOrCreateUser(it) }
 
                         TranslatableRichTextViewer(
                             stringResource(
                                 id = R.string.private_conversation_notification,
                                 "@${note.author?.pubkeyNpub()}",
-                                "@${recepient?.pubkeyNpub()}"
+                                "@${recipient?.pubkeyNpub()}"
                             ),
                             canPreview = !makeItShort,
                             Modifier.fillMaxWidth(),
