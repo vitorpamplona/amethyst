@@ -50,11 +50,13 @@ fun RobohashAsyncImage(
     }
 }
 
+var imageErrors = setOf<String>()
+
 @Composable
 fun RobohashFallbackAsyncImage(
     robot: String,
     robotSize: Dp,
-    model: String?,
+    model: String,
     contentDescription: String?,
     modifier: Modifier = Modifier,
     alignment: Alignment = Alignment.Center,
@@ -63,30 +65,47 @@ fun RobohashFallbackAsyncImage(
     colorFilter: ColorFilter? = null,
     filterQuality: FilterQuality = DrawScope.DefaultFilterQuality
 ) {
-    val context = LocalContext.current
-    val painter = with(LocalDensity.current) {
-        rememberAsyncImagePainter(
-            model = Robohash.imageRequest(
-                context,
-                robot,
-                Size(robotSize.roundToPx(), robotSize.roundToPx())
+    if (imageErrors.contains(model)) {
+        RobohashAsyncImage(
+            robot = robot,
+            robotSize = robotSize,
+            contentDescription = contentDescription,
+            modifier = modifier,
+            alignment = alignment,
+            contentScale = contentScale,
+            alpha = alpha,
+            colorFilter = colorFilter,
+            filterQuality = filterQuality
+        )
+    } else {
+        val context = LocalContext.current
+        val painter = with(LocalDensity.current) {
+            rememberAsyncImagePainter(
+                model = Robohash.imageRequest(
+                    context,
+                    robot,
+                    Size(robotSize.roundToPx(), robotSize.roundToPx())
+                )
             )
+        }
+
+        AsyncImage(
+            model = model,
+            contentDescription = contentDescription,
+            modifier = modifier,
+            placeholder = painter,
+            fallback = painter,
+            error = painter,
+            alignment = alignment,
+            contentScale = contentScale,
+            alpha = alpha,
+            colorFilter = colorFilter,
+            filterQuality = filterQuality,
+            onError = {
+                imageErrors = imageErrors + model
+            }
         )
     }
-
-    AsyncImage(
-        model = model,
-        contentDescription = contentDescription,
-        modifier = modifier,
-        placeholder = painter,
-        fallback = painter,
-        error = painter,
-        alignment = alignment,
-        contentScale = contentScale,
-        alpha = alpha,
-        colorFilter = colorFilter,
-        filterQuality = filterQuality
-    )
 }
 
 @Composable
@@ -101,7 +120,8 @@ fun RobohashAsyncImageProxy(
     colorFilter: ColorFilter? = null,
     filterQuality: FilterQuality = DrawScope.DefaultFilterQuality
 ) {
-    if (model.url == null) {
+    val proxy = model.proxyUrl()
+    if (proxy == null) {
         RobohashAsyncImage(
             robot = robot,
             robotSize = model.size,
@@ -117,7 +137,7 @@ fun RobohashAsyncImageProxy(
         RobohashFallbackAsyncImage(
             robot = robot,
             robotSize = model.size,
-            model = model.proxyUrl(),
+            model = proxy,
             contentDescription = contentDescription,
             modifier = modifier,
             alignment = alignment,
