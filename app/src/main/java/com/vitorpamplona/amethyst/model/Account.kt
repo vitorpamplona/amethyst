@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.model
 import android.content.res.Resources
 import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
+import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Constants
@@ -355,6 +356,25 @@ class Account(
             Client.send(event)
             LocalCache.consume(event)
         }
+    }
+
+    fun sendHeader(headerInfo: FileHeader): Note? {
+        if (!isWriteable()) return null
+
+        val signedEvent = FileHeaderEvent.create(
+            url = headerInfo.url,
+            mimeType = headerInfo.mimeType,
+            hash = headerInfo.hash,
+            size = headerInfo.size.toString(),
+            blurhash = headerInfo.blurHash,
+            description = headerInfo.description,
+            privateKey = loggedIn.privKey!!
+        )
+
+        Client.send(signedEvent)
+        LocalCache.consume(signedEvent)
+
+        return LocalCache.notes[signedEvent.id]
     }
 
     fun sendPost(message: String, replyTo: List<Note>?, mentions: List<User>?, tags: List<String>? = null) {

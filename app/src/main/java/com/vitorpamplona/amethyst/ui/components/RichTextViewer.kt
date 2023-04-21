@@ -139,11 +139,17 @@ fun RichTextViewer(
         } else {
             val urls = UrlDetector(content, UrlDetectorOptions.Default).detect()
             val urlSet = urls.mapTo(LinkedHashSet(urls.size)) { it.originalUrl }
-            val imagesForPager = urlSet.filter { fullUrl ->
+            val imagesForPager = urlSet.mapNotNull { fullUrl ->
                 val removedParamsFromUrl = fullUrl.split("?")[0].lowercase()
-                imageExtensions.any { removedParamsFromUrl.endsWith(it) } || videoExtensions.any { removedParamsFromUrl.endsWith(it) }
-            }
-            val imagesForPagerSet = imagesForPager.toSet()
+                if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
+                    ZoomableImage(fullUrl)
+                } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
+                    ZoomableVideo(fullUrl)
+                } else {
+                    null
+                }
+            }.associateBy { it.url }
+            val imageList = imagesForPager.values.toList()
 
             // FlowRow doesn't work well with paragraphs. So we need to split them
             content.split('\n').forEach { paragraph ->
@@ -152,8 +158,9 @@ fun RichTextViewer(
                     s.forEach { word: String ->
                         if (canPreview) {
                             // Explicit URL
-                            if (imagesForPagerSet.contains(word)) {
-                                ZoomableImageView(word, imagesForPager)
+                            val img = imagesForPager[word]
+                            if (img != null) {
+                                ZoomableContentView(img, imageList)
                             } else if (urlSet.contains(word)) {
                                 UrlPreview(word, "$word ")
                             } else if (word.startsWith("lnbc", true)) {
