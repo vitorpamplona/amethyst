@@ -226,12 +226,6 @@
     <string name="account_switch_has_private_key">Heeft privésleutel</string>
     <string name="account_switch_pubkey_only">Alleen lezen, geen privésleutel</string>
     <string name="back">Terug</string>
-    <string name="quick_action_block_dialog_btn">Blokkeren</string>
-    <string name="quick_action_delete_dialog_btn">Verwijderen</string>
-    <string name="quick_action_block">Blokkeren</string>
-    <string name="quick_action_report">Rapporteren</string>
-    <string name="quick_action_delete_button">Verwijderen</string>
-    <string name="quick_action_dont_show_again_button">Niet meer laten zien</string>
     <string name="report_dialog_spam">Spam of oplichting</string>
     <string name="report_dialog_profanity">Godslastering of haatdragend gedrag</string>
     <string name="report_dialog_impersonation">Kwaadwillige imitatie</string>
