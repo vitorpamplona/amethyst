@@ -263,9 +263,30 @@
     <string name="wallet_connect_service_secret_placeholder">nsec / hex privát kulcs</string>
 
     <string name="pledge_amount_in_sats">Hozzájárulás összege sats-ban</string>
+    <string name="post_poll">Szavazás Létrehozása</string>
+    <string name="poll_heading_required">Szükséges mezők:</string>
+    <string name="poll_zap_recipients">Zap-et kapják</string>
+    <string name="poll_primary_description">Szavazás elsődleges leírása…</string>
+    <string name="poll_option_index">Szavazás %s megoszlása</string>
+    <string name="poll_option_description">Szavazás opcióinak leírása</string>
+    <string name="poll_heading_optional">Kiegészítő mezők:</string>
+    <string name="poll_zap_value_min">Zap minimum</string>
+    <string name="poll_zap_value_max">Zap maximum</string>
+    <string name="poll_consensus_threshold">Konszenzus</string>
+    <string name="poll_consensus_threshold_percent">(0–100)%</string>
+    <string name="poll_closing_time">Szavazás lezárása</string>
+    <string name="poll_closing_time_days">napok</string>
+    <string name="poll_is_closed">A szavazásra nem lehet már új szavazatot leadni</string>
+    <string name="poll_zap_amount">Zap összege</string>
+    <string name="one_vote_per_user_on_atomic_votes">Az ilyen típusú szavazásokon felhasználónként csak egy szavazat engedélyezett</string>
+
 
     <string name="looking_for_event">"%1$s esemény keresése"</string>
 
     <string name="custom_zaps_add_a_message">Nyilvános üzenet hozzáadása</string>
     <string name="custom_zaps_add_a_message_example">Köszönöm a kemény munkát!</string>
+
+    <string name="lightning_create_and_add_invoice">Létrehoz és Hozzáad</string>
+    <string name="poll_author_no_vote">A szavazás létrehozója sajátjára nem szavazhat.</string>
+    <string name="poll_hashtag" translatable="false">#zappoll</string>
 </resources>

@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -7,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.DropdownMenu
 import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.Icon
@@ -14,7 +17,6 @@ import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Tab
 import androidx.compose.material.TabRow
-import androidx.compose.material.TabRowDefaults
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
@@ -37,10 +39,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.google.accompanist.pager.ExperimentalPagerApi
-import com.google.accompanist.pager.HorizontalPager
-import com.google.accompanist.pager.pagerTabIndicatorOffset
-import com.google.accompanist.pager.rememberPagerState
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
 import com.vitorpamplona.amethyst.ui.dal.ChatroomListKnownFeedFilter
@@ -50,7 +48,7 @@ import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListKnownFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListNewFeedViewModel
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalPagerApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ChatroomListScreen(accountViewModel: AccountViewModel, navController: NavController) {
     val pagerState = rememberPagerState()
@@ -68,13 +66,7 @@ fun ChatroomListScreen(accountViewModel: AccountViewModel, navController: NavCon
                 Box(Modifier.fillMaxWidth()) {
                     TabRow(
                         backgroundColor = MaterialTheme.colors.background,
-                        selectedTabIndex = pagerState.currentPage,
-                        indicator = { tabPositions ->
-                            TabRowDefaults.Indicator(
-                                Modifier.pagerTabIndicatorOffset(pagerState, tabPositions),
-                                color = MaterialTheme.colors.primary
-                            )
-                        }
+                        selectedTabIndex = pagerState.currentPage
                     ) {
                         Tab(
                             selected = pagerState.currentPage == 0,
@@ -115,7 +107,7 @@ fun ChatroomListScreen(accountViewModel: AccountViewModel, navController: NavCon
                     }
                 }
 
-                HorizontalPager(count = 2, state = pagerState) {
+                HorizontalPager(pageCount = 2, state = pagerState) {
                     when (pagerState.currentPage) {
                         0 -> TabKnown(accountViewModel, navController, markKnownAsRead)
                         1 -> TabNew(accountViewModel, navController, markNewAsRead)

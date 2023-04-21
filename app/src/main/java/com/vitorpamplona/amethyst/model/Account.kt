@@ -54,8 +54,14 @@ class Account(
     val liveLanguages: AccountLiveData = AccountLiveData(this)
     val saveable: AccountLiveData = AccountLiveData(this)
 
+    var userProfileCache: User? = null
+
     fun userProfile(): User {
-        return LocalCache.getOrCreateUser(loggedIn.pubKey.toHexKey())
+        return userProfileCache ?: run {
+            val myUser: User = LocalCache.getOrCreateUser(loggedIn.pubKey.toHexKey())
+            userProfileCache = myUser
+            myUser
+        }
     }
 
     fun followingChannels(): List<Channel> {
@@ -722,11 +728,11 @@ class Account(
     fun isHidden(userHex: String) = userHex in hiddenUsers || userHex in transientHiddenUsers
 
     fun followingKeySet(): Set<HexKey> {
-        return userProfile().cachedFollowingKeySet() ?: emptySet()
+        return userProfile().cachedFollowingKeySet()
     }
 
     fun followingTagSet(): Set<HexKey> {
-        return userProfile().cachedFollowingTagSet() ?: emptySet()
+        return userProfile().cachedFollowingTagSet()
     }
 
     fun isAcceptable(user: User): Boolean {

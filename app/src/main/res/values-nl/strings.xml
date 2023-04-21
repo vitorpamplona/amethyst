@@ -226,4 +226,63 @@
     <string name="account_switch_has_private_key">Heeft privésleutel</string>
     <string name="account_switch_pubkey_only">Alleen lezen, geen privésleutel</string>
     <string name="back">Terug</string>
+    <string name="report_dialog_spam">Spam of oplichting</string>
+    <string name="report_dialog_profanity">Godslastering of haatdragend gedrag</string>
+    <string name="report_dialog_impersonation">Kwaadwillige imitatie</string>
+    <string name="report_dialog_nudity">Naaktheid of grafische inhoud</string>
+    <string name="report_dialog_illegal">Illegaal gedrag</string>
+    <string name="report_dialog_blocking_a_user">Als u een gebruiker blokkeert, wordt zijn inhoud in uw app verborgen. Uw notes zijn nog steeds publiekelijk zichtbaar, ook voor mensen die u blokkeert. Geblokkeerde gebruikers worden vermeld in het scherm Beveiligingsfilters.</string>
+    <string name="report_dialog_block_hide_user_btn"><![CDATA[Blokkeer & verberg gebruiker]]></string>
+    <string name="report_dialog_report_btn">Misbruik melden</string>
+    <string name="report_dialog_reminder_public">Alle geplaatste rapporteringen zijn openbaar.</string>
+    <string name="report_dialog_additional_reason_placeholder">Geef optioneel extra context over uw rapportering...</string>
+    <string name="report_dialog_additional_reason_label">Extra context</string>
+    <string name="report_dialog_select_reason_label">Reden</string>
+    <string name="report_dialog_select_reason_placeholder">Selecteer een reden…</string>
+    <string name="report_dialog_post_report_btn">Rapporteer</string>
+    <string name="report_dialog_title">Blokkeer en rapporteer</string>
+    <string name="block_only">Blokkeren</string>
+
+    <string name="bookmarks">Bladwijzers</string>
+    <string name="private_bookmarks">Privé bladwijzers</string>
+    <string name="public_bookmarks">PPublieke Bladwijzers</string>
+    <string name="add_to_private_bookmarks">Toevoegen aan privé bladwijzers</string>
+    <string name="add_to_public_bookmarks">Toevoegen aan publieke bladwijzers</string>
+    <string name="remove_from_private_bookmarks">Verwijderen uit privé bladwijzers</string>
+    <string name="remove_from_public_bookmarks">Verwijderen uit publieke bladwijzers</string>
+
+    <string name="wallet_connect_service">Wallet Connect Service</string>
+    <string name="wallet_connect_service_explainer">Machtigt een Nostr Secret om zaps te betalen zonder de app te verlaten. Houd het geheim veilig en gebruik indien mogelijk een privé relays.</string>
+    <string name="wallet_connect_service_pubkey">Wallet Connect publieke sleutel</string>
+    <string name="wallet_connect_service_relay">Wallet Connect Relay</string>
+    <string name="wallet_connect_service_secret">Wallet Connect Secret</string>
+    <string name="wallet_connect_service_show_secret">Toon secret sleutel</string>
+    <string name="wallet_connect_service_secret_placeholder">nsec / hex privésleutel</string>
+
+    <string name="pledge_amount_in_sats">Bedrag in sats</string>
+    <string name="post_poll">Verzend poll</string>
+    <string name="poll_heading_required">Verplichte velden:</string>
+    <string name="poll_zap_recipients">Zap ontvangers</string>
+    <string name="poll_primary_description">Primaire poll beschrijving…</string>
+    <string name="poll_option_index">Optie %s</string>
+    <string name="poll_option_description">Poll optie beschrijvingen</string>
+    <string name="poll_heading_optional">Optionele velden:</string>
+    <string name="poll_zap_value_min">Zap minimum</string>
+    <string name="poll_zap_value_max">Zap maximum</string>
+    <string name="poll_consensus_threshold">Consensus</string>
+    <string name="poll_consensus_threshold_percent">(0–100)%</string>
+    <string name="poll_closing_time">Sluit na</string>
+    <string name="poll_closing_time_days">dagen</string>
+    <string name="poll_is_closed">Poll is gesloten voor nieuwe stemmen</string>
+    <string name="poll_zap_amount">Zap bedrag</string>
+    <string name="one_vote_per_user_on_atomic_votes">Slechts één stem per gebruiker is toegestaan bij dit type peiling.</string>
+
+    <string name="looking_for_event">"Zoeken naar event %1$s"</string>
+
+    <string name="custom_zaps_add_a_message">Een openbaar bericht toevoegen</string>
+    <string name="custom_zaps_add_a_message_example">Bedankt voor al jullie werk!</string>
+
+    <string name="lightning_create_and_add_invoice">Maken en toevoegen</string>
+    <string name="poll_author_no_vote">Poll auteurs kunnen niet stemmen in hun eigen poll.</string>
+    <string name="poll_hashtag" translatable="false">#zappoll</string>
 </resources>

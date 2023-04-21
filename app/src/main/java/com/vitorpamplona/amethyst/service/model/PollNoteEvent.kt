@@ -20,24 +20,17 @@ class PollNoteEvent(
     content: String,
     sig: HexKey
 ) : BaseTextNoteEvent(id, pubKey, createdAt, kind, tags, content, sig) {
-    fun pollOptions(): Map<Int, String> {
-        val map = mutableMapOf<Int, String>()
-        tags.filter { it.first() == POLL_OPTION }
-            .forEach { map[it[1].toInt()] = it[2] }
-        return map
-    }
+    fun pollOptions() =
+        tags.filter { it.size > 2 && it[0] == POLL_OPTION }
+            .associate { it[1].toInt() to it[2] }
 
     fun getTagInt(property: String): Int? {
-        val tagList = tags.filter {
-            it.firstOrNull() == property
-        }
-        val tag = tagList.getOrNull(0)
-        val s = tag?.getOrNull(1)
+        val number = tags.firstOrNull() { it.size > 1 && it[0] == property }?.get(1)
 
-        return if (s.isNullOrBlank() || s == "null") {
+        return if (number.isNullOrBlank() || number == "null") {
             null
         } else {
-            s.toInt()
+            number.toInt()
         }
     }
 

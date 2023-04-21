@@ -14,6 +14,7 @@ import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -32,6 +33,8 @@ import com.halilibo.richtext.markdown.MarkdownParseOptions
 import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.material.MaterialRichText
 import com.halilibo.richtext.ui.resolveDefaults
+import com.linkedin.urls.detection.UrlDetector
+import com.linkedin.urls.detection.UrlDetectorOptions
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -123,31 +126,24 @@ fun RichTextViewer(
                 )
             )
 
+            val markdownWithSpecialContent = returnMarkdownWithSpecialContent(content)
+
             MaterialRichText(
                 style = myMarkDownStyle
             ) {
                 Markdown(
-                    content = content,
+                    content = markdownWithSpecialContent,
                     markdownParseOptions = MarkdownParseOptions.Default
                 )
             }
         } else {
-            val imagesForPager = mutableListOf<String>()
-
-            content.split('\n').forEach { paragraph ->
-                paragraph.split(' ').forEach { word: String ->
-                    // sequence of images will render in a slideview
-                    if (isValidURL(word)) {
-                        val removedParamsFromUrl = word.split("?")[0].lowercase()
-                        if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-                            imagesForPager.add(word)
-                        }
-                        if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-                            imagesForPager.add(word)
-                        }
-                    }
-                }
+            val urls = UrlDetector(content, UrlDetectorOptions.Default).detect()
+            val urlSet = urls.mapTo(LinkedHashSet(urls.size)) { it.originalUrl }
+            val imagesForPager = urlSet.filter { fullUrl ->
+                val removedParamsFromUrl = fullUrl.split("?")[0].lowercase()
+                imageExtensions.any { removedParamsFromUrl.endsWith(it) } || videoExtensions.any { removedParamsFromUrl.endsWith(it) }
             }
+            val imagesForPagerSet = imagesForPager.toSet()
 
             // FlowRow doesn't work well with paragraphs. So we need to split them
             content.split('\n').forEach { paragraph ->
@@ -156,15 +152,10 @@ fun RichTextViewer(
                     s.forEach { word: String ->
                         if (canPreview) {
                             // Explicit URL
-                            if (isValidURL(word)) {
-                                val removedParamsFromUrl = word.split("?")[0].lowercase()
-                                if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-                                    ZoomableImageView(word, imagesForPager)
-                                } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-                                    ZoomableImageView(word, imagesForPager)
-                                } else {
-                                    UrlPreview(word, "$word ")
-                                }
+                            if (imagesForPagerSet.contains(word)) {
+                                ZoomableImageView(word, imagesForPager)
+                            } else if (urlSet.contains(word)) {
+                                UrlPreview(word, "$word ")
                             } else if (word.startsWith("lnbc", true)) {
                                 MayBeInvoicePreview(word)
                             } else if (word.startsWith("lnurl", true)) {
@@ -192,7 +183,7 @@ fun RichTextViewer(
                                         navController
                                     )
                                 } else if (hashTagsPattern.matcher(word).matches()) {
-                                    HashTag(word, accountViewModel, navController)
+                                    HashTag(word, navController)
                                 } else {
                                     Text(
                                         text = "$word ",
@@ -205,8 +196,15 @@ fun RichTextViewer(
                                 val url = matcher.group(1) // url
                                 val additionalChars = matcher.group(4) ?: "" // additional chars
 
-                                ClickableUrl(url, "https://$url")
-                                Text("$additionalChars ")
+                                if (url != null) {
+                                    ClickableUrl(url, "https://$url")
+                                    Text("$additionalChars ")
+                                } else {
+                                    Text(
+                                        text = "$word ",
+                                        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+                                    )
+                                }
                             } else {
                                 Text(
                                     text = "$word ",
@@ -214,7 +212,7 @@ fun RichTextViewer(
                                 )
                             }
                         } else {
-                            if (isValidURL(word)) {
+                            if (urlSet.contains(word)) {
                                 ClickableUrl("$word ", word)
                             } else if (word.startsWith("lnurl", true)) {
                                 val lnWithdrawal = LnWithdrawalUtil.findWithdrawal(word)
@@ -249,7 +247,7 @@ fun RichTextViewer(
                                         navController
                                     )
                                 } else if (hashTagsPattern.matcher(word).matches()) {
-                                    HashTag(word, accountViewModel, navController)
+                                    HashTag(word, navController)
                                 } else {
                                     Text(
                                         text = "$word ",
@@ -262,8 +260,15 @@ fun RichTextViewer(
                                 val url = matcher.group(1) // url
                                 val additionalChars = matcher.group(4) ?: "" // additional chars
 
-                                ClickableUrl(url, "https://$url")
-                                Text("$additionalChars ")
+                                if (url != null) {
+                                    ClickableUrl(url, "https://$url")
+                                    Text("$additionalChars ")
+                                } else {
+                                    Text(
+                                        text = "$word ",
+                                        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+                                    )
+                                }
                             } else {
                                 Text(
                                     text = "$word ",
@@ -276,6 +281,53 @@ fun RichTextViewer(
             }
         }
     }
+}
+
+@Composable
+private fun getDisplayNameFromUserNip19(parsedNip19: Nip19.Return): String? {
+    if (parsedNip19.type == Nip19.Type.USER) {
+        val userHex = parsedNip19.hex
+        val userBase = LocalCache.getOrCreateUser(userHex)
+
+        val userState by userBase.live().metadata.observeAsState()
+        val displayName = userState?.user?.bestDisplayName()
+        if (displayName !== null) {
+            return displayName
+        }
+    }
+    return null
+}
+
+@Composable
+private fun returnMarkdownWithSpecialContent(content: String): String {
+    var returnContent = ""
+    content.split('\n').forEach { paragraph ->
+        paragraph.split(' ').forEach { word: String ->
+            if (isValidURL(word)) {
+                returnContent += "[$word]($word) "
+            } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
+                returnContent += "[$word](mailto:$word) "
+            } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
+                returnContent += "[$word](tel:$word) "
+            } else if (isBechLink(word)) {
+                val parsedNip19 = Nip19.uriToRoute(word)
+                returnContent += if (parsedNip19 !== null) {
+                    val displayName = getDisplayNameFromUserNip19(parsedNip19)
+                    if (displayName != null) {
+                        "[@$displayName](nostr://$word) "
+                    } else {
+                        "$word "
+                    }
+                } else {
+                    "$word "
+                }
+            } else {
+                returnContent += "$word "
+            }
+        }
+        returnContent += "\n"
+    }
+    return returnContent
 }
 
 private fun isArabic(text: String): Boolean {
@@ -340,7 +392,7 @@ fun BechLink(word: String, canPreview: Boolean, backgroundColor: Color, accountV
 }
 
 @Composable
-fun HashTag(word: String, accountViewModel: AccountViewModel, navController: NavController) {
+fun HashTag(word: String, navController: NavController) {
     var tagSuffixPair by remember { mutableStateOf<Pair<String, String?>?>(null) }
 
     LaunchedEffect(key1 = word) {

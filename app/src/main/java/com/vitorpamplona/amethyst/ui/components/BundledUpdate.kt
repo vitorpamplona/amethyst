@@ -9,6 +9,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * This class is designed to have a waiting time between two calls of invalidate
@@ -38,6 +39,40 @@ class BundledUpdate(
             } finally {
                 withContext(NonCancellable) {
                     invalidatesAgain = false
+                    onlyOneInBlock.set(false)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * This class is designed to have a waiting time between two calls of invalidate
+ */
+class BundledInsert<T>(
+    val delay: Long,
+    val dispatcher: CoroutineDispatcher = Dispatchers.Default
+) {
+    private var onlyOneInBlock = AtomicBoolean()
+    private var atomicSet = AtomicReference<Set<T>>(setOf<T>())
+
+    fun invalidateList(newObject: T, onUpdate: (Set<T>) -> Unit) {
+        atomicSet.updateAndGet() {
+            it + newObject
+        }
+
+        if (onlyOneInBlock.getAndSet(true)) {
+            return
+        }
+
+        val scope = CoroutineScope(Job() + dispatcher)
+        scope.launch {
+            try {
+                onUpdate(atomicSet.getAndSet(emptySet()))
+                delay(delay)
+                onUpdate(atomicSet.getAndSet(emptySet()))
+            } finally {
+                withContext(NonCancellable) {
                     onlyOneInBlock.set(false)
                 }
             }

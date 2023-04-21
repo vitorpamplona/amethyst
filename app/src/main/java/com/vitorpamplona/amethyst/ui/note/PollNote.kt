@@ -48,9 +48,6 @@ fun PollNote(
     accountViewModel: AccountViewModel,
     navController: NavController
 ) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
-
     val zapsState by baseNote.live().zaps.observeAsState()
     val zappedNote = zapsState?.note ?: return
 
@@ -72,7 +69,7 @@ fun PollNote(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(vertical = 3.dp)
         ) {
-            if (zappedNote.author == account.userProfile() || zappedNote.isZappedBy(account.userProfile())) {
+            if (accountViewModel.isLoggedUser(zappedNote.author) || zappedNote.isZappedBy(accountViewModel.userProfile())) {
                 ZapVote(
                     baseNote,
                     accountViewModel,
@@ -90,7 +87,7 @@ fun PollNote(
                             LinearProgressIndicator(
                                 modifier = Modifier.matchParentSize(),
                                 color = color,
-                                progress = optionTally
+                                progress = optionTally.toFloat()
                             )
 
                             Row(
@@ -101,7 +98,7 @@ fun PollNote(
                                     modifier = Modifier.padding(horizontal = 10.dp).width(40.dp)
                                 ) {
                                     Text(
-                                        text = "${(optionTally * 100).roundToInt()}%",
+                                        text = "${(optionTally.toFloat() * 100).roundToInt()}%",
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
@@ -210,7 +207,7 @@ fun ZapVote(
                             )
                             .show()
                     }
-                } else if (zappedNote?.author == account.userProfile()) {
+                } else if (accountViewModel.isLoggedUser(zappedNote?.author)) {
                     scope.launch {
                         Toast
                             .makeText(

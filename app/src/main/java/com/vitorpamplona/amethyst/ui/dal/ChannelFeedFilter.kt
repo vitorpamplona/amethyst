@@ -5,7 +5,7 @@ import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 
-object ChannelFeedFilter : FeedFilter<Note>() {
+object ChannelFeedFilter : AdditiveFeedFilter<Note>() {
     lateinit var account: Account
     lateinit var channel: Channel
 
@@ -21,5 +21,15 @@ object ChannelFeedFilter : FeedFilter<Note>() {
             .filter { account.isAcceptable(it) }
             .sortedBy { it.createdAt() }
             .reversed()
+    }
+
+    override fun applyFilter(collection: Set<Note>): Set<Note> {
+        return collection
+            .filter { it.idHex in channel.notes.keys && account.isAcceptable(it) }
+            .toSet()
+    }
+
+    override fun sort(collection: Set<Note>): List<Note> {
+        return collection.sortedBy { it.createdAt() }.reversed()
     }
 }

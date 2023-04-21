@@ -12,8 +12,8 @@ android {
         applicationId "com.vitorpamplona.amethyst"
         minSdk 26
         targetSdk 33
-        versionCode 118
-        versionName "0.32.3"
+        versionCode 120
+        versionName "0.33.1"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -57,12 +57,12 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_11
-        targetCompatibility JavaVersion.VERSION_11
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = '11'
+        jvmTarget = '17'
     }
 
     buildFeatures {
@@ -78,10 +78,14 @@ android {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
         }
     }
+    lint {
+        disable 'MissingTranslation'
+    }
+
 }
 
 dependencies {
-    implementation 'androidx.core:core-ktx:1.9.0'
+    implementation 'androidx.core:core-ktx:1.10.0'
     implementation 'androidx.activity:activity-compose:1.7.0-beta01'
     implementation "androidx.compose.ui:ui:$compose_ui_version"
     implementation "androidx.compose.ui:ui-tooling-preview:$compose_ui_version"
@@ -146,10 +150,6 @@ dependencies {
     implementation "com.google.accompanist:accompanist-flowlayout:$accompanist_version"
     // Permission to upload pictures:
     implementation "com.google.accompanist:accompanist-permissions:$accompanist_version"
-
-    // tabs for user profiles
-    implementation "com.google.accompanist:accompanist-pager:$accompanist_version" // Pager
-    implementation "com.google.accompanist:accompanist-pager-indicators:$accompanist_version"
 
     // Parses URLs from Text:
     implementation "io.github.url-detector:url-detector:0.1.23"
