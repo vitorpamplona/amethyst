@@ -154,7 +154,7 @@ fun RichTextViewer(
             // FlowRow doesn't work well with paragraphs. So we need to split them
             content.split('\n').forEach { paragraph ->
                 FlowRow() {
-                    val s = if (isArabic(paragraph)) paragraph.split(' ').reversed() else paragraph.split(' ')
+                    val s = if (isArabic(paragraph)) paragraph.trim().split(' ').reversed() else paragraph.trim().split(' ')
                     s.forEach { word: String ->
                         if (canPreview) {
                             // Explicit URL
@@ -385,9 +385,11 @@ fun BechLink(word: String, canPreview: Boolean, backgroundColor: Color, accountV
                 isQuotedNote = true,
                 navController = navController
             )
-            Text(
-                "${it.second} "
-            )
+            if (!it.second.isNullOrEmpty()) {
+                Text(
+                    "${it.second} "
+                )
+            }
         } ?: nip19Route?.let {
             ClickableRoute(it, navController)
         } ?: Text(text = "$word ")
