@@ -14,6 +14,7 @@ import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -125,11 +126,13 @@ fun RichTextViewer(
                 )
             )
 
+            val markdownWithSpecialContent = returnMarkdownWithSpecialContent(content)
+
             MaterialRichText(
                 style = myMarkDownStyle
             ) {
                 Markdown(
-                    content = content,
+                    content = markdownWithSpecialContent,
                     markdownParseOptions = MarkdownParseOptions.Default
                 )
             }
@@ -278,6 +281,53 @@ fun RichTextViewer(
             }
         }
     }
+}
+
+@Composable
+private fun getDisplayNameFromUserNip19(parsedNip19: Nip19.Return): String? {
+    if (parsedNip19.type == Nip19.Type.USER) {
+        val userHex = parsedNip19.hex
+        val userBase = LocalCache.getOrCreateUser(userHex)
+
+        val userState by userBase.live().metadata.observeAsState()
+        val displayName = userState?.user?.bestDisplayName()
+        if (displayName !== null) {
+            return displayName
+        }
+    }
+    return null
+}
+
+@Composable
+private fun returnMarkdownWithSpecialContent(content: String): String {
+    var returnContent = ""
+    content.split('\n').forEach { paragraph ->
+        paragraph.split(' ').forEach { word: String ->
+            if (isValidURL(word)) {
+                returnContent += "[$word]($word) "
+            } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
+                returnContent += "[$word](mailto:$word) "
+            } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
+                returnContent += "[$word](tel:$word) "
+            } else if (isBechLink(word)) {
+                val parsedNip19 = Nip19.uriToRoute(word)
+                returnContent += if (parsedNip19 !== null) {
+                    val displayName = getDisplayNameFromUserNip19(parsedNip19)
+                    if (displayName != null) {
+                        "[@$displayName](nostr://$word) "
+                    } else {
+                        "$word "
+                    }
+                } else {
+                    "$word "
+                }
+            } else {
+                returnContent += "$word "
+            }
+        }
+        returnContent += "\n"
+    }
+    return returnContent
 }
 
 private fun isArabic(text: String): Boolean {
