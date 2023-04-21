@@ -20,11 +20,9 @@ import com.vitorpamplona.amethyst.model.*
 
 @Composable
 fun ReplyInformation(replyTo: List<Note>?, mentions: List<String>, account: Account, navController: NavController) {
-    val sortedMentions = mentions.mapNotNull { LocalCache.checkGetOrCreateUser(it) }
-        .toSet()
-        .sortedBy { account.userProfile().isFollowingCached(it) }
+    val dupMentions = mentions.mapNotNull { LocalCache.checkGetOrCreateUser(it) }
 
-    ReplyInformation(replyTo, sortedMentions, account) {
+    ReplyInformation(replyTo, dupMentions, account) {
         navController.navigate("User/${it.pubkeyHex}")
     }
 }

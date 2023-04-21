@@ -7,7 +7,6 @@ import com.vitorpamplona.amethyst.service.relays.EOSETime
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
-import java.util.Date
 
 object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
     private var eventsToWatch = setOf<Note>()
@@ -19,8 +18,6 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
         if (addressesToWatch.isEmpty()) {
             return null
         }
-
-        val now = Date().time / 1000
 
         return addressesToWatch.mapNotNull {
             it.address()?.let { aTag ->
@@ -48,8 +45,6 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
         if (addressesToWatch.isEmpty()) {
             return null
         }
-
-        val now = Date().time / 1000
 
         return addressesToWatch.mapNotNull {
             it.address()?.let { aTag ->

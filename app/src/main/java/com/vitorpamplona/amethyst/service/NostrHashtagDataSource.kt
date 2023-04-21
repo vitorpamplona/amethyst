@@ -17,7 +17,14 @@ object NostrHashtagDataSource : NostrDataSource("SingleHashtagFeed") {
         return TypedFilter(
             types = FeedType.values().toSet(),
             filter = JsonFilter(
-                tags = mapOf("t" to listOf(hashToLoad, hashToLoad.lowercase(), hashToLoad.uppercase(), hashToLoad.capitalize())),
+                tags = mapOf(
+                    "t" to listOf(
+                        hashToLoad,
+                        hashToLoad.lowercase(),
+                        hashToLoad.uppercase(),
+                        hashToLoad.capitalize()
+                    )
+                ),
                 kinds = listOf(TextNoteEvent.kind, ChannelMessageEvent.kind, LongTextNoteEvent.kind),
                 limit = 200
             )

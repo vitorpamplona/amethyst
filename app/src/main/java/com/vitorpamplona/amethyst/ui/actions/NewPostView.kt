@@ -167,7 +167,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                             )
 
                             if (postViewModel.wantsPoll) {
-                                postViewModel.pollOptions.values.forEachIndexed { index, element ->
+                                postViewModel.pollOptions.values.forEachIndexed { index, _ ->
                                     NewPollOption(postViewModel, index)
                                 }
 
@@ -189,7 +189,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                             val user = postViewModel.account?.userProfile()
                             val lud16 = user?.info?.lnAddress()
 
-                            if (lud16 != null && user != null && postViewModel.wantsInvoice) {
+                            if (lud16 != null && postViewModel.wantsInvoice) {
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 5.dp)) {
                                     InvoiceRequest(
                                         lud16,

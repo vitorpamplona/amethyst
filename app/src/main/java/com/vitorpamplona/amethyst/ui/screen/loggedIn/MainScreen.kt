@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -19,6 +20,7 @@ import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
@@ -34,10 +36,12 @@ import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.navigation.currentRoute
 import com.vitorpamplona.amethyst.ui.screen.AccountState
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: AccountStateViewModel, startingPage: String? = null) {
+    val coroutineScope = rememberCoroutineScope()
     val navController = rememberNavController()
     val scaffoldState = rememberScaffoldState(rememberDrawerState(DrawerValue.Closed))
     val sheetState = rememberModalBottomSheetState(
@@ -64,6 +68,9 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
             },
             drawerContent = {
                 DrawerContent(navController, scaffoldState, sheetState, accountViewModel)
+                BackHandler(enabled = scaffoldState.drawerState.isOpen) {
+                    coroutineScope.launch { scaffoldState.drawerState.close() }
+                }
             },
             floatingActionButton = {
                 FloatingButtons(navController, accountStateViewModel)

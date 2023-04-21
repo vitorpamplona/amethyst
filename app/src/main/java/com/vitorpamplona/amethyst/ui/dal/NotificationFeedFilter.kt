@@ -6,14 +6,22 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.*
 
-object NotificationFeedFilter : FeedFilter<Note>() {
+object NotificationFeedFilter : AdditiveFeedFilter<Note>() {
     lateinit var account: Account
 
     override fun feed(): List<Note> {
+        return sort(innerApplyFilter(LocalCache.notes.values))
+    }
+
+    override fun applyFilter(collection: Set<Note>): Set<Note> {
+        return innerApplyFilter(collection)
+    }
+
+    private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val loggedInUser = account.userProfile()
         val loggedInUserHex = loggedInUser.pubkeyHex
 
-        return LocalCache.notes.values.filter {
+        return collection.filter {
             it.event !is ChannelCreateEvent &&
                 it.event !is ChannelMetadataEvent &&
                 it.event !is LnZapRequestEvent &&
@@ -23,9 +31,11 @@ object NotificationFeedFilter : FeedFilter<Note>() {
                 it.event?.isTaggedUser(loggedInUserHex) ?: false &&
                 (it.author == null || !account.isHidden(it.author!!.pubkeyHex)) &&
                 tagsAnEventByUser(it, loggedInUser)
-        }
-            .sortedBy { it.createdAt() }
-            .reversed()
+        }.toSet()
+    }
+
+    override fun sort(collection: Set<Note>): List<Note> {
+        return collection.sortedBy { it.createdAt() }.reversed()
     }
 
     fun tagsAnEventByUser(note: Note, author: User): Boolean {

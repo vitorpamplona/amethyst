@@ -19,6 +19,7 @@ import coil.decode.ImageDecoderDecoder
 import coil.decode.SvgDecoder
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
+import com.vitorpamplona.amethyst.VideoCache
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.navigation.Route
@@ -53,6 +54,9 @@ class MainActivity : FragmentActivity() {
         } catch (e: Exception) {
             null
         }
+
+        // Initializes video cache.
+        VideoCache.init(this.applicationContext)
 
         Coil.setImageLoader {
             ImageLoader.Builder(this).components {
