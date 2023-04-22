@@ -53,13 +53,14 @@ open class Note(val idHex: String) {
     open fun idNote() = id().toNote()
     open fun idDisplayNote() = idNote().toShortenHex()
 
-    fun channel(): Channel? {
-        val channelHex =
-            (event as? ChannelMessageEvent)?.channel()
-                ?: (event as? ChannelMetadataEvent)?.channel()
-                ?: (event as? ChannelCreateEvent)?.id
+    fun channelHex(): HexKey? {
+        return (event as? ChannelMessageEvent)?.channel()
+            ?: (event as? ChannelMetadataEvent)?.channel()
+            ?: (event as? ChannelCreateEvent)?.id
+    }
 
-        return channelHex?.let { LocalCache.checkGetOrCreateChannel(it) }
+    fun channel(): Channel? {
+        return channelHex()?.let { LocalCache.checkGetOrCreateChannel(it) }
     }
 
     open fun address(): ATag? = null

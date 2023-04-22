@@ -171,7 +171,7 @@ class NewUserMetadataViewModel : ViewModel() {
         ImageUploader.uploadImage(
             uri = it,
             contentResolver = context.contentResolver,
-            onSuccess = { imageUrl ->
+            onSuccess = { imageUrl, mimeType ->
                 onUploading(false)
                 onUploaded(imageUrl)
             },

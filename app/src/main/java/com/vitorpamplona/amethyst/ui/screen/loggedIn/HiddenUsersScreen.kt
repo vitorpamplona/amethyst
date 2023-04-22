@@ -1,12 +1,14 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Tab
 import androidx.compose.material.TabRow
-import androidx.compose.material.TabRowDefaults
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -17,17 +19,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.google.accompanist.pager.ExperimentalPagerApi
-import com.google.accompanist.pager.HorizontalPager
-import com.google.accompanist.pager.pagerTabIndicatorOffset
-import com.google.accompanist.pager.rememberPagerState
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.dal.HiddenAccountsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.NostrHiddenAccountsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.UserFeedView
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalPagerApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HiddenUsersScreen(accountViewModel: AccountViewModel, navController: NavController) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
@@ -45,13 +43,7 @@ fun HiddenUsersScreen(accountViewModel: AccountViewModel, navController: NavCont
 
                 TabRow(
                     backgroundColor = MaterialTheme.colors.background,
-                    selectedTabIndex = pagerState.currentPage,
-                    indicator = { tabPositions ->
-                        TabRowDefaults.Indicator(
-                            Modifier.pagerTabIndicatorOffset(pagerState, tabPositions),
-                            color = MaterialTheme.colors.primary
-                        )
-                    }
+                    selectedTabIndex = pagerState.currentPage
                 ) {
                     Tab(
                         selected = pagerState.currentPage == 0,
@@ -61,7 +53,7 @@ fun HiddenUsersScreen(accountViewModel: AccountViewModel, navController: NavCont
                         }
                     )
                 }
-                HorizontalPager(count = 1, state = pagerState) {
+                HorizontalPager(pageCount = 1, state = pagerState) {
                     when (pagerState.currentPage) {
                         0 -> UserFeedView(feedViewModel, accountViewModel, navController)
                     }

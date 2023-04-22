@@ -13,6 +13,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.*
+import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.ui.components.isValidURL
@@ -72,7 +73,7 @@ open class NewPostViewModel : ViewModel() {
                     this.mentions = currentMentions.plus(replyUser)
                 }
             }
-        } ?: {
+        } ?: run {
             replyTos = null
             mentions = null
         }
@@ -110,13 +111,39 @@ open class NewPostViewModel : ViewModel() {
         ImageUploader.uploadImage(
             uri = it,
             contentResolver = context.contentResolver,
-            onSuccess = { imageUrl ->
-                isUploadingImage = false
-                message = TextFieldValue(message.text + "\n\n" + imageUrl)
-
+            onSuccess = { imageUrl, mimeType ->
                 viewModelScope.launch(Dispatchers.IO) {
-                    delay(2000)
-                    urlPreview = findUrlInMessage()
+                    // Images don't seem to be ready immediately after upload
+
+                    if (mimeType?.startsWith("image/") == true) {
+                        delay(2000)
+                    } else {
+                        delay(5000)
+                    }
+
+                    FileHeader.prepare(
+                        imageUrl,
+                        mimeType,
+                        onReady = {
+                            val note = account?.sendHeader(it)
+
+                            isUploadingImage = false
+
+                            if (note == null) {
+                                message = TextFieldValue(message.text + "\n\n" + imageUrl)
+                            } else {
+                                message = TextFieldValue(message.text + "\n\nnostr:" + note.idNote())
+                            }
+
+                            urlPreview = findUrlInMessage()
+                        },
+                        onError = {
+                            isUploadingImage = false
+                            viewModelScope.launch {
+                                imageUploadingError.emit("Failed to upload the image / video")
+                            }
+                        }
+                    )
                 }
             },
             onError = {

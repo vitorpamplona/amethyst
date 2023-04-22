@@ -5,6 +5,8 @@ import android.net.Uri
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
@@ -48,10 +50,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import com.google.accompanist.pager.ExperimentalPagerApi
-import com.google.accompanist.pager.HorizontalPager
-import com.google.accompanist.pager.pagerTabIndicatorOffset
-import com.google.accompanist.pager.rememberPagerState
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -70,6 +68,7 @@ import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
+import com.vitorpamplona.amethyst.ui.components.figureOutMimeType
 import com.vitorpamplona.amethyst.ui.dal.UserProfileBookmarksFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowersFeedFilter
@@ -98,7 +97,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 
-@OptIn(ExperimentalPagerApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navController: NavController) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
@@ -187,12 +186,6 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                     ScrollableTabRow(
                         backgroundColor = MaterialTheme.colors.background,
                         selectedTabIndex = pagerState.currentPage,
-                        indicator = { tabPositions ->
-                            TabRowDefaults.Indicator(
-                                Modifier.pagerTabIndicatorOffset(pagerState, tabPositions),
-                                color = MaterialTheme.colors.primary
-                            )
-                        },
                         edgePadding = 8.dp,
                         modifier = Modifier.onSizeChanged {
                             tabsSize = it
@@ -268,7 +261,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                         }
                     }
                     HorizontalPager(
-                        count = 8,
+                        pageCount = 8,
                         state = pagerState,
                         modifier = with(LocalDensity.current) {
                             Modifier.height((columnSize.height - tabsSize.height).toDp())
@@ -409,8 +402,9 @@ private fun ProfileHeader(
         }
     }
 
-    if (zoomImageDialogOpen) {
-        ZoomableImageDialog(baseUser.profilePicture()!!, onDismiss = { zoomImageDialogOpen = false })
+    val profilePic = baseUser.profilePicture()
+    if (zoomImageDialogOpen && profilePic != null) {
+        ZoomableImageDialog(figureOutMimeType(profilePic), onDismiss = { zoomImageDialogOpen = false })
     }
 }
 
@@ -498,7 +492,7 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewMode
 
     userBadge.acceptedBadges?.let { note ->
         (note.event as? BadgeProfilesEvent)?.let { event ->
-            FlowRow(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 5.dp)) {
+            FlowRow(verticalArrangement = Arrangement.Center, modifier = Modifier.padding(vertical = 5.dp)) {
                 event.badgeAwardEvents().forEach { badgeAwardEvent ->
                     val baseNote = LocalCache.notes[badgeAwardEvent]
                     if (baseNote != null) {
@@ -655,6 +649,7 @@ fun BadgeThumb(
         if (image == null) {
             RobohashAsyncImage(
                 robot = "authornotfound",
+                robotSize = size,
                 contentDescription = stringResource(R.string.unknown_author),
                 modifier = pictureModifier
                     .width(size)
@@ -664,6 +659,7 @@ fun BadgeThumb(
         } else {
             RobohashFallbackAsyncImage(
                 robot = note.idHex,
+                robotSize = size,
                 model = image,
                 contentDescription = stringResource(id = R.string.profile_image),
                 modifier = pictureModifier
@@ -712,7 +708,7 @@ private fun DrawBanner(baseUser: User) {
         )
 
         if (zoomImageDialogOpen) {
-            ZoomableImageDialog(imageUrl = banner, onDismiss = { zoomImageDialogOpen = false })
+            ZoomableImageDialog(imageUrl = figureOutMimeType(banner), onDismiss = { zoomImageDialogOpen = false })
         }
     } else {
         Image(

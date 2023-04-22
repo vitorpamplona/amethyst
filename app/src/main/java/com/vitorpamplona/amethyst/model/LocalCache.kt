@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.Relay
-import com.vitorpamplona.amethyst.ui.components.BundledUpdate
+import com.vitorpamplona.amethyst.ui.components.BundledInsert
 import fr.acinq.secp256k1.Hex
 import kotlinx.coroutines.*
 import nostr.postr.toNpub
@@ -189,7 +189,7 @@ object LocalCache {
             it.addReply(note)
         }
 
-        refreshObservers()
+        refreshObservers(note)
     }
 
     fun consume(event: LongTextNoteEvent, relay: Relay?) {
@@ -218,7 +218,7 @@ object LocalCache {
 
             author.addNote(note)
 
-            refreshObservers()
+            refreshObservers(note)
         }
     }
 
@@ -255,7 +255,7 @@ object LocalCache {
             it.addReply(note)
         }
 
-        refreshObservers()
+        refreshObservers(note)
     }
 
     fun consume(event: BadgeDefinitionEvent) {
@@ -268,7 +268,7 @@ object LocalCache {
         if (event.createdAt > (note.createdAt() ?: 0)) {
             note.loadEvent(event, author, emptyList<Note>())
 
-            refreshObservers()
+            refreshObservers(note)
         }
     }
 
@@ -286,8 +286,6 @@ object LocalCache {
             note.loadEvent(event, author, replyTo)
 
             author.updateAcceptedBadges(note)
-
-            refreshObservers()
         }
     }
 
@@ -309,7 +307,7 @@ object LocalCache {
             it.addReply(note)
         }
 
-        refreshObservers()
+        refreshObservers(note)
     }
 
     @Suppress("UNUSED_PARAMETER")
@@ -353,7 +351,7 @@ object LocalCache {
             recipient.addMessage(author, note)
         }
 
-        refreshObservers()
+        refreshObservers(note)
     }
 
     fun consume(event: DeletionEvent) {
@@ -401,7 +399,7 @@ object LocalCache {
         }
 
         if (deletedAtLeastOne) {
-            live.invalidateData()
+            // refreshObservers()
         }
     }
 
@@ -427,7 +425,7 @@ object LocalCache {
             it.addBoost(note)
         }
 
-        refreshObservers()
+        refreshObservers(note)
     }
 
     fun consume(event: ReactionEvent) {
@@ -465,6 +463,8 @@ object LocalCache {
                 it.addReport(note)
             }
         }
+
+        refreshObservers(note)
     }
 
     fun consume(event: ReportEvent, relay: Relay?) {
@@ -495,6 +495,8 @@ object LocalCache {
         repliesTo.forEach {
             it.addReport(note)
         }
+
+        refreshObservers(note)
     }
 
     fun consume(event: ChannelCreateEvent) {
@@ -511,7 +513,7 @@ object LocalCache {
             oldChannel.addNote(note)
             note.loadEvent(event, author, emptyList())
 
-            refreshObservers()
+            refreshObservers(note)
         }
     }
 
@@ -531,7 +533,7 @@ object LocalCache {
                 oldChannel.addNote(note)
                 note.loadEvent(event, author, emptyList())
 
-                refreshObservers()
+                refreshObservers(note)
             }
         } else {
             // Log.d("MT","Relay sent a previous Metadata Event ${oldUser.toBestDisplayName()} ${formattedDateTime(event.createdAt)} > ${formattedDateTime(oldUser.updatedAt)}")
@@ -578,7 +580,7 @@ object LocalCache {
             it.addReply(note)
         }
 
-        refreshObservers()
+        refreshObservers(note)
     }
 
     @Suppress("UNUSED_PARAMETER")
@@ -595,7 +597,7 @@ object LocalCache {
         // Already processed this event.
         if (note.event != null) return
 
-        val zapRequest = event.containedPost()?.id?.let { getOrCreateNote(it) }
+        val zapRequest = event.zapRequest?.id?.let { getOrCreateNote(it) }
 
         val author = getOrCreateUser(event.pubKey)
         val mentions = event.zappedAuthor().mapNotNull { checkGetOrCreateUser(it) }
@@ -620,6 +622,8 @@ object LocalCache {
         mentions.forEach {
             it.addZap(zapRequest, note)
         }
+
+        refreshObservers(note)
     }
 
     fun consume(event: LnZapRequestEvent) {
@@ -643,6 +647,21 @@ object LocalCache {
         mentions.forEach {
             it.addZap(note, null)
         }
+
+        refreshObservers(note)
+    }
+
+    fun consume(event: FileHeaderEvent) {
+        val note = getOrCreateNote(event.id)
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        val author = getOrCreateUser(event.pubKey)
+
+        note.loadEvent(event, author, emptyList())
+
+        refreshObservers(note)
     }
 
     fun findUsersStartingWith(username: String): List<User> {
@@ -694,11 +713,6 @@ object LocalCache {
                 notes.remove(it.idHex)
                 // Doesn't need to clean up the replies and mentions.. Too small to matter.
 
-                // reverts the add
-                val mentions =
-                    it.event?.tags()?.filter { it.firstOrNull() == "p" }?.mapNotNull { it.getOrNull(1) }
-                        ?.mapNotNull { checkGetOrCreateUser(it) }
-
                 // Counts the replies
                 it.replyTo?.forEach { _ ->
                     it.removeReply(it)
@@ -749,30 +763,23 @@ object LocalCache {
     }
 
     // Observers line up here.
-    val live: LocalCacheLiveData = LocalCacheLiveData(this)
+    val live: LocalCacheLiveData = LocalCacheLiveData()
 
-    private fun refreshObservers() {
-        live.invalidateData()
+    private fun refreshObservers(newNote: Note) {
+        live.invalidateData(newNote)
     }
 }
 
-class LocalCacheLiveData(val cache: LocalCache) :
-    LiveData<LocalCacheState>(LocalCacheState(cache)) {
+class LocalCacheLiveData : LiveData<Set<Note>>(setOf<Note>()) {
 
     // Refreshes observers in batches.
-    private val bundler = BundledUpdate(300, Dispatchers.Main) {
-        if (hasActiveObservers()) {
-            refresh()
+    private val bundler = BundledInsert<Note>(300, Dispatchers.Main)
+
+    fun invalidateData(newNote: Note) {
+        bundler.invalidateList(newNote) { bundledNewNotes ->
+            if (hasActiveObservers()) {
+                postValue(bundledNewNotes)
+            }
         }
     }
-
-    fun invalidateData() {
-        bundler.invalidate()
-    }
-
-    private fun refresh() {
-        postValue(LocalCacheState(cache))
-    }
 }
-
-class LocalCacheState(val cache: LocalCache)

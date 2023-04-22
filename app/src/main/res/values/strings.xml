@@ -292,4 +292,9 @@
     <string name="lightning_create_and_add_invoice">Create and Add</string>
     <string name="poll_author_no_vote">Poll authors can\'t vote in their own polls.</string>
     <string name="poll_hashtag" translatable="false">#zappoll</string>
+
+
+    <string name="hash_verification_passed">Image is the same since the post</string>
+    <string name="hash_verification_failed">Image has changed. The author might not have seen the change</string>
+
 </resources>

@@ -5,8 +5,6 @@ import android.graphics.Bitmap
 import android.util.Log
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -61,7 +59,6 @@ import com.vitorpamplona.amethyst.ui.theme.Following
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.math.BigDecimal
-import kotlin.math.ceil
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTimedValue
 
@@ -96,7 +93,7 @@ fun NoteCompose(
         )
     }
 
-    Log.d("Time", "Note Compose in $elapsed for ${baseNote.event?.kind()} ${baseNote.event?.content()?.split("\n")?.get(0)?.take(100)}")
+    Log.d("Time", "Note Compose in $elapsed for ${baseNote.idHex} ${baseNote.event?.kind()} ${baseNote.event?.content()?.split("\n")?.get(0)?.take(100)}")
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -170,6 +167,8 @@ fun NoteComposeInner(
         ChannelHeader(baseChannel = baseChannel, account = account, navController = navController)
     } else if (noteEvent is BadgeDefinitionEvent) {
         BadgeDisplay(baseNote = note)
+    } else if (noteEvent is FileHeaderEvent) {
+        FileHeaderDisplay(note)
     } else {
         var isNew by remember { mutableStateOf<Boolean>(false) }
 
@@ -299,7 +298,7 @@ fun NoteComposeInner(
                         }
 
                         if (noteEvent is RepostEvent) {
-                            note.replyTo?.lastOrNull()?.let {
+                            baseNote.replyTo?.lastOrNull()?.let {
                                 RelayBadges(it)
                             }
                         } else {
@@ -496,13 +495,13 @@ fun NoteComposeInner(
                         noteEvent.recipientPubKey() != loggedIn.pubkeyHex &&
                         note.author !== loggedIn
                     ) {
-                        val recepient = noteEvent.recipientPubKey()?.let { LocalCache.checkGetOrCreateUser(it) }
+                        val recipient = noteEvent.recipientPubKey()?.let { LocalCache.checkGetOrCreateUser(it) }
 
                         TranslatableRichTextViewer(
                             stringResource(
                                 id = R.string.private_conversation_notification,
                                 "@${note.author?.pubkeyNpub()}",
-                                "@${recepient?.pubkeyNpub()}"
+                                "@${recipient?.pubkeyNpub()}"
                             ),
                             canPreview = !makeItShort,
                             Modifier.fillMaxWidth(),
@@ -582,7 +581,9 @@ fun DisplayFollowingHashtagsInPost(
     var firstTag by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(key1 = noteEvent) {
-        firstTag = noteEvent.firstIsTaggedHashes(account.followingTagSet())
+        withContext(Dispatchers.IO) {
+            firstTag = noteEvent.firstIsTaggedHashes(account.followingTagSet())
+        }
     }
 
     Column() {
@@ -778,6 +779,30 @@ fun BadgeDisplay(baseNote: Note) {
 }
 
 @Composable
+fun FileHeaderDisplay(note: Note) {
+    val event = (note.event as? FileHeaderEvent) ?: return
+
+    val fullUrl = event.url() ?: return
+    val blurHash = event.blurhash()
+    val hash = event.hash()
+    val description = event.content
+    val removedParamsFromUrl = fullUrl.split("?")[0].lowercase()
+    val isImage = imageExtensions.any { removedParamsFromUrl.endsWith(it) }
+    val isVideo = videoExtensions.any { removedParamsFromUrl.endsWith(it) }
+
+    if (isImage || isVideo) {
+        val content = if (isImage) {
+            ZoomableImage(fullUrl, description, hash, blurHash)
+        } else {
+            ZoomableVideo(fullUrl, description, hash)
+        }
+        ZoomableContentView(content = content, listOf(content))
+    } else {
+        UrlPreview(fullUrl, "$fullUrl ")
+    }
+}
+
+@Composable
 private fun LongFormHeader(noteEvent: LongTextNoteEvent, note: Note, loggedIn: User) {
     Row(
         modifier = Modifier
@@ -869,67 +894,102 @@ private fun LongFormHeader(noteEvent: LongTextNoteEvent, note: Note, loggedIn: U
 @Composable
 private fun RelayBadges(baseNote: Note) {
     val noteRelaysState by baseNote.live().relays.observeAsState()
-    val noteRelays = noteRelaysState?.note?.relays ?: emptySet()
+    val noteRelays = noteRelaysState?.note ?: return
 
     var expanded by remember { mutableStateOf(false) }
+    var showShowMore by remember { mutableStateOf(false) }
+    var lazyRelayList by remember { mutableStateOf(emptyList<String>()) }
 
-    val relaysToDisplay = (if (expanded) noteRelays else noteRelays.take(3)).toList()
-    val height = (ceil(relaysToDisplay.size / 3.0f) * 17).dp
+    LaunchedEffect(key1 = noteRelaysState, key2 = expanded) {
+        withContext(Dispatchers.IO) {
+            val relayList = noteRelays.relays.map {
+                it.removePrefix("wss://").removePrefix("ws://")
+            }
 
-    val uri = LocalUriHandler.current
+            val relaysToDisplay = if (expanded) relayList else relayList.take(3)
+            val shouldListChange = lazyRelayList.size < 3 || lazyRelayList.size != relayList.size
 
-    Spacer(Modifier.height(10.dp))
+            if (shouldListChange) {
+                lazyRelayList = relaysToDisplay
+            }
 
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(3),
-        contentPadding = PaddingValues(start = 4.dp, end = 4.dp),
-        modifier = Modifier.height(height),
-        userScrollEnabled = false
-    ) {
-        items(relaysToDisplay.size) {
-            val url = relaysToDisplay[it].removePrefix("wss://").removePrefix("ws://")
-
-            Box(
-                Modifier
-                    .padding(1.dp)
-                    .size(15.dp)
-            ) {
-                RobohashFallbackAsyncImage(
-                    robot = "https://$url/favicon.ico",
-                    model = "https://$url/favicon.ico",
-                    contentDescription = stringResource(R.string.relay_icon),
-                    colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }),
-                    modifier = Modifier
-                        .width(13.dp)
-                        .height(13.dp)
-                        .clip(shape = CircleShape)
-                        // .border(1.dp, Color.Red)
-                        .background(MaterialTheme.colors.background)
-                        .clickable(onClick = { uri.openUri("https://$url") })
-                )
+            val nextShowMore = relayList.size > 3 && !expanded
+            if (nextShowMore != showShowMore) {
+                // only triggers recomposition when actually different
+                showShowMore = nextShowMore
             }
         }
     }
 
-    if (noteRelays.size > 3 && !expanded) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .height(25.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.Top
+    Spacer(Modifier.height(10.dp))
+
+    VerticalRelayPanelWithFlow(lazyRelayList)
+
+    if (showShowMore) {
+        ShowMoreRelaysButton {
+            expanded = true
+        }
+    }
+}
+
+@Composable
+@Stable
+private fun VerticalRelayPanelWithFlow(
+    relays: List<String>
+) {
+    // FlowRow Seems to be a lot faster than LazyVerticalGrid
+    FlowRow() {
+        relays.forEach { url ->
+            RelayIconCompose(url)
+        }
+    }
+}
+
+@Composable
+@Stable
+private fun RelayIconCompose(url: String) {
+    val uri = LocalUriHandler.current
+
+    Box(
+        Modifier
+            .padding(1.dp)
+            .size(15.dp)
+    ) {
+        RobohashFallbackAsyncImage(
+            robot = "https://$url/favicon.ico",
+            robotSize = 15.dp,
+            model = "https://$url/favicon.ico",
+            contentDescription = stringResource(R.string.relay_icon),
+            colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }),
+            modifier = Modifier
+                .width(13.dp)
+                .height(13.dp)
+                .clip(shape = CircleShape)
+                .background(MaterialTheme.colors.background)
+                .clickable(onClick = { uri.openUri("https://$url") })
+        )
+    }
+}
+
+@Composable
+private fun ShowMoreRelaysButton(onClick: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .height(25.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.Top
+    ) {
+        IconButton(
+            modifier = Modifier.then(Modifier.size(24.dp)),
+            onClick = onClick
         ) {
-            IconButton(
-                modifier = Modifier.then(Modifier.size(24.dp)),
-                onClick = { expanded = true }
-            ) {
-                Icon(
-                    imageVector = Icons.Default.ExpandMore,
-                    null,
-                    modifier = Modifier.size(15.dp),
-                    tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                )
-            }
+            Icon(
+                imageVector = Icons.Default.ExpandMore,
+                null,
+                modifier = Modifier.size(15.dp),
+                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+            )
         }
     }
 }
@@ -968,6 +1028,7 @@ fun NoteAuthorPicture(
         if (author == null) {
             RobohashAsyncImage(
                 robot = "authornotfound",
+                robotSize = size,
                 contentDescription = stringResource(R.string.unknown_author),
                 modifier = modifier
                     .width(size)
@@ -1108,12 +1169,14 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
     }
 
     LaunchedEffect(key1 = note) {
-        state = DropDownParams(
-            accountViewModel.isFollowing(note.author),
-            accountViewModel.isInPrivateBookmarks(note),
-            accountViewModel.isInPublicBookmarks(note),
-            accountViewModel.isLoggedUser(note.author)
-        )
+        withContext(Dispatchers.IO) {
+            state = DropDownParams(
+                accountViewModel.isFollowing(note.author),
+                accountViewModel.isInPrivateBookmarks(note),
+                accountViewModel.isInPublicBookmarks(note),
+                accountViewModel.isLoggedUser(note.author)
+            )
+        }
     }
 
     DropdownMenu(

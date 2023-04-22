@@ -75,8 +75,9 @@ abstract class NostrDataSource(val debugName: String) {
                         is ContactListEvent -> LocalCache.consume(event)
                         is DeletionEvent -> LocalCache.consume(event)
 
+                        is FileHeaderEvent -> LocalCache.consume(event)
                         is LnZapEvent -> {
-                            event.containedPost()?.let { onEvent(it, subscriptionId, relay) }
+                            event.zapRequest?.let { onEvent(it, subscriptionId, relay) }
                             LocalCache.consume(event)
                         }
                         is LnZapRequestEvent -> LocalCache.consume(event)
@@ -154,7 +155,7 @@ abstract class NostrDataSource(val debugName: String) {
 
     // Refreshes observers in batches.
     private val bundler = BundledUpdate(250, Dispatchers.IO) {
-        println("DataSource: ${this.javaClass.simpleName} InvalidateFilters")
+        // println("DataSource: ${this.javaClass.simpleName} InvalidateFilters")
 
         // adds the time to perform the refresh into this delay
         // holding off new updates in case of heavy refresh routines.

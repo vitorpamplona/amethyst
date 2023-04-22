@@ -7,7 +7,6 @@ import com.vitorpamplona.amethyst.service.relays.EOSETime
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
-import java.util.Date
 
 object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
     private var eventsToWatch = setOf<Note>()
@@ -19,8 +18,6 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
         if (addressesToWatch.isEmpty()) {
             return null
         }
-
-        val now = Date().time / 1000
 
         return addressesToWatch.mapNotNull {
             it.address()?.let { aTag ->
@@ -48,8 +45,6 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
         if (addressesToWatch.isEmpty()) {
             return null
         }
-
-        val now = Date().time / 1000
 
         return addressesToWatch.mapNotNull {
             it.address()?.let { aTag ->
@@ -116,9 +111,12 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
                 types = FeedType.values().toSet(),
                 filter = JsonFilter(
                     kinds = listOf(
-                        TextNoteEvent.kind, LongTextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind, LnZapEvent.kind, LnZapRequestEvent.kind,
-                        ChannelMessageEvent.kind, ChannelCreateEvent.kind, ChannelMetadataEvent.kind, BadgeDefinitionEvent.kind, BadgeAwardEvent.kind, BadgeProfilesEvent.kind,
-                        PollNoteEvent.kind, PrivateDmEvent.kind
+                        TextNoteEvent.kind, LongTextNoteEvent.kind, PollNoteEvent.kind,
+                        ReactionEvent.kind, RepostEvent.kind,
+                        LnZapEvent.kind, LnZapRequestEvent.kind,
+                        ChannelMessageEvent.kind, ChannelCreateEvent.kind, ChannelMetadataEvent.kind,
+                        BadgeDefinitionEvent.kind, BadgeAwardEvent.kind, BadgeProfilesEvent.kind,
+                        PrivateDmEvent.kind, FileHeaderEvent.kind
                     ),
                     ids = interestedEvents.toList()
                 )

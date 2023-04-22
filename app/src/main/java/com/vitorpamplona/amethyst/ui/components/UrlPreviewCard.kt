@@ -41,24 +41,24 @@ fun UrlPreviewCard(
             )
     ) {
         Column {
-            val url = URL(previewInfo.url)
+            val validatedUrl = URL(previewInfo.url)
 
             // correctly treating relative images
             val imageUrl = if (previewInfo.image.startsWith("/")) {
-                URL(url, previewInfo.image).toString()
+                URL(validatedUrl, previewInfo.image).toString()
             } else {
                 previewInfo.image
             }
 
             AsyncImage(
                 model = imageUrl,
-                contentDescription = stringResource(R.string.preview_card_image_for, url),
+                contentDescription = stringResource(R.string.preview_card_image_for, validatedUrl),
                 contentScale = ContentScale.FillWidth,
                 modifier = Modifier.fillMaxWidth()
             )
 
             Text(
-                text = url.host,
+                text = validatedUrl.host,
                 style = MaterialTheme.typography.caption,
                 modifier = Modifier
                     .fillMaxWidth()

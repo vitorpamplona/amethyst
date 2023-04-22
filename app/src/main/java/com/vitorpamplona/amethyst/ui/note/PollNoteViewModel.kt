@@ -5,6 +5,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.*
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.util.*
 
 class PollNoteViewModel {
@@ -16,7 +17,9 @@ class PollNoteViewModel {
     var valueMaximum: Int? = null
     var valueMinimum: Int? = null
     private var closedAt: Int? = null
-    var consensusThreshold: Float? = null
+    var consensusThreshold: BigDecimal? = null
+
+    var totalZapped: BigDecimal = BigDecimal.ZERO
 
     fun load(note: Note?) {
         pollNote = note
@@ -24,8 +27,10 @@ class PollNoteViewModel {
         pollOptions = pollEvent?.pollOptions()
         valueMaximum = pollEvent?.getTagInt(VALUE_MAXIMUM)
         valueMinimum = pollEvent?.getTagInt(VALUE_MINIMUM)
-        consensusThreshold = pollEvent?.getTagInt(CONSENSUS_THRESHOLD)?.toFloat()?.div(100)
+        consensusThreshold = pollEvent?.getTagInt(CONSENSUS_THRESHOLD)?.toFloat()?.div(100)?.toBigDecimal()
         closedAt = pollEvent?.getTagInt(CLOSED_AT)
+
+        totalZapped = totalZapped()
     }
 
     fun isVoteAmountAtomic() = valueMaximum != null && valueMinimum != null && valueMinimum == valueMaximum
@@ -73,47 +78,45 @@ class PollNoteViewModel {
         return false
     }
 
-    fun optionVoteTally(op: Int): Float {
-        val tally = zappedPollOptionAmount(op).toFloat().div(zappedVoteTotal())
-        return if (tally.isNaN()) { // catch div by 0
-            0f
-        } else { tally }
-    }
-
-    private fun zappedVoteTotal(): Float {
-        var total = 0f
-        pollOptions?.keys?.forEach {
-            total += zappedPollOptionAmount(it).toFloat()
+    fun optionVoteTally(op: Int): BigDecimal {
+        return if (totalZapped.compareTo(BigDecimal.ZERO) > 0) {
+            zappedPollOptionAmount(op).divide(totalZapped, 2, RoundingMode.HALF_UP)
+        } else {
+            BigDecimal.ZERO
         }
-        return total
     }
 
     fun isPollOptionZappedBy(option: Int, user: User): Boolean {
-        if (pollNote?.zaps?.any { it.key.author == user } == true) {
-            pollNote!!.zaps.mapNotNull { it.value?.event }
-                .filterIsInstance<LnZapEvent>()
-                .map {
-                    val zappedOption = it.zappedPollOption()
-                    if (zappedOption == option && it.zappedRequestAuthor() == user.pubkeyHex) {
-                        return true
-                    }
+        if (pollNote?.zaps?.any { it.key.author === user } == true) {
+            pollNote!!.zaps
+                .any {
+                    val event = it.value?.event as? LnZapEvent
+                    event?.zappedPollOption() == option && event.zappedRequestAuthor() == user.pubkeyHex
                 }
         }
         return false
     }
 
     fun zappedPollOptionAmount(option: Int): BigDecimal {
-        return if (pollNote != null) {
-            pollNote!!.zaps.mapNotNull { it.value?.event }
-                .filterIsInstance<LnZapEvent>()
-                .mapNotNull {
-                    val zappedOption = it.zappedPollOption()
-                    if (zappedOption == option) {
-                        it.amount
-                    } else { null }
-                }.sumOf { it }
-        } else {
-            BigDecimal(0)
-        }
+        return pollNote?.zaps?.values?.sumOf {
+            val event = it?.event as? LnZapEvent
+            if (event?.zappedPollOption() == option) {
+                event.amount ?: BigDecimal(0)
+            } else {
+                BigDecimal(0)
+            }
+        } ?: BigDecimal(0)
+    }
+
+    fun totalZapped(): BigDecimal {
+        return pollNote?.zaps?.values?.sumOf {
+            val zapEvent = (it?.event as? LnZapEvent)
+
+            if (zapEvent?.zappedPollOption() != null) {
+                zapEvent.amount ?: BigDecimal(0)
+            } else {
+                BigDecimal(0)
+            }
+        } ?: BigDecimal(0)
     }
 }

@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.time.ExperimentalTime
 
 val bottomNavigationItems = listOf(
     Route.Home,
@@ -135,6 +136,7 @@ fun AppBottomBar(navController: NavHostController, accountViewModel: AccountView
     }
 }
 
+@OptIn(ExperimentalTime::class)
 @Composable
 private fun NotifiableIcon(route: Route, selected: Boolean, accountViewModel: AccountViewModel) {
     Box(Modifier.size(if ("Home" == route.base) 25.dp else 23.dp)) {
@@ -159,13 +161,13 @@ private fun NotifiableIcon(route: Route, selected: Boolean, accountViewModel: Ac
 
         LaunchedEffect(key1 = notif) {
             withContext(Dispatchers.IO) {
-                hasNewItems = route.hasNewItems(account, notif.cache)
+                hasNewItems = route.hasNewItems(account, notif.cache, emptySet())
             }
         }
 
         LaunchedEffect(key1 = db) {
             withContext(Dispatchers.IO) {
-                hasNewItems = route.hasNewItems(account, notif.cache)
+                hasNewItems = route.hasNewItems(account, notif.cache, db)
             }
         }
 
