@@ -16,5 +16,5 @@ interface LnZapEventInterface : EventInterface {
 
     fun amount(): BigDecimal?
 
-    fun message(): String
+    fun containedPost(): Event?
 }

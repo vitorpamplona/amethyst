@@ -67,6 +67,7 @@ fun ZapCustomDialog(onClose: () -> Unit, account: Account, accountViewModel: Acc
 
     val zapTypes = listOf(
         Pair(LnZapEvent.ZapType.PUBLIC, "Public"),
+        Pair(LnZapEvent.ZapType.PRIVATE, "Private"),
         Pair(LnZapEvent.ZapType.ANONYMOUS, "Anonymous"),
         Pair(LnZapEvent.ZapType.NONZAP, "Non-Zap")
     )
