@@ -673,6 +673,19 @@ object LocalCache {
         refreshObservers(note)
     }
 
+    fun consume(event: FileHeaderEvent) {
+        val note = getOrCreateNote(event.id)
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        val author = getOrCreateUser(event.pubKey)
+
+        note.loadEvent(event, author, emptyList())
+
+        refreshObservers(note)
+    }
+
     fun findUsersStartingWith(username: String): List<User> {
         return users.values.filter {
             (it.anyNameStartsWith(username)) ||

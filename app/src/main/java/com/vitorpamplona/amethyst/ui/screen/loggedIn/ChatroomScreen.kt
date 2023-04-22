@@ -67,6 +67,8 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
     val context = LocalContext.current
     val chatRoomScreenModel: NewPostViewModel = viewModel()
 
+    chatRoomScreenModel.account = account
+
     if (account != null && userId != null) {
         val replyTo = remember { mutableStateOf<Note?>(null) }
 

@@ -110,7 +110,13 @@ class PollNoteViewModel {
 
     fun totalZapped(): BigDecimal {
         return pollNote?.zaps?.values?.sumOf {
-            (it?.event as? LnZapEvent)?.amount ?: BigDecimal(0)
+            val zapEvent = (it?.event as? LnZapEvent)
+
+            if (zapEvent?.zappedPollOption() != null) {
+                zapEvent.amount ?: BigDecimal(0)
+            } else {
+                BigDecimal(0)
+            }
         } ?: BigDecimal(0)
     }
 }
