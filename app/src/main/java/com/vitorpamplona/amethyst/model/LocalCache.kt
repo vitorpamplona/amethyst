@@ -599,7 +599,7 @@ object LocalCache {
         if (decryptedContent != null) {
             Log.e(
                 "DC",
-                "Decrypted Event: Sender: {${decryptedContent.pubKey}}, Message: {${decryptedContent.content}} "
+                "Decrypted Content from Anon Tag: Sender: {${decryptedContent.pubKey}}, Message: {${decryptedContent.content}} "
 
                 // TODO Update Notification with this Sender and Message
             )
