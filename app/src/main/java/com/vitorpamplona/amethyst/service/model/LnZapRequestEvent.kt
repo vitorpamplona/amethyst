@@ -55,9 +55,9 @@ class LnZapRequestEvent(
                 privkey = Utils.privkeyCreate()
                 pubKey = Utils.pubkeyCreate(privkey).toHexKey()
             } else if (zapType == LnZapEvent.ZapType.PRIVATE) {
-                var encryptionprkey = create_private_key(privateKey.toHexKey(), originalNote.id(), createdAt)
+                var encryptionprkey = createPrivateKey(privateKey.toHexKey(), originalNote.id(), createdAt)
                 var noteJson = (create(privkey, 9733, listOf(tags[0], tags[1]), message)).toJson()
-                var privreq = encrypt_privatezap_message(noteJson, encryptionprkey, originalNote.pubKey().toByteArray())
+                var privreq = encryptPrivateZapMessage(noteJson, encryptionprkey, originalNote.pubKey().toByteArray())
                 tags = tags + listOf(listOf("anon", privreq))
                 content = ""
                 privkey = encryptionprkey
@@ -68,13 +68,13 @@ class LnZapRequestEvent(
             return LnZapRequestEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
         }
 
-        fun create_private_key(privkey: String, id: String, createdAt: Long): ByteArray {
+        fun createPrivateKey(privkey: String, id: String, createdAt: Long): ByteArray {
             var str = privkey + id + createdAt.toString()
             var strbyte = str.toByteArray(Charset.forName("utf-8"))
             return sha256.digest(strbyte)
         }
 
-        fun encrypt_privatezap_message(msg: String, privkey: ByteArray, pubkey: ByteArray): String {
+        fun encryptPrivateZapMessage(msg: String, privkey: ByteArray, pubkey: ByteArray): String {
             var sharedSecret = Utils.getSharedSecret(privkey, pubkey)
             val iv = ByteArray(16)
             SecureRandom().nextBytes(iv)
@@ -93,7 +93,7 @@ class LnZapRequestEvent(
             return encryptedMsgBech32 + "_" + ivBech32
         }
 
-        fun decrypt_privatezap_message(msg: String, privkey: ByteArray, pubkey: ByteArray): String {
+        fun decryptPrivateZapMessage(msg: String, privkey: ByteArray, pubkey: ByteArray): String {
             var sharedSecret = Utils.getSharedSecret(privkey, pubkey)
             if (sharedSecret.size != 16 && sharedSecret.size != 32) {
                 throw IllegalArgumentException("Invalid shared secret size")
@@ -113,6 +113,25 @@ class LnZapRequestEvent(
             } catch (ex: BadPaddingException) {
                 throw IllegalArgumentException("Bad padding")
             }
+        }
+
+        fun checkForPrivateZap(zaprequest: Event, loggedInUserPrivKey: ByteArray): Event? {
+            var anonTag = zaprequest.tags.firstOrNull { t -> t.count() >= 2 && t[0] == "anon" }
+            if (anonTag != null && anonTag.size > 1) {
+                var encnote = anonTag?.elementAt(1)
+                if (encnote != null && encnote != "") {
+                    try {
+                        var note = decryptPrivateZapMessage(encnote, loggedInUserPrivKey, zaprequest.pubKey.toByteArray())
+                        var decryptedEvent = fromJson(note)
+                        if (decryptedEvent.kind == 9733) {
+                            return decryptedEvent
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+            return null
         }
 
         fun create(
@@ -135,9 +154,9 @@ class LnZapRequestEvent(
                 pubKey = Utils.pubkeyCreate(privkey).toHexKey()
                 tags = tags + listOf(listOf("anon", ""))
             } else if (zapType == LnZapEvent.ZapType.PRIVATE) {
-                var enc_prkey = create_private_key(privateKey.toHexKey(), userHex, createdAt)
+                var enc_prkey = createPrivateKey(privateKey.toHexKey(), userHex, createdAt)
                 var noteJson = (create(privkey, 9733, listOf(tags[0], tags[1]), message)).toJson()
-                var privreq = encrypt_privatezap_message(noteJson, enc_prkey, userHex.toByteArray())
+                var privreq = encryptPrivateZapMessage(noteJson, enc_prkey, userHex.toByteArray())
                 tags = tags + listOf(listOf("anon", privreq))
                 content = ""
                 privkey = enc_prkey

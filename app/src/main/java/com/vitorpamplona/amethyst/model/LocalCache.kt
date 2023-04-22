@@ -4,10 +4,10 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.vitorpamplona.amethyst.service.NostrAccountDataSource.account
 import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.BundledInsert
-import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
 import fr.acinq.secp256k1.Hex
 import kotlinx.coroutines.*
 import nostr.postr.toNpub
@@ -595,6 +595,16 @@ object LocalCache {
     fun consume(event: LnZapEvent) {
         val note = getOrCreateNote(event.id)
 
+        var decryptedContent = LnZapRequestEvent.checkForPrivateZap(event.zapRequest!!, account.loggedIn.privKey!!)
+        if (decryptedContent != null) {
+            Log.e(
+                "DC",
+                "Decrypted Event: Sender: {${decryptedContent.pubKey}}, Message: {${decryptedContent.content}} "
+
+                // TODO Update Notification with this Sender and Message
+            )
+        }
+
         // Already processed this event.
         if (note.event != null) return
 
@@ -627,27 +637,6 @@ object LocalCache {
         refreshObservers(note)
     }
 
-    fun checkPrivateZap(zaprequest: Event): Event {
-        var anonTag = zaprequest.tags.firstOrNull { t -> t.count() >= 2 && t[0] == "anon" }
-        if (anonTag != null && anonTag.size > 1) {
-            var encnote = anonTag?.elementAt(1)
-            if (encnote != null && encnote != "") {
-                try {
-                    val loggedInUserHex = NotificationFeedFilter.account.loggedIn.privKey!! // Replace without Filter
-                    var note = LnZapRequestEvent.decrypt_privatezap_message(encnote, loggedInUserHex, zaprequest.pubKey.toByteArray())
-                    var decryptedEvent = Event.fromJson(note)
-                    if (decryptedEvent.kind == 9733) {
-                        zaprequest.pubKey = decryptedEvent.pubKey
-                        zaprequest.content = decryptedEvent.content
-                        // return decryptedEvent
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
-        }
-        return zaprequest
-    }
     fun consume(event: LnZapRequestEvent) {
         val note = getOrCreateNote(event.id)
 
