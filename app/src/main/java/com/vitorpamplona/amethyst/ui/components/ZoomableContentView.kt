@@ -148,14 +148,6 @@ fun ZoomableContentView(content: ZoomableContent, images: List<ZoomableContent> 
         )
 
     if (content is ZoomableImage) {
-        if (imageState !is AsyncImagePainter.State.Success) {
-            if (content.bluehash != null) {
-                DisplayBlueHash(content, mainImageModifier)
-            } else {
-                DisplayUrlWithLoadingSymbol(content)
-            }
-        }
-
         Box() {
             AsyncImage(
                 model = content.url,
@@ -172,6 +164,14 @@ fun ZoomableContentView(content: ZoomableContent, images: List<ZoomableContent> 
 
             if (imageState is AsyncImagePainter.State.Success) {
                 HashVerificationSymbol(verifiedHash, Modifier.align(Alignment.TopEnd))
+            }
+        }
+
+        if (imageState !is AsyncImagePainter.State.Success) {
+            if (content.bluehash != null) {
+                DisplayBlueHash(content, mainImageModifier)
+            } else {
+                DisplayUrlWithLoadingSymbol(content)
             }
         }
     } else {
