@@ -15,7 +15,7 @@ object ImageUploader {
     fun uploadImage(
         uri: Uri,
         contentResolver: ContentResolver,
-        onSuccess: (String) -> Unit,
+        onSuccess: (String, String?) -> Unit,
         onError: (Throwable) -> Unit
     ) {
         val contentType = contentResolver.getType(uri)
@@ -64,7 +64,7 @@ object ImageUploader {
                             "There must be an uploaded image URL in the response"
                         }
 
-                        onSuccess(url)
+                        onSuccess(url, contentType)
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()

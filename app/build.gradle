@@ -12,8 +12,8 @@ android {
         applicationId "com.vitorpamplona.amethyst"
         minSdk 26
         targetSdk 33
-        versionCode 120
-        versionName "0.33.1"
+        versionCode 123
+        versionName "0.34.1"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -145,6 +145,9 @@ dependencies {
     implementation "io.coil-kt:coil-gif:$coil_version"
     // view svgs
     implementation "io.coil-kt:coil-svg:$coil_version"
+
+    // create blurhash
+    implementation group: 'io.trbl', name: 'blurhash', version: '1.0.0'
 
     // Rendering clickable text
     implementation "com.google.accompanist:accompanist-flowlayout:$accompanist_version"

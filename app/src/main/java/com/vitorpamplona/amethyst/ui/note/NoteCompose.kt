@@ -167,6 +167,8 @@ fun NoteComposeInner(
         ChannelHeader(baseChannel = baseChannel, account = account, navController = navController)
     } else if (noteEvent is BadgeDefinitionEvent) {
         BadgeDisplay(baseNote = note)
+    } else if (noteEvent is FileHeaderEvent) {
+        FileHeaderDisplay(note)
     } else {
         var isNew by remember { mutableStateOf<Boolean>(false) }
 
@@ -773,6 +775,30 @@ fun BadgeDisplay(baseNote: Note) {
                 )
             }
         }
+    }
+}
+
+@Composable
+fun FileHeaderDisplay(note: Note) {
+    val event = (note.event as? FileHeaderEvent) ?: return
+
+    val fullUrl = event.url() ?: return
+    val blurHash = event.blurhash()
+    val hash = event.hash()
+    val description = event.content
+    val removedParamsFromUrl = fullUrl.split("?")[0].lowercase()
+    val isImage = imageExtensions.any { removedParamsFromUrl.endsWith(it) }
+    val isVideo = videoExtensions.any { removedParamsFromUrl.endsWith(it) }
+
+    if (isImage || isVideo) {
+        val content = if (isImage) {
+            ZoomableImage(fullUrl, description, hash, blurHash)
+        } else {
+            ZoomableVideo(fullUrl, description, hash)
+        }
+        ZoomableContentView(content = content, listOf(content))
+    } else {
+        UrlPreview(fullUrl, "$fullUrl ")
     }
 }
 

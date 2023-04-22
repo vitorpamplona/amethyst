@@ -68,6 +68,7 @@ import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
+import com.vitorpamplona.amethyst.ui.components.figureOutMimeType
 import com.vitorpamplona.amethyst.ui.dal.UserProfileBookmarksFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowersFeedFilter
@@ -401,8 +402,9 @@ private fun ProfileHeader(
         }
     }
 
-    if (zoomImageDialogOpen) {
-        ZoomableImageDialog(baseUser.profilePicture()!!, onDismiss = { zoomImageDialogOpen = false })
+    val profilePic = baseUser.profilePicture()
+    if (zoomImageDialogOpen && profilePic != null) {
+        ZoomableImageDialog(figureOutMimeType(profilePic), onDismiss = { zoomImageDialogOpen = false })
     }
 }
 
@@ -706,7 +708,7 @@ private fun DrawBanner(baseUser: User) {
         )
 
         if (zoomImageDialogOpen) {
-            ZoomableImageDialog(imageUrl = banner, onDismiss = { zoomImageDialogOpen = false })
+            ZoomableImageDialog(imageUrl = figureOutMimeType(banner), onDismiss = { zoomImageDialogOpen = false })
         }
     } else {
         Image(

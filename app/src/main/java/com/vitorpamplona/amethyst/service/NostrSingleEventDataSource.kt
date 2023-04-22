@@ -111,9 +111,12 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
                 types = FeedType.values().toSet(),
                 filter = JsonFilter(
                     kinds = listOf(
-                        TextNoteEvent.kind, LongTextNoteEvent.kind, ReactionEvent.kind, RepostEvent.kind, LnZapEvent.kind, LnZapRequestEvent.kind,
-                        ChannelMessageEvent.kind, ChannelCreateEvent.kind, ChannelMetadataEvent.kind, BadgeDefinitionEvent.kind, BadgeAwardEvent.kind, BadgeProfilesEvent.kind,
-                        PollNoteEvent.kind, PrivateDmEvent.kind
+                        TextNoteEvent.kind, LongTextNoteEvent.kind, PollNoteEvent.kind,
+                        ReactionEvent.kind, RepostEvent.kind,
+                        LnZapEvent.kind, LnZapRequestEvent.kind,
+                        ChannelMessageEvent.kind, ChannelCreateEvent.kind, ChannelMetadataEvent.kind,
+                        BadgeDefinitionEvent.kind, BadgeAwardEvent.kind, BadgeProfilesEvent.kind,
+                        PrivateDmEvent.kind, FileHeaderEvent.kind
                     ),
                     ids = interestedEvents.toList()
                 )

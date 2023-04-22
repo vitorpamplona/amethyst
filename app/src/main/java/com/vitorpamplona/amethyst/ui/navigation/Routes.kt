@@ -11,6 +11,7 @@ import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ChatroomListKnownFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
@@ -109,9 +110,29 @@ fun currentRoute(navController: NavHostController): String? {
     return navBackStackEntry?.destination?.route
 }
 
-object HomeLatestItem {
-    private var newestItem: Note? = null
+open class LatestItem {
+    var newestItemPerAccount: Map<String, Note?> = mapOf()
 
+    fun updateNewestItem(newNotes: Set<Note>, account: Account, filter: AdditiveFeedFilter<Note>): Note? {
+        val newestItem = newestItemPerAccount[account.userProfile().pubkeyHex]
+
+        if (newestItem == null) {
+            newestItemPerAccount = newestItemPerAccount + Pair(
+                account.userProfile().pubkeyHex,
+                filter.feed().firstOrNull { it.createdAt() != null }
+            )
+        } else {
+            newestItemPerAccount = newestItemPerAccount + Pair(
+                account.userProfile().pubkeyHex,
+                filter.sort(filter.applyFilter(newNotes) + newestItem).first()
+            )
+        }
+
+        return newestItemPerAccount[account.userProfile().pubkeyHex]
+    }
+}
+
+object HomeLatestItem : LatestItem() {
     fun hasNewItems(
         account: Account,
         cache: NotificationCache,
@@ -120,22 +141,13 @@ object HomeLatestItem {
         val lastTime = cache.load("HomeFollows")
         HomeNewThreadFeedFilter.account = account
 
-        if (newestItem == null) {
-            newestItem = HomeNewThreadFeedFilter.feed().firstOrNull { it.createdAt() != null }
-        } else {
-            newestItem =
-                HomeNewThreadFeedFilter.sort(
-                    HomeNewThreadFeedFilter.applyFilter(newNotes + newestItem!!)
-                ).first()
-        }
+        val newestItem = updateNewestItem(newNotes, account, HomeNewThreadFeedFilter)
 
         return (newestItem?.createdAt() ?: 0) > lastTime
     }
 }
 
-object NotificationLatestItem {
-    private var newestItem: Note? = null
-
+object NotificationLatestItem : LatestItem() {
     fun hasNewItems(
         account: Account,
         cache: NotificationCache,
@@ -144,21 +156,13 @@ object NotificationLatestItem {
         val lastTime = cache.load("Notification")
         NotificationFeedFilter.account = account
 
-        if (newestItem == null) {
-            newestItem = NotificationFeedFilter.feed().firstOrNull { it.createdAt() != null }
-        } else {
-            newestItem = HomeNewThreadFeedFilter.sort(
-                NotificationFeedFilter.applyFilter(newNotes) + newestItem!!
-            ).first()
-        }
+        val newestItem = updateNewestItem(newNotes, account, NotificationFeedFilter)
 
         return (newestItem?.createdAt() ?: 0) > lastTime
     }
 }
 
 object MessagesLatestItem {
-    private var newestItem: Note? = null
-
     fun hasNewItems(
         account: Account,
         cache: NotificationCache,
