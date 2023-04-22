@@ -88,13 +88,13 @@ class LnZapRequestEvent(
                 pubKey = Utils.pubkeyCreate(privkey).toHexKey()
                 tags = tags + listOf(listOf("anon", ""))
             } else if (zapType == LnZapEvent.ZapType.PRIVATE) {
-                var enc_prkey = createEncryptionPrivateKey(privateKey.toHexKey(), userHex, createdAt)
+                var encryptionPrivateKey = createEncryptionPrivateKey(privateKey.toHexKey(), userHex, createdAt)
                 var noteJson = (create(privkey, 9733, listOf(tags[0], tags[1]), message)).toJson()
-                var privreq = encryptPrivateZapMessage(noteJson, enc_prkey, userHex.toByteArray())
-                tags = tags + listOf(listOf("anon", privreq))
+                var encryptedContent = encryptPrivateZapMessage(noteJson, encryptionPrivateKey, userHex.toByteArray())
+                tags = tags + listOf(listOf("anon", encryptedContent))
                 content = ""
-                privkey = enc_prkey
-                pubKey = Utils.pubkeyCreate(enc_prkey).toHexKey()
+                privkey = encryptionPrivateKey
+                pubKey = Utils.pubkeyCreate(encryptionPrivateKey).toHexKey()
             }
             val id = generateId(pubKey, createdAt, kind, tags, content)
             val sig = Utils.sign(id, privkey)
