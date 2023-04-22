@@ -55,20 +55,53 @@ class LnZapRequestEvent(
                 privkey = Utils.privkeyCreate()
                 pubKey = Utils.pubkeyCreate(privkey).toHexKey()
             } else if (zapType == LnZapEvent.ZapType.PRIVATE) {
-                var encryptionprkey = createPrivateKey(privateKey.toHexKey(), originalNote.id(), createdAt)
+                var encryptionPrivateKey = createEncryptionPrivateKey(privateKey.toHexKey(), originalNote.id(), createdAt)
                 var noteJson = (create(privkey, 9733, listOf(tags[0], tags[1]), message)).toJson()
-                var privreq = encryptPrivateZapMessage(noteJson, encryptionprkey, originalNote.pubKey().toByteArray())
-                tags = tags + listOf(listOf("anon", privreq))
-                content = ""
-                privkey = encryptionprkey
-                pubKey = Utils.pubkeyCreate(encryptionprkey).toHexKey()
+                var encryptedContent = encryptPrivateZapMessage(noteJson, encryptionPrivateKey, originalNote.pubKey().toByteArray())
+                tags = tags + listOf(listOf("anon", encryptedContent))
+                content = "" // make sure public content is empty, as the content is encrypted
+                privkey = encryptionPrivateKey // sign event with generated privkey
+                pubKey = Utils.pubkeyCreate(encryptionPrivateKey).toHexKey() // updated event with according pubkey
             }
             val id = generateId(pubKey, createdAt, kind, tags, content)
             val sig = Utils.sign(id, privkey)
             return LnZapRequestEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
         }
 
-        fun createPrivateKey(privkey: String, id: String, createdAt: Long): ByteArray {
+        fun create(
+            userHex: String,
+            relays: Set<String>,
+            privateKey: ByteArray,
+            message: String,
+            zapType: LnZapEvent.ZapType,
+            createdAt: Long = Date().time / 1000
+        ): LnZapRequestEvent {
+            var content = message
+            var privkey = privateKey
+            var pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
+            var tags = listOf(
+                listOf("p", userHex),
+                listOf("relays") + relays
+            )
+            if (zapType == LnZapEvent.ZapType.ANONYMOUS) {
+                privkey = Utils.privkeyCreate()
+                pubKey = Utils.pubkeyCreate(privkey).toHexKey()
+                tags = tags + listOf(listOf("anon", ""))
+            } else if (zapType == LnZapEvent.ZapType.PRIVATE) {
+                var enc_prkey = createEncryptionPrivateKey(privateKey.toHexKey(), userHex, createdAt)
+                var noteJson = (create(privkey, 9733, listOf(tags[0], tags[1]), message)).toJson()
+                var privreq = encryptPrivateZapMessage(noteJson, enc_prkey, userHex.toByteArray())
+                tags = tags + listOf(listOf("anon", privreq))
+                content = ""
+                privkey = enc_prkey
+                pubKey = Utils.pubkeyCreate(enc_prkey).toHexKey()
+            }
+            val id = generateId(pubKey, createdAt, kind, tags, content)
+            val sig = Utils.sign(id, privkey)
+            return LnZapRequestEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
+        }
+
+        fun createEncryptionPrivateKey(privkey: String, id: String, createdAt: Long): ByteArray {
             var str = privkey + id + createdAt.toString()
             var strbyte = str.toByteArray(Charset.forName("utf-8"))
             return sha256.digest(strbyte)
@@ -116,13 +149,13 @@ class LnZapRequestEvent(
         }
 
         fun checkForPrivateZap(zaprequest: Event, loggedInUserPrivKey: ByteArray): Event? {
-            var anonTag = zaprequest.tags.firstOrNull { t -> t.count() >= 2 && t[0] == "anon" }
+            val anonTag = zaprequest.tags.firstOrNull { t -> t.count() >= 2 && t[0] == "anon" }
             if (anonTag != null && anonTag.size > 1) {
-                var encnote = anonTag?.elementAt(1)
+                val encnote = anonTag?.elementAt(1)
                 if (encnote != null && encnote != "") {
                     try {
-                        var note = decryptPrivateZapMessage(encnote, loggedInUserPrivKey, zaprequest.pubKey.toByteArray())
-                        var decryptedEvent = fromJson(note)
+                        val note = decryptPrivateZapMessage(encnote, loggedInUserPrivKey, zaprequest.pubKey.toByteArray())
+                        val decryptedEvent = fromJson(note)
                         if (decryptedEvent.kind == 9733) {
                             return decryptedEvent
                         }
@@ -132,39 +165,6 @@ class LnZapRequestEvent(
                 }
             }
             return null
-        }
-
-        fun create(
-            userHex: String,
-            relays: Set<String>,
-            privateKey: ByteArray,
-            message: String,
-            zapType: LnZapEvent.ZapType,
-            createdAt: Long = Date().time / 1000
-        ): LnZapRequestEvent {
-            var content = message
-            var privkey = privateKey
-            var pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
-            var tags = listOf(
-                listOf("p", userHex),
-                listOf("relays") + relays
-            )
-            if (zapType == LnZapEvent.ZapType.ANONYMOUS) {
-                privkey = Utils.privkeyCreate()
-                pubKey = Utils.pubkeyCreate(privkey).toHexKey()
-                tags = tags + listOf(listOf("anon", ""))
-            } else if (zapType == LnZapEvent.ZapType.PRIVATE) {
-                var enc_prkey = createPrivateKey(privateKey.toHexKey(), userHex, createdAt)
-                var noteJson = (create(privkey, 9733, listOf(tags[0], tags[1]), message)).toJson()
-                var privreq = encryptPrivateZapMessage(noteJson, enc_prkey, userHex.toByteArray())
-                tags = tags + listOf(listOf("anon", privreq))
-                content = ""
-                privkey = enc_prkey
-                pubKey = Utils.pubkeyCreate(enc_prkey).toHexKey()
-            }
-            val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = Utils.sign(id, privkey)
-            return LnZapRequestEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
         }
     }
 }
