@@ -31,6 +31,7 @@ import kotlinx.coroutines.launch
 
 class ZapOptionstViewModel : ViewModel() {
     private var account: Account? = null
+
     var customAmount by mutableStateOf(TextFieldValue("21"))
     var customMessage by mutableStateOf(TextFieldValue(""))
 
@@ -73,7 +74,7 @@ fun ZapCustomDialog(onClose: () -> Unit, account: Account, accountViewModel: Acc
     )
 
     val zapOptions = zapTypes.map { it.second }
-    var selectedZapType by remember { mutableStateOf(zapTypes[0]) }
+    var selectedZapType by remember { mutableStateOf(account.defaultZapType) }
 
     Dialog(
         onDismissRequest = { onClose() },
@@ -116,7 +117,7 @@ fun ZapCustomDialog(onClose: () -> Unit, account: Account, accountViewModel: Acc
                                         zappingProgress = it
                                     }
                                 },
-                                zapType = selectedZapType.first
+                                zapType = selectedZapType
                             )
                         }
                         onClose()
@@ -186,10 +187,11 @@ fun ZapCustomDialog(onClose: () -> Unit, account: Account, accountViewModel: Acc
                 }
                 TextSpinner(
                     label = "Zap Type",
-                    placeholder = "Public",
+                    placeholder = zapTypes.filter { it.first == account.defaultZapType }.first().second,
                     options = zapOptions,
                     onSelect = {
-                        selectedZapType = zapTypes[it]
+                        selectedZapType = zapTypes[it].first
+                        account.changeDefaultZapType(selectedZapType)
                     },
                     modifier = Modifier.fillMaxWidth()
                 )

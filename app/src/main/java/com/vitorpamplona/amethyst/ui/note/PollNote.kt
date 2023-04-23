@@ -250,7 +250,7 @@ fun ZapVote(
                                     zappingProgress = it
                                 }
                             },
-                            zapType = LnZapEvent.ZapType.PUBLIC
+                            zapType = account.defaultZapType
                         )
                     }
                 } else {
