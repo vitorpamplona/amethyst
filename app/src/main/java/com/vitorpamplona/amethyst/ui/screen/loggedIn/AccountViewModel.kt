@@ -95,7 +95,7 @@ class AccountViewModel(private val account: Account) : ViewModel() {
                             } else {
                                 // awaits for confirmation from Receiver or timeout.
                             }
-                        },
+                        }
                     )
                     onProgress(0.8f)
 

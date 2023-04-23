@@ -2,12 +2,7 @@ package com.vitorpamplona.amethyst.service.model
 
 import android.util.Log
 import com.google.gson.annotations.SerializedName
-import com.google.gson.reflect.TypeToken
 import com.vitorpamplona.amethyst.model.HexKey
-import com.vitorpamplona.amethyst.model.toByteArray
-import com.vitorpamplona.amethyst.model.toHexKey
-import nostr.postr.Utils
-import java.util.Date
 
 class LnZapPaymentResponseEvent(
     id: HexKey,
@@ -45,15 +40,13 @@ abstract class Response(
 
 // PayInvoice Call
 
-class PayInvoiceSuccessResponse(val result: PayInvoiceResultParams):
-    Response("pay_invoice")
-{
+class PayInvoiceSuccessResponse(val result: PayInvoiceResultParams) :
+    Response("pay_invoice") {
     class PayInvoiceResultParams(val preimage: String)
 }
 
-class PayInvoiceErrorResponse(val error: PayInvoiceErrorParams? = null):
-    Response("pay_invoice")
-{
+class PayInvoiceErrorResponse(val error: PayInvoiceErrorParams? = null) :
+    Response("pay_invoice") {
     class PayInvoiceErrorParams(val code: ErrorType?, val message: String?)
 
     enum class ErrorType {
@@ -72,12 +65,6 @@ class PayInvoiceErrorResponse(val error: PayInvoiceErrorParams? = null):
         @SerializedName(value = "internal", alternate = ["INTERNAL"])
         INTERNAL, // An internal error.
         @SerializedName(value = "other", alternate = ["OTHER"])
-        OTHER, // Other error.
+        OTHER // Other error.
     }
 }
-
-
-
-
-
-

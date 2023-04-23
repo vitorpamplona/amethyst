@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.service.relays
 
-import com.vitorpamplona.amethyst.service.NostrDataSource
 import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.EventInterface
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -8,7 +7,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.util.UUID
 
 /**
@@ -79,7 +77,9 @@ object Client : RelayPool.Listener {
                 }
             } else {
                 /** temporary connection */
-                newSporadicRelay(relay, feedTypes,
+                newSporadicRelay(
+                    relay,
+                    feedTypes,
                     onConnected = { relay ->
                         relay.send(signedEvent)
                     },
@@ -102,8 +102,9 @@ object Client : RelayPool.Listener {
                 relay.disconnect()
                 RelayPool.removeRelay(relay)
 
-                if (onDone != null)
+                if (onDone != null) {
                     onDone()
+                }
             }
         }
     }

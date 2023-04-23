@@ -8,8 +8,8 @@ import com.vitorpamplona.amethyst.service.relays.TypedFilter
 class NostrLnZapPaymentResponseDataSource(
     private var fromServiceHex: String,
     private var toUserHex: String,
-    private var replyingToHex: String,
-): NostrDataSource("LnZapPaymentResponseFeed") {
+    private var replyingToHex: String
+) : NostrDataSource("LnZapPaymentResponseFeed") {
 
     val feedTypes = setOf(FeedType.WALLET_CONNECT)
 

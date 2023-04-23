@@ -1,7 +1,6 @@
 package com.vitorpamplona.amethyst.service.model
 
 import android.util.Log
-import com.google.gson.annotations.SerializedName
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toByteArray
 import com.vitorpamplona.amethyst.model.toHexKey
@@ -63,15 +62,8 @@ class LnZapPaymentRequestEvent(
 abstract class Request(val method: String, val params: Params)
 abstract class Params
 
-
 // PayInvoice Call
 
-class PayInvoiceMethod(bolt11: String): Request("pay_invoice", PayInvoiceParams(bolt11)) {
-    class PayInvoiceParams(val invoice: String): Params()
+class PayInvoiceMethod(bolt11: String) : Request("pay_invoice", PayInvoiceParams(bolt11)) {
+    class PayInvoiceParams(val invoice: String) : Params()
 }
-
-
-
-
-
-

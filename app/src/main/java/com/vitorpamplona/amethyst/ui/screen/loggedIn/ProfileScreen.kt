@@ -60,7 +60,6 @@ import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
 import com.vitorpamplona.amethyst.service.model.IdentityClaim
-import com.vitorpamplona.amethyst.service.model.LnZapPaymentResponseEvent
 import com.vitorpamplona.amethyst.service.model.PayInvoiceErrorResponse
 import com.vitorpamplona.amethyst.service.model.PayInvoiceSuccessResponse
 import com.vitorpamplona.amethyst.service.model.ReportEvent
