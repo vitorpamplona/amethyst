@@ -162,14 +162,16 @@ fun ZoomableContentView(content: ZoomableContent, images: List<ZoomableContent> 
                 }
             )
 
-            if (imageState !is AsyncImagePainter.State.Success) {
-                if (content.bluehash != null) {
-                    DisplayBlueHash(content, mainImageModifier)
-                } else {
-                    DisplayUrlWithLoadingSymbol(content)
-                }
-            } else {
+            if (imageState is AsyncImagePainter.State.Success) {
                 HashVerificationSymbol(verifiedHash, Modifier.align(Alignment.TopEnd))
+            }
+        }
+
+        if (imageState !is AsyncImagePainter.State.Success) {
+            if (content.bluehash != null) {
+                DisplayBlueHash(content, mainImageModifier)
+            } else {
+                DisplayUrlWithLoadingSymbol(content)
             }
         }
     } else {
@@ -183,7 +185,7 @@ fun ZoomableContentView(content: ZoomableContent, images: List<ZoomableContent> 
 
 @Composable
 private fun DisplayUrlWithLoadingSymbol(content: ZoomableContent) {
-    ClickableUrl(urlText = "$content ", url = content.url)
+    ClickableUrl(urlText = "${content.url} ", url = content.url)
 
     val myId = "inlineContent"
     val emptytext = buildAnnotatedString {

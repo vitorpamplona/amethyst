@@ -375,7 +375,7 @@ fun NoteComposeInner(
                                 baseNote = replyingDirectlyTo,
                                 isQuotedNote = true,
                                 modifier = Modifier
-                                    .padding(0.dp)
+                                    .padding(top = 5.dp)
                                     .fillMaxWidth()
                                     .clip(shape = RoundedCornerShape(15.dp))
                                     .border(

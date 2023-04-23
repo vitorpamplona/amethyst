@@ -1,9 +1,15 @@
 package com.vitorpamplona.amethyst.service.model
 
-import com.vitorpamplona.amethyst.model.HexKey
-import com.vitorpamplona.amethyst.model.toHexKey
+import com.vitorpamplona.amethyst.model.*
+import nostr.postr.Bech32
 import nostr.postr.Utils
-import java.util.Date
+import java.nio.charset.Charset
+import java.security.SecureRandom
+import java.util.*
+import javax.crypto.BadPaddingException
+import javax.crypto.Cipher
+import javax.crypto.spec.IvParameterSpec
+import javax.crypto.spec.SecretKeySpec
 
 class LnZapRequestEvent(
     id: HexKey,
@@ -30,7 +36,7 @@ class LnZapRequestEvent(
             zapType: LnZapEvent.ZapType,
             createdAt: Long = Date().time / 1000
         ): LnZapRequestEvent {
-            val content = message
+            var content = message
             var privkey = privateKey
             var pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             var tags = listOf(
@@ -48,6 +54,14 @@ class LnZapRequestEvent(
                 tags = tags + listOf(listOf("anon", ""))
                 privkey = Utils.privkeyCreate()
                 pubKey = Utils.pubkeyCreate(privkey).toHexKey()
+            } else if (zapType == LnZapEvent.ZapType.PRIVATE) {
+                var encryptionPrivateKey = createEncryptionPrivateKey(privateKey.toHexKey(), originalNote.id(), createdAt)
+                var noteJson = (create(privkey, 9733, listOf(tags[0], tags[1]), message)).toJson()
+                var encryptedContent = encryptPrivateZapMessage(noteJson, encryptionPrivateKey, originalNote.pubKey().toByteArray())
+                tags = tags + listOf(listOf("anon", encryptedContent))
+                content = "" // make sure public content is empty, as the content is encrypted
+                privkey = encryptionPrivateKey // sign event with generated privkey
+                pubKey = Utils.pubkeyCreate(encryptionPrivateKey).toHexKey() // updated event with according pubkey
             }
             val id = generateId(pubKey, createdAt, kind, tags, content)
             val sig = Utils.sign(id, privkey)
@@ -62,7 +76,7 @@ class LnZapRequestEvent(
             zapType: LnZapEvent.ZapType,
             createdAt: Long = Date().time / 1000
         ): LnZapRequestEvent {
-            val content = message
+            var content = message
             var privkey = privateKey
             var pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             var tags = listOf(
@@ -70,18 +84,90 @@ class LnZapRequestEvent(
                 listOf("relays") + relays
             )
             if (zapType == LnZapEvent.ZapType.ANONYMOUS) {
-                tags = tags + listOf(listOf("anon", ""))
                 privkey = Utils.privkeyCreate()
                 pubKey = Utils.pubkeyCreate(privkey).toHexKey()
+                tags = tags + listOf(listOf("anon", ""))
+            } else if (zapType == LnZapEvent.ZapType.PRIVATE) {
+                var encryptionPrivateKey = createEncryptionPrivateKey(privateKey.toHexKey(), userHex, createdAt)
+                var noteJson = (create(privkey, 9733, listOf(tags[0], tags[1]), message)).toJson()
+                var encryptedContent = encryptPrivateZapMessage(noteJson, encryptionPrivateKey, userHex.toByteArray())
+                tags = tags + listOf(listOf("anon", encryptedContent))
+                content = ""
+                privkey = encryptionPrivateKey
+                pubKey = Utils.pubkeyCreate(encryptionPrivateKey).toHexKey()
             }
-
             val id = generateId(pubKey, createdAt, kind, tags, content)
             val sig = Utils.sign(id, privkey)
             return LnZapRequestEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
         }
+
+        fun createEncryptionPrivateKey(privkey: String, id: String, createdAt: Long): ByteArray {
+            var str = privkey + id + createdAt.toString()
+            var strbyte = str.toByteArray(Charset.forName("utf-8"))
+            return sha256.digest(strbyte)
+        }
+
+        fun encryptPrivateZapMessage(msg: String, privkey: ByteArray, pubkey: ByteArray): String {
+            var sharedSecret = Utils.getSharedSecret(privkey, pubkey)
+            val iv = ByteArray(16)
+            SecureRandom().nextBytes(iv)
+
+            val keySpec = SecretKeySpec(sharedSecret, "AES")
+            val ivSpec = IvParameterSpec(iv)
+
+            var utf8message = msg.toByteArray(Charset.forName("utf-8"))
+            val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
+            cipher.init(Cipher.ENCRYPT_MODE, keySpec, ivSpec)
+            val encryptedMsg = cipher.doFinal(utf8message)
+
+            val encryptedMsgBech32 = Bech32.encode("pzap", Bech32.eight2five(encryptedMsg), Bech32.Encoding.Bech32)
+            val ivBech32 = Bech32.encode("iv", Bech32.eight2five(iv), Bech32.Encoding.Bech32)
+
+            return encryptedMsgBech32 + "_" + ivBech32
+        }
+
+        fun decryptPrivateZapMessage(msg: String, privkey: ByteArray, pubkey: ByteArray): String {
+            var sharedSecret = Utils.getSharedSecret(privkey, pubkey)
+            if (sharedSecret.size != 16 && sharedSecret.size != 32) {
+                throw IllegalArgumentException("Invalid shared secret size")
+            }
+            val parts = msg.split("_")
+            if (parts.size != 2) {
+                throw IllegalArgumentException("Invalid message format")
+            }
+            val iv = parts[1].run { Bech32.decode(this) }
+            val encryptedMsg = parts.first().run { Bech32.decode(this) }
+            val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
+            cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(sharedSecret, "AES"), IvParameterSpec(Bech32.five2eight(iv.second, 0)))
+
+            try {
+                val decryptedMsgBytes = cipher.doFinal(Bech32.five2eight(encryptedMsg.second, 0))
+                return String(decryptedMsgBytes)
+            } catch (ex: BadPaddingException) {
+                throw IllegalArgumentException("Bad padding")
+            }
+        }
+
+        fun checkForPrivateZap(zaprequest: Event, loggedInUserPrivKey: ByteArray): Event? {
+            val anonTag = zaprequest.tags.firstOrNull { t -> t.count() >= 2 && t[0] == "anon" }
+            if (anonTag != null && anonTag.size > 1) {
+                val encnote = anonTag?.elementAt(1)
+                if (encnote != null && encnote != "") {
+                    try {
+                        val note = decryptPrivateZapMessage(encnote, loggedInUserPrivKey, zaprequest.pubKey.toByteArray())
+                        val decryptedEvent = fromJson(note)
+                        if (decryptedEvent.kind == 9733) {
+                            return decryptedEvent
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+            return null
+        }
     }
 }
-
 /*
 {
   "pubkey": "32e1827635450ebb3c5a7d12c1f8e7b2b514439ac10a67eef3d9fd9c5c68e245",
