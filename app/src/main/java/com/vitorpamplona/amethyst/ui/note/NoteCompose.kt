@@ -450,7 +450,7 @@ fun NoteComposeInner(
                     } else if (noteEvent is LongTextNoteEvent) {
                         LongFormHeader(noteEvent, note, loggedIn)
 
-                        ReactionsRow(note, accountViewModel)
+                        ReactionsRow(note, accountViewModel, navController)
 
                         Divider(
                             modifier = Modifier.padding(top = 10.dp),
@@ -485,7 +485,7 @@ fun NoteComposeInner(
                             )
                         }
 
-                        ReactionsRow(note, accountViewModel)
+                        ReactionsRow(note, accountViewModel, navController)
 
                         Divider(
                             modifier = Modifier.padding(top = 10.dp),
@@ -512,7 +512,7 @@ fun NoteComposeInner(
                         )
 
                         if (!makeItShort) {
-                            ReactionsRow(note, accountViewModel)
+                            ReactionsRow(note, accountViewModel, navController)
                         }
 
                         Divider(
@@ -556,7 +556,7 @@ fun NoteComposeInner(
                         }
 
                         if (!makeItShort) {
-                            ReactionsRow(note, accountViewModel)
+                            ReactionsRow(note, accountViewModel, navController)
                         }
 
                         Divider(

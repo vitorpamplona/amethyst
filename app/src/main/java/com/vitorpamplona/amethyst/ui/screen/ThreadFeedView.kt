@@ -378,7 +378,7 @@ fun NoteMaster(
                         }
                     }
 
-                    ReactionsRow(note, accountViewModel)
+                    ReactionsRow(note, accountViewModel, navController)
 
                     Divider(
                         modifier = Modifier.padding(top = 10.dp),

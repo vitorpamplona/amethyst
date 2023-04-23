@@ -73,7 +73,7 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
                 }
             },
             floatingActionButton = {
-                FloatingButtons(navController, accountStateViewModel)
+                FloatingButtons(navController, accountViewModel, accountStateViewModel)
             },
             scaffoldState = scaffoldState
         ) {
@@ -85,8 +85,8 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
 }
 
 @Composable
-fun FloatingButtons(navController: NavHostController, accountViewModel: AccountStateViewModel) {
-    val accountState by accountViewModel.accountContent.collectAsState()
+fun FloatingButtons(navController: NavHostController, accountViewModel: AccountViewModel, accountStateViewModel: AccountStateViewModel) {
+    val accountState by accountStateViewModel.accountContent.collectAsState()
 
     if (currentRoute(navController)?.substringBefore("?") == Route.Home.base) {
         Crossfade(targetState = accountState, animationSpec = tween(durationMillis = 100)) { state ->
@@ -98,7 +98,7 @@ fun FloatingButtons(navController: NavHostController, accountViewModel: AccountS
                     // Does nothing.
                 }
                 is AccountState.LoggedIn -> {
-                    NewNoteButton(state.account)
+                    NewNoteButton(state.account, accountViewModel, navController)
                 }
             }
         }

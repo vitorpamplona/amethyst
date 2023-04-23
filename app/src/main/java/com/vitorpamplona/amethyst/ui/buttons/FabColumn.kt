@@ -88,7 +88,7 @@ fun FabColumn(account: Account) {
     }
 
     if (wantsToPost) {
-        NewPostView({ wantsToPost = false }, account = NostrAccountDataSource.account)
+        //NewPostView({ wantsToPost = false }, account = NostrAccountDataSource.account)
     }
 
     if (wantsToPoll) {

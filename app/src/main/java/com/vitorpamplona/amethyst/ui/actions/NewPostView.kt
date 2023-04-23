@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
@@ -44,13 +45,14 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.ui.components.*
 import com.vitorpamplona.amethyst.ui.note.ReplyInformation
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.UserLine
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = null, account: Account) {
+fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = null, account: Account, accountViewModel: AccountViewModel, navController: NavController) {
     val postViewModel: NewPostViewModel = viewModel()
 
     val context = LocalContext.current
@@ -234,6 +236,14 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                         } else {
                                             UrlPreview(myUrlPreview, myUrlPreview)
                                         }
+                                    } else if (isBechLink(myUrlPreview)) {
+                                        BechLink(
+                                            myUrlPreview,
+                                            true,
+                                            MaterialTheme.colors.background,
+                                            accountViewModel,
+                                            navController
+                                        )
                                     } else if (noProtocolUrlValidator.matcher(myUrlPreview).matches()) {
                                         UrlPreview("https://$myUrlPreview", myUrlPreview)
                                     }
