@@ -1,11 +1,14 @@
 package com.vitorpamplona.amethyst.service.relays
 
+import com.vitorpamplona.amethyst.service.NostrDataSource
 import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.EventInterface
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.UUID
 
 /**
@@ -64,22 +67,43 @@ object Client : RelayPool.Listener {
         RelayPool.sendFilterOnlyIfDisconnected()
     }
 
-    fun send(signedEvent: EventInterface, relay: String? = null) {
+    fun send(signedEvent: EventInterface, relay: String? = null, feedTypes: Set<FeedType>? = null, onDone: (() -> Unit)? = null) {
         if (relay == null) {
             RelayPool.send(signedEvent)
         } else {
-            val useConnectedRelay = relays.filter { it.url == relay }
+            val useConnectedRelayIfPresent = relays.filter { it.url == relay }
 
-            if (useConnectedRelay.isNotEmpty()) {
-                useConnectedRelay.forEach {
+            if (useConnectedRelayIfPresent.isNotEmpty()) {
+                useConnectedRelayIfPresent.forEach {
                     it.send(signedEvent)
                 }
             } else {
                 /** temporary connection */
-                Relay(relay, false, true, emptySet()).requestAndWatch() {
-                    it.send(signedEvent)
-                    it.disconnect()
-                }
+                newSporadicRelay(relay, feedTypes,
+                    onConnected = { relay ->
+                        relay.send(signedEvent)
+                    },
+                    onDone = onDone
+                )
+            }
+        }
+    }
+
+    @OptIn(DelicateCoroutinesApi::class)
+    fun newSporadicRelay(url: String, feedTypes: Set<FeedType>?, onConnected: (Relay) -> Unit, onDone: (() -> Unit)?) {
+        val relay = Relay(url, true, true, feedTypes ?: emptySet())
+        RelayPool.addRelay(relay)
+
+        relay.requestAndWatch {
+            onConnected(relay)
+
+            GlobalScope.launch(Dispatchers.IO) {
+                delay(10000) // waits for a reply
+                relay.disconnect()
+                RelayPool.removeRelay(relay)
+
+                if (onDone != null)
+                    onDone()
             }
         }
     }

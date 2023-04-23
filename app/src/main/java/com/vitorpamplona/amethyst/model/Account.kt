@@ -4,10 +4,13 @@ import android.content.res.Resources
 import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.FileHeader
+import com.vitorpamplona.amethyst.service.NostrAccountDataSource
+import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
 import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.relays.FeedType
+import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
@@ -165,13 +168,19 @@ class Account(
         return zapPaymentRequest != null
     }
 
-    fun sendZapPaymentRequestFor(lnInvoice: String) {
+    fun sendZapPaymentRequestFor(bolt11: String, onResponse: (LnZapPaymentResponseEvent) -> Unit) {
         if (!isWriteable()) return
 
         zapPaymentRequest?.let {
-            val event = LnZapPaymentRequestEvent.create(lnInvoice, it.pubKeyHex, it.secret?.toByteArray() ?: loggedIn.privKey!!)
+            val event = LnZapPaymentRequestEvent.create(bolt11, it.pubKeyHex, it.secret?.toByteArray() ?: loggedIn.privKey!!)
 
-            Client.send(event, it.relayUri)
+            val wcListener = NostrLnZapPaymentResponseDataSource(it.pubKeyHex, loggedIn.pubKey.toHexKey(), event.id)
+            wcListener.start()
+
+            LocalCache.consume(event, onResponse)
+            Client.send(event, it.relayUri, wcListener.feedTypes) {
+                wcListener.destroy()
+            }
         }
     }
 

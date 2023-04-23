@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.service.model
 
 import android.util.Log
+import com.google.gson.annotations.SerializedName
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toByteArray
 import com.vitorpamplona.amethyst.model.toHexKey
@@ -15,6 +16,8 @@ class LnZapPaymentRequestEvent(
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
+
+    fun walletServicePubKey() = tags.firstOrNull() { it.size > 1 && it[0] == "p" }?.get(1)
 
     fun lnInvoice(privKey: ByteArray): String? {
         return try {
@@ -37,9 +40,10 @@ class LnZapPaymentRequestEvent(
             createdAt: Long = Date().time / 1000
         ): LnZapPaymentRequestEvent {
             val pubKey = Utils.pubkeyCreate(privateKey)
+            val serializedRequest = gson.toJson(PayInvoiceMethod(lnInvoice))
 
             val content = Utils.encrypt(
-                lnInvoice,
+                serializedRequest,
                 privateKey,
                 walletServicePubkey.toByteArray()
             )
@@ -53,3 +57,21 @@ class LnZapPaymentRequestEvent(
         }
     }
 }
+
+// REQUEST OBJECTS
+
+abstract class Request(val method: String, val params: Params)
+abstract class Params
+
+
+// PayInvoice Call
+
+class PayInvoiceMethod(bolt11: String): Request("pay_invoice", PayInvoiceParams(bolt11)) {
+    class PayInvoiceParams(val invoice: String): Params()
+}
+
+
+
+
+
+

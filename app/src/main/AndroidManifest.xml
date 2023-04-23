@@ -50,6 +50,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="nostrwalletconnect" />
+                <data android:scheme="nostr+walletconnect" />
             </intent-filter>
 
             <meta-data

@@ -88,6 +88,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                 RepostEvent.kind,
                 ReportEvent.kind,
                 LnZapEvent.kind,
+                LnZapPaymentResponseEvent.kind,
                 ChannelMessageEvent.kind,
                 BadgeAwardEvent.kind
             ),

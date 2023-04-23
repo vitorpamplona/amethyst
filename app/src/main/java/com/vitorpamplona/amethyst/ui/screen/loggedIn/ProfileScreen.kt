@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.*
@@ -59,6 +60,9 @@ import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
 import com.vitorpamplona.amethyst.service.model.IdentityClaim
+import com.vitorpamplona.amethyst.service.model.LnZapPaymentResponseEvent
+import com.vitorpamplona.amethyst.service.model.PayInvoiceErrorResponse
+import com.vitorpamplona.amethyst.service.model.PayInvoiceSuccessResponse
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
 import com.vitorpamplona.amethyst.ui.components.DisplayNip05ProfileStatus
@@ -420,6 +424,7 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewMode
     val uri = LocalUriHandler.current
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     Row(verticalAlignment = Alignment.Bottom) {
         user.bestDisplayName()?.let {
@@ -561,7 +566,28 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewMode
                     onSuccess = {
                         // pay directly
                         if (account.hasWalletConnectSetup()) {
-                            account.sendZapPaymentRequestFor(it)
+                            account.sendZapPaymentRequestFor(it) {
+                                val response = it.response()
+                                if (response is PayInvoiceSuccessResponse) {
+                                    scope.launch {
+                                        Toast.makeText(
+                                            context,
+                                            "Payment Successful", // Turn this into a UI animation
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    }
+                                } else if (response is PayInvoiceErrorResponse) {
+                                    scope.launch {
+                                        Toast.makeText(
+                                            context,
+                                            response.error?.message
+                                                ?: response.error?.code?.toString()
+                                                ?: "Error parsing error message",
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    }
+                                }
+                            }
                         } else {
                             runCatching {
                                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse("lightning:$it"))

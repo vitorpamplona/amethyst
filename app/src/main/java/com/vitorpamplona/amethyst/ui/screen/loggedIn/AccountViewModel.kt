@@ -15,6 +15,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
+import com.vitorpamplona.amethyst.service.model.PayInvoiceErrorResponse
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -80,7 +81,22 @@ class AccountViewModel(private val account: Account) : ViewModel() {
             onSuccess = {
                 onProgress(0.7f)
                 if (account.hasWalletConnectSetup()) {
-                    account.sendZapPaymentRequestFor(it)
+                    account.sendZapPaymentRequestFor(
+                        bolt11 = it,
+                        onResponse = {
+                            val response = it.response()
+                            if (response is PayInvoiceErrorResponse) {
+                                onProgress(0.0f)
+                                onError(
+                                    response.error?.message
+                                        ?: response.error?.code?.toString()
+                                        ?: "Error parsing error message"
+                                )
+                            } else {
+                                // awaits for confirmation from Receiver or timeout.
+                            }
+                        },
+                    )
                     onProgress(0.8f)
 
                     // Awaits for the event to come back to LocalCache.
