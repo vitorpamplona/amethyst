@@ -164,7 +164,15 @@ fun ZapCustomDialog(onClose: () -> Unit, account: Account, accountViewModel: Acc
                 ) {
                     OutlinedTextField(
                         // stringResource(R.string.new_amount_in_sats
-                        label = { Text(text = stringResource(id = R.string.custom_zaps_add_a_message)) },
+                        label = {
+                            if (selectedZapType == LnZapEvent.ZapType.PUBLIC || selectedZapType == LnZapEvent.ZapType.ANONYMOUS) {
+                                Text(text = stringResource(id = R.string.custom_zaps_add_a_message))
+                            } else if (selectedZapType == LnZapEvent.ZapType.PRIVATE) {
+                                Text(text = stringResource(id = R.string.custom_zaps_add_a_message_private))
+                            } else if (selectedZapType == LnZapEvent.ZapType.NONZAP) {
+                                Text(text = stringResource(id = R.string.custom_zaps_add_a_message_nonzap))
+                            }
+                        },
                         value = postViewModel.customMessage,
                         onValueChange = {
                             postViewModel.customMessage = it

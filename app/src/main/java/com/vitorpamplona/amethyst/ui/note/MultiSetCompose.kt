@@ -36,8 +36,13 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
+import com.vitorpamplona.amethyst.service.model.Event
+import com.vitorpamplona.amethyst.service.model.LnZapEvent
+import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
+import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.MultiSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -135,7 +140,16 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
                                 )
                             }
 
-                            AuthorGallery(multiSetCard.zapEvents.keys, navController, account)
+                            for (i in multiSetCard.zapEvents) {
+                                var decryptedContent = (i.value.event as LnZapEvent).zapRequest?.let {
+                                    LnZapRequestEvent.checkForPrivateZap(it, NostrAccountDataSource.account.loggedIn.privKey!!)
+                                }
+                                if (decryptedContent != null) {
+                                    (i.key.event as Event).content = decryptedContent.content
+                                    i.key.author = LocalCache.getOrCreateUser(decryptedContent.pubKey)
+                                }
+                            }
+                            AuthorGallery(multiSetCard.zapEvents.keys, navController, account, accountViewModel, "zap")
                         }
                     }
 
@@ -156,7 +170,7 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
                                 )
                             }
 
-                            AuthorGallery(multiSetCard.boostEvents, navController, account)
+                            AuthorGallery(multiSetCard.boostEvents, navController, account, accountViewModel)
                         }
                     }
 
@@ -177,7 +191,7 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
                                 )
                             }
 
-                            AuthorGallery(multiSetCard.likeEvents, navController, account)
+                            AuthorGallery(multiSetCard.likeEvents, navController, account, accountViewModel)
                         }
                     }
 
@@ -211,7 +225,9 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
 fun AuthorGallery(
     authorNotes: Collection<Note>,
     navController: NavController,
-    account: Account
+    account: Account,
+    accountViewModel: AccountViewModel,
+    kind: String = "nonzap"
 ) {
     val accountState by account.userProfile().live().follows.observeAsState()
     val accountUser = accountState?.user ?: return
@@ -219,12 +235,39 @@ fun AuthorGallery(
     Column(modifier = Modifier.padding(start = 10.dp)) {
         FlowRow() {
             authorNotes.forEach {
-                FastNoteAuthorPicture(
-                    note = it,
-                    navController = navController,
-                    userAccount = accountUser,
-                    size = 35.dp
-                )
+                if (it.event?.content() != "" && kind == "zap") {
+                    Row(Modifier.fillMaxWidth()) {
+                        FastNoteAuthorPicture(
+                            note = it,
+                            navController = navController,
+                            userAccount = accountUser,
+                            size = 35.dp
+                        )
+                    }
+                } else {
+                    Row() {
+                        FastNoteAuthorPicture(
+                            note = it,
+                            navController = navController,
+                            userAccount = accountUser,
+                            size = 35.dp
+                        )
+                    }
+                }
+                if (it.event?.content() != "" && kind == "zap") {
+                    Row(Modifier.fillMaxWidth()) {
+                        it.event?.let {
+                            TranslatableRichTextViewer(
+                                content = it.content(),
+                                canPreview = true,
+                                tags = null,
+                                backgroundColor = MaterialTheme.colors.background,
+                                accountViewModel = accountViewModel,
+                                navController = navController
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -245,7 +288,6 @@ fun FastNoteAuthorPicture(
     val user = userState?.user ?: return
 
     val showFollowingMark = userAccount.isFollowingCached(user) || user === userAccount
-
     UserPicture(
         userHex = user.pubkeyHex,
         userPicture = user.profilePicture(),
