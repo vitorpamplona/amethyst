@@ -43,6 +43,7 @@ class Account(
     var languagePreferences: Map<String, String> = mapOf(),
     var translateTo: String = Locale.getDefault().language,
     var zapAmountChoices: List<Long> = listOf(500L, 1000L, 5000L),
+    var defaultZapType: LnZapEvent.ZapType = LnZapEvent.ZapType.PUBLIC,
     var zapPaymentRequest: Nip47URI? = null,
     var hideDeleteRequestDialog: Boolean = false,
     var hideBlockAlertDialog: Boolean = false,
@@ -621,6 +622,12 @@ class Account(
     fun showUser(pubkeyHex: String) {
         hiddenUsers = hiddenUsers - pubkeyHex
         transientHiddenUsers = transientHiddenUsers - pubkeyHex
+        live.invalidateData()
+        saveable.invalidateData()
+    }
+
+    fun changeDefaultZapType(zapType: LnZapEvent.ZapType) {
+        defaultZapType = zapType
         live.invalidateData()
         saveable.invalidateData()
     }

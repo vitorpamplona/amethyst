@@ -594,17 +594,6 @@ object LocalCache {
 
     fun consume(event: LnZapEvent) {
         val note = getOrCreateNote(event.id)
-
-        var decryptedContent = LnZapRequestEvent.checkForPrivateZap(event.zapRequest!!, account.loggedIn.privKey!!)
-        if (decryptedContent != null) {
-            Log.e(
-                "DC",
-                "Decrypted Content from Anon Tag: Sender: {${decryptedContent.pubKey}}, Message: {${decryptedContent.content}} "
-
-                // TODO Update Notification with this Sender and Message
-            )
-        }
-
         // Already processed this event.
         if (note.event != null) return
 
