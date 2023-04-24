@@ -203,7 +203,7 @@ class Relay(
                     if (filters.isNotEmpty()) {
                         val request =
                             """["REQ","$requestId",${filters.take(40).joinToString(",") { it.filter.toJson(url) }}]"""
-                        println("FILTERSSENT $url $request")
+                        // println("FILTERSSENT $url $request")
                         socket?.send(request)
                         eventUploadCounterInBytes += request.bytesUsedInMemory()
                         afterEOSE = false
