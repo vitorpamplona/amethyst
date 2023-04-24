@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.model
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.model.*
+import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.service.relays.EOSETime
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
@@ -20,6 +21,7 @@ val tagSearch = Pattern.compile("(?:\\s|\\A)\\#\\[([0-9]+)\\]")
 
 class AddressableNote(val address: ATag) : Note(address.toTag()) {
     override fun idNote() = address.toNAddr()
+    override fun toNEvent() = address.toNAddr()
     override fun idDisplayNote() = idNote().toShortenHex()
     override fun address() = address
     override fun createdAt() = (event as? LongTextNoteEvent)?.publishedAt() ?: event?.createdAt()
@@ -51,6 +53,11 @@ open class Note(val idHex: String) {
 
     fun id() = Hex.decode(idHex)
     open fun idNote() = id().toNote()
+
+    open fun toNEvent(): String {
+        return Nip19.createNEvent(idHex, author?.pubkeyHex, event?.kind(), relays.firstOrNull())
+    }
+
     open fun idDisplayNote() = idNote().toShortenHex()
 
     fun channelHex(): HexKey? {

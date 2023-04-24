@@ -31,6 +31,7 @@ import kotlinx.coroutines.launch
 
 class ZapOptionstViewModel : ViewModel() {
     private var account: Account? = null
+
     var customAmount by mutableStateOf(TextFieldValue("21"))
     var customMessage by mutableStateOf(TextFieldValue(""))
 
@@ -73,7 +74,7 @@ fun ZapCustomDialog(onClose: () -> Unit, account: Account, accountViewModel: Acc
     )
 
     val zapOptions = zapTypes.map { it.second }
-    var selectedZapType by remember { mutableStateOf(zapTypes[0]) }
+    var selectedZapType by remember { mutableStateOf(account.defaultZapType) }
 
     Dialog(
         onDismissRequest = { onClose() },
@@ -116,7 +117,7 @@ fun ZapCustomDialog(onClose: () -> Unit, account: Account, accountViewModel: Acc
                                         zappingProgress = it
                                     }
                                 },
-                                zapType = selectedZapType.first
+                                zapType = selectedZapType
                             )
                         }
                         onClose()
@@ -163,7 +164,15 @@ fun ZapCustomDialog(onClose: () -> Unit, account: Account, accountViewModel: Acc
                 ) {
                     OutlinedTextField(
                         // stringResource(R.string.new_amount_in_sats
-                        label = { Text(text = stringResource(id = R.string.custom_zaps_add_a_message)) },
+                        label = {
+                            if (selectedZapType == LnZapEvent.ZapType.PUBLIC || selectedZapType == LnZapEvent.ZapType.ANONYMOUS) {
+                                Text(text = stringResource(id = R.string.custom_zaps_add_a_message))
+                            } else if (selectedZapType == LnZapEvent.ZapType.PRIVATE) {
+                                Text(text = stringResource(id = R.string.custom_zaps_add_a_message_private))
+                            } else if (selectedZapType == LnZapEvent.ZapType.NONZAP) {
+                                Text(text = stringResource(id = R.string.custom_zaps_add_a_message_nonzap))
+                            }
+                        },
                         value = postViewModel.customMessage,
                         onValueChange = {
                             postViewModel.customMessage = it
@@ -186,10 +195,11 @@ fun ZapCustomDialog(onClose: () -> Unit, account: Account, accountViewModel: Acc
                 }
                 TextSpinner(
                     label = "Zap Type",
-                    placeholder = "Public",
+                    placeholder = zapTypes.filter { it.first == account.defaultZapType }.first().second,
                     options = zapOptions,
                     onSelect = {
-                        selectedZapType = zapTypes[it]
+                        selectedZapType = zapTypes[it].first
+                        account.changeDefaultZapType(selectedZapType)
                     },
                     modifier = Modifier.fillMaxWidth()
                 )

@@ -287,6 +287,9 @@
     <string name="looking_for_event">"Looking for Event %1$s"</string>
 
     <string name="custom_zaps_add_a_message">Add a public message</string>
+    <string name="custom_zaps_add_a_message_private">Add a private message</string>
+    <string name="custom_zaps_add_a_message_nonzap">Add an invoice message</string>
+
     <string name="custom_zaps_add_a_message_example">Thank you for all your work!</string>
 
     <string name="lightning_create_and_add_invoice">Create and Add</string>
@@ -296,5 +299,12 @@
 
     <string name="hash_verification_passed">Image is the same since the post</string>
     <string name="hash_verification_failed">Image has changed. The author might not have seen the change</string>
+
+    <string name="content_description_add_image">Add Image</string>
+    <string name="content_description_add_video">Add Video</string>
+    <string name="content_description_add_document">Add Document</string>
+    <string name="add_content">Create and Add</string>
+    <string name="content_description">Description of the contents</string>
+    <string name="content_description_example">A blue boat in a white sandy beach at sunset</string>
 
 </resources>

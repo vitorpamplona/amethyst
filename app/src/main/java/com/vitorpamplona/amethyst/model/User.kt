@@ -47,6 +47,7 @@ class User(val pubkeyHex: String) {
 
     fun pubkey() = Hex.decode(pubkeyHex)
     fun pubkeyNpub() = pubkey().toNpub()
+
     fun pubkeyDisplayHex() = pubkeyNpub().toShortenHex()
 
     override fun toString(): String = pubkeyHex

@@ -1,8 +1,11 @@
 package com.vitorpamplona.amethyst.service.nip19
 
 import android.util.Log
+import com.vitorpamplona.amethyst.model.toByteArray
 import com.vitorpamplona.amethyst.model.toHexKey
+import nostr.postr.Bech32
 import nostr.postr.bechToBytes
+import nostr.postr.toByteArray
 import java.util.regex.Pattern
 
 object Nip19 {
@@ -12,7 +15,14 @@ object Nip19 {
 
     val nip19regex = Pattern.compile("(nostr:)?@?(nsec1|npub1|nevent1|naddr1|note1|nprofile1|nrelay1)([qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)(.*)", Pattern.CASE_INSENSITIVE)
 
-    data class Return(val type: Type, val hex: String, val relay: String? = null, val additionalChars: String = "")
+    data class Return(
+        val type: Type,
+        val hex: String,
+        val relay: String? = null,
+        val author: String? = null,
+        val kind: Long? = null,
+        val additionalChars: String = ""
+    )
 
     fun uriToRoute(uri: String?): Return? {
         if (uri == null) return null
@@ -26,8 +36,23 @@ object Nip19 {
             val uriScheme = matcher.group(1) // nostr:
             val type = matcher.group(2) // npub1
             val key = matcher.group(3) // bech32
-            val additionalChars = matcher.group(4) ?: "" // additional chars
+            val additionalChars = matcher.group(4) // additional chars
 
+            return parseComponents(uriScheme, type, key, additionalChars)
+        } catch (e: Throwable) {
+            Log.e("NIP19 Parser", "Issue trying to Decode NIP19 $uri: ${e.message}", e)
+        }
+
+        return null
+    }
+
+    fun parseComponents(
+        uriScheme: String?,
+        type: String,
+        key: String?,
+        additionalChars: String?
+    ): Return? {
+        return try {
             val bytes = (type + key).bechToBytes()
             val parsed = when (type.lowercase()) {
                 "npub1" -> npub(bytes)
@@ -38,12 +63,11 @@ object Nip19 {
                 "naddr1" -> naddr(bytes)
                 else -> null
             }
-            return parsed?.copy(additionalChars = additionalChars)
+            parsed?.copy(additionalChars = additionalChars ?: "")
         } catch (e: Throwable) {
-            Log.e("NIP19 Parser", "Issue trying to Decode NIP19 $uri: ${e.message}", e)
+            Log.e("NIP19 Parser", "Issue trying to Decode NIP19 $key: ${e.message}", e)
+            null
         }
-
-        return null
     }
 
     private fun npub(bytes: ByteArray): Return {
@@ -79,7 +103,15 @@ object Nip19 {
             ?.get(0)
             ?.toString(Charsets.UTF_8)
 
-        return Return(Type.EVENT, hex, relay)
+        val author = tlv.get(Tlv.Type.AUTHOR.id)
+            ?.get(0)
+            ?.toHexKey()
+
+        val kind = tlv.get(Tlv.Type.KIND.id)
+            ?.get(0)
+            ?.let { Tlv.toInt32(it) }?.toLong()
+
+        return Return(Type.EVENT, hex, relay, author, kind)
     }
 
     private fun nrelay(bytes: ByteArray): Return? {
@@ -108,8 +140,31 @@ object Nip19 {
 
         val kind = tlv.get(Tlv.Type.KIND.id)
             ?.get(0)
-            ?.let { Tlv.toInt32(it) }
+            ?.let { Tlv.toInt32(it) }?.toLong()
 
-        return Return(Type.ADDRESS, "$kind:$author:$d", relay)
+        return Return(Type.ADDRESS, "$kind:$author:$d", relay, author, kind)
+    }
+
+    public fun createNEvent(idHex: String, author: String?, kind: Int?, relay: String?): String {
+        val kind = kind?.toByteArray()
+        val author = author?.toByteArray()
+        val idHex = idHex.toByteArray()
+        val relay = relay?.toByteArray(Charsets.UTF_8)
+
+        var fullArray = byteArrayOf(Tlv.Type.SPECIAL.id, idHex.size.toByte()) + idHex
+
+        if (relay != null) {
+            fullArray = fullArray + byteArrayOf(Tlv.Type.RELAY.id, relay.size.toByte()) + relay
+        }
+
+        if (author != null) {
+            fullArray = fullArray + byteArrayOf(Tlv.Type.AUTHOR.id, author.size.toByte()) + author
+        }
+
+        if (kind != null) {
+            fullArray = fullArray + byteArrayOf(Tlv.Type.KIND.id, kind.size.toByte()) + kind
+        }
+
+        return Bech32.encodeBytes(hrp = "nevent", fullArray, Bech32.Encoding.Bech32)
     }
 }

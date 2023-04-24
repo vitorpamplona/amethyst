@@ -450,7 +450,7 @@ fun NoteComposeInner(
                     } else if (noteEvent is LongTextNoteEvent) {
                         LongFormHeader(noteEvent, note, loggedIn)
 
-                        ReactionsRow(note, accountViewModel)
+                        ReactionsRow(note, accountViewModel, navController)
 
                         Divider(
                             modifier = Modifier.padding(top = 10.dp),
@@ -485,7 +485,7 @@ fun NoteComposeInner(
                             )
                         }
 
-                        ReactionsRow(note, accountViewModel)
+                        ReactionsRow(note, accountViewModel, navController)
 
                         Divider(
                             modifier = Modifier.padding(top = 10.dp),
@@ -512,7 +512,7 @@ fun NoteComposeInner(
                         )
 
                         if (!makeItShort) {
-                            ReactionsRow(note, accountViewModel)
+                            ReactionsRow(note, accountViewModel, navController)
                         }
 
                         Divider(
@@ -556,7 +556,7 @@ fun NoteComposeInner(
                         }
 
                         if (!makeItShort) {
-                            ReactionsRow(note, accountViewModel)
+                            ReactionsRow(note, accountViewModel, navController)
                         }
 
                         Divider(
@@ -1196,10 +1196,10 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
         DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(accountViewModel.decrypt(note) ?: "")); onDismiss() }) {
             Text(stringResource(R.string.copy_text))
         }
-        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString("@${note.author?.pubkeyNpub()}")); onDismiss() }) {
+        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString("nostr:${note.author?.pubkeyNpub()}")); onDismiss() }) {
             Text(stringResource(R.string.copy_user_pubkey))
         }
-        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(note.idNote())); onDismiss() }) {
+        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString("nostr:" + note.toNEvent())); onDismiss() }) {
             Text(stringResource(R.string.copy_note_id))
         }
         DropdownMenuItem(onClick = {

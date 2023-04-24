@@ -49,12 +49,12 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -66,7 +66,7 @@ import java.math.RoundingMode
 import kotlin.math.roundToInt
 
 @Composable
-fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel) {
+fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel, navController: NavController) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
@@ -79,11 +79,11 @@ fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel) {
     }
 
     if (wantsToReplyTo != null) {
-        NewPostView({ wantsToReplyTo = null }, wantsToReplyTo, null, account)
+        NewPostView({ wantsToReplyTo = null }, wantsToReplyTo, null, account, accountViewModel, navController)
     }
 
     if (wantsToQuote != null) {
-        NewPostView({ wantsToQuote = null }, null, wantsToQuote, account)
+        NewPostView({ wantsToQuote = null }, null, wantsToQuote, account, accountViewModel, navController)
     }
 
     Spacer(modifier = Modifier.height(8.dp))
@@ -364,7 +364,7 @@ fun ZapReaction(
                                         zappingProgress = it
                                     }
                                 },
-                                zapType = LnZapEvent.ZapType.PUBLIC
+                                zapType = account.defaultZapType
                             )
                         }
                     } else if (account.zapAmountChoices.size > 1) {
@@ -561,7 +561,7 @@ fun ZapAmountChoicePopup(
                                 context,
                                 onError,
                                 onProgress,
-                                LnZapEvent.ZapType.PUBLIC
+                                account.defaultZapType
                             )
                             onDismiss()
                         }
@@ -587,7 +587,7 @@ fun ZapAmountChoicePopup(
                                         context,
                                         onError,
                                         onProgress,
-                                        LnZapEvent.ZapType.PUBLIC
+                                        account.defaultZapType
                                     )
                                     onDismiss()
                                 }
