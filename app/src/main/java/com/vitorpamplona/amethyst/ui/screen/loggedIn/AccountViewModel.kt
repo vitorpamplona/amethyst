@@ -83,8 +83,7 @@ class AccountViewModel(private val account: Account) : ViewModel() {
                 if (account.hasWalletConnectSetup()) {
                     account.sendZapPaymentRequestFor(
                         bolt11 = it,
-                        onResponse = {
-                            val response = it.response()
+                        onResponse = { response ->
                             if (response is PayInvoiceErrorResponse) {
                                 onProgress(0.0f)
                                 onError(
@@ -93,7 +92,7 @@ class AccountViewModel(private val account: Account) : ViewModel() {
                                         ?: "Error parsing error message"
                                 )
                             } else {
-                                // awaits for confirmation from Receiver or timeout.
+                                onProgress(0.99f)
                             }
                         }
                     )

@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.service.model
 import android.util.Log
 import com.google.gson.annotations.SerializedName
 import com.vitorpamplona.amethyst.model.HexKey
+import nostr.postr.Utils
 
 class LnZapPaymentResponseEvent(
     id: HexKey,
@@ -16,9 +17,26 @@ class LnZapPaymentResponseEvent(
     fun requestAuthor() = tags.firstOrNull() { it.size > 1 && it[0] == "p" }?.get(1)
     fun requestId() = tags.firstOrNull() { it.size > 1 && it[0] == "e" }?.get(1)
 
-    fun response(): Response? = try {
+    fun decrypt(privKey: ByteArray, pubKey: ByteArray): String? {
+        return try {
+            val sharedSecret = Utils.getSharedSecret(privKey, pubKey)
+
+            val retVal = Utils.decrypt(content, sharedSecret)
+
+            if (retVal.startsWith(PrivateDmEvent.nip18Advertisement)) {
+                retVal.substring(16)
+            } else {
+                retVal
+            }
+        } catch (e: Exception) {
+            Log.w("PrivateDM", "Error decrypting the message ${e.message}")
+            null
+        }
+    }
+
+    fun response(privKey: ByteArray, pubKey: ByteArray): Response? = try {
         if (content.isNotEmpty()) {
-            gson.fromJson(content, Response::class.java)
+            gson.fromJson(decrypt(privKey, pubKey), Response::class.java)
         } else {
             null
         }

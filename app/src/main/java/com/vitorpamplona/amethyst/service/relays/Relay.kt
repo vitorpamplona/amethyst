@@ -5,7 +5,6 @@ import com.google.gson.JsonElement
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.EventInterface
-import com.vitorpamplona.amethyst.service.model.LnZapPaymentResponseEvent
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -16,6 +15,8 @@ import java.util.Date
 enum class FeedType {
     FOLLOWS, PUBLIC_CHATS, PRIVATE_DMS, GLOBAL, SEARCH, WALLET_CONNECT
 }
+
+val COMMON_FEED_TYPES = setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.PRIVATE_DMS, FeedType.GLOBAL)
 
 class Relay(
     var url: String,
@@ -94,14 +95,11 @@ class Relay(
                         val type = msg[0].asString
                         val channel = msg[1].asString
 
-                        Log.w("Relay", "New Message $type, $url, $channel, ${msg[2]}")
+                        // Log.w("Relay", "New Message $type, $url, $channel, ${msg[2]}")
 
                         when (type) {
                             "EVENT" -> {
                                 val event = Event.fromJson(msg[2], Client.lenient)
-                                if (event.kind == LnZapPaymentResponseEvent.kind) {
-                                    println("This " + event.toJson())
-                                }
 
                                 // Log.w("Relay", "Relay onEVENT $url, $channel")
                                 listeners.forEach {
@@ -117,15 +115,15 @@ class Relay(
                                 it.onRelayStateChange(this@Relay, Type.EOSE, channel)
                             }
                             "NOTICE" -> listeners.forEach {
-                                Log.w("Relay", "Relay onNotice $url, $channel")
+                                // Log.w("Relay", "Relay onNotice $url, $channel")
                                 it.onError(this@Relay, channel, Error("Relay sent notice: " + channel))
                             }
                             "OK" -> listeners.forEach {
-                                Log.w("Relay", "Relay on OK $url, $channel")
+                                // Log.w("Relay", "Relay on OK $url, $channel")
                                 it.onSendResponse(this@Relay, msg[1].asString, msg[2].asBoolean, msg[3].asString)
                             }
                             else -> listeners.forEach {
-                                Log.w("Relay", "Relay something else $url, $channel")
+                                // Log.w("Relay", "Relay something else $url, $channel")
                                 it.onError(
                                     this@Relay,
                                     channel,
@@ -205,31 +203,11 @@ class Relay(
                     if (filters.isNotEmpty()) {
                         val request =
                             """["REQ","$requestId",${filters.take(40).joinToString(",") { it.filter.toJson(url) }}]"""
-                        // println("FILTERSSENT $url $request")
+                        println("FILTERSSENT $url $request")
                         socket?.send(request)
                         eventUploadCounterInBytes += request.bytesUsedInMemory()
                         afterEOSE = false
                     }
-                }
-            } else {
-                // waits 60 seconds to reconnect after disconnected.
-                if (Date().time / 1000 > closingTime + 60) {
-                    // sends all filters after connection is successful.
-                    requestAndWatch()
-                }
-            }
-        }
-    }
-
-    fun sendUnregisteredFilter(request: JsonFilter, subscriptionId: String?) {
-        if (read) {
-            if (isConnected()) {
-                if (isReady) {
-                    val request = """["REQ","${subscriptionId ?: ""}",${request.toJson(url)}]"""
-                    println("FILTERSSENT $url $request")
-                    socket?.send(request)
-                    eventUploadCounterInBytes += request.bytesUsedInMemory()
-                    afterEOSE = false
                 }
             } else {
                 // waits 60 seconds to reconnect after disconnected.

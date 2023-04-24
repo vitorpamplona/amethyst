@@ -565,8 +565,7 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewMode
                     onSuccess = {
                         // pay directly
                         if (account.hasWalletConnectSetup()) {
-                            account.sendZapPaymentRequestFor(it) {
-                                val response = it.response()
+                            account.sendZapPaymentRequestFor(it) { response ->
                                 if (response is PayInvoiceSuccessResponse) {
                                     scope.launch {
                                         Toast.makeText(

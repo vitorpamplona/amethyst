@@ -167,17 +167,24 @@ class Account(
         return zapPaymentRequest != null
     }
 
-    fun sendZapPaymentRequestFor(bolt11: String, onResponse: (LnZapPaymentResponseEvent) -> Unit) {
+    fun sendZapPaymentRequestFor(bolt11: String, onResponse: (Response?) -> Unit) {
         if (!isWriteable()) return
 
-        zapPaymentRequest?.let {
-            val event = LnZapPaymentRequestEvent.create(bolt11, it.pubKeyHex, it.secret?.toByteArray() ?: loggedIn.privKey!!)
+        zapPaymentRequest?.let { nip47 ->
+            val event = LnZapPaymentRequestEvent.create(bolt11, nip47.pubKeyHex, nip47.secret?.toByteArray() ?: loggedIn.privKey!!)
 
-            val wcListener = NostrLnZapPaymentResponseDataSource(it.pubKeyHex, loggedIn.pubKey.toHexKey(), event.id)
+            val wcListener = NostrLnZapPaymentResponseDataSource(nip47.pubKeyHex, event.pubKey, event.id)
             wcListener.start()
 
-            LocalCache.consume(event, onResponse)
-            Client.send(event, it.relayUri, wcListener.feedTypes) {
+            LocalCache.consume(event) {
+                // After the response is received.
+                val privKey = nip47.secret?.toByteArray()
+                if (privKey != null) {
+                    onResponse(it.response(privKey, event.pubKey.toByteArray()))
+                }
+            }
+
+            Client.send(event, nip47.relayUri, wcListener.feedTypes) {
                 wcListener.destroy()
             }
         }

@@ -95,6 +95,10 @@ object Client : RelayPool.Listener {
         RelayPool.addRelay(relay)
 
         relay.requestAndWatch {
+            allSubscriptions().forEach {
+                relay.sendFilter(requestId = it)
+            }
+
             onConnected(relay)
 
             GlobalScope.launch(Dispatchers.IO) {
