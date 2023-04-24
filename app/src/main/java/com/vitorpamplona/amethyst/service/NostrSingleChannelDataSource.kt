@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.service
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
+import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
@@ -40,7 +41,7 @@ object NostrSingleChannelDataSource : NostrDataSource("SingleChannelFeed") {
 
         // downloads linked events to this event.
         return TypedFilter(
-            types = FeedType.values().toSet(),
+            types = COMMON_FEED_TYPES,
             filter = JsonFilter(
                 kinds = listOf(ChannelCreateEvent.kind),
                 ids = interestedEvents.toList()

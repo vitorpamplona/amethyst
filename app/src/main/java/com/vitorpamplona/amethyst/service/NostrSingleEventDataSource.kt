@@ -3,8 +3,8 @@ package com.vitorpamplona.amethyst.service
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.*
+import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.amethyst.service.relays.EOSETime
-import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 
@@ -22,7 +22,7 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
         return addressesToWatch.mapNotNull {
             it.address()?.let { aTag ->
                 TypedFilter(
-                    types = FeedType.values().toSet(),
+                    types = COMMON_FEED_TYPES,
                     filter = JsonFilter(
                         kinds = listOf(
                             TextNoteEvent.kind, LongTextNoteEvent.kind,
@@ -49,7 +49,7 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
         return addressesToWatch.mapNotNull {
             it.address()?.let { aTag ->
                 TypedFilter(
-                    types = FeedType.values().toSet(),
+                    types = COMMON_FEED_TYPES,
                     filter = JsonFilter(
                         kinds = listOf(aTag.kind),
                         tags = mapOf("d" to listOf(aTag.dTag)),
@@ -69,7 +69,7 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
 
         return reactionsToWatch.map {
             TypedFilter(
-                types = FeedType.values().toSet(),
+                types = COMMON_FEED_TYPES,
                 filter = JsonFilter(
                     kinds = listOf(
                         TextNoteEvent.kind,
@@ -108,7 +108,7 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
         // downloads linked events to this event.
         return listOf(
             TypedFilter(
-                types = FeedType.values().toSet(),
+                types = COMMON_FEED_TYPES,
                 filter = JsonFilter(
                     kinds = listOf(
                         TextNoteEvent.kind, LongTextNoteEvent.kind, PollNoteEvent.kind,

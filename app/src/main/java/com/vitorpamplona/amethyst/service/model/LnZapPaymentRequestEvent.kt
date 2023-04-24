@@ -16,6 +16,8 @@ class LnZapPaymentRequestEvent(
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
 
+    fun walletServicePubKey() = tags.firstOrNull() { it.size > 1 && it[0] == "p" }?.get(1)
+
     fun lnInvoice(privKey: ByteArray): String? {
         return try {
             val sharedSecret = Utils.getSharedSecret(privKey, pubKey.toByteArray())
@@ -37,9 +39,10 @@ class LnZapPaymentRequestEvent(
             createdAt: Long = Date().time / 1000
         ): LnZapPaymentRequestEvent {
             val pubKey = Utils.pubkeyCreate(privateKey)
+            val serializedRequest = gson.toJson(PayInvoiceMethod(lnInvoice))
 
             val content = Utils.encrypt(
-                lnInvoice,
+                serializedRequest,
                 privateKey,
                 walletServicePubkey.toByteArray()
             )
@@ -52,4 +55,15 @@ class LnZapPaymentRequestEvent(
             return LnZapPaymentRequestEvent(id.toHexKey(), pubKey.toHexKey(), createdAt, tags, content, sig.toHexKey())
         }
     }
+}
+
+// REQUEST OBJECTS
+
+abstract class Request(val method: String, val params: Params)
+abstract class Params
+
+// PayInvoice Call
+
+class PayInvoiceMethod(bolt11: String) : Request("pay_invoice", PayInvoiceParams(bolt11)) {
+    class PayInvoiceParams(val invoice: String) : Params()
 }

@@ -4,7 +4,7 @@ import androidx.compose.ui.text.capitalize
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
-import com.vitorpamplona.amethyst.service.relays.FeedType
+import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 
@@ -15,7 +15,7 @@ object NostrHashtagDataSource : NostrDataSource("SingleHashtagFeed") {
         val hashToLoad = hashtagToWatch ?: return null
 
         return TypedFilter(
-            types = FeedType.values().toSet(),
+            types = COMMON_FEED_TYPES,
             filter = JsonFilter(
                 tags = mapOf(
                     "t" to listOf(

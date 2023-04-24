@@ -13,8 +13,10 @@ import okhttp3.WebSocketListener
 import java.util.Date
 
 enum class FeedType {
-    FOLLOWS, PUBLIC_CHATS, PRIVATE_DMS, GLOBAL, SEARCH
+    FOLLOWS, PUBLIC_CHATS, PRIVATE_DMS, GLOBAL, SEARCH, WALLET_CONNECT
 }
+
+val COMMON_FEED_TYPES = setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.PRIVATE_DMS, FeedType.GLOBAL)
 
 class Relay(
     var url: String,
@@ -93,11 +95,15 @@ class Relay(
                         val type = msg[0].asString
                         val channel = msg[1].asString
 
+                        // Log.w("Relay", "New Message $type, $url, $channel, ${msg[2]}")
+
                         when (type) {
                             "EVENT" -> {
+                                val event = Event.fromJson(msg[2], Client.lenient)
+
                                 // Log.w("Relay", "Relay onEVENT $url, $channel")
                                 listeners.forEach {
-                                    it.onEvent(this@Relay, channel, Event.fromJson(msg[2], Client.lenient))
+                                    it.onEvent(this@Relay, channel, event)
                                     if (afterEOSE) {
                                         it.onRelayStateChange(this@Relay, Type.EOSE, channel)
                                     }
@@ -113,7 +119,7 @@ class Relay(
                                 it.onError(this@Relay, channel, Error("Relay sent notice: " + channel))
                             }
                             "OK" -> listeners.forEach {
-                                // Log.w("Relay", "Relay onOK $url, $channel")
+                                // Log.w("Relay", "Relay on OK $url, $channel")
                                 it.onSendResponse(this@Relay, msg[1].asString, msg[2].asBoolean, msg[3].asString)
                             }
                             else -> listeners.forEach {

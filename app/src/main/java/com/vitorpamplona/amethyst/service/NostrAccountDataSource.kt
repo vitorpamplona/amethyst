@@ -13,8 +13,8 @@ import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
+import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.amethyst.service.relays.EOSEAccount
-import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 
@@ -25,7 +25,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
 
     fun createAccountContactListFilter(): TypedFilter {
         return TypedFilter(
-            types = FeedType.values().toSet(),
+            types = COMMON_FEED_TYPES,
             filter = JsonFilter(
                 kinds = listOf(ContactListEvent.kind),
                 authors = listOf(account.userProfile().pubkeyHex),
@@ -36,7 +36,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
 
     fun createAccountMetadataFilter(): TypedFilter {
         return TypedFilter(
-            types = FeedType.values().toSet(),
+            types = COMMON_FEED_TYPES,
             filter = JsonFilter(
                 kinds = listOf(MetadataEvent.kind),
                 authors = listOf(account.userProfile().pubkeyHex),
@@ -47,7 +47,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
 
     fun createAccountAcceptedAwardsFilter(): TypedFilter {
         return TypedFilter(
-            types = FeedType.values().toSet(),
+            types = COMMON_FEED_TYPES,
             filter = JsonFilter(
                 kinds = listOf(BadgeProfilesEvent.kind),
                 authors = listOf(account.userProfile().pubkeyHex),
@@ -58,7 +58,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
 
     fun createAccountBookmarkListFilter(): TypedFilter {
         return TypedFilter(
-            types = FeedType.values().toSet(),
+            types = COMMON_FEED_TYPES,
             filter = JsonFilter(
                 kinds = listOf(BookmarkListEvent.kind),
                 authors = listOf(account.userProfile().pubkeyHex),
@@ -69,7 +69,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
 
     fun createAccountReportsFilter(): TypedFilter {
         return TypedFilter(
-            types = FeedType.values().toSet(),
+            types = COMMON_FEED_TYPES,
             filter = JsonFilter(
                 kinds = listOf(ReportEvent.kind),
                 authors = listOf(account.userProfile().pubkeyHex),
@@ -79,7 +79,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
     }
 
     fun createNotificationFilter() = TypedFilter(
-        types = FeedType.values().toSet(),
+        types = COMMON_FEED_TYPES,
         filter = JsonFilter(
             kinds = listOf(
                 TextNoteEvent.kind,
@@ -88,6 +88,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                 RepostEvent.kind,
                 ReportEvent.kind,
                 LnZapEvent.kind,
+                LnZapPaymentResponseEvent.kind,
                 ChannelMessageEvent.kind,
                 BadgeAwardEvent.kind
             ),
