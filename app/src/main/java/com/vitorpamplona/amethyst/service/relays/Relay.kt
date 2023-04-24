@@ -24,6 +24,10 @@ class Relay(
     var activeTypes: Set<FeedType> = FeedType.values().toSet(),
     proxy: Proxy?
 ) {
+    init {
+        println("Tor: ${proxy != null} url: $url")
+    }
+
     private val httpClient = OkHttpClient.Builder()
         .proxy(proxy)
         .followRedirects(true)

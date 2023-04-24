@@ -274,9 +274,11 @@ fun ListContent(
             onClick = { backupDialogOpen = true }
         )
 
+        var textTorProxy = if (checked) "Disable" else "Enable"
+
         IconRow(
-            title = "Enable Tor",
-            icon = R.drawable.ic_topics,
+            title = "$textTorProxy Tor",
+            icon = R.drawable.ic_tor,
             tint = MaterialTheme.colors.onBackground,
             onClick = {
                 checked = !checked
