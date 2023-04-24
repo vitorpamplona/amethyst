@@ -1,5 +1,9 @@
 package com.vitorpamplona.amethyst.ui.actions
 
+import android.graphics.Bitmap
+import android.net.Uri
+import android.os.Build
+import android.util.Size
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -13,10 +17,15 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CurrencyBitcoin
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -25,15 +34,18 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -48,7 +60,9 @@ import com.vitorpamplona.amethyst.ui.note.ReplyInformation
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.UserLine
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -188,6 +202,19 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                 }
                             }
 
+                            val url = postViewModel.contentToAddUrl
+                            if (url != null) {
+                                ImageVideoDescription(
+                                    url,
+                                    onAdd = { description ->
+                                        postViewModel.upload(url, description, context)
+                                    },
+                                    onCancel = {
+                                        postViewModel.contentToAddUrl = null
+                                    }
+                                )
+                            }
+
                             val user = postViewModel.account?.userProfile()
                             val lud16 = user?.info?.lnAddress()
 
@@ -277,7 +304,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                             tint = MaterialTheme.colors.onBackground,
                             modifier = Modifier.padding(bottom = 10.dp)
                         ) {
-                            postViewModel.upload(it, context)
+                            postViewModel.selectImage(it)
                         }
 
                         if (postViewModel.canUsePoll) {
@@ -455,5 +482,151 @@ fun SearchButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifier 
             modifier = Modifier.size(26.dp),
             tint = Color.White
         )
+    }
+}
+
+@Composable
+fun ImageVideoDescription(
+    uri: Uri,
+    onAdd: (String) -> Unit,
+    onCancel: () -> Unit
+) {
+    val resolver = LocalContext.current.contentResolver
+    val mediaType = resolver.getType(uri) ?: ""
+    val scope = rememberCoroutineScope()
+
+    val isImage = mediaType.startsWith("image")
+    val isVideo = mediaType.startsWith("video")
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 30.dp, end = 30.dp)
+            .clip(shape = RoundedCornerShape(10.dp))
+            .border(
+                1.dp,
+                MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
+                RoundedCornerShape(15.dp)
+            )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(30.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 10.dp)
+            ) {
+                Text(
+                    text = stringResource(
+                        if (isImage) {
+                            R.string.content_description_add_image
+                        } else {
+                            if (isVideo) {
+                                R.string.content_description_add_video
+                            } else {
+                                R.string.content_description_add_document
+                            }
+                        }
+                    ),
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.W500,
+                    modifier = Modifier
+                        .padding(start = 10.dp)
+                        .weight(1.0f)
+                )
+
+                IconButton(
+                    modifier = Modifier.size(30.dp),
+                    onClick = onCancel
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Cancel,
+                        null,
+                        modifier = Modifier
+                            .padding(end = 5.dp)
+                            .size(30.dp),
+                        tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    )
+                }
+            }
+
+            Divider()
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 10.dp)
+            ) {
+                if (mediaType.startsWith("image")) {
+                    AsyncImage(
+                        model = uri.toString(),
+                        contentDescription = uri.toString(),
+                        contentScale = ContentScale.FillWidth,
+                        modifier = Modifier
+                            .padding(top = 4.dp)
+                            .fillMaxWidth()
+                    )
+                } else if (mediaType.startsWith("video") && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    var bitmap by remember { mutableStateOf<Bitmap?>(null) }
+
+                    LaunchedEffect(key1 = uri) {
+                        scope.launch(Dispatchers.IO) {
+                            bitmap = resolver.loadThumbnail(uri, Size(1200, 1000), null)
+                        }
+                    }
+
+                    bitmap?.let {
+                        Image(
+                            bitmap = it.asImageBitmap(),
+                            contentDescription = "some useful description",
+                            contentScale = ContentScale.FillWidth,
+                            modifier = Modifier
+                                .padding(top = 4.dp)
+                                .fillMaxWidth()
+                        )
+                    }
+                } else {
+                    VideoView(uri)
+                }
+            }
+
+            var message by remember { mutableStateOf("") }
+
+            OutlinedTextField(
+                label = { Text(text = stringResource(R.string.content_description)) },
+                modifier = Modifier.fillMaxWidth(),
+                value = message,
+                onValueChange = { message = it },
+                placeholder = {
+                    Text(
+                        text = stringResource(R.string.content_description_example),
+                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    )
+                },
+                keyboardOptions = KeyboardOptions.Default.copy(
+                    capitalization = KeyboardCapitalization.Sentences
+                )
+            )
+
+            Button(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 10.dp),
+                onClick = {
+                    onAdd(message)
+                },
+                shape = RoundedCornerShape(15.dp),
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = MaterialTheme.colors.primary
+                )
+            ) {
+                Text(text = stringResource(R.string.add_content), color = Color.White, fontSize = 20.sp)
+            }
+        }
     }
 }

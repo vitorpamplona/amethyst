@@ -175,7 +175,7 @@ fun ZoomableContentView(content: ZoomableContent, images: List<ZoomableContent> 
             }
         }
     } else {
-        VideoView(content.url) { dialogOpen = true }
+        VideoView(content.url, content.description) { dialogOpen = true }
     }
 
     if (dialogOpen) {
@@ -322,7 +322,7 @@ private fun RenderImageOrVideo(content: ZoomableContent) {
         }
     } else {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize(1f)) {
-            VideoView(content.url)
+            VideoView(content.url, content.description)
         }
     }
 }

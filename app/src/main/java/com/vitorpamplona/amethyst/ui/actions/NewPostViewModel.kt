@@ -38,6 +38,9 @@ open class NewPostViewModel : ViewModel() {
     var userSuggestions by mutableStateOf<List<User>>(emptyList())
     var userSuggestionAnchor: TextRange? = null
 
+    // Images and Videos
+    var contentToAddUrl by mutableStateOf<Uri?>(null)
+
     // Polls
     var canUsePoll by mutableStateOf(false)
     var wantsPoll by mutableStateOf(false)
@@ -84,6 +87,7 @@ open class NewPostViewModel : ViewModel() {
 
         canAddInvoice = account.userProfile().info?.lnAddress() != null
         canUsePoll = originalNote?.event !is PrivateDmEvent && originalNote?.channel() == null
+        contentToAddUrl = null
 
         this.account = account
     }
@@ -105,46 +109,15 @@ open class NewPostViewModel : ViewModel() {
         cancel()
     }
 
-    fun upload(it: Uri, context: Context) {
+    fun upload(it: Uri, description: String, context: Context) {
         isUploadingImage = true
+        contentToAddUrl = null
 
         ImageUploader.uploadImage(
             uri = it,
             contentResolver = context.contentResolver,
             onSuccess = { imageUrl, mimeType ->
-                viewModelScope.launch(Dispatchers.IO) {
-                    // Images don't seem to be ready immediately after upload
-
-                    if (mimeType?.startsWith("image/") == true) {
-                        delay(2000)
-                    } else {
-                        delay(5000)
-                    }
-
-                    FileHeader.prepare(
-                        imageUrl,
-                        mimeType,
-                        onReady = {
-                            val note = account?.sendHeader(it)
-
-                            isUploadingImage = false
-
-                            if (note == null) {
-                                message = TextFieldValue(message.text + "\n\n" + imageUrl)
-                            } else {
-                                message = TextFieldValue(message.text + "\n\nnostr:" + note.idNote())
-                            }
-
-                            urlPreview = findUrlInMessage()
-                        },
-                        onError = {
-                            isUploadingImage = false
-                            viewModelScope.launch {
-                                imageUploadingError.emit("Failed to upload the image / video")
-                            }
-                        }
-                    )
-                }
+                createNIP97Record(imageUrl, mimeType, description)
             },
             onError = {
                 isUploadingImage = false
@@ -157,6 +130,7 @@ open class NewPostViewModel : ViewModel() {
 
     open fun cancel() {
         message = TextFieldValue("")
+        contentToAddUrl = null
         urlPreview = null
         isUploadingImage = false
         mentions = null
@@ -220,7 +194,7 @@ open class NewPostViewModel : ViewModel() {
 
     fun canPost(): Boolean {
         return message.text.isNotBlank() && !isUploadingImage && !wantsInvoice &&
-            (!wantsPoll || pollOptions.values.all { it.isNotEmpty() })
+            (!wantsPoll || pollOptions.values.all { it.isNotEmpty() }) && contentToAddUrl == null
     }
 
     fun includePollHashtagInMessage(include: Boolean, hashtag: String) {
@@ -234,5 +208,46 @@ open class NewPostViewModel : ViewModel() {
                 )
             )
         }
+    }
+
+    fun createNIP97Record(imageUrl: String, mimeType: String?, description: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            // Images don't seem to be ready immediately after upload
+
+            if (mimeType?.startsWith("image/") == true) {
+                delay(2000)
+            } else {
+                delay(5000)
+            }
+
+            FileHeader.prepare(
+                imageUrl,
+                mimeType,
+                description,
+                onReady = {
+                    val note = account?.sendHeader(it)
+
+                    isUploadingImage = false
+
+                    if (note == null) {
+                        message = TextFieldValue(message.text + "\n\n" + imageUrl)
+                    } else {
+                        message = TextFieldValue(message.text + "\n\nnostr:" + note.idNote())
+                    }
+
+                    urlPreview = findUrlInMessage()
+                },
+                onError = {
+                    isUploadingImage = false
+                    viewModelScope.launch {
+                        imageUploadingError.emit("Failed to upload the image / video")
+                    }
+                }
+            )
+        }
+    }
+
+    fun selectImage(uri: Uri) {
+        contentToAddUrl = uri
     }
 }

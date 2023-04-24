@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.components
 
+import android.net.Uri
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,6 +17,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.google.android.exoplayer2.C
 import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.MediaItem
+import com.google.android.exoplayer2.MediaMetadata
 import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
@@ -23,16 +25,33 @@ import com.google.android.exoplayer2.ui.StyledPlayerView
 import com.vitorpamplona.amethyst.VideoCache
 
 @Composable
-fun VideoView(videoUri: String, onDialog: ((Boolean) -> Unit)? = null) {
+fun VideoView(videoUri: String, description: String? = null, onDialog: ((Boolean) -> Unit)? = null) {
+    VideoView(Uri.parse(videoUri), description, onDialog)
+}
+
+@Composable
+fun VideoView(videoUri: Uri, description: String? = null, onDialog: ((Boolean) -> Unit)? = null) {
     val context = LocalContext.current
     val lifecycleOwner = rememberUpdatedState(LocalLifecycleOwner.current)
 
     val exoPlayer = remember(videoUri) {
+        val mediaBuilder = MediaItem.Builder().setUri(videoUri)
+
+        description?.let {
+            mediaBuilder.setMediaMetadata(
+                MediaMetadata.Builder().setDisplayTitle(it).build()
+            )
+        }
+
+        val media = mediaBuilder.build()
+
         ExoPlayer.Builder(context).build().apply {
             repeatMode = Player.REPEAT_MODE_ALL
             videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
             setMediaSource(
-                ProgressiveMediaSource.Factory(VideoCache.get()).createMediaSource(MediaItem.fromUri(videoUri))
+                ProgressiveMediaSource.Factory(VideoCache.get()).createMediaSource(
+                    media
+                )
             )
             prepare()
         }
