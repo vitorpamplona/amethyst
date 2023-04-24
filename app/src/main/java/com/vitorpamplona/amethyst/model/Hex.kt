@@ -84,15 +84,15 @@ fun parseDirtyWordForKey(mightBeAKey: String): DirtyKeyInfo? {
         } else if (key.startsWith("nprofile", true)) {
             val pubkeyRelay = Nip19.uriToRoute(keyB32 + restOfWord) ?: return null
 
-            return DirtyKeyInfo(pubkeyRelay, restOfWord)
-        } else if (key.startsWith("nevent", true)) {
+            return DirtyKeyInfo(pubkeyRelay, pubkeyRelay.additionalChars)
+        } else if (key.startsWith("nevent1", true)) {
             val noteRelayId = Nip19.uriToRoute(keyB32 + restOfWord) ?: return null
 
-            return DirtyKeyInfo(noteRelayId, restOfWord)
+            return DirtyKeyInfo(noteRelayId, noteRelayId.additionalChars)
         } else if (key.startsWith("naddr1", true)) {
             val address = Nip19.uriToRoute(keyB32 + restOfWord) ?: return null
 
-            return DirtyKeyInfo(address, "") // no way to know when they address ends and dirt begins
+            return DirtyKeyInfo(address, address.additionalChars) // no way to know when they address ends and dirt begins
         }
     } catch (e: Exception) {
         e.printStackTrace()

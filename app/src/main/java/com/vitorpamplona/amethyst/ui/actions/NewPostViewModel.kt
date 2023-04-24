@@ -82,7 +82,7 @@ open class NewPostViewModel : ViewModel() {
         }
 
         quote?.let {
-            message = TextFieldValue(message.text + "\n\n@${it.idNote()}")
+            message = TextFieldValue(message.text + "\n\n@${it.toNEvent()}")
         }
 
         canAddInvoice = account.userProfile().info?.lnAddress() != null
@@ -232,7 +232,7 @@ open class NewPostViewModel : ViewModel() {
                     if (note == null) {
                         message = TextFieldValue(message.text + "\n\n" + imageUrl)
                     } else {
-                        message = TextFieldValue(message.text + "\n\nnostr:" + note.idNote())
+                        message = TextFieldValue(message.text + "\n\nnostr:" + note.toNEvent())
                     }
 
                     urlPreview = findUrlInMessage()

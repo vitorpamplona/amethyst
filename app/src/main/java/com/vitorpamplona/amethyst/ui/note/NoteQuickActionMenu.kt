@@ -85,7 +85,7 @@ val externalLinkForNote = { note: Note ->
             "https://habla.news/a/${note.address().toNAddr()}"
         }
     } else {
-        "https://snort.social/e/${note.idNote()}"
+        "https://snort.social/e/${note.toNEvent()}"
     }
 }
 
@@ -152,13 +152,13 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
                         }
                         VerticalDivider(primaryLight)
                         NoteQuickActionItem(Icons.Default.AlternateEmail, stringResource(R.string.quick_action_copy_user_id)) {
-                            clipboardManager.setText(AnnotatedString("@${note.author?.pubkeyNpub()}"))
+                            clipboardManager.setText(AnnotatedString("nostr:${note.author?.pubkeyNpub()}"))
                             showToast(R.string.copied_user_id_to_clipboard)
                             onDismiss()
                         }
                         VerticalDivider(primaryLight)
                         NoteQuickActionItem(Icons.Default.FormatQuote, stringResource(R.string.quick_action_copy_note_id)) {
-                            clipboardManager.setText(AnnotatedString("@${note.idNote()}"))
+                            clipboardManager.setText(AnnotatedString("nostr:${note.toNEvent()}"))
                             showToast(R.string.copied_note_id_to_clipboard)
                             onDismiss()
                         }

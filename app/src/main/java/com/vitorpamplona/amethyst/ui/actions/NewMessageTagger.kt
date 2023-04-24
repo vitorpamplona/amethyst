@@ -56,19 +56,19 @@ class NewMessageTagger(var channel: Channel?, var mentions: List<User>?, var rep
                 if (results?.key?.type == Nip19.Type.USER) {
                     val user = LocalCache.getOrCreateUser(results.key.hex)
 
-                    "#[${tagIndex(user)}]${results.restOfWord}"
+                    "nostr:${user.pubkeyNpub()}${results.restOfWord}"
                 } else if (results?.key?.type == Nip19.Type.NOTE) {
                     val note = LocalCache.getOrCreateNote(results.key.hex)
 
-                    "#[${tagIndex(note)}]${results.restOfWord}"
+                    "nostr:${note.toNEvent()}${results.restOfWord}"
                 } else if (results?.key?.type == Nip19.Type.EVENT) {
                     val note = LocalCache.getOrCreateNote(results.key.hex)
 
-                    "#[${tagIndex(note)}]${results.restOfWord}"
+                    "nostr:${note.toNEvent()}${results.restOfWord}"
                 } else if (results?.key?.type == Nip19.Type.ADDRESS) {
                     val note = LocalCache.checkGetOrCreateAddressableNote(results.key.hex)
                     if (note != null) {
-                        "#[${tagIndex(note)}]${results.restOfWord}"
+                        "nostr:${note.idNote()}${results.restOfWord}"
                     } else {
                         word
                     }
