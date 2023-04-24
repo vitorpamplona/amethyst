@@ -66,7 +66,7 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 10.dp),
-                    verticalArrangement = Arrangement.SpaceBetween
+                    verticalArrangement = Arrangement.SpaceAround
                 ) {
                     if (presenting) {
                         Column(modifier = Modifier.fillMaxWidth()) {
@@ -91,22 +91,22 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
                                     fontSize = 18.sp
                                 )
                             }
-
-                            Row(
-                                horizontalArrangement = Arrangement.Center,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 35.dp, vertical = 10.dp)
-                            ) {
-                                QrCodeDrawer("nostr:${user.pubkeyNpub()}")
-                            }
                         }
 
                         Row(
                             horizontalArrangement = Arrangement.Center,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 30.dp, vertical = 10.dp)
+                                .padding(horizontal = 35.dp)
+                        ) {
+                            QrCodeDrawer("nostr:${user.pubkeyNpub()}")
+                        }
+
+                        Row(
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 30.dp)
                         ) {
                             Button(
                                 onClick = { presenting = false },

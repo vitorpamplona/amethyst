@@ -53,13 +53,14 @@ open class Note(val idHex: String) {
     open fun idNote() = id().toNote()
     open fun idDisplayNote() = idNote().toShortenHex()
 
-    fun channel(): Channel? {
-        val channelHex =
-            (event as? ChannelMessageEvent)?.channel()
-                ?: (event as? ChannelMetadataEvent)?.channel()
-                ?: (event as? ChannelCreateEvent)?.let { it.id }
+    fun channelHex(): HexKey? {
+        return (event as? ChannelMessageEvent)?.channel()
+            ?: (event as? ChannelMetadataEvent)?.channel()
+            ?: (event as? ChannelCreateEvent)?.id
+    }
 
-        return channelHex?.let { LocalCache.checkGetOrCreateChannel(it) }
+    fun channel(): Channel? {
+        return channelHex()?.let { LocalCache.checkGetOrCreateChannel(it) }
     }
 
     open fun address(): ATag? = null
@@ -194,15 +195,15 @@ open class Note(val idHex: String) {
 
     fun isZappedBy(user: User): Boolean {
         // Zaps who the requester was the user
-        return zaps.any { it.key.author == user }
+        return zaps.any { it.key.author === user }
     }
 
     fun isReactedBy(user: User): Boolean {
-        return reactions.any { it.author == user }
+        return reactions.any { it.author === user }
     }
 
     fun isBoostedBy(user: User): Boolean {
-        return boosts.any { it.author == user }
+        return boosts.any { it.author === user }
     }
 
     fun reportsBy(user: User): Set<Note> {
@@ -268,45 +269,6 @@ open class Note(val idHex: String) {
                     it.firstOrNull { (it.createdAt() ?: 0) > dayAgo } != null
                 } ?: false
                 )
-    }
-
-    fun directlyCiteUsersHex(): Set<HexKey> {
-        val matcher = tagSearch.matcher(event?.content() ?: "")
-        val returningList = mutableSetOf<String>()
-        while (matcher.find()) {
-            try {
-                val tag = matcher.group(1)?.let { event?.tags()?.get(it.toInt()) }
-                if (tag != null && tag[0] == "p") {
-                    returningList.add(tag[1])
-                }
-            } catch (e: Exception) {
-            }
-        }
-        return returningList
-    }
-
-    fun directlyCiteUsers(): Set<User> {
-        val matcher = tagSearch.matcher(event?.content() ?: "")
-        val returningList = mutableSetOf<User>()
-        while (matcher.find()) {
-            try {
-                val tag = matcher.group(1)?.let { event?.tags()?.get(it.toInt()) }
-                if (tag != null && tag[0] == "p") {
-                    LocalCache.checkGetOrCreateUser(tag[1])?.let {
-                        returningList.add(it)
-                    }
-                }
-            } catch (e: Exception) {
-            }
-        }
-        return returningList
-    }
-
-    fun directlyCites(userProfile: User): Boolean {
-        return author == userProfile ||
-            (userProfile in directlyCiteUsers()) ||
-            (event is ReactionEvent && replyTo?.lastOrNull()?.directlyCites(userProfile) == true) ||
-            (event is RepostEvent && replyTo?.lastOrNull()?.directlyCites(userProfile) == true)
     }
 
     fun isNewThread(): Boolean {

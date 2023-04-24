@@ -14,8 +14,8 @@ class ReactionEvent(
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
 
-    fun originalPost() = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
-    fun originalAuthor() = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
+    fun originalPost() = tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }
+    fun originalAuthor() = tags.filter { it.size > 1 && it[0] == "p" }.map { it[1] }
 
     companion object {
         const val kind = 7

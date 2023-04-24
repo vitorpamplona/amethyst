@@ -3,9 +3,10 @@ package com.vitorpamplona.amethyst.ui.screen
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.LocalCacheState
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.components.BundledInsert
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
+import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.BookmarkPrivateFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.BookmarkPublicFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ChannelFeedFilter
@@ -65,7 +66,7 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
     fun refreshSuspended() {
         val notes = newListFromDataSource()
 
-        val oldNotesState = feedContent.value
+        val oldNotesState = _feedContent.value
         if (oldNotesState is FeedState.Loaded) {
             // Using size as a proxy for has changed.
             if (notes != oldNotesState.feed.value) {
@@ -79,7 +80,7 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
     private fun updateFeed(notes: List<Note>) {
         val scope = CoroutineScope(Job() + Dispatchers.Main)
         scope.launch {
-            val currentState = feedContent.value
+            val currentState = _feedContent.value
             if (notes.isEmpty()) {
                 _feedContent.update { FeedState.Empty }
             } else if (currentState is FeedState.Loaded) {
@@ -91,18 +92,41 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
         }
     }
 
+    fun refreshFromOldState(newItems: Set<Note>) {
+        val oldNotesState = _feedContent.value
+        if (localFilter is AdditiveFeedFilter && oldNotesState is FeedState.Loaded) {
+            val newList = localFilter.updateListWith(oldNotesState.feed.value, newItems.toSet())
+            updateFeed(newList)
+        } else {
+            // Refresh Everything
+            refreshSuspended()
+        }
+    }
+
     private val bundler = BundledUpdate(250, Dispatchers.IO) {
         // adds the time to perform the refresh into this delay
         // holding off new updates in case of heavy refresh routines.
         refreshSuspended()
     }
+    private val bundlerInsert = BundledInsert<Set<Note>>(250, Dispatchers.IO)
 
     fun invalidateData() {
         bundler.invalidate()
     }
 
-    private val cacheListener: (LocalCacheState) -> Unit = {
-        invalidateData()
+    fun invalidateInsertData(newItems: Set<Note>) {
+        bundlerInsert.invalidateList(newItems) {
+            refreshFromOldState(it.flatten().toSet())
+        }
+    }
+
+    private val cacheListener: (Set<Note>) -> Unit = { newNotes ->
+        if (localFilter is AdditiveFeedFilter && _feedContent.value is FeedState.Loaded) {
+            invalidateInsertData(newNotes)
+        } else {
+            // Refresh Everything
+            invalidateData()
+        }
     }
 
     init {

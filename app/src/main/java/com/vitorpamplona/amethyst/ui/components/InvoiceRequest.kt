@@ -1,7 +1,5 @@
 package com.vitorpamplona.amethyst.ui.components
 
-import android.content.Intent
-import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
@@ -36,14 +34,22 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat.startActivity
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import kotlinx.coroutines.launch
 
 @Composable
-fun InvoiceRequest(lud16: String, toUserPubKeyHex: String, account: Account, onClose: () -> Unit) {
+fun InvoiceRequest(
+    lud16: String,
+    toUserPubKeyHex: String,
+    account: Account,
+    titleText: String? = null,
+    buttonText: String? = null,
+    onSuccess: (String) -> Unit,
+    onClose: () -> Unit
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -73,7 +79,7 @@ fun InvoiceRequest(lud16: String, toUserPubKeyHex: String, account: Account, onC
                 )
 
                 Text(
-                    text = stringResource(R.string.lightning_tips),
+                    text = titleText ?: stringResource(R.string.lightning_tips),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.W500,
                     modifier = Modifier.padding(start = 10.dp)
@@ -130,20 +136,14 @@ fun InvoiceRequest(lud16: String, toUserPubKeyHex: String, account: Account, onC
             Button(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
                 onClick = {
-                    val zapRequest = account.createZapRequestFor(toUserPubKeyHex, message)
+                    val zapRequest = account.createZapRequestFor(toUserPubKeyHex, message, LnZapEvent.ZapType.PUBLIC)
 
                     LightningAddressResolver().lnAddressInvoice(
                         lud16,
                         amount * 1000,
                         message,
                         zapRequest?.toJson(),
-                        onSuccess = {
-                            runCatching {
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("lightning:$it"))
-                                startActivity(context, intent, null)
-                            }
-                            onClose()
-                        },
+                        onSuccess = onSuccess,
                         onError = {
                             scope.launch {
                                 Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
@@ -159,7 +159,7 @@ fun InvoiceRequest(lud16: String, toUserPubKeyHex: String, account: Account, onC
                     backgroundColor = MaterialTheme.colors.primary
                 )
             ) {
-                Text(text = stringResource(R.string.send_sats), color = Color.White, fontSize = 20.sp)
+                Text(text = buttonText ?: stringResource(R.string.send_sats), color = Color.White, fontSize = 20.sp)
             }
         }
     }

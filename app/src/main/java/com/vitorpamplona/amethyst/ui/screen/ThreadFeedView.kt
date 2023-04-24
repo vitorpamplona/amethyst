@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,6 +22,7 @@ import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.SnackbarDefaults.backgroundColor
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
@@ -53,8 +55,10 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
+import com.vitorpamplona.amethyst.service.model.PollNoteEvent
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
-import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
+import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.ui.note.*
 import com.vitorpamplona.amethyst.ui.note.BadgeDisplay
 import com.vitorpamplona.amethyst.ui.note.BlankNote
 import com.vitorpamplona.amethyst.ui.note.DisplayFollowingHashtagsInPost
@@ -293,8 +297,9 @@ fun NoteMaster(
                 }
             }
 
+            Spacer(modifier = Modifier.height(10.dp))
+
             if (noteEvent is BadgeDefinitionEvent) {
-                Spacer(modifier = Modifier.padding(top = 10.dp))
                 BadgeDisplay(baseNote = note)
             } else if (noteEvent is LongTextNoteEvent) {
                 Row(modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp)) {
@@ -350,7 +355,7 @@ fun NoteMaster(
                         !noteForReports.hasAnyReports()
 
                     if (eventContent != null) {
-                        TranslateableRichTextViewer(
+                        TranslatableRichTextViewer(
                             eventContent,
                             canPreview,
                             Modifier.fillMaxWidth(),
@@ -360,7 +365,17 @@ fun NoteMaster(
                             navController
                         )
 
-                        DisplayUncitedHashtags(noteEvent, eventContent, navController)
+                        DisplayUncitedHashtags(noteEvent.hashtags(), eventContent, navController)
+
+                        if (noteEvent is PollNoteEvent) {
+                            PollNote(
+                                note,
+                                canPreview,
+                                backgroundColor,
+                                accountViewModel,
+                                navController
+                            )
+                        }
                     }
 
                     ReactionsRow(note, accountViewModel)

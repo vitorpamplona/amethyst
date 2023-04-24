@@ -3,15 +3,18 @@ package com.vitorpamplona.amethyst.ui.actions
 import android.content.Context
 import android.net.Uri
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.*
+import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
-import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.ui.components.isValidURL
 import com.vitorpamplona.amethyst.ui.components.noProtocolUrlValidator
 import kotlinx.coroutines.Dispatchers
@@ -19,9 +22,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 
-class NewPostViewModel : ViewModel() {
-    private var account: Account? = null
-    private var originalNote: Note? = null
+open class NewPostViewModel : ViewModel() {
+    var account: Account? = null
+    var originalNote: Note? = null
 
     var mentions by mutableStateOf<List<User>?>(null)
     var replyTos by mutableStateOf<List<Note>?>(null)
@@ -34,7 +37,27 @@ class NewPostViewModel : ViewModel() {
     var userSuggestions by mutableStateOf<List<User>>(emptyList())
     var userSuggestionAnchor: TextRange? = null
 
-    fun load(account: Account, replyingTo: Note?, quote: Note?) {
+    // Polls
+    var canUsePoll by mutableStateOf(false)
+    var wantsPoll by mutableStateOf(false)
+    var zapRecipients = mutableStateListOf<HexKey>()
+    var pollOptions = newStateMapPollOptions()
+    var valueMaximum: Int? = null
+    var valueMinimum: Int? = null
+    var consensusThreshold: Int? = null
+    var closedAt: Int? = null
+
+    var isValidRecipients = mutableStateOf(true)
+    var isValidvalueMaximum = mutableStateOf(true)
+    var isValidvalueMinimum = mutableStateOf(true)
+    var isValidConsensusThreshold = mutableStateOf(true)
+    var isValidClosedAt = mutableStateOf(true)
+
+    // Invoices
+    var canAddInvoice by mutableStateOf(false)
+    var wantsInvoice by mutableStateOf(false)
+
+    open fun load(account: Account, replyingTo: Note?, quote: Note?) {
         originalNote = replyingTo
         replyingTo?.let { replyNote ->
             this.replyTos = (replyNote.replyTo ?: emptyList()).plus(replyNote)
@@ -49,7 +72,7 @@ class NewPostViewModel : ViewModel() {
                     this.mentions = currentMentions.plus(replyUser)
                 }
             }
-        } ?: {
+        } ?: run {
             replyTos = null
             mentions = null
         }
@@ -58,88 +81,27 @@ class NewPostViewModel : ViewModel() {
             message = TextFieldValue(message.text + "\n\n@${it.idNote()}")
         }
 
+        canAddInvoice = account.userProfile().info?.lnAddress() != null
+        canUsePoll = originalNote?.event !is PrivateDmEvent && originalNote?.channel() == null
+
         this.account = account
     }
 
-    fun addUserToMentions(user: User) {
-        mentions = if (mentions?.contains(user) == true) mentions else mentions?.plus(user) ?: listOf(user)
-    }
-
-    fun addNoteToReplyTos(note: Note) {
-        note.author?.let { addUserToMentions(it) }
-        replyTos = if (replyTos?.contains(note) == true) replyTos else replyTos?.plus(note) ?: listOf(note)
-    }
-
-    fun tagIndex(user: User): Int {
-        // Postr Events assembles replies before mentions in the tag order
-        return (if (originalNote?.channel() != null) 1 else 0) + (replyTos?.size ?: 0) + (mentions?.indexOf(user) ?: 0)
-    }
-
-    fun tagIndex(note: Note): Int {
-        // Postr Events assembles replies before mentions in the tag order
-        return (if (originalNote?.channel() != null) 1 else 0) + (replyTos?.indexOf(note) ?: 0)
-    }
-
     fun sendPost() {
-        // adds all references to mentions and reply tos
-        message.text.split('\n').forEach { paragraph: String ->
-            paragraph.split(' ').forEach { word: String ->
-                val results = parseDirtyWordForKey(word)
+        val tagger = NewMessageTagger(originalNote?.channel(), mentions, replyTos, message.text)
+        tagger.run()
 
-                if (results?.key?.type == Nip19.Type.USER) {
-                    addUserToMentions(LocalCache.getOrCreateUser(results.key.hex))
-                } else if (results?.key?.type == Nip19.Type.NOTE) {
-                    addNoteToReplyTos(LocalCache.getOrCreateNote(results.key.hex))
-                } else if (results?.key?.type == Nip19.Type.EVENT) {
-                    addNoteToReplyTos(LocalCache.getOrCreateNote(results.key.hex))
-                } else if (results?.key?.type == Nip19.Type.ADDRESS) {
-                    val note = LocalCache.checkGetOrCreateAddressableNote(results.key.hex)
-                    if (note != null) {
-                        addNoteToReplyTos(note)
-                    }
-                }
-            }
-        }
-
-        // Tags the text in the correct order.
-        val newMessage = message.text.split('\n').map { paragraph: String ->
-            paragraph.split(' ').map { word: String ->
-                val results = parseDirtyWordForKey(word)
-                if (results?.key?.type == Nip19.Type.USER) {
-                    val user = LocalCache.getOrCreateUser(results.key.hex)
-
-                    "#[${tagIndex(user)}]${results.restOfWord}"
-                } else if (results?.key?.type == Nip19.Type.NOTE) {
-                    val note = LocalCache.getOrCreateNote(results.key.hex)
-
-                    "#[${tagIndex(note)}]${results.restOfWord}"
-                } else if (results?.key?.type == Nip19.Type.EVENT) {
-                    val note = LocalCache.getOrCreateNote(results.key.hex)
-
-                    "#[${tagIndex(note)}]${results.restOfWord}"
-                } else if (results?.key?.type == Nip19.Type.ADDRESS) {
-                    val note = LocalCache.checkGetOrCreateAddressableNote(results.key.hex)
-                    if (note != null) {
-                        "#[${tagIndex(note)}]${results.restOfWord}"
-                    } else {
-                        word
-                    }
-                } else {
-                    word
-                }
-            }.joinToString(" ")
-        }.joinToString("\n")
-
-        if (originalNote?.channel() != null) {
-            account?.sendChannelMessage(newMessage, originalNote!!.channel()!!.idHex, originalNote!!, mentions)
+        if (wantsPoll) {
+            account?.sendPoll(tagger.message, tagger.replyTos, tagger.mentions, pollOptions, valueMaximum, valueMinimum, consensusThreshold, closedAt)
+        } else if (originalNote?.channel() != null) {
+            account?.sendChannelMessage(tagger.message, tagger.channel!!.idHex, tagger.replyTos, tagger.mentions)
+        } else if (originalNote?.event is PrivateDmEvent) {
+            account?.sendPrivateMessage(tagger.message, originalNote!!.author!!.pubkeyHex, originalNote!!, tagger.mentions)
         } else {
-            account?.sendPost(newMessage, replyTos, mentions)
+            account?.sendPost(tagger.message, tagger.replyTos, tagger.mentions)
         }
 
-        message = TextFieldValue("")
-        urlPreview = null
-        isUploadingImage = false
-        mentions = null
+        cancel()
     }
 
     fun upload(it: Uri, context: Context) {
@@ -166,14 +128,24 @@ class NewPostViewModel : ViewModel() {
         )
     }
 
-    fun cancel() {
+    open fun cancel() {
         message = TextFieldValue("")
         urlPreview = null
         isUploadingImage = false
         mentions = null
+
+        wantsPoll = false
+        zapRecipients = mutableStateListOf<HexKey>()
+        pollOptions = newStateMapPollOptions()
+        valueMaximum = null
+        valueMinimum = null
+        consensusThreshold = null
+        closedAt = null
+
+        wantsInvoice = false
     }
 
-    fun findUrlInMessage(): String? {
+    open fun findUrlInMessage(): String? {
         return message.text.split('\n').firstNotNullOfOrNull { paragraph ->
             paragraph.split(' ').firstOrNull { word: String ->
                 isValidURL(word) || noProtocolUrlValidator.matcher(word).matches()
@@ -181,11 +153,11 @@ class NewPostViewModel : ViewModel() {
         }
     }
 
-    fun removeFromReplyList(it: User) {
+    open fun removeFromReplyList(it: User) {
         mentions = mentions?.minus(it)
     }
 
-    fun updateMessage(it: TextFieldValue) {
+    open fun updateMessage(it: TextFieldValue) {
         message = it
         urlPreview = findUrlInMessage()
 
@@ -200,7 +172,7 @@ class NewPostViewModel : ViewModel() {
         }
     }
 
-    fun autocompleteWithUser(item: User) {
+    open fun autocompleteWithUser(item: User) {
         userSuggestionAnchor?.let {
             val lastWord = message.text.substring(0, it.end).substringAfterLast("\n").substringAfterLast(" ")
             val lastWordStart = it.end - lastWord.length
@@ -212,6 +184,28 @@ class NewPostViewModel : ViewModel() {
             )
             userSuggestionAnchor = null
             userSuggestions = emptyList()
+        }
+    }
+
+    private fun newStateMapPollOptions(): SnapshotStateMap<Int, String> {
+        return mutableStateMapOf(Pair(0, ""), Pair(1, ""))
+    }
+
+    fun canPost(): Boolean {
+        return message.text.isNotBlank() && !isUploadingImage && !wantsInvoice &&
+            (!wantsPoll || pollOptions.values.all { it.isNotEmpty() })
+    }
+
+    fun includePollHashtagInMessage(include: Boolean, hashtag: String) {
+        if (include) {
+            updateMessage(TextFieldValue(message.text + " $hashtag"))
+        } else {
+            updateMessage(
+                TextFieldValue(
+                    message.text.replace(" $hashtag", "")
+                        .replace(hashtag, "")
+                )
+            )
         }
     }
 }

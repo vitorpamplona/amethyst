@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.toByteArray
+import com.vitorpamplona.amethyst.service.nip19.Nip19
 import fr.acinq.secp256k1.Hex
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -16,6 +18,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import nostr.postr.Persona
 import nostr.postr.bechToBytes
+import java.net.InetSocketAddress
+import java.net.Proxy
 import java.util.regex.Pattern
 
 class AccountStateViewModel() : ViewModel() {
@@ -33,26 +37,30 @@ class AccountStateViewModel() : ViewModel() {
 
     private fun tryLoginExistingAccount() {
         LocalPreferences.loadFromEncryptedStorage()?.let {
-            login(it)
+            startUI(it)
         }
     }
 
-    fun login(key: String) {
+    fun startUI(key: String, useProxy: Boolean) {
         val pattern = Pattern.compile(".+@.+\\.[a-z]+")
+        val parsed = Nip19.uriToRoute(key)
+        val pubKeyParsed = parsed?.hex?.toByteArray()
+        var proxy = if (useProxy) Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", 9050)) else null
 
         val account =
             if (key.startsWith("nsec")) {
-                Account(Persona(privKey = key.bechToBytes()))
-            } else if (key.startsWith("npub")) {
-                Account(Persona(pubKey = key.bechToBytes()))
+                Account(Persona(privKey = key.bechToBytes()), proxy = proxy)
+            } else if (pubKeyParsed != null) {
+                Account(Persona(pubKey = pubKeyParsed), proxy = proxy)
             } else if (pattern.matcher(key).matches()) {
                 // Evaluate NIP-5
-                Account(Persona())
+                Account(Persona(), proxy = proxy)
             } else {
-                Account(Persona(Hex.decode(key)))
+                Account(Persona(Hex.decode(key)), proxy = proxy)
             }
 
-        login(account)
+        LocalPreferences.updatePrefsForLogin(account)
+        startUI(account)
     }
 
     fun switchUser(npub: String) {
@@ -61,26 +69,25 @@ class AccountStateViewModel() : ViewModel() {
         tryLoginExistingAccount()
     }
 
-    fun newKey() {
-        val account = Account(Persona())
-        login(account)
+    fun newKey(useProxy: Boolean) {
+        var proxy = if (useProxy) Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", 9050)) else null
+        val account = Account(Persona(), proxy = proxy)
+        // saves to local preferences
+        LocalPreferences.updatePrefsForLogin(account)
+        startUI(account)
     }
 
     @OptIn(DelicateCoroutinesApi::class)
-    fun login(account: Account) {
-        LocalPreferences.updatePrefsForLogin(account)
-
+    fun startUI(account: Account) {
         if (account.loggedIn.privKey != null) {
             _accountContent.update { AccountState.LoggedIn(account) }
         } else {
             _accountContent.update { AccountState.LoggedInViewOnly(account) }
         }
-
         val scope = CoroutineScope(Job() + Dispatchers.IO)
         scope.launch {
             ServiceManager.start(account)
         }
-
         GlobalScope.launch(Dispatchers.Main) {
             account.saveable.observeForever(saveListener)
         }

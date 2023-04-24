@@ -30,7 +30,7 @@ class ReportEvent(
     }
 
     fun reportedPost() = tags
-        .filter { it.firstOrNull() == "e" && it.getOrNull(1) != null }
+        .filter { it.size > 1 && it[0] == "e" }
         .map {
             ReportedKey(
                 it[1],
@@ -39,7 +39,7 @@ class ReportEvent(
         }
 
     fun reportedAuthor() = tags
-        .filter { it.firstOrNull() == "p" && it.getOrNull(1) != null }
+        .filter { it.size > 1 && it[0] == "p" }
         .map {
             ReportedKey(
                 it[1],

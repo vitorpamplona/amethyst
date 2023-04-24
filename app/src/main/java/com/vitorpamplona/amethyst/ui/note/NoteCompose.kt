@@ -51,24 +51,8 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
-import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
-import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
-import com.vitorpamplona.amethyst.service.model.EventInterface
-import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
-import com.vitorpamplona.amethyst.service.model.ReactionEvent
-import com.vitorpamplona.amethyst.service.model.ReportEvent
-import com.vitorpamplona.amethyst.service.model.RepostEvent
-import com.vitorpamplona.amethyst.service.model.TextNoteEvent
-import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
-import com.vitorpamplona.amethyst.ui.components.ResizeImage
-import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
-import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
-import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
-import com.vitorpamplona.amethyst.ui.components.TranslateableRichTextViewer
+import com.vitorpamplona.amethyst.service.model.*
+import com.vitorpamplona.amethyst.ui.components.*
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
@@ -81,7 +65,7 @@ import kotlin.math.ceil
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTimedValue
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalTime::class)
+@OptIn(ExperimentalTime::class)
 @Composable
 fun NoteCompose(
     baseNote: Note,
@@ -112,7 +96,7 @@ fun NoteCompose(
         )
     }
 
-    Log.d("Time", "Note Compose in $elapsed for ${baseNote.event?.kind()} ${baseNote.event?.content()?.split("\n")?.get(0)?.take(100)}")
+    Log.d("Time", "Note Compose in $elapsed for ${baseNote.idHex} ${baseNote.event?.kind()} ${baseNote.event?.content()?.split("\n")?.get(0)?.take(100)}")
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -132,6 +116,7 @@ fun NoteComposeInner(
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
+    val loggedIn = account.userProfile()
 
     val noteState by baseNote.live().metadata.observeAsState()
     val note = noteState?.note
@@ -146,6 +131,19 @@ fun NoteComposeInner(
 
     var moreActionsExpanded by remember { mutableStateOf(false) }
 
+    var isAcceptable by remember { mutableStateOf(true) }
+    var canPreview by remember { mutableStateOf(true) }
+
+    LaunchedEffect(key1 = noteReportsState) {
+        withContext(Dispatchers.IO) {
+            canPreview = note?.author === loggedIn ||
+                (note?.author?.let { loggedIn.isFollowingCached(it) } ?: true) ||
+                !noteForReports.hasAnyReports()
+
+            isAcceptable = account.isAcceptable(noteForReports)
+        }
+    }
+
     val noteEvent = note?.event
     val baseChannel = note?.channel()
 
@@ -157,11 +155,11 @@ fun NoteComposeInner(
             ),
             isBoostedNote
         )
-    } else if (!account.isAcceptable(noteForReports) && !showHiddenNote) {
+    } else if (!isAcceptable && !showHiddenNote) {
         if (!account.isHidden(noteForReports.author!!)) {
             HiddenNote(
                 account.getRelevantReports(noteForReports),
-                account.userProfile(),
+                loggedIn,
                 modifier,
                 isBoostedNote,
                 navController,
@@ -209,7 +207,20 @@ fun NoteComposeInner(
                                 navController.navigate("Channel/${it.idHex}")
                             }
                         } else if (noteEvent is PrivateDmEvent) {
-                            navController.navigate("Room/${note.author?.pubkeyHex}")
+                            val replyAuthorBase =
+                                (note.event as? PrivateDmEvent)
+                                    ?.recipientPubKey()
+                                    ?.let { LocalCache.getOrCreateUser(it) }
+
+                            var userToComposeOn = note.author!!
+
+                            if (replyAuthorBase != null) {
+                                if (note.author == accountViewModel.userProfile()) {
+                                    userToComposeOn = replyAuthorBase
+                                }
+                            }
+
+                            navController.navigate("Room/${userToComposeOn.pubkeyHex}")
                         } else {
                             navController.navigate("Note/${note.idHex}")
                         }
@@ -234,7 +245,7 @@ fun NoteComposeInner(
                                 .width(55.dp)
                                 .padding(0.dp)
                         ) {
-                            NoteAuthorPicture(note, navController, account.userProfile(), 55.dp)
+                            NoteAuthorPicture(note, navController, loggedIn, 55.dp)
 
                             if (noteEvent is RepostEvent) {
                                 note.replyTo?.lastOrNull()?.let {
@@ -247,7 +258,7 @@ fun NoteComposeInner(
                                         NoteAuthorPicture(
                                             it,
                                             navController,
-                                            account.userProfile(),
+                                            loggedIn,
                                             35.dp,
                                             pictureModifier = Modifier.border(2.dp, MaterialTheme.colors.background, CircleShape)
                                         )
@@ -302,7 +313,7 @@ fun NoteComposeInner(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (isQuotedNote) {
-                            NoteAuthorPicture(note, navController, account.userProfile(), 25.dp)
+                            NoteAuthorPicture(note, navController, loggedIn, 25.dp)
                             Spacer(Modifier.padding(horizontal = 5.dp))
                             NoteUsernameDisplay(note, Modifier.weight(1f))
                         } else {
@@ -326,7 +337,7 @@ fun NoteComposeInner(
                         )
 
                         IconButton(
-                            modifier = Modifier.then(Modifier.size(24.dp)),
+                            modifier = Modifier.size(24.dp),
                             onClick = { moreActionsExpanded = true }
                         ) {
                             Icon(
@@ -359,11 +370,6 @@ fun NoteComposeInner(
                     Spacer(modifier = Modifier.height(3.dp))
 
                     if (!makeItShort && noteEvent is TextNoteEvent && (note.replyTo != null || noteEvent.mentions().isNotEmpty())) {
-                        val sortedMentions = noteEvent.mentions()
-                            .mapNotNull { LocalCache.checkGetOrCreateUser(it) }
-                            .toSet()
-                            .sortedBy { account.userProfile().isFollowingCached(it) }
-
                         val replyingDirectlyTo = note.replyTo?.lastOrNull()
                         if (replyingDirectlyTo != null && unPackReply) {
                             NoteCompose(
@@ -385,17 +391,19 @@ fun NoteComposeInner(
                                 navController = navController
                             )
                         } else {
-                            ReplyInformation(note.replyTo, sortedMentions, account, navController)
+                            ReplyInformation(note.replyTo, noteEvent.mentions(), account, navController)
                         }
-                    } else if (!makeItShort && noteEvent is ChannelMessageEvent && (note.replyTo != null || noteEvent.mentions() != null)) {
+                        Spacer(modifier = Modifier.height(5.dp))
+                    } else if (!makeItShort && noteEvent is ChannelMessageEvent && (note.replyTo != null || noteEvent.mentions().isNotEmpty())) {
                         val sortedMentions = noteEvent.mentions()
                             .mapNotNull { LocalCache.checkGetOrCreateUser(it) }
                             .toSet()
-                            .sortedBy { account.userProfile().isFollowingCached(it) }
+                            .sortedBy { loggedIn.isFollowingCached(it) }
 
                         note.channel()?.let {
                             ReplyInformationChannel(note.replyTo, sortedMentions, it, navController)
                         }
+                        Spacer(modifier = Modifier.height(5.dp))
                     }
 
                     if (noteEvent is ReactionEvent || noteEvent is RepostEvent) {
@@ -441,7 +449,7 @@ fun NoteComposeInner(
                             thickness = 0.25.dp
                         )
                     } else if (noteEvent is LongTextNoteEvent) {
-                        LongFormHeader(noteEvent, note, account.userProfile())
+                        LongFormHeader(noteEvent, note, loggedIn)
 
                         ReactionsRow(note, accountViewModel)
 
@@ -459,7 +467,7 @@ fun NoteComposeInner(
                                     UserPicture(
                                         user = it,
                                         navController = navController,
-                                        userAccount = account.userProfile(),
+                                        userAccount = loggedIn,
                                         size = 35.dp
                                     )
                                 }
@@ -485,12 +493,12 @@ fun NoteComposeInner(
                             thickness = 0.25.dp
                         )
                     } else if (noteEvent is PrivateDmEvent &&
-                        noteEvent.recipientPubKey() != account.userProfile().pubkeyHex &&
-                        note.author != account.userProfile()
+                        noteEvent.recipientPubKey() != loggedIn.pubkeyHex &&
+                        note.author !== loggedIn
                     ) {
                         val recepient = noteEvent.recipientPubKey()?.let { LocalCache.checkGetOrCreateUser(it) }
 
-                        TranslateableRichTextViewer(
+                        TranslatableRichTextViewer(
                             stringResource(
                                 id = R.string.private_conversation_notification,
                                 "@${note.author?.pubkeyNpub()}",
@@ -515,12 +523,8 @@ fun NoteComposeInner(
                     } else {
                         val eventContent = accountViewModel.decrypt(note)
 
-                        val canPreview = note.author == account.userProfile() ||
-                            (note.author?.let { account.userProfile().isFollowingCached(it) } ?: true) ||
-                            !noteForReports.hasAnyReports()
-
                         if (eventContent != null) {
-                            if (makeItShort && note.author == account.userProfile()) {
+                            if (makeItShort && note.author == loggedIn) {
                                 Text(
                                     text = eventContent,
                                     color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
@@ -528,7 +532,7 @@ fun NoteComposeInner(
                                     overflow = TextOverflow.Ellipsis
                                 )
                             } else {
-                                TranslateableRichTextViewer(
+                                TranslatableRichTextViewer(
                                     eventContent,
                                     canPreview = canPreview && !makeItShort,
                                     Modifier.fillMaxWidth(),
@@ -538,7 +542,17 @@ fun NoteComposeInner(
                                     navController
                                 )
 
-                                DisplayUncitedHashtags(noteEvent, eventContent, navController)
+                                DisplayUncitedHashtags(noteEvent.hashtags(), eventContent, navController)
+                            }
+
+                            if (noteEvent is PollNoteEvent) {
+                                PollNote(
+                                    note,
+                                    canPreview = canPreview && !makeItShort,
+                                    backgroundColor,
+                                    accountViewModel,
+                                    navController
+                                )
                             }
                         }
 
@@ -565,11 +579,17 @@ fun DisplayFollowingHashtagsInPost(
     account: Account,
     navController: NavController
 ) {
+    var firstTag by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(key1 = noteEvent) {
+        withContext(Dispatchers.IO) {
+            firstTag = noteEvent.firstIsTaggedHashes(account.followingTagSet())
+        }
+    }
+
     Column() {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            val firstTag =
-                noteEvent.firstIsTaggedHashes(account.followingTagSet())
-            if (firstTag != null) {
+            firstTag?.let {
                 ClickableText(
                     text = AnnotatedString(" #$firstTag"),
                     onClick = { navController.navigate("Hashtag/$firstTag") },
@@ -586,11 +606,10 @@ fun DisplayFollowingHashtagsInPost(
 
 @Composable
 fun DisplayUncitedHashtags(
-    noteEvent: EventInterface,
+    hashtags: List<String>,
     eventContent: String,
     navController: NavController
 ) {
-    val hashtags = noteEvent.hashtags()
     if (hashtags.isNotEmpty()) {
         FlowRow(
             modifier = Modifier.padding(top = 5.dp)
@@ -872,7 +891,11 @@ private fun RelayBadges(baseNote: Note) {
         items(relaysToDisplay.size) {
             val url = relaysToDisplay[it].removePrefix("wss://").removePrefix("ws://")
 
-            Box(Modifier.padding(1.dp).size(15.dp)) {
+            Box(
+                Modifier
+                    .padding(1.dp)
+                    .size(15.dp)
+            ) {
                 RobohashFallbackAsyncImage(
                     robot = "https://$url/favicon.ico",
                     model = "https://$url/favicon.ico",
@@ -1066,6 +1089,13 @@ fun UserPicture(
     }
 }
 
+data class DropDownParams(
+    val isFollowingAuthor: Boolean,
+    val isPrivateBookmarkNote: Boolean,
+    val isPublicBookmarkNote: Boolean,
+    val isLoggedUser: Boolean
+)
+
 @Composable
 fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, accountViewModel: AccountViewModel) {
     val clipboardManager = LocalClipboardManager.current
@@ -1073,11 +1103,28 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
     val actContext = LocalContext.current
     var reportDialogShowing by remember { mutableStateOf(false) }
 
+    var state by remember {
+        mutableStateOf<DropDownParams>(
+            DropDownParams(false, false, false, false)
+        )
+    }
+
+    LaunchedEffect(key1 = note) {
+        withContext(Dispatchers.IO) {
+            state = DropDownParams(
+                accountViewModel.isFollowing(note.author),
+                accountViewModel.isInPrivateBookmarks(note),
+                accountViewModel.isInPublicBookmarks(note),
+                accountViewModel.isLoggedUser(note.author)
+            )
+        }
+    }
+
     DropdownMenu(
         expanded = popupExpanded,
         onDismissRequest = onDismiss
     ) {
-        if (!accountViewModel.isFollowing(note.author)) {
+        if (!state.isFollowingAuthor) {
             DropdownMenuItem(onClick = {
                 accountViewModel.follow(
                     note.author ?: return@DropdownMenuItem
@@ -1114,7 +1161,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
             Text(stringResource(R.string.quick_action_share))
         }
         Divider()
-        if (accountViewModel.isInPrivateBookmarks(note)) {
+        if (state.isPrivateBookmarkNote) {
             DropdownMenuItem(onClick = { accountViewModel.removePrivateBookmark(note); onDismiss() }) {
                 Text(stringResource(R.string.remove_from_private_bookmarks))
             }
@@ -1123,7 +1170,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
                 Text(stringResource(R.string.add_to_private_bookmarks))
             }
         }
-        if (accountViewModel.isInPublicBookmarks(note)) {
+        if (state.isPublicBookmarkNote) {
             DropdownMenuItem(onClick = { accountViewModel.removePublicBookmark(note); onDismiss() }) {
                 Text(stringResource(R.string.remove_from_public_bookmarks))
             }
@@ -1137,7 +1184,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
             Text(stringResource(R.string.broadcast))
         }
         Divider()
-        if (accountViewModel.isLoggedUser(note.author)) {
+        if (state.isLoggedUser) {
             DropdownMenuItem(onClick = { accountViewModel.delete(note); onDismiss() }) {
                 Text(stringResource(R.string.request_deletion))
             }

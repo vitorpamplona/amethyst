@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.ui.note.MessageSetCompose
 import com.vitorpamplona.amethyst.ui.note.MultiSetCompose
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.ZapSetCompose
+import com.vitorpamplona.amethyst.ui.note.ZapUserSetCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @OptIn(ExperimentalMaterialApi::class)
@@ -122,6 +123,13 @@ private fun FeedLoaded(
                     routeForLastRead = routeForLastRead
                 )
                 is ZapSetCard -> ZapSetCompose(
+                    item,
+                    isInnerNote = false,
+                    accountViewModel = accountViewModel,
+                    navController = navController,
+                    routeForLastRead = routeForLastRead
+                )
+                is ZapUserSetCard -> ZapUserSetCompose(
                     item,
                     isInnerNote = false,
                     accountViewModel = accountViewModel,

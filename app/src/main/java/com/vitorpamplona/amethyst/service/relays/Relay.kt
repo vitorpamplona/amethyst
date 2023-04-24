@@ -10,6 +10,7 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
+import java.net.Proxy
 import java.util.Date
 
 enum class FeedType {
@@ -20,9 +21,11 @@ class Relay(
     var url: String,
     var read: Boolean = true,
     var write: Boolean = true,
-    var activeTypes: Set<FeedType> = FeedType.values().toSet()
+    var activeTypes: Set<FeedType> = FeedType.values().toSet(),
+    proxy: Proxy?
 ) {
     private val httpClient = OkHttpClient.Builder()
+        .proxy(proxy)
         .followRedirects(true)
         .followSslRedirects(true)
         .build()

@@ -4,30 +4,9 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.vitorpamplona.amethyst.service.model.ATag
-import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
-import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
-import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
-import com.vitorpamplona.amethyst.service.model.BookmarkListEvent
-import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.service.model.ChannelHideMessageEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMuteUserEvent
-import com.vitorpamplona.amethyst.service.model.ContactListEvent
-import com.vitorpamplona.amethyst.service.model.DeletionEvent
-import com.vitorpamplona.amethyst.service.model.LnZapEvent
-import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
-import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
-import com.vitorpamplona.amethyst.service.model.MetadataEvent
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
-import com.vitorpamplona.amethyst.service.model.ReactionEvent
-import com.vitorpamplona.amethyst.service.model.RecommendRelayEvent
-import com.vitorpamplona.amethyst.service.model.ReportEvent
-import com.vitorpamplona.amethyst.service.model.RepostEvent
-import com.vitorpamplona.amethyst.service.model.TextNoteEvent
+import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.Relay
-import com.vitorpamplona.amethyst.ui.components.BundledUpdate
+import com.vitorpamplona.amethyst.ui.components.BundledInsert
 import fr.acinq.secp256k1.Hex
 import kotlinx.coroutines.*
 import nostr.postr.toNpub
@@ -38,16 +17,18 @@ import java.time.format.DateTimeFormatter
 import java.util.concurrent.ConcurrentHashMap
 
 object LocalCache {
-    val metadataParser = jacksonObjectMapper()
-        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-        .readerFor(UserMetadata::class.java)
+    val metadataParser by lazy {
+        jacksonObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            .readerFor(UserMetadata::class.java)
+    }
 
     val antiSpam = AntiSpamFilter()
 
-    val users = ConcurrentHashMap<HexKey, User>()
-    val notes = ConcurrentHashMap<HexKey, Note>()
+    val users = ConcurrentHashMap<HexKey, User>(5000)
+    val notes = ConcurrentHashMap<HexKey, Note>(5000)
     val channels = ConcurrentHashMap<HexKey, Channel>()
-    val addressables = ConcurrentHashMap<String, AddressableNote>()
+    val addressables = ConcurrentHashMap<String, AddressableNote>(100)
 
     fun checkGetOrCreateUser(key: String): User? {
         if (isValidHexNpub(key)) {
@@ -208,7 +189,7 @@ object LocalCache {
             it.addReply(note)
         }
 
-        refreshObservers()
+        refreshObservers(note)
     }
 
     fun consume(event: LongTextNoteEvent, relay: Relay?) {
@@ -237,8 +218,44 @@ object LocalCache {
 
             author.addNote(note)
 
-            refreshObservers()
+            refreshObservers(note)
         }
+    }
+
+    fun consume(event: PollNoteEvent, relay: Relay? = null) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        if (antiSpam.isSpam(event, relay)) {
+            relay?.let {
+                it.spamCounter++
+            }
+            return
+        }
+
+        val replyTo = event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+
+        note.loadEvent(event, author, replyTo)
+
+        // Log.d("TN", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${note.event?.content()?.take(100)} ${formattedDateTime(event.createdAt)}")
+
+        // Prepares user's profile view.
+        author.addNote(note)
+
+        // Counts the replies
+        replyTo.forEach {
+            it.addReply(note)
+        }
+
+        refreshObservers(note)
     }
 
     fun consume(event: BadgeDefinitionEvent) {
@@ -251,7 +268,7 @@ object LocalCache {
         if (event.createdAt > (note.createdAt() ?: 0)) {
             note.loadEvent(event, author, emptyList<Note>())
 
-            refreshObservers()
+            refreshObservers(note)
         }
     }
 
@@ -269,8 +286,6 @@ object LocalCache {
             note.loadEvent(event, author, replyTo)
 
             author.updateAcceptedBadges(note)
-
-            refreshObservers()
         }
     }
 
@@ -292,7 +307,7 @@ object LocalCache {
             it.addReply(note)
         }
 
-        refreshObservers()
+        refreshObservers(note)
     }
 
     @Suppress("UNUSED_PARAMETER")
@@ -336,7 +351,7 @@ object LocalCache {
             recipient.addMessage(author, note)
         }
 
-        refreshObservers()
+        refreshObservers(note)
     }
 
     fun consume(event: DeletionEvent) {
@@ -384,7 +399,7 @@ object LocalCache {
         }
 
         if (deletedAtLeastOne) {
-            live.invalidateData()
+            // refreshObservers()
         }
     }
 
@@ -410,7 +425,7 @@ object LocalCache {
             it.addBoost(note)
         }
 
-        refreshObservers()
+        refreshObservers(note)
     }
 
     fun consume(event: ReactionEvent) {
@@ -448,6 +463,8 @@ object LocalCache {
                 it.addReport(note)
             }
         }
+
+        refreshObservers(note)
     }
 
     fun consume(event: ReportEvent, relay: Relay?) {
@@ -478,6 +495,8 @@ object LocalCache {
         repliesTo.forEach {
             it.addReport(note)
         }
+
+        refreshObservers(note)
     }
 
     fun consume(event: ChannelCreateEvent) {
@@ -494,7 +513,7 @@ object LocalCache {
             oldChannel.addNote(note)
             note.loadEvent(event, author, emptyList())
 
-            refreshObservers()
+            refreshObservers(note)
         }
     }
 
@@ -514,7 +533,7 @@ object LocalCache {
                 oldChannel.addNote(note)
                 note.loadEvent(event, author, emptyList())
 
-                refreshObservers()
+                refreshObservers(note)
             }
         } else {
             // Log.d("MT","Relay sent a previous Metadata Event ${oldUser.toBestDisplayName()} ${formattedDateTime(event.createdAt)} > ${formattedDateTime(oldUser.updatedAt)}")
@@ -548,9 +567,9 @@ object LocalCache {
             return
         }
 
-        val replyTo = event.replyTos()
+        val replyTo = event.tagsWithoutCitations()
+            .filter { it != event.channel() }
             .mapNotNull { checkGetOrCreateNote(it) }
-            .filter { it.event !is ChannelCreateEvent }
 
         note.loadEvent(event, author, replyTo)
 
@@ -561,7 +580,7 @@ object LocalCache {
             it.addReply(note)
         }
 
-        refreshObservers()
+        refreshObservers(note)
     }
 
     @Suppress("UNUSED_PARAMETER")
@@ -578,15 +597,14 @@ object LocalCache {
         // Already processed this event.
         if (note.event != null) return
 
-        val zapRequest = event.containedPost()?.id?.let { getOrCreateNote(it) }
+        val zapRequest = event.zapRequest?.id?.let { getOrCreateNote(it) }
 
         val author = getOrCreateUser(event.pubKey)
         val mentions = event.zappedAuthor().mapNotNull { checkGetOrCreateUser(it) }
         val repliesTo = event.zappedPost().mapNotNull { checkGetOrCreateNote(it) } +
             event.taggedAddresses().map { getOrCreateAddressableNote(it) } +
             (
-                (zapRequest?.event as? LnZapRequestEvent)?.taggedAddresses()
-                    ?.map { getOrCreateAddressableNote(it) } ?: emptySet<Note>()
+                (zapRequest?.event as? LnZapRequestEvent)?.taggedAddresses()?.map { getOrCreateAddressableNote(it) } ?: emptySet<Note>()
                 )
 
         note.loadEvent(event, author, repliesTo)
@@ -604,6 +622,8 @@ object LocalCache {
         mentions.forEach {
             it.addZap(zapRequest, note)
         }
+
+        refreshObservers(note)
     }
 
     fun consume(event: LnZapRequestEvent) {
@@ -627,6 +647,8 @@ object LocalCache {
         mentions.forEach {
             it.addZap(note, null)
         }
+
+        refreshObservers(note)
     }
 
     fun findUsersStartingWith(username: String): List<User> {
@@ -640,6 +662,7 @@ object LocalCache {
     fun findNotesStartingWith(text: String): List<Note> {
         return notes.values.filter {
             (it.event is TextNoteEvent && it.event?.content()?.contains(text, true) ?: false) ||
+                (it.event is PollNoteEvent && it.event?.content()?.contains(text, true) ?: false) ||
                 (it.event is ChannelMessageEvent && it.event?.content()?.contains(text, true) ?: false) ||
                 it.idHex.startsWith(text, true) ||
                 it.idNote().startsWith(text, true)
@@ -732,30 +755,23 @@ object LocalCache {
     }
 
     // Observers line up here.
-    val live: LocalCacheLiveData = LocalCacheLiveData(this)
+    val live: LocalCacheLiveData = LocalCacheLiveData()
 
-    private fun refreshObservers() {
-        live.invalidateData()
+    private fun refreshObservers(newNote: Note) {
+        live.invalidateData(newNote)
     }
 }
 
-class LocalCacheLiveData(val cache: LocalCache) :
-    LiveData<LocalCacheState>(LocalCacheState(cache)) {
+class LocalCacheLiveData : LiveData<Set<Note>>(setOf<Note>()) {
 
     // Refreshes observers in batches.
-    private val bundler = BundledUpdate(300, Dispatchers.Main) {
-        if (hasActiveObservers()) {
-            refresh()
+    private val bundler = BundledInsert<Note>(300, Dispatchers.Main)
+
+    fun invalidateData(newNote: Note) {
+        bundler.invalidateList(newNote) { bundledNewNotes ->
+            if (hasActiveObservers()) {
+                postValue(bundledNewNotes)
+            }
         }
     }
-
-    fun invalidateData() {
-        bundler.invalidate()
-    }
-
-    private fun refresh() {
-        postValue(LocalCacheState(cache))
-    }
 }
-
-class LocalCacheState(val cache: LocalCache)

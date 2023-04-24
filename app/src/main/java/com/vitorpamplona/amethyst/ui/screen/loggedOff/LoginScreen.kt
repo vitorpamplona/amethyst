@@ -55,6 +55,7 @@ fun LoginPage(
     var dialogOpen by remember {
         mutableStateOf(false)
     }
+    val useProxy = remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -134,29 +135,31 @@ fun LoginPage(
                                 }
                             )
                         }
-                        if (dialogOpen) {
-                            SimpleQrCodeScanner {
-                                dialogOpen = false
-                                if (!it.isNullOrEmpty()) {
-                                    key.value = TextFieldValue(it)
-                                }
+                    }
+                },
+                leadingIcon = {
+                    if (dialogOpen) {
+                        SimpleQrCodeScanner {
+                            dialogOpen = false
+                            if (!it.isNullOrEmpty()) {
+                                key.value = TextFieldValue(it)
                             }
                         }
-                        IconButton(onClick = { dialogOpen = true }) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_qrcode),
-                                null,
-                                modifier = Modifier.size(24.dp),
-                                tint = MaterialTheme.colors.primary
-                            )
-                        }
+                    }
+                    IconButton(onClick = { dialogOpen = true }) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_qrcode),
+                            null,
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colors.primary
+                        )
                     }
                 },
                 visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardActions = KeyboardActions(
                     onGo = {
                         try {
-                            accountViewModel.login(key.value.text)
+                            accountViewModel.startUI(key.value.text, useProxy.value)
                         } catch (e: Exception) {
                             errorMessage = context.getString(R.string.invalid_key)
                         }
@@ -219,6 +222,15 @@ fun LoginPage(
                 }
             }
 
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(
+                    checked = useProxy.value,
+                    onCheckedChange = { useProxy.value = it }
+                )
+
+                Text("Enable Tor")
+            }
+
             Spacer(modifier = Modifier.height(20.dp))
 
             Box(modifier = Modifier.padding(40.dp, 0.dp, 40.dp, 0.dp)) {
@@ -235,7 +247,7 @@ fun LoginPage(
 
                         if (acceptedTerms.value && key.value.text.isNotBlank()) {
                             try {
-                                accountViewModel.login(key.value.text)
+                                accountViewModel.startUI(key.value.text, useProxy.value)
                             } catch (e: Exception) {
                                 errorMessage = context.getString(R.string.invalid_key)
                             }
@@ -263,7 +275,7 @@ fun LoginPage(
                 .fillMaxWidth(),
             onClick = {
                 if (acceptedTerms.value) {
-                    accountViewModel.newKey()
+                    accountViewModel.newKey(useProxy.value)
                 } else {
                     termsAcceptanceIsRequired =
                         context.getString(R.string.acceptance_of_terms_is_required)
