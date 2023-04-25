@@ -692,7 +692,7 @@ class Account(
 
             event.plainContent(loggedIn.privKey!!, pubkeyToUse.toByteArray())
         } else if (event is LnZapRequestEvent && loggedIn.privKey != null) {
-            LnZapRequestEvent.checkForPrivateZap(event, loggedIn.privKey!!)?.content()
+            decryptZapContentAuthor(note)?.content()
         } else {
             event?.content()
         }
@@ -700,8 +700,43 @@ class Account(
 
     fun decryptZapContentAuthor(note: Note): Event? {
         val event = note.event
-        return if (event is LnZapRequestEvent && loggedIn.privKey != null) {
-            LnZapRequestEvent.checkForPrivateZap(event, loggedIn.privKey!!)
+        val loggedInPrivateKey = loggedIn.privKey
+
+        return if (event is LnZapRequestEvent && loggedInPrivateKey != null && event.isPrivateZap()) {
+            val recipientPK = event.zappedAuthor().firstOrNull()
+            val recipientPost = event.zappedPost().firstOrNull()
+
+            if (recipientPK == userProfile().pubkeyHex) {
+                // if the receiver is logged in, these are the params.
+                val privateKeyToUse = loggedInPrivateKey
+                val pubkeyToUse = event.pubKey
+
+                LnZapRequestEvent.checkForPrivateZap(event, privateKeyToUse, pubkeyToUse)
+            } else {
+                // if the sender is logged in, these are the params
+                val altPubkeyToUse = recipientPK
+                val altPrivateKeyToUse = if (recipientPost != null) {
+                    LnZapRequestEvent.createEncryptionPrivateKey(
+                        loggedInPrivateKey.toHexKey(),
+                        recipientPost,
+                        event.createdAt
+                    )
+                } else if (recipientPK != null) {
+                    LnZapRequestEvent.createEncryptionPrivateKey(
+                        loggedInPrivateKey.toHexKey(),
+                        recipientPK,
+                        event.createdAt
+                    )
+                } else {
+                    null
+                }
+
+                if (altPrivateKeyToUse != null && altPubkeyToUse != null) {
+                    LnZapRequestEvent.checkForPrivateZap(event, altPrivateKeyToUse, altPubkeyToUse)
+                } else {
+                    null
+                }
+            }
         } else {
             null
         }

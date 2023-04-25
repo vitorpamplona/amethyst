@@ -200,9 +200,11 @@ open class Note(val idHex: String) {
         }
     }
 
-    fun isZappedBy(user: User): Boolean {
+    fun isZappedBy(user: User, account: Account): Boolean {
         // Zaps who the requester was the user
-        return zaps.any { it.key.author === user }
+        return zaps.any {
+            it.key.author === user || account.decryptZapContentAuthor(it.key)?.pubKey == user.pubkeyHex
+        }
     }
 
     fun isReactedBy(user: User): Boolean {

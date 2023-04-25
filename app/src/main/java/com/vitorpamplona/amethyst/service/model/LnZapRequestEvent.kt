@@ -24,6 +24,8 @@ class LnZapRequestEvent(
 
     fun zappedAuthor() = tags.filter { it.size > 1 && it[0] == "p" }.map { it[1] }
 
+    fun isPrivateZap() = tags.any { t -> t.size >= 2 && t[0] == "anon" && t[1].isNotBlank() }
+
     companion object {
         const val kind = 9734
 
@@ -135,26 +137,27 @@ class LnZapRequestEvent(
             if (parts.size != 2) {
                 throw IllegalArgumentException("Invalid message format")
             }
-            val iv = parts[1].run { Bech32.decode(this) }
-            val encryptedMsg = parts.first().run { Bech32.decode(this) }
+            val iv = parts[1].run { Bech32.decode(this).second }
+            val encryptedMsg = parts.first().run { Bech32.decode(this).second }
+            val encryptedBytes = Bech32.five2eight(encryptedMsg, 0)
             val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
-            cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(sharedSecret, "AES"), IvParameterSpec(Bech32.five2eight(iv.second, 0)))
+            cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(sharedSecret, "AES"), IvParameterSpec(Bech32.five2eight(iv, 0)))
 
             try {
-                val decryptedMsgBytes = cipher.doFinal(Bech32.five2eight(encryptedMsg.second, 0))
+                val decryptedMsgBytes = cipher.doFinal(encryptedBytes)
                 return String(decryptedMsgBytes)
             } catch (ex: BadPaddingException) {
-                throw IllegalArgumentException("Bad padding")
+                throw IllegalArgumentException("Bad padding: ${ex.message}")
             }
         }
 
-        fun checkForPrivateZap(zaprequest: Event, loggedInUserPrivKey: ByteArray): Event? {
-            val anonTag = zaprequest.tags.firstOrNull { t -> t.size >= 2 && t[0] == "anon" }
+        fun checkForPrivateZap(zapRequest: LnZapRequestEvent, loggedInUserPrivKey: ByteArray, pubKey: HexKey): Event? {
+            val anonTag = zapRequest.tags.firstOrNull { t -> t.size >= 2 && t[0] == "anon" }
             if (anonTag != null) {
                 val encnote = anonTag[1]
-                if (encnote != null && encnote != "") {
+                if (encnote.isNotBlank()) {
                     try {
-                        val note = decryptPrivateZapMessage(encnote, loggedInUserPrivKey, zaprequest.pubKey.toByteArray())
+                        val note = decryptPrivateZapMessage(encnote, loggedInUserPrivKey, pubKey.toByteArray())
                         val decryptedEvent = fromJson(note)
                         if (decryptedEvent.kind == 9733) {
                             return decryptedEvent

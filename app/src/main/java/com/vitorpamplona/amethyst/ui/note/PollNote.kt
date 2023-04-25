@@ -31,12 +31,12 @@ import androidx.compose.ui.window.Popup
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.*
 import kotlin.math.roundToInt
 
@@ -51,7 +51,11 @@ fun PollNote(
     val zapsState by baseNote.live().zaps.observeAsState()
     val zappedNote = zapsState?.note ?: return
 
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val account = accountState?.account ?: return
+
     val pollViewModel = PollNoteViewModel()
+    pollViewModel.account = account
     pollViewModel.load(zappedNote)
 
     pollViewModel.pollEvent?.pollOptions()?.forEach { poll_op ->
@@ -69,7 +73,7 @@ fun PollNote(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(vertical = 3.dp)
         ) {
-            if (accountViewModel.isLoggedUser(zappedNote.author) || zappedNote.isZappedBy(accountViewModel.userProfile())) {
+            if (pollViewModel.canZap()) {
                 ZapVote(
                     baseNote,
                     accountViewModel,
@@ -288,7 +292,17 @@ fun ZapVote(
 
         clickablePrepend()
 
-        if (pollViewModel.isPollOptionZappedBy(pollOption, accountViewModel.userProfile())) {
+        var optionWasZappedByLoggedInUser by remember { mutableStateOf(false) }
+
+        LaunchedEffect(key1 = zappedNote) {
+            withContext(Dispatchers.IO) {
+                if (!optionWasZappedByLoggedInUser) {
+                    optionWasZappedByLoggedInUser = pollViewModel.isPollOptionZappedBy(pollOption, accountViewModel.userProfile())
+                }
+            }
+        }
+
+        if (optionWasZappedByLoggedInUser) {
             zappingProgress = 1f
             Icon(
                 imageVector = Icons.Default.Bolt,
@@ -315,8 +329,18 @@ fun ZapVote(
         }
     }
 
+    var wasZappedByLoggedInUser by remember { mutableStateOf(false) }
+
+    LaunchedEffect(key1 = zappedNote) {
+        withContext(Dispatchers.IO) {
+            if (!wasZappedByLoggedInUser) {
+                wasZappedByLoggedInUser = zappedNote?.isZappedBy(accountViewModel.userProfile(), account) == true
+            }
+        }
+    }
+
     // only show tallies after a user has zapped note
-    if (baseNote.author == accountViewModel.userProfile() || zappedNote?.isZappedBy(accountViewModel.userProfile()) == true) {
+    if (baseNote.author == accountViewModel.userProfile() || wasZappedByLoggedInUser) {
         Text(
             showAmount(pollViewModel.zappedPollOptionAmount(pollOption)),
             fontSize = 14.sp,
@@ -378,7 +402,7 @@ fun FilteredZapAmountChoicePopup(
                                 context,
                                 onError,
                                 onProgress,
-                                LnZapEvent.ZapType.PUBLIC
+                                account.defaultZapType
                             )
                             onDismiss()
                         }
@@ -404,7 +428,7 @@ fun FilteredZapAmountChoicePopup(
                                         context,
                                         onError,
                                         onProgress,
-                                        LnZapEvent.ZapType.PUBLIC
+                                        account.defaultZapType
                                     )
                                     onDismiss()
                                 }
@@ -496,8 +520,7 @@ fun ZapVoteAmountChoicePopup(
                                 "",
                                 context,
                                 onError,
-                                onProgress,
-                                LnZapEvent.ZapType.PUBLIC
+                                onProgress
                             )
                             onDismiss()
                         }
@@ -522,8 +545,7 @@ fun ZapVoteAmountChoicePopup(
                                         "",
                                         context,
                                         onError,
-                                        onProgress,
-                                        LnZapEvent.ZapType.PUBLIC
+                                        onProgress
                                     )
                                     onDismiss()
                                 }

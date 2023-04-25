@@ -314,6 +314,16 @@ fun ZapReaction(
 
     var zappingProgress by remember { mutableStateOf(0f) }
 
+    var wasZappedByLoggedInUser by remember { mutableStateOf(false) }
+
+    LaunchedEffect(key1 = zappedNote) {
+        withContext(Dispatchers.IO) {
+            if (!wasZappedByLoggedInUser) {
+                wasZappedByLoggedInUser = zappedNote?.isZappedBy(account.userProfile(), account) == true
+            }
+        }
+    }
+
     Row(
         verticalAlignment = CenterVertically,
         modifier = Modifier
@@ -412,7 +422,7 @@ fun ZapReaction(
             ZapCustomDialog({ wantsToSetCustomZap = false }, account = account, accountViewModel, baseNote)
         }
 
-        if (zappedNote?.isZappedBy(account.userProfile()) == true) {
+        if (wasZappedByLoggedInUser) {
             zappingProgress = 1f
             Icon(
                 imageVector = Icons.Default.Bolt,
