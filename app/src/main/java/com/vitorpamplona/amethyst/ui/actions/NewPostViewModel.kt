@@ -82,7 +82,8 @@ open class NewPostViewModel : ViewModel() {
         }
 
         quote?.let {
-            message = TextFieldValue(message.text + "\n\n@${it.toNEvent()}")
+            message = TextFieldValue(message.text + "\n\nnostr:${it.toNEvent()}")
+            urlPreview = findUrlInMessage()
         }
 
         canAddInvoice = account.userProfile().info?.lnAddress() != null
