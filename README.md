@@ -32,7 +32,7 @@ Or get the latest APK from the [Releases Section](https://github.com/vitorpamplo
 - [x] Relay Sets (home, dms, public chats, global)
 - [x] User/Note Tagging (NIP-08, NIP-10)
 - [x] Lightning Tips
-- [x] Zaps (NIP-57)
+- [x] Zaps (private, public, anon, non-zap) (NIP-57)
 - [x] URI Support (NIP-21)
 - [x] Event Deletion (NIP-09: like, boost, text notes and reports)
 - [x] Identity Verification (NIP-05)
@@ -41,7 +41,17 @@ Or get the latest APK from the [Releases Section](https://github.com/vitorpamplo
 - [x] Online Relay Search (NIP-50)
 - [x] Internationalization
 - [x] Badges (NIP-58)
-- [x] Hashtags
+- [x] Hashtag Following and Custom Hashtags
+- [x] Polls (NIP-69)
+- [x] Verifiable uploads (NIP-94)
+- [x] Login with QR
+- [x] Wallet Connect API (NIP-47)
+- [x] Accessible uploads
+- [x] Bounty support (nostrbounties.com)
+- [x] De-googled F-Droid flavor
+- [x] External Identity Support (NIP-39)
+- [x] Multiple Accounts
+- [x] Markdown Support
 - [ ] Local Database 
 - [ ] View Individual Reactions (Like, Boost, Zaps, Reports) per Post
 - [ ] Bookmarks, Pinned Posts, Muted Events (NIP-51)
@@ -59,7 +69,7 @@ Or get the latest APK from the [Releases Section](https://github.com/vitorpamplo
 - [ ] Delegated Event Signing (NIP-26)
 - [ ] Account Creation / Backup Guidance (NIP-06)
 - [ ] Message Sent feedback (NIP-20)
-- [ ] Polls (NIP-69)
+
 
 # Development Overview
 
