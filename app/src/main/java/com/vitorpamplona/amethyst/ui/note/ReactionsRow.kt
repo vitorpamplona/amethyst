@@ -316,7 +316,7 @@ fun ZapReaction(
 
     var wasZappedByLoggedInUser by remember { mutableStateOf(false) }
 
-    LaunchedEffect(key1 = zappedNote) {
+    LaunchedEffect(key1 = zapsState) {
         withContext(Dispatchers.IO) {
             if (!wasZappedByLoggedInUser) {
                 wasZappedByLoggedInUser = zappedNote?.isZappedBy(account.userProfile(), account) == true
