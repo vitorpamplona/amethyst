@@ -248,6 +248,13 @@ fun ZoomableImageDialog(imageUrl: ZoomableContent, allImages: List<ZoomableConte
             Column() {
                 val pagerState: PagerState = remember { PagerState() }
 
+                LaunchedEffect(key1 = pagerState, key2 = imageUrl) {
+                    val page = allImages.indexOf(imageUrl)
+                    if (page > -1) {
+                        pagerState.scrollToPage(page)
+                    }
+                }
+
                 Row(
                     modifier = Modifier
                         .padding(10.dp)
