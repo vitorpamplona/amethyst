@@ -691,8 +691,19 @@ class Account(
             }
 
             event.plainContent(loggedIn.privKey!!, pubkeyToUse.toByteArray())
+        } else if (event is LnZapRequestEvent && loggedIn.privKey != null) {
+            LnZapRequestEvent.checkForPrivateZap(event, loggedIn.privKey!!)?.content()
         } else {
             event?.content()
+        }
+    }
+
+    fun decryptZapContentAuthor(note: Note): Event? {
+        val event = note.event
+        return if (event is LnZapRequestEvent && loggedIn.privKey != null) {
+            LnZapRequestEvent.checkForPrivateZap(event, loggedIn.privKey!!)
+        } else {
+            null
         }
     }
 

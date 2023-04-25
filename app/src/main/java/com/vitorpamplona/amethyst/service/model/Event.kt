@@ -19,7 +19,7 @@ open class Event(
     @SerializedName("created_at") val createdAt: Long,
     val kind: Int,
     val tags: List<List<String>>,
-    var content: String,
+    val content: String,
     val sig: HexKey
 ) : EventInterface {
     override fun id(): HexKey = id

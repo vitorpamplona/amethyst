@@ -14,6 +14,7 @@ import com.vitorpamplona.amethyst.model.AccountState
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.PayInvoiceErrorResponse
 import com.vitorpamplona.amethyst.service.model.ReportEvent
@@ -162,6 +163,10 @@ class AccountViewModel(private val account: Account) : ViewModel() {
 
     fun decrypt(note: Note): String? {
         return account.decryptContent(note)
+    }
+
+    fun decryptZap(note: Note): Event? {
+        return account.decryptZapContentAuthor(note)
     }
 
     fun hide(user: User) {

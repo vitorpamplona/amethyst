@@ -149,9 +149,9 @@ class LnZapRequestEvent(
         }
 
         fun checkForPrivateZap(zaprequest: Event, loggedInUserPrivKey: ByteArray): Event? {
-            val anonTag = zaprequest.tags.firstOrNull { t -> t.count() >= 2 && t[0] == "anon" }
-            if (anonTag != null && anonTag.size > 1) {
-                val encnote = anonTag?.elementAt(1)
+            val anonTag = zaprequest.tags.firstOrNull { t -> t.size >= 2 && t[0] == "anon" }
+            if (anonTag != null) {
+                val encnote = anonTag[1]
                 if (encnote != null && encnote != "") {
                     try {
                         val note = decryptPrivateZapMessage(encnote, loggedInUserPrivKey, zaprequest.pubKey.toByteArray())
