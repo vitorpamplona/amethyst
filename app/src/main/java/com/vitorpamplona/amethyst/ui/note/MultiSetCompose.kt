@@ -284,7 +284,7 @@ private fun AuthorPictureAndComment(
             Spacer(modifier = Modifier.width(5.dp))
             TranslatableRichTextViewer(
                 content = comment,
-                canPreview = false,
+                canPreview = true,
                 tags = null,
                 modifier = Modifier.weight(1f),
                 backgroundColor = MaterialTheme.colors.background,
