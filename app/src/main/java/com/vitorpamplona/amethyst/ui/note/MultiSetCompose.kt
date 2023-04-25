@@ -239,7 +239,9 @@ private fun AuthorPictureAndComment(
     accountUser: User,
     accountViewModel: AccountViewModel
 ) {
-    var content by remember { mutableStateOf<Pair<User, String?>>(Pair(zapRequest.author!!, null)) }
+    val author = zapRequest.author ?: return
+
+    var content by remember { mutableStateOf<Pair<User, String?>>(Pair(author, null)) }
 
     LaunchedEffect(key1 = zapRequest.idHex) {
         (zapRequest.event as? LnZapRequestEvent)?.let {
@@ -249,7 +251,7 @@ private fun AuthorPictureAndComment(
                 content = Pair(author, decryptedContent.content)
             } else {
                 if (!zapRequest.event?.content().isNullOrBlank()) {
-                    content = Pair(zapRequest.author!!, zapRequest.event?.content())
+                    content = Pair(author, zapRequest.event?.content())
                 }
             }
         }

@@ -307,4 +307,19 @@
     <string name="content_description">Description of the contents</string>
     <string name="content_description_example">A blue boat in a white sandy beach at sunset</string>
 
+    <string name="zap_type">Zap Type</string>
+    <string name="zap_type_explainer">Zap Type for all options</string>
+
+    <string name="zap_type_public">Public</string>
+    <string name="zap_type_public_explainer">Everybody can see the transaction and message</string>
+
+    <string name="zap_type_private">Private</string>
+    <string name="zap_type_private_explainer">Sender and Receiver can see each other and read the message</string>
+
+    <string name="zap_type_anonymous">Anonymous</string>
+    <string name="zap_type_anonymous_explainer">Receiver and the public does not know who sent the payment</string>
+
+    <string name="zap_type_nonzap">Non-Zap</string>
+    <string name="zap_type_nonzap_explainer">No trace in Nostr, only in Lightning</string>
+
 </resources>

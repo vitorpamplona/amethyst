@@ -5,8 +5,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -29,7 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 
 @Composable
-fun TextSpinner(label: String, placeholder: String, options: List<String>, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
+fun TextSpinner(label: String, placeholder: String, options: List<String>, explainers: List<String>? = null, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
     val focusRequester = remember { FocusRequester() }
     val interactionSource = remember { MutableInteractionSource() }
     var optionsShowing by remember { mutableStateOf(false) }
@@ -62,7 +65,7 @@ fun TextSpinner(label: String, placeholder: String, options: List<String>, onSel
 
     if (optionsShowing) {
         options.isNotEmpty().also {
-            SpinnerSelectionDialog(options = options, onDismiss = { optionsShowing = false }) {
+            SpinnerSelectionDialog(options = options, explainers = explainers, onDismiss = { optionsShowing = false }) {
                 currentText = options[it]
                 optionsShowing = false
                 onSelect(it)
@@ -72,7 +75,7 @@ fun TextSpinner(label: String, placeholder: String, options: List<String>, onSel
 }
 
 @Composable
-fun SpinnerSelectionDialog(options: List<String>, onDismiss: () -> Unit, onSelect: (Int) -> Unit) {
+fun SpinnerSelectionDialog(options: List<String>, explainers: List<String>?, onDismiss: () -> Unit, onSelect: (Int) -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             border = BorderStroke(0.25.dp, Color.LightGray),
@@ -81,7 +84,6 @@ fun SpinnerSelectionDialog(options: List<String>, onDismiss: () -> Unit, onSelec
             LazyColumn() {
                 itemsIndexed(options) { index, item ->
                     Row(
-                        horizontalArrangement = Arrangement.Center,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(16.dp, 16.dp)
@@ -89,7 +91,25 @@ fun SpinnerSelectionDialog(options: List<String>, onDismiss: () -> Unit, onSelec
                                 onSelect(index)
                             }
                     ) {
-                        Text(text = item, color = MaterialTheme.colors.onSurface)
+                        Column() {
+                            Row(
+                                horizontalArrangement = Arrangement.Center,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                            ) {
+                                Text(text = item, color = MaterialTheme.colors.onSurface)
+                            }
+                            explainers?.getOrNull(index)?.let {
+                                Spacer(modifier = Modifier.height(5.dp))
+                                Row(
+                                    horizontalArrangement = Arrangement.Start,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                ) {
+                                    Text(text = it, color = Color.Gray)
+                                }
+                            }
+                        }
                     }
                     if (index < options.lastIndex) {
                         Divider(color = Color.LightGray, thickness = 0.25.dp)
