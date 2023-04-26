@@ -11,6 +11,7 @@ import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.RelayPool
+import com.vitorpamplona.amethyst.ui.actions.ServersAvailable
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.Nip47URI
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -45,6 +46,7 @@ class Account(
     var translateTo: String = Locale.getDefault().language,
     var zapAmountChoices: List<Long> = listOf(500L, 1000L, 5000L),
     var defaultZapType: LnZapEvent.ZapType = LnZapEvent.ZapType.PRIVATE,
+    var defaultFileServer: ServersAvailable = ServersAvailable.IMGUR,
     var zapPaymentRequest: Nip47URI? = null,
     var hideDeleteRequestDialog: Boolean = false,
     var hideBlockAlertDialog: Boolean = false,
@@ -648,6 +650,12 @@ class Account(
 
     fun changeDefaultZapType(zapType: LnZapEvent.ZapType) {
         defaultZapType = zapType
+        live.invalidateData()
+        saveable.invalidateData()
+    }
+
+    fun changeDefaultFileServer(server: ServersAvailable) {
+        defaultFileServer = server
         live.invalidateData()
         saveable.invalidateData()
     }

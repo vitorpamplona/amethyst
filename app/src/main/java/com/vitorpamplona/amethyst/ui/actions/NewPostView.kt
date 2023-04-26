@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.ui.components.*
 import com.vitorpamplona.amethyst.ui.note.ReplyInformation
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.UserLine
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import kotlinx.coroutines.Dispatchers
@@ -206,8 +207,10 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                             if (url != null) {
                                 ImageVideoDescription(
                                     url,
-                                    onAdd = { description ->
-                                        postViewModel.upload(url, description, context)
+                                    account.defaultFileServer,
+                                    onAdd = { description, server ->
+                                        postViewModel.upload(url, description, server, context)
+                                        account.changeDefaultFileServer(server)
                                     },
                                     onCancel = {
                                         postViewModel.contentToAddUrl = null
@@ -485,10 +488,15 @@ fun SearchButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifier 
     }
 }
 
+enum class ServersAvailable() {
+    IMGUR
+}
+
 @Composable
 fun ImageVideoDescription(
     uri: Uri,
-    onAdd: (String) -> Unit,
+    defaultServer: ServersAvailable,
+    onAdd: (String, ServersAvailable) -> Unit,
     onCancel: () -> Unit
 ) {
     val resolver = LocalContext.current.contentResolver
@@ -497,6 +505,15 @@ fun ImageVideoDescription(
 
     val isImage = mediaType.startsWith("image")
     val isVideo = mediaType.startsWith("video")
+
+    val fileServers = listOf(
+        Pair(ServersAvailable.IMGUR, "imgur.com")
+    )
+
+    val fileServerOptions = fileServers.map { it.second }
+
+    var selectedServer by remember { mutableStateOf(defaultServer) }
+    var message by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -595,30 +612,49 @@ fun ImageVideoDescription(
                 }
             }
 
-            var message by remember { mutableStateOf("") }
-
-            OutlinedTextField(
-                label = { Text(text = stringResource(R.string.content_description)) },
-                modifier = Modifier.fillMaxWidth(),
-                value = message,
-                onValueChange = { message = it },
-                placeholder = {
-                    Text(
-                        text = stringResource(R.string.content_description_example),
-                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                    )
-                },
-                keyboardOptions = KeyboardOptions.Default.copy(
-                    capitalization = KeyboardCapitalization.Sentences
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                TextSpinner(
+                    label = stringResource(id = R.string.file_server),
+                    placeholder = fileServers.filter { it.first == defaultServer }.first().second,
+                    options = fileServerOptions,
+                    onSelect = {
+                        selectedServer = fileServers[it].first
+                    },
+                    modifier = Modifier
+                        .weight(1f)
                 )
-            )
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    label = { Text(text = stringResource(R.string.content_description)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    value = message,
+                    onValueChange = { message = it },
+                    placeholder = {
+                        Text(
+                            text = stringResource(R.string.content_description_example),
+                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                        )
+                    },
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        capitalization = KeyboardCapitalization.Sentences
+                    )
+                )
+            }
 
             Button(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 10.dp),
                 onClick = {
-                    onAdd(message)
+                    onAdd(message, selectedServer)
                 },
                 shape = RoundedCornerShape(15.dp),
                 colors = ButtonDefaults.buttonColors(

@@ -194,7 +194,7 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
                             tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                             modifier = Modifier.padding(start = 5.dp)
                         ) {
-                            chatRoomScreenModel.upload(it, "", context)
+                            chatRoomScreenModel.upload(it, "", account.defaultFileServer, context)
                         }
                     },
                     colors = TextFieldDefaults.textFieldColors(

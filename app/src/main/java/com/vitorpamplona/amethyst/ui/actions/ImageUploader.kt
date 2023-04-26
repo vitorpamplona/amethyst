@@ -14,6 +14,7 @@ import java.util.*
 object ImageUploader {
     fun uploadImage(
         uri: Uri,
+        server: ServersAvailable,
         contentResolver: ContentResolver,
         onSuccess: (String, String?) -> Unit,
         onError: (Throwable) -> Unit

@@ -12,6 +12,7 @@ import com.vitorpamplona.amethyst.service.model.ContactListEvent
 import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.Event.Companion.getRefinedEvent
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
+import com.vitorpamplona.amethyst.ui.actions.ServersAvailable
 import com.vitorpamplona.amethyst.ui.note.Nip47URI
 import fr.acinq.secp256k1.Hex
 import nostr.postr.Persona
@@ -44,6 +45,7 @@ private object PrefKeys {
     const val TRANSLATE_TO = "translateTo"
     const val ZAP_AMOUNTS = "zapAmounts"
     const val DEFAULT_ZAPTYPE = "defaultZapType"
+    const val DEFAULT_FILE_SERVER = "defaultFileServer"
     const val ZAP_PAYMENT_REQUEST_SERVER = "zapPaymentServer"
     const val LATEST_CONTACT_LIST = "latestContactList"
     const val HIDE_DELETE_REQUEST_DIALOG = "hide_delete_request_dialog"
@@ -194,6 +196,7 @@ object LocalPreferences {
             putString(PrefKeys.TRANSLATE_TO, account.translateTo)
             putString(PrefKeys.ZAP_AMOUNTS, gson.toJson(account.zapAmountChoices))
             putString(PrefKeys.DEFAULT_ZAPTYPE, gson.toJson(account.defaultZapType))
+            putString(PrefKeys.DEFAULT_FILE_SERVER, gson.toJson(account.defaultFileServer))
             putString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, gson.toJson(account.zapPaymentRequest))
             putString(PrefKeys.LATEST_CONTACT_LIST, Event.gson.toJson(account.backupContactList))
             putBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, account.hideDeleteRequestDialog)
@@ -224,6 +227,11 @@ object LocalPreferences {
                 getString(PrefKeys.DEFAULT_ZAPTYPE, "PUBLIC"),
                 object : TypeToken<LnZapEvent.ZapType>() {}.type
             ) ?: LnZapEvent.ZapType.PUBLIC
+
+            val defaultFileServer = gson.fromJson(
+                getString(PrefKeys.DEFAULT_FILE_SERVER, "IMGUR"),
+                object : TypeToken<ServersAvailable>() {}.type
+            ) ?: ServersAvailable.IMGUR
 
             val zapPaymentRequestServer = try {
                 getString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, null)?.let {
@@ -269,6 +277,7 @@ object LocalPreferences {
                 translateTo,
                 zapAmountChoices,
                 defaultZapType,
+                defaultFileServer,
                 zapPaymentRequestServer,
                 hideDeleteRequestDialog,
                 hideBlockAlertDialog,

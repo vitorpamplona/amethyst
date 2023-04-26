@@ -170,6 +170,7 @@ class NewUserMetadataViewModel : ViewModel() {
 
         ImageUploader.uploadImage(
             uri = it,
+            server = account.defaultFileServer,
             contentResolver = context.contentResolver,
             onSuccess = { imageUrl, mimeType ->
                 onUploading(false)

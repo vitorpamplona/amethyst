@@ -110,12 +110,13 @@ open class NewPostViewModel : ViewModel() {
         cancel()
     }
 
-    fun upload(it: Uri, description: String, context: Context) {
+    fun upload(it: Uri, description: String, server: ServersAvailable, context: Context) {
         isUploadingImage = true
         contentToAddUrl = null
 
         ImageUploader.uploadImage(
             uri = it,
+            server = server,
             contentResolver = context.contentResolver,
             onSuccess = { imageUrl, mimeType ->
                 createNIP97Record(imageUrl, mimeType, description)
