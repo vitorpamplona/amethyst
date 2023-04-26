@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.service.relays
 
+import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.EventInterface
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -76,8 +77,7 @@ object Client : RelayPool.Listener {
                 }
             } else {
                 /** temporary connection */
-                /** TODO: set the proxy for this temporary connection */
-                Relay(relay, false, true, emptySet(), null).requestAndWatch() {
+                Relay(relay, false, true, emptySet(), HttpClient.getProxy()).requestAndWatch() {
                     it.send(signedEvent)
                     it.disconnect()
                 }

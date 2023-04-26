@@ -14,4 +14,8 @@ object HttpClient {
     fun getHttpClient(): OkHttpClient {
         return OkHttpClient.Builder().proxy(proxy).build()
     }
+
+    fun getProxy(): Proxy? {
+        return proxy
+    }
 }
