@@ -5,6 +5,7 @@ import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
+import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
@@ -43,7 +44,7 @@ object NostrChatroomListDataSource : NostrDataSource("MailBoxFeed") {
     )
 
     fun createMyChannelsFilter() = TypedFilter(
-        types = FeedType.values().toSet(), // Metadata comes from any relay
+        types = COMMON_FEED_TYPES, // Metadata comes from any relay
         filter = JsonFilter(
             kinds = listOf(ChannelCreateEvent.kind),
             ids = account.followingChannels.toList(),
@@ -54,7 +55,7 @@ object NostrChatroomListDataSource : NostrDataSource("MailBoxFeed") {
     fun createLastChannelInfoFilter(): List<TypedFilter> {
         return account.followingChannels.map {
             TypedFilter(
-                types = FeedType.values().toSet(), // Metadata comes from any relay
+                types = COMMON_FEED_TYPES, // Metadata comes from any relay
                 filter = JsonFilter(
                     kinds = listOf(ChannelMetadataEvent.kind),
                     tags = mapOf("e" to listOf(it)),

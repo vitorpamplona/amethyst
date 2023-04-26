@@ -13,9 +13,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.ui.actions.NewPollView
-import com.vitorpamplona.amethyst.ui.actions.NewPostView
 
 @Composable
 fun FabColumn(account: Account) {
@@ -88,7 +86,7 @@ fun FabColumn(account: Account) {
     }
 
     if (wantsToPost) {
-        NewPostView({ wantsToPost = false }, account = NostrAccountDataSource.account)
+        // NewPostView({ wantsToPost = false }, account = NostrAccountDataSource.account)
     }
 
     if (wantsToPoll) {

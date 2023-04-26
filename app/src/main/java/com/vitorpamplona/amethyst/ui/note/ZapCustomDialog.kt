@@ -31,6 +31,7 @@ import kotlinx.coroutines.launch
 
 class ZapOptionstViewModel : ViewModel() {
     private var account: Account? = null
+
     var customAmount by mutableStateOf(TextFieldValue("21"))
     var customMessage by mutableStateOf(TextFieldValue(""))
 
@@ -59,6 +60,7 @@ fun ZapCustomDialog(onClose: () -> Unit, account: Account, accountViewModel: Acc
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val postViewModel: ZapOptionstViewModel = viewModel()
+
     LaunchedEffect(account) {
         postViewModel.load(account)
     }
@@ -66,14 +68,15 @@ fun ZapCustomDialog(onClose: () -> Unit, account: Account, accountViewModel: Acc
     var zappingProgress by remember { mutableStateOf(0f) }
 
     val zapTypes = listOf(
-        Pair(LnZapEvent.ZapType.PUBLIC, "Public"),
-        Pair(LnZapEvent.ZapType.PRIVATE, "Private"),
-        Pair(LnZapEvent.ZapType.ANONYMOUS, "Anonymous"),
-        Pair(LnZapEvent.ZapType.NONZAP, "Non-Zap")
+        Triple(LnZapEvent.ZapType.PUBLIC, stringResource(id = R.string.zap_type_public), stringResource(id = R.string.zap_type_public_explainer)),
+        Triple(LnZapEvent.ZapType.PRIVATE, stringResource(id = R.string.zap_type_private), stringResource(id = R.string.zap_type_private_explainer)),
+        Triple(LnZapEvent.ZapType.ANONYMOUS, stringResource(id = R.string.zap_type_anonymous), stringResource(id = R.string.zap_type_anonymous_explainer)),
+        Triple(LnZapEvent.ZapType.NONZAP, stringResource(id = R.string.zap_type_nonzap), stringResource(id = R.string.zap_type_nonzap_explainer))
     )
 
     val zapOptions = zapTypes.map { it.second }
-    var selectedZapType by remember { mutableStateOf(zapTypes[0]) }
+    val zapOptionExplainers = zapTypes.map { it.third }
+    var selectedZapType by remember { mutableStateOf(account.defaultZapType) }
 
     Dialog(
         onDismissRequest = { onClose() },
@@ -116,7 +119,7 @@ fun ZapCustomDialog(onClose: () -> Unit, account: Account, accountViewModel: Acc
                                         zappingProgress = it
                                     }
                                 },
-                                zapType = selectedZapType.first
+                                zapType = selectedZapType
                             )
                         }
                         onClose()
@@ -149,11 +152,23 @@ fun ZapCustomDialog(onClose: () -> Unit, account: Account, accountViewModel: Acc
                         },
                         singleLine = true,
                         modifier = Modifier
-                            .padding(end = 10.dp)
+                            .padding(end = 5.dp)
                             .weight(1f)
                     )
+
+                    TextSpinner(
+                        label = stringResource(id = R.string.zap_type),
+                        placeholder = zapTypes.filter { it.first == account.defaultZapType }.first().second,
+                        options = zapOptions,
+                        explainers = zapOptionExplainers,
+                        onSelect = {
+                            selectedZapType = zapTypes[it].first
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(end = 5.dp)
+                    )
                 }
-                Spacer(modifier = Modifier.height(5.dp))
 
                 Row(
                     modifier = Modifier
@@ -163,7 +178,15 @@ fun ZapCustomDialog(onClose: () -> Unit, account: Account, accountViewModel: Acc
                 ) {
                     OutlinedTextField(
                         // stringResource(R.string.new_amount_in_sats
-                        label = { Text(text = stringResource(id = R.string.custom_zaps_add_a_message)) },
+                        label = {
+                            if (selectedZapType == LnZapEvent.ZapType.PUBLIC || selectedZapType == LnZapEvent.ZapType.ANONYMOUS) {
+                                Text(text = stringResource(id = R.string.custom_zaps_add_a_message))
+                            } else if (selectedZapType == LnZapEvent.ZapType.PRIVATE) {
+                                Text(text = stringResource(id = R.string.custom_zaps_add_a_message_private))
+                            } else if (selectedZapType == LnZapEvent.ZapType.NONZAP) {
+                                Text(text = stringResource(id = R.string.custom_zaps_add_a_message_nonzap))
+                            }
+                        },
                         value = postViewModel.customMessage,
                         onValueChange = {
                             postViewModel.customMessage = it
@@ -180,19 +203,10 @@ fun ZapCustomDialog(onClose: () -> Unit, account: Account, accountViewModel: Acc
                         },
                         singleLine = true,
                         modifier = Modifier
-                            .padding(end = 10.dp)
+                            .padding(end = 5.dp)
                             .weight(1f)
                     )
                 }
-                TextSpinner(
-                    label = "Zap Type",
-                    placeholder = "Public",
-                    options = zapOptions,
-                    onSelect = {
-                        selectedZapType = zapTypes[it]
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
             }
         }
     }

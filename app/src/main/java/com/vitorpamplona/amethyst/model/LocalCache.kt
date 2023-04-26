@@ -31,6 +31,8 @@ object LocalCache {
     val channels = ConcurrentHashMap<HexKey, Channel>()
     val addressables = ConcurrentHashMap<String, AddressableNote>(100)
 
+    val awaitingPaymentRequests = ConcurrentHashMap<HexKey, (LnZapPaymentResponseEvent) -> Unit>(10)
+
     fun checkGetOrCreateUser(key: String): User? {
         if (isValidHexNpub(key)) {
             return getOrCreateUser(key)
@@ -594,17 +596,6 @@ object LocalCache {
 
     fun consume(event: LnZapEvent) {
         val note = getOrCreateNote(event.id)
-
-        var decryptedContent = LnZapRequestEvent.checkForPrivateZap(event.zapRequest!!, account.loggedIn.privKey!!)
-        if (decryptedContent != null) {
-            Log.e(
-                "DC",
-                "Decrypted Content from Anon Tag: Sender: {${decryptedContent.pubKey}}, Message: {${decryptedContent.content}} "
-
-                // TODO Update Notification with this Sender and Message
-            )
-        }
-
         // Already processed this event.
         if (note.event != null) return
 
@@ -673,6 +664,22 @@ object LocalCache {
         note.loadEvent(event, author, emptyList())
 
         refreshObservers(note)
+    }
+
+    fun consume(event: LnZapPaymentRequestEvent) {
+        // Does nothing without a response callback.
+    }
+
+    fun consume(event: LnZapPaymentRequestEvent, onResponse: (LnZapPaymentResponseEvent) -> Unit) {
+        awaitingPaymentRequests.put(event.id, onResponse)
+    }
+
+    fun consume(event: LnZapPaymentResponseEvent) {
+        val responseCallback = awaitingPaymentRequests[event.requestId()]
+
+        if (responseCallback != null) {
+            responseCallback(event)
+        }
     }
 
     fun findUsersStartingWith(username: String): List<User> {

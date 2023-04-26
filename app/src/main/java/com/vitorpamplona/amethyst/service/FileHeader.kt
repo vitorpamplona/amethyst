@@ -18,7 +18,7 @@ class FileHeader(
     val description: String? = null
 ) {
     companion object {
-        fun prepare(fileUrl: String, mimeType: String?, onReady: (FileHeader) -> Unit, onError: () -> Unit) {
+        fun prepare(fileUrl: String, mimeType: String?, description: String?, onReady: (FileHeader) -> Unit, onError: () -> Unit) {
             try {
                 val imageData = URL(fileUrl).readBytes()
                 val sha256 = MessageDigest.getInstance("SHA-256")
@@ -55,7 +55,7 @@ class FileHeader(
                     null
                 }
 
-                onReady(FileHeader(fileUrl, mimeType, hash, size, blurHash, ""))
+                onReady(FileHeader(fileUrl, mimeType, hash, size, blurHash, description))
             } catch (e: Exception) {
                 Log.e("ImageDownload", "Couldn't convert image in to File Header: ${e.message}")
                 onError()

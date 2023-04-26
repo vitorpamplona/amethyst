@@ -450,7 +450,7 @@ fun NoteComposeInner(
                     } else if (noteEvent is LongTextNoteEvent) {
                         LongFormHeader(noteEvent, note, loggedIn)
 
-                        ReactionsRow(note, accountViewModel)
+                        ReactionsRow(note, accountViewModel, navController)
 
                         Divider(
                             modifier = Modifier.padding(top = 10.dp),
@@ -485,7 +485,7 @@ fun NoteComposeInner(
                             )
                         }
 
-                        ReactionsRow(note, accountViewModel)
+                        ReactionsRow(note, accountViewModel, navController)
 
                         Divider(
                             modifier = Modifier.padding(top = 10.dp),
@@ -512,7 +512,7 @@ fun NoteComposeInner(
                         )
 
                         if (!makeItShort) {
-                            ReactionsRow(note, accountViewModel)
+                            ReactionsRow(note, accountViewModel, navController)
                         }
 
                         Divider(
@@ -556,7 +556,7 @@ fun NoteComposeInner(
                         }
 
                         if (!makeItShort) {
-                            ReactionsRow(note, accountViewModel)
+                            ReactionsRow(note, accountViewModel, navController)
                         }
 
                         Divider(
@@ -781,25 +781,29 @@ fun BadgeDisplay(baseNote: Note) {
 @Composable
 fun FileHeaderDisplay(note: Note) {
     val event = (note.event as? FileHeaderEvent) ?: return
-
     val fullUrl = event.url() ?: return
-    val blurHash = event.blurhash()
-    val hash = event.hash()
-    val description = event.content
-    val removedParamsFromUrl = fullUrl.split("?")[0].lowercase()
-    val isImage = imageExtensions.any { removedParamsFromUrl.endsWith(it) }
-    val isVideo = videoExtensions.any { removedParamsFromUrl.endsWith(it) }
 
-    if (isImage || isVideo) {
-        val content = if (isImage) {
-            ZoomableImage(fullUrl, description, hash, blurHash)
-        } else {
-            ZoomableVideo(fullUrl, description, hash)
+    var content by remember { mutableStateOf<ZoomableContent?>(null) }
+
+    LaunchedEffect(key1 = event.id) {
+        withContext(Dispatchers.IO) {
+            val blurHash = event.blurhash()
+            val hash = event.hash()
+            val description = event.content
+            val removedParamsFromUrl = fullUrl.split("?")[0].lowercase()
+            val isImage = imageExtensions.any { removedParamsFromUrl.endsWith(it) }
+            val isVideo = videoExtensions.any { removedParamsFromUrl.endsWith(it) }
+            content = if (isImage) {
+                ZoomableImage(fullUrl, description, hash, blurHash)
+            } else {
+                ZoomableVideo(fullUrl, description, hash)
+            }
         }
-        ZoomableContentView(content = content, listOf(content))
-    } else {
-        UrlPreview(fullUrl, "$fullUrl ")
     }
+
+    content?.let {
+        ZoomableContentView(content = it, listOf(it))
+    } ?: UrlPreview(fullUrl, "$fullUrl ")
 }
 
 @Composable
@@ -1196,10 +1200,10 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
         DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(accountViewModel.decrypt(note) ?: "")); onDismiss() }) {
             Text(stringResource(R.string.copy_text))
         }
-        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString("@${note.author?.pubkeyNpub()}")); onDismiss() }) {
+        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString("nostr:${note.author?.pubkeyNpub()}")); onDismiss() }) {
             Text(stringResource(R.string.copy_user_pubkey))
         }
-        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(note.idNote())); onDismiss() }) {
+        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString("nostr:" + note.toNEvent())); onDismiss() }) {
             Text(stringResource(R.string.copy_note_id))
         }
         DropdownMenuItem(onClick = {

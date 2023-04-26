@@ -5,6 +5,7 @@ import com.vitorpamplona.amethyst.service.model.EventInterface
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.UUID
 
@@ -64,21 +65,49 @@ object Client : RelayPool.Listener {
         RelayPool.sendFilterOnlyIfDisconnected()
     }
 
-    fun send(signedEvent: EventInterface, relay: String? = null) {
+    fun send(signedEvent: EventInterface, relay: String? = null, feedTypes: Set<FeedType>? = null, onDone: (() -> Unit)? = null) {
         if (relay == null) {
             RelayPool.send(signedEvent)
         } else {
-            val useConnectedRelay = relays.filter { it.url == relay }
+            val useConnectedRelayIfPresent = relays.filter { it.url == relay }
 
-            if (useConnectedRelay.isNotEmpty()) {
-                useConnectedRelay.forEach {
+            if (useConnectedRelayIfPresent.isNotEmpty()) {
+                useConnectedRelayIfPresent.forEach {
                     it.send(signedEvent)
                 }
             } else {
                 /** temporary connection */
-                Relay(relay, false, true, emptySet()).requestAndWatch() {
-                    it.send(signedEvent)
-                    it.disconnect()
+                newSporadicRelay(
+                    relay,
+                    feedTypes,
+                    onConnected = { relay ->
+                        relay.send(signedEvent)
+                    },
+                    onDone = onDone
+                )
+            }
+        }
+    }
+
+    @OptIn(DelicateCoroutinesApi::class)
+    fun newSporadicRelay(url: String, feedTypes: Set<FeedType>?, onConnected: (Relay) -> Unit, onDone: (() -> Unit)?) {
+        val relay = Relay(url, true, true, feedTypes ?: emptySet())
+        RelayPool.addRelay(relay)
+
+        relay.requestAndWatch {
+            allSubscriptions().forEach {
+                relay.sendFilter(requestId = it)
+            }
+
+            onConnected(relay)
+
+            GlobalScope.launch(Dispatchers.IO) {
+                delay(10000) // waits for a reply
+                relay.disconnect()
+                RelayPool.removeRelay(relay)
+
+                if (onDone != null) {
+                    onDone()
                 }
             }
         }
@@ -131,6 +160,14 @@ object Client : RelayPool.Listener {
         }
     }
 
+    override fun onAuth(relay: Relay, challenge: String) {
+        // Releases the Web thread for the new payload.
+        // May need to add a processing queue if processing new events become too costly.
+        GlobalScope.launch(Dispatchers.Default) {
+            listeners.forEach { it.onAuth(relay, challenge) }
+        }
+    }
+
     fun subscribe(listener: Listener) {
         listeners = listeners.plus(listener)
     }
@@ -167,5 +204,7 @@ object Client : RelayPool.Listener {
          * When an relay saves or rejects a new event.
          */
         open fun onSendResponse(eventId: String, success: Boolean, message: String, relay: Relay) = Unit
+
+        open fun onAuth(relay: Relay, challenge: String) = Unit
     }
 }

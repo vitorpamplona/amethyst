@@ -6,6 +6,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -37,7 +38,9 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
+import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
+import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.MultiSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -81,9 +84,11 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
                 .combinedClickable(
                     onClick = {
                         if (noteEvent is ChannelMessageEvent) {
-                            note.channel()?.let {
-                                navController.navigate("Channel/${it.idHex}")
-                            }
+                            note
+                                .channel()
+                                ?.let {
+                                    navController.navigate("Channel/${it.idHex}")
+                                }
                         } else if (noteEvent is PrivateDmEvent) {
                             val replyAuthorBase =
                                 (note.event as? PrivateDmEvent)
@@ -135,7 +140,7 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
                                 )
                             }
 
-                            AuthorGallery(multiSetCard.zapEvents.keys, navController, account)
+                            AuthorGalleryZaps(multiSetCard.zapEvents, navController, account, accountViewModel)
                         }
                     }
 
@@ -156,7 +161,7 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
                                 )
                             }
 
-                            AuthorGallery(multiSetCard.boostEvents, navController, account)
+                            AuthorGallery(multiSetCard.boostEvents, navController, account, accountViewModel)
                         }
                     }
 
@@ -177,7 +182,7 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
                                 )
                             }
 
-                            AuthorGallery(multiSetCard.likeEvents, navController, account)
+                            AuthorGallery(multiSetCard.likeEvents, navController, account, accountViewModel)
                         }
                     }
 
@@ -208,10 +213,11 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
 }
 
 @Composable
-fun AuthorGallery(
-    authorNotes: Collection<Note>,
+fun AuthorGalleryZaps(
+    authorNotes: Map<Note, Note>,
     navController: NavController,
-    account: Account
+    account: Account,
+    accountViewModel: AccountViewModel
 ) {
     val accountState by account.userProfile().live().follows.observeAsState()
     val accountUser = accountState?.user ?: return
@@ -219,12 +225,95 @@ fun AuthorGallery(
     Column(modifier = Modifier.padding(start = 10.dp)) {
         FlowRow() {
             authorNotes.forEach {
-                FastNoteAuthorPicture(
-                    note = it,
-                    navController = navController,
-                    userAccount = accountUser,
-                    size = 35.dp
-                )
+                AuthorPictureAndComment(it.key, it.value, navController, accountUser, accountViewModel)
+            }
+        }
+    }
+}
+
+@Composable
+private fun AuthorPictureAndComment(
+    zapRequest: Note,
+    zapEvent: Note,
+    navController: NavController,
+    accountUser: User,
+    accountViewModel: AccountViewModel
+) {
+    val author = zapRequest.author ?: return
+
+    var content by remember { mutableStateOf<Pair<User, String?>>(Pair(author, null)) }
+
+    LaunchedEffect(key1 = zapRequest.idHex) {
+        (zapRequest.event as? LnZapRequestEvent)?.let {
+            val decryptedContent = accountViewModel.decryptZap(zapRequest)
+            if (decryptedContent != null) {
+                val author = LocalCache.getOrCreateUser(decryptedContent.pubKey)
+                content = Pair(author, decryptedContent.content)
+            } else {
+                if (!zapRequest.event?.content().isNullOrBlank()) {
+                    content = Pair(author, zapRequest.event?.content())
+                }
+            }
+        }
+    }
+
+    AuthorPictureAndComment(content.first, content.second, navController, accountUser, accountViewModel)
+}
+
+@Composable
+private fun AuthorPictureAndComment(
+    author: User,
+    comment: String?,
+    navController: NavController,
+    accountUser: User,
+    accountViewModel: AccountViewModel
+) {
+    val modifier = if (!comment.isNullOrBlank()) {
+        Modifier.fillMaxWidth()
+    } else {
+        Modifier
+    }
+
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        FastNoteAuthorPicture(
+            author = author,
+            navController = navController,
+            userAccount = accountUser,
+            size = 35.dp
+        )
+
+        if (!comment.isNullOrBlank()) {
+            Spacer(modifier = Modifier.width(5.dp))
+            TranslatableRichTextViewer(
+                content = comment,
+                canPreview = true,
+                tags = null,
+                modifier = Modifier.weight(1f),
+                backgroundColor = MaterialTheme.colors.background,
+                accountViewModel = accountViewModel,
+                navController = navController
+            )
+        }
+    }
+}
+
+@Composable
+fun AuthorGallery(
+    authorNotes: Collection<Note>,
+    navController: NavController,
+    account: Account,
+    accountViewModel: AccountViewModel
+) {
+    val accountState by account.userProfile().live().follows.observeAsState()
+    val accountUser = accountState?.user ?: return
+
+    Column(modifier = Modifier.padding(start = 10.dp)) {
+        FlowRow() {
+            authorNotes.forEach {
+                val author = it.author
+                if (author != null) {
+                    AuthorPictureAndComment(author, null, navController, accountUser, accountViewModel)
+                }
             }
         }
     }
@@ -232,20 +321,16 @@ fun AuthorGallery(
 
 @Composable
 fun FastNoteAuthorPicture(
-    note: Note,
+    author: User,
     navController: NavController,
     userAccount: User,
     size: Dp,
     pictureModifier: Modifier = Modifier
 ) {
-    // can't be null if here
-    val author = note.author ?: return
-
     val userState by author.live().metadata.observeAsState()
     val user = userState?.user ?: return
 
     val showFollowingMark = userAccount.isFollowingCached(user) || user === userAccount
-
     UserPicture(
         userHex = user.pubkeyHex,
         userPicture = user.profilePicture(),

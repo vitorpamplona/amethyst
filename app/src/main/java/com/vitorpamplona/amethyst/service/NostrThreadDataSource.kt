@@ -1,7 +1,7 @@
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.ThreadAssembler
-import com.vitorpamplona.amethyst.service.relays.FeedType
+import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 
@@ -18,7 +18,7 @@ object NostrThreadDataSource : NostrDataSource("SingleThreadFeed") {
             .ifEmpty { null } ?: return null
 
         return TypedFilter(
-            types = FeedType.values().toSet(),
+            types = COMMON_FEED_TYPES,
             filter = JsonFilter(
                 ids = eventsToLoad.map { it.substring(0, 8) }
             )

@@ -233,7 +233,7 @@ fun ChannelScreen(
                             tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                             modifier = Modifier.padding(start = 5.dp)
                         ) {
-                            channelScreenModel.upload(it, context)
+                            channelScreenModel.upload(it, "", context)
                         }
                     },
                     colors = TextFieldDefaults.textFieldColors(

@@ -175,7 +175,7 @@ fun ZoomableContentView(content: ZoomableContent, images: List<ZoomableContent> 
             }
         }
     } else {
-        VideoView(content.url) { dialogOpen = true }
+        VideoView(content.url, content.description) { dialogOpen = true }
     }
 
     if (dialogOpen) {
@@ -247,6 +247,13 @@ fun ZoomableImageDialog(imageUrl: ZoomableContent, allImages: List<ZoomableConte
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background) {
             Column() {
                 val pagerState: PagerState = remember { PagerState() }
+
+                LaunchedEffect(key1 = pagerState, key2 = imageUrl) {
+                    val page = allImages.indexOf(imageUrl)
+                    if (page > -1) {
+                        pagerState.scrollToPage(page)
+                    }
+                }
 
                 Row(
                     modifier = Modifier
@@ -322,7 +329,7 @@ private fun RenderImageOrVideo(content: ZoomableContent) {
         }
     } else {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize(1f)) {
-            VideoView(content.url)
+            VideoView(content.url, content.description)
         }
     }
 }

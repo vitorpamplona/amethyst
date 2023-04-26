@@ -4,6 +4,7 @@ import android.content.res.Resources
 import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.FileHeader
+import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
 import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Constants
@@ -43,6 +44,7 @@ class Account(
     var languagePreferences: Map<String, String> = mapOf(),
     var translateTo: String = Locale.getDefault().language,
     var zapAmountChoices: List<Long> = listOf(500L, 1000L, 5000L),
+    var defaultZapType: LnZapEvent.ZapType = LnZapEvent.ZapType.PRIVATE,
     var zapPaymentRequest: Nip47URI? = null,
     var hideDeleteRequestDialog: Boolean = false,
     var hideBlockAlertDialog: Boolean = false,
@@ -165,13 +167,26 @@ class Account(
         return zapPaymentRequest != null
     }
 
-    fun sendZapPaymentRequestFor(lnInvoice: String) {
+    fun sendZapPaymentRequestFor(bolt11: String, onResponse: (Response?) -> Unit) {
         if (!isWriteable()) return
 
-        zapPaymentRequest?.let {
-            val event = LnZapPaymentRequestEvent.create(lnInvoice, it.pubKeyHex, it.secret?.toByteArray() ?: loggedIn.privKey!!)
+        zapPaymentRequest?.let { nip47 ->
+            val event = LnZapPaymentRequestEvent.create(bolt11, nip47.pubKeyHex, nip47.secret?.toByteArray() ?: loggedIn.privKey!!)
 
-            Client.send(event, it.relayUri)
+            val wcListener = NostrLnZapPaymentResponseDataSource(nip47.pubKeyHex, event.pubKey, event.id)
+            wcListener.start()
+
+            LocalCache.consume(event) {
+                // After the response is received.
+                val privKey = nip47.secret?.toByteArray()
+                if (privKey != null) {
+                    onResponse(it.response(privKey, event.pubKey.toByteArray()))
+                }
+            }
+
+            Client.send(event, nip47.relayUri, wcListener.feedTypes) {
+                wcListener.destroy()
+            }
         }
     }
 
@@ -554,6 +569,12 @@ class Account(
         LocalCache.consume(event)
     }
 
+    fun createAuthEvent(relay: Relay, challenge: String): RelayAuthEvent? {
+        if (!isWriteable()) return null
+
+        return RelayAuthEvent.create(relay.url, challenge, loggedIn.privKey!!)
+    }
+
     fun removePublicBookmark(note: Note) {
         if (!isWriteable()) return
 
@@ -625,6 +646,12 @@ class Account(
         saveable.invalidateData()
     }
 
+    fun changeDefaultZapType(zapType: LnZapEvent.ZapType) {
+        defaultZapType = zapType
+        live.invalidateData()
+        saveable.invalidateData()
+    }
+
     fun changeZapAmounts(newAmounts: List<Long>) {
         zapAmountChoices = newAmounts
         live.invalidateData()
@@ -670,8 +697,54 @@ class Account(
             }
 
             event.plainContent(loggedIn.privKey!!, pubkeyToUse.toByteArray())
+        } else if (event is LnZapRequestEvent && loggedIn.privKey != null) {
+            decryptZapContentAuthor(note)?.content()
         } else {
             event?.content()
+        }
+    }
+
+    fun decryptZapContentAuthor(note: Note): Event? {
+        val event = note.event
+        val loggedInPrivateKey = loggedIn.privKey
+
+        return if (event is LnZapRequestEvent && loggedInPrivateKey != null && event.isPrivateZap()) {
+            val recipientPK = event.zappedAuthor().firstOrNull()
+            val recipientPost = event.zappedPost().firstOrNull()
+
+            if (recipientPK == userProfile().pubkeyHex) {
+                // if the receiver is logged in, these are the params.
+                val privateKeyToUse = loggedInPrivateKey
+                val pubkeyToUse = event.pubKey
+
+                LnZapRequestEvent.checkForPrivateZap(event, privateKeyToUse, pubkeyToUse)
+            } else {
+                // if the sender is logged in, these are the params
+                val altPubkeyToUse = recipientPK
+                val altPrivateKeyToUse = if (recipientPost != null) {
+                    LnZapRequestEvent.createEncryptionPrivateKey(
+                        loggedInPrivateKey.toHexKey(),
+                        recipientPost,
+                        event.createdAt
+                    )
+                } else if (recipientPK != null) {
+                    LnZapRequestEvent.createEncryptionPrivateKey(
+                        loggedInPrivateKey.toHexKey(),
+                        recipientPK,
+                        event.createdAt
+                    )
+                } else {
+                    null
+                }
+
+                if (altPrivateKeyToUse != null && altPubkeyToUse != null) {
+                    LnZapRequestEvent.checkForPrivateZap(event, altPrivateKeyToUse, altPubkeyToUse)
+                } else {
+                    null
+                }
+            }
+        } else {
+            null
         }
     }
 

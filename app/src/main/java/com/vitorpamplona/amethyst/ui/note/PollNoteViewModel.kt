@@ -33,6 +33,13 @@ class PollNoteViewModel {
         totalZapped = totalZapped()
     }
 
+    fun canZap(): Boolean {
+        val account = account ?: return false
+        val user = account.userProfile() ?: return false
+        val note = pollNote ?: return false
+        return user != note.author && !note.isZappedBy(user, account)
+    }
+
     fun isVoteAmountAtomic() = valueMaximum != null && valueMinimum != null && valueMinimum == valueMaximum
 
     fun isPollClosed(): Boolean = closedAt?.let { // allow 2 minute leeway for zap to propagate
@@ -87,14 +94,12 @@ class PollNoteViewModel {
     }
 
     fun isPollOptionZappedBy(option: Int, user: User): Boolean {
-        if (pollNote?.zaps?.any { it.key.author === user } == true) {
-            pollNote!!.zaps
-                .any {
-                    val event = it.value?.event as? LnZapEvent
-                    event?.zappedPollOption() == option && event.zappedRequestAuthor() == user.pubkeyHex
-                }
-        }
-        return false
+        return pollNote!!.zaps
+            .any {
+                val zapEvent = it.value?.event as? LnZapEvent
+                val privateZapAuthor = account?.decryptZapContentAuthor(it.key)
+                zapEvent?.zappedPollOption() == option && (it.key.author?.pubkeyHex == user.pubkeyHex || privateZapAuthor?.pubKey == user.pubkeyHex)
+            }
     }
 
     fun zappedPollOptionAmount(option: Int): BigDecimal {

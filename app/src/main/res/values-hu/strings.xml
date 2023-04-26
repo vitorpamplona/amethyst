@@ -289,4 +289,16 @@
     <string name="lightning_create_and_add_invoice">Létrehoz és Hozzáad</string>
     <string name="poll_author_no_vote">A szavazás létrehozója sajátjára nem szavazhat.</string>
     <string name="poll_hashtag" translatable="false">#zappoll</string>
+
+
+    <string name="hash_verification_passed">A kép a bejegyzés óta ugyanaz</string>
+    <string name="hash_verification_failed">A kép megváltozott. Lehet, hogy a szerző nem látta a változást</string>
+
+    <string name="content_description_add_image">Kép Hozzáadása</string>
+    <string name="content_description_add_video">Videó Hozzáadása</string>
+    <string name="content_description_add_document">Dokumentum Hozzáadása</string>
+    <string name="add_content">Létrehoz és Hozzáad</string>
+    <string name="content_description">A tartalom leírása</string>
+    <string name="content_description_example">Naplementekor egy kék csónak egy fehér homokos tengerparton</string>
+
 </resources>
