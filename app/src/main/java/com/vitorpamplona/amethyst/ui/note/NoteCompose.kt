@@ -353,7 +353,7 @@ fun NoteComposeInner(
 
                     if (note.author != null && !makeItShort && !isQuotedNote) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            ObserveDisplayNip05Status(note.author!!, Modifier.weight(1f))
+                            ObserveDisplayNip05Status(note.author!!, Modifier.weight(1f), account.proxy)
 
                             val baseReward = noteEvent.getReward()
                             if (baseReward != null) {
@@ -509,7 +509,8 @@ fun NoteComposeInner(
                             noteEvent.tags(),
                             backgroundColor,
                             accountViewModel,
-                            navController
+                            navController,
+                            account.proxy
                         )
 
                         if (!makeItShort) {
@@ -539,7 +540,8 @@ fun NoteComposeInner(
                                     noteEvent.tags(),
                                     backgroundColor,
                                     accountViewModel,
-                                    navController
+                                    navController,
+                                    account.proxy
                                 )
 
                                 DisplayUncitedHashtags(noteEvent.hashtags(), eventContent, navController)
@@ -551,7 +553,8 @@ fun NoteComposeInner(
                                     canPreview = canPreview && !makeItShort,
                                     backgroundColor,
                                     accountViewModel,
-                                    navController
+                                    navController,
+                                    account.proxy
                                 )
                             }
                         }

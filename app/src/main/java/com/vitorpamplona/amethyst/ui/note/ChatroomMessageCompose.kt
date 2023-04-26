@@ -290,7 +290,8 @@ fun ChatroomMessageCompose(
                                             note.event?.tags(),
                                             backgroundBubbleColor,
                                             accountViewModel,
-                                            navController
+                                            navController,
+                                            account.proxy
                                         )
                                     } else {
                                         TranslatableRichTextViewer(
@@ -300,7 +301,8 @@ fun ChatroomMessageCompose(
                                             note.event?.tags(),
                                             backgroundBubbleColor,
                                             accountViewModel,
-                                            navController
+                                            navController,
+                                            account.proxy
                                         )
                                     }
                                 }

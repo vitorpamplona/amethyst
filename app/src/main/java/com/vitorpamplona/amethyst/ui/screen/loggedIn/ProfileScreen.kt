@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.content.Intent
+import java.net.Proxy
 import android.net.Uri
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.scrollBy
@@ -308,7 +309,7 @@ private fun ProfileHeader(
     val clipboardManager = LocalClipboardManager.current
 
     Box {
-        DrawBanner(baseUser)
+        DrawBanner(baseUser, account.proxy)
 
         Box(
             modifier = Modifier
@@ -410,7 +411,7 @@ private fun ProfileHeader(
     }
 
     if (zoomImageDialogOpen) {
-        ZoomableImageDialog(baseUser.profilePicture()!!, onDismiss = { zoomImageDialogOpen = false })
+        ZoomableImageDialog(baseUser.profilePicture()!!, onDismiss = { zoomImageDialogOpen = false }, proxy = account.proxy)
     }
 }
 
@@ -514,7 +515,7 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewMode
         }
     }
 
-    DisplayNip05ProfileStatus(user)
+    DisplayNip05ProfileStatus(user, account.proxy)
 
     val website = user.info?.website
     if (!website.isNullOrEmpty()) {
@@ -616,7 +617,8 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewMode
                 tags = null,
                 backgroundColor = MaterialTheme.colors.background,
                 accountViewModel = accountViewModel,
-                navController = navController
+                navController = navController,
+                proxy = account.proxy
             )
         }
     }
@@ -686,7 +688,7 @@ fun BadgeThumb(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun DrawBanner(baseUser: User) {
+private fun DrawBanner(baseUser: User, proxy: Proxy?) {
     val userState by baseUser.live().metadata.observeAsState()
     val user = userState?.user ?: return
 
@@ -712,7 +714,7 @@ private fun DrawBanner(baseUser: User) {
         )
 
         if (zoomImageDialogOpen) {
-            ZoomableImageDialog(imageUrl = banner, onDismiss = { zoomImageDialogOpen = false })
+            ZoomableImageDialog(imageUrl = banner, onDismiss = { zoomImageDialogOpen = false }, proxy = proxy)
         }
     } else {
         Image(

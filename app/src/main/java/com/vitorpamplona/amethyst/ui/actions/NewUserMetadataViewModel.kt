@@ -180,7 +180,8 @@ class NewUserMetadataViewModel : ViewModel() {
                 viewModelScope.launch {
                     imageUploadingError.emit("Failed to upload the image / video")
                 }
-            }
+            },
+            account.proxy
         )
     }
 }

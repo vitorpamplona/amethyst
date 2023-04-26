@@ -14,6 +14,7 @@ import okio.BufferedSource
 import okio.IOException
 import okio.sink
 import java.io.File
+import java.net.Proxy
 
 object ImageSaver {
     /**
@@ -26,9 +27,10 @@ object ImageSaver {
         url: String,
         context: Context,
         onSuccess: () -> Any?,
-        onError: (Throwable) -> Any?
+        onError: (Throwable) -> Any?,
+        proxy: Proxy?
     ) {
-        val client = OkHttpClient.Builder().build()
+        val client = OkHttpClient.Builder().proxy(proxy).build()
 
         val request = Request.Builder()
             .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")

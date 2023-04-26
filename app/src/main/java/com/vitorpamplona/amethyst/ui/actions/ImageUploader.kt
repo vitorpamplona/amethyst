@@ -9,6 +9,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okio.BufferedSink
 import okio.source
 import java.io.IOException
+import java.net.Proxy
 import java.util.*
 
 object ImageUploader {
@@ -16,14 +17,15 @@ object ImageUploader {
         uri: Uri,
         contentResolver: ContentResolver,
         onSuccess: (String) -> Unit,
-        onError: (Throwable) -> Unit
+        onError: (Throwable) -> Unit,
+        proxy: Proxy?
     ) {
         val contentType = contentResolver.getType(uri)
         val category = contentType?.toMediaType()?.toString()?.split("/")?.get(0) ?: "image"
 
         val url = if (category == "image") "https://api.imgur.com/3/image" else "https://api.imgur.com/3/upload"
 
-        val client = OkHttpClient.Builder().build()
+        val client = OkHttpClient.Builder().proxy(proxy).build()
 
         val requestBody: RequestBody = MultipartBody.Builder()
             .setType(MultipartBody.FORM)

@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.MalformedURLException
+import java.net.Proxy
 import java.net.URISyntaxException
 import java.net.URL
 import java.util.regex.Pattern
@@ -80,7 +81,8 @@ fun RichTextViewer(
     tags: List<List<String>>?,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    navController: NavController,
+    proxy: Proxy?
 ) {
     Column(modifier = modifier) {
         if (content.startsWith("# ") ||
@@ -159,9 +161,9 @@ fun RichTextViewer(
                             if (isValidURL(word)) {
                                 val removedParamsFromUrl = word.split("?")[0].lowercase()
                                 if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-                                    ZoomableImageView(word, imagesForPager)
+                                    ZoomableImageView(word, imagesForPager, proxy)
                                 } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-                                    ZoomableImageView(word, imagesForPager)
+                                    ZoomableImageView(word, imagesForPager, proxy)
                                 } else {
                                     UrlPreview(word, "$word ")
                                 }

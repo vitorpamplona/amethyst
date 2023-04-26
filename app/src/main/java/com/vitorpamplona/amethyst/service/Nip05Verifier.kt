@@ -12,9 +12,10 @@ import okhttp3.Callback
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
+import java.net.Proxy
 
-class Nip05Verifier {
-    val client = OkHttpClient.Builder().build()
+class Nip05Verifier(proxy: Proxy?) {
+    val client = OkHttpClient.Builder().proxy(proxy).build()
 
     fun assembleUrl(nip05address: String): String? {
         val parts = nip05address.trim().split("@")

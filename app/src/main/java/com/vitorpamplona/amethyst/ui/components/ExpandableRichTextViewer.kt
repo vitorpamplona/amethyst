@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import java.net.Proxy
 
 const val SHORT_TEXT_LENGTH = 350
 
@@ -38,7 +39,8 @@ fun ExpandableRichTextViewer(
     tags: List<List<String>>?,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    navController: NavController,
+    proxy: Proxy?
 ) {
     var showFullText by remember { mutableStateOf(false) }
 
@@ -62,7 +64,8 @@ fun ExpandableRichTextViewer(
             tags,
             backgroundColor,
             accountViewModel,
-            navController
+            navController,
+            proxy
         )
 
         if (content.length > whereToCut && !showFullText) {

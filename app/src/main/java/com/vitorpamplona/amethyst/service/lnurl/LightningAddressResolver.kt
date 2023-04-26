@@ -14,10 +14,11 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import java.math.BigDecimal
+import java.net.Proxy
 import java.net.URLEncoder
 
-class LightningAddressResolver {
-    val client = OkHttpClient.Builder().build()
+class LightningAddressResolver(proxy: Proxy?) {
+    val client = OkHttpClient.Builder().proxy(proxy).build()
 
     fun assembleUrl(lnaddress: String): String? {
         val parts = lnaddress.split("@")

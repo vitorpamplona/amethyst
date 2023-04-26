@@ -72,7 +72,7 @@ class AccountViewModel(private val account: Account) : ViewModel() {
 
         onProgress(0.10f)
 
-        LightningAddressResolver().lnAddressInvoice(
+        LightningAddressResolver(account.proxy).lnAddressInvoice(
             lud16,
             amount,
             message,

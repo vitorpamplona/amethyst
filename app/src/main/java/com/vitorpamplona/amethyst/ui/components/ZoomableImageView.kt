@@ -46,10 +46,11 @@ import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.actions.SaveToGallery
 import net.engawapg.lib.zoomable.rememberZoomState
 import net.engawapg.lib.zoomable.zoomable
+import java.net.Proxy
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
-fun ZoomableImageView(word: String, images: List<String> = listOf(word)) {
+fun ZoomableImageView(word: String, images: List<String> = listOf(word), proxy: Proxy?) {
     val clipboardManager = LocalClipboardManager.current
 
     // store the dialog open or close state
@@ -126,13 +127,13 @@ fun ZoomableImageView(word: String, images: List<String> = listOf(word)) {
     }
 
     if (dialogOpen) {
-        ZoomableImageDialog(word, images, onDismiss = { dialogOpen = false })
+        ZoomableImageDialog(word, images, onDismiss = { dialogOpen = false }, proxy)
     }
 }
 
 @OptIn(ExperimentalPagerApi::class)
 @Composable
-fun ZoomableImageDialog(imageUrl: String, allImages: List<String> = listOf(imageUrl), onDismiss: () -> Unit) {
+fun ZoomableImageDialog(imageUrl: String, allImages: List<String> = listOf(imageUrl), onDismiss: () -> Unit, proxy: Proxy?) {
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -150,7 +151,7 @@ fun ZoomableImageDialog(imageUrl: String, allImages: List<String> = listOf(image
                 ) {
                     CloseButton(onCancel = onDismiss)
 
-                    SaveToGallery(url = allImages[pagerState.currentPage])
+                    SaveToGallery(url = allImages[pagerState.currentPage], proxy)
                 }
 
                 if (allImages.size > 1) {
