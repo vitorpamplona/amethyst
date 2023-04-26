@@ -810,17 +810,18 @@ fun FileHeaderDisplay(note: Note) {
 
 @Composable
 fun FileStorageHeaderDisplay(baseNote: Note) {
-    val fileNote = baseNote.replyTo?.firstOrNull() ?: return
+    val eventHeader = (baseNote.event as? FileStorageHeaderEvent) ?: return
+
+    val fileNote = eventHeader.dataEventId()?.let { LocalCache.checkGetOrCreateNote(it) } ?: return
 
     val noteState by fileNote.live().metadata.observeAsState()
     val note = noteState?.note
 
     val eventBytes = (note?.event as? FileStorageEvent)
-    val eventHeader = (baseNote.event as? FileStorageHeaderEvent) ?: return
 
     var content by remember { mutableStateOf<ZoomableContent?>(null) }
 
-    LaunchedEffect(key1 = eventHeader.id) {
+    LaunchedEffect(key1 = eventHeader.id, key2 = noteState) {
         withContext(Dispatchers.IO) {
             val bytes = eventBytes?.decode()
             val blurHash = eventHeader.blurhash()

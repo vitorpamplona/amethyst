@@ -666,6 +666,32 @@ object LocalCache {
         refreshObservers(note)
     }
 
+    fun consume(event: FileStorageHeaderEvent) {
+        val note = getOrCreateNote(event.id)
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        val author = getOrCreateUser(event.pubKey)
+
+        note.loadEvent(event, author, emptyList())
+
+        refreshObservers(note)
+    }
+
+    fun consume(event: FileStorageEvent) {
+        val note = getOrCreateNote(event.id)
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        val author = getOrCreateUser(event.pubKey)
+
+        note.loadEvent(event, author, emptyList())
+
+        refreshObservers(note)
+    }
+
     fun consume(event: LnZapPaymentRequestEvent) {
         // Does nothing without a response callback.
     }
@@ -721,6 +747,10 @@ object LocalCache {
         users.forEach {
             it.value.clearLive()
         }
+    }
+
+    fun pruneFileStorageEvents(account: Account) {
+        notes.filter { it.value.event is FileStorageEvent }
     }
 
     fun pruneOldAndHiddenMessages(account: Account) {

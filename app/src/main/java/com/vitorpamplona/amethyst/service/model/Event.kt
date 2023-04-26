@@ -223,6 +223,8 @@ open class Event(
             DeletionEvent.kind -> DeletionEvent(id, pubKey, createdAt, tags, content, sig)
 
             FileHeaderEvent.kind -> FileHeaderEvent(id, pubKey, createdAt, tags, content, sig)
+            FileStorageEvent.kind -> FileStorageEvent(id, pubKey, createdAt, tags, content, sig)
+            FileStorageHeaderEvent.kind -> FileStorageHeaderEvent(id, pubKey, createdAt, tags, content, sig)
             LnZapEvent.kind -> LnZapEvent(id, pubKey, createdAt, tags, content, sig)
             LnZapPaymentRequestEvent.kind -> LnZapPaymentRequestEvent(id, pubKey, createdAt, tags, content, sig)
             LnZapPaymentResponseEvent.kind -> LnZapPaymentResponseEvent(id, pubKey, createdAt, tags, content, sig)

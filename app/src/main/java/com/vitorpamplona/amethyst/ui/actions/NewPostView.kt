@@ -489,7 +489,7 @@ fun SearchButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifier 
 }
 
 enum class ServersAvailable {
-    IMGUR, NOSTR_BUILD, NOSTR_IMG
+    IMGUR, NOSTR_BUILD, NOSTR_IMG, NIP95
 }
 
 @Composable
@@ -508,7 +508,8 @@ fun ImageVideoDescription(
 
     val fileServers = listOf(
         Pair(ServersAvailable.IMGUR, "imgur.com"),
-        Pair(ServersAvailable.NOSTR_IMG, "nostrimg.com")
+        Pair(ServersAvailable.NOSTR_IMG, "nostrimg.com"),
+        Pair(ServersAvailable.NIP95, "your relays (NIP-95)")
     )
 
     val fileServerOptions = fileServers.map { it.second }

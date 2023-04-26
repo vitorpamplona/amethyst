@@ -375,6 +375,34 @@ class Account(
         }
     }
 
+    fun sendNip95(data: ByteArray, headerInfo: FileHeader): Note? {
+        if (!isWriteable()) return null
+
+        val data = FileStorageEvent.create(
+            mimeType = headerInfo.mimeType ?: "",
+            data = data,
+            privateKey = loggedIn.privKey!!
+        )
+
+        val signedEvent = FileStorageHeaderEvent.create(
+            data,
+            mimeType = headerInfo.mimeType,
+            hash = headerInfo.hash,
+            size = headerInfo.size.toString(),
+            blurhash = headerInfo.blurHash,
+            description = headerInfo.description,
+            privateKey = loggedIn.privKey!!
+        )
+
+        Client.send(data)
+        LocalCache.consume(data)
+
+        Client.send(signedEvent)
+        LocalCache.consume(signedEvent)
+
+        return LocalCache.notes[signedEvent.id]
+    }
+
     fun sendHeader(headerInfo: FileHeader): Note? {
         if (!isWriteable()) return null
 

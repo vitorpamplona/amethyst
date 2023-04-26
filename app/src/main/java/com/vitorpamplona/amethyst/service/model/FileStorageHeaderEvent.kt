@@ -14,6 +14,8 @@ class FileStorageHeaderEvent(
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
 
+    fun dataEventId() = tags.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)
+
     fun encryptionKey() = tags.firstOrNull { it.size > 2 && it[0] == ENCRYPTION_KEY }?.let { AESGCM(it[1], it[2]) }
     fun mimeType() = tags.firstOrNull { it.size > 1 && it[0] == MIME_TYPE }?.get(1)
     fun hash() = tags.firstOrNull { it.size > 1 && it[0] == HASH }?.get(1)

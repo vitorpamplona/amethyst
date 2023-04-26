@@ -114,20 +114,29 @@ open class NewPostViewModel : ViewModel() {
         isUploadingImage = true
         contentToAddUrl = null
 
-        ImageUploader.uploadImage(
-            uri = it,
-            server = server,
-            contentResolver = context.contentResolver,
-            onSuccess = { imageUrl, mimeType ->
-                createNIP97Record(imageUrl, mimeType, description)
-            },
-            onError = {
-                isUploadingImage = false
-                viewModelScope.launch {
-                    imageUploadingError.emit("Failed to upload the image / video")
-                }
+        val contentResolver = context.contentResolver
+
+        if (server == ServersAvailable.NIP95) {
+            val contentType = contentResolver.getType(it)
+            contentResolver.openInputStream(it)?.use {
+                createNIP95Record(it.readBytes(), contentType, description)
             }
-        )
+        } else {
+            ImageUploader.uploadImage(
+                uri = it,
+                server = server,
+                contentResolver = contentResolver,
+                onSuccess = { imageUrl, mimeType ->
+                    createNIP94Record(imageUrl, mimeType, description)
+                },
+                onError = {
+                    isUploadingImage = false
+                    viewModelScope.launch {
+                        imageUploadingError.emit("Failed to upload the image / video")
+                    }
+                }
+            )
+        }
     }
 
     open fun cancel() {
@@ -212,7 +221,7 @@ open class NewPostViewModel : ViewModel() {
         }
     }
 
-    fun createNIP97Record(imageUrl: String, mimeType: String?, description: String) {
+    fun createNIP94Record(imageUrl: String, mimeType: String?, description: String) {
         viewModelScope.launch(Dispatchers.IO) {
             // Images don't seem to be ready immediately after upload
 
@@ -235,6 +244,34 @@ open class NewPostViewModel : ViewModel() {
                         message = TextFieldValue(message.text + "\n\n" + imageUrl)
                     } else {
                         message = TextFieldValue(message.text + "\n\nnostr:" + note.toNEvent())
+                    }
+
+                    urlPreview = findUrlInMessage()
+                },
+                onError = {
+                    isUploadingImage = false
+                    viewModelScope.launch {
+                        imageUploadingError.emit("Failed to upload the image / video")
+                    }
+                }
+            )
+        }
+    }
+
+    fun createNIP95Record(bytes: ByteArray, mimeType: String?, description: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            FileHeader.prepare(
+                bytes,
+                "",
+                mimeType,
+                description,
+                onReady = {
+                    val note = account?.sendNip95(bytes, headerInfo = it)
+
+                    isUploadingImage = false
+
+                    note?.let {
+                        message = TextFieldValue(message.text + "\n\nnostr:" + it.toNEvent())
                     }
 
                     urlPreview = findUrlInMessage()
