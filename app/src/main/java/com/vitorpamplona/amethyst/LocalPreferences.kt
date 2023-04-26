@@ -8,6 +8,7 @@ import com.google.gson.reflect.TypeToken
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.model.toByteArray
+import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.model.ContactListEvent
 import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.Event.Companion.getRefinedEvent
@@ -17,8 +18,6 @@ import nostr.postr.Persona
 import nostr.postr.toHex
 import nostr.postr.toNpub
 import java.io.File
-import java.net.InetSocketAddress
-import java.net.Proxy
 import java.util.Locale
 
 // Release mode (!BuildConfig.DEBUG) always uses encrypted preferences
@@ -256,7 +255,7 @@ object LocalPreferences {
             val hideDeleteRequestDialog = getBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, false)
             val hideBlockAlertDialog = getBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, false)
             val useProxy = getBoolean(PrefKeys.USE_PROXY, false)
-            var proxy = if (useProxy) Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", 9050)) else null
+            val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", 9050)
 
             val a = Account(
                 Persona(privKey = privKey?.toByteArray(), pubKey = pubKey.toByteArray()),

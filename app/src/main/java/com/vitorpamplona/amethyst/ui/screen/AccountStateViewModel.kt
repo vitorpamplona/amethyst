@@ -5,6 +5,7 @@ import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.toByteArray
+import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import fr.acinq.secp256k1.Hex
 import kotlinx.coroutines.CoroutineScope
@@ -18,8 +19,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import nostr.postr.Persona
 import nostr.postr.bechToBytes
-import java.net.InetSocketAddress
-import java.net.Proxy
 import java.util.regex.Pattern
 
 class AccountStateViewModel() : ViewModel() {
@@ -45,7 +44,7 @@ class AccountStateViewModel() : ViewModel() {
         val pattern = Pattern.compile(".+@.+\\.[a-z]+")
         val parsed = Nip19.uriToRoute(key)
         val pubKeyParsed = parsed?.hex?.toByteArray()
-        var proxy = if (useProxy) Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", 9050)) else null
+        val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", 9050)
 
         val account =
             if (key.startsWith("nsec")) {
@@ -70,7 +69,7 @@ class AccountStateViewModel() : ViewModel() {
     }
 
     fun newKey(useProxy: Boolean) {
-        var proxy = if (useProxy) Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", 9050)) else null
+        var proxy = HttpClient.initProxy(useProxy, "127.0.0.1", 9050)
         val account = Account(Persona(), proxy = proxy)
         // saves to local preferences
         LocalPreferences.updatePrefsForLogin(account)

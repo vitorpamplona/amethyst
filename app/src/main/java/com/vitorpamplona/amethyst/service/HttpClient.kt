@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.Account
 import okhttp3.OkHttpClient
+import java.net.InetSocketAddress
 import java.net.Proxy
 
 object HttpClient {
@@ -17,5 +18,9 @@ object HttpClient {
 
     fun getProxy(): Proxy? {
         return proxy
+    }
+
+    fun initProxy(useProxy: Boolean, hostname: String, port: Int): Proxy? {
+        return if (useProxy) Proxy(Proxy.Type.SOCKS, InetSocketAddress(hostname, port)) else null
     }
 }

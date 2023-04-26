@@ -49,13 +49,12 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountBackupDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.launch
-import java.net.InetSocketAddress
-import java.net.Proxy
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
@@ -283,7 +282,7 @@ fun ListContent(
             onClick = {
                 checked = !checked
                 println("changed tor to $checked")
-                account.proxy = if (checked) Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", 9050)) else null
+                account.proxy = HttpClient.initProxy(checked, "127.0.0.1", 9050)
                 ServiceManager.pause()
                 ServiceManager.start()
             }
