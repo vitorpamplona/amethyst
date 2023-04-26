@@ -282,7 +282,7 @@ fun NoteMaster(
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        ObserveDisplayNip05Status(baseNote, Modifier.weight(1f), account.proxy)
+                        ObserveDisplayNip05Status(baseNote, Modifier.weight(1f))
 
                         val baseReward = noteEvent.getReward()
                         if (baseReward != null) {
@@ -362,8 +362,7 @@ fun NoteMaster(
                             note.event?.tags(),
                             MaterialTheme.colors.background,
                             accountViewModel,
-                            navController,
-                            account.proxy
+                            navController
                         )
 
                         DisplayUncitedHashtags(noteEvent.hashtags(), eventContent, navController)
@@ -374,8 +373,7 @@ fun NoteMaster(
                                 canPreview,
                                 backgroundColor,
                                 accountViewModel,
-                                navController,
-                                account.proxy
+                                navController
                             )
                         }
                     }

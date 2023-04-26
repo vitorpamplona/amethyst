@@ -4,12 +4,12 @@ import android.content.ContentResolver
 import android.net.Uri
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.BuildConfig
+import com.vitorpamplona.amethyst.service.HttpClient
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okio.BufferedSink
 import okio.source
 import java.io.IOException
-import java.net.Proxy
 import java.util.*
 
 object ImageUploader {
@@ -17,15 +17,14 @@ object ImageUploader {
         uri: Uri,
         contentResolver: ContentResolver,
         onSuccess: (String) -> Unit,
-        onError: (Throwable) -> Unit,
-        proxy: Proxy?
+        onError: (Throwable) -> Unit
     ) {
         val contentType = contentResolver.getType(uri)
         val category = contentType?.toMediaType()?.toString()?.split("/")?.get(0) ?: "image"
 
         val url = if (category == "image") "https://api.imgur.com/3/image" else "https://api.imgur.com/3/upload"
 
-        val client = OkHttpClient.Builder().proxy(proxy).build()
+        val client = HttpClient.getHttpClient()
 
         val requestBody: RequestBody = MultipartBody.Builder()
             .setType(MultipartBody.FORM)

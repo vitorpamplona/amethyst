@@ -37,7 +37,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.net.Proxy
 import java.util.*
 import kotlin.math.roundToInt
 
@@ -47,8 +46,7 @@ fun PollNote(
     canPreview: Boolean,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
-    navController: NavController,
-    proxy: Proxy?
+    navController: NavController
 ) {
     val zapsState by baseNote.live().zaps.observeAsState()
     val zappedNote = zapsState?.note ?: return
@@ -113,8 +111,7 @@ fun PollNote(
                                         pollViewModel.pollEvent?.tags(),
                                         backgroundColor,
                                         accountViewModel,
-                                        navController,
-                                        proxy
+                                        navController
                                     )
                                 }
                             }
@@ -147,8 +144,7 @@ fun PollNote(
                                 pollViewModel.pollEvent?.tags(),
                                 backgroundColor,
                                 accountViewModel,
-                                navController,
-                                proxy
+                                navController
                             )
                         }
                     }

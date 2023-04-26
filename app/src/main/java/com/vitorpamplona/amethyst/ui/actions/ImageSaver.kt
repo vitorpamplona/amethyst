@@ -9,12 +9,12 @@ import android.os.Environment
 import android.provider.MediaStore
 import androidx.annotation.RequiresApi
 import com.vitorpamplona.amethyst.BuildConfig
+import com.vitorpamplona.amethyst.service.HttpClient
 import okhttp3.*
 import okio.BufferedSource
 import okio.IOException
 import okio.sink
 import java.io.File
-import java.net.Proxy
 
 object ImageSaver {
     /**
@@ -27,10 +27,9 @@ object ImageSaver {
         url: String,
         context: Context,
         onSuccess: () -> Any?,
-        onError: (Throwable) -> Any?,
-        proxy: Proxy?
+        onError: (Throwable) -> Any?
     ) {
-        val client = OkHttpClient.Builder().proxy(proxy).build()
+        val client = HttpClient.getHttpClient()
 
         val request = Request.Builder()
             .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")

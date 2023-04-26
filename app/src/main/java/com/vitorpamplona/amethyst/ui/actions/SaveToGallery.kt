@@ -18,7 +18,6 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.R
 import kotlinx.coroutines.launch
-import java.net.Proxy
 
 /**
  * A button to save the remote image to the gallery.
@@ -28,7 +27,7 @@ import java.net.Proxy
  */
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun SaveToGallery(url: String, proxy: Proxy?) {
+fun SaveToGallery(url: String) {
     val localContext = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -55,8 +54,7 @@ fun SaveToGallery(url: String, proxy: Proxy?) {
                     )
                         .show()
                 }
-            },
-            proxy = proxy
+            }
         )
     }
 

@@ -59,7 +59,6 @@ import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.ChatroomFeedView
 import com.vitorpamplona.amethyst.ui.screen.NostrChatRoomFeedViewModel
-import java.net.Proxy
 
 @Composable
 fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navController: NavController) {
@@ -105,7 +104,7 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
 
         Column(Modifier.fillMaxHeight()) {
             NostrChatroomDataSource.withUser?.let {
-                ChatroomHeader(it, account.userProfile(), navController = navController, account.proxy)
+                ChatroomHeader(it, account.userProfile(), navController = navController)
             }
 
             Column(
@@ -207,7 +206,7 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
 }
 
 @Composable
-fun ChatroomHeader(baseUser: User, accountUser: User, navController: NavController, proxy: Proxy?) {
+fun ChatroomHeader(baseUser: User, accountUser: User, navController: NavController) {
     Column(
         modifier = Modifier.clickable(
             onClick = { navController.navigate("User/${baseUser.pubkeyHex}") }
@@ -227,7 +226,7 @@ fun ChatroomHeader(baseUser: User, accountUser: User, navController: NavControll
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        ObserveDisplayNip05Status(baseUser, proxy = proxy)
+                        ObserveDisplayNip05Status(baseUser)
                     }
                 }
             }

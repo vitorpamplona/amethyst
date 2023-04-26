@@ -35,11 +35,10 @@ import com.vitorpamplona.amethyst.service.Nip05Verifier
 import com.vitorpamplona.amethyst.ui.theme.Nip05
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.net.Proxy
 import java.util.Date
 
 @Composable
-fun nip05VerificationAsAState(user: UserMetadata, pubkeyHex: String, proxy: Proxy?): State<Boolean?> {
+fun nip05VerificationAsAState(user: UserMetadata, pubkeyHex: String): State<Boolean?> {
     var nip05Verified = remember { mutableStateOf<Boolean?>(null) }
 
     LaunchedEffect(key1 = user) {
@@ -49,7 +48,7 @@ fun nip05VerificationAsAState(user: UserMetadata, pubkeyHex: String, proxy: Prox
                 if ((user.nip05LastVerificationTime ?: 0) > (now - 60 * 60)) { // 1hour
                     nip05Verified.value = user.nip05Verified
                 } else {
-                    Nip05Verifier(proxy).verifyNip05(
+                    Nip05Verifier().verifyNip05(
                         nip05,
                         onSuccess = {
                             // Marks user as verified
@@ -78,18 +77,18 @@ fun nip05VerificationAsAState(user: UserMetadata, pubkeyHex: String, proxy: Prox
 }
 
 @Composable
-fun ObserveDisplayNip05Status(baseNote: Note, columnModifier: Modifier = Modifier, proxy: Proxy?) {
+fun ObserveDisplayNip05Status(baseNote: Note, columnModifier: Modifier = Modifier) {
     val noteState by baseNote.live().metadata.observeAsState()
     val note = noteState?.note ?: return
 
     val author = note.author
     if (author != null) {
-        ObserveDisplayNip05Status(author, columnModifier, proxy)
+        ObserveDisplayNip05Status(author, columnModifier)
     }
 }
 
 @Composable
-fun ObserveDisplayNip05Status(baseUser: User, columnModifier: Modifier = Modifier, proxy: Proxy?) {
+fun ObserveDisplayNip05Status(baseUser: User, columnModifier: Modifier = Modifier) {
     val userState by baseUser.live().metadata.observeAsState()
     val user = userState?.user ?: return
 
@@ -108,7 +107,7 @@ fun ObserveDisplayNip05Status(baseUser: User, columnModifier: Modifier = Modifie
                         )
                     }
 
-                    val nip05Verified by nip05VerificationAsAState(user.info!!, user.pubkeyHex, proxy)
+                    val nip05Verified by nip05VerificationAsAState(user.info!!, user.pubkeyHex)
                     if (nip05Verified == null) {
                         Icon(
                             tint = Color.Yellow,
@@ -152,12 +151,12 @@ fun ObserveDisplayNip05Status(baseUser: User, columnModifier: Modifier = Modifie
 }
 
 @Composable
-fun DisplayNip05ProfileStatus(user: User, proxy: Proxy?) {
+fun DisplayNip05ProfileStatus(user: User) {
     val uri = LocalUriHandler.current
 
     user.nip05()?.let { nip05 ->
         if (nip05.split("@").size == 2) {
-            val nip05Verified by nip05VerificationAsAState(user.info!!, user.pubkeyHex, proxy)
+            val nip05Verified by nip05VerificationAsAState(user.info!!, user.pubkeyHex)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (nip05Verified == null) {
                     Icon(

@@ -138,7 +138,7 @@ fun InvoiceRequest(
                 onClick = {
                     val zapRequest = account.createZapRequestFor(toUserPubKeyHex, message, LnZapEvent.ZapType.PUBLIC)
 
-                    LightningAddressResolver(account.proxy).lnAddressInvoice(
+                    LightningAddressResolver().lnAddressInvoice(
                         lud16,
                         amount * 1000,
                         message,

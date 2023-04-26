@@ -35,7 +35,6 @@ import com.vitorpamplona.amethyst.service.lang.ResultOrError
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.net.Proxy
 import java.util.Locale
 
 @Composable
@@ -46,8 +45,7 @@ fun TranslatableRichTextViewer(
     tags: List<List<String>>?,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
-    navController: NavController,
-    proxy: Proxy?
+    navController: NavController
 ) {
     val translatedTextState = remember {
         mutableStateOf(ResultOrError(content, null, null, null))
@@ -89,8 +87,7 @@ fun TranslatableRichTextViewer(
             tags,
             backgroundColor,
             accountViewModel,
-            navController,
-            proxy
+            navController
         )
 
         val target = translatedTextState.value.targetLang

@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.service.lnurl
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.BuildConfig
+import com.vitorpamplona.amethyst.service.HttpClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -10,15 +11,13 @@ import kotlinx.coroutines.withContext
 import nostr.postr.Bech32
 import okhttp3.Call
 import okhttp3.Callback
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import java.math.BigDecimal
-import java.net.Proxy
 import java.net.URLEncoder
 
-class LightningAddressResolver(proxy: Proxy?) {
-    val client = OkHttpClient.Builder().proxy(proxy).build()
+class LightningAddressResolver() {
+    val client = HttpClient.getHttpClient()
 
     fun assembleUrl(lnaddress: String): String? {
         val parts = lnaddress.split("@")
