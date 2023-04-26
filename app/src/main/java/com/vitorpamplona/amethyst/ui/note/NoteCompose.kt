@@ -169,6 +169,8 @@ fun NoteComposeInner(
         BadgeDisplay(baseNote = note)
     } else if (noteEvent is FileHeaderEvent) {
         FileHeaderDisplay(note)
+    } else if (noteEvent is FileStorageHeaderEvent) {
+        FileStorageHeaderDisplay(note)
     } else {
         var isNew by remember { mutableStateOf<Boolean>(false) }
 
@@ -794,9 +796,9 @@ fun FileHeaderDisplay(note: Note) {
             val isImage = imageExtensions.any { removedParamsFromUrl.endsWith(it) }
             val isVideo = videoExtensions.any { removedParamsFromUrl.endsWith(it) }
             content = if (isImage) {
-                ZoomableImage(fullUrl, description, hash, blurHash)
+                ZoomableUrlImage(fullUrl, description, hash, blurHash)
             } else {
-                ZoomableVideo(fullUrl, description, hash)
+                ZoomableUrlVideo(fullUrl, description, hash)
             }
         }
     }
@@ -804,6 +806,42 @@ fun FileHeaderDisplay(note: Note) {
     content?.let {
         ZoomableContentView(content = it, listOf(it))
     } ?: UrlPreview(fullUrl, "$fullUrl ")
+}
+
+@Composable
+fun FileStorageHeaderDisplay(baseNote: Note) {
+    val fileNote = baseNote.replyTo?.firstOrNull() ?: return
+
+    val noteState by fileNote.live().metadata.observeAsState()
+    val note = noteState?.note
+
+    val eventBytes = (note?.event as? FileStorageEvent)
+    val eventHeader = (baseNote.event as? FileStorageHeaderEvent) ?: return
+
+    var content by remember { mutableStateOf<ZoomableContent?>(null) }
+
+    LaunchedEffect(key1 = eventHeader.id) {
+        withContext(Dispatchers.IO) {
+            val bytes = eventBytes?.decode()
+            val blurHash = eventHeader.blurhash()
+            val description = eventHeader.content
+            val mimeType = eventHeader.mimeType()
+
+            content = if (mimeType?.startsWith("image") == true) {
+                ZoomableBitmapImage(bytes, mimeType, description, blurHash, true)
+            } else {
+                if (bytes != null) {
+                    ZoomableBytesVideo(bytes, mimeType, description, true)
+                } else {
+                    null
+                }
+            }
+        }
+    }
+
+    content?.let {
+        ZoomableContentView(content = it, listOf(it))
+    } ?: BlankNote()
 }
 
 @Composable

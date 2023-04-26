@@ -142,9 +142,9 @@ fun RichTextViewer(
             val imagesForPager = urlSet.mapNotNull { fullUrl ->
                 val removedParamsFromUrl = fullUrl.split("?")[0].lowercase()
                 if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-                    ZoomableImage(fullUrl)
+                    ZoomableUrlImage(fullUrl)
                 } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-                    ZoomableVideo(fullUrl)
+                    ZoomableUrlVideo(fullUrl)
                 } else {
                     null
                 }
