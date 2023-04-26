@@ -301,4 +301,18 @@
     <string name="content_description">A tartalom leírása</string>
     <string name="content_description_example">Naplementekor egy kék csónak egy fehér homokos tengerparton</string>
 
+    <string name="zap_type">Zap Típusa</string>
+    <string name="zap_type_explainer">Zap típus minden opcióhoz</string>
+
+    <string name="zap_type_public">Publikus</string>
+    <string name="zap_type_public_explainer">Mindenki láthatja a tranzakciót és az üzenetet</string>
+
+    <string name="zap_type_private">Privát</string>
+    <string name="zap_type_private_explainer">A küldő és a fogadó láthatja egymást és az üzenetet is elolvashatja</string>
+
+    <string name="zap_type_anonymous">Névtelen</string>
+    <string name="zap_type_anonymous_explainer">A címzett és a nyilvánosság nem tudja ki küldte a fizetést</string>
+
+    <string name="zap_type_nonzap">Nem Zap</string>
+    <string name="zap_type_nonzap_explainer">Nostr-ban nyoma sincs, csak a Lightning-ben</string>
 </resources>
