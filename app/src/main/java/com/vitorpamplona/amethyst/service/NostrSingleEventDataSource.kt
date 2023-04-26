@@ -116,7 +116,8 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
                         LnZapEvent.kind, LnZapRequestEvent.kind,
                         ChannelMessageEvent.kind, ChannelCreateEvent.kind, ChannelMetadataEvent.kind,
                         BadgeDefinitionEvent.kind, BadgeAwardEvent.kind, BadgeProfilesEvent.kind,
-                        PrivateDmEvent.kind, FileHeaderEvent.kind
+                        PrivateDmEvent.kind,
+                        FileHeaderEvent.kind, FileStorageEvent.kind, FileStorageHeaderEvent.kind
                     ),
                     ids = interestedEvents.toList()
                 )

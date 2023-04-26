@@ -488,8 +488,8 @@ fun SearchButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifier 
     }
 }
 
-enum class ServersAvailable() {
-    IMGUR
+enum class ServersAvailable {
+    IMGUR, NOSTR_BUILD, NOSTR_IMG
 }
 
 @Composable
@@ -507,7 +507,8 @@ fun ImageVideoDescription(
     val isVideo = mediaType.startsWith("video")
 
     val fileServers = listOf(
-        Pair(ServersAvailable.IMGUR, "imgur.com")
+        Pair(ServersAvailable.IMGUR, "imgur.com"),
+        Pair(ServersAvailable.NOSTR_IMG, "nostrimg.com")
     )
 
     val fileServerOptions = fileServers.map { it.second }
@@ -618,7 +619,7 @@ fun ImageVideoDescription(
             ) {
                 TextSpinner(
                     label = stringResource(id = R.string.file_server),
-                    placeholder = fileServers.filter { it.first == defaultServer }.first().second,
+                    placeholder = fileServers.filter { it.first == defaultServer }.firstOrNull()?.second ?: fileServers[0].second,
                     options = fileServerOptions,
                     onSelect = {
                         selectedServer = fileServers[it].first
