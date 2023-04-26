@@ -160,6 +160,14 @@ object Client : RelayPool.Listener {
         }
     }
 
+    override fun onAuth(relay: Relay, challenge: String) {
+        // Releases the Web thread for the new payload.
+        // May need to add a processing queue if processing new events become too costly.
+        GlobalScope.launch(Dispatchers.Default) {
+            listeners.forEach { it.onAuth(relay, challenge) }
+        }
+    }
+
     fun subscribe(listener: Listener) {
         listeners = listeners.plus(listener)
     }
@@ -196,5 +204,7 @@ object Client : RelayPool.Listener {
          * When an relay saves or rejects a new event.
          */
         open fun onSendResponse(eventId: String, success: Boolean, message: String, relay: Relay) = Unit
+
+        open fun onAuth(relay: Relay, challenge: String) = Unit
     }
 }

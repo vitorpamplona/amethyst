@@ -52,12 +52,12 @@ Or get the latest APK from the [Releases Section](https://github.com/vitorpamplo
 - [x] External Identity Support (NIP-39)
 - [x] Multiple Accounts
 - [x] Markdown Support
+- [x] Relay Authentication (NIP-42)
 - [ ] Local Database 
 - [ ] View Individual Reactions (Like, Boost, Zaps, Reports) per Post
 - [ ] Bookmarks, Pinned Posts, Muted Events (NIP-51)
 - [ ] Sensitive Content (NIP-36) 
 - [ ] Relay Pages (NIP-11)
-- [ ] Relay Authentication (NIP-42)
 - [ ] Generic Tags (NIP-12)
 - [ ] Proof of Work in the Phone (NIP-13, NIP-20)
 - [ ] Events with a Subject (NIP-14)

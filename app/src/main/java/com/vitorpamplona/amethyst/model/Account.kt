@@ -569,6 +569,12 @@ class Account(
         LocalCache.consume(event)
     }
 
+    fun createAuthEvent(relay: Relay, challenge: String): RelayAuthEvent? {
+        if (!isWriteable()) return null
+
+        return RelayAuthEvent.create(relay.url, challenge, loggedIn.privKey!!)
+    }
+
     fun removePublicBookmark(note: Note) {
         if (!isWriteable()) return
 

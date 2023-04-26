@@ -122,6 +122,10 @@ class Relay(
                                 // Log.w("Relay", "Relay on OK $url, $channel")
                                 it.onSendResponse(this@Relay, msg[1].asString, msg[2].asBoolean, msg[3].asString)
                             }
+                            "AUTH" -> listeners.forEach {
+                                // Log.w("Relay", "Relay AUTH $url, $channel")
+                                it.onAuth(this@Relay, msg[1].asString)
+                            }
                             else -> listeners.forEach {
                                 // Log.w("Relay", "Relay something else $url, $channel")
                                 it.onError(
@@ -271,6 +275,8 @@ class Relay(
         fun onError(relay: Relay, subscriptionId: String, error: Error)
 
         fun onSendResponse(relay: Relay, eventId: String, success: Boolean, message: String)
+
+        fun onAuth(relay: Relay, challenge: String)
 
         /**
          * Connected to or disconnected from a relay

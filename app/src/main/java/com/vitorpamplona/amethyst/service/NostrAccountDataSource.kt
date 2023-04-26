@@ -14,8 +14,10 @@ import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
+import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
+import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 
 object NostrAccountDataSource : NostrDataSource("AccountData") {
@@ -112,5 +114,20 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
             createAccountAcceptedAwardsFilter(),
             createAccountBookmarkListFilter()
         ).ifEmpty { null }
+    }
+
+    override fun auth(relay: Relay, challenge: String) {
+        super.auth(relay, challenge)
+
+        if (this::account.isInitialized) {
+            val event = account.createAuthEvent(relay, challenge)
+
+            if (event != null) {
+                Client.send(
+                    event,
+                    relay.url
+                )
+            }
+        }
     }
 }

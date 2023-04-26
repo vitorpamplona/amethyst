@@ -126,6 +126,10 @@ abstract class NostrDataSource(val debugName: String) {
 
         override fun onSendResponse(eventId: String, success: Boolean, message: String, relay: Relay) {
         }
+
+        override fun onAuth(relay: Relay, challenge: String) {
+            auth(relay, challenge)
+        }
     }
 
     init {
@@ -221,4 +225,5 @@ abstract class NostrDataSource(val debugName: String) {
     }
 
     abstract fun updateChannelFilters()
+    open fun auth(relay: Relay, challenge: String) = Unit
 }
