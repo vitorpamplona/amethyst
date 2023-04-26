@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.AlertDialog
 import androidx.compose.material.Divider
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.Icon
@@ -24,7 +25,9 @@ import androidx.compose.material.ModalBottomSheetState
 import androidx.compose.material.ScaffoldState
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
+import androidx.compose.material.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -235,6 +238,7 @@ fun ListContent(
     val coroutineScope = rememberCoroutineScope()
     var backupDialogOpen by remember { mutableStateOf(false) }
     var checked by remember { mutableStateOf(account.proxy != null) }
+    val openDialog = remember { mutableStateOf(false) }
 
     Column(modifier = modifier.fillMaxHeight()) {
         if (accountUser != null) {
@@ -280,11 +284,12 @@ fun ListContent(
             icon = R.drawable.ic_tor,
             tint = MaterialTheme.colors.onBackground,
             onClick = {
-                checked = !checked
-                println("changed tor to $checked")
-                account.proxy = HttpClient.initProxy(checked, "127.0.0.1", 9050)
-                ServiceManager.pause()
-                ServiceManager.start()
+                if (checked) {
+                    openDialog.value = true
+                } else {
+                    checked = true
+                    enableTor(account, true, openDialog)
+                }
             }
         )
 
@@ -301,6 +306,44 @@ fun ListContent(
     if (backupDialogOpen) {
         AccountBackupDialog(account, onClose = { backupDialogOpen = false })
     }
+
+    if (openDialog.value) {
+        AlertDialog(
+            text = { Text(text = "Do you really want to disable tor?") },
+            onDismissRequest = { },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        openDialog.value = false
+                        checked = false
+                        enableTor(account, false, openDialog)
+                    }
+                ) {
+                    Text(text = "Yes")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        openDialog.value = false
+                    }
+                ) {
+                    Text(text = "No")
+                }
+            }
+        )
+    }
+}
+
+private fun enableTor(
+    account: Account,
+    checked: Boolean,
+    openDialog: MutableState<Boolean>
+) {
+    account.proxy = HttpClient.initProxy(checked, "127.0.0.1", 9050)
+    ServiceManager.pause()
+    ServiceManager.start()
+    openDialog.value = false
 }
 
 @Composable
