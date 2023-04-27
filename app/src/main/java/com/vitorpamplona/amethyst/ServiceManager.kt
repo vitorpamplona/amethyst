@@ -72,6 +72,7 @@ object ServiceManager {
             LocalCache.pruneOldAndHiddenMessages(it)
             LocalCache.pruneHiddenMessages(it)
             LocalCache.pruneContactLists(it)
+            LocalCache.pruneFileStorageEvents(it)
             // LocalCache.pruneNonFollows(it)
         }
     }
