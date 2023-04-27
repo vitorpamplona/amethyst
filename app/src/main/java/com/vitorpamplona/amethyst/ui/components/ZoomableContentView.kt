@@ -80,25 +80,29 @@ abstract class ZoomableContent(
 abstract class ZoomableUrlContent(
     val url: String,
     description: String? = null,
-    val hash: String? = null
+    val hash: String? = null,
+    val uri: String? = null
 ) : ZoomableContent(description)
 
 class ZoomableUrlImage(
     url: String,
     description: String? = null,
     hash: String? = null,
-    val bluehash: String? = null
-) : ZoomableUrlContent(url, description, hash)
+    val bluehash: String? = null,
+    uri: String? = null
+) : ZoomableUrlContent(url, description, hash, uri)
 
 class ZoomableUrlVideo(
     url: String,
     description: String? = null,
-    hash: String? = null
-) : ZoomableUrlContent(url, description, hash)
+    hash: String? = null,
+    uri: String? = null
+) : ZoomableUrlContent(url, description, hash, uri)
 
 abstract class ZoomablePreloadedContent(
     description: String? = null,
-    val isVerified: Boolean? = null
+    val isVerified: Boolean? = null,
+    val uri: String
 ) : ZoomableContent(description)
 
 class ZoomableBitmapImage(
@@ -106,15 +110,17 @@ class ZoomableBitmapImage(
     val mimeType: String? = null,
     description: String? = null,
     val bluehash: String? = null,
-    isVerified: Boolean? = null
-) : ZoomablePreloadedContent(description, isVerified)
+    isVerified: Boolean? = null,
+    uri: String
+) : ZoomablePreloadedContent(description, isVerified, uri)
 
 class ZoomableBytesVideo(
     val byteArray: ByteArray,
     val mimeType: String? = null,
     description: String? = null,
-    isVerified: Boolean? = null
-) : ZoomablePreloadedContent(description, isVerified)
+    isVerified: Boolean? = null,
+    uri: String
+) : ZoomablePreloadedContent(description, isVerified, uri)
 
 fun figureOutMimeType(fullUrl: String): ZoomableContent {
     val removedParamsFromUrl = fullUrl.split("?")[0].lowercase()
@@ -189,7 +195,17 @@ fun ZoomableContentView(content: ZoomableContent, images: List<ZoomableContent> 
     if (content is ZoomableUrlContent) {
         mainImageModifier = mainImageModifier.combinedClickable(
             onClick = { dialogOpen = true },
-            onLongClick = { clipboardManager.setText(AnnotatedString(content.url)) }
+            onLongClick = { clipboardManager.setText(AnnotatedString(content.uri ?: content.url)) }
+        )
+    } else if (content is ZoomableBitmapImage) {
+        mainImageModifier = mainImageModifier.combinedClickable(
+            onClick = { dialogOpen = true },
+            onLongClick = { clipboardManager.setText(AnnotatedString(content.uri)) }
+        )
+    } else if (content is ZoomableBytesVideo) {
+        mainImageModifier = mainImageModifier.combinedClickable(
+            onClick = { dialogOpen = true },
+            onLongClick = { clipboardManager.setText(AnnotatedString(content.uri)) }
         )
     } else {
         mainImageModifier = mainImageModifier.clickable {

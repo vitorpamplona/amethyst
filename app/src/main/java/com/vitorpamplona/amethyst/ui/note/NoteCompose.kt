@@ -795,10 +795,11 @@ fun FileHeaderDisplay(note: Note) {
             val removedParamsFromUrl = fullUrl.split("?")[0].lowercase()
             val isImage = imageExtensions.any { removedParamsFromUrl.endsWith(it) }
             val isVideo = videoExtensions.any { removedParamsFromUrl.endsWith(it) }
+            val uri = "nostr:" + note.toNEvent()
             content = if (isImage) {
-                ZoomableUrlImage(fullUrl, description, hash, blurHash)
+                ZoomableUrlImage(fullUrl, description, hash, blurHash, uri)
             } else {
-                ZoomableUrlVideo(fullUrl, description, hash)
+                ZoomableUrlVideo(fullUrl, description, hash, uri)
             }
         }
     }
@@ -823,16 +824,17 @@ fun FileStorageHeaderDisplay(baseNote: Note) {
 
     LaunchedEffect(key1 = eventHeader.id, key2 = noteState) {
         withContext(Dispatchers.IO) {
+            val uri = "nostr:" + baseNote.toNEvent()
             val bytes = eventBytes?.decode()
             val blurHash = eventHeader.blurhash()
             val description = eventHeader.content
             val mimeType = eventHeader.mimeType()
 
             content = if (mimeType?.startsWith("image") == true) {
-                ZoomableBitmapImage(bytes, mimeType, description, blurHash, true)
+                ZoomableBitmapImage(bytes, mimeType, description, blurHash, true, uri)
             } else {
                 if (bytes != null) {
-                    ZoomableBytesVideo(bytes, mimeType, description, true)
+                    ZoomableBytesVideo(bytes, mimeType, description, true, uri)
                 } else {
                     null
                 }
