@@ -45,6 +45,6 @@ object GlobalFeedFilter : AdditiveFeedFilter<Note>() {
     }
 
     override fun sort(collection: Set<Note>): List<Note> {
-        return collection.sortedBy { it.createdAt() }.reversed()
+        return collection.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
     }
 }
