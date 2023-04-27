@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.model
 
 import android.content.res.Resources
+import android.util.Log
 import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.FileHeader
@@ -779,7 +780,11 @@ class Account(
                 }
 
                 if (altPrivateKeyToUse != null && altPubkeyToUse != null) {
-                    LnZapRequestEvent.checkForPrivateZap(event, altPrivateKeyToUse, altPubkeyToUse)
+                    val result = LnZapRequestEvent.checkForPrivateZap(event, altPrivateKeyToUse, altPubkeyToUse)
+                    if (result == null) {
+                        Log.w("Private ZAP Decrypt", "Fail to decrypt Zap from ${note.author?.toBestDisplayName()} ${note.idNote()}")
+                    }
+                    result
                 } else {
                     null
                 }
