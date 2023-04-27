@@ -60,7 +60,7 @@ class AccountViewModel(private val account: Account) : ViewModel() {
     }
 
     fun zap(note: Note, amount: Long, pollOption: Int?, message: String, context: Context, onError: (String) -> Unit, onProgress: (percent: Float) -> Unit, zapType: LnZapEvent.ZapType) {
-        val lud16 = note.author?.info?.lud16?.trim() ?: note.author?.info?.lud06?.trim()
+        val lud16 = note.event?.zapAddress() ?: note.author?.info?.lud16?.trim() ?: note.author?.info?.lud06?.trim()
 
         if (lud16.isNullOrBlank()) {
             onError(context.getString(R.string.user_does_not_have_a_lightning_address_setup_to_receive_sats))

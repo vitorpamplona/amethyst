@@ -33,4 +33,6 @@ interface EventInterface {
 
     fun getReward(): BigDecimal?
     fun getPoWRank(): Int
+
+    fun zapAddress(): String?
 }

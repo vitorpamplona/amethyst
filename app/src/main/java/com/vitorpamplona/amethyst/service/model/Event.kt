@@ -41,6 +41,8 @@ open class Event(
     fun taggedUsers() = tags.filter { it.size > 1 && it[0] == "p" }.map { it[1] }
     fun taggedEvents() = tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }
 
+    override fun zapAddress() = tags.firstOrNull { it.size > 1 && it[0] == "zap" }?.get(1)
+
     fun taggedAddresses() = tags.filter { it.size > 1 && it[0] == "a" }.mapNotNull {
         val aTagValue = it[1]
         val relay = it.getOrNull(2)
