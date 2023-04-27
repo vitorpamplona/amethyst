@@ -205,7 +205,7 @@ class Relay(
                     val filters = Client.getSubscriptionFilters(requestId).filter { activeTypes.intersect(it.types).isNotEmpty() }
                     if (filters.isNotEmpty()) {
                         val request =
-                            """["REQ","$requestId",${filters.take(12).joinToString(",") { it.filter.toJson(url) }}]"""
+                            """["REQ","$requestId",${filters.take(10).joinToString(",") { it.filter.toJson(url) }}]"""
                         // println("FILTERSSENT $url $request")
                         socket?.send(request)
                         eventUploadCounterInBytes += request.bytesUsedInMemory()
