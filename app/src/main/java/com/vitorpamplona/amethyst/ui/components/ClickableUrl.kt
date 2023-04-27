@@ -11,9 +11,11 @@ import androidx.compose.ui.text.AnnotatedString
 fun ClickableUrl(urlText: String, url: String) {
     val uri = LocalUriHandler.current
 
+    val doubleCheckedUrl = if (url.contains("://")) url else "https://$url"
+
     ClickableText(
         text = AnnotatedString(urlText),
-        onClick = { runCatching { uri.openUri(url) } },
+        onClick = { runCatching { uri.openUri(doubleCheckedUrl) } },
         style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary)
     )
 }
