@@ -467,7 +467,8 @@ private fun ForwardZapTo(
             placeholder = {
                 Text(
                     text = stringResource(R.string.zap_forward_lnAddress),
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                    fontSize = 14.sp
                 )
             },
             colors = TextFieldDefaults
