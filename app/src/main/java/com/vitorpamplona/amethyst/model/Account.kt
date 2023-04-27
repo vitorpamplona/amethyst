@@ -422,7 +422,7 @@ class Account(
         return LocalCache.notes[signedEvent.id]
     }
 
-    fun sendPost(message: String, replyTo: List<Note>?, mentions: List<User>?, tags: List<String>? = null) {
+    fun sendPost(message: String, replyTo: List<Note>?, mentions: List<User>?, tags: List<String>? = null, zapReceiver: String? = null) {
         if (!isWriteable()) return
 
         val repliesToHex = replyTo?.filter { it.address() == null }?.map { it.idHex }
@@ -435,6 +435,7 @@ class Account(
             mentions = mentionsHex,
             addresses = addresses,
             extraTags = tags,
+            zapReceiver = zapReceiver,
             privateKey = loggedIn.privKey!!
         )
 
@@ -450,7 +451,8 @@ class Account(
         valueMaximum: Int?,
         valueMinimum: Int?,
         consensusThreshold: Int?,
-        closedAt: Int?
+        closedAt: Int?,
+        zapReceiver: String? = null
     ) {
         if (!isWriteable()) return
 
@@ -468,14 +470,15 @@ class Account(
             valueMaximum = valueMaximum,
             valueMinimum = valueMinimum,
             consensusThreshold = consensusThreshold,
-            closedAt = closedAt
+            closedAt = closedAt,
+            zapReceiver = zapReceiver
         )
         // println("Sending new PollNoteEvent: %s".format(signedEvent.toJson()))
         Client.send(signedEvent)
         LocalCache.consume(signedEvent)
     }
 
-    fun sendChannelMessage(message: String, toChannel: String, replyTo: List<Note>?, mentions: List<User>?) {
+    fun sendChannelMessage(message: String, toChannel: String, replyTo: List<Note>?, mentions: List<User>?, zapReceiver: String? = null) {
         if (!isWriteable()) return
 
         // val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
@@ -487,13 +490,14 @@ class Account(
             channel = toChannel,
             replyTos = repliesToHex,
             mentions = mentionsHex,
+            zapReceiver = zapReceiver,
             privateKey = loggedIn.privKey!!
         )
         Client.send(signedEvent)
         LocalCache.consume(signedEvent, null)
     }
 
-    fun sendPrivateMessage(message: String, toUser: String, replyingTo: Note? = null, mentions: List<User>?) {
+    fun sendPrivateMessage(message: String, toUser: String, replyingTo: Note? = null, mentions: List<User>?, zapReceiver: String? = null) {
         if (!isWriteable()) return
         val user = LocalCache.users[toUser] ?: return
 
@@ -506,6 +510,7 @@ class Account(
             msg = message,
             replyTos = repliesToHex,
             mentions = mentionsHex,
+            zapReceiver = zapReceiver,
             privateKey = loggedIn.privKey!!,
             advertiseNip18 = false
         )

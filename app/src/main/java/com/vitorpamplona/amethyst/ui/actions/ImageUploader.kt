@@ -11,7 +11,6 @@ import okio.BufferedSink
 import okio.source
 import java.io.IOException
 import java.io.InputStream
-import java.util.*
 
 val charPool: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
 
@@ -35,7 +34,7 @@ object ImageUploader {
 
         val myServer = if (server == ServersAvailable.IMGUR) {
             ImgurServer()
-        } else if (server == ServersAvailable.NOSTR_IMG) {
+        } else if (server == ServersAvailable.NOSTRIMG) {
             NostrImgServer()
         } else {
             ImgurServer()
