@@ -59,7 +59,7 @@ val noProtocolUrlValidator = Pattern.compile("(([\\w\\d-]+\\.)*[a-zA-Z][\\w-]+[\
 val tagIndex = Pattern.compile("\\#\\[([0-9]+)\\](.*)")
 
 val mentionsPattern: Pattern = Pattern.compile("@([A-Za-z0-9_\\-]+)")
-val hashTagsPattern: Pattern = Pattern.compile("#([a-z0-9_\\-]+)(.*)", Pattern.CASE_INSENSITIVE)
+val hashTagsPattern: Pattern = Pattern.compile("#([^\\s!@#\$%^&*()=+./,\\[{\\]};:'\"?><]+)(.*)", Pattern.CASE_INSENSITIVE)
 val urlPattern: Pattern = Patterns.WEB_URL
 
 fun isValidURL(url: String?): Boolean {
