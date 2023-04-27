@@ -307,7 +307,12 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                         }
                     }
 
-                    Row(modifier = Modifier.fillMaxWidth().height(50.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         UploadFromGallery(
                             isUploading = postViewModel.isUploadingImage,
                             tint = MaterialTheme.colors.onBackground,
@@ -406,31 +411,43 @@ private fun ForwardZapTo(
             onClick()
         }
     ) {
-        Box(Modifier.height(20.dp).width(25.dp)) {
+        Box(
+            Modifier
+                .height(20.dp)
+                .width(25.dp)
+        ) {
             if (!postViewModel.wantsForwardZapTo) {
                 Icon(
                     imageVector = Icons.Default.Bolt,
                     contentDescription = stringResource(R.string.zaps),
-                    modifier = Modifier.size(20.dp).align(Alignment.CenterStart),
+                    modifier = Modifier
+                        .size(20.dp)
+                        .align(Alignment.CenterStart),
                     tint = MaterialTheme.colors.onBackground
                 )
                 Icon(
                     imageVector = Icons.Default.ArrowForwardIos,
                     contentDescription = stringResource(R.string.zaps),
-                    modifier = Modifier.size(13.dp).align(Alignment.CenterEnd),
+                    modifier = Modifier
+                        .size(13.dp)
+                        .align(Alignment.CenterEnd),
                     tint = MaterialTheme.colors.onBackground
                 )
             } else {
                 Icon(
                     imageVector = Icons.Outlined.Bolt,
                     contentDescription = stringResource(id = R.string.zaps),
-                    modifier = Modifier.size(20.dp).align(Alignment.CenterStart),
+                    modifier = Modifier
+                        .size(20.dp)
+                        .align(Alignment.CenterStart),
                     tint = BitcoinOrange
                 )
                 Icon(
                     imageVector = Icons.Outlined.ArrowForwardIos,
                     contentDescription = stringResource(id = R.string.zaps),
-                    modifier = Modifier.size(13.dp).align(Alignment.CenterEnd),
+                    modifier = Modifier
+                        .size(13.dp)
+                        .align(Alignment.CenterEnd),
                     tint = BitcoinOrange
                 )
             }
@@ -443,7 +460,10 @@ private fun ForwardZapTo(
             onValueChange = {
                 postViewModel.updateZapForwardTo(it)
             },
-            modifier = Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)).padding(0.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
+                .padding(0.dp),
             placeholder = {
                 Text(
                     text = stringResource(R.string.zap_forward_lnAddress),
@@ -587,11 +607,11 @@ fun ImageVideoDescription(
     val isVideo = mediaType.startsWith("video")
 
     val fileServers = listOf(
-        Triple(ServersAvailable.IMGUR, "imgur.com", "Uploads to ImgUR. ImgUR can change your image at any time"),
-        Triple(ServersAvailable.NOSTRIMG, "nostrimg.com", "Regular NostrImg. NostrImg can change your image at any time"),
-        Triple(ServersAvailable.IMGUR_NIP_94, "Verifiable ImgUr (NIP-94)", "Protects from ImgUr changing your image after you post"),
-        Triple(ServersAvailable.NOSTRIMG_NIP_94, "Verifiable NostrIMG (NIP-94)", "Protects from NostrIMG changing your image after you post"),
-        Triple(ServersAvailable.NIP95, "Your relays (NIP-95)", "The image is hosted in the relay itself. Your image will be free from a domain name / third-party control")
+        Triple(ServersAvailable.IMGUR, stringResource(id = R.string.upload_server_imgur), stringResource(id = R.string.upload_server_imgur_explainer)),
+        Triple(ServersAvailable.NOSTRIMG, stringResource(id = R.string.upload_server_nostrimg), stringResource(id = R.string.upload_server_nostrimg_explainer)),
+        Triple(ServersAvailable.IMGUR_NIP_94, stringResource(id = R.string.upload_server_imgur_nip94), stringResource(id = R.string.upload_server_imgur_nip94_explainer)),
+        Triple(ServersAvailable.NOSTRIMG_NIP_94, stringResource(id = R.string.upload_server_nostrimg_nip94), stringResource(id = R.string.upload_server_nostrimg_nip94_explainer)),
+        Triple(ServersAvailable.NIP95, stringResource(id = R.string.upload_server_relays_nip95), stringResource(id = R.string.upload_server_relays_nip95_explainer))
     )
 
     val fileServerOptions = fileServers.map { it.second }
@@ -638,7 +658,8 @@ fun ImageVideoDescription(
                     fontWeight = FontWeight.W500,
                     modifier = Modifier
                         .padding(start = 10.dp)
-                        .weight(1.0f).windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
+                        .weight(1.0f)
+                        .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
                 )
 
                 IconButton(
@@ -662,7 +683,8 @@ fun ImageVideoDescription(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 10.dp).windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
+                    .padding(bottom = 10.dp)
+                    .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
             ) {
                 if (mediaType.startsWith("image")) {
                     AsyncImage(
@@ -671,7 +693,8 @@ fun ImageVideoDescription(
                         contentScale = ContentScale.FillWidth,
                         modifier = Modifier
                             .padding(top = 4.dp)
-                            .fillMaxWidth().windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
+                            .fillMaxWidth()
+                            .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
                     )
                 } else if (mediaType.startsWith("video") && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
@@ -709,7 +732,8 @@ fun ImageVideoDescription(
                     onSelect = {
                         selectedServer = fileServers[it].first
                     },
-                    modifier = Modifier.windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
+                    modifier = Modifier
+                        .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
                         .weight(1f)
                 )
             }
@@ -720,12 +744,14 @@ fun ImageVideoDescription(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
                         .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
                 ) {
                     OutlinedTextField(
                         label = { Text(text = stringResource(R.string.content_description)) },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
                             .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
                         value = message,
                         onValueChange = { message = it },
