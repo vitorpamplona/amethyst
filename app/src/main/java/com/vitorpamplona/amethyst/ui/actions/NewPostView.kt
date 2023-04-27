@@ -564,7 +564,12 @@ fun SearchButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifier 
 }
 
 enum class ServersAvailable {
-    IMGUR, NOSTR_BUILD, NOSTR_IMG, NIP95
+    IMGUR,
+    NOSTR_BUILD,
+    NOSTRIMG,
+    IMGUR_NIP_94,
+    NOSTRIMG_NIP_94,
+    NIP95
 }
 
 @Composable
@@ -582,12 +587,15 @@ fun ImageVideoDescription(
     val isVideo = mediaType.startsWith("video")
 
     val fileServers = listOf(
-        Pair(ServersAvailable.IMGUR, "imgur.com"),
-        Pair(ServersAvailable.NOSTR_IMG, "nostrimg.com"),
-        Pair(ServersAvailable.NIP95, "your relays (NIP-95)")
+        Triple(ServersAvailable.IMGUR, "imgur.com", "Uploads to ImgUR. ImgUR can change your image at any time"),
+        Triple(ServersAvailable.NOSTRIMG, "nostrimg.com", "Regular NostrImg. NostrImg can change your image at any time"),
+        Triple(ServersAvailable.IMGUR_NIP_94, "Verifiable ImgUr (NIP-94)", "Protects from ImgUr changing your image after you post"),
+        Triple(ServersAvailable.NOSTRIMG_NIP_94, "Verifiable NostrIMG (NIP-94)", "Protects from NostrIMG changing your image after you post"),
+        Triple(ServersAvailable.NIP95, "Your relays (NIP-95)", "The image is hosted in the relay itself. Your image will be free from a domain name / third-party control")
     )
 
     val fileServerOptions = fileServers.map { it.second }
+    val fileServerExplainers = fileServers.map { it.third }
 
     var selectedServer by remember { mutableStateOf(defaultServer) }
     var message by remember { mutableStateOf("") }
@@ -697,6 +705,7 @@ fun ImageVideoDescription(
                     label = stringResource(id = R.string.file_server),
                     placeholder = fileServers.filter { it.first == defaultServer }.firstOrNull()?.second ?: fileServers[0].second,
                     options = fileServerOptions,
+                    explainers = fileServerExplainers,
                     onSelect = {
                         selectedServer = fileServers[it].first
                     },
@@ -705,25 +714,32 @@ fun ImageVideoDescription(
                 )
             }
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
+            if (selectedServer == ServersAvailable.NOSTRIMG_NIP_94 ||
+                selectedServer == ServersAvailable.IMGUR_NIP_94 ||
+                selectedServer == ServersAvailable.NIP95
             ) {
-                OutlinedTextField(
-                    label = { Text(text = stringResource(R.string.content_description)) },
-                    modifier = Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
-                    value = message,
-                    onValueChange = { message = it },
-                    placeholder = {
-                        Text(
-                            text = stringResource(R.string.content_description_example),
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                        .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
+                ) {
+                    OutlinedTextField(
+                        label = { Text(text = stringResource(R.string.content_description)) },
+                        modifier = Modifier.fillMaxWidth()
+                            .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
+                        value = message,
+                        onValueChange = { message = it },
+                        placeholder = {
+                            Text(
+                                text = stringResource(R.string.content_description_example),
+                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                            )
+                        },
+                        keyboardOptions = KeyboardOptions.Default.copy(
+                            capitalization = KeyboardCapitalization.Sentences
                         )
-                    },
-                    keyboardOptions = KeyboardOptions.Default.copy(
-                        capitalization = KeyboardCapitalization.Sentences
                     )
-                )
+                }
             }
 
             Button(

@@ -147,7 +147,13 @@ open class NewPostViewModel : ViewModel() {
                 server = server,
                 contentResolver = contentResolver,
                 onSuccess = { imageUrl, mimeType ->
-                    createNIP94Record(imageUrl, mimeType, description)
+                    if (server == ServersAvailable.IMGUR_NIP_94 || server == ServersAvailable.NOSTRIMG_NIP_94) {
+                        createNIP94Record(imageUrl, mimeType, description)
+                    } else {
+                        isUploadingImage = false
+                        message = TextFieldValue(message.text + "\n\n" + imageUrl)
+                        urlPreview = findUrlInMessage()
+                    }
                 },
                 onError = {
                     isUploadingImage = false
