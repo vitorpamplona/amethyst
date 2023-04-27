@@ -17,8 +17,12 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowForwardIos
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CurrencyBitcoin
+import androidx.compose.material.icons.outlined.ArrowForwardIos
+import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -205,17 +209,19 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
 
                             val url = postViewModel.contentToAddUrl
                             if (url != null) {
-                                ImageVideoDescription(
-                                    url,
-                                    account.defaultFileServer,
-                                    onAdd = { description, server ->
-                                        postViewModel.upload(url, description, server, context)
-                                        account.changeDefaultFileServer(server)
-                                    },
-                                    onCancel = {
-                                        postViewModel.contentToAddUrl = null
-                                    }
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    ImageVideoDescription(
+                                        url,
+                                        account.defaultFileServer,
+                                        onAdd = { description, server ->
+                                            postViewModel.upload(url, description, server, context)
+                                            account.changeDefaultFileServer(server)
+                                        },
+                                        onCancel = {
+                                            postViewModel.contentToAddUrl = null
+                                        }
+                                    )
+                                }
                             }
 
                             val user = postViewModel.account?.userProfile()
@@ -301,11 +307,11 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                         }
                     }
 
-                    Row(modifier = Modifier.fillMaxWidth()) {
+                    Row(modifier = Modifier.fillMaxWidth().height(50.dp), verticalAlignment = Alignment.CenterVertically) {
                         UploadFromGallery(
                             isUploading = postViewModel.isUploadingImage,
                             tint = MaterialTheme.colors.onBackground,
-                            modifier = Modifier.padding(bottom = 10.dp)
+                            modifier = Modifier
                         ) {
                             postViewModel.selectImage(it)
                         }
@@ -322,6 +328,10 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                             AddLnInvoiceButton(postViewModel.wantsInvoice) {
                                 postViewModel.wantsInvoice = !postViewModel.wantsInvoice
                             }
+                        }
+
+                        ForwardZapTo(postViewModel) {
+                            postViewModel.wantsForwardZapTo = !postViewModel.wantsForwardZapTo
                         }
                     }
                 }
@@ -383,6 +393,71 @@ private fun AddLnInvoiceButton(
                 tint = BitcoinOrange
             )
         }
+    }
+}
+
+@Composable
+private fun ForwardZapTo(
+    postViewModel: NewPostViewModel,
+    onClick: () -> Unit
+) {
+    IconButton(
+        onClick = {
+            onClick()
+        }
+    ) {
+        Box(Modifier.height(20.dp).width(25.dp)) {
+            if (!postViewModel.wantsForwardZapTo) {
+                Icon(
+                    imageVector = Icons.Default.Bolt,
+                    contentDescription = stringResource(R.string.zaps),
+                    modifier = Modifier.size(20.dp).align(Alignment.CenterStart),
+                    tint = MaterialTheme.colors.onBackground
+                )
+                Icon(
+                    imageVector = Icons.Default.ArrowForwardIos,
+                    contentDescription = stringResource(R.string.zaps),
+                    modifier = Modifier.size(13.dp).align(Alignment.CenterEnd),
+                    tint = MaterialTheme.colors.onBackground
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Outlined.Bolt,
+                    contentDescription = stringResource(id = R.string.zaps),
+                    modifier = Modifier.size(20.dp).align(Alignment.CenterStart),
+                    tint = BitcoinOrange
+                )
+                Icon(
+                    imageVector = Icons.Outlined.ArrowForwardIos,
+                    contentDescription = stringResource(id = R.string.zaps),
+                    modifier = Modifier.size(13.dp).align(Alignment.CenterEnd),
+                    tint = BitcoinOrange
+                )
+            }
+        }
+    }
+
+    if (postViewModel.wantsForwardZapTo) {
+        OutlinedTextField(
+            value = postViewModel.forwardZapToEditting,
+            onValueChange = {
+                postViewModel.updateZapForwardTo(it)
+            },
+            modifier = Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)).padding(0.dp),
+            placeholder = {
+                Text(
+                    text = stringResource(R.string.zap_forward_lnAddress),
+                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                )
+            },
+            colors = TextFieldDefaults
+                .outlinedTextFieldColors(
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedBorderColor = Color.Transparent
+                ),
+            visualTransformation = UrlUserTagTransformation(MaterialTheme.colors.primary),
+            textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+        )
     }
 }
 
@@ -555,7 +630,7 @@ fun ImageVideoDescription(
                     fontWeight = FontWeight.W500,
                     modifier = Modifier
                         .padding(start = 10.dp)
-                        .weight(1.0f)
+                        .weight(1.0f).windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
                 )
 
                 IconButton(
@@ -579,7 +654,7 @@ fun ImageVideoDescription(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 10.dp)
+                    .padding(bottom = 10.dp).windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
             ) {
                 if (mediaType.startsWith("image")) {
                     AsyncImage(
@@ -588,7 +663,7 @@ fun ImageVideoDescription(
                         contentScale = ContentScale.FillWidth,
                         modifier = Modifier
                             .padding(top = 4.dp)
-                            .fillMaxWidth()
+                            .fillMaxWidth().windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
                     )
                 } else if (mediaType.startsWith("video") && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
@@ -625,18 +700,18 @@ fun ImageVideoDescription(
                     onSelect = {
                         selectedServer = fileServers[it].first
                     },
-                    modifier = Modifier
+                    modifier = Modifier.windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
                         .weight(1f)
                 )
             }
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
             ) {
                 OutlinedTextField(
                     label = { Text(text = stringResource(R.string.content_description)) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
                     value = message,
                     onValueChange = { message = it },
                     placeholder = {

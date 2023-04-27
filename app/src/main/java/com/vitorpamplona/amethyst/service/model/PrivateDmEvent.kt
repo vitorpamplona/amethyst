@@ -58,6 +58,7 @@ class PrivateDmEvent(
             msg: String,
             replyTos: List<String>? = null,
             mentions: List<String>? = null,
+            zapReceiver: String?,
             privateKey: ByteArray,
             createdAt: Long = Date().time / 1000,
             publishedRecipientPubKey: ByteArray? = null,
@@ -78,6 +79,9 @@ class PrivateDmEvent(
             }
             mentions?.forEach {
                 tags.add(listOf("p", it))
+            }
+            zapReceiver?.let {
+                tags.add(listOf("zap", it))
             }
             val id = generateId(pubKey, createdAt, kind, tags, content)
             val sig = Utils.sign(id, privateKey)
