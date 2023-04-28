@@ -79,7 +79,8 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
                         ReportEvent.kind,
                         LnZapEvent.kind,
                         LnZapRequestEvent.kind,
-                        PollNoteEvent.kind
+                        PollNoteEvent.kind,
+                        HighlightEvent.kind
                     ),
                     tags = mapOf("e" to listOf(it.idHex)),
                     since = it.lastReactionsDownloadTime
@@ -117,7 +118,8 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
                         ChannelMessageEvent.kind, ChannelCreateEvent.kind, ChannelMetadataEvent.kind,
                         BadgeDefinitionEvent.kind, BadgeAwardEvent.kind, BadgeProfilesEvent.kind,
                         PrivateDmEvent.kind,
-                        FileHeaderEvent.kind, FileStorageEvent.kind, FileStorageHeaderEvent.kind
+                        FileHeaderEvent.kind, FileStorageEvent.kind, FileStorageHeaderEvent.kind,
+                        HighlightEvent.kind
                     ),
                     ids = interestedEvents.toList()
                 )

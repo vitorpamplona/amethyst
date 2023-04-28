@@ -86,7 +86,8 @@ fun RichTextViewer(
     navController: NavController
 ) {
     Column(modifier = modifier) {
-        if (content.startsWith("# ") ||
+        if (content.startsWith("> ") ||
+            content.startsWith("# ") ||
             content.contains("##") ||
             content.contains("**") ||
             content.contains("__") ||

@@ -396,10 +396,10 @@ class Account(
         )
 
         Client.send(data)
-        LocalCache.consume(data)
+        LocalCache.consume(data, null)
 
         Client.send(signedEvent)
-        LocalCache.consume(signedEvent)
+        LocalCache.consume(signedEvent, null)
 
         return LocalCache.notes[signedEvent.id]
     }
@@ -418,7 +418,7 @@ class Account(
         )
 
         Client.send(signedEvent)
-        LocalCache.consume(signedEvent)
+        LocalCache.consume(signedEvent, null)
 
         return LocalCache.notes[signedEvent.id]
     }

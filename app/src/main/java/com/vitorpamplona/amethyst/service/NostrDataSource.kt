@@ -76,9 +76,10 @@ abstract class NostrDataSource(val debugName: String) {
                         is ContactListEvent -> LocalCache.consume(event)
                         is DeletionEvent -> LocalCache.consume(event)
 
-                        is FileHeaderEvent -> LocalCache.consume(event)
-                        is FileStorageEvent -> LocalCache.consume(event)
-                        is FileStorageHeaderEvent -> LocalCache.consume(event)
+                        is FileHeaderEvent -> LocalCache.consume(event, relay)
+                        is FileStorageEvent -> LocalCache.consume(event, relay)
+                        is FileStorageHeaderEvent -> LocalCache.consume(event, relay)
+                        is HighlightEvent -> LocalCache.consume(event, relay)
                         is LnZapEvent -> {
                             event.zapRequest?.let { onEvent(it, subscriptionId, relay) }
                             LocalCache.consume(event)

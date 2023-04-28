@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.ui.theme.Following
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.math.BigDecimal
+import java.net.URL
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTimedValue
 
@@ -521,6 +522,26 @@ fun NoteComposeInner(
                             modifier = Modifier.padding(top = 10.dp),
                             thickness = 0.25.dp
                         )
+                    } else if (noteEvent is HighlightEvent) {
+                        DisplayHighlight(
+                            noteEvent.quote(),
+                            noteEvent.author(),
+                            noteEvent.inUrl(),
+                            makeItShort,
+                            canPreview,
+                            backgroundColor,
+                            accountViewModel,
+                            navController
+                        )
+
+                        if (!makeItShort) {
+                            ReactionsRow(note, accountViewModel, navController)
+                        }
+
+                        Divider(
+                            modifier = Modifier.padding(top = 10.dp),
+                            thickness = 0.25.dp
+                        )
                     } else {
                         val eventContent = accountViewModel.decrypt(note)
 
@@ -569,6 +590,66 @@ fun NoteComposeInner(
 
                     NoteQuickActionMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun DisplayHighlight(
+    highlight: String,
+    authorHex: String?,
+    url: String?,
+    makeItShort: Boolean,
+    canPreview: Boolean,
+    backgroundColor: Color,
+    accountViewModel: AccountViewModel,
+    navController: NavController
+) {
+    val quote = highlight.split("\n").map { "> *${it.removeSuffix(" ")}*" }.joinToString("\n")
+
+    if (quote != null) {
+        TranslatableRichTextViewer(
+            quote,
+            canPreview = canPreview && !makeItShort,
+            Modifier.fillMaxWidth(),
+            emptyList(),
+            backgroundColor,
+            accountViewModel,
+            navController
+        )
+    }
+
+    FlowRow() {
+        authorHex?.let { authorHex ->
+            val userBase = LocalCache.checkGetOrCreateUser(authorHex)
+
+            if (userBase != null) {
+                val userState by userBase.live().metadata.observeAsState()
+                val user = userState?.user
+
+                if (user != null) {
+                    CreateClickableText(
+                        user.toBestDisplayName(),
+                        "",
+                        "User/${user.pubkeyHex}",
+                        navController
+                    )
+                }
+            }
+        }
+
+        url?.let { url ->
+            val validatedUrl = try {
+                URL(url)
+            } catch (e: Exception) {
+                Log.w("Note Compose", "Invalid URI: $url")
+                null
+            }
+
+            validatedUrl?.host?.let { host ->
+                Text("on ")
+                ClickableUrl(urlText = host, url = url)
             }
         }
     }

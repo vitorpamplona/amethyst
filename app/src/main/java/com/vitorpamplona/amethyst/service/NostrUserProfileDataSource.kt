@@ -35,7 +35,7 @@ object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
         TypedFilter(
             types = COMMON_FEED_TYPES,
             filter = JsonFilter(
-                kinds = listOf(TextNoteEvent.kind, RepostEvent.kind, LongTextNoteEvent.kind, PollNoteEvent.kind),
+                kinds = listOf(TextNoteEvent.kind, RepostEvent.kind, LongTextNoteEvent.kind, PollNoteEvent.kind, HighlightEvent.kind),
                 authors = listOf(it.pubkeyHex),
                 limit = 200
             )
