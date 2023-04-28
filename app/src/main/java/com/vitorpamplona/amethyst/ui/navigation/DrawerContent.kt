@@ -277,7 +277,7 @@ fun ListContent(
             onClick = { backupDialogOpen = true }
         )
 
-        var textTorProxy = if (checked) "Disable" else "Enable"
+        var textTorProxy = if (checked) stringResource(R.string.disable) else stringResource(R.string.enable)
 
         IconRow(
             title = "$textTorProxy Tor",
@@ -309,7 +309,7 @@ fun ListContent(
 
     if (openDialog.value) {
         AlertDialog(
-            text = { Text(text = "Do you really want to disable tor?") },
+            text = { Text(text = stringResource(R.string.do_you_really_want_to_disable_tor)) },
             onDismissRequest = { },
             confirmButton = {
                 TextButton(
@@ -319,7 +319,7 @@ fun ListContent(
                         enableTor(account, false, openDialog)
                     }
                 ) {
-                    Text(text = "Yes")
+                    Text(text = stringResource(R.string.yes))
                 }
             },
             dismissButton = {
@@ -328,7 +328,7 @@ fun ListContent(
                         openDialog.value = false
                     }
                 ) {
-                    Text(text = "No")
+                    Text(text = stringResource(R.string.no))
                 }
             }
         )

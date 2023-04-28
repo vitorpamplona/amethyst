@@ -228,7 +228,7 @@ fun LoginPage(
                     onCheckedChange = { useProxy.value = it }
                 )
 
-                Text("Enable Tor")
+                Text(stringResource(R.string.connect_via_tor))
             }
 
             Spacer(modifier = Modifier.height(20.dp))
