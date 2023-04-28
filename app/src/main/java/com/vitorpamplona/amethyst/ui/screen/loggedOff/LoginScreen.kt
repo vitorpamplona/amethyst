@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedOff
 
+import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -222,13 +223,15 @@ fun LoginPage(
                 }
             }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(
-                    checked = useProxy.value,
-                    onCheckedChange = { useProxy.value = it }
-                )
+            if (isPackageInstalled(context, "org.torproject.android")) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = useProxy.value,
+                        onCheckedChange = { useProxy.value = it }
+                    )
 
-                Text(stringResource(R.string.connect_via_tor))
+                    Text(stringResource(R.string.connect_via_tor))
+                }
             }
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -289,4 +292,8 @@ fun LoginPage(
             )
         )
     }
+}
+
+fun isPackageInstalled(context: Context, target: String): Boolean {
+    return context.packageManager.getInstalledApplications(0).find { info -> info.packageName == target } != null
 }

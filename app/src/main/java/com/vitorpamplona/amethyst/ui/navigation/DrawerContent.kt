@@ -277,10 +277,10 @@ fun ListContent(
             onClick = { backupDialogOpen = true }
         )
 
-        var textTorProxy = if (checked) stringResource(R.string.disable) else stringResource(R.string.enable)
+        val textTorProxy = if (checked) stringResource(R.string.disconnect_from_your_orbot_setup) else stringResource(R.string.connect_via_tor)
 
         IconRow(
-            title = "$textTorProxy Tor",
+            title = textTorProxy,
             icon = R.drawable.ic_tor,
             tint = MaterialTheme.colors.onBackground,
             onClick = {

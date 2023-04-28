@@ -292,10 +292,9 @@
     <string name="lightning_create_and_add_invoice">Create and Add</string>
     <string name="poll_author_no_vote">Poll authors can\'t vote in their own polls.</string>
     <string name="poll_hashtag" translatable="false">#zappoll</string>
-    <string name="connect_via_tor">Connect via Tor</string>
-    <string name="do_you_really_want_to_disable_tor">Do you really want to disable tor?</string>
-    <string name="disable">Disable</string>
-    <string name="enable">Enable</string>
+    <string name="connect_via_tor">Connect through your Orbot setup</string>
+    <string name="do_you_really_want_to_disable_tor">Do you really want to disconnect from your Orbot setup?</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
+    <string name="disconnect_from_your_orbot_setup">Disconnect from your Orbot setup</string>
 </resources>
