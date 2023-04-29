@@ -406,7 +406,7 @@ fun ZoomableImageDialog(imageUrl: ZoomableContent, allImages: List<ZoomableConte
 }
 
 @Composable
-private fun RenderImageOrVideo(content: ZoomableContent) {
+fun RenderImageOrVideo(content: ZoomableContent) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 

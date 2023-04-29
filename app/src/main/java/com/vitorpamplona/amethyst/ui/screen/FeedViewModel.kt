@@ -23,6 +23,7 @@ import com.vitorpamplona.amethyst.ui.dal.UserProfileBookmarksFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.VideoFeedFilter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -34,6 +35,7 @@ import kotlinx.coroutines.launch
 class NostrChannelFeedViewModel : FeedViewModel(ChannelFeedFilter)
 class NostrChatRoomFeedViewModel : FeedViewModel(ChatroomFeedFilter)
 class NostrGlobalFeedViewModel : FeedViewModel(GlobalFeedFilter)
+class NostrVideoFeedViewModel : FeedViewModel(VideoFeedFilter)
 class NostrThreadFeedViewModel : FeedViewModel(ThreadFeedFilter)
 class NostrHashtagFeedViewModel : FeedViewModel(HashtagFeedFilter)
 class NostrUserProfileNewThreadsFeedViewModel : FeedViewModel(UserProfileNewThreadFeedFilter)
