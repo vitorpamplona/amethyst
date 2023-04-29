@@ -17,9 +17,11 @@ import com.vitorpamplona.amethyst.ui.dal.GlobalFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.VideoFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.NostrGlobalFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NotificationViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.BookmarkListScreen
@@ -34,6 +36,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.NotificationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ProfileScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SearchScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ThreadScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.VideoScreen
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -58,10 +61,31 @@ fun AppNavigation(
     GlobalFeedFilter.account = account
     val searchFeedViewModel: NostrGlobalFeedViewModel = viewModel()
 
+    VideoFeedFilter.account = account
+    val videoFeedViewModel: NostrVideoFeedViewModel = viewModel()
+
     NotificationFeedFilter.account = account
     val notifFeedViewModel: NotificationViewModel = viewModel()
 
     NavHost(navController, startDestination = Route.Home.route) {
+        Route.Video.let { route ->
+            composable(route.route, route.arguments, content = {
+                val scrollToTop = it.arguments?.getBoolean("scrollToTop") ?: false
+
+                VideoScreen(
+                    videoFeedView = videoFeedViewModel,
+                    accountViewModel = accountViewModel,
+                    navController = navController,
+                    scrollToTop = scrollToTop
+                )
+
+                // Avoids running scroll to top when back button is pressed
+                if (scrollToTop) {
+                    it.arguments?.remove("scrollToTop")
+                }
+            })
+        }
+
         Route.Search.let { route ->
             composable(route.route, route.arguments, content = {
                 val scrollToTop = it.arguments?.getBoolean("scrollToTop") ?: false

@@ -41,6 +41,12 @@ sealed class Route(
         arguments = listOf(navArgument("scrollToTop") { type = NavType.BoolType; defaultValue = false })
     )
 
+    object Video : Route(
+        route = "Video?scrollToTop={scrollToTop}",
+        icon = R.drawable.ic_video,
+        arguments = listOf(navArgument("scrollToTop") { type = NavType.BoolType; defaultValue = false })
+    )
+
     object Notification : Route(
         route = "Notification?scrollToTop={scrollToTop}",
         icon = R.drawable.ic_notifications,
