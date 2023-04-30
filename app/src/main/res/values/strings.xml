@@ -327,19 +327,19 @@
     <string name="file_server">File Server</string>
     <string name="zap_forward_lnAddress">LnAddress or @User</string>
 
-    <string name="upload_server_imgur">imgur.com - less secure</string>
-    <string name="upload_server_imgur_explainer">Uploads to Imgur. Imgur can change your image/video at any time</string>
+    <string name="upload_server_imgur">imgur.com</string>
+    <string name="upload_server_imgur_explainer">Uploads Media to Imgur</string>
 
-    <string name="upload_server_nostrimg">nostrimg.com - less secure</string>
-    <string name="upload_server_nostrimg_explainer">Uploads to NostrImg. NostrImg can change your image at any time</string>
+    <string name="upload_server_nostrimg">nostrimg.com</string>
+    <string name="upload_server_nostrimg_explainer">Uploads Image to NostrImg</string>
 
     <string name="upload_server_imgur_nip94">Verifiable Imgur (NIP-94)</string>
-    <string name="upload_server_imgur_nip94_explainer">Protects from Imgur changing your image/video after you post</string>
+    <string name="upload_server_imgur_nip94_explainer">Verifiable Media with description on Imgur. Some clients might not support NIP-94, yet.</string>
 
     <string name="upload_server_nostrimg_nip94">Verifiable NostrImg (NIP-94)</string>
-    <string name="upload_server_nostrimg_nip94_explainer">Protects from NostrImg changing your image after you post</string>
+    <string name="upload_server_nostrimg_nip94_explainer">Verifiable Image with description on NostrImg. Some clients might not support NIP-94, yet.</string>
 
     <string name="upload_server_relays_nip95">Your relays (NIP-95)</string>
-    <string name="upload_server_relays_nip95_explainer">Files are uploaded to and hosted by relays. They are free from a fixed url (third-party dependency). Make sure to have a NIP-95 relay in your relay list</string>
+    <string name="upload_server_relays_nip95_explainer">Media is uploaded to and hosted by relays without using a third-party host. Make sure to have a NIP-95 relay in your relay list. Some clients might not support NIP-94/95, yet.</string>
 
 </resources>
