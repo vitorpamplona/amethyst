@@ -174,7 +174,10 @@ fun SlidingCarousel(
         pageCount = feed.value.size,
         state = pagerState,
         beyondBoundsPageCount = 1,
-        modifier = Modifier.fillMaxSize(1f)
+        modifier = Modifier.fillMaxSize(1f),
+        key = { index ->
+            feed.value.getOrNull(index)?.idHex ?: "$index"
+        }
     ) { index ->
         feed.value.getOrNull(index)?.let { note ->
             RenderVideoOrPictureNote(note, accountViewModel, navController)
