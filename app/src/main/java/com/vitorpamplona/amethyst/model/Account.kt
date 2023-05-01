@@ -20,6 +20,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import nostr.postr.Persona
+import nostr.postr.Utils
 import java.math.BigDecimal
 import java.util.Locale
 
@@ -171,6 +172,12 @@ class Account(
         return zapPaymentRequest != null
     }
 
+    fun isNIP47Author(pubkeyHex: String?): Boolean {
+        val privKey = zapPaymentRequest?.secret?.toByteArray() ?: loggedIn.privKey!!
+        val pubKey = Utils.pubkeyCreate(privKey).toHexKey()
+        return (pubKey == pubkeyHex)
+    }
+
     fun decryptZapPaymentResponseEvent(zapResponseEvent: LnZapPaymentResponseEvent): Response? {
         val myNip47 = zapPaymentRequest ?: return null
         return zapResponseEvent.response(
@@ -203,7 +210,7 @@ class Account(
                 // After the response is received.
                 val privKey = nip47.secret?.toByteArray()
                 if (privKey != null) {
-                    onResponse(it.response(privKey, event.pubKey.toByteArray()))
+                    onResponse(it.response(privKey, nip47.pubKeyHex.toByteArray()))
                 }
             }
 

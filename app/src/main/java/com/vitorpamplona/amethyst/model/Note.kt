@@ -236,7 +236,7 @@ open class Note(val idHex: String) {
             } else {
                 null
             }
-            response is PayInvoiceSuccessResponse && zapResponseEvent?.requestAuthor() == user.pubkeyHex
+            response is PayInvoiceSuccessResponse && account.isNIP47Author(zapResponseEvent?.requestAuthor())
         }
     }
 
