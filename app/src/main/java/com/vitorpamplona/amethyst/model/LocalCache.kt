@@ -811,14 +811,6 @@ object LocalCache {
         }
     }
 
-    fun pruneFileStorageEvents(account: Account) {
-        val toBeRemoved = notes.filter { it.value.event is FileStorageEvent }
-
-        toBeRemoved.forEach {
-            notes.remove(it.key)
-        }
-    }
-
     fun pruneOldAndHiddenMessages(account: Account) {
         channels.forEach { it ->
             val toBeRemoved = it.value.pruneOldAndHiddenMessages(account)
