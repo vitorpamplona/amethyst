@@ -58,7 +58,7 @@ import com.google.android.exoplayer2.util.Util
 import com.vitorpamplona.amethyst.VideoCache
 import java.io.File
 
-private var muted = mutableStateOf(true)
+public var muted = mutableStateOf(true)
 
 @Composable
 fun VideoView(localFile: File, description: String? = null, onDialog: ((Boolean) -> Unit)? = null) {
