@@ -31,26 +31,31 @@ object ImageUploader {
         checkNotNull(imageInputStream) {
             "Can't open the image input stream"
         }
-
         val myServer = if (server == ServersAvailable.IMGUR) {
             ImgurServer()
         } else if (server == ServersAvailable.NOSTRIMG) {
             NostrImgServer()
+        } else if (server == ServersAvailable.NOSTR_BUILD) {
+            NostrBuildServer()
         } else {
             ImgurServer()
         }
 
-        uploadImage(imageInputStream, contentType, myServer, onSuccess, onError)
+        uploadImage(imageInputStream, contentType, myServer, server, onSuccess, onError)
     }
 
     fun uploadImage(
         inputStream: InputStream,
         contentType: String?,
         server: FileServer,
+        serverType: ServersAvailable,
         onSuccess: (String, String?) -> Unit,
         onError: (Throwable) -> Unit
     ) {
-        val category = contentType?.toMediaType()?.toString()?.split("/")?.get(0) ?: "image"
+        var category = "fileToUpload"
+        if (serverType != ServersAvailable.NOSTR_BUILD) {
+            category = contentType?.toMediaType()?.toString()?.split("/")?.get(0) ?: "image"
+        }
         val fileName = randomChars()
         val extension = contentType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
 
@@ -73,16 +78,18 @@ object ImageUploader {
             .build()
 
         val requestBuilder = Request.Builder()
-
         server.clientID()?.let {
-            requestBuilder.header("Authorization", it)
+            requestBuilder.addHeader("Authorization", it)
+        }
+
+        if (serverType == ServersAvailable.NOSTR_BUILD) {
+            requestBuilder.addHeader("Content-Type", "multipart/form-data")
         }
 
         requestBuilder
-            .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
+            .addHeader("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
             .url(server.postUrl(contentType))
             .post(requestBody)
-
         val request = requestBuilder.build()
 
         client.newCall(request).enqueue(object : Callback {
@@ -146,12 +153,11 @@ class ImgurServer : FileServer() {
 }
 
 class NostrBuildServer : FileServer() {
-    override fun postUrl(contentType: String?) = "https://nostr.build/api/upload/amethyst.php"
+    override fun postUrl(contentType: String?) = "https://nostr.build/api/upload/android.php"
 
     override fun parseUrlFromSucess(body: String): String? {
-        val tree = jacksonObjectMapper().readTree(body)
-        val url = tree?.get("data")?.get("link")?.asText()
-        return url
+        val url = jacksonObjectMapper().readTree(body)
+        return url.toString().replace("\"", "")
     }
 
     override fun clientID() = null

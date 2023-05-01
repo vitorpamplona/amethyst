@@ -333,6 +333,9 @@
     <string name="upload_server_nostrimg">nostrimg.com - less secure</string>
     <string name="upload_server_nostrimg_explainer">Uploads to NostrImg. NostrImg can change your image at any time</string>
 
+    <string name="upload_server_nostrbuild">nostr.build- less secure</string>
+    <string name="upload_server_nostrbuild_explainer">Uploads to Nostr.build. Nostr.build can change your image at any time</string>
+
     <string name="upload_server_imgur_nip94">Verifiable Imgur (NIP-94)</string>
     <string name="upload_server_imgur_nip94_explainer">Protects from Imgur changing your image/video after you post</string>
 
