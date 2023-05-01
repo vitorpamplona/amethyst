@@ -56,8 +56,7 @@ fun PollNote(
     val account = accountState?.account ?: return
 
     val pollViewModel = PollNoteViewModel()
-    pollViewModel.account = account
-    pollViewModel.load(zappedNote)
+    pollViewModel.load(account, zappedNote)
 
     pollViewModel.pollEvent?.pollOptions()?.forEach { poll_op ->
         OptionNote(
@@ -212,7 +211,7 @@ fun ZapVote(
     clickablePrepend: @Composable () -> Unit
 ) {
     val zapsState by baseNote.live().zaps.observeAsState()
-    val zappedNote = zapsState?.note
+    val zappedNote = zapsState?.note ?: return
 
     var wantsToZap by remember { mutableStateOf(false) }
 
@@ -253,7 +252,7 @@ fun ZapVote(
                             )
                             .show()
                     }
-                } else if (accountViewModel.isLoggedUser(zappedNote?.author)) {
+                } else if (accountViewModel.isLoggedUser(zappedNote.author)) {
                     scope.launch {
                         Toast
                             .makeText(
@@ -376,7 +375,7 @@ fun ZapVote(
     LaunchedEffect(key1 = zapsState) {
         withContext(Dispatchers.IO) {
             if (!wasZappedByLoggedInUser) {
-                wasZappedByLoggedInUser = zappedNote?.isZappedBy(accountViewModel.userProfile(), account) == true
+                wasZappedByLoggedInUser = accountViewModel.calculateIfNoteWasZappedByAccount(zappedNote)
             }
         }
     }

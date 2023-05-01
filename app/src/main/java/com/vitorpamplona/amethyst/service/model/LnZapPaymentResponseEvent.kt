@@ -1,9 +1,14 @@
 package com.vitorpamplona.amethyst.service.model
 
 import android.util.Log
+import com.google.gson.JsonDeserializationContext
+import com.google.gson.JsonDeserializer
+import com.google.gson.JsonElement
+import com.google.gson.JsonParseException
 import com.google.gson.annotations.SerializedName
 import com.vitorpamplona.amethyst.model.HexKey
 import nostr.postr.Utils
+import java.lang.reflect.Type
 
 class LnZapPaymentResponseEvent(
     id: HexKey,
@@ -35,8 +40,13 @@ class LnZapPaymentResponseEvent(
     }
 
     fun response(privKey: ByteArray, pubKey: ByteArray): Response? = try {
+        println("Response Arrived: Decrypting")
         if (content.isNotEmpty()) {
-            gson.fromJson(decrypt(privKey, pubKey), Response::class.java)
+            val decrypted = decrypt(privKey, pubKey)
+            println("Response Arrived: Parsing $decrypted")
+            val response = gson.fromJson(decrypted, Response::class.java)
+            println("Response Arrived: Decrypted ${response?.resultType}")
+            response
         } else {
             null
         }
@@ -58,7 +68,7 @@ abstract class Response(
 
 // PayInvoice Call
 
-class PayInvoiceSuccessResponse(val result: PayInvoiceResultParams) :
+class PayInvoiceSuccessResponse(val result: PayInvoiceResultParams? = null) :
     Response("pay_invoice") {
     class PayInvoiceResultParams(val preimage: String)
 }
@@ -84,5 +94,41 @@ class PayInvoiceErrorResponse(val error: PayInvoiceErrorParams? = null) :
         INTERNAL, // An internal error.
         @SerializedName(value = "other", alternate = ["OTHER"])
         OTHER // Other error.
+    }
+}
+
+class ResponseDeserializer :
+    JsonDeserializer<Response?> {
+    @Throws(JsonParseException::class)
+    override fun deserialize(
+        json: JsonElement,
+        typeOfT: Type,
+        context: JsonDeserializationContext
+    ): Response? {
+        val jsonObject = json.asJsonObject
+        val resultType = jsonObject.get("result_type")?.asString
+
+        if (resultType == "pay_invoice") {
+            val result = jsonObject.get("result")?.asJsonObject
+            val error = jsonObject.get("error")?.asJsonObject
+            if (result != null) {
+                return context.deserialize<PayInvoiceSuccessResponse>(jsonObject, PayInvoiceSuccessResponse::class.java)
+            }
+            if (error != null) {
+                return context.deserialize<PayInvoiceErrorResponse>(jsonObject, PayInvoiceErrorResponse::class.java)
+            }
+        } else {
+            // tries to guess
+            if (jsonObject.get("result")?.asJsonObject?.get("preimage") != null) {
+                return context.deserialize<PayInvoiceSuccessResponse>(jsonObject, PayInvoiceSuccessResponse::class.java)
+            }
+            if (jsonObject.get("error")?.asJsonObject?.get("code") != null) {
+                return context.deserialize<PayInvoiceErrorResponse>(jsonObject, PayInvoiceErrorResponse::class.java)
+            }
+        }
+        return null
+    }
+
+    companion object {
     }
 }

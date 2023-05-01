@@ -20,8 +20,10 @@ class PollNoteViewModel {
     var consensusThreshold: BigDecimal? = null
 
     var totalZapped: BigDecimal = BigDecimal.ZERO
+    var wasZappedByAuthor: Boolean = false
 
-    fun load(note: Note?) {
+    fun load(acc: Account, note: Note?) {
+        account = acc
         pollNote = note
         pollEvent = pollNote?.event as PollNoteEvent
         pollOptions = pollEvent?.pollOptions()
@@ -31,13 +33,14 @@ class PollNoteViewModel {
         closedAt = pollEvent?.getTagInt(CLOSED_AT)
 
         totalZapped = totalZapped()
+        wasZappedByAuthor = note?.let { account?.calculateIfNoteWasZappedByAccount(it) } ?: false
     }
 
     fun canZap(): Boolean {
         val account = account ?: return false
         val user = account.userProfile() ?: return false
         val note = pollNote ?: return false
-        return user != note.author && !note.isZappedBy(user, account)
+        return user != note.author && !wasZappedByAuthor
     }
 
     fun isVoteAmountAtomic() = valueMaximum != null && valueMinimum != null && valueMinimum == valueMaximum

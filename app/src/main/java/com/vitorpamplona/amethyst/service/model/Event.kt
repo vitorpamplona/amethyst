@@ -207,6 +207,7 @@ open class Event(
             .registerTypeAdapter(Event::class.java, EventDeserializer())
             .registerTypeAdapter(ByteArray::class.java, ByteArraySerializer())
             .registerTypeAdapter(ByteArray::class.java, ByteArrayDeserializer())
+            .registerTypeAdapter(Response::class.java, ResponseDeserializer())
             .create()
 
         fun fromJson(json: String, lenient: Boolean = false): Event = gson.fromJson(json, Event::class.java).getRefinedEvent(lenient)
