@@ -20,6 +20,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import nostr.postr.Persona
+import java.math.BigDecimal
 import java.util.Locale
 
 val DefaultChannels = setOf(
@@ -170,7 +171,26 @@ class Account(
         return zapPaymentRequest != null
     }
 
-    fun sendZapPaymentRequestFor(bolt11: String, onResponse: (Response?) -> Unit) {
+    fun decryptZapPaymentResponseEvent(zapResponseEvent: LnZapPaymentResponseEvent): Response? {
+        val myNip47 = zapPaymentRequest ?: return null
+        return zapResponseEvent.response(
+            myNip47.secret?.toByteArray() ?: loggedIn.privKey!!,
+            myNip47.pubKeyHex.toByteArray()
+        )
+    }
+
+    fun calculateIfNoteWasZappedByAccount(zappedNote: Note): Boolean {
+        return zappedNote.isZappedBy(userProfile(), this) == true
+    }
+
+    fun calculateZappedAmount(zappedNote: Note?): BigDecimal {
+        return zappedNote?.zappedAmount(
+            zapPaymentRequest?.secret?.toByteArray() ?: loggedIn.privKey!!,
+            zapPaymentRequest?.pubKeyHex?.toByteArray()
+        ) ?: BigDecimal.ZERO
+    }
+
+    fun sendZapPaymentRequestFor(bolt11: String, zappedNote: Note?, onResponse: (Response?) -> Unit) {
         if (!isWriteable()) return
 
         zapPaymentRequest?.let { nip47 ->
@@ -179,7 +199,7 @@ class Account(
             val wcListener = NostrLnZapPaymentResponseDataSource(nip47.pubKeyHex, event.pubKey, event.id)
             wcListener.start()
 
-            LocalCache.consume(event) {
+            LocalCache.consume(event, zappedNote) {
                 // After the response is received.
                 val privKey = nip47.secret?.toByteArray()
                 if (privKey != null) {

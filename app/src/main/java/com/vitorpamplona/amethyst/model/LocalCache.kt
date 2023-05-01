@@ -4,7 +4,6 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.vitorpamplona.amethyst.service.NostrAccountDataSource.account
 import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.BundledInsert
@@ -31,7 +30,8 @@ object LocalCache {
     val channels = ConcurrentHashMap<HexKey, Channel>()
     val addressables = ConcurrentHashMap<String, AddressableNote>(100)
 
-    val awaitingPaymentRequests = ConcurrentHashMap<HexKey, (LnZapPaymentResponseEvent) -> Unit>(10)
+    val awaitingPaymentRequests =
+        ConcurrentHashMap<HexKey, Pair<Note?, (LnZapPaymentResponseEvent) -> Unit>>(10)
 
     fun checkGetOrCreateUser(key: String): User? {
         if (isValidHexNpub(key)) {
@@ -379,6 +379,7 @@ object LocalCache {
                     masterNote.removeBoost(deleteNote)
                     masterNote.removeReaction(deleteNote)
                     masterNote.removeZap(deleteNote)
+                    masterNote.removeZapPayment(deleteNote)
                     masterNote.removeReport(deleteNote)
                 }
 
@@ -728,12 +729,41 @@ object LocalCache {
         // Does nothing without a response callback.
     }
 
-    fun consume(event: LnZapPaymentRequestEvent, onResponse: (LnZapPaymentResponseEvent) -> Unit) {
-        awaitingPaymentRequests.put(event.id, onResponse)
+    fun consume(event: LnZapPaymentRequestEvent, zappedNote: Note?, onResponse: (LnZapPaymentResponseEvent) -> Unit) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        note.loadEvent(event, author, emptyList())
+
+        zappedNote?.addZapPayment(note, null)
+
+        awaitingPaymentRequests.put(event.id, Pair(zappedNote, onResponse))
+
+        refreshObservers(note)
     }
 
     fun consume(event: LnZapPaymentResponseEvent) {
-        val responseCallback = awaitingPaymentRequests[event.requestId()]
+        val requestId = event.requestId()
+        val pair = awaitingPaymentRequests[requestId] ?: return
+
+        val (zappedNote, responseCallback) = pair
+
+        val requestNote = requestId?.let { checkGetOrCreateNote(requestId) }
+
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        note.loadEvent(event, author, emptyList())
+
+        requestNote?.let { request ->
+            zappedNote?.addZapPayment(request, note)
+        }
 
         if (responseCallback != null) {
             responseCallback(event)
