@@ -309,7 +309,7 @@ fun ZapReaction(
     val account = accountState?.account ?: return
 
     val zapsState by baseNote.live().zaps.observeAsState()
-    val zappedNote = zapsState?.note
+    val zappedNote = zapsState?.note ?: return
     val zapMessage = ""
 
     var wantsToZap by remember { mutableStateOf(false) }
@@ -326,7 +326,7 @@ fun ZapReaction(
     LaunchedEffect(key1 = zapsState) {
         withContext(Dispatchers.IO) {
             if (!wasZappedByLoggedInUser) {
-                wasZappedByLoggedInUser = zappedNote?.isZappedBy(account.userProfile(), account) == true
+                wasZappedByLoggedInUser = accountViewModel.calculateIfNoteWasZappedByAccount(zappedNote)
             }
         }
     }
@@ -459,7 +459,7 @@ fun ZapReaction(
 
     LaunchedEffect(key1 = zapsState) {
         withContext(Dispatchers.IO) {
-            zapAmount = zappedNote?.zappedAmount()
+            zapAmount = account.calculateZappedAmount(zappedNote)
         }
     }
 

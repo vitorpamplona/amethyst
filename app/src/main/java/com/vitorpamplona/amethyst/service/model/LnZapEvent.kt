@@ -57,7 +57,7 @@ class LnZapEvent(
         return content
     }
 
-    private fun lnInvoice() = tags.firstOrNull { it.size > 1 && it[0] == "bolt11" }?.get(1)
+    fun lnInvoice() = tags.firstOrNull { it.size > 1 && it[0] == "bolt11" }?.get(1)
 
     private fun description() = tags.firstOrNull { it.size > 1 && it[0] == "description" }?.get(1)
 

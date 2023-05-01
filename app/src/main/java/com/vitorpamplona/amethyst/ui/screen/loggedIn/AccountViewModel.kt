@@ -59,6 +59,10 @@ class AccountViewModel(private val account: Account) : ViewModel() {
         zap(note, amount, pollOption, message, context, onError, onProgress, account.defaultZapType)
     }
 
+    fun calculateIfNoteWasZappedByAccount(zappedNote: Note): Boolean {
+        return account.calculateIfNoteWasZappedByAccount(zappedNote)
+    }
+
     fun zap(note: Note, amount: Long, pollOption: Int?, message: String, context: Context, onError: (String) -> Unit, onProgress: (percent: Float) -> Unit, zapType: LnZapEvent.ZapType) {
         val lud16 = note.event?.zapAddress() ?: note.author?.info?.lud16?.trim() ?: note.author?.info?.lud06?.trim()
 
@@ -88,6 +92,7 @@ class AccountViewModel(private val account: Account) : ViewModel() {
                 if (account.hasWalletConnectSetup()) {
                     account.sendZapPaymentRequestFor(
                         bolt11 = it,
+                        note,
                         onResponse = { response ->
                             if (response is PayInvoiceErrorResponse) {
                                 onProgress(0.0f)
