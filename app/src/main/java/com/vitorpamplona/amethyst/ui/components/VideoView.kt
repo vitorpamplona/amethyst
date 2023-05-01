@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.google.android.exoplayer2.C
@@ -22,7 +23,14 @@ import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
 import com.google.android.exoplayer2.ui.StyledPlayerView
+import com.google.android.exoplayer2.util.EventLogger
 import com.vitorpamplona.amethyst.VideoCache
+import java.io.File
+
+@Composable
+fun VideoView(localFile: File, description: String? = null, onDialog: ((Boolean) -> Unit)? = null) {
+    VideoView(localFile.toUri(), description, onDialog)
+}
 
 @Composable
 fun VideoView(videoUri: String, description: String? = null, onDialog: ((Boolean) -> Unit)? = null) {
@@ -48,14 +56,20 @@ fun VideoView(videoUri: Uri, description: String? = null, onDialog: ((Boolean) -
         ExoPlayer.Builder(context).build().apply {
             repeatMode = Player.REPEAT_MODE_ALL
             videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
-            setMediaSource(
-                ProgressiveMediaSource.Factory(VideoCache.get()).createMediaSource(
-                    media
+            if (videoUri.scheme?.startsWith("file") == true) {
+                setMediaItem(media)
+            } else {
+                setMediaSource(
+                    ProgressiveMediaSource.Factory(VideoCache.get()).createMediaSource(
+                        media
+                    )
                 )
-            )
+            }
             prepare()
         }
     }
+
+    exoPlayer.addAnalyticsListener(EventLogger())
 
     DisposableEffect(
         AndroidView(
@@ -94,8 +108,4 @@ fun VideoView(videoUri: Uri, description: String? = null, onDialog: ((Boolean) -
             lifecycle.removeObserver(observer)
         }
     }
-}
-
-@Composable
-fun VideoView(videoBytes: ByteArray, description: String? = null, onDialog: ((Boolean) -> Unit)? = null) {
 }

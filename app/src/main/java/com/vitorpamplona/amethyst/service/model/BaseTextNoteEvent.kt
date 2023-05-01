@@ -86,10 +86,6 @@ open class BaseTextNoteEvent(
             val parsed = Nip19.parseComponents(uriScheme, type, key, additionalChars)
 
             if (parsed != null) {
-                if (content.contains("Testing event")) {
-                    println("AAAA $key")
-                }
-
                 try {
                     val tag = tags.firstOrNull { it.size > 1 && it[1] == parsed.hex }
 

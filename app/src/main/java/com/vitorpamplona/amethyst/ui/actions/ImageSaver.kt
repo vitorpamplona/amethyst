@@ -79,7 +79,7 @@ object ImageSaver {
     }
 
     fun saveImage(
-        byteArray: ByteArray,
+        localFile: File,
         mimeType: String?,
         context: Context,
         onSuccess: () -> Any?,
@@ -87,7 +87,7 @@ object ImageSaver {
     ) {
         try {
             val extension = mimeType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
-            val buffer = byteArray.inputStream().source().buffer()
+            val buffer = localFile.inputStream().source().buffer()
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 saveContentQ(

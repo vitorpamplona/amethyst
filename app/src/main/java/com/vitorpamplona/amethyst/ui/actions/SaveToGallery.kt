@@ -18,6 +18,7 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.R
 import kotlinx.coroutines.launch
+import java.io.File
 
 /**
  * A button to save the remote image to the gallery.
@@ -86,14 +87,14 @@ fun SaveToGallery(url: String) {
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun SaveToGallery(byteArray: ByteArray, mimeType: String?) {
+fun SaveToGallery(localFile: File, mimeType: String?) {
     val localContext = LocalContext.current
     val scope = rememberCoroutineScope()
 
     fun saveImage() {
         ImageSaver.saveImage(
             context = localContext,
-            byteArray = byteArray,
+            localFile = localFile,
             mimeType = mimeType,
             onSuccess = {
                 scope.launch {

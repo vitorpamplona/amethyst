@@ -29,7 +29,14 @@ class FileHeader(
             }
         }
 
-        fun prepare(data: ByteArray, fileUrl: String, mimeType: String?, description: String?, onReady: (FileHeader) -> Unit, onError: () -> Unit) {
+        fun prepare(
+            data: ByteArray,
+            fileUrl: String,
+            mimeType: String?,
+            description: String?,
+            onReady: (FileHeader) -> Unit,
+            onError: () -> Unit
+        ) {
             try {
                 val sha256 = MessageDigest.getInstance("SHA-256")
 
