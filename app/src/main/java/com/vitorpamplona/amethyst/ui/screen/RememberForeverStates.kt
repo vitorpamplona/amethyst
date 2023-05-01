@@ -10,6 +10,7 @@ import com.vitorpamplona.amethyst.ui.navigation.Route
 import kotlin.math.roundToInt
 
 private val savedScrollStates = mutableMapOf<String, ScrollState>()
+
 private data class ScrollState(val index: Int, val scrollOffsetFraction: Float)
 
 object ScrollStateKeys {
