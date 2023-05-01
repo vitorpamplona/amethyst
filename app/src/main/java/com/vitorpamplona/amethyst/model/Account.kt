@@ -403,7 +403,7 @@ class Account(
         }
     }
 
-    fun sendNip95(data: ByteArray, headerInfo: FileHeader): Note? {
+    fun createNip95(data: ByteArray, headerInfo: FileHeader): Pair<FileStorageEvent, FileStorageHeaderEvent>? {
         if (!isWriteable()) return null
 
         val data = FileStorageEvent.create(
@@ -421,6 +421,12 @@ class Account(
             description = headerInfo.description,
             privateKey = loggedIn.privKey!!
         )
+
+        return Pair(data, signedEvent)
+    }
+
+    fun sendNip95(data: FileStorageEvent, signedEvent: FileStorageHeaderEvent): Note? {
+        if (!isWriteable()) return null
 
         Client.send(data)
         LocalCache.consume(data, null)

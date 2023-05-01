@@ -28,7 +28,6 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
@@ -36,23 +35,20 @@ import com.vitorpamplona.amethyst.ui.components.*
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
-fun NewMediaView(uri: Uri, onClose: () -> Unit, accountViewModel: AccountViewModel, navController: NavController) {
+fun NewMediaView(uri: Uri, onClose: () -> Unit, postViewModel: NewMediaModel, accountViewModel: AccountViewModel, navController: NavController) {
     val account = accountViewModel.accountLiveData.value?.account ?: return
     val resolver = LocalContext.current.contentResolver
-    val postViewModel: NewMediaModel = viewModel()
     val context = LocalContext.current
 
     val scroolState = rememberScrollState()
 
-    LaunchedEffect(Unit) {
-        val mediaType = resolver.getType(uri) ?: ""
-        postViewModel.load(account, uri, mediaType)
-        delay(100)
+    val mediaType = resolver.getType(uri) ?: ""
+    postViewModel.load(account, uri, mediaType)
 
+    LaunchedEffect(Unit) {
         postViewModel.imageUploadingError.collect { error ->
             Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
         }
@@ -85,15 +81,11 @@ fun NewMediaView(uri: Uri, onClose: () -> Unit, accountViewModel: AccountViewMod
                         onClose()
                     })
 
-                    if (postViewModel.isUploadingImage) {
-                        LoadingAnimation()
-                    }
-
                     PostButton(
                         onPost = {
-                            postViewModel.upload(context) {
-                                onClose()
-                            }
+                            onClose()
+                            postViewModel.upload(context)
+                            postViewModel.selectedServer?.let { account.changeDefaultFileServer(it) }
                         },
                         isActive = postViewModel.canPost()
                     )
@@ -154,7 +146,11 @@ fun ImageVideoPost(postViewModel: NewMediaModel) {
             LaunchedEffect(key1 = postViewModel.galleryUri) {
                 scope.launch(Dispatchers.IO) {
                     postViewModel.galleryUri?.let {
-                        bitmap = resolver.loadThumbnail(it, Size(1200, 1000), null)
+                        try {
+                            bitmap = resolver.loadThumbnail(it, Size(1200, 1000), null)
+                        } catch (e: Exception) {
+                            postViewModel.imageUploadingError.emit("Unable to load file")
+                        }
                     }
                 }
             }
@@ -182,7 +178,7 @@ fun ImageVideoPost(postViewModel: NewMediaModel) {
     ) {
         TextSpinner(
             label = stringResource(id = R.string.file_server),
-            placeholder = fileServers.filter { it.first == postViewModel.defaultServer() }.firstOrNull()?.second ?: fileServers[0].second,
+            placeholder = fileServers.firstOrNull { it.first == postViewModel.selectedServer }?.second ?: fileServers[0].second,
             options = fileServerOptions,
             explainers = fileServerExplainers,
             onSelect = {

@@ -1,9 +1,11 @@
 package com.vitorpamplona.amethyst.model
 
 import android.util.Log
+import androidx.core.net.toUri
 import androidx.lifecycle.LiveData
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.BundledInsert
@@ -11,6 +13,9 @@ import fr.acinq.secp256k1.Hex
 import kotlinx.coroutines.*
 import nostr.postr.toNpub
 import java.io.ByteArrayInputStream
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -720,7 +725,21 @@ object LocalCache {
         // Already processed this event.
         if (note.event != null) return
 
-        note.loadEvent(event, author, emptyList())
+        try {
+            val cachePath = File(Amethyst.instance.applicationContext.externalCacheDir, "NIP95")
+            cachePath.mkdirs()
+            val stream = FileOutputStream(File(cachePath, event.id))
+            stream.write(event.decode())
+            stream.close()
+            Log.e("EventLogger", "Saved to disk as ${File(cachePath, event.id).toUri()}")
+        } catch (e: IOException) {
+            Log.e("FileSotrageEvent", "FileStorageEvent save to disk error: " + event.id, e)
+        }
+
+        // this is an invalid event. But we don't need to keep the data in memory.
+        val eventNoData = FileStorageEvent(event.id, event.pubKey, event.createdAt, event.tags, "", event.sig)
+
+        note.loadEvent(eventNoData, author, emptyList())
 
         refreshObservers(note)
     }

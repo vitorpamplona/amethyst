@@ -329,7 +329,8 @@ open class NewPostViewModel : ViewModel() {
                 mimeType,
                 description,
                 onReady = {
-                    val note = account?.sendNip95(bytes, headerInfo = it)
+                    val nip95 = account?.createNip95(bytes, headerInfo = it)
+                    val note = nip95?.let { it1 -> account?.sendNip95(it1.first, it1.second) }
 
                     isUploadingImage = false
 

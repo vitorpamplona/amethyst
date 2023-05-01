@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Following
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.math.BigDecimal
 import java.net.URL
 import kotlin.time.ExperimentalTime
@@ -892,6 +893,7 @@ fun FileHeaderDisplay(note: Note) {
 
 @Composable
 fun FileStorageHeaderDisplay(baseNote: Note) {
+    val appContext = LocalContext.current.applicationContext
     val eventHeader = (baseNote.event as? FileStorageHeaderEvent) ?: return
 
     val fileNote = eventHeader.dataEventId()?.let { LocalCache.checkGetOrCreateNote(it) } ?: return
@@ -906,16 +908,17 @@ fun FileStorageHeaderDisplay(baseNote: Note) {
     LaunchedEffect(key1 = eventHeader.id, key2 = noteState) {
         withContext(Dispatchers.IO) {
             val uri = "nostr:" + baseNote.toNEvent()
+            val localDir = File(File(appContext.externalCacheDir, "NIP95"), fileNote.idHex)
             val bytes = eventBytes?.decode()
             val blurHash = eventHeader.blurhash()
             val description = eventHeader.content
             val mimeType = eventHeader.mimeType()
 
             content = if (mimeType?.startsWith("image") == true) {
-                ZoomableBitmapImage(bytes, mimeType, description, blurHash, true, uri)
+                ZoomableBitmapImage(localDir, mimeType, description, blurHash, true, uri)
             } else {
                 if (bytes != null) {
-                    ZoomableBytesVideo(bytes, mimeType, description, true, uri)
+                    ZoomableBytesVideo(localDir, mimeType, description, true, uri)
                 } else {
                     null
                 }

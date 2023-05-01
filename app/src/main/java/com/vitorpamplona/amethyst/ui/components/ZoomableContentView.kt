@@ -3,6 +3,9 @@ package com.vitorpamplona.amethyst.ui.components
 import android.content.Context
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -71,6 +74,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import net.engawapg.lib.zoomable.rememberZoomState
 import net.engawapg.lib.zoomable.zoomable
+import java.io.File
 import java.security.MessageDigest
 
 abstract class ZoomableContent(
@@ -106,7 +110,7 @@ abstract class ZoomablePreloadedContent(
 ) : ZoomableContent(description)
 
 class ZoomableBitmapImage(
-    val byteArray: ByteArray?,
+    val localFile: File,
     val mimeType: String? = null,
     description: String? = null,
     val bluehash: String? = null,
@@ -115,7 +119,7 @@ class ZoomableBitmapImage(
 ) : ZoomablePreloadedContent(description, isVerified, uri)
 
 class ZoomableBytesVideo(
-    val byteArray: ByteArray,
+    val localFile: File,
     val mimeType: String? = null,
     description: String? = null,
     isVerified: Boolean? = null,
@@ -166,7 +170,7 @@ fun ZoomableContentView(content: ZoomableContent, images: List<ZoomableContent> 
             }
         }
     } else if (content is ZoomableBitmapImage) {
-        LaunchedEffect(key1 = content.byteArray, key2 = imageState) {
+        LaunchedEffect(key1 = content.localFile, key2 = imageState) {
             if (imageState is AsyncImagePainter.State.Success) {
                 scope.launch(Dispatchers.IO) {
                     verifiedHash = content.isVerified
@@ -174,12 +178,8 @@ fun ZoomableContentView(content: ZoomableContent, images: List<ZoomableContent> 
             }
         }
     } else if (content is ZoomableBytesVideo) {
-        LaunchedEffect(key1 = content.byteArray, key2 = imageState) {
-            if (imageState is AsyncImagePainter.State.Success) {
-                scope.launch(Dispatchers.IO) {
-                    verifiedHash = content.isVerified
-                }
-            }
+        LaunchedEffect(key1 = content.localFile, key2 = imageState) {
+            verifiedHash = content.isVerified
         }
     }
 
@@ -214,7 +214,7 @@ fun ZoomableContentView(content: ZoomableContent, images: List<ZoomableContent> 
     }
 
     if (content is ZoomableUrlImage) {
-        Box() {
+        Box(contentAlignment = Alignment.Center) {
             AsyncImage(
                 model = content.url,
                 contentDescription = content.description,
@@ -231,13 +231,16 @@ fun ZoomableContentView(content: ZoomableContent, images: List<ZoomableContent> 
             if (imageState is AsyncImagePainter.State.Success) {
                 HashVerificationSymbol(verifiedHash, Modifier.align(Alignment.TopEnd))
             }
-        }
 
-        if (imageState !is AsyncImagePainter.State.Success) {
-            if (content.bluehash != null) {
-                DisplayBlueHash(content, mainImageModifier)
-            } else {
-                DisplayUrlWithLoadingSymbol(content)
+            AnimatedVisibility(
+                visible = imageState !is AsyncImagePainter.State.Success,
+                exit = fadeOut(animationSpec = tween(200))
+            ) {
+                if (content.bluehash != null) {
+                    DisplayBlueHash(content, mainImageModifier)
+                } else {
+                    DisplayUrlWithLoadingSymbol(content)
+                }
             }
         }
     } else if (content is ZoomableUrlVideo) {
@@ -245,7 +248,7 @@ fun ZoomableContentView(content: ZoomableContent, images: List<ZoomableContent> 
     } else if (content is ZoomableBitmapImage) {
         Box() {
             AsyncImage(
-                model = content.byteArray,
+                model = content.localFile,
                 contentDescription = content.description,
                 contentScale = ContentScale.FillWidth,
                 modifier = mainImageModifier,
@@ -270,6 +273,7 @@ fun ZoomableContentView(content: ZoomableContent, images: List<ZoomableContent> 
             }
         }
     } else if (content is ZoomableBytesVideo) {
+        VideoView(content.localFile, content.description) { dialogOpen = true }
     }
 
     if (dialogOpen) {
@@ -384,8 +388,8 @@ fun ZoomableImageDialog(imageUrl: ZoomableContent, allImages: List<ZoomableConte
                     val myContent = allImages[pagerState.currentPage]
                     if (myContent is ZoomableUrlContent) {
                         SaveToGallery(url = myContent.url)
-                    } else if (myContent is ZoomableBitmapImage && myContent.byteArray != null) {
-                        SaveToGallery(byteArray = myContent.byteArray, mimeType = myContent.mimeType)
+                    } else if (myContent is ZoomableBitmapImage && myContent.localFile != null) {
+                        SaveToGallery(localFile = myContent.localFile, mimeType = myContent.mimeType)
                     }
                 }
 
@@ -428,7 +432,7 @@ fun RenderImageOrVideo(content: ZoomableContent) {
             }
         }
     } else if (content is ZoomableBitmapImage) {
-        LaunchedEffect(key1 = content.byteArray, key2 = imageState) {
+        LaunchedEffect(key1 = content.localFile, key2 = imageState) {
             if (imageState is AsyncImagePainter.State.Success) {
                 scope.launch(Dispatchers.IO) {
                     verifiedHash = content.isVerified
@@ -436,12 +440,8 @@ fun RenderImageOrVideo(content: ZoomableContent) {
             }
         }
     } else if (content is ZoomableBytesVideo) {
-        LaunchedEffect(key1 = content.byteArray, key2 = imageState) {
-            if (imageState is AsyncImagePainter.State.Success) {
-                scope.launch(Dispatchers.IO) {
-                    verifiedHash = content.isVerified
-                }
-            }
+        LaunchedEffect(key1 = content.localFile, key2 = imageState) {
+            verifiedHash = content.isVerified
         }
     }
 
@@ -461,10 +461,20 @@ fun RenderImageOrVideo(content: ZoomableContent) {
                     imageState = it
                 }
             )
-            if (imageState !is AsyncImagePainter.State.Success) {
-                DisplayBlueHash(content = content, modifier = Modifier.fillMaxWidth())
-            } else {
+
+            if (imageState is AsyncImagePainter.State.Success) {
                 HashVerificationSymbol(verifiedHash, Modifier.align(Alignment.TopEnd))
+            }
+
+            AnimatedVisibility(
+                visible = imageState !is AsyncImagePainter.State.Success,
+                exit = fadeOut(animationSpec = tween(200))
+            ) {
+                if (content.bluehash != null) {
+                    DisplayBlueHash(content = content, modifier = Modifier.fillMaxWidth())
+                } else {
+                    DisplayUrlWithLoadingSymbol(content)
+                }
             }
         }
     } else if (content is ZoomableUrlVideo) {
@@ -474,7 +484,7 @@ fun RenderImageOrVideo(content: ZoomableContent) {
     } else if (content is ZoomableBitmapImage) {
         Box() {
             AsyncImage(
-                model = content.byteArray,
+                model = content.localFile,
                 contentDescription = content.description,
                 contentScale = ContentScale.FillWidth,
                 modifier = Modifier
@@ -496,7 +506,7 @@ fun RenderImageOrVideo(content: ZoomableContent) {
         }
     } else if (content is ZoomableBytesVideo) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize(1f)) {
-            VideoView(content.byteArray, content.description)
+            VideoView(content.localFile, content.description)
         }
     }
 }

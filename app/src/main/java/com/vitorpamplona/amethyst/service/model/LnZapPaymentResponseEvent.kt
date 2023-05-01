@@ -40,13 +40,9 @@ class LnZapPaymentResponseEvent(
     }
 
     fun response(privKey: ByteArray, pubKey: ByteArray): Response? = try {
-        println("Response Arrived: Decrypting")
         if (content.isNotEmpty()) {
             val decrypted = decrypt(privKey, pubKey)
-            println("Response Arrived: Parsing $decrypted")
-            val response = gson.fromJson(decrypted, Response::class.java)
-            println("Response Arrived: Decrypted ${response?.resultType}")
-            response
+            gson.fromJson(decrypted, Response::class.java)
         } else {
             null
         }
