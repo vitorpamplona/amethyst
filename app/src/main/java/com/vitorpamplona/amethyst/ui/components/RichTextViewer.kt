@@ -89,7 +89,6 @@ fun RichTextViewer(
         if (content.startsWith("> ") ||
             content.startsWith("# ") ||
             content.contains("##") ||
-            content.contains("**") ||
             content.contains("__") ||
             content.contains("```")
         ) {
