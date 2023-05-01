@@ -496,7 +496,7 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewMode
 
     userBadge.acceptedBadges?.let { note ->
         (note.event as? BadgeProfilesEvent)?.let { event ->
-            FlowRow(verticalArrangement = Arrangement.Center, modifier = Modifier.padding(vertical = 5.dp)) {
+            FlowRow(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 5.dp)) {
                 event.badgeAwardEvents().forEach { badgeAwardEvent ->
                     val baseNote = LocalCache.notes[badgeAwardEvent]
                     if (baseNote != null) {

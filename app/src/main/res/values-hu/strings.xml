@@ -301,4 +301,37 @@
     <string name="content_description">A tartalom leírása</string>
     <string name="content_description_example">Naplementekor egy kék csónak egy fehér homokos tengerparton</string>
 
+    <string name="zap_type">Zap Típusa</string>
+    <string name="zap_type_explainer">Zap típus minden opcióhoz</string>
+
+    <string name="zap_type_public">Publikus</string>
+    <string name="zap_type_public_explainer">Mindenki láthatja a tranzakciót és az üzenetet</string>
+
+    <string name="zap_type_private">Privát</string>
+    <string name="zap_type_private_explainer">A küldő és a fogadó láthatja egymást és az üzenetet is elolvashatja</string>
+
+    <string name="zap_type_anonymous">Névtelen</string>
+    <string name="zap_type_anonymous_explainer">A címzett és a nyilvánosság nem tudja ki küldte a fizetést</string>
+
+    <string name="zap_type_nonzap">Nem Zap</string>
+    <string name="zap_type_nonzap_explainer">Nostr-ban nyoma sincs, csak a Lightning-ben</string>
+
+    <string name="file_server">Fájl Szerver</string>
+    <string name="zap_forward_lnAddress">LnCím vagy @Felhasználó</string>
+
+    <string name="upload_server_imgur">imgur.com - kevésbé biztonságos</string>
+    <string name="upload_server_imgur_explainer">Feltöltés az Imgur-ba. Az Imgur a képet/videót bármikor megváltoztathatja</string>
+
+    <string name="upload_server_nostrimg">nostrimg.com - kevésbé biztonságos</string>
+    <string name="upload_server_nostrimg_explainer">Feltöltés a NostrImg-be. A NostrImg a képet bármikor megváltoztathatja</string>
+
+    <string name="upload_server_imgur_nip94">Ellenőrizhető Imgur (NIP-94)</string>
+    <string name="upload_server_imgur_nip94_explainer">Megvéd attól, hogy az Imgur a képet/videót a közzététel után megváltoztassa</string>
+
+    <string name="upload_server_nostrimg_nip94">Ellenőrizhető NostrImg (NIP-94)</string>
+    <string name="upload_server_nostrimg_nip94_explainer">Megvéd attól, hogy az NostrImg a képet a közzététel után megváltoztassa</string>
+
+    <string name="upload_server_relays_nip95">Saját csomópontjaid (NIP-95)</string>
+    <string name="upload_server_relays_nip95_explainer">A fájlokat a csomópontokra töltik fel és ott tárolják. Rögzített URL-től mentesek (harmadik féltől való függőség). Győződj meg róla, hogy legalább egy NIP-95 csomópont a csomópontlistában szerepel</string>
+
 </resources>

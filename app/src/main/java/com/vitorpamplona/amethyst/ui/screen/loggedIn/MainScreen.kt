@@ -88,33 +88,23 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
 fun FloatingButtons(navController: NavHostController, accountViewModel: AccountViewModel, accountStateViewModel: AccountStateViewModel) {
     val accountState by accountStateViewModel.accountContent.collectAsState()
 
-    if (currentRoute(navController)?.substringBefore("?") == Route.Home.base) {
-        Crossfade(targetState = accountState, animationSpec = tween(durationMillis = 100)) { state ->
-            when (state) {
-                is AccountState.LoggedInViewOnly -> {
-                    // Does nothing.
-                }
-                is AccountState.LoggedOff -> {
-                    // Does nothing.
-                }
-                is AccountState.LoggedIn -> {
+    Crossfade(targetState = accountState, animationSpec = tween(durationMillis = 100)) { state ->
+        when (state) {
+            is AccountState.LoggedInViewOnly -> {
+                // Does nothing.
+            }
+            is AccountState.LoggedOff -> {
+                // Does nothing.
+            }
+            is AccountState.LoggedIn -> {
+                if (currentRoute(navController)?.substringBefore("?") == Route.Home.base) {
                     NewNoteButton(state.account, accountViewModel, navController)
                 }
-            }
-        }
-    }
-
-    if (currentRoute(navController) == Route.Message.base) {
-        Crossfade(targetState = accountState, animationSpec = tween(durationMillis = 100)) { state ->
-            when (state) {
-                is AccountState.LoggedInViewOnly -> {
-                    // Does nothing.
-                }
-                is AccountState.LoggedOff -> {
-                    // Does nothing.
-                }
-                is AccountState.LoggedIn -> {
+                if (currentRoute(navController) == Route.Message.base) {
                     NewChannelButton(state.account)
+                }
+                if (currentRoute(navController)?.substringBefore("?") == Route.Video.base) {
+                    NewImageButton(accountViewModel, navController)
                 }
             }
         }

@@ -20,7 +20,7 @@ class ChannelMessageEvent(
     companion object {
         const val kind = 42
 
-        fun create(message: String, channel: String, replyTos: List<String>? = null, mentions: List<String>? = null, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ChannelMessageEvent {
+        fun create(message: String, channel: String, replyTos: List<String>? = null, mentions: List<String>? = null, zapReceiver: String?, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ChannelMessageEvent {
             val content = message
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf(
@@ -31,6 +31,9 @@ class ChannelMessageEvent(
             }
             mentions?.forEach {
                 tags.add(listOf("p", it))
+            }
+            zapReceiver?.let {
+                tags.add(listOf("zap", it))
             }
 
             val id = generateId(pubKey, createdAt, kind, tags, content)

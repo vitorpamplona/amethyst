@@ -653,13 +653,71 @@ object LocalCache {
         refreshObservers(note)
     }
 
-    fun consume(event: FileHeaderEvent) {
+    fun consume(event: FileHeaderEvent, relay: Relay?) {
         val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
 
         // Already processed this event.
         if (note.event != null) return
 
+        note.loadEvent(event, author, emptyList())
+
+        refreshObservers(note)
+    }
+
+    fun consume(event: FileStorageHeaderEvent, relay: Relay?) {
+        val note = getOrCreateNote(event.id)
         val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        note.loadEvent(event, author, emptyList())
+
+        refreshObservers(note)
+    }
+
+    fun consume(event: HighlightEvent, relay: Relay?) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        note.loadEvent(event, author, emptyList())
+
+        // Adds to user profile
+        author.addNote(note)
+
+        refreshObservers(note)
+    }
+
+    fun consume(event: FileStorageEvent, relay: Relay?) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
 
         note.loadEvent(event, author, emptyList())
 
@@ -720,6 +778,14 @@ object LocalCache {
 
         users.forEach {
             it.value.clearLive()
+        }
+    }
+
+    fun pruneFileStorageEvents(account: Account) {
+        val toBeRemoved = notes.filter { it.value.event is FileStorageEvent }
+
+        toBeRemoved.forEach {
+            notes.remove(it.key)
         }
     }
 

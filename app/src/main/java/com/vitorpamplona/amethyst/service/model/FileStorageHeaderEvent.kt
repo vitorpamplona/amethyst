@@ -5,7 +5,7 @@ import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
 import java.util.Date
 
-class FileHeaderEvent(
+class FileStorageHeaderEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
@@ -14,7 +14,8 @@ class FileHeaderEvent(
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
 
-    fun url() = tags.firstOrNull { it.size > 1 && it[0] == URL }?.get(1)
+    fun dataEventId() = tags.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)
+
     fun encryptionKey() = tags.firstOrNull { it.size > 2 && it[0] == ENCRYPTION_KEY }?.let { AESGCM(it[1], it[2]) }
     fun mimeType() = tags.firstOrNull { it.size > 1 && it[0] == MIME_TYPE }?.get(1)
     fun hash() = tags.firstOrNull { it.size > 1 && it[0] == HASH }?.get(1)
@@ -24,9 +25,8 @@ class FileHeaderEvent(
     fun blurhash() = tags.firstOrNull { it.size > 1 && it[0] == BLUR_HASH }?.get(1)
 
     companion object {
-        const val kind = 1063
+        const val kind = 1065
 
-        private const val URL = "url"
         private const val ENCRYPTION_KEY = "aes-256-gcm"
         private const val MIME_TYPE = "m"
         private const val FILE_SIZE = "size"
@@ -36,7 +36,7 @@ class FileHeaderEvent(
         private const val BLUR_HASH = "blurhash"
 
         fun create(
-            url: String,
+            storageEvent: FileStorageEvent,
             mimeType: String? = null,
             description: String? = null,
             hash: String? = null,
@@ -47,9 +47,9 @@ class FileHeaderEvent(
             encryptionKey: AESGCM? = null,
             privateKey: ByteArray,
             createdAt: Long = Date().time / 1000
-        ): FileHeaderEvent {
+        ): FileStorageHeaderEvent {
             val tags = listOfNotNull(
-                listOf(URL, url),
+                listOf("e", storageEvent.id),
                 mimeType?.let { listOf(MIME_TYPE, mimeType) },
                 hash?.let { listOf(HASH, it) },
                 size?.let { listOf(FILE_SIZE, it) },
@@ -63,9 +63,7 @@ class FileHeaderEvent(
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             val id = generateId(pubKey, createdAt, kind, tags, content)
             val sig = Utils.sign(id, privateKey)
-            return FileHeaderEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
+            return FileStorageHeaderEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
         }
     }
 }
-
-data class AESGCM(val key: String, val nonce: String)

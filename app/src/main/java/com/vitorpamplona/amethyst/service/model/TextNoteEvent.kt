@@ -26,6 +26,7 @@ class TextNoteEvent(
             mentions: List<String>?,
             addresses: List<ATag>?,
             extraTags: List<String>?,
+            zapReceiver: String?,
             privateKey: ByteArray,
             createdAt: Long = Date().time / 1000
         ): TextNoteEvent {
@@ -46,9 +47,13 @@ class TextNoteEvent(
             extraTags?.forEach {
                 tags.add(listOf("t", it))
             }
+            zapReceiver?.let {
+                tags.add(listOf("zap", it))
+            }
             findURLs(msg).forEach {
                 tags.add(listOf("r", it))
             }
+
             val id = generateId(pubKey, createdAt, kind, tags, msg)
             val sig = Utils.sign(id, privateKey)
             return TextNoteEvent(id.toHexKey(), pubKey, createdAt, tags, msg, sig.toHexKey())

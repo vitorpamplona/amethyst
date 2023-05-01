@@ -43,7 +43,7 @@ Or get the latest APK from the [Releases Section](https://github.com/vitorpamplo
 - [x] Badges (NIP-58)
 - [x] Hashtag Following and Custom Hashtags
 - [x] Polls (NIP-69)
-- [x] Verifiable uploads (NIP-94)
+- [x] Verifiable static content in URLs (NIP-94)
 - [x] Login with QR
 - [x] Wallet Connect API (NIP-47)
 - [x] Accessible uploads
@@ -53,6 +53,7 @@ Or get the latest APK from the [Releases Section](https://github.com/vitorpamplo
 - [x] Multiple Accounts
 - [x] Markdown Support
 - [x] Relay Authentication (NIP-42)
+- [x] Content stored in relays themselves (NIP-95)
 - [ ] Local Database 
 - [ ] View Individual Reactions (Like, Boost, Zaps, Reports) per Post
 - [ ] Bookmarks, Pinned Posts, Muted Events (NIP-51)

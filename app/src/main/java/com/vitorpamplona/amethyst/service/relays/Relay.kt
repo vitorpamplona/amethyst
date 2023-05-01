@@ -5,6 +5,7 @@ import com.google.gson.JsonElement
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.EventInterface
+import com.vitorpamplona.amethyst.service.model.RelayAuthEvent
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -95,8 +96,6 @@ class Relay(
                         val type = msg[0].asString
                         val channel = msg[1].asString
 
-                        // Log.w("Relay", "New Message $type, $url, $channel, ${msg[2]}")
-
                         when (type) {
                             "EVENT" -> {
                                 val event = Event.fromJson(msg[2], Client.lenient)
@@ -115,15 +114,15 @@ class Relay(
                                 it.onRelayStateChange(this@Relay, Type.EOSE, channel)
                             }
                             "NOTICE" -> listeners.forEach {
-                                // Log.w("Relay", "Relay onNotice $url, $channel")
+                                Log.w("Relay", "Relay onNotice $url, $channel")
                                 it.onError(this@Relay, channel, Error("Relay sent notice: " + channel))
                             }
                             "OK" -> listeners.forEach {
-                                // Log.w("Relay", "Relay on OK $url, $channel")
+                                Log.w("Relay", "Relay on OK $url, ${msg[1].asString}, ${msg[2].asBoolean}, ${msg[3].asString}")
                                 it.onSendResponse(this@Relay, msg[1].asString, msg[2].asBoolean, msg[3].asString)
                             }
                             "AUTH" -> listeners.forEach {
-                                // Log.w("Relay", "Relay AUTH $url, $channel")
+                                // Log.w("Relay", "Relay$url, ${msg[1].asString}")
                                 it.onAuth(this@Relay, msg[1].asString)
                             }
                             else -> listeners.forEach {
@@ -206,7 +205,7 @@ class Relay(
                     val filters = Client.getSubscriptionFilters(requestId).filter { activeTypes.intersect(it.types).isNotEmpty() }
                     if (filters.isNotEmpty()) {
                         val request =
-                            """["REQ","$requestId",${filters.take(40).joinToString(",") { it.filter.toJson(url) }}]"""
+                            """["REQ","$requestId",${filters.take(10).joinToString(",") { it.filter.toJson(url) }}]"""
                         // println("FILTERSSENT $url $request")
                         socket?.send(request)
                         eventUploadCounterInBytes += request.bytesUsedInMemory()
@@ -234,10 +233,18 @@ class Relay(
     }
 
     fun send(signedEvent: EventInterface) {
-        if (write) {
-            val event = """["EVENT",${signedEvent.toJson()}]"""
+        if (signedEvent is RelayAuthEvent) {
+            val event = """["AUTH",${signedEvent.toJson()}]"""
             socket?.send(event)
             eventUploadCounterInBytes += event.bytesUsedInMemory()
+        }
+
+        if (write) {
+            if (signedEvent !is RelayAuthEvent) {
+                val event = """["EVENT",${signedEvent.toJson()}]"""
+                socket?.send(event)
+                eventUploadCounterInBytes += event.bytesUsedInMemory()
+            }
         }
     }
 

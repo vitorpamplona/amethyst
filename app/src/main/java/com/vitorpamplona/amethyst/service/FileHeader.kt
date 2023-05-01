@@ -19,17 +19,22 @@ class FileHeader(
 ) {
     companion object {
         fun prepare(fileUrl: String, mimeType: String?, description: String?, onReady: (FileHeader) -> Unit, onError: () -> Unit) {
+            val imageData = URL(fileUrl).readBytes()
+
+            prepare(imageData, fileUrl, mimeType, description, onReady, onError)
+        }
+
+        fun prepare(data: ByteArray, fileUrl: String, mimeType: String?, description: String?, onReady: (FileHeader) -> Unit, onError: () -> Unit) {
             try {
-                val imageData = URL(fileUrl).readBytes()
                 val sha256 = MessageDigest.getInstance("SHA-256")
 
-                val hash = sha256.digest(imageData).toHexKey()
-                val size = imageData.size
+                val hash = sha256.digest(data).toHexKey()
+                val size = data.size
 
                 val blurHash = if (mimeType?.startsWith("image/") == true) {
                     val opt = BitmapFactory.Options()
                     opt.inPreferredConfig = Bitmap.Config.ARGB_8888
-                    val mBitmap = BitmapFactory.decodeByteArray(imageData, 0, imageData.size, opt)
+                    val mBitmap = BitmapFactory.decodeByteArray(data, 0, data.size, opt)
 
                     val intArray = IntArray(mBitmap.width * mBitmap.height)
                     mBitmap.getPixels(

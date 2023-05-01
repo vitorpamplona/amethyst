@@ -5,14 +5,13 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.*
 
-object GlobalFeedFilter : AdditiveFeedFilter<Note>() {
+object VideoFeedFilter : AdditiveFeedFilter<Note>() {
     lateinit var account: Account
 
     override fun feed(): List<Note> {
         val notes = innerApplyFilter(LocalCache.notes.values)
-        val longFormNotes = innerApplyFilter(LocalCache.addressables.values)
 
-        return sort(notes + longFormNotes)
+        return sort(notes)
     }
 
     override fun applyFilter(collection: Set<Note>): Set<Note> {
@@ -20,21 +19,12 @@ object GlobalFeedFilter : AdditiveFeedFilter<Note>() {
     }
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
-        val followChannels = account.followingChannels
-        val followUsers = account.followingKeySet()
         val now = System.currentTimeMillis() / 1000
 
         return collection
             .asSequence()
             .filter {
-                it.event is BaseTextNoteEvent && it.replyTo.isNullOrEmpty()
-            }
-            .filter {
-                val channel = it.channelHex()
-                // does not show events already in the public chat list
-                (channel == null || channel !in followChannels) &&
-                    // does not show people the user already follows
-                    (it.author?.pubkeyHex !in followUsers)
+                it.event is FileHeaderEvent || it.event is FileStorageHeaderEvent
             }
             .filter { account.isAcceptable(it) }
             .filter {

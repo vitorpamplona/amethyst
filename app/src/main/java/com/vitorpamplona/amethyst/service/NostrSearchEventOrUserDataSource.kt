@@ -60,7 +60,7 @@ object NostrSearchEventOrUserDataSource : NostrDataSource("SingleEventFeed") {
             TypedFilter(
                 types = COMMON_FEED_TYPES,
                 filter = JsonFilter(
-                    kinds = listOf(TextNoteEvent.kind, LongTextNoteEvent.kind, PollNoteEvent.kind, ChannelMetadataEvent.kind, ChannelCreateEvent.kind, ChannelMessageEvent.kind),
+                    kinds = listOf(TextNoteEvent.kind, LongTextNoteEvent.kind, PollNoteEvent.kind, ChannelMetadataEvent.kind, ChannelCreateEvent.kind, ChannelMessageEvent.kind, HighlightEvent.kind),
                     search = mySearchString,
                     limit = 20
                 )

@@ -12,8 +12,8 @@ android {
         applicationId "com.vitorpamplona.amethyst"
         minSdk 26
         targetSdk 33
-        versionCode 126
-        versionName "0.36.0"
+        versionCode 134
+        versionName "0.40.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -86,7 +86,7 @@ android {
 
 dependencies {
     implementation 'androidx.core:core-ktx:1.10.0'
-    implementation 'androidx.activity:activity-compose:1.7.0-beta01'
+    implementation 'androidx.activity:activity-compose:1.7.0'
     implementation "androidx.compose.ui:ui:$compose_ui_version"
     implementation "androidx.compose.ui:ui-tooling-preview:$compose_ui_version"
 
@@ -134,7 +134,7 @@ dependencies {
     implementation 'tw.com.oneup.www:Baha-UrlPreview:1.0.1'
 
     // Encrypted Key Storage
-    implementation 'androidx.security:security-crypto-ktx:1.1.0-alpha05'
+    implementation 'androidx.security:security-crypto-ktx:1.1.0-alpha06'
 
     // view videos
     implementation 'com.google.android.exoplayer:exoplayer:2.18.6'
@@ -177,7 +177,7 @@ dependencies {
 
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'io.mockk:mockk:1.13.5'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.0-alpha01'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
     androidTestImplementation "androidx.compose.ui:ui-test-junit4:$compose_ui_version"
     debugImplementation "androidx.compose.ui:ui-tooling:$compose_ui_version"

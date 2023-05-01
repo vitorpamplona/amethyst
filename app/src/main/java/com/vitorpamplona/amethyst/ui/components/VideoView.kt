@@ -95,3 +95,7 @@ fun VideoView(videoUri: Uri, description: String? = null, onDialog: ((Boolean) -
         }
     }
 }
+
+@Composable
+fun VideoView(videoBytes: ByteArray, description: String? = null, onDialog: ((Boolean) -> Unit)? = null) {
+}

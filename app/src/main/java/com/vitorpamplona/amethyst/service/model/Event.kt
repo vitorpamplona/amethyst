@@ -41,6 +41,10 @@ open class Event(
     fun taggedUsers() = tags.filter { it.size > 1 && it[0] == "p" }.map { it[1] }
     fun taggedEvents() = tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }
 
+    fun taggedUrls() = tags.filter { it.size > 1 && it[0] == "r" }.map { it[1] }
+
+    override fun zapAddress() = tags.firstOrNull { it.size > 1 && it[0] == "zap" }?.get(1)
+
     fun taggedAddresses() = tags.filter { it.size > 1 && it[0] == "a" }.mapNotNull {
         val aTagValue = it[1]
         val relay = it.getOrNull(2)
@@ -223,6 +227,9 @@ open class Event(
             DeletionEvent.kind -> DeletionEvent(id, pubKey, createdAt, tags, content, sig)
 
             FileHeaderEvent.kind -> FileHeaderEvent(id, pubKey, createdAt, tags, content, sig)
+            FileStorageEvent.kind -> FileStorageEvent(id, pubKey, createdAt, tags, content, sig)
+            FileStorageHeaderEvent.kind -> FileStorageHeaderEvent(id, pubKey, createdAt, tags, content, sig)
+            HighlightEvent.kind -> HighlightEvent(id, pubKey, createdAt, tags, content, sig)
             LnZapEvent.kind -> LnZapEvent(id, pubKey, createdAt, tags, content, sig)
             LnZapPaymentRequestEvent.kind -> LnZapPaymentRequestEvent(id, pubKey, createdAt, tags, content, sig)
             LnZapPaymentResponseEvent.kind -> LnZapPaymentResponseEvent(id, pubKey, createdAt, tags, content, sig)

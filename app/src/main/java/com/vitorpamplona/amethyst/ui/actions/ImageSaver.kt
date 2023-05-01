@@ -7,13 +7,17 @@ import android.media.MediaScannerConnection
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import android.webkit.MimeTypeMap
 import androidx.annotation.RequiresApi
 import com.vitorpamplona.amethyst.BuildConfig
 import okhttp3.*
 import okio.BufferedSource
 import okio.IOException
+import okio.buffer
 import okio.sink
+import okio.source
 import java.io.File
+import java.util.UUID
 
 object ImageSaver {
     /**
@@ -72,6 +76,38 @@ object ImageSaver {
                 }
             }
         })
+    }
+
+    fun saveImage(
+        byteArray: ByteArray,
+        mimeType: String?,
+        context: Context,
+        onSuccess: () -> Any?,
+        onError: (Throwable) -> Any?
+    ) {
+        try {
+            val extension = mimeType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
+            val buffer = byteArray.inputStream().source().buffer()
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                saveContentQ(
+                    displayName = UUID.randomUUID().toString(),
+                    contentType = mimeType ?: "",
+                    contentSource = buffer,
+                    contentResolver = context.contentResolver
+                )
+            } else {
+                saveContentDefault(
+                    fileName = UUID.randomUUID().toString() + ".$extension",
+                    contentSource = buffer,
+                    context = context
+                )
+            }
+            onSuccess()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            onError(e)
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.Q)

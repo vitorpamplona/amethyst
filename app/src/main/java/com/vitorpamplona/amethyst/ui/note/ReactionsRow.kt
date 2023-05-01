@@ -45,6 +45,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -116,6 +117,7 @@ fun ReplyReaction(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     showCounter: Boolean = true,
+    iconSize: Dp = 20.dp,
     onPress: () -> Unit
 ) {
     val repliesState by baseNote.live().replies.observeAsState()
@@ -125,7 +127,7 @@ fun ReplyReaction(
     val scope = rememberCoroutineScope()
 
     IconButton(
-        modifier = Modifier.size(20.dp),
+        modifier = Modifier.size(iconSize),
         onClick = {
             if (accountViewModel.isWriteable()) {
                 onPress()
@@ -140,7 +142,7 @@ fun ReplyReaction(
             }
         }
     ) {
-        ReplyIcon()
+        ReplyIcon(iconSize)
     }
 
     if (showCounter) {
@@ -153,19 +155,20 @@ fun ReplyReaction(
 }
 
 @Composable
-private fun ReplyIcon() {
+private fun ReplyIcon(iconSize: Dp = 15.dp) {
     Icon(
         painter = painterResource(R.drawable.ic_comment),
         null,
-        modifier = Modifier.size(15.dp),
+        modifier = Modifier.size(iconSize),
         tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
     )
 }
 
 @Composable
-private fun BoostReaction(
+public fun BoostReaction(
     baseNote: Note,
     accountViewModel: AccountViewModel,
+    iconSize: Dp = 20.dp,
     onQuotePress: () -> Unit
 ) {
     val boostsState by baseNote.live().boosts.observeAsState()
@@ -178,7 +181,7 @@ private fun BoostReaction(
     var wantsToBoost by remember { mutableStateOf(false) }
 
     IconButton(
-        modifier = Modifier.then(Modifier.size(20.dp)),
+        modifier = Modifier.then(Modifier.size(iconSize)),
         onClick = {
             if (accountViewModel.isWriteable()) {
                 if (accountViewModel.hasBoosted(baseNote)) {
@@ -215,14 +218,14 @@ private fun BoostReaction(
             Icon(
                 painter = painterResource(R.drawable.ic_retweeted),
                 null,
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(iconSize),
                 tint = Color.Unspecified
             )
         } else {
             Icon(
                 painter = painterResource(R.drawable.ic_retweet),
                 null,
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(iconSize),
                 tint = grayTint
             )
         }
@@ -238,7 +241,9 @@ private fun BoostReaction(
 @Composable
 fun LikeReaction(
     baseNote: Note,
-    accountViewModel: AccountViewModel
+    accountViewModel: AccountViewModel,
+    iconSize: Dp = 20.dp,
+    heartSize: Dp = 16.dp
 ) {
     val reactionsState by baseNote.live().reactions.observeAsState()
     val reactedNote = reactionsState?.note ?: return
@@ -248,7 +253,7 @@ fun LikeReaction(
     val scope = rememberCoroutineScope()
 
     IconButton(
-        modifier = Modifier.then(Modifier.size(20.dp)),
+        modifier = Modifier.then(Modifier.size(iconSize)),
         onClick = {
             if (accountViewModel.isWriteable()) {
                 if (accountViewModel.hasReactedTo(baseNote)) {
@@ -271,14 +276,14 @@ fun LikeReaction(
             Icon(
                 painter = painterResource(R.drawable.ic_liked),
                 null,
-                modifier = Modifier.size(16.dp),
+                modifier = Modifier.size(heartSize),
                 tint = Color.Unspecified
             )
         } else {
             Icon(
                 painter = painterResource(R.drawable.ic_like),
                 null,
-                modifier = Modifier.size(16.dp),
+                modifier = Modifier.size(heartSize),
                 tint = grayTint
             )
         }
@@ -296,7 +301,9 @@ fun LikeReaction(
 fun ZapReaction(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    textModifier: Modifier = Modifier
+    textModifier: Modifier = Modifier,
+    iconSize: Dp = 20.dp,
+    animationSize: Dp = 14.dp
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
@@ -326,8 +333,7 @@ fun ZapReaction(
 
     Row(
         verticalAlignment = CenterVertically,
-        modifier = Modifier
-            .then(Modifier.size(20.dp))
+        modifier = Modifier.size(iconSize)
             .combinedClickable(
                 role = Role.Button,
                 interactionSource = remember { MutableInteractionSource() },
@@ -427,7 +433,7 @@ fun ZapReaction(
             Icon(
                 imageVector = Icons.Default.Bolt,
                 contentDescription = stringResource(R.string.zaps),
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(iconSize),
                 tint = BitcoinOrange
             )
         } else {
@@ -435,14 +441,14 @@ fun ZapReaction(
                 Icon(
                     imageVector = Icons.Outlined.Bolt,
                     contentDescription = stringResource(id = R.string.zaps),
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(iconSize),
                     tint = grayTint
                 )
             } else {
                 Spacer(Modifier.width(3.dp))
                 CircularProgressIndicator(
                     progress = zappingProgress,
-                    modifier = Modifier.size(14.dp),
+                    modifier = Modifier.size(animationSize),
                     strokeWidth = 2.dp
                 )
             }
@@ -466,18 +472,18 @@ fun ZapReaction(
 }
 
 @Composable
-private fun ViewCountReaction(idHex: String) {
+public fun ViewCountReaction(idHex: String, iconSize: Dp = 20.dp, barChartSize: Dp = 19.dp, numberSize: Dp = 24.dp) {
     val uri = LocalUriHandler.current
     val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
 
     IconButton(
-        modifier = Modifier.size(20.dp),
+        modifier = Modifier.size(iconSize),
         onClick = { uri.openUri("https://counter.amethyst.social/$idHex/") }
     ) {
         Icon(
             imageVector = Icons.Outlined.BarChart,
             null,
-            modifier = Modifier.size(19.dp),
+            modifier = Modifier.size(barChartSize),
             tint = grayTint
         )
     }
@@ -490,7 +496,7 @@ private fun ViewCountReaction(idHex: String) {
                 .memoryCachePolicy(CachePolicy.ENABLED)
                 .build(),
             contentDescription = stringResource(R.string.view_count),
-            modifier = Modifier.height(24.dp),
+            modifier = Modifier.height(numberSize),
             colorFilter = ColorFilter.tint(grayTint)
         )
     }

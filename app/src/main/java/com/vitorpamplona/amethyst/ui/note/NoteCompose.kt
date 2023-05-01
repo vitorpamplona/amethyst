@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.ui.theme.Following
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.math.BigDecimal
+import java.net.URL
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTimedValue
 
@@ -169,6 +170,8 @@ fun NoteComposeInner(
         BadgeDisplay(baseNote = note)
     } else if (noteEvent is FileHeaderEvent) {
         FileHeaderDisplay(note)
+    } else if (noteEvent is FileStorageHeaderEvent) {
+        FileStorageHeaderDisplay(note)
     } else {
         var isNew by remember { mutableStateOf<Boolean>(false) }
 
@@ -519,6 +522,26 @@ fun NoteComposeInner(
                             modifier = Modifier.padding(top = 10.dp),
                             thickness = 0.25.dp
                         )
+                    } else if (noteEvent is HighlightEvent) {
+                        DisplayHighlight(
+                            noteEvent.quote(),
+                            noteEvent.author(),
+                            noteEvent.inUrl(),
+                            makeItShort,
+                            canPreview,
+                            backgroundColor,
+                            accountViewModel,
+                            navController
+                        )
+
+                        if (!makeItShort) {
+                            ReactionsRow(note, accountViewModel, navController)
+                        }
+
+                        Divider(
+                            modifier = Modifier.padding(top = 10.dp),
+                            thickness = 0.25.dp
+                        )
                     } else {
                         val eventContent = accountViewModel.decrypt(note)
 
@@ -567,6 +590,66 @@ fun NoteComposeInner(
 
                     NoteQuickActionMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun DisplayHighlight(
+    highlight: String,
+    authorHex: String?,
+    url: String?,
+    makeItShort: Boolean,
+    canPreview: Boolean,
+    backgroundColor: Color,
+    accountViewModel: AccountViewModel,
+    navController: NavController
+) {
+    val quote = highlight.split("\n").map { "> *${it.removeSuffix(" ")}*" }.joinToString("\n")
+
+    if (quote != null) {
+        TranslatableRichTextViewer(
+            quote,
+            canPreview = canPreview && !makeItShort,
+            Modifier.fillMaxWidth(),
+            emptyList(),
+            backgroundColor,
+            accountViewModel,
+            navController
+        )
+    }
+
+    FlowRow() {
+        authorHex?.let { authorHex ->
+            val userBase = LocalCache.checkGetOrCreateUser(authorHex)
+
+            if (userBase != null) {
+                val userState by userBase.live().metadata.observeAsState()
+                val user = userState?.user
+
+                if (user != null) {
+                    CreateClickableText(
+                        user.toBestDisplayName(),
+                        "",
+                        "User/${user.pubkeyHex}",
+                        navController
+                    )
+                }
+            }
+        }
+
+        url?.let { url ->
+            val validatedUrl = try {
+                URL(url)
+            } catch (e: Exception) {
+                Log.w("Note Compose", "Invalid URI: $url")
+                null
+            }
+
+            validatedUrl?.host?.let { host ->
+                Text("on ")
+                ClickableUrl(urlText = host, url = url)
             }
         }
     }
@@ -793,10 +876,11 @@ fun FileHeaderDisplay(note: Note) {
             val removedParamsFromUrl = fullUrl.split("?")[0].lowercase()
             val isImage = imageExtensions.any { removedParamsFromUrl.endsWith(it) }
             val isVideo = videoExtensions.any { removedParamsFromUrl.endsWith(it) }
+            val uri = "nostr:" + note.toNEvent()
             content = if (isImage) {
-                ZoomableImage(fullUrl, description, hash, blurHash)
+                ZoomableUrlImage(fullUrl, description, hash, blurHash, uri)
             } else {
-                ZoomableVideo(fullUrl, description, hash)
+                ZoomableUrlVideo(fullUrl, description, hash, uri)
             }
         }
     }
@@ -804,6 +888,44 @@ fun FileHeaderDisplay(note: Note) {
     content?.let {
         ZoomableContentView(content = it, listOf(it))
     } ?: UrlPreview(fullUrl, "$fullUrl ")
+}
+
+@Composable
+fun FileStorageHeaderDisplay(baseNote: Note) {
+    val eventHeader = (baseNote.event as? FileStorageHeaderEvent) ?: return
+
+    val fileNote = eventHeader.dataEventId()?.let { LocalCache.checkGetOrCreateNote(it) } ?: return
+
+    val noteState by fileNote.live().metadata.observeAsState()
+    val note = noteState?.note
+
+    val eventBytes = (note?.event as? FileStorageEvent)
+
+    var content by remember { mutableStateOf<ZoomableContent?>(null) }
+
+    LaunchedEffect(key1 = eventHeader.id, key2 = noteState) {
+        withContext(Dispatchers.IO) {
+            val uri = "nostr:" + baseNote.toNEvent()
+            val bytes = eventBytes?.decode()
+            val blurHash = eventHeader.blurhash()
+            val description = eventHeader.content
+            val mimeType = eventHeader.mimeType()
+
+            content = if (mimeType?.startsWith("image") == true) {
+                ZoomableBitmapImage(bytes, mimeType, description, blurHash, true, uri)
+            } else {
+                if (bytes != null) {
+                    ZoomableBytesVideo(bytes, mimeType, description, true, uri)
+                } else {
+                    null
+                }
+            }
+        }
+    }
+
+    content?.let {
+        ZoomableContentView(content = it, listOf(it))
+    } ?: BlankNote()
 }
 
 @Composable

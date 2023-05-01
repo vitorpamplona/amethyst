@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.model
 
 import android.content.res.Resources
+import android.util.Log
 import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.FileHeader
@@ -11,6 +12,7 @@ import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.RelayPool
+import com.vitorpamplona.amethyst.ui.actions.ServersAvailable
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.Nip47URI
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -45,6 +47,7 @@ class Account(
     var translateTo: String = Locale.getDefault().language,
     var zapAmountChoices: List<Long> = listOf(500L, 1000L, 5000L),
     var defaultZapType: LnZapEvent.ZapType = LnZapEvent.ZapType.PRIVATE,
+    var defaultFileServer: ServersAvailable = ServersAvailable.IMGUR,
     var zapPaymentRequest: Nip47URI? = null,
     var hideDeleteRequestDialog: Boolean = false,
     var hideBlockAlertDialog: Boolean = false,
@@ -373,6 +376,34 @@ class Account(
         }
     }
 
+    fun sendNip95(data: ByteArray, headerInfo: FileHeader): Note? {
+        if (!isWriteable()) return null
+
+        val data = FileStorageEvent.create(
+            mimeType = headerInfo.mimeType ?: "",
+            data = data,
+            privateKey = loggedIn.privKey!!
+        )
+
+        val signedEvent = FileStorageHeaderEvent.create(
+            data,
+            mimeType = headerInfo.mimeType,
+            hash = headerInfo.hash,
+            size = headerInfo.size.toString(),
+            blurhash = headerInfo.blurHash,
+            description = headerInfo.description,
+            privateKey = loggedIn.privKey!!
+        )
+
+        Client.send(data)
+        LocalCache.consume(data, null)
+
+        Client.send(signedEvent)
+        LocalCache.consume(signedEvent, null)
+
+        return LocalCache.notes[signedEvent.id]
+    }
+
     fun sendHeader(headerInfo: FileHeader): Note? {
         if (!isWriteable()) return null
 
@@ -387,12 +418,12 @@ class Account(
         )
 
         Client.send(signedEvent)
-        LocalCache.consume(signedEvent)
+        LocalCache.consume(signedEvent, null)
 
         return LocalCache.notes[signedEvent.id]
     }
 
-    fun sendPost(message: String, replyTo: List<Note>?, mentions: List<User>?, tags: List<String>? = null) {
+    fun sendPost(message: String, replyTo: List<Note>?, mentions: List<User>?, tags: List<String>? = null, zapReceiver: String? = null) {
         if (!isWriteable()) return
 
         val repliesToHex = replyTo?.filter { it.address() == null }?.map { it.idHex }
@@ -405,6 +436,7 @@ class Account(
             mentions = mentionsHex,
             addresses = addresses,
             extraTags = tags,
+            zapReceiver = zapReceiver,
             privateKey = loggedIn.privKey!!
         )
 
@@ -420,7 +452,8 @@ class Account(
         valueMaximum: Int?,
         valueMinimum: Int?,
         consensusThreshold: Int?,
-        closedAt: Int?
+        closedAt: Int?,
+        zapReceiver: String? = null
     ) {
         if (!isWriteable()) return
 
@@ -438,14 +471,15 @@ class Account(
             valueMaximum = valueMaximum,
             valueMinimum = valueMinimum,
             consensusThreshold = consensusThreshold,
-            closedAt = closedAt
+            closedAt = closedAt,
+            zapReceiver = zapReceiver
         )
         // println("Sending new PollNoteEvent: %s".format(signedEvent.toJson()))
         Client.send(signedEvent)
         LocalCache.consume(signedEvent)
     }
 
-    fun sendChannelMessage(message: String, toChannel: String, replyTo: List<Note>?, mentions: List<User>?) {
+    fun sendChannelMessage(message: String, toChannel: String, replyTo: List<Note>?, mentions: List<User>?, zapReceiver: String? = null) {
         if (!isWriteable()) return
 
         // val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
@@ -457,13 +491,14 @@ class Account(
             channel = toChannel,
             replyTos = repliesToHex,
             mentions = mentionsHex,
+            zapReceiver = zapReceiver,
             privateKey = loggedIn.privKey!!
         )
         Client.send(signedEvent)
         LocalCache.consume(signedEvent, null)
     }
 
-    fun sendPrivateMessage(message: String, toUser: String, replyingTo: Note? = null, mentions: List<User>?) {
+    fun sendPrivateMessage(message: String, toUser: String, replyingTo: Note? = null, mentions: List<User>?, zapReceiver: String? = null) {
         if (!isWriteable()) return
         val user = LocalCache.users[toUser] ?: return
 
@@ -476,6 +511,7 @@ class Account(
             msg = message,
             replyTos = repliesToHex,
             mentions = mentionsHex,
+            zapReceiver = zapReceiver,
             privateKey = loggedIn.privKey!!,
             advertiseNip18 = false
         )
@@ -652,6 +688,12 @@ class Account(
         saveable.invalidateData()
     }
 
+    fun changeDefaultFileServer(server: ServersAvailable) {
+        defaultFileServer = server
+        live.invalidateData()
+        saveable.invalidateData()
+    }
+
     fun changeZapAmounts(newAmounts: List<Long>) {
         zapAmountChoices = newAmounts
         live.invalidateData()
@@ -738,7 +780,11 @@ class Account(
                 }
 
                 if (altPrivateKeyToUse != null && altPubkeyToUse != null) {
-                    LnZapRequestEvent.checkForPrivateZap(event, altPrivateKeyToUse, altPubkeyToUse)
+                    val result = LnZapRequestEvent.checkForPrivateZap(event, altPrivateKeyToUse, altPubkeyToUse)
+                    if (result == null) {
+                        Log.w("Private ZAP Decrypt", "Fail to decrypt Zap from ${note.author?.toBestDisplayName()} ${note.idNote()}")
+                    }
+                    result
                 } else {
                     null
                 }

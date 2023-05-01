@@ -59,7 +59,7 @@ val noProtocolUrlValidator = Pattern.compile("(([\\w\\d-]+\\.)*[a-zA-Z][\\w-]+[\
 val tagIndex = Pattern.compile("\\#\\[([0-9]+)\\](.*)")
 
 val mentionsPattern: Pattern = Pattern.compile("@([A-Za-z0-9_\\-]+)")
-val hashTagsPattern: Pattern = Pattern.compile("#([a-z0-9_\\-]+)(.*)", Pattern.CASE_INSENSITIVE)
+val hashTagsPattern: Pattern = Pattern.compile("#([^\\s!@#\$%^&*()=+./,\\[{\\]};:'\"?><]+)(.*)", Pattern.CASE_INSENSITIVE)
 val urlPattern: Pattern = Patterns.WEB_URL
 
 fun isValidURL(url: String?): Boolean {
@@ -86,7 +86,8 @@ fun RichTextViewer(
     navController: NavController
 ) {
     Column(modifier = modifier) {
-        if (content.startsWith("# ") ||
+        if (content.startsWith("> ") ||
+            content.startsWith("# ") ||
             content.contains("##") ||
             content.contains("**") ||
             content.contains("__") ||
@@ -142,9 +143,9 @@ fun RichTextViewer(
             val imagesForPager = urlSet.mapNotNull { fullUrl ->
                 val removedParamsFromUrl = fullUrl.split("?")[0].lowercase()
                 if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-                    ZoomableImage(fullUrl)
+                    ZoomableUrlImage(fullUrl)
                 } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-                    ZoomableVideo(fullUrl)
+                    ZoomableUrlVideo(fullUrl)
                 } else {
                     null
                 }
