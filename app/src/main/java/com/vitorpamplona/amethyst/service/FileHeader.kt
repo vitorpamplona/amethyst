@@ -19,9 +19,14 @@ class FileHeader(
 ) {
     companion object {
         fun prepare(fileUrl: String, mimeType: String?, description: String?, onReady: (FileHeader) -> Unit, onError: () -> Unit) {
-            val imageData = URL(fileUrl).readBytes()
+            try {
+                val imageData = URL(fileUrl).readBytes()
 
-            prepare(imageData, fileUrl, mimeType, description, onReady, onError)
+                prepare(imageData, fileUrl, mimeType, description, onReady, onError)
+            } catch (e: Exception) {
+                Log.e("ImageDownload", "Couldn't download image from server: ${e.message}")
+                onError()
+            }
         }
 
         fun prepare(data: ByteArray, fileUrl: String, mimeType: String?, description: String?, onReady: (FileHeader) -> Unit, onError: () -> Unit) {
