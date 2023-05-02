@@ -95,7 +95,7 @@ class ZoomableUrlImage(
     url: String,
     description: String? = null,
     hash: String? = null,
-    val bluehash: String? = null,
+    val blurhash: String? = null,
     dim: String? = null,
     uri: String? = null
 ) : ZoomableUrlContent(url, description, hash, dim, uri)
@@ -213,32 +213,36 @@ private fun LocalImageView(
     }
 
     Box(contentAlignment = Alignment.Center) {
-        AsyncImage(
-            model = content.localFile,
-            contentDescription = content.description,
-            contentScale = ContentScale.FillWidth,
-            modifier = mainImageModifier,
-            onLoading = {
-                imageState = it
-            },
-            onSuccess = {
-                imageState = it
-            }
-        )
+        if (content.localFile.exists()) {
+            AsyncImage(
+                model = content.localFile,
+                contentDescription = content.description,
+                contentScale = ContentScale.FillWidth,
+                modifier = mainImageModifier,
+                onLoading = {
+                    imageState = it
+                },
+                onSuccess = {
+                    imageState = it
+                }
+            )
+        }
 
         if (imageState is AsyncImagePainter.State.Success) {
             HashVerificationSymbol(content.isVerified, Modifier.align(Alignment.TopEnd))
         }
 
-        AnimatedVisibility(
-            visible = imageState !is AsyncImagePainter.State.Success,
-            exit = fadeOut(animationSpec = tween(200))
-        ) {
-            if (content.blurhash != null) {
-                DisplayBlueHash(content, mainImageModifier)
-            } else {
-                DisplayUrlWithLoadingSymbol(content)
+        if (content.blurhash != null) {
+            AnimatedVisibility(
+                visible = imageState !is AsyncImagePainter.State.Success,
+                exit = fadeOut(animationSpec = tween(200))
+            ) {
+                DisplayBlurHash(content.blurhash, content.description, mainImageModifier)
             }
+        }
+
+        if (imageState is AsyncImagePainter.State.Error) {
+            DisplayUrlWithLoadingSymbol(content)
         }
     }
 }
@@ -286,15 +290,17 @@ private fun UrlImageView(
             HashVerificationSymbol(verifiedHash, Modifier.align(Alignment.TopEnd))
         }
 
-        AnimatedVisibility(
-            visible = imageState !is AsyncImagePainter.State.Success,
-            exit = fadeOut(animationSpec = tween(200))
-        ) {
-            if (content.bluehash != null) {
-                DisplayBlueHash(content, mainImageModifier)
-            } else {
-                DisplayUrlWithLoadingSymbol(content)
+        if (content.blurhash != null) {
+            AnimatedVisibility(
+                visible = imageState !is AsyncImagePainter.State.Success,
+                exit = fadeOut(animationSpec = tween(200))
+            ) {
+                DisplayBlurHash(content.blurhash, content.description, mainImageModifier)
             }
+        }
+
+        if (imageState is AsyncImagePainter.State.Error) {
+            DisplayUrlWithLoadingSymbol(content)
         }
     }
 }
@@ -354,38 +360,20 @@ private fun DisplayUrlWithLoadingSymbol(content: ZoomableContent) {
 }
 
 @Composable
-private fun DisplayBlueHash(
-    content: ZoomableUrlImage,
+private fun DisplayBlurHash(
+    blurhash: String?,
+    description: String?,
     modifier: Modifier
 ) {
-    if (content.bluehash == null) return
+    if (blurhash == null) return
 
     val context = LocalContext.current
     AsyncImage(
         model = BlurHashRequester.imageRequest(
             context,
-            content.bluehash
+            blurhash
         ),
-        contentDescription = content.description,
-        contentScale = ContentScale.FillWidth,
-        modifier = modifier
-    )
-}
-
-@Composable
-private fun DisplayBlueHash(
-    content: ZoomableLocalImage,
-    modifier: Modifier
-) {
-    if (content.blurhash == null) return
-
-    val context = LocalContext.current
-    AsyncImage(
-        model = BlurHashRequester.imageRequest(
-            context,
-            content.blurhash
-        ),
-        contentDescription = content.description,
+        contentDescription = description,
         contentScale = ContentScale.FillWidth,
         modifier = modifier
     )
