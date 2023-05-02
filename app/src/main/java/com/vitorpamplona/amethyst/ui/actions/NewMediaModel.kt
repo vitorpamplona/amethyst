@@ -61,11 +61,13 @@ open class NewMediaModel : ViewModel() {
             contentResolver.openInputStream(uri)?.use {
                 createNIP95Record(it.readBytes(), contentType, description)
             }
-                ?: viewModelScope.launch {
-                    imageUploadingError.emit("Failed to upload the image / video")
-                    isUploadingImage = false
-                    uploadingPercentage.value = 0.00f
-                    uploadingDescription.value = null
+                ?: run {
+                    viewModelScope.launch {
+                        imageUploadingError.emit("Failed to upload the image / video")
+                        isUploadingImage = false
+                        uploadingPercentage.value = 0.00f
+                        uploadingDescription.value = null
+                    }
                 }
         } else {
             uploadingPercentage.value = 0.1f

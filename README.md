@@ -54,6 +54,7 @@ Or get the latest APK from the [Releases Section](https://github.com/vitorpamplo
 - [x] Markdown Support
 - [x] Relay Authentication (NIP-42)
 - [x] Content stored in relays themselves (NIP-95)
+- [ ] Image/Video Capture in the app
 - [ ] Local Database 
 - [ ] View Individual Reactions (Like, Boost, Zaps, Reports) per Post
 - [ ] Bookmarks, Pinned Posts, Muted Events (NIP-51)

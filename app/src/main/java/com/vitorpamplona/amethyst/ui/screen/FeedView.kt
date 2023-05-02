@@ -42,7 +42,8 @@ fun FeedView(
     navController: NavController,
     routeForLastRead: String?,
     scrollStateKey: String? = null,
-    scrollToTop: Boolean = false
+    scrollToTop: Boolean = false,
+    enablePullRefresh: Boolean = true
 ) {
     val feedState by viewModel.feedContent.collectAsState()
 
@@ -50,7 +51,13 @@ fun FeedView(
     val refresh = { refreshing = true; viewModel.invalidateData(); refreshing = false }
     val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = refresh)
 
-    Box(Modifier.pullRefresh(pullRefreshState)) {
+    val modifier = if (enablePullRefresh) {
+        Modifier.pullRefresh(pullRefreshState)
+    } else {
+        Modifier
+    }
+
+    Box(modifier) {
         Column {
             Crossfade(
                 targetState = feedState,
@@ -88,7 +95,9 @@ fun FeedView(
             }
         }
 
-        PullRefreshIndicator(refreshing, pullRefreshState, Modifier.align(Alignment.TopCenter))
+        if (enablePullRefresh) {
+            PullRefreshIndicator(refreshing, pullRefreshState, Modifier.align(Alignment.TopCenter))
+        }
     }
 }
 

@@ -873,13 +873,13 @@ fun FileHeaderDisplay(note: Note) {
         withContext(Dispatchers.IO) {
             val blurHash = event.blurhash()
             val hash = event.hash()
+            val dimensions = event.dimensions()
             val description = event.content
             val removedParamsFromUrl = fullUrl.split("?")[0].lowercase()
             val isImage = imageExtensions.any { removedParamsFromUrl.endsWith(it) }
-            val isVideo = videoExtensions.any { removedParamsFromUrl.endsWith(it) }
             val uri = "nostr:" + note.toNEvent()
             content = if (isImage) {
-                ZoomableUrlImage(fullUrl, description, hash, blurHash, uri)
+                ZoomableUrlImage(fullUrl, description, hash, blurHash, dimensions, uri)
             } else {
                 ZoomableUrlVideo(fullUrl, description, hash, uri)
             }
@@ -888,7 +888,7 @@ fun FileHeaderDisplay(note: Note) {
 
     content?.let {
         ZoomableContentView(content = it, listOf(it))
-    } ?: UrlPreview(fullUrl, "$fullUrl ")
+    }
 }
 
 @Composable
@@ -911,14 +911,30 @@ fun FileStorageHeaderDisplay(baseNote: Note) {
             val localDir = File(File(appContext.externalCacheDir, "NIP95"), fileNote.idHex)
             val bytes = eventBytes?.decode()
             val blurHash = eventHeader.blurhash()
+            val dimensions = eventHeader.dimensions()
             val description = eventHeader.content
             val mimeType = eventHeader.mimeType()
 
             content = if (mimeType?.startsWith("image") == true) {
-                ZoomableBitmapImage(localDir, mimeType, description, blurHash, true, uri)
+                ZoomableLocalImage(
+                    localFile = localDir,
+                    mimeType = mimeType,
+                    description = description,
+                    blurhash = blurHash,
+                    dim = dimensions,
+                    isVerified = true,
+                    uri = uri
+                )
             } else {
                 if (bytes != null) {
-                    ZoomableBytesVideo(localDir, mimeType, description, true, uri)
+                    ZoomableLocalVideo(
+                        localFile = localDir,
+                        mimeType = mimeType,
+                        description = description,
+                        dim = dimensions,
+                        isVerified = true,
+                        uri = uri
+                    )
                 } else {
                     null
                 }
@@ -928,7 +944,7 @@ fun FileStorageHeaderDisplay(baseNote: Note) {
 
     content?.let {
         ZoomableContentView(content = it, listOf(it))
-    } ?: BlankNote()
+    }
 }
 
 @Composable

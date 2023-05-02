@@ -337,10 +337,10 @@
     <string name="upload_server_nostrbuild_explainer">Uploads to Nostr.build. Nostr.build can change your image at any time</string>
 
     <string name="upload_server_imgur_nip94">Verifiable Imgur (NIP-94)</string>
-    <string name="upload_server_imgur_nip94_explainer">Protects from Imgur changing your image/video after you post</string>
+    <string name="upload_server_imgur_nip94_explainer">Protects from Imgur modifying the content afterwards. This is a new NIP: other clients might not see the image</string>
 
     <string name="upload_server_nostrimg_nip94">Verifiable NostrImg (NIP-94)</string>
-    <string name="upload_server_nostrimg_nip94_explainer">Protects from NostrImg changing your image after you post</string>
+    <string name="upload_server_nostrimg_nip94_explainer">Protects from NostrImg modifying the content afterwards. This is a new NIP: other clients might not see the image</string>
 
     <string name="upload_server_relays_nip95">Your relays (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Files are uploaded to and hosted by relays. They are free from a fixed url (third-party dependency). Make sure to have a NIP-95 relay in your relay list</string>

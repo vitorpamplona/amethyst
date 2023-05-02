@@ -760,7 +760,7 @@ fun TabNotesNewThreads(accountViewModel: AccountViewModel, navController: NavCon
             Column(
                 modifier = Modifier.padding(vertical = 0.dp)
             ) {
-                FeedView(feedViewModel, accountViewModel, navController, null)
+                FeedView(feedViewModel, accountViewModel, navController, null, enablePullRefresh = false)
             }
         }
     }
@@ -780,7 +780,7 @@ fun TabNotesConversations(accountViewModel: AccountViewModel, navController: Nav
             Column(
                 modifier = Modifier.padding(vertical = 0.dp)
             ) {
-                FeedView(feedViewModel, accountViewModel, navController, null)
+                FeedView(feedViewModel, accountViewModel, navController, null, enablePullRefresh = false)
             }
         }
     }
@@ -801,7 +801,7 @@ fun TabBookmarks(baseUser: User, accountViewModel: AccountViewModel, navControll
             Column(
                 modifier = Modifier.padding(vertical = 0.dp)
             ) {
-                FeedView(feedViewModel, accountViewModel, navController, null)
+                FeedView(feedViewModel, accountViewModel, navController, null, enablePullRefresh = false)
             }
         }
     }
@@ -821,7 +821,7 @@ fun TabFollows(baseUser: User, accountViewModel: AccountViewModel, navController
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            UserFeedView(feedViewModel, accountViewModel, navController)
+            UserFeedView(feedViewModel, accountViewModel, navController, enablePullRefresh = false)
         }
     }
 }
@@ -840,7 +840,7 @@ fun TabFollowers(baseUser: User, accountViewModel: AccountViewModel, navControll
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            UserFeedView(feedViewModel, accountViewModel, navController)
+            UserFeedView(feedViewModel, accountViewModel, navController, enablePullRefresh = false)
         }
     }
 }
@@ -859,7 +859,7 @@ fun TabReceivedZaps(baseUser: User, accountViewModel: AccountViewModel, navContr
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            LnZapFeedView(feedViewModel, accountViewModel, navController)
+            LnZapFeedView(feedViewModel, accountViewModel, navController, enablePullRefresh = false)
         }
     }
 }
@@ -878,7 +878,7 @@ fun TabReports(baseUser: User, accountViewModel: AccountViewModel, navController
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            FeedView(feedViewModel, accountViewModel, navController, null)
+            FeedView(feedViewModel, accountViewModel, navController, null, enablePullRefresh = false)
         }
     }
 }
@@ -913,7 +913,7 @@ fun TabRelays(user: User, accountViewModel: AccountViewModel) {
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            RelayFeedView(feedViewModel, accountViewModel)
+            RelayFeedView(feedViewModel, accountViewModel, enablePullRefresh = false)
         }
     }
 }

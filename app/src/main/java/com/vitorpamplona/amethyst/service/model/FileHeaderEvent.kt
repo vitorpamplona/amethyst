@@ -19,6 +19,7 @@ class FileHeaderEvent(
     fun mimeType() = tags.firstOrNull { it.size > 1 && it[0] == MIME_TYPE }?.get(1)
     fun hash() = tags.firstOrNull { it.size > 1 && it[0] == HASH }?.get(1)
     fun size() = tags.firstOrNull { it.size > 1 && it[0] == FILE_SIZE }?.get(1)
+    fun dimensions() = tags.firstOrNull { it.size > 1 && it[0] == DIMENSION }?.get(1)
     fun magnetURI() = tags.firstOrNull { it.size > 1 && it[0] == MAGNET_URI }?.get(1)
     fun torrentInfoHash() = tags.firstOrNull { it.size > 1 && it[0] == TORRENT_INFOHASH }?.get(1)
     fun blurhash() = tags.firstOrNull { it.size > 1 && it[0] == BLUR_HASH }?.get(1)
@@ -30,6 +31,7 @@ class FileHeaderEvent(
         private const val ENCRYPTION_KEY = "aes-256-gcm"
         private const val MIME_TYPE = "m"
         private const val FILE_SIZE = "size"
+        private const val DIMENSION = "dim"
         private const val HASH = "x"
         private const val MAGNET_URI = "magnet"
         private const val TORRENT_INFOHASH = "i"
@@ -41,6 +43,7 @@ class FileHeaderEvent(
             description: String? = null,
             hash: String? = null,
             size: String? = null,
+            dimensions: String? = null,
             blurhash: String? = null,
             magnetURI: String? = null,
             torrentInfoHash: String? = null,
@@ -53,6 +56,7 @@ class FileHeaderEvent(
                 mimeType?.let { listOf(MIME_TYPE, mimeType) },
                 hash?.let { listOf(HASH, it) },
                 size?.let { listOf(FILE_SIZE, it) },
+                dimensions?.let { listOf(DIMENSION, it) },
                 blurhash?.let { listOf(BLUR_HASH, it) },
                 magnetURI?.let { listOf(MAGNET_URI, it) },
                 torrentInfoHash?.let { listOf(TORRENT_INFOHASH, it) },

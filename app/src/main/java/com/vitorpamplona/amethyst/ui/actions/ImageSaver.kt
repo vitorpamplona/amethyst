@@ -126,8 +126,14 @@ object ImageSaver {
             )
         }
 
+        val masterUri = if (contentType.startsWith("image")) {
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        } else {
+            MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+        }
+
         val uri =
-            contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+            contentResolver.insert(masterUri, contentValues)
         checkNotNull(uri) {
             "Can't insert the new content"
         }
