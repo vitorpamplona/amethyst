@@ -367,9 +367,9 @@ fun ReactionsColumn(baseNote: Note, accountViewModel: AccountViewModel, navContr
         BoostReaction(baseNote, accountViewModel, iconSize = 40.dp) {
             wantsToQuote = baseNote
         }*/
-        LikeReaction(baseNote, accountViewModel, iconSize = 40.dp, heartSize = 35.dp)
-        ZapReaction(baseNote, accountViewModel, iconSize = 40.dp, animationSize = 35.dp)
-        ViewCountReaction(baseNote.idHex, iconSize = 40.dp, barChartSize = 39.dp)
+        LikeReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, accountViewModel, iconSize = 40.dp, heartSize = 35.dp)
+        ZapReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, accountViewModel, iconSize = 40.dp, animationSize = 35.dp)
+        ViewCountReaction(baseNote.idHex, grayTint = MaterialTheme.colors.onBackground, iconSize = 40.dp, barChartSize = 39.dp)
     }
 }
 

@@ -96,7 +96,11 @@ class RelayFeedViewModel : ViewModel() {
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun RelayFeedView(viewModel: RelayFeedViewModel, accountViewModel: AccountViewModel) {
+fun RelayFeedView(
+    viewModel: RelayFeedViewModel,
+    accountViewModel: AccountViewModel,
+    enablePullRefresh: Boolean = true
+) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
@@ -114,7 +118,13 @@ fun RelayFeedView(viewModel: RelayFeedViewModel, accountViewModel: AccountViewMo
     val refresh = { refreshing = true; viewModel.refresh(); refreshing = false }
     val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = refresh)
 
-    Box(Modifier.pullRefresh(pullRefreshState)) {
+    val modifier = if (enablePullRefresh) {
+        Modifier.pullRefresh(pullRefreshState)
+    } else {
+        Modifier
+    }
+
+    Box(modifier) {
         Column() {
             val listState = rememberLazyListState()
 
@@ -136,6 +146,8 @@ fun RelayFeedView(viewModel: RelayFeedViewModel, accountViewModel: AccountViewMo
             }
         }
 
-        PullRefreshIndicator(refreshing, pullRefreshState, Modifier.align(Alignment.TopCenter))
+        if (enablePullRefresh) {
+            PullRefreshIndicator(refreshing, pullRefreshState, Modifier.align(Alignment.TopCenter))
+        }
     }
 }

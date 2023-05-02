@@ -71,6 +71,8 @@ fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel, navControll
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
+    val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+
     var wantsToReplyTo by remember {
         mutableStateOf<Note?>(null)
     }
@@ -91,23 +93,23 @@ fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel, navControll
 
     Row(verticalAlignment = CenterVertically) {
         Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
-            ReplyReaction(baseNote, accountViewModel) {
+            ReplyReaction(baseNote, grayTint, accountViewModel) {
                 wantsToReplyTo = baseNote
             }
         }
         Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
-            BoostReaction(baseNote, accountViewModel) {
+            BoostReaction(baseNote, grayTint, accountViewModel) {
                 wantsToQuote = baseNote
             }
         }
         Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
-            LikeReaction(baseNote, accountViewModel)
+            LikeReaction(baseNote, grayTint, accountViewModel)
         }
         Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
-            ZapReaction(baseNote, accountViewModel)
+            ZapReaction(baseNote, grayTint, accountViewModel)
         }
         Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
-            ViewCountReaction(baseNote.idHex)
+            ViewCountReaction(baseNote.idHex, grayTint)
         }
     }
 }
@@ -115,6 +117,7 @@ fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel, navControll
 @Composable
 fun ReplyReaction(
     baseNote: Note,
+    grayTint: Color,
     accountViewModel: AccountViewModel,
     showCounter: Boolean = true,
     iconSize: Dp = 20.dp,
@@ -142,39 +145,33 @@ fun ReplyReaction(
             }
         }
     ) {
-        ReplyIcon(iconSize)
+        Icon(
+            painter = painterResource(R.drawable.ic_comment),
+            null,
+            modifier = Modifier.size(iconSize),
+            tint = grayTint
+        )
     }
 
     if (showCounter) {
         Text(
             " ${showCount(replies.size)}",
             fontSize = 14.sp,
-            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+            color = grayTint
         )
     }
 }
 
 @Composable
-private fun ReplyIcon(iconSize: Dp = 15.dp) {
-    Icon(
-        painter = painterResource(R.drawable.ic_comment),
-        null,
-        modifier = Modifier.size(iconSize),
-        tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-    )
-}
-
-@Composable
 public fun BoostReaction(
     baseNote: Note,
+    grayTint: Color,
     accountViewModel: AccountViewModel,
     iconSize: Dp = 20.dp,
     onQuotePress: () -> Unit
 ) {
     val boostsState by baseNote.live().boosts.observeAsState()
     val boostedNote = boostsState?.note
-
-    val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -234,13 +231,14 @@ public fun BoostReaction(
     Text(
         " ${showCount(boostedNote?.boosts?.size)}",
         fontSize = 14.sp,
-        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+        color = grayTint
     )
 }
 
 @Composable
 fun LikeReaction(
     baseNote: Note,
+    grayTint: Color,
     accountViewModel: AccountViewModel,
     iconSize: Dp = 20.dp,
     heartSize: Dp = 16.dp
@@ -248,7 +246,6 @@ fun LikeReaction(
     val reactionsState by baseNote.live().reactions.observeAsState()
     val reactedNote = reactionsState?.note ?: return
 
-    val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -292,7 +289,7 @@ fun LikeReaction(
     Text(
         " ${showCount(reactedNote.reactions.size)}",
         fontSize = 14.sp,
-        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+        color = grayTint
     )
 }
 
@@ -300,6 +297,7 @@ fun LikeReaction(
 @OptIn(ExperimentalFoundationApi::class)
 fun ZapReaction(
     baseNote: Note,
+    grayTint: Color,
     accountViewModel: AccountViewModel,
     textModifier: Modifier = Modifier,
     iconSize: Dp = 20.dp,
@@ -315,7 +313,6 @@ fun ZapReaction(
     var wantsToZap by remember { mutableStateOf(false) }
     var wantsToChangeZapAmount by remember { mutableStateOf(false) }
     var wantsToSetCustomZap by remember { mutableStateOf(false) }
-    val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -466,15 +463,20 @@ fun ZapReaction(
     Text(
         showAmount(zapAmount),
         fontSize = 14.sp,
-        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+        color = grayTint,
         modifier = textModifier
     )
 }
 
 @Composable
-public fun ViewCountReaction(idHex: String, iconSize: Dp = 20.dp, barChartSize: Dp = 19.dp, numberSize: Dp = 24.dp) {
+public fun ViewCountReaction(
+    idHex: String,
+    grayTint: Color,
+    iconSize: Dp = 20.dp,
+    barChartSize: Dp = 19.dp,
+    numberSize: Dp = 24.dp
+) {
     val uri = LocalUriHandler.current
-    val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
 
     IconButton(
         modifier = Modifier.size(iconSize),
