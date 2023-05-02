@@ -51,7 +51,7 @@ import java.net.URL
 import java.util.regex.Pattern
 
 val imageExtensions = listOf("png", "jpg", "gif", "bmp", "jpeg", "webp", "svg")
-val videoExtensions = listOf("mp4", "avi", "wmv", "mpg", "amv", "webm", "mov")
+val videoExtensions = listOf("mp4", "avi", "wmv", "mpg", "amv", "webm", "mov", "mp3")
 
 // Group 1 = url, group 4 additional chars
 val noProtocolUrlValidator = Pattern.compile("(([\\w\\d-]+\\.)*[a-zA-Z][\\w-]+[\\.\\:]\\w+([\\/\\?\\=\\&\\#\\.]?[\\w-]+)*\\/?)(.*)")

@@ -31,6 +31,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.components.*
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
@@ -45,10 +46,9 @@ fun NewMediaView(uri: Uri, onClose: () -> Unit, postViewModel: NewMediaModel, ac
 
     val scroolState = rememberScrollState()
 
-    val mediaType = resolver.getType(uri) ?: ""
-    postViewModel.load(account, uri, mediaType)
-
-    LaunchedEffect(Unit) {
+    LaunchedEffect(uri) {
+        val mediaType = resolver.getType(uri) ?: ""
+        postViewModel.load(account, uri, mediaType)
         postViewModel.imageUploadingError.collect { error ->
             Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
         }
@@ -101,7 +101,7 @@ fun NewMediaView(uri: Uri, onClose: () -> Unit, postViewModel: NewMediaModel, ac
                             .fillMaxWidth()
                             .verticalScroll(scroolState)
                     ) {
-                        ImageVideoPost(postViewModel)
+                        ImageVideoPost(postViewModel, account)
                     }
                 }
             }
@@ -110,7 +110,7 @@ fun NewMediaView(uri: Uri, onClose: () -> Unit, postViewModel: NewMediaModel, ac
 }
 
 @Composable
-fun ImageVideoPost(postViewModel: NewMediaModel) {
+fun ImageVideoPost(postViewModel: NewMediaModel, acc: Account) {
     val scope = rememberCoroutineScope()
 
     val fileServers = listOf(
@@ -178,7 +178,7 @@ fun ImageVideoPost(postViewModel: NewMediaModel) {
     ) {
         TextSpinner(
             label = stringResource(id = R.string.file_server),
-            placeholder = fileServers.firstOrNull { it.first == postViewModel.selectedServer }?.second ?: fileServers[0].second,
+            placeholder = fileServers.firstOrNull { it.first == acc.defaultFileServer }?.second ?: fileServers[0].second,
             options = fileServerOptions,
             explainers = fileServerExplainers,
             onSelect = {

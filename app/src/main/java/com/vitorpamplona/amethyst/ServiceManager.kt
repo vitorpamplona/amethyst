@@ -35,8 +35,8 @@ object ServiceManager {
             NostrChatroomListDataSource.account = myAccount
 
             // Notification Elements
-            NostrAccountDataSource.start()
             NostrHomeDataSource.start()
+            NostrAccountDataSource.start()
             NostrChatroomListDataSource.start()
 
             // More Info Data Sources

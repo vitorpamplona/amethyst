@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.service
 import com.vitorpamplona.amethyst.model.decodePublicKey
 import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
+import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import nostr.postr.bechToBytes
@@ -50,7 +51,7 @@ object NostrSearchEventOrUserDataSource : NostrDataSource("SingleEventFeed") {
                 )
             },
             TypedFilter(
-                types = COMMON_FEED_TYPES,
+                types = setOf(FeedType.SEARCH),
                 filter = JsonFilter(
                     kinds = listOf(MetadataEvent.kind),
                     search = mySearchString,
@@ -58,9 +59,8 @@ object NostrSearchEventOrUserDataSource : NostrDataSource("SingleEventFeed") {
                 )
             ),
             TypedFilter(
-                types = COMMON_FEED_TYPES,
+                types = setOf(FeedType.SEARCH),
                 filter = JsonFilter(
-                    kinds = listOf(TextNoteEvent.kind, LongTextNoteEvent.kind, PollNoteEvent.kind, ChannelMetadataEvent.kind, ChannelCreateEvent.kind, ChannelMessageEvent.kind, HighlightEvent.kind),
                     search = mySearchString,
                     limit = 20
                 )

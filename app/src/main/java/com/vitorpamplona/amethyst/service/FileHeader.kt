@@ -14,6 +14,7 @@ class FileHeader(
     val mimeType: String?,
     val hash: String,
     val size: Int,
+    val dim: String?,
     val blurHash: String?,
     val description: String? = null
 ) {
@@ -43,7 +44,7 @@ class FileHeader(
                 val hash = sha256.digest(data).toHexKey()
                 val size = data.size
 
-                val blurHash = if (mimeType?.startsWith("image/") == true) {
+                val (blurHash, dim) = if (mimeType?.startsWith("image/") == true) {
                     val opt = BitmapFactory.Options()
                     opt.inPreferredConfig = Bitmap.Config.ARGB_8888
                     val mBitmap = BitmapFactory.decodeByteArray(data, 0, data.size, opt)
@@ -59,20 +60,22 @@ class FileHeader(
                         mBitmap.height
                     )
 
+                    val dim = "${mBitmap.width}x${mBitmap.height}"
+
                     val aspectRatio = (mBitmap.width).toFloat() / (mBitmap.height).toFloat()
 
                     if (aspectRatio > 1) {
-                        BlurHash.encode(intArray, mBitmap.width, mBitmap.height, 9, (9 * (1 / aspectRatio)).roundToInt())
+                        Pair(BlurHash.encode(intArray, mBitmap.width, mBitmap.height, 9, (9 * (1 / aspectRatio)).roundToInt()), dim)
                     } else if (aspectRatio < 1) {
-                        BlurHash.encode(intArray, mBitmap.width, mBitmap.height, (9 * aspectRatio).roundToInt(), 9)
+                        Pair(BlurHash.encode(intArray, mBitmap.width, mBitmap.height, (9 * aspectRatio).roundToInt(), 9), dim)
                     } else {
-                        BlurHash.encode(intArray, mBitmap.width, mBitmap.height, 4, 4)
+                        Pair(BlurHash.encode(intArray, mBitmap.width, mBitmap.height, 4, 4), dim)
                     }
                 } else {
-                    null
+                    Pair(null, null)
                 }
 
-                onReady(FileHeader(fileUrl, mimeType, hash, size, blurHash, description))
+                onReady(FileHeader(fileUrl, mimeType, hash, size, dim, blurHash, description))
             } catch (e: Exception) {
                 Log.e("ImageDownload", "Couldn't convert image in to File Header: ${e.message}")
                 onError()

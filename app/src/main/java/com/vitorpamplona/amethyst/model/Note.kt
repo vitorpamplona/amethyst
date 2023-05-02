@@ -286,7 +286,7 @@ open class Note(val idHex: String) {
                     response is PayInvoiceSuccessResponse
                 }
                 .associate {
-                    val lnInvoice = (it.key.event as? LnZapPaymentRequestEvent)?.lnInvoice(privKey)
+                    val lnInvoice = (it.key.event as? LnZapPaymentRequestEvent)?.lnInvoice(privKey, walletServicePubkey)
                     val amount = try {
                         if (lnInvoice == null) {
                             null

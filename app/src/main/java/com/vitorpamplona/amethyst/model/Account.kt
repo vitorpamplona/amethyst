@@ -417,6 +417,7 @@ class Account(
             mimeType = headerInfo.mimeType,
             hash = headerInfo.hash,
             size = headerInfo.size.toString(),
+            dimensions = headerInfo.dim,
             blurhash = headerInfo.blurHash,
             description = headerInfo.description,
             privateKey = loggedIn.privKey!!
@@ -445,6 +446,7 @@ class Account(
             mimeType = headerInfo.mimeType,
             hash = headerInfo.hash,
             size = headerInfo.size.toString(),
+            dimensions = headerInfo.dim,
             blurhash = headerInfo.blurHash,
             description = headerInfo.description,
             privateKey = loggedIn.privKey!!

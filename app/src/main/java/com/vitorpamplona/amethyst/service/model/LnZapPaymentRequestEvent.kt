@@ -1,10 +1,15 @@
 package com.vitorpamplona.amethyst.service.model
 
 import android.util.Log
+import com.google.gson.JsonDeserializationContext
+import com.google.gson.JsonDeserializer
+import com.google.gson.JsonElement
+import com.google.gson.JsonParseException
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toByteArray
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
+import java.lang.reflect.Type
 import java.util.Date
 
 class LnZapPaymentRequestEvent(
@@ -18,11 +23,15 @@ class LnZapPaymentRequestEvent(
 
     fun walletServicePubKey() = tags.firstOrNull() { it.size > 1 && it[0] == "p" }?.get(1)
 
-    fun lnInvoice(privKey: ByteArray): String? {
+    fun lnInvoice(privKey: ByteArray, pubkey: ByteArray): String? {
         return try {
-            val sharedSecret = Utils.getSharedSecret(privKey, pubKey.toByteArray())
+            val sharedSecret = Utils.getSharedSecret(privKey, pubkey)
 
-            return Utils.decrypt(content, sharedSecret)
+            val jsonText = Utils.decrypt(content, sharedSecret)
+
+            val payInvoiceMethod = gson.fromJson(jsonText, Request::class.java)
+
+            return (payInvoiceMethod as? PayInvoiceMethod)?.params?.invoice
         } catch (e: Exception) {
             Log.w("BookmarkList", "Error decrypting the message ${e.message}")
             null
@@ -39,7 +48,7 @@ class LnZapPaymentRequestEvent(
             createdAt: Long = Date().time / 1000
         ): LnZapPaymentRequestEvent {
             val pubKey = Utils.pubkeyCreate(privateKey)
-            val serializedRequest = gson.toJson(PayInvoiceMethod(lnInvoice))
+            val serializedRequest = gson.toJson(PayInvoiceMethod.create(lnInvoice))
 
             val content = Utils.encrypt(
                 serializedRequest,
@@ -59,11 +68,37 @@ class LnZapPaymentRequestEvent(
 
 // REQUEST OBJECTS
 
-abstract class Request(val method: String, val params: Params)
-abstract class Params
+abstract class Request(var method: String? = null)
 
 // PayInvoice Call
+class PayInvoiceParams(var invoice: String? = null)
 
-class PayInvoiceMethod(bolt11: String) : Request("pay_invoice", PayInvoiceParams(bolt11)) {
-    class PayInvoiceParams(val invoice: String) : Params()
+class PayInvoiceMethod(var params: PayInvoiceParams? = null) : Request("pay_invoice") {
+
+    companion object {
+        fun create(bolt11: String): PayInvoiceMethod {
+            return PayInvoiceMethod(PayInvoiceParams(bolt11))
+        }
+    }
+}
+
+class RequestDeserializer :
+    JsonDeserializer<Request?> {
+    @Throws(JsonParseException::class)
+    override fun deserialize(
+        json: JsonElement,
+        typeOfT: Type,
+        context: JsonDeserializationContext
+    ): Request? {
+        val jsonObject = json.asJsonObject
+        val method = jsonObject.get("method")?.asString
+
+        if (method == "pay_invoice") {
+            return context.deserialize<PayInvoiceMethod>(jsonObject, PayInvoiceMethod::class.java)
+        }
+        return null
+    }
+
+    companion object {
+    }
 }

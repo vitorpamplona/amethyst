@@ -46,6 +46,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
@@ -55,6 +57,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrGlobalDataSource
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
+import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.dal.GlobalFeedFilter
 import com.vitorpamplona.amethyst.ui.note.ChannelName
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
@@ -127,14 +130,62 @@ fun SearchScreen(
     }
 }
 
+class SearchBarViewModel : ViewModel() {
+    var searchValue by mutableStateOf("")
+    val searchResults = mutableStateOf<List<User>>(emptyList())
+    val searchResultsNotes = mutableStateOf<List<Note>>(emptyList())
+    val searchResultsChannels = mutableStateOf<List<Channel>>(emptyList())
+    val hashtagResults = mutableStateOf<List<String>>(emptyList())
+
+    val isTrailingIconVisible by
+    derivedStateOf {
+        searchValue.isNotBlank()
+    }
+
+    fun updateSearchValue(newValue: String) {
+        searchValue = newValue
+    }
+
+    private fun runSearch() {
+        if (searchValue.isBlank()) {
+            hashtagResults.value = emptyList()
+            searchResults.value = emptyList()
+            searchResultsChannels.value = emptyList()
+            searchResultsNotes.value = emptyList()
+            return
+        }
+
+        hashtagResults.value = findHashtags(searchValue)
+        searchResults.value = LocalCache.findUsersStartingWith(searchValue)
+        searchResultsNotes.value = LocalCache.findNotesStartingWith(searchValue).sortedBy { it.createdAt() }.reversed()
+        searchResultsChannels.value = LocalCache.findChannelsStartingWith(searchValue)
+    }
+
+    fun clean() {
+        searchValue = ""
+        searchResults.value = emptyList()
+        searchResultsChannels.value = emptyList()
+        searchResultsNotes.value = emptyList()
+    }
+
+    private val bundler = BundledUpdate(250, Dispatchers.IO) {
+        // adds the time to perform the refresh into this delay
+        // holding off new updates in case of heavy refresh routines.
+        runSearch()
+    }
+
+    fun invalidateData() {
+        bundler.invalidate()
+    }
+
+    fun isSearching() = searchValue.isNotBlank()
+}
+
 @OptIn(FlowPreview::class)
 @Composable
 private fun SearchBar(accountViewModel: AccountViewModel, navController: NavController) {
-    var searchValue by remember { mutableStateOf("") }
-    val searchResults = remember { mutableStateOf<List<User>>(emptyList()) }
-    val searchResultsNotes = remember { mutableStateOf<List<Note>>(emptyList()) }
-    val searchResultsChannels = remember { mutableStateOf<List<Channel>>(emptyList()) }
-    val hashtagResults = remember { mutableStateOf<List<String>>(emptyList()) }
+    val searchBarViewModel: SearchBarViewModel = viewModel()
+
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
 
@@ -143,25 +194,16 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
     val dbState = LocalCache.live.observeAsState()
     val db = dbState.value ?: return
 
-    val isTrailingIconVisible by remember {
-        derivedStateOf {
-            searchValue.isNotBlank()
-        }
-    }
-
     // Create a channel for processing search queries.
     val searchTextChanges = remember {
         CoroutineChannel<String>(CoroutineChannel.CONFLATED)
     }
 
     LaunchedEffect(db) {
-        if (searchValue.length > 1) {
-            withContext(Dispatchers.IO) {
-                searchResults.value = LocalCache.findUsersStartingWith(searchValue)
-                searchResultsNotes.value =
-                    LocalCache.findNotesStartingWith(searchValue).sortedBy { it.createdAt() }
-                        .reversed()
-                searchResultsChannels.value = LocalCache.findChannelsStartingWith(searchValue)
+        withContext(Dispatchers.IO) {
+            if (searchBarViewModel.isSearching()) {
+                println("Search Active")
+                searchBarViewModel.invalidateData()
             }
         }
     }
@@ -174,15 +216,11 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
                 .distinctUntilChanged()
                 .debounce(300)
                 .collectLatest {
-                    hashtagResults.value = findHashtags(it)
-
-                    if (it.length >= 4) {
+                    if (it.length >= 2) {
                         onlineSearch.search(it.trim())
                     }
 
-                    searchResults.value = LocalCache.findUsersStartingWith(it)
-                    searchResultsNotes.value = LocalCache.findNotesStartingWith(it).sortedBy { it.createdAt() }.reversed()
-                    searchResultsChannels.value = LocalCache.findChannelsStartingWith(it)
+                    searchBarViewModel.invalidateData()
 
                     // makes sure to show the top of the search
                     scope.launch(Dispatchers.Main) { listState.animateScrollToItem(0) }
@@ -205,9 +243,9 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
         verticalAlignment = Alignment.CenterVertically
     ) {
         TextField(
-            value = searchValue,
+            value = searchBarViewModel.searchValue,
             onValueChange = {
-                searchValue = it
+                searchBarViewModel.updateSearchValue(it)
                 scope.launch(Dispatchers.IO) {
                     searchTextChanges.trySend(it)
                 }
@@ -234,14 +272,10 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
                 )
             },
             trailingIcon = {
-                if (isTrailingIconVisible) {
+                if (searchBarViewModel.isTrailingIconVisible) {
                     IconButton(
                         onClick = {
-                            searchValue = ""
-                            searchResults.value = emptyList()
-                            searchResultsChannels.value = emptyList()
-                            searchResultsNotes.value = emptyList()
-
+                            searchBarViewModel.clean()
                             onlineSearch.clear()
                         }
                     ) {
@@ -260,7 +294,7 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
         )
     }
 
-    if (searchValue.isNotBlank()) {
+    if (searchBarViewModel.isSearching()) {
         LazyColumn(
             modifier = Modifier.fillMaxHeight(),
             contentPadding = PaddingValues(
@@ -269,17 +303,17 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
             ),
             state = listState
         ) {
-            itemsIndexed(hashtagResults.value, key = { _, item -> "#" + item }) { _, item ->
+            itemsIndexed(searchBarViewModel.hashtagResults.value, key = { _, item -> "#" + item }) { _, item ->
                 HashtagLine(item) {
                     navController.navigate("Hashtag/$item")
                 }
             }
 
-            itemsIndexed(searchResults.value, key = { _, item -> "u" + item.pubkeyHex }) { _, item ->
+            itemsIndexed(searchBarViewModel.searchResults.value, key = { _, item -> "u" + item.pubkeyHex }) { _, item ->
                 UserCompose(item, accountViewModel = accountViewModel, navController = navController)
             }
 
-            itemsIndexed(searchResultsChannels.value, key = { _, item -> "c" + item.idHex }) { _, item ->
+            itemsIndexed(searchBarViewModel.searchResultsChannels.value, key = { _, item -> "c" + item.idHex }) { _, item ->
                 ChannelName(
                     channelIdHex = item.idHex,
                     channelPicture = item.profilePicture(),
@@ -296,7 +330,7 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
                 )
             }
 
-            itemsIndexed(searchResultsNotes.value, key = { _, item -> "n" + item.idHex }) { _, item ->
+            itemsIndexed(searchBarViewModel.searchResultsNotes.value, key = { _, item -> "n" + item.idHex }) { _, item ->
                 NoteCompose(item, accountViewModel = accountViewModel, navController = navController)
             }
         }

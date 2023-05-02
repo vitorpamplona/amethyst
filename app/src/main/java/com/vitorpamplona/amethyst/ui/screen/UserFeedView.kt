@@ -27,14 +27,25 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun UserFeedView(viewModel: UserFeedViewModel, accountViewModel: AccountViewModel, navController: NavController) {
+fun UserFeedView(
+    viewModel: UserFeedViewModel,
+    accountViewModel: AccountViewModel,
+    navController: NavController,
+    enablePullRefresh: Boolean = true
+) {
     val feedState by viewModel.feedContent.collectAsState()
 
     var refreshing by remember { mutableStateOf(false) }
     val refresh = { refreshing = true; viewModel.invalidateData(); refreshing = false }
     val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = refresh)
 
-    Box(Modifier.pullRefresh(pullRefreshState)) {
+    val modifier = if (enablePullRefresh) {
+        Modifier.pullRefresh(pullRefreshState)
+    } else {
+        Modifier
+    }
+
+    Box(modifier) {
         Column() {
             Crossfade(targetState = feedState, animationSpec = tween(durationMillis = 100)) { state ->
                 when (state) {
@@ -59,7 +70,9 @@ fun UserFeedView(viewModel: UserFeedViewModel, accountViewModel: AccountViewMode
             }
         }
 
-        PullRefreshIndicator(refreshing, pullRefreshState, Modifier.align(Alignment.TopCenter))
+        if (enablePullRefresh) {
+            PullRefreshIndicator(refreshing, pullRefreshState, Modifier.align(Alignment.TopCenter))
+        }
     }
 }
 
