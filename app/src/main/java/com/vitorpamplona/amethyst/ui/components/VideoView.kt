@@ -127,7 +127,7 @@ fun VideoView(videoUri: Uri, description: String? = null, onDialog: ((Boolean) -
                         )
                         controllerAutoShow = false
                         hideController()
-                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
+                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                         onDialog?.let { innerOnDialog ->
                             setFullscreenButtonClickListener {
                                 exoPlayer.pause()
