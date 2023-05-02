@@ -888,7 +888,7 @@ fun FileHeaderDisplay(note: Note) {
 
     content?.let {
         ZoomableContentView(content = it, listOf(it))
-    } ?: UrlPreview(fullUrl, "$fullUrl ")
+    }
 }
 
 @Composable
@@ -944,7 +944,7 @@ fun FileStorageHeaderDisplay(baseNote: Note) {
 
     content?.let {
         ZoomableContentView(content = it, listOf(it))
-    } ?: BlankNote()
+    }
 }
 
 @Composable
