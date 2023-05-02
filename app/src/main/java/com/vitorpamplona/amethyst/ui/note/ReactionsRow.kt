@@ -319,12 +319,15 @@ fun ZapReaction(
     var zappingProgress by remember { mutableStateOf(0f) }
 
     var wasZappedByLoggedInUser by remember { mutableStateOf(false) }
+    var zapAmount by remember { mutableStateOf<BigDecimal?>(null) }
 
     LaunchedEffect(key1 = zapsState) {
         withContext(Dispatchers.IO) {
             if (!wasZappedByLoggedInUser) {
                 wasZappedByLoggedInUser = accountViewModel.calculateIfNoteWasZappedByAccount(zappedNote)
             }
+
+            zapAmount = account.calculateZappedAmount(zappedNote)
         }
     }
 
@@ -449,14 +452,6 @@ fun ZapReaction(
                     strokeWidth = 2.dp
                 )
             }
-        }
-    }
-
-    var zapAmount by remember { mutableStateOf<BigDecimal?>(null) }
-
-    LaunchedEffect(key1 = zapsState) {
-        withContext(Dispatchers.IO) {
-            zapAmount = account.calculateZappedAmount(zappedNote)
         }
     }
 
