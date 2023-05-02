@@ -75,6 +75,7 @@ open class NewMediaModel : ViewModel() {
             ImageUploader.uploadImage(
                 uri = uri,
                 server = serverToUse,
+                context = context,
                 contentResolver = contentResolver,
                 onSuccess = { imageUrl, mimeType ->
                     createNIP94Record(imageUrl, mimeType, description)
