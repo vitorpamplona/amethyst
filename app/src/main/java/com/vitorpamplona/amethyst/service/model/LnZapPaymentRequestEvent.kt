@@ -82,7 +82,6 @@ class PayInvoiceMethod(var params: PayInvoiceParams? = null) : Request("pay_invo
     }
 }
 
-
 class RequestDeserializer :
     JsonDeserializer<Request?> {
     @Throws(JsonParseException::class)
