@@ -249,7 +249,7 @@ private fun LocalImageView(
             }
         }
 
-        if (imageState is AsyncImagePainter.State.Error) {
+        if (imageState is AsyncImagePainter.State.Error || !content.localFile.exists()) {
             BlankNote()
         }
     }
