@@ -64,15 +64,19 @@ import coil.annotation.ExperimentalCoilApi
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.imageLoader
+import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.BlurHashRequester
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.actions.SaveToGallery
+import com.vitorpamplona.amethyst.ui.note.BlankNote
 import com.vitorpamplona.amethyst.ui.theme.Nip05
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import net.engawapg.lib.zoomable.rememberZoomState
 import net.engawapg.lib.zoomable.zoomable
 import java.io.File
@@ -232,17 +236,21 @@ private fun LocalImageView(
             HashVerificationSymbol(content.isVerified, Modifier.align(Alignment.TopEnd))
         }
 
-        if (content.blurhash != null) {
-            AnimatedVisibility(
-                visible = imageState !is AsyncImagePainter.State.Success,
-                exit = fadeOut(animationSpec = tween(200))
-            ) {
+        AnimatedVisibility(
+            visible = imageState !is AsyncImagePainter.State.Success,
+            exit = fadeOut(animationSpec = tween(200))
+        ) {
+            if (content.blurhash != null) {
                 DisplayBlurHash(content.blurhash, content.description, mainImageModifier)
+            } else {
+                FlowRow() {
+                    DisplayUrlWithLoadingSymbol(content)
+                }
             }
         }
 
         if (imageState is AsyncImagePainter.State.Error) {
-            DisplayUrlWithLoadingSymbol(content)
+            BlankNote()
         }
     }
 }
@@ -290,17 +298,21 @@ private fun UrlImageView(
             HashVerificationSymbol(verifiedHash, Modifier.align(Alignment.TopEnd))
         }
 
-        if (content.blurhash != null) {
-            AnimatedVisibility(
-                visible = imageState !is AsyncImagePainter.State.Success,
-                exit = fadeOut(animationSpec = tween(200))
-            ) {
+        AnimatedVisibility(
+            visible = imageState !is AsyncImagePainter.State.Success,
+            exit = fadeOut(animationSpec = tween(200))
+        ) {
+            if (content.blurhash != null) {
                 DisplayBlurHash(content.blurhash, content.description, mainImageModifier)
+            } else {
+                FlowRow() {
+                    DisplayUrlWithLoadingSymbol(content)
+                }
             }
         }
 
         if (imageState is AsyncImagePainter.State.Error) {
-            DisplayUrlWithLoadingSymbol(content)
+            ClickableUrl(urlText = "${content.url} ", url = content.url)
         }
     }
 }
@@ -322,6 +334,20 @@ private fun aspectRatio(dim: String?): Float? {
 
 @Composable
 private fun DisplayUrlWithLoadingSymbol(content: ZoomableContent) {
+    var cnt by remember { mutableStateOf<ZoomableContent?>(null) }
+
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            delay(200)
+            cnt = content
+        }
+    }
+
+    cnt?.let { DisplayUrlWithLoadingSymbolWait(it) }
+}
+
+@Composable
+private fun DisplayUrlWithLoadingSymbolWait(content: ZoomableContent) {
     if (content is ZoomableUrlContent) {
         ClickableUrl(urlText = "${content.url} ", url = content.url)
     } else {
