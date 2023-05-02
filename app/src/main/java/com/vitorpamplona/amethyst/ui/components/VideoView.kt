@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -125,6 +126,7 @@ fun VideoView(videoUri: Uri, description: String? = null, onDialog: ((Boolean) -
             AndroidView(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .defaultMinSize(minHeight = 70.dp)
                     .align(Alignment.Center)
                     .onVisibilityChanges { visible ->
                         if (visible) {
