@@ -100,6 +100,10 @@ fun VideoView(videoUri: Uri, description: String? = null, onDialog: ((Boolean) -
         }
     }
 
+    LaunchedEffect(key1 = muted.value) {
+        exoPlayer.volume = if (muted.value) 0f else 1f
+    }
+
     DisposableEffect(
         Box() {
             AndroidView(
@@ -136,7 +140,6 @@ fun VideoView(videoUri: Uri, description: String? = null, onDialog: ((Boolean) -
 
             MuteButton(muted, Modifier) {
                 muted.value = !muted.value
-                exoPlayer.volume = if (muted.value) 0f else 1f
             }
         }
 
