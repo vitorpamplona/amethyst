@@ -6,6 +6,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -40,6 +41,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.isFinite
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
@@ -105,7 +107,7 @@ fun VideoView(videoUri: Uri, description: String? = null, onDialog: ((Boolean) -
     }
 
     DisposableEffect(
-        Box() {
+        BoxWithConstraints() {
             AndroidView(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -127,7 +129,7 @@ fun VideoView(videoUri: Uri, description: String? = null, onDialog: ((Boolean) -
                         )
                         controllerAutoShow = false
                         hideController()
-                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                        resizeMode = if (maxHeight.isFinite) AspectRatioFrameLayout.RESIZE_MODE_FIT else AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
                         onDialog?.let { innerOnDialog ->
                             setFullscreenButtonClickListener {
                                 exoPlayer.pause()
