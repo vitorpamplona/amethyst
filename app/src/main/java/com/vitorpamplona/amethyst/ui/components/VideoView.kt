@@ -1,7 +1,5 @@
 package com.vitorpamplona.amethyst.ui.components
 
-import android.content.Context
-import android.media.AudioManager
 import android.net.Uri
 import android.view.View
 import android.view.ViewGroup
@@ -51,11 +49,9 @@ import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.MediaMetadata
 import com.google.android.exoplayer2.Player
-import com.google.android.exoplayer2.audio.AudioAttributes
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
 import com.google.android.exoplayer2.ui.StyledPlayerView
-import com.google.android.exoplayer2.util.Util
 import com.vitorpamplona.amethyst.VideoCache
 import java.io.File
 
@@ -76,14 +72,6 @@ fun VideoView(videoUri: Uri, description: String? = null, onDialog: ((Boolean) -
     val context = LocalContext.current
     val lifecycleOwner = rememberUpdatedState(LocalLifecycleOwner.current)
 
-    val myAudioManager =
-        context.applicationContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-
-    val myAudioAttributes = AudioAttributes.Builder()
-        .setUsage(C.USAGE_MEDIA)
-        .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
-        .build()
-
     val exoPlayer = remember(videoUri) {
         val mediaBuilder = MediaItem.Builder().setUri(videoUri)
 
@@ -98,16 +86,7 @@ fun VideoView(videoUri: Uri, description: String? = null, onDialog: ((Boolean) -
         ExoPlayer.Builder(context).build().apply {
             repeatMode = Player.REPEAT_MODE_ALL
             videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
-            setAudioAttributes(myAudioAttributes, true)
-            if (Util.SDK_INT >= 23) {
-                myAudioManager.adjustStreamVolume(
-                    C.STREAM_TYPE_MUSIC,
-                    if (muted.value) AudioManager.ADJUST_MUTE else AudioManager.ADJUST_UNMUTE,
-                    0
-                )
-            } else {
-                myAudioManager.setStreamMute(C.STREAM_TYPE_MUSIC, muted.value)
-            }
+            volume = 0f
             if (videoUri.scheme?.startsWith("file") == true) {
                 setMediaItem(media)
             } else {
@@ -157,15 +136,7 @@ fun VideoView(videoUri: Uri, description: String? = null, onDialog: ((Boolean) -
 
             MuteButton(muted, Modifier) {
                 muted.value = !muted.value
-                if (Util.SDK_INT >= 23) {
-                    myAudioManager.adjustStreamVolume(
-                        C.STREAM_TYPE_MUSIC,
-                        if (muted.value) AudioManager.ADJUST_MUTE else AudioManager.ADJUST_UNMUTE,
-                        0
-                    )
-                } else {
-                    myAudioManager.setStreamMute(C.STREAM_TYPE_MUSIC, muted.value)
-                }
+                exoPlayer.volume = if (muted.value) 0f else 1f
             }
         }
 
