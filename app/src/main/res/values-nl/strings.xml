@@ -280,9 +280,56 @@
     <string name="looking_for_event">"Zoeken naar event %1$s"</string>
 
     <string name="custom_zaps_add_a_message">Een openbaar bericht toevoegen</string>
+    <string name="custom_zaps_add_a_message_private">Een privébericht toevoegen</string>
+    <string name="custom_zaps_add_a_message_nonzap">Een invoice bericht toevoegen</string>
     <string name="custom_zaps_add_a_message_example">Bedankt voor al jullie werk!</string>
 
     <string name="lightning_create_and_add_invoice">Maken en toevoegen</string>
     <string name="poll_author_no_vote">Poll auteurs kunnen niet stemmen in hun eigen poll.</string>
     <string name="poll_hashtag" translatable="false">#zappoll</string>
+	
+    <string name="hash_verification_passed">De afbeelding is onveranderd sinds de post</string>
+    <string name="hash_verification_failed">De afbeelding is veranderd. De auteur heeft de wijziging misschien niet gezien</string>
+
+    <string name="content_description_add_image">Afbeelding toevoegen/string>
+    <string name="content_description_add_video">Video toevoegen</string>
+    <string name="content_description_add_document">Document toevoegen</string>
+
+    <string name="add_content">Voeg toe aan bericht</string>
+    <string name="content_description">Beschrijving van de inhoud</string>
+    <string name="content_description_example">Een blauwe boot in een wit zandstrand bij zonsondergang</string>
+
+    <string name="zap_type">Zap type</string>
+    <string name="zap_type_explainer">Zap type voor alle opties</string>
+
+    <string name="zap_type_public">Publiek</string>
+    <string name="zap_type_public_explainer">Iedereen kan de transactie en het bericht zien</string>
+
+    <string name="zap_type_private">Privé</string>
+    <string name="zap_type_private_explainer">Verzender en ontvanger kunnen elkaar zien en het bericht lezen</string>
+
+    <string name="zap_type_anonymous">Anoniem</string>
+    <string name="zap_type_anonymous_explainer">Ontvanger en het publiek weten niet wie de betaling verzond</string>
+
+    <string name="zap_type_nonzap">Non-Zap</string>
+    <string name="zap_type_nonzap_explainer">Geen spoor binnen Nostr, alleen in Lightning</string>
+
+
+    <string name="file_server">File server</string>
+    <string name="zap_forward_lnAddress">LnAddress of @User</string>
+
+    <string name="upload_server_imgur">imgur.com - minder beveiligd</string>
+    <string name="upload_server_imgur_explainer">Upload naar Imgur. Imgur kan uw afbeelding/video op elk moment wijzigen</string>
+
+    <string name="upload_server_nostrimg">nostrimg.com - minder beveiligd</string>
+    <string name="upload_server_nostrimg_explainer">Upload naar NostrImg. NostrImg kan uw afbeelding/video op elk moment wijzigen</string>
+
+    <string name="upload_server_imgur_nip94">Verifieerbare Imgur (NIP-94)</string>
+    <string name="upload_server_imgur_nip94_explainer">Beschermt tegen het achteraf wijzigen van de inhoud door Imgur. Dit is een nieuwe NIP: andere clients zien de afbeelding misschien niet.</string>
+
+    <string name="upload_server_nostrimg_nip94">Verifieerbare NostrImg (NIP-94)</string>
+    <string name="upload_server_nostrimg_nip94_explainer">Beschermt tegen het achteraf wijzigen van de inhoud door NostrImg. Dit is een nieuwe NIP: andere clients zien de afbeelding misschien niet.</string>
+
+    <string name="upload_server_relays_nip95">Uw relays (NIP-95)</string>
+    <string name="upload_server_relays_nip95_explainer">Bestanden worden geüpload naar en gehost door relays. Ze zijn vrij van een vaste url (afhankelijkheid van derden). Zorg ervoor dat u een NIP-95 relay in uw lijst met relays hebt.</string>
 </resources>
