@@ -13,6 +13,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
@@ -57,6 +58,7 @@ import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.isFinite
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -173,11 +175,6 @@ fun ZoomableContentView(content: ZoomableContent, images: List<ZoomableContent> 
             RoundedCornerShape(15.dp)
         )
 
-    val ratio = aspectRatio(content.dim)
-    if (ratio != null) {
-        mainImageModifier = mainImageModifier.aspectRatio(ratio)
-    }
-
     if (content is ZoomableUrlContent) {
         mainImageModifier = mainImageModifier.combinedClickable(
             onClick = { dialogOpen = true },
@@ -216,13 +213,22 @@ private fun LocalImageView(
         mutableStateOf<AsyncImagePainter.State?>(null)
     }
 
-    Box(contentAlignment = Alignment.Center) {
+    val ratio = aspectRatio(content.dim)
+
+    BoxWithConstraints(contentAlignment = Alignment.Center) {
+        val myModifier = mainImageModifier.also {
+            if (ratio != null) {
+                it.aspectRatio(ratio, maxHeight.isFinite)
+            }
+        }
+        val contentScale = if (maxHeight.isFinite) ContentScale.Fit else ContentScale.FillWidth
+
         if (content.localFile.exists()) {
             AsyncImage(
                 model = content.localFile,
                 contentDescription = content.description,
-                contentScale = ContentScale.FillWidth,
-                modifier = mainImageModifier,
+                contentScale = contentScale,
+                modifier = myModifier,
                 onLoading = {
                     imageState = it
                 },
@@ -241,7 +247,7 @@ private fun LocalImageView(
             exit = fadeOut(animationSpec = tween(200))
         ) {
             if (content.blurhash != null) {
-                DisplayBlurHash(content.blurhash, content.description, mainImageModifier)
+                DisplayBlurHash(content.blurhash, content.description, contentScale, myModifier)
             } else {
                 FlowRow() {
                     DisplayUrlWithLoadingSymbol(content)
@@ -272,6 +278,8 @@ private fun UrlImageView(
         mutableStateOf<Boolean?>(null)
     }
 
+    val ratio = aspectRatio(content.dim)
+
     LaunchedEffect(key1 = content.url, key2 = imageState) {
         if (imageState is AsyncImagePainter.State.Success) {
             scope.launch(Dispatchers.IO) {
@@ -280,12 +288,19 @@ private fun UrlImageView(
         }
     }
 
-    Box(contentAlignment = Alignment.Center) {
+    BoxWithConstraints(contentAlignment = Alignment.Center) {
+        val myModifier = mainImageModifier.also {
+            if (ratio != null) {
+                it.aspectRatio(ratio, maxHeight.isFinite)
+            }
+        }
+        val contentScale = if (maxHeight.isFinite) ContentScale.Fit else ContentScale.FillWidth
+
         AsyncImage(
             model = content.url,
             contentDescription = content.description,
-            contentScale = ContentScale.FillWidth,
-            modifier = mainImageModifier,
+            contentScale = contentScale,
+            modifier = myModifier,
             onLoading = {
                 imageState = it
             },
@@ -303,7 +318,7 @@ private fun UrlImageView(
             exit = fadeOut(animationSpec = tween(200))
         ) {
             if (content.blurhash != null) {
-                DisplayBlurHash(content.blurhash, content.description, mainImageModifier)
+                DisplayBlurHash(content.blurhash, content.description, contentScale, myModifier)
             } else {
                 FlowRow() {
                     DisplayUrlWithLoadingSymbol(content)
@@ -389,6 +404,7 @@ private fun DisplayUrlWithLoadingSymbolWait(content: ZoomableContent) {
 private fun DisplayBlurHash(
     blurhash: String?,
     description: String?,
+    contentScale: ContentScale,
     modifier: Modifier
 ) {
     if (blurhash == null) return
@@ -400,7 +416,7 @@ private fun DisplayBlurHash(
             blurhash
         ),
         contentDescription = description,
-        contentScale = ContentScale.FillWidth,
+        contentScale = contentScale,
         modifier = modifier
     )
 }

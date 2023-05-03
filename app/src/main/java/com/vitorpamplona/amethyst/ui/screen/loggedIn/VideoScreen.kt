@@ -237,7 +237,7 @@ private fun RenderVideoOrPictureNote(
     var moreActionsExpanded by remember { mutableStateOf(false) }
 
     Column(Modifier.fillMaxSize(1f)) {
-        Row(Modifier.weight(1f, true), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
             if (noteEvent is FileHeaderEvent) {
                 FileHeaderDisplay(note)
             } else if (noteEvent is FileStorageHeaderEvent) {
