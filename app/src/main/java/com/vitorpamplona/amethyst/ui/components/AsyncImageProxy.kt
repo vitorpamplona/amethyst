@@ -22,7 +22,7 @@ data class ResizeImage(val url: String?, val size: Dp) {
         val imgPx = 200 // with(LocalDensity.current) { model.size.toPx().toInt() }
         val base64 = Base64.getUrlEncoder().encodeToString(url.toByteArray())
 
-        return "https://d12fidohs5rlxk.cloudfront.net/preset:sharp/rs:fit:$imgPx:$imgPx:0/gravity:sm/$base64"
+        return url // "https://d12fidohs5rlxk.cloudfront.net/preset:sharp/rs:fit:$imgPx:$imgPx:0/gravity:sm/$base64"
     }
 }
 
