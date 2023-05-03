@@ -4,6 +4,7 @@ import com.vitorpamplona.amethyst.model.Account
 import okhttp3.OkHttpClient
 import java.net.InetSocketAddress
 import java.net.Proxy
+import java.time.Duration
 
 object HttpClient {
     private var proxy: Proxy? = null
@@ -13,7 +14,14 @@ object HttpClient {
     }
 
     fun getHttpClient(): OkHttpClient {
-        return OkHttpClient.Builder().proxy(proxy).build()
+        val seconds = if (proxy != null) 20L else 10L
+        val duration = Duration.ofSeconds(seconds)
+        return OkHttpClient.Builder()
+            .proxy(proxy)
+            .readTimeout(duration)
+            .connectTimeout(duration)
+            .writeTimeout(duration)
+            .build()
     }
 
     fun getProxy(): Proxy? {
