@@ -291,7 +291,7 @@
     <string name="hash_verification_passed">De afbeelding is onveranderd sinds de post</string>
     <string name="hash_verification_failed">De afbeelding is veranderd. De auteur heeft de wijziging misschien niet gezien</string>
 
-    <string name="content_description_add_image">Afbeelding toevoegen/string>
+    <string name="content_description_add_image">Afbeelding toevoegen</string>
     <string name="content_description_add_video">Video toevoegen</string>
     <string name="content_description_add_document">Document toevoegen</string>
 
