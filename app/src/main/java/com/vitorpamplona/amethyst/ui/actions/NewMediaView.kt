@@ -116,6 +116,7 @@ fun ImageVideoPost(postViewModel: NewMediaModel, acc: Account) {
     val fileServers = listOf(
         Triple(ServersAvailable.IMGUR_NIP_94, stringResource(id = R.string.upload_server_imgur_nip94), stringResource(id = R.string.upload_server_imgur_nip94_explainer)),
         Triple(ServersAvailable.NOSTRIMG_NIP_94, stringResource(id = R.string.upload_server_nostrimg_nip94), stringResource(id = R.string.upload_server_nostrimg_nip94_explainer)),
+        Triple(ServersAvailable.NOSTR_BUILD_NIP_94, stringResource(id = R.string.upload_server_nostrbuild_nip94), stringResource(id = R.string.upload_server_nostrbuild_nip94_explainer)),
         Triple(ServersAvailable.NIP95, stringResource(id = R.string.upload_server_relays_nip95), stringResource(id = R.string.upload_server_relays_nip95_explainer))
     )
 
@@ -192,6 +193,7 @@ fun ImageVideoPost(postViewModel: NewMediaModel, acc: Account) {
 
     if (postViewModel.selectedServer == ServersAvailable.NOSTRIMG_NIP_94 ||
         postViewModel.selectedServer == ServersAvailable.IMGUR_NIP_94 ||
+        postViewModel.selectedServer == ServersAvailable.NOSTR_BUILD_NIP_94 ||
         postViewModel.selectedServer == ServersAvailable.NIP95
     ) {
         Row(
