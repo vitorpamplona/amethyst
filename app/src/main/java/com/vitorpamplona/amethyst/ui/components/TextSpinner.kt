@@ -29,6 +29,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 
 @Composable
@@ -106,7 +107,7 @@ fun SpinnerSelectionDialog(options: List<String>, explainers: List<String>?, onD
                                     modifier = Modifier
                                         .fillMaxWidth()
                                 ) {
-                                    Text(text = it, color = Color.Gray)
+                                    Text(text = it, color = Color.Gray, fontSize = 14.sp)
                                 }
                             }
                         }
