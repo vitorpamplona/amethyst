@@ -46,6 +46,7 @@ import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -113,6 +114,9 @@ fun NoteComposeInner(
     accountViewModel: AccountViewModel,
     navController: NavController
 ) {
+    val defaultBackgroundColor = MaterialTheme.colors.background
+    val defaultPrimaryColor = MaterialTheme.colors.primary
+
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
     val loggedIn = account.userProfile()
@@ -174,7 +178,7 @@ fun NoteComposeInner(
     } else if (noteEvent is FileStorageHeaderEvent) {
         FileStorageHeaderDisplay(note)
     } else {
-        var isNew by remember { mutableStateOf<Boolean>(false) }
+        var backgroundColor by remember { mutableStateOf<Color>(defaultBackgroundColor) }
 
         LaunchedEffect(key1 = routeForLastRead) {
             withContext(Dispatchers.IO) {
@@ -182,54 +186,55 @@ fun NoteComposeInner(
                     val lastTime = NotificationCache.load(it)
 
                     val createdAt = note.createdAt()
-                    if (createdAt != null) {
+                    val isNew = if (createdAt != null) {
                         NotificationCache.markAsRead(it, createdAt)
-                        isNew = createdAt > lastTime
+                        createdAt > lastTime
+                    } else {
+                        false
+                    }
+
+                    backgroundColor = if (isNew) {
+                        val newColor = defaultPrimaryColor.copy(0.12f)
+                        if (parentBackgroundColor != null) {
+                            newColor.compositeOver(parentBackgroundColor)
+                        } else {
+                            newColor.compositeOver(defaultBackgroundColor)
+                        }
+                    } else {
+                        parentBackgroundColor ?: defaultBackgroundColor
                     }
                 }
             }
         }
 
-        val backgroundColor = if (isNew) {
-            val newColor = MaterialTheme.colors.primary.copy(0.12f)
-            if (parentBackgroundColor != null) {
-                newColor.compositeOver(parentBackgroundColor)
-            } else {
-                newColor.compositeOver(MaterialTheme.colors.background)
-            }
-        } else {
-            parentBackgroundColor ?: MaterialTheme.colors.background
-        }
-
         Column(
-            modifier = modifier
-                .combinedClickable(
-                    onClick = {
-                        if (noteEvent is ChannelMessageEvent) {
-                            baseChannel?.let {
-                                navController.navigate("Channel/${it.idHex}")
-                            }
-                        } else if (noteEvent is PrivateDmEvent) {
-                            val replyAuthorBase =
-                                (note.event as? PrivateDmEvent)
-                                    ?.recipientPubKey()
-                                    ?.let { LocalCache.getOrCreateUser(it) }
-
-                            var userToComposeOn = note.author!!
-
-                            if (replyAuthorBase != null) {
-                                if (note.author == accountViewModel.userProfile()) {
-                                    userToComposeOn = replyAuthorBase
-                                }
-                            }
-
-                            navController.navigate("Room/${userToComposeOn.pubkeyHex}")
-                        } else {
-                            navController.navigate("Note/${note.idHex}")
+            modifier = modifier.combinedClickable(
+                onClick = {
+                    if (noteEvent is ChannelMessageEvent) {
+                        baseChannel?.let {
+                            navController.navigate("Channel/${it.idHex}")
                         }
-                    },
-                    onLongClick = { popupExpanded = true }
-                )
+                    } else if (noteEvent is PrivateDmEvent) {
+                        val replyAuthorBase =
+                            (note.event as? PrivateDmEvent)
+                                ?.recipientPubKey()
+                                ?.let { LocalCache.getOrCreateUser(it) }
+
+                        var userToComposeOn = note.author!!
+
+                        if (replyAuthorBase != null) {
+                            if (note.author == accountViewModel.userProfile()) {
+                                userToComposeOn = replyAuthorBase
+                            }
+                        }
+
+                        navController.navigate("Room/${userToComposeOn.pubkeyHex}")
+                    } else {
+                        navController.navigate("Note/${note.idHex}")
+                    }
+                },
+                onLongClick = { popupExpanded = true }
+            )
                 .background(backgroundColor)
         ) {
             Row(
@@ -237,78 +242,11 @@ fun NoteComposeInner(
                     .padding(
                         start = if (!isBoostedNote) 12.dp else 0.dp,
                         end = if (!isBoostedNote) 12.dp else 0.dp,
-                        top = if (addMarginTop) 10.dp else 0.dp
+                        top = if (addMarginTop && !isBoostedNote) 10.dp else 0.dp
                     )
             ) {
                 if (!isBoostedNote && !isQuotedNote) {
-                    Column(Modifier.width(55.dp)) {
-                        // Draws the boosted picture outside the boosted card.
-                        Box(
-                            modifier = Modifier
-                                .width(55.dp)
-                                .padding(0.dp)
-                        ) {
-                            NoteAuthorPicture(note, navController, loggedIn, 55.dp)
-
-                            if (noteEvent is RepostEvent) {
-                                note.replyTo?.lastOrNull()?.let {
-                                    Box(
-                                        Modifier
-                                            .width(30.dp)
-                                            .height(30.dp)
-                                            .align(Alignment.BottomEnd)
-                                    ) {
-                                        NoteAuthorPicture(
-                                            it,
-                                            navController,
-                                            loggedIn,
-                                            35.dp,
-                                            pictureModifier = Modifier.border(2.dp, MaterialTheme.colors.background, CircleShape)
-                                        )
-                                    }
-                                }
-                            }
-
-                            // boosted picture
-                            if (noteEvent is ChannelMessageEvent && baseChannel != null) {
-                                val channelState by baseChannel.live.observeAsState()
-                                val channel = channelState?.channel
-
-                                if (channel != null) {
-                                    Box(
-                                        Modifier
-                                            .width(30.dp)
-                                            .height(30.dp)
-                                            .align(Alignment.BottomEnd)
-                                    ) {
-                                        RobohashAsyncImageProxy(
-                                            robot = channel.idHex,
-                                            model = ResizeImage(channel.profilePicture(), 30.dp),
-                                            contentDescription = stringResource(R.string.group_picture),
-                                            modifier = Modifier
-                                                .width(30.dp)
-                                                .height(30.dp)
-                                                .clip(shape = CircleShape)
-                                                .background(MaterialTheme.colors.background)
-                                                .border(
-                                                    2.dp,
-                                                    MaterialTheme.colors.background,
-                                                    CircleShape
-                                                )
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        if (noteEvent is RepostEvent) {
-                            baseNote.replyTo?.lastOrNull()?.let {
-                                RelayBadges(it)
-                            }
-                        } else {
-                            RelayBadges(baseNote)
-                        }
-                    }
+                    DrawAuthorImages(baseNote, loggedIn, navController)
                 }
 
                 Column(
@@ -354,7 +292,7 @@ fun NoteComposeInner(
                         }
                     }
 
-                    if (note.author != null && !makeItShort && !isQuotedNote) {
+                    if (noteEvent !is RepostEvent && note.author != null && !makeItShort && !isQuotedNote) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             ObserveDisplayNip05Status(note.author!!, Modifier.weight(1f))
 
@@ -370,7 +308,7 @@ fun NoteComposeInner(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(3.dp))
+                    Spacer(modifier = Modifier.height(2.dp))
 
                     if (!makeItShort && noteEvent is TextNoteEvent && (note.replyTo != null || noteEvent.mentions().isNotEmpty())) {
                         val replyingDirectlyTo = note.replyTo?.lastOrNull()
@@ -592,6 +530,91 @@ fun NoteComposeInner(
                     NoteQuickActionMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun DrawAuthorImages(baseNote: Note, loggedIn: User, navController: NavController) {
+    val baseChannel = baseNote.channel()
+
+    Column(Modifier.width(55.dp)) {
+        // Draws the boosted picture outside the boosted card.
+        Box(modifier = Modifier.width(55.dp), contentAlignment = Alignment.BottomEnd) {
+            NoteAuthorPicture(baseNote, navController, loggedIn, 55.dp)
+
+            if (baseNote.event is RepostEvent) {
+                RepostNoteAuthorPicture(baseNote, navController, loggedIn)
+            }
+
+            if (baseNote.event is ChannelMessageEvent && baseChannel != null) {
+                ChannelNotePicture(baseChannel)
+            }
+        }
+
+        if (baseNote.event is RepostEvent) {
+            baseNote.replyTo?.lastOrNull()?.let {
+                RelayBadges(it)
+            }
+        } else {
+            RelayBadges(baseNote)
+        }
+    }
+}
+
+@Composable
+private fun ChannelNotePicture(baseChannel: Channel) {
+    val channelState by baseChannel.live.observeAsState()
+    val channel = channelState?.channel
+
+    if (channel != null) {
+        Box(
+            Modifier
+                .width(30.dp)
+                .height(30.dp)
+        ) {
+            RobohashAsyncImageProxy(
+                robot = channel.idHex,
+                model = ResizeImage(channel.profilePicture(), 30.dp),
+                contentDescription = stringResource(R.string.group_picture),
+                modifier = Modifier
+                    .width(30.dp)
+                    .height(30.dp)
+                    .clip(shape = CircleShape)
+                    .background(MaterialTheme.colors.background)
+                    .border(
+                        2.dp,
+                        MaterialTheme.colors.background,
+                        CircleShape
+                    )
+            )
+        }
+    }
+}
+
+@Composable
+private fun RepostNoteAuthorPicture(
+    baseNote: Note,
+    navController: NavController,
+    loggedIn: User
+) {
+    baseNote.replyTo?.lastOrNull()?.let {
+        Box(
+            Modifier
+                .width(30.dp)
+                .height(30.dp)
+        ) {
+            NoteAuthorPicture(
+                it,
+                navController,
+                loggedIn,
+                35.dp,
+                pictureModifier = Modifier.border(
+                    2.dp,
+                    MaterialTheme.colors.background,
+                    CircleShape
+                )
+            )
         }
     }
 }
