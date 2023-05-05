@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.service.model
 import android.util.Log
 import com.google.gson.reflect.TypeToken
 import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.toByteArray
 import nostr.postr.Utils
 
 abstract class GeneralListEvent(
