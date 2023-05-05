@@ -333,5 +333,11 @@
 
     <string name="upload_server_relays_nip95">Saját csomópontjaid (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">A fájlokat a csomópontokra töltik fel és ott tárolják. Rögzített URL-től mentesek (harmadik féltől való függőség). Győződj meg róla, hogy legalább egy NIP-95 csomópont a csomópontlistában szerepel</string>
+    
+    
+    
+    <string name="follow_list_selection">Követek Lista</string>
+    <string name="follow_list_kind3follows">Mindenki akit követek</string>
+    <string name="follow_list_global">Globális</string>
 
 </resources>
