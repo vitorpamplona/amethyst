@@ -387,6 +387,12 @@ private fun ProfileHeader(
                         ShowUserButton {
                             account.showUser(baseUser.pubkeyHex)
                         }
+                    } else if (baseUser.info?.nip97 == true) {
+                        if (accountUser.isSubscribedToAsRecommendation(baseUser)) {
+                            RemoveRecommendations({ coroutineScope.launch(Dispatchers.IO) { account.removeFromRecommendations(baseUser) } })
+                        } else {
+                            AddRecommendations({ coroutineScope.launch(Dispatchers.IO) { account.addToRecommendations(baseUser) } })
+                        }
                     } else if (accountUser.isFollowingCached(baseUser)) {
                         UnfollowButton { coroutineScope.launch(Dispatchers.IO) { account.unfollow(baseUser) } }
                     } else {
@@ -1022,6 +1028,38 @@ fun UnfollowButton(onClick: () -> Unit) {
 
 @Composable
 fun FollowButton(onClick: () -> Unit, text: Int = R.string.follow) {
+    Button(
+        modifier = Modifier.padding(start = 3.dp),
+        onClick = onClick,
+        shape = RoundedCornerShape(20.dp),
+        colors = ButtonDefaults
+            .buttonColors(
+                backgroundColor = MaterialTheme.colors.primary
+            ),
+        contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
+    ) {
+        Text(text = stringResource(text), color = Color.White, textAlign = TextAlign.Center)
+    }
+}
+
+@Composable
+fun AddRecommendations(onClick: () -> Unit, text: Int = R.string.recommendations_subscribe_button) {
+    Button(
+        modifier = Modifier.padding(start = 3.dp),
+        onClick = onClick,
+        shape = RoundedCornerShape(20.dp),
+        colors = ButtonDefaults
+            .buttonColors(
+                backgroundColor = MaterialTheme.colors.primary
+            ),
+        contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
+    ) {
+        Text(text = stringResource(text), color = Color.White, textAlign = TextAlign.Center)
+    }
+}
+
+@Composable
+fun RemoveRecommendations(onClick: () -> Unit, text: Int = R.string.recommendations_unsubscribe_button) {
     Button(
         modifier = Modifier.padding(start = 3.dp),
         onClick = onClick,

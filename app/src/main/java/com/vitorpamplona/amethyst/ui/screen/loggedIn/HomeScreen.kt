@@ -56,6 +56,12 @@ fun HomeScreen(
     val accountState = account.live.observeAsState()
 
     LaunchedEffect(accountViewModel, accountState.value?.account?.defaultHomeFollowList) {
+        account.sendRecommendationRequest(account.defaultHomeFollowList) {
+            NostrHomeDataSource.resetFilters()
+            homeFeedViewModel.invalidateData()
+            repliesFeedViewModel.invalidateData()
+        }
+
         HomeNewThreadFeedFilter.account = account
         HomeConversationsFeedFilter.account = account
         NostrHomeDataSource.resetFilters()

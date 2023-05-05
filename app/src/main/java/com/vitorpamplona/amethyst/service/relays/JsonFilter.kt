@@ -15,7 +15,7 @@ class JsonFilter(
     val limit: Int? = null,
     val search: String? = null
 ) {
-    fun toJson(forRelay: String? = null): String {
+    fun toJsonObject(forRelay: String? = null): JsonObject {
         val jsonObject = JsonObject()
         ids?.run {
             jsonObject.add("ids", JsonArray().apply { ids.forEach { add(it) } })
@@ -56,7 +56,11 @@ class JsonFilter(
         search?.run {
             jsonObject.addProperty("search", search)
         }
-        return gson.toJson(jsonObject)
+        return jsonObject
+    }
+
+    fun toJson(forRelay: String? = null): String {
+        return gson.toJson(toJsonObject(forRelay))
     }
 
     companion object {

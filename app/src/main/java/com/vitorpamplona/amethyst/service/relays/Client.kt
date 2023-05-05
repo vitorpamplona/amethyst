@@ -68,12 +68,22 @@ object Client : RelayPool.Listener {
     fun send(signedEvent: EventInterface, relay: String? = null, feedTypes: Set<FeedType>? = null, onDone: (() -> Unit)? = null) {
         if (relay == null) {
             RelayPool.send(signedEvent)
+
+            GlobalScope.launch(Dispatchers.IO) {
+                delay(10000) // waits for a reply
+                onDone?.invoke()
+            }
         } else {
             val useConnectedRelayIfPresent = relays.filter { it.url == relay }
 
             if (useConnectedRelayIfPresent.isNotEmpty()) {
                 useConnectedRelayIfPresent.forEach {
                     it.send(signedEvent)
+
+                    GlobalScope.launch(Dispatchers.IO) {
+                        delay(10000) // waits for a reply
+                        onDone?.invoke()
+                    }
                 }
             } else {
                 /** temporary connection */

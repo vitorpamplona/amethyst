@@ -354,4 +354,7 @@
     <string name="follow_list_kind3follows">All Follows</string>
     <string name="follow_list_global">Global</string>
 
+    <string name="recommendations_subscribe_button">Subscribe</string>
+    <string name="recommendations_unsubscribe_button">Unsubscribe</string>
+
 </resources>

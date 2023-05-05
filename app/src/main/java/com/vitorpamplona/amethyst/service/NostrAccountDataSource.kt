@@ -58,11 +58,11 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
         )
     }
 
-    fun createAccountBookmarkListFilter(): TypedFilter {
+    fun createAccountListsFilter(): TypedFilter {
         return TypedFilter(
             types = COMMON_FEED_TYPES,
             filter = JsonFilter(
-                kinds = listOf(BookmarkListEvent.kind, PeopleListEvent.kind),
+                kinds = listOf(BookmarkListEvent.kind, PeopleListEvent.kind, RecommendationSubscriptionListEvent.kind),
                 authors = listOf(account.userProfile().pubkeyHex),
                 limit = 100
             )
@@ -109,10 +109,10 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
         accountChannel.typedFilters = listOf(
             createAccountMetadataFilter(),
             createAccountContactListFilter(),
+            createAccountListsFilter(),
             createNotificationFilter(),
             createAccountReportsFilter(),
-            createAccountAcceptedAwardsFilter(),
-            createAccountBookmarkListFilter()
+            createAccountAcceptedAwardsFilter()
         ).ifEmpty { null }
     }
 

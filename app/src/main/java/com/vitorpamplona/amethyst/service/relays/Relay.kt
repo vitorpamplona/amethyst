@@ -14,7 +14,7 @@ import okhttp3.WebSocketListener
 import java.util.Date
 
 enum class FeedType {
-    FOLLOWS, PUBLIC_CHATS, PRIVATE_DMS, GLOBAL, SEARCH, WALLET_CONNECT
+    FOLLOWS, PUBLIC_CHATS, PRIVATE_DMS, GLOBAL, SEARCH, WALLET_CONNECT, RECOMMENDATION
 }
 
 val COMMON_FEED_TYPES = setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.PRIVATE_DMS, FeedType.GLOBAL)
@@ -92,6 +92,10 @@ class Relay(
                     eventDownloadCounterInBytes += text.bytesUsedInMemory()
 
                     try {
+                        if (text.contains("20021")) {
+                            Log.w("Relay", "provider Relay onEVENT $url $text")
+                        }
+
                         val msg = Event.gson.fromJson(text, JsonElement::class.java).asJsonArray
                         val type = msg[0].asString
                         val channel = msg[1].asString
@@ -206,7 +210,10 @@ class Relay(
                     if (filters.isNotEmpty()) {
                         val request =
                             """["REQ","$requestId",${filters.take(10).joinToString(",") { it.filter.toJson(url) }}]"""
-                        // println("FILTERSSENT $url $request")
+
+                        if (request.contains("20021")) {
+                            println("provider FILTERSSENT $url $request")
+                        }
                         socket?.send(request)
                         eventUploadCounterInBytes += request.bytesUsedInMemory()
                         afterEOSE = false
@@ -242,6 +249,7 @@ class Relay(
         if (write) {
             if (signedEvent !is RelayAuthEvent) {
                 val event = """["EVENT",${signedEvent.toJson()}]"""
+                println("provider EVENT SENT $url " + event)
                 socket?.send(event)
                 eventUploadCounterInBytes += event.bytesUsedInMemory()
             }

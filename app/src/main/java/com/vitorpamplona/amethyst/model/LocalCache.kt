@@ -38,6 +38,8 @@ object LocalCache {
     val awaitingPaymentRequests =
         ConcurrentHashMap<HexKey, Pair<Note?, (LnZapPaymentResponseEvent) -> Unit>>(10)
 
+    val recommendations = ConcurrentHashMap<HexKey, Recommendation>(10)
+
     fun checkGetOrCreateUser(key: String): User? {
         if (isValidHexNpub(key)) {
             return getOrCreateUser(key)
@@ -95,6 +97,15 @@ object LocalCache {
         return channels[key] ?: run {
             val answer = Channel(key)
             channels.put(key, answer)
+            answer
+        }
+    }
+
+    @Synchronized
+    fun getOrCreateRecommendationsFrom(pubKey: String): Recommendation {
+        return recommendations[pubKey] ?: run {
+            val answer = Recommendation(pubKey)
+            recommendations.put(pubKey, answer)
             answer
         }
     }
@@ -170,6 +181,8 @@ object LocalCache {
             note.loadEvent(event, author, emptyList())
 
             refreshObservers(note)
+            // refreshes lists on screen.
+            author.liveSet?.follows?.invalidateData()
         }
     }
 
@@ -345,6 +358,38 @@ object LocalCache {
             user.updateContactList(event)
             // Log.d("CL", "AAA ${user.toBestDisplayName()} ${follows.size}")
         }
+    }
+
+    fun consume(event: RecommendationSubscriptionListEvent) {
+        val user = getOrCreateUser(event.pubKey)
+
+        // avoids processing empty contact lists.
+        if (event.createdAt > (user.latestRecommendationSubscriptionList?.createdAt ?: 0)) {
+            println("provider: event arrived: ${event.id}")
+
+            user.updateRecommendations(event)
+            // Log.d("CL", "AAA ${user.toBestDisplayName()} ${follows.size}")
+        }
+    }
+
+    fun consume(event: RecommendationRequestEvent) {
+        // does nothing
+    }
+
+    fun consume(event: RecommendationRequestEvent, onResponse: (RecommendationResponseEvent) -> Unit) {
+        val user = getOrCreateUser(event.pubKey)
+        val recomm = getOrCreateRecommendationsFrom(event.pubKey)
+
+        recomm.updateRequest(event, user, onResponse)
+    }
+
+    fun consume(event: RecommendationResponseEvent) {
+        val user = getOrCreateUser(event.pubKey)
+        val recomm = getOrCreateRecommendationsFrom(event.pubKey)
+
+        println("provider recommendation response event ")
+
+        recomm.updateResponse(event, user)
     }
 
     fun consume(event: PrivateDmEvent, relay: Relay?) {

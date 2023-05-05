@@ -6,10 +6,12 @@ import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
+import com.vitorpamplona.amethyst.service.NostrRecommendationResponseDataSource
 import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.relays.FeedType
+import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.ui.actions.ServersAvailable
@@ -18,6 +20,7 @@ import com.vitorpamplona.amethyst.ui.note.Nip47URI
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import nostr.postr.Persona
 import nostr.postr.Utils
@@ -38,8 +41,12 @@ fun getLanguagesSpokenByUser(): Set<String> {
     return codedList
 }
 
-val GLOBAL_FOLLOWS = " Global "
-val KIND3_FOLLOWS = " All Follows "
+val HARDCODED_SCHEME = "hardcoded"
+val RECOMMENDATION_SCHEME = "recommendation"
+val PEOPLE_LIST_SCHEME = "showlist"
+
+val GLOBAL_FOLLOWS = "$HARDCODED_SCHEME:Global"
+val KIND3_FOLLOWS = "$HARDCODED_SCHEME:All Follows"
 
 @OptIn(DelicateCoroutinesApi::class)
 class Account(
@@ -226,6 +233,55 @@ class Account(
 
             Client.send(event, nip47.relayUri, wcListener.feedTypes) {
                 wcListener.destroy()
+            }
+        }
+    }
+
+    fun sendRecommendationRequest(listName: String?, onResponse: () -> Unit) {
+        if (!isWriteable()) return
+        if (listName == null || !isRecommendation(listName)) return
+
+        println("provider1 sendRecommendationRequest $listName")
+
+        val (scheme, idHex) = followListNameSplit(listName)
+
+        println("provider2 $scheme $idHex")
+
+        val provider = userProfile().latestRecommendationSubscriptionList?.taggedUsersWithRelays()?.firstOrNull { it.pubKeyHex == idHex }
+
+        if (provider == null) return
+
+        println("provider3 ${provider.pubKeyHex} ${provider.relayUri} ${LocalCache.checkGetOrCreateUser(provider.pubKeyHex)?.latestContactList}")
+
+        val event = RecommendationRequestEvent.create(
+            listOf(userProfile().pubkeyHex),
+            RecommendationFilter(
+                listOf(
+                    JsonFilter(
+                        kinds = listOf(TextNoteEvent.kind)
+                    )
+                )
+            ),
+            provider.pubKeyHex,
+            provider.relayUri,
+            loggedIn.privKey!!
+        )
+
+        GlobalScope.launch(Dispatchers.IO) {
+            val listener = NostrRecommendationResponseDataSource(provider.pubKeyHex, event.pubKey, event.id)
+            listener.start()
+
+            delay(1000)
+
+            LocalCache.consume(event) {
+                println("provider4 response")
+                // After the response is received.
+                onResponse()
+            }
+
+            Client.send(event, provider.relayUri, listener.feedTypes) {
+                println("provider4 onDestroy")
+                listener.destroy()
             }
         }
     }
@@ -584,6 +640,52 @@ class Account(
         joinChannel(event.id)
     }
 
+    fun addToRecommendations(baseUser: User) {
+        if (!isWriteable()) return
+
+        val recommendations = userProfile().latestRecommendationSubscriptionList
+
+        val myPreferredReplyRelays = userProfile().relaysBeingUsed.values.sortedBy { it.counter }.map { it.url }
+
+        val providerRelays = baseUser.latestContactList?.relays()?.mapNotNull {
+            if (it.value.read && it.value.write) {
+                it.key
+            } else {
+                null
+            }
+        }
+
+        val bestRelay = myPreferredReplyRelays.intersect(providerRelays?.toSet() ?: emptySet()).firstOrNull() ?: providerRelays?.firstOrNull() ?: ""
+
+        val event = RecommendationSubscriptionListEvent.addTag(
+            "p",
+            baseUser.pubkeyHex,
+            bestRelay,
+            true,
+            recommendations,
+            loggedIn.privKey!!
+        )
+
+        Client.send(event)
+        LocalCache.consume(event)
+    }
+
+    fun removeFromRecommendations(baseUser: User) {
+        if (!isWriteable()) return
+
+        val recommendations = userProfile().latestRecommendationSubscriptionList
+
+        val event = RecommendationSubscriptionListEvent.removeTag(
+            baseUser.pubkeyHex,
+            true,
+            recommendations,
+            loggedIn.privKey!!
+        )
+
+        Client.send(event)
+        LocalCache.consume(event)
+    }
+
     fun addPrivateBookmark(note: Note) {
         if (!isWriteable()) return
 
@@ -763,13 +865,36 @@ class Account(
         saveable.invalidateData()
     }
 
-    fun selectedUsersFollowList(listName: String?): Set<String>? {
-        if (listName == GLOBAL_FOLLOWS) return null
-        if (listName == KIND3_FOLLOWS) return userProfile().cachedFollowingKeySet()
+    fun followListNameSplit(schemeListName: String): Pair<String, String> {
+        val parts = schemeListName.split(":")
 
+        return if (parts.size == 2) {
+            Pair(parts[0], parts[1])
+        } else {
+            // old version
+            if (parts.contains("Global")) {
+                Pair(HARDCODED_SCHEME, GLOBAL_FOLLOWS)
+            } else if (parts.contains("All Follows")) {
+                Pair(HARDCODED_SCHEME, KIND3_FOLLOWS)
+            } else {
+                Pair(PEOPLE_LIST_SCHEME, schemeListName)
+            }
+        }
+    }
+
+    fun isRecommendation(schemeListName: String) = schemeListName.substringBefore(":") == RECOMMENDATION_SCHEME
+
+    fun selectedUsersFollowList(schemeListName: String?): Set<String>? {
+        if (schemeListName == null) return emptySet()
+        if (schemeListName == GLOBAL_FOLLOWS) return null
+        if (schemeListName == KIND3_FOLLOWS) return userProfile().cachedFollowingKeySet()
+
+        val (scheme, listName) = followListNameSplit(schemeListName)
         val privKey = loggedIn.privKey
 
-        return if (listName != null) {
+        println("aaaaaaa $scheme $listName")
+
+        return if (scheme == PEOPLE_LIST_SCHEME) {
             val aTag = ATag(PeopleListEvent.kind, userProfile().pubkeyHex, listName, null).toTag()
             val list = LocalCache.addressables[aTag]
             if (list != null) {
@@ -778,10 +903,20 @@ class Account(
                     (list.event as? PeopleListEvent)?.privateTaggedUsers(it)
                 } ?: emptySet()
 
+                println("aaaaaaa $scheme $listName ${publicHexList.size}")
+
                 (publicHexList + privateHexList).toSet()
             } else {
                 emptySet()
             }
+        } else if (scheme == RECOMMENDATION_SCHEME) {
+            val recommendedPeople = LocalCache.recommendations[listName]?.response?.recommendedPeople()
+
+            // println("provider recommended ${listName} ${LocalCache.recommendations[listName]}")
+
+            recommendedPeople?.map {
+                it.pubkeyHex
+            }?.toSet() ?: emptySet()
         } else {
             emptySet()
         }

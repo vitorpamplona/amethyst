@@ -48,6 +48,9 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.PEOPLE_LIST_SCHEME
+import com.vitorpamplona.amethyst.model.RECOMMENDATION_SCHEME
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
@@ -87,7 +90,11 @@ fun AppTopBar(navController: NavHostController, scaffoldState: ScaffoldState, ac
 @Composable
 fun StoriesTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
     GenericTopBar(scaffoldState, accountViewModel) { account ->
-        FollowList(account.defaultStoriesFollowList, true) { listName ->
+        FollowList(
+            account.defaultStoriesFollowList,
+            account,
+            true
+        ) { listName ->
             account.changeDefaultStoriesFollowList(listName)
         }
     }
@@ -96,7 +103,7 @@ fun StoriesTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewMod
 @Composable
 fun HomeTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
     GenericTopBar(scaffoldState, accountViewModel) { account ->
-        FollowList(account.defaultHomeFollowList, false) { listName ->
+        FollowList(account.defaultHomeFollowList, account, false) { listName ->
             account.changeDefaultHomeFollowList(listName)
         }
     }
@@ -226,59 +233,70 @@ private fun LoggedInUserPictureDrawer(
 }
 
 @Composable
-fun FollowList(listName: String, withGlobal: Boolean, onChange: (String) -> Unit) {
+fun FollowList(selectedList: String, account: Account, withGlobal: Boolean, onChange: (String) -> Unit) {
     // Notification
     val dbState = LocalCache.live.observeAsState()
     val db = dbState.value ?: return
 
+    val userState by account.userProfile().live().follows.observeAsState()
+    val user = userState?.user ?: return
+
     val kind3Follow = Pair(KIND3_FOLLOWS, stringResource(id = R.string.follow_list_kind3follows))
     val globalFollow = Pair(GLOBAL_FOLLOWS, stringResource(id = R.string.follow_list_global))
 
-    val defaultOptions = if (withGlobal) listOf(kind3Follow, globalFollow) else listOf(kind3Follow)
+    val defaultOptions = if (withGlobal) listOf<Pair<String, Any>>(kind3Follow, globalFollow) else listOf(kind3Follow)
 
-    var followLists by remember { mutableStateOf(defaultOptions) }
-    val followNames = remember { derivedStateOf { followLists.map { it.second } } }
+    var availableOptions by remember { mutableStateOf(defaultOptions) }
+    val followNames = remember { derivedStateOf { availableOptions.map { it.second } } }
 
-    LaunchedEffect(key1 = db) {
+    LaunchedEffect(key1 = db, key2 = selectedList, key3 = user.recommendationList()) {
         withContext(Dispatchers.IO) {
-            followLists = defaultOptions + LocalCache.addressables.mapNotNull {
+            val followLists = LocalCache.addressables.mapNotNull {
                 val event = (it.value.event as? PeopleListEvent)
                 // Has to have an list
-                if (event != null && (event.tags.size > 1 || event.content.length > 50)) {
-                    Pair(event.dTag(), event.dTag())
+                if (event != null && user.pubkeyHex == event.pubKey && (event.tags.size > 1 || event.content.length > 50)) {
+                    Pair("$PEOPLE_LIST_SCHEME:${event.dTag()}", event.dTag())
                 } else {
                     null
                 }
             }.sortedBy { it.second }
+
+            val recommendations = user.recommendationList().mapNotNull { hex ->
+                LocalCache.checkGetOrCreateUser(hex)?.let { user ->
+                    Pair("$RECOMMENDATION_SCHEME:$hex", user)
+                }
+            }
+
+            availableOptions = defaultOptions + followLists + recommendations
         }
     }
 
     SimpleTextSpinner(
-        placeholder = followLists.firstOrNull { it.first == listName }?.first ?: KIND3_FOLLOWS,
+        placeholder = availableOptions.firstOrNull { it.first == selectedList }?.second ?: "Select an Option",
         options = followNames.value,
         onSelect = {
-            onChange(followLists.getOrNull(it)?.first ?: KIND3_FOLLOWS)
+            onChange(availableOptions.getOrNull(it)?.first ?: KIND3_FOLLOWS)
         }
     )
 }
 
 @Composable
 fun SimpleTextSpinner(
-    placeholder: String,
-    options: List<String>,
+    placeholder: Any,
+    options: List<Any>,
     explainers: List<String>? = null,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     var optionsShowing by remember { mutableStateOf(false) }
-    var currentText by remember { mutableStateOf(placeholder) }
+    var currentSelection by remember { mutableStateOf(placeholder) }
 
     Box(
         modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
-        Text(currentText)
+        Text((currentSelection as? User)?.toBestDisplayName() ?: currentSelection.toString())
         Box(
             modifier = Modifier
                 .matchParentSize()
@@ -294,7 +312,7 @@ fun SimpleTextSpinner(
     if (optionsShowing) {
         options.isNotEmpty().also {
             SpinnerSelectionDialog(options = options, explainers = explainers, onDismiss = { optionsShowing = false }) {
-                currentText = options[it]
+                currentSelection = options[it]
                 optionsShowing = false
                 onSelect(it)
             }

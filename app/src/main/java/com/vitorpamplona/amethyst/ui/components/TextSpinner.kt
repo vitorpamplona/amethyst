@@ -21,6 +21,7 @@ import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -31,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.vitorpamplona.amethyst.model.User
 
 @Composable
 fun TextSpinner(
@@ -83,7 +85,7 @@ fun TextSpinner(
 }
 
 @Composable
-fun SpinnerSelectionDialog(options: List<String>, explainers: List<String>?, onDismiss: () -> Unit, onSelect: (Int) -> Unit) {
+fun SpinnerSelectionDialog(options: List<Any>, explainers: List<String>?, onDismiss: () -> Unit, onSelect: (Int) -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             border = BorderStroke(0.25.dp, Color.LightGray),
@@ -105,7 +107,12 @@ fun SpinnerSelectionDialog(options: List<String>, explainers: List<String>?, onD
                                 modifier = Modifier
                                     .fillMaxWidth()
                             ) {
-                                Text(text = item, color = MaterialTheme.colors.onSurface)
+                                if (item is User) {
+                                    val userState = item.live().metadata.observeAsState()
+                                    Text(text = userState.value?.user?.toBestDisplayName() ?: "", color = MaterialTheme.colors.onSurface)
+                                } else {
+                                    Text(text = item.toString(), color = MaterialTheme.colors.onSurface)
+                                }
                             }
                             explainers?.getOrNull(index)?.let {
                                 Spacer(modifier = Modifier.height(5.dp))

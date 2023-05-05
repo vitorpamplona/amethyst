@@ -38,6 +38,9 @@ open class Event(
 
     override fun toJson(): String = gson.toJson(this)
 
+    fun taggedEventsWithRelays() = tags.filter { it.size > 1 && it[0] == "e" }.map { Contact(it[1], it.getOrNull(2)) }
+    fun taggedUsersWithRelays() = tags.filter { it.size > 1 && it[0] == "p" }.map { Contact(it[1], it.getOrNull(2)) }
+
     fun taggedUsers() = tags.filter { it.size > 1 && it[0] == "p" }.map { it[1] }
     fun taggedEvents() = tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }
 
@@ -243,6 +246,9 @@ open class Event(
             PrivateDmEvent.kind -> PrivateDmEvent(id, pubKey, createdAt, tags, content, sig)
             ReactionEvent.kind -> ReactionEvent(id, pubKey, createdAt, tags, content, sig)
             RecommendRelayEvent.kind -> RecommendRelayEvent(id, pubKey, createdAt, tags, content, sig, lenient)
+            RecommendationRequestEvent.kind -> RecommendationRequestEvent(id, pubKey, createdAt, tags, content, sig)
+            RecommendationResponseEvent.kind -> RecommendationResponseEvent(id, pubKey, createdAt, tags, content, sig)
+            RecommendationSubscriptionListEvent.kind -> RecommendationSubscriptionListEvent(id, pubKey, createdAt, tags, content, sig)
             ReportEvent.kind -> ReportEvent(id, pubKey, createdAt, tags, content, sig)
             RepostEvent.kind -> RepostEvent(id, pubKey, createdAt, tags, content, sig)
             TextNoteEvent.kind -> TextNoteEvent(id, pubKey, createdAt, tags, content, sig)

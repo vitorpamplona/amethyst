@@ -18,6 +18,8 @@ object HomeConversationsFeedFilter : AdditiveFeedFilter<Note>() {
     }
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
+        val isRecommendationActive = account.isRecommendation(account.defaultHomeFollowList)
+
         val followingKeySet = account.selectedUsersFollowList(account.defaultHomeFollowList) ?: emptySet()
         val followingTagSet = account.selectedTagsFollowList(account.defaultHomeFollowList) ?: emptySet()
 

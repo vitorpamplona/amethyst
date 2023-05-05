@@ -6,6 +6,7 @@ import com.vitorpamplona.amethyst.service.model.BookmarkListEvent
 import com.vitorpamplona.amethyst.service.model.ContactListEvent
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.MetadataEvent
+import com.vitorpamplona.amethyst.service.model.RecommendationSubscriptionListEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.relays.EOSETime
 import com.vitorpamplona.amethyst.service.relays.Relay
@@ -25,6 +26,7 @@ class User(val pubkeyHex: String) {
 
     var latestContactList: ContactListEvent? = null
     var latestBookmarkList: BookmarkListEvent? = null
+    var latestRecommendationSubscriptionList: RecommendationSubscriptionListEvent? = null
 
     var notes = setOf<Note>()
         private set
@@ -78,6 +80,18 @@ class User(val pubkeyHex: String) {
 
         latestBookmarkList = event
         liveSet?.bookmarks?.invalidateData()
+    }
+
+    fun updateRecommendations(event: RecommendationSubscriptionListEvent) {
+        if (event.id == latestRecommendationSubscriptionList?.id) return
+
+        latestRecommendationSubscriptionList = event
+
+        liveSet?.follows?.invalidateData()
+    }
+
+    fun isSubscribedToAsRecommendation(user: User): Boolean {
+        return latestRecommendationSubscriptionList?.isTaggedUser(user.pubkeyHex) ?: false
     }
 
     fun updateContactList(event: ContactListEvent) {
@@ -277,6 +291,10 @@ class User(val pubkeyHex: String) {
         return LocalCache.users.values.count { it.latestContactList?.isTaggedUser(pubkeyHex) ?: false }
     }
 
+    fun recommendationList(): Set<HexKey> {
+        return latestRecommendationSubscriptionList?.taggedUsers()?.toSet() ?: emptySet()
+    }
+
     fun cachedFollowingKeySet(): Set<HexKey> {
         return latestContactList?.verifiedFollowKeySet ?: emptySet()
     }
@@ -380,6 +398,8 @@ class UserMetadata {
     var iris: String? = null
     var main_relay: String? = null
     var twitter: String? = null
+
+    var nip97: Boolean? = null
 
     var updatedMetadataAt: Long = 0
     var latestMetadata: MetadataEvent? = null
