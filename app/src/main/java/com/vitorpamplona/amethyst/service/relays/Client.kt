@@ -109,7 +109,6 @@ object Client : RelayPool.Listener {
 
                 if (onDone != null) {
                     onDone()
-
                 }
             }
         }
