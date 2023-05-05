@@ -191,8 +191,8 @@ class Account(
         )
     }
 
-    fun calculateIfNoteWasZappedByAccount(zappedNote: Note): Boolean {
-        return zappedNote.isZappedBy(userProfile(), this) == true
+    fun calculateIfNoteWasZappedByAccount(zappedNote: Note?): Boolean {
+        return zappedNote?.isZappedBy(userProfile(), this) == true
     }
 
     fun calculateZappedAmount(zappedNote: Note?): BigDecimal {
