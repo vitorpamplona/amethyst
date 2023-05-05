@@ -3,9 +3,6 @@ package com.vitorpamplona.amethyst.ui.components
 import android.content.Context
 import android.util.Log
 import android.widget.Toast
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -240,12 +237,7 @@ private fun LocalImageView(
 
         if (imageState is AsyncImagePainter.State.Success) {
             HashVerificationSymbol(content.isVerified, Modifier.align(Alignment.TopEnd))
-        }
-
-        AnimatedVisibility(
-            visible = imageState !is AsyncImagePainter.State.Success,
-            exit = fadeOut(animationSpec = tween(200))
-        ) {
+        } else {
             if (content.blurhash != null) {
                 DisplayBlurHash(content.blurhash, content.description, contentScale, myModifier)
             } else {
@@ -311,12 +303,7 @@ private fun UrlImageView(
 
         if (imageState is AsyncImagePainter.State.Success) {
             HashVerificationSymbol(verifiedHash, Modifier.align(Alignment.TopEnd))
-        }
-
-        AnimatedVisibility(
-            visible = imageState !is AsyncImagePainter.State.Success,
-            exit = fadeOut(animationSpec = tween(200))
-        ) {
+        } else {
             if (content.blurhash != null) {
                 DisplayBlurHash(content.blurhash, content.description, contentScale, myModifier)
             } else {
