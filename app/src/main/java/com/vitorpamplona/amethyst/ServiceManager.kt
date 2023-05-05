@@ -12,6 +12,7 @@ import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.NostrThreadDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
+import com.vitorpamplona.amethyst.service.NostrVideoDataSource
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Constants
 
@@ -33,6 +34,7 @@ object ServiceManager {
             NostrAccountDataSource.account = myAccount
             NostrHomeDataSource.account = myAccount
             NostrChatroomListDataSource.account = myAccount
+            NostrVideoDataSource.account = myAccount
 
             // Notification Elements
             NostrHomeDataSource.start()
@@ -61,6 +63,7 @@ object ServiceManager {
         NostrSingleUserDataSource.stop()
         NostrThreadDataSource.stop()
         NostrUserProfileDataSource.stop()
+        NostrVideoDataSource.stop()
 
         Client.disconnect()
     }

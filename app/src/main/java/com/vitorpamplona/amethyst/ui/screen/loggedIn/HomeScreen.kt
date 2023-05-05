@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -50,9 +51,11 @@ fun HomeScreen(
 ) {
     val coroutineScope = rememberCoroutineScope()
     val account = accountViewModel.accountLiveData.value?.account ?: return
-    var wantsToAddNip47 by remember { mutableStateOf<String?>(nip47) }
+    var wantsToAddNip47 by remember { mutableStateOf(nip47) }
 
-    LaunchedEffect(accountViewModel) {
+    val accountState = account.live.observeAsState()
+
+    LaunchedEffect(accountViewModel, accountState.value?.account?.defaultHomeFollowList) {
         HomeNewThreadFeedFilter.account = account
         HomeConversationsFeedFilter.account = account
         NostrHomeDataSource.resetFilters()

@@ -46,6 +46,8 @@ private object PrefKeys {
     const val ZAP_AMOUNTS = "zapAmounts"
     const val DEFAULT_ZAPTYPE = "defaultZapType"
     const val DEFAULT_FILE_SERVER = "defaultFileServer"
+    const val DEFAULT_HOME_FOLLOW_LIST = "defaultHomeFollowList"
+    const val DEFAULT_STORIES_FOLLOW_LIST = "defaultStoriesFollowList"
     const val ZAP_PAYMENT_REQUEST_SERVER = "zapPaymentServer"
     const val LATEST_CONTACT_LIST = "latestContactList"
     const val HIDE_DELETE_REQUEST_DIALOG = "hide_delete_request_dialog"
@@ -197,6 +199,8 @@ object LocalPreferences {
             putString(PrefKeys.ZAP_AMOUNTS, gson.toJson(account.zapAmountChoices))
             putString(PrefKeys.DEFAULT_ZAPTYPE, gson.toJson(account.defaultZapType))
             putString(PrefKeys.DEFAULT_FILE_SERVER, gson.toJson(account.defaultFileServer))
+            putString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, account.defaultHomeFollowList)
+            putString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, account.defaultStoriesFollowList)
             putString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, gson.toJson(account.zapPaymentRequest))
             putString(PrefKeys.LATEST_CONTACT_LIST, Event.gson.toJson(account.backupContactList))
             putBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, account.hideDeleteRequestDialog)
@@ -217,6 +221,8 @@ object LocalPreferences {
 
             val dontTranslateFrom = getStringSet(PrefKeys.DONT_TRANSLATE_FROM, null) ?: setOf()
             val translateTo = getString(PrefKeys.TRANSLATE_TO, null) ?: Locale.getDefault().language
+            val defaultHomeFollowList = getString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, null)
+            val defaultStoriesFollowList = getString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, null)
 
             val zapAmountChoices = gson.fromJson(
                 getString(PrefKeys.ZAP_AMOUNTS, "[]"),
@@ -278,6 +284,8 @@ object LocalPreferences {
                 zapAmountChoices,
                 defaultZapType,
                 defaultFileServer,
+                defaultHomeFollowList,
+                defaultStoriesFollowList,
                 zapPaymentRequestServer,
                 hideDeleteRequestDialog,
                 hideBlockAlertDialog,

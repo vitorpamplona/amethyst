@@ -159,6 +159,20 @@ object LocalCache {
         }
     }
 
+    fun consume(event: PeopleListEvent) {
+        val note = getOrCreateAddressableNote(event.address())
+        val author = getOrCreateUser(event.pubKey)
+
+        // Already processed this event.
+        if (note.event?.id() == event.id()) return
+
+        if (event.createdAt > (note.createdAt() ?: 0)) {
+            note.loadEvent(event, author, emptyList())
+
+            refreshObservers(note)
+        }
+    }
+
     fun formattedDateTime(timestamp: Long): String {
         return Instant.ofEpochSecond(timestamp).atZone(ZoneId.systemDefault())
             .format(DateTimeFormatter.ofPattern("uuuu MMM d hh:mm a"))

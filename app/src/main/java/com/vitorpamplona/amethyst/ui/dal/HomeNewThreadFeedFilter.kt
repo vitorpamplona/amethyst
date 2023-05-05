@@ -24,9 +24,8 @@ object HomeNewThreadFeedFilter : AdditiveFeedFilter<Note>() {
     }
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
-        val user = account.userProfile()
-        val followingKeySet = user.cachedFollowingKeySet()
-        val followingTagSet = user.cachedFollowingTagSet()
+        val followingKeySet = account.selectedUsersFollowList(account.defaultHomeFollowList) ?: emptySet()
+        val followingTagSet = account.selectedTagsFollowList(account.defaultHomeFollowList) ?: emptySet()
 
         return collection
             .asSequence()

@@ -105,10 +105,14 @@ fun VideoScreen(
     val lifeCycleOwner = LocalLifecycleOwner.current
     val account = accountViewModel.accountLiveData.value?.account ?: return
 
+    val accountState = account.live.observeAsState()
+
+    NostrVideoDataSource.account = account
     VideoFeedFilter.account = account
 
-    LaunchedEffect(accountViewModel) {
+    LaunchedEffect(accountViewModel, accountState.value?.account?.defaultStoriesFollowList) {
         VideoFeedFilter.account = account
+        NostrVideoDataSource.account = account
         NostrVideoDataSource.resetFilters()
         videoFeedView.invalidateData()
     }
@@ -118,6 +122,7 @@ fun VideoScreen(
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Video Start")
                 VideoFeedFilter.account = account
+                NostrVideoDataSource.account = account
                 NostrVideoDataSource.start()
                 videoFeedView.invalidateData()
             }

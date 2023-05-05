@@ -33,7 +33,14 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 
 @Composable
-fun TextSpinner(label: String, placeholder: String, options: List<String>, explainers: List<String>? = null, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
+fun TextSpinner(
+    label: String,
+    placeholder: String,
+    options: List<String>,
+    explainers: List<String>? = null,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
     val focusRequester = remember { FocusRequester() }
     val interactionSource = remember { MutableInteractionSource() }
     var optionsShowing by remember { mutableStateOf(false) }

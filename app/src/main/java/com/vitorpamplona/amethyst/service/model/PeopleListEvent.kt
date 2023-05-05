@@ -5,7 +5,7 @@ import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
 import java.util.Date
 
-class BookmarkListEvent(
+class PeopleListEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
@@ -14,7 +14,7 @@ class BookmarkListEvent(
     sig: HexKey
 ) : GeneralListEvent(id, pubKey, createdAt, kind, tags, content, sig) {
     companion object {
-        const val kind = 30001
+        const val kind = 30000
 
         fun create(
             name: String = "",
@@ -29,7 +29,7 @@ class BookmarkListEvent(
 
             privateKey: ByteArray,
             createdAt: Long = Date().time / 1000
-        ): BookmarkListEvent {
+        ): PeopleListEvent {
             val pubKey = Utils.pubkeyCreate(privateKey)
             val content = createPrivateTags(privEvents, privUsers, privAddresses, privateKey, pubKey)
 
@@ -48,7 +48,7 @@ class BookmarkListEvent(
 
             val id = generateId(pubKey.toHexKey(), createdAt, kind, tags, content)
             val sig = Utils.sign(id, privateKey)
-            return BookmarkListEvent(id.toHexKey(), pubKey.toHexKey(), createdAt, tags, content, sig.toHexKey())
+            return PeopleListEvent(id.toHexKey(), pubKey.toHexKey(), createdAt, tags, content, sig.toHexKey())
         }
     }
 }

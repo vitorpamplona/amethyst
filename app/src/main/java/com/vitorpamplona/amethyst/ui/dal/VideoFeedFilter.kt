@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.*
@@ -20,17 +21,17 @@ object VideoFeedFilter : AdditiveFeedFilter<Note>() {
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val now = System.currentTimeMillis() / 1000
+        val isGlobal = account.defaultStoriesFollowList == GLOBAL_FOLLOWS
+
+        val followingKeySet = account.selectedUsersFollowList(account.defaultStoriesFollowList) ?: emptySet()
+        val followingTagSet = account.selectedTagsFollowList(account.defaultStoriesFollowList) ?: emptySet()
 
         return collection
             .asSequence()
-            .filter {
-                it.event is FileHeaderEvent || it.event is FileStorageHeaderEvent
-            }
+            .filter { it.event is FileHeaderEvent || it.event is FileStorageHeaderEvent }
+            .filter { isGlobal || it.author?.pubkeyHex in followingKeySet || (it.event?.isTaggedHashes(followingTagSet) ?: false) }
             .filter { account.isAcceptable(it) }
-            .filter {
-                // Do not show notes with the creation time exceeding the current time, as they will always stay at the top of the global feed, which is cheating.
-                it.createdAt()!! <= now
-            }
+            .filter { it.createdAt()!! <= now }
             .toSet()
     }
 

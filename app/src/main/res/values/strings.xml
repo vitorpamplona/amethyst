@@ -348,4 +348,10 @@
     <string name="upload_server_relays_nip95">Your relays (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Files are hosted by your relays. New NIP: check if they support</string>
 
+
+
+    <string name="follow_list_selection">Follow List</string>
+    <string name="follow_list_kind3follows">All Follows</string>
+    <string name="follow_list_global">Global</string>
+
 </resources>

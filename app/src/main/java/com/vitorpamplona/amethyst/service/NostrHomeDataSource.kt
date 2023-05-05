@@ -45,7 +45,7 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
     }
 
     fun createFollowAccountsFilter(): TypedFilter {
-        val follows = account.followingKeySet()
+        val follows = account.selectedUsersFollowList(account.defaultHomeFollowList) ?: emptySet()
 
         val followKeys = follows.map {
             it.substring(0, 6)
@@ -65,7 +65,7 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
     }
 
     fun createFollowTagsFilter(): TypedFilter? {
-        val hashToLoad = account.followingTagSet()
+        val hashToLoad = account.selectedTagsFollowList(account.defaultHomeFollowList) ?: emptySet()
 
         if (hashToLoad.isEmpty()) return null
 
