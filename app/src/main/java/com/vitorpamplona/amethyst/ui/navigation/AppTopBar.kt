@@ -226,7 +226,7 @@ private fun LoggedInUserPictureDrawer(
 }
 
 @Composable
-fun FollowList(listName: String?, withGlobal: Boolean, onChange: (String?) -> Unit) {
+fun FollowList(listName: String, withGlobal: Boolean, onChange: (String) -> Unit) {
     // Notification
     val dbState = LocalCache.live.observeAsState()
     val db = dbState.value ?: return
@@ -257,7 +257,7 @@ fun FollowList(listName: String?, withGlobal: Boolean, onChange: (String?) -> Un
         placeholder = followLists.firstOrNull { it.first == listName }?.first ?: KIND3_FOLLOWS,
         options = followNames.value,
         onSelect = {
-            onChange(followLists.getOrNull(it)?.first)
+            onChange(followLists.getOrNull(it)?.first ?: KIND3_FOLLOWS)
         }
     )
 }

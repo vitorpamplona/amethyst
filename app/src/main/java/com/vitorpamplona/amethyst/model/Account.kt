@@ -53,8 +53,8 @@ class Account(
     var zapAmountChoices: List<Long> = listOf(500L, 1000L, 5000L),
     var defaultZapType: LnZapEvent.ZapType = LnZapEvent.ZapType.PRIVATE,
     var defaultFileServer: ServersAvailable = ServersAvailable.IMGUR,
-    var defaultHomeFollowList: String? = null,
-    var defaultStoriesFollowList: String? = null,
+    var defaultHomeFollowList: String = KIND3_FOLLOWS,
+    var defaultStoriesFollowList: String = GLOBAL_FOLLOWS,
     var zapPaymentRequest: Nip47URI? = null,
     var hideDeleteRequestDialog: Boolean = false,
     var hideBlockAlertDialog: Boolean = false,
@@ -408,12 +408,12 @@ class Account(
         }
     }
 
-    fun createNip95(data: ByteArray, headerInfo: FileHeader): Pair<FileStorageEvent, FileStorageHeaderEvent>? {
+    fun createNip95(byteArray: ByteArray, headerInfo: FileHeader): Pair<FileStorageEvent, FileStorageHeaderEvent>? {
         if (!isWriteable()) return null
 
         val data = FileStorageEvent.create(
             mimeType = headerInfo.mimeType ?: "",
-            data = data,
+            data = byteArray,
             privateKey = loggedIn.privKey!!
         )
 
@@ -734,13 +734,13 @@ class Account(
         saveable.invalidateData()
     }
 
-    fun changeDefaultHomeFollowList(name: String?) {
+    fun changeDefaultHomeFollowList(name: String) {
         defaultHomeFollowList = name
         live.invalidateData()
         saveable.invalidateData()
     }
 
-    fun changeDefaultStoriesFollowList(name: String?) {
+    fun changeDefaultStoriesFollowList(name: String) {
         defaultStoriesFollowList = name
         live.invalidateData()
         saveable.invalidateData()

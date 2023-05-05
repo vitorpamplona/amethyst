@@ -138,7 +138,7 @@ open class NewMediaModel : ViewModel() {
                     onReady = {
                         uploadingPercentage.value = 0.90f
                         uploadingDescription.value = "Sending"
-                        val note = account?.sendHeader(it)
+                        account?.sendHeader(it)
                         uploadingPercentage.value = 1.00f
                         isUploadingImage = false
                         onceUploaded()
