@@ -590,6 +590,7 @@ enum class ServersAvailable {
     NOSTRIMG,
     IMGUR_NIP_94,
     NOSTRIMG_NIP_94,
+    NOSTR_BUILD_NIP_94,
     NIP95
 }
 
@@ -610,8 +611,10 @@ fun ImageVideoDescription(
     val fileServers = listOf(
         Triple(ServersAvailable.IMGUR, stringResource(id = R.string.upload_server_imgur), stringResource(id = R.string.upload_server_imgur_explainer)),
         Triple(ServersAvailable.NOSTRIMG, stringResource(id = R.string.upload_server_nostrimg), stringResource(id = R.string.upload_server_nostrimg_explainer)),
+        Triple(ServersAvailable.NOSTR_BUILD, stringResource(id = R.string.upload_server_nostrbuild), stringResource(id = R.string.upload_server_nostrbuild_explainer)),
         Triple(ServersAvailable.IMGUR_NIP_94, stringResource(id = R.string.upload_server_imgur_nip94), stringResource(id = R.string.upload_server_imgur_nip94_explainer)),
         Triple(ServersAvailable.NOSTRIMG_NIP_94, stringResource(id = R.string.upload_server_nostrimg_nip94), stringResource(id = R.string.upload_server_nostrimg_nip94_explainer)),
+        Triple(ServersAvailable.NOSTR_BUILD_NIP_94, stringResource(id = R.string.upload_server_nostrbuild_nip94), stringResource(id = R.string.upload_server_nostrbuild_nip94_explainer)),
         Triple(ServersAvailable.NIP95, stringResource(id = R.string.upload_server_relays_nip95), stringResource(id = R.string.upload_server_relays_nip95_explainer))
     )
 
@@ -741,6 +744,7 @@ fun ImageVideoDescription(
 
             if (selectedServer == ServersAvailable.NOSTRIMG_NIP_94 ||
                 selectedServer == ServersAvailable.IMGUR_NIP_94 ||
+                selectedServer == ServersAvailable.NOSTR_BUILD_NIP_94 ||
                 selectedServer == ServersAvailable.NIP95
             ) {
                 Row(

@@ -327,19 +327,31 @@
     <string name="file_server">File Server</string>
     <string name="zap_forward_lnAddress">LnAddress or @User</string>
 
-    <string name="upload_server_imgur">imgur.com - less secure</string>
-    <string name="upload_server_imgur_explainer">Uploads to Imgur. Imgur can change your image/video at any time</string>
+    <string name="upload_server_imgur">imgur.com - trusted</string>
+    <string name="upload_server_imgur_explainer">Imgur can modify the file</string>
 
-    <string name="upload_server_nostrimg">nostrimg.com - less secure</string>
-    <string name="upload_server_nostrimg_explainer">Uploads to NostrImg. NostrImg can change your image at any time</string>
+    <string name="upload_server_nostrimg">nostrimg.com - trusted</string>
+    <string name="upload_server_nostrimg_explainer">NostrImg can modify the file</string>
+
+    <string name="upload_server_nostrbuild">nostr.build - trusted</string>
+    <string name="upload_server_nostrbuild_explainer">Nostr.build can modify the file</string>
 
     <string name="upload_server_imgur_nip94">Verifiable Imgur (NIP-94)</string>
-    <string name="upload_server_imgur_nip94_explainer">Protects from Imgur modifying the content afterwards. This is a new NIP: other clients might not see the image</string>
+    <string name="upload_server_imgur_nip94_explainer">Checks if Imgur modified the file. New NIP: other clients might not see it</string>
 
     <string name="upload_server_nostrimg_nip94">Verifiable NostrImg (NIP-94)</string>
-    <string name="upload_server_nostrimg_nip94_explainer">Protects from NostrImg modifying the content afterwards. This is a new NIP: other clients might not see the image</string>
+    <string name="upload_server_nostrimg_nip94_explainer">Checks if NostrImg modified the file. New NIP: other clients might not see it</string>
+
+    <string name="upload_server_nostrbuild_nip94">Verifiable Nostr.build (NIP-94)</string>
+    <string name="upload_server_nostrbuild_nip94_explainer">Checks if Nostr.build modified the file. New NIP: other clients might not see it</string>
 
     <string name="upload_server_relays_nip95">Your relays (NIP-95)</string>
-    <string name="upload_server_relays_nip95_explainer">Files are uploaded to and hosted by relays. They are free from a fixed url (third-party dependency). Make sure to have a NIP-95 relay in your relay list</string>
+    <string name="upload_server_relays_nip95_explainer">Files are hosted by your relays. New NIP: check if they support</string>
+
+
+
+    <string name="follow_list_selection">Follow List</string>
+    <string name="follow_list_kind3follows">All Follows</string>
+    <string name="follow_list_global">Global</string>
 
 </resources>

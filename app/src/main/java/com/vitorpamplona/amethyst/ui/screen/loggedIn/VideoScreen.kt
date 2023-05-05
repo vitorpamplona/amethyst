@@ -105,10 +105,14 @@ fun VideoScreen(
     val lifeCycleOwner = LocalLifecycleOwner.current
     val account = accountViewModel.accountLiveData.value?.account ?: return
 
+    val accountState = account.live.observeAsState()
+
+    NostrVideoDataSource.account = account
     VideoFeedFilter.account = account
 
-    LaunchedEffect(accountViewModel) {
+    LaunchedEffect(accountViewModel, accountState.value?.account?.defaultStoriesFollowList) {
         VideoFeedFilter.account = account
+        NostrVideoDataSource.account = account
         NostrVideoDataSource.resetFilters()
         videoFeedView.invalidateData()
     }
@@ -118,6 +122,7 @@ fun VideoScreen(
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Video Start")
                 VideoFeedFilter.account = account
+                NostrVideoDataSource.account = account
                 NostrVideoDataSource.start()
                 videoFeedView.invalidateData()
             }
@@ -237,7 +242,7 @@ private fun RenderVideoOrPictureNote(
     var moreActionsExpanded by remember { mutableStateOf(false) }
 
     Column(Modifier.fillMaxSize(1f)) {
-        Row(Modifier.weight(1f, true), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
             if (noteEvent is FileHeaderEvent) {
                 FileHeaderDisplay(note)
             } else if (noteEvent is FileStorageHeaderEvent) {

@@ -44,6 +44,8 @@ open class NewMediaModel : ViewModel() {
             selectedServer = ServersAvailable.IMGUR_NIP_94
         } else if (selectedServer == ServersAvailable.NOSTRIMG) {
             selectedServer = ServersAvailable.NOSTRIMG_NIP_94
+        } else if (selectedServer == ServersAvailable.NOSTR_BUILD) {
+            selectedServer = ServersAvailable.NOSTR_BUILD_NIP_94
         }
     }
 
@@ -75,6 +77,7 @@ open class NewMediaModel : ViewModel() {
             ImageUploader.uploadImage(
                 uri = uri,
                 server = serverToUse,
+                context = context,
                 contentResolver = contentResolver,
                 onSuccess = { imageUrl, mimeType ->
                     createNIP94Record(imageUrl, mimeType, description)
@@ -135,7 +138,7 @@ open class NewMediaModel : ViewModel() {
                     onReady = {
                         uploadingPercentage.value = 0.90f
                         uploadingDescription.value = "Sending"
-                        val note = account?.sendHeader(it)
+                        account?.sendHeader(it)
                         uploadingPercentage.value = 1.00f
                         isUploadingImage = false
                         onceUploaded()

@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.navigation
 
 import android.util.Log
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +24,8 @@ import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -41,6 +44,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import coil.Coil
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
+import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
@@ -55,6 +61,7 @@ import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.NostrThreadDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
+import com.vitorpamplona.amethyst.service.model.PeopleListEvent
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
@@ -62,32 +69,57 @@ import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.RelayPoolViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.SpinnerSelectionDialog
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun AppTopBar(navController: NavHostController, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
-    when (currentRoute(navController)) {
+    when (currentRoute(navController)?.substringBefore("?")) {
         // Route.Profile.route -> TopBarWithBackButton(navController)
+        Route.Home.base -> HomeTopBar(scaffoldState, accountViewModel)
+        Route.Video.base -> StoriesTopBar(scaffoldState, accountViewModel)
         else -> MainTopBar(scaffoldState, accountViewModel)
+    }
+}
+
+@Composable
+fun StoriesTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
+    GenericTopBar(scaffoldState, accountViewModel) { account ->
+        FollowList(account.defaultStoriesFollowList, true) { listName ->
+            account.changeDefaultStoriesFollowList(listName)
+        }
+    }
+}
+
+@Composable
+fun HomeTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
+    GenericTopBar(scaffoldState, accountViewModel) { account ->
+        FollowList(account.defaultHomeFollowList, false) { listName ->
+            account.changeDefaultHomeFollowList(listName)
+        }
+    }
+}
+
+@Composable
+fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
+    GenericTopBar(scaffoldState, accountViewModel) {
+        AmethystIcon()
     }
 }
 
 @OptIn(coil.annotation.ExperimentalCoilApi::class)
 @Composable
-fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
+fun GenericTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel, content: @Composable (Account) -> Unit) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
-
-    val accountUserState by account.userProfile().live().metadata.observeAsState()
-    val accountUser = accountUserState?.user ?: return
 
     val relayViewModel: RelayPoolViewModel = viewModel { RelayPoolViewModel() }
     val connectedRelaysLiveData by relayViewModel.connectedRelaysLiveData.observeAsState()
     val availableRelaysLiveData by relayViewModel.availableRelaysLiveData.observeAsState()
 
     val coroutineScope = rememberCoroutineScope()
-
-    val context = LocalContext.current
 
     var wantsToEditRelays by remember {
         mutableStateOf(false)
@@ -115,48 +147,7 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
-                            IconButton(
-                                onClick = {
-                                    Client.allSubscriptions().map {
-                                        "$it ${
-                                        Client.getSubscriptionFilters(it)
-                                            .joinToString { it.filter.toJson() }
-                                        }"
-                                    }.forEach {
-                                        Log.d("STATE DUMP", it)
-                                    }
-
-                                    NostrAccountDataSource.printCounter()
-                                    NostrChannelDataSource.printCounter()
-                                    NostrChatroomDataSource.printCounter()
-                                    NostrChatroomListDataSource.printCounter()
-                                    NostrGlobalDataSource.printCounter()
-                                    NostrHashtagDataSource.printCounter()
-                                    NostrHomeDataSource.printCounter()
-                                    NostrSearchEventOrUserDataSource.printCounter()
-                                    NostrSingleChannelDataSource.printCounter()
-                                    NostrSingleEventDataSource.printCounter()
-                                    NostrSingleUserDataSource.printCounter()
-                                    NostrThreadDataSource.printCounter()
-                                    NostrUserProfileDataSource.printCounter()
-
-                                    Log.d("STATE DUMP", "Connected Relays: " + RelayPool.connectedRelays())
-
-                                    val imageLoader = Coil.imageLoader(context)
-                                    Log.d("STATE DUMP", "Image Disk Cache ${(imageLoader.diskCache?.size ?: 0) / (1024 * 1024)}/${(imageLoader.diskCache?.maxSize ?: 0) / (1024 * 1024)} MB")
-                                    Log.d("STATE DUMP", "Image Memory Cache ${(imageLoader.memoryCache?.size ?: 0) / (1024 * 1024)}/${(imageLoader.memoryCache?.maxSize ?: 0) / (1024 * 1024)} MB")
-
-                                    Log.d("STATE DUMP", "Notes: " + LocalCache.notes.filter { it.value.event != null }.size + "/" + LocalCache.notes.size)
-                                    Log.d("STATE DUMP", "Users: " + LocalCache.users.filter { it.value.info?.latestMetadata != null }.size + "/" + LocalCache.users.size)
-                                }
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.amethyst),
-                                    null,
-                                    modifier = Modifier.size(40.dp),
-                                    tint = Color.Unspecified
-                                )
-                            }
+                            content(account)
                         }
 
                         Column(
@@ -186,23 +177,10 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
                 }
             },
             navigationIcon = {
-                IconButton(
-                    onClick = {
-                        coroutineScope.launch {
-                            scaffoldState.drawerState.open()
-                        }
-                    },
-                    modifier = Modifier
-                ) {
-                    RobohashAsyncImageProxy(
-                        robot = accountUser.pubkeyHex,
-                        model = ResizeImage(accountUser.profilePicture(), 34.dp),
-                        contentDescription = stringResource(id = R.string.profile_image),
-                        modifier = Modifier
-                            .width(34.dp)
-                            .height(34.dp)
-                            .clip(shape = CircleShape)
-                    )
+                LoggedInUserPictureDrawer(account) {
+                    coroutineScope.launch {
+                        scaffoldState.drawerState.open()
+                    }
                 }
             },
             actions = {
@@ -220,6 +198,107 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
             }
         )
         Divider(thickness = 0.25.dp)
+    }
+}
+
+@Composable
+private fun LoggedInUserPictureDrawer(
+    account: Account,
+    onClick: () -> Unit
+) {
+    val accountUserState by account.userProfile().live().metadata.observeAsState()
+    val accountUser = accountUserState?.user ?: return
+
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier
+    ) {
+        RobohashAsyncImageProxy(
+            robot = accountUser.pubkeyHex,
+            model = ResizeImage(accountUser.profilePicture(), 34.dp),
+            contentDescription = stringResource(id = R.string.profile_image),
+            modifier = Modifier
+                .width(34.dp)
+                .height(34.dp)
+                .clip(shape = CircleShape)
+        )
+    }
+}
+
+@Composable
+fun FollowList(listName: String, withGlobal: Boolean, onChange: (String) -> Unit) {
+    // Notification
+    val dbState = LocalCache.live.observeAsState()
+    val db = dbState.value ?: return
+
+    val kind3Follow = Pair(KIND3_FOLLOWS, stringResource(id = R.string.follow_list_kind3follows))
+    val globalFollow = Pair(GLOBAL_FOLLOWS, stringResource(id = R.string.follow_list_global))
+
+    val defaultOptions = if (withGlobal) listOf(kind3Follow, globalFollow) else listOf(kind3Follow)
+
+    var followLists by remember { mutableStateOf(defaultOptions) }
+    val followNames = remember { derivedStateOf { followLists.map { it.second } } }
+
+    LaunchedEffect(key1 = db) {
+        withContext(Dispatchers.IO) {
+            followLists = defaultOptions + LocalCache.addressables.mapNotNull {
+                val event = (it.value.event as? PeopleListEvent)
+                // Has to have an list
+                if (event != null && (event.tags.size > 1 || event.content.length > 50)) {
+                    Pair(event.dTag(), event.dTag())
+                } else {
+                    null
+                }
+            }.sortedBy { it.second }
+        }
+    }
+
+    SimpleTextSpinner(
+        placeholder = followLists.firstOrNull { it.first == listName }?.first ?: KIND3_FOLLOWS,
+        options = followNames.value,
+        onSelect = {
+            onChange(followLists.getOrNull(it)?.first ?: KIND3_FOLLOWS)
+        }
+    )
+}
+
+@Composable
+fun SimpleTextSpinner(
+    placeholder: String,
+    options: List<String>,
+    explainers: List<String>? = null,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    var optionsShowing by remember { mutableStateOf(false) }
+    var currentText by remember { mutableStateOf(placeholder) }
+
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center
+    ) {
+        Text(currentText)
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = null
+                ) {
+                    optionsShowing = true
+                }
+        )
+    }
+
+    if (optionsShowing) {
+        options.isNotEmpty().also {
+            SpinnerSelectionDialog(options = options, explainers = explainers, onDismiss = { optionsShowing = false }) {
+                currentText = options[it]
+                optionsShowing = false
+                onSelect(it)
+            }
+        }
     }
 }
 
@@ -248,5 +327,53 @@ fun TopBarWithBackButton(navController: NavHostController) {
             actions = {}
         )
         Divider(thickness = 0.25.dp)
+    }
+}
+
+@Composable
+fun AmethystIcon() {
+    val context = LocalContext.current
+
+    IconButton(
+        onClick = {
+            Client.allSubscriptions().map {
+                "$it ${
+                Client.getSubscriptionFilters(it)
+                    .joinToString { it.filter.toJson() }
+                }"
+            }.forEach {
+                Log.d("STATE DUMP", it)
+            }
+
+            NostrAccountDataSource.printCounter()
+            NostrChannelDataSource.printCounter()
+            NostrChatroomDataSource.printCounter()
+            NostrChatroomListDataSource.printCounter()
+            NostrGlobalDataSource.printCounter()
+            NostrHashtagDataSource.printCounter()
+            NostrHomeDataSource.printCounter()
+            NostrSearchEventOrUserDataSource.printCounter()
+            NostrSingleChannelDataSource.printCounter()
+            NostrSingleEventDataSource.printCounter()
+            NostrSingleUserDataSource.printCounter()
+            NostrThreadDataSource.printCounter()
+            NostrUserProfileDataSource.printCounter()
+
+            Log.d("STATE DUMP", "Connected Relays: " + RelayPool.connectedRelays())
+
+            val imageLoader = Coil.imageLoader(context)
+            Log.d("STATE DUMP", "Image Disk Cache ${(imageLoader.diskCache?.size ?: 0) / (1024 * 1024)}/${(imageLoader.diskCache?.maxSize ?: 0) / (1024 * 1024)} MB")
+            Log.d("STATE DUMP", "Image Memory Cache ${(imageLoader.memoryCache?.size ?: 0) / (1024 * 1024)}/${(imageLoader.memoryCache?.maxSize ?: 0) / (1024 * 1024)} MB")
+
+            Log.d("STATE DUMP", "Notes: " + LocalCache.notes.filter { it.value.event != null }.size + "/" + LocalCache.notes.size)
+            Log.d("STATE DUMP", "Users: " + LocalCache.users.filter { it.value.info?.latestMetadata != null }.size + "/" + LocalCache.users.size)
+        }
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.amethyst),
+            null,
+            modifier = Modifier.size(40.dp),
+            tint = Color.Unspecified
+        )
     }
 }

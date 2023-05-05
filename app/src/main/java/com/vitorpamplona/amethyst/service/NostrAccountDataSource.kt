@@ -62,9 +62,9 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
         return TypedFilter(
             types = COMMON_FEED_TYPES,
             filter = JsonFilter(
-                kinds = listOf(BookmarkListEvent.kind),
+                kinds = listOf(BookmarkListEvent.kind, PeopleListEvent.kind),
                 authors = listOf(account.userProfile().pubkeyHex),
-                limit = 1
+                limit = 100
             )
         )
     }

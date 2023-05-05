@@ -38,6 +38,9 @@ fun getLanguagesSpokenByUser(): Set<String> {
     return codedList
 }
 
+val GLOBAL_FOLLOWS = " Global "
+val KIND3_FOLLOWS = " All Follows "
+
 @OptIn(DelicateCoroutinesApi::class)
 class Account(
     val loggedIn: Persona,
@@ -50,6 +53,8 @@ class Account(
     var zapAmountChoices: List<Long> = listOf(500L, 1000L, 5000L),
     var defaultZapType: LnZapEvent.ZapType = LnZapEvent.ZapType.PRIVATE,
     var defaultFileServer: ServersAvailable = ServersAvailable.IMGUR,
+    var defaultHomeFollowList: String = KIND3_FOLLOWS,
+    var defaultStoriesFollowList: String = GLOBAL_FOLLOWS,
     var zapPaymentRequest: Nip47URI? = null,
     var hideDeleteRequestDialog: Boolean = false,
     var hideBlockAlertDialog: Boolean = false,
@@ -403,12 +408,12 @@ class Account(
         }
     }
 
-    fun createNip95(data: ByteArray, headerInfo: FileHeader): Pair<FileStorageEvent, FileStorageHeaderEvent>? {
+    fun createNip95(byteArray: ByteArray, headerInfo: FileHeader): Pair<FileStorageEvent, FileStorageHeaderEvent>? {
         if (!isWriteable()) return null
 
         val data = FileStorageEvent.create(
             mimeType = headerInfo.mimeType ?: "",
-            data = data,
+            data = byteArray,
             privateKey = loggedIn.privKey!!
         )
 
@@ -729,6 +734,18 @@ class Account(
         saveable.invalidateData()
     }
 
+    fun changeDefaultHomeFollowList(name: String) {
+        defaultHomeFollowList = name
+        live.invalidateData()
+        saveable.invalidateData()
+    }
+
+    fun changeDefaultStoriesFollowList(name: String) {
+        defaultStoriesFollowList = name
+        live.invalidateData()
+        saveable.invalidateData()
+    }
+
     fun changeZapAmounts(newAmounts: List<Long>) {
         zapAmountChoices = newAmounts
         live.invalidateData()
@@ -739,6 +756,37 @@ class Account(
         zapPaymentRequest = newServer
         live.invalidateData()
         saveable.invalidateData()
+    }
+
+    fun selectedUsersFollowList(listName: String?): Set<String>? {
+        if (listName == GLOBAL_FOLLOWS) return null
+        if (listName == KIND3_FOLLOWS) return userProfile().cachedFollowingKeySet()
+
+        val privKey = loggedIn.privKey
+
+        return if (listName != null) {
+            val aTag = ATag(PeopleListEvent.kind, userProfile().pubkeyHex, listName, null).toTag()
+            val list = LocalCache.addressables[aTag]
+            if (list != null) {
+                val publicHexList = (list.event as? PeopleListEvent)?.bookmarkedPeople() ?: emptySet()
+                val privateHexList = privKey?.let {
+                    (list.event as? PeopleListEvent)?.privateTaggedUsers(it)
+                } ?: emptySet()
+
+                (publicHexList + privateHexList).toSet()
+            } else {
+                emptySet()
+            }
+        } else {
+            emptySet()
+        }
+    }
+
+    fun selectedTagsFollowList(listName: String?): Set<String>? {
+        if (listName == GLOBAL_FOLLOWS) return null
+        if (listName == KIND3_FOLLOWS) return userProfile().cachedFollowingTagSet()
+
+        return emptySet()
     }
 
     fun sendChangeChannel(name: String, about: String, picture: String, channel: Channel) {

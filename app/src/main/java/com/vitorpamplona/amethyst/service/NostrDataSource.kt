@@ -90,6 +90,7 @@ abstract class NostrDataSource(val debugName: String) {
                         is LongTextNoteEvent -> LocalCache.consume(event, relay)
                         is MetadataEvent -> LocalCache.consume(event)
                         is PrivateDmEvent -> LocalCache.consume(event, relay)
+                        is PeopleListEvent -> LocalCache.consume(event)
                         is ReactionEvent -> LocalCache.consume(event)
                         is RecommendRelayEvent -> LocalCache.consume(event)
                         is ReportEvent -> LocalCache.consume(event, relay)
