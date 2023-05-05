@@ -27,7 +27,6 @@ import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -48,6 +47,7 @@ import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
+import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountBackupDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterialApi::class)
@@ -239,6 +240,7 @@ fun ListContent(
     var backupDialogOpen by remember { mutableStateOf(false) }
     var checked by remember { mutableStateOf(account.proxy != null) }
     val openDialog = remember { mutableStateOf(false) }
+    var conectOrbotDialogOpen by remember { mutableStateOf(false) }
 
     Column(modifier = modifier.fillMaxHeight()) {
         if (accountUser != null) {
@@ -287,8 +289,7 @@ fun ListContent(
                 if (checked) {
                     openDialog.value = true
                 } else {
-                    checked = true
-                    enableTor(account, true, openDialog)
+                    conectOrbotDialogOpen = true
                 }
             }
         )
@@ -307,6 +308,19 @@ fun ListContent(
         AccountBackupDialog(account, onClose = { backupDialogOpen = false })
     }
 
+    if (conectOrbotDialogOpen) {
+        ConnectOrbotDialog(
+            account = account,
+            onClose = { conectOrbotDialogOpen = false },
+            onPost = {
+                conectOrbotDialogOpen = false
+                openDialog.value = false
+                checked = true
+                enableTor(account, true)
+            }
+        )
+    }
+
     if (openDialog.value) {
         AlertDialog(
             text = { Text(text = stringResource(R.string.do_you_really_want_to_disable_tor)) },
@@ -316,7 +330,7 @@ fun ListContent(
                     onClick = {
                         openDialog.value = false
                         checked = false
-                        enableTor(account, false, openDialog)
+                        enableTor(account, false)
                     }
                 ) {
                     Text(text = stringResource(R.string.yes))
@@ -337,13 +351,12 @@ fun ListContent(
 
 private fun enableTor(
     account: Account,
-    checked: Boolean,
-    openDialog: MutableState<Boolean>
+    checked: Boolean
 ) {
     account.proxy = HttpClient.initProxy(checked, "127.0.0.1", 9050)
+    LocalPreferences.saveToEncryptedStorage(account)
     ServiceManager.pause()
     ServiceManager.start()
-    openDialog.value = false
 }
 
 @Composable

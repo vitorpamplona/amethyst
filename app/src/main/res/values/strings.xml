@@ -358,5 +358,15 @@
     <string name="follow_list_selection">Follow List</string>
     <string name="follow_list_kind3follows">All Follows</string>
     <string name="follow_list_global">Global</string>
+    <string name="connect_through_your_orbot_setup_markdown">
+        ## Connect through your Orbot setup
+        \n\n1. Install [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
+        \n2. Start Orbot
+        \n3. In Orbot check the Socks port. By default it uses the port 9050
+        \n4. If necessary change the port
+        \n5. Configure the Socks port in this screen
+        \n6. Press the post button to use Orbot as a proxy
+    </string>
+    <string name="orbot_socks_port">Orbot Socks Port</string>
 
 </resources>
