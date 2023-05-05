@@ -178,17 +178,23 @@ class Account(
     }
 
     fun isNIP47Author(pubkeyHex: String?): Boolean {
-        val privKey = zapPaymentRequest?.secret?.toByteArray() ?: loggedIn.privKey!!
+        val privKey = zapPaymentRequest?.secret?.toByteArray() ?: loggedIn.privKey
+
+        if (privKey == null) return false
+
         val pubKey = Utils.pubkeyCreate(privKey).toHexKey()
         return (pubKey == pubkeyHex)
     }
 
     fun decryptZapPaymentResponseEvent(zapResponseEvent: LnZapPaymentResponseEvent): Response? {
         val myNip47 = zapPaymentRequest ?: return null
-        return zapResponseEvent.response(
-            myNip47.secret?.toByteArray() ?: loggedIn.privKey!!,
-            myNip47.pubKeyHex.toByteArray()
-        )
+
+        val privKey = myNip47.secret?.toByteArray() ?: loggedIn.privKey
+        val pubKey = myNip47.pubKeyHex.toByteArray()
+
+        if (privKey == null) return null
+
+        return zapResponseEvent.response(privKey, pubKey)
     }
 
     fun calculateIfNoteWasZappedByAccount(zappedNote: Note?): Boolean {
@@ -196,10 +202,9 @@ class Account(
     }
 
     fun calculateZappedAmount(zappedNote: Note?): BigDecimal {
-        return zappedNote?.zappedAmount(
-            zapPaymentRequest?.secret?.toByteArray() ?: loggedIn.privKey!!,
-            zapPaymentRequest?.pubKeyHex?.toByteArray()
-        ) ?: BigDecimal.ZERO
+        val privKey = zapPaymentRequest?.secret?.toByteArray() ?: loggedIn.privKey
+        val pubKey = zapPaymentRequest?.pubKeyHex?.toByteArray()
+        return zappedNote?.zappedAmount(privKey, pubKey) ?: BigDecimal.ZERO
     }
 
     fun sendZapPaymentRequestFor(bolt11: String, zappedNote: Note?, onResponse: (Response?) -> Unit) {
