@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
@@ -87,7 +88,7 @@ fun AppTopBar(navController: NavHostController, scaffoldState: ScaffoldState, ac
 @Composable
 fun StoriesTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
     GenericTopBar(scaffoldState, accountViewModel) { account ->
-        FollowList(account.defaultStoriesFollowList, true) { listName ->
+        FollowList(account.defaultStoriesFollowList, account.userProfile(),true) { listName ->
             account.changeDefaultStoriesFollowList(listName)
         }
     }
@@ -96,7 +97,7 @@ fun StoriesTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewMod
 @Composable
 fun HomeTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
     GenericTopBar(scaffoldState, accountViewModel) { account ->
-        FollowList(account.defaultHomeFollowList, false) { listName ->
+        FollowList(account.defaultHomeFollowList, account.userProfile(),false) { listName ->
             account.changeDefaultHomeFollowList(listName)
         }
     }
@@ -226,7 +227,7 @@ private fun LoggedInUserPictureDrawer(
 }
 
 @Composable
-fun FollowList(listName: String, withGlobal: Boolean, onChange: (String) -> Unit) {
+fun FollowList(listName: String, loggedIn: User, withGlobal: Boolean, onChange: (String) -> Unit) {
     // Notification
     val dbState = LocalCache.live.observeAsState()
     val db = dbState.value ?: return
@@ -254,7 +255,7 @@ fun FollowList(listName: String, withGlobal: Boolean, onChange: (String) -> Unit
     }
 
     SimpleTextSpinner(
-        placeholder = followLists.firstOrNull { it.first == listName }?.first ?: KIND3_FOLLOWS,
+        placeholder = followLists.firstOrNull { it.first == listName }?.second ?: "Select an Option",
         options = followNames.value,
         onSelect = {
             onChange(followLists.getOrNull(it)?.first ?: KIND3_FOLLOWS)
