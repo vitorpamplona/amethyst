@@ -31,12 +31,13 @@ import androidx.compose.ui.window.Popup
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.math.BigDecimal
 import java.util.*
 import kotlin.math.roundToInt
 
@@ -51,105 +52,149 @@ fun PollNote(
     val zapsState by baseNote.live().zaps.observeAsState()
     val zappedNote = zapsState?.note ?: return
 
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val account = accountState?.account ?: return
+
     val pollViewModel = PollNoteViewModel()
-    pollViewModel.load(zappedNote)
+    pollViewModel.load(account, zappedNote)
 
     pollViewModel.pollEvent?.pollOptions()?.forEach { poll_op ->
-        val optionTally = pollViewModel.optionVoteTally(poll_op.key)
-        val color = if (
-            pollViewModel.consensusThreshold != null &&
-            optionTally >= pollViewModel.consensusThreshold!!
-        ) {
-            Color.Green.copy(alpha = 0.32f)
-        } else {
-            MaterialTheme.colors.primary.copy(alpha = 0.32f)
-        }
+        OptionNote(
+            poll_op.key,
+            poll_op.value,
+            pollViewModel,
+            baseNote,
+            accountViewModel,
+            canPreview,
+            backgroundColor,
+            navController
+        )
+    }
+}
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(vertical = 3.dp)
-        ) {
-            if (accountViewModel.isLoggedUser(zappedNote.author) || zappedNote.isZappedBy(accountViewModel.userProfile())) {
-                ZapVote(
-                    baseNote,
-                    accountViewModel,
-                    pollViewModel,
-                    poll_op.key,
-                    nonClickablePrepend = {
-                        Box(
-                            Modifier.fillMaxWidth(0.75f).clip(shape = RoundedCornerShape(15.dp))
-                                .border(
-                                    2.dp,
-                                    color,
-                                    RoundedCornerShape(15.dp)
-                                )
-                        ) {
-                            LinearProgressIndicator(
-                                modifier = Modifier.matchParentSize(),
-                                color = color,
-                                progress = optionTally.toFloat()
+@Composable
+private fun OptionNote(
+    optionNumber: Int,
+    optionText: String,
+    pollViewModel: PollNoteViewModel,
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    canPreview: Boolean,
+    backgroundColor: Color,
+    navController: NavController
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(vertical = 3.dp)
+    ) {
+        if (!pollViewModel.canZap()) {
+            val defaultColor = MaterialTheme.colors.primary.copy(alpha = 0.32f)
+            var optionTally by remember { mutableStateOf(Pair(BigDecimal.ZERO, defaultColor)) }
+
+            LaunchedEffect(key1 = optionNumber, key2 = pollViewModel) {
+                val myTally = pollViewModel.optionVoteTally(optionNumber)
+                val color = if (
+                    pollViewModel.consensusThreshold != null &&
+                    myTally >= pollViewModel.consensusThreshold!!
+                ) {
+                    Color.Green.copy(alpha = 0.32f)
+                } else {
+                    defaultColor
+                }
+
+                if (myTally > optionTally.first || color != optionTally.second) {
+                    optionTally = Pair(myTally, color)
+                }
+            }
+
+            ZapVote(
+                baseNote,
+                accountViewModel,
+                pollViewModel,
+                optionNumber,
+                nonClickablePrepend = {
+                    Box(
+                        Modifier
+                            .fillMaxWidth(0.75f)
+                            .clip(shape = RoundedCornerShape(15.dp))
+                            .border(
+                                2.dp,
+                                optionTally.second,
+                                RoundedCornerShape(15.dp)
                             )
+                    ) {
+                        LinearProgressIndicator(
+                            modifier = Modifier.matchParentSize(),
+                            color = optionTally.second,
+                            progress = optionTally.first.toFloat()
+                        )
 
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.End,
+                                modifier = Modifier
+                                    .padding(horizontal = 10.dp)
+                                    .width(40.dp)
                             ) {
-                                Column(
-                                    horizontalAlignment = Alignment.End,
-                                    modifier = Modifier.padding(horizontal = 10.dp).width(40.dp)
-                                ) {
-                                    Text(
-                                        text = "${(optionTally.toFloat() * 100).roundToInt()}%",
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
+                                Text(
+                                    text = "${(optionTally.first.toFloat() * 100).roundToInt()}%",
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
 
-                                Column(modifier = Modifier.fillMaxWidth().padding(15.dp)) {
-                                    TranslatableRichTextViewer(
-                                        poll_op.value,
-                                        canPreview,
-                                        Modifier,
-                                        pollViewModel.pollEvent?.tags(),
-                                        backgroundColor,
-                                        accountViewModel,
-                                        navController
-                                    )
-                                }
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(15.dp)
+                            ) {
+                                TranslatableRichTextViewer(
+                                    optionText,
+                                    canPreview,
+                                    Modifier,
+                                    pollViewModel.pollEvent?.tags(),
+                                    backgroundColor,
+                                    accountViewModel,
+                                    navController
+                                )
                             }
                         }
-                    },
-                    clickablePrepend = {
                     }
-                )
-            } else {
-                ZapVote(
-                    baseNote,
-                    accountViewModel,
-                    pollViewModel,
-                    poll_op.key,
-                    nonClickablePrepend = {},
-                    clickablePrepend = {
-                        Box(
-                            Modifier.fillMaxWidth(0.75f)
-                                .clip(shape = RoundedCornerShape(15.dp))
-                                .border(
-                                    2.dp,
-                                    MaterialTheme.colors.primary,
-                                    RoundedCornerShape(15.dp)
-                                )
-                        ) {
-                            TranslatableRichTextViewer(
-                                poll_op.value,
-                                canPreview,
-                                Modifier.padding(15.dp),
-                                pollViewModel.pollEvent?.tags(),
-                                backgroundColor,
-                                accountViewModel,
-                                navController
+                },
+                clickablePrepend = {
+                }
+            )
+        } else {
+            ZapVote(
+                baseNote,
+                accountViewModel,
+                pollViewModel,
+                optionNumber,
+                nonClickablePrepend = {},
+                clickablePrepend = {
+                    Box(
+                        Modifier
+                            .fillMaxWidth(0.75f)
+                            .clip(shape = RoundedCornerShape(15.dp))
+                            .border(
+                                2.dp,
+                                MaterialTheme.colors.primary,
+                                RoundedCornerShape(15.dp)
                             )
-                        }
+                    ) {
+                        TranslatableRichTextViewer(
+                            optionText,
+                            canPreview,
+                            Modifier.padding(15.dp),
+                            pollViewModel.pollEvent?.tags(),
+                            backgroundColor,
+                            accountViewModel,
+                            navController
+                        )
                     }
-                )
-            }
+                }
+            )
         }
     }
 }
@@ -166,7 +211,7 @@ fun ZapVote(
     clickablePrepend: @Composable () -> Unit
 ) {
     val zapsState by baseNote.live().zaps.observeAsState()
-    val zappedNote = zapsState?.note
+    val zappedNote = zapsState?.note ?: return
 
     var wantsToZap by remember { mutableStateOf(false) }
 
@@ -207,7 +252,7 @@ fun ZapVote(
                             )
                             .show()
                     }
-                } else if (accountViewModel.isLoggedUser(zappedNote?.author)) {
+                } else if (accountViewModel.isLoggedUser(zappedNote.author)) {
                     scope.launch {
                         Toast
                             .makeText(
@@ -250,7 +295,7 @@ fun ZapVote(
                                     zappingProgress = it
                                 }
                             },
-                            zapType = LnZapEvent.ZapType.PUBLIC
+                            zapType = account.defaultZapType
                         )
                     }
                 } else {
@@ -288,7 +333,17 @@ fun ZapVote(
 
         clickablePrepend()
 
-        if (pollViewModel.isPollOptionZappedBy(pollOption, accountViewModel.userProfile())) {
+        var optionWasZappedByLoggedInUser by remember { mutableStateOf(false) }
+
+        LaunchedEffect(key1 = zapsState) {
+            withContext(Dispatchers.IO) {
+                if (!optionWasZappedByLoggedInUser) {
+                    optionWasZappedByLoggedInUser = pollViewModel.isPollOptionZappedBy(pollOption, accountViewModel.userProfile())
+                }
+            }
+        }
+
+        if (optionWasZappedByLoggedInUser) {
             zappingProgress = 1f
             Icon(
                 imageVector = Icons.Default.Bolt,
@@ -315,8 +370,18 @@ fun ZapVote(
         }
     }
 
+    var wasZappedByLoggedInUser by remember { mutableStateOf(false) }
+
+    LaunchedEffect(key1 = zapsState) {
+        withContext(Dispatchers.IO) {
+            if (!wasZappedByLoggedInUser) {
+                wasZappedByLoggedInUser = accountViewModel.calculateIfNoteWasZappedByAccount(zappedNote)
+            }
+        }
+    }
+
     // only show tallies after a user has zapped note
-    if (baseNote.author == accountViewModel.userProfile() || zappedNote?.isZappedBy(accountViewModel.userProfile()) == true) {
+    if (baseNote.author == accountViewModel.userProfile() || wasZappedByLoggedInUser) {
         Text(
             showAmount(pollViewModel.zappedPollOptionAmount(pollOption)),
             fontSize = 14.sp,
@@ -378,7 +443,7 @@ fun FilteredZapAmountChoicePopup(
                                 context,
                                 onError,
                                 onProgress,
-                                LnZapEvent.ZapType.PUBLIC
+                                account.defaultZapType
                             )
                             onDismiss()
                         }
@@ -404,7 +469,7 @@ fun FilteredZapAmountChoicePopup(
                                         context,
                                         onError,
                                         onProgress,
-                                        LnZapEvent.ZapType.PUBLIC
+                                        account.defaultZapType
                                     )
                                     onDismiss()
                                 }
@@ -496,8 +561,7 @@ fun ZapVoteAmountChoicePopup(
                                 "",
                                 context,
                                 onError,
-                                onProgress,
-                                LnZapEvent.ZapType.PUBLIC
+                                onProgress
                             )
                             onDismiss()
                         }
@@ -522,8 +586,7 @@ fun ZapVoteAmountChoicePopup(
                                         "",
                                         context,
                                         onError,
-                                        onProgress,
-                                        LnZapEvent.ZapType.PUBLIC
+                                        onProgress
                                     )
                                     onDismiss()
                                 }

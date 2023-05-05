@@ -89,6 +89,8 @@ fun ChannelScreen(
     val context = LocalContext.current
     val channelScreenModel: NewPostViewModel = viewModel()
 
+    channelScreenModel.account = account
+
     if (account != null && channelId != null) {
         val replyTo = remember { mutableStateOf<Note?>(null) }
 
@@ -231,7 +233,7 @@ fun ChannelScreen(
                             tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                             modifier = Modifier.padding(start = 5.dp)
                         ) {
-                            channelScreenModel.upload(it, context)
+                            channelScreenModel.upload(it, "", account.defaultFileServer, context)
                         }
                     },
                     colors = TextFieldDefaults.textFieldColors(

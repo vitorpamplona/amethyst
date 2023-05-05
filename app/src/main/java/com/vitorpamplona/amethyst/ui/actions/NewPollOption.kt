@@ -7,7 +7,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
@@ -15,15 +14,6 @@ import com.vitorpamplona.amethyst.R
 
 @Composable
 fun NewPollOption(pollViewModel: NewPostViewModel, optionIndex: Int) {
-    val colorInValid = TextFieldDefaults.outlinedTextFieldColors(
-        focusedBorderColor = MaterialTheme.colors.error,
-        unfocusedBorderColor = Color.Red
-    )
-    val colorValid = TextFieldDefaults.outlinedTextFieldColors(
-        focusedBorderColor = MaterialTheme.colors.primary,
-        unfocusedBorderColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-    )
-
     Row {
         val deleteIcon: @Composable (() -> Unit) = {
             IconButton(

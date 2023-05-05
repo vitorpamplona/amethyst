@@ -54,6 +54,7 @@ import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
+import com.vitorpamplona.amethyst.service.model.HighlightEvent
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.PollNoteEvent
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
@@ -348,37 +349,50 @@ fun NoteMaster(
                     )
             ) {
                 Column() {
-                    val eventContent = note.event?.content()
-
-                    val canPreview = note.author == account.userProfile() ||
-                        (note.author?.let { account.userProfile().isFollowingCached(it) } ?: true) ||
-                        !noteForReports.hasAnyReports()
-
-                    if (eventContent != null) {
-                        TranslatableRichTextViewer(
-                            eventContent,
-                            canPreview,
-                            Modifier.fillMaxWidth(),
-                            note.event?.tags(),
-                            MaterialTheme.colors.background,
+                    if (noteEvent is HighlightEvent) {
+                        DisplayHighlight(
+                            noteEvent.quote(),
+                            noteEvent.author(),
+                            noteEvent.inUrl(),
+                            false,
+                            true,
+                            backgroundColor,
                             accountViewModel,
                             navController
                         )
+                    } else {
+                        val eventContent = note.event?.content()
 
-                        DisplayUncitedHashtags(noteEvent.hashtags(), eventContent, navController)
+                        val canPreview = note.author == account.userProfile() ||
+                            (note.author?.let { account.userProfile().isFollowingCached(it) } ?: true) ||
+                            !noteForReports.hasAnyReports()
 
-                        if (noteEvent is PollNoteEvent) {
-                            PollNote(
-                                note,
+                        if (eventContent != null) {
+                            TranslatableRichTextViewer(
+                                eventContent,
                                 canPreview,
-                                backgroundColor,
+                                Modifier.fillMaxWidth(),
+                                note.event?.tags(),
+                                MaterialTheme.colors.background,
                                 accountViewModel,
                                 navController
                             )
+
+                            DisplayUncitedHashtags(noteEvent.hashtags(), eventContent, navController)
+
+                            if (noteEvent is PollNoteEvent) {
+                                PollNote(
+                                    note,
+                                    canPreview,
+                                    backgroundColor,
+                                    accountViewModel,
+                                    navController
+                                )
+                            }
                         }
                     }
 
-                    ReactionsRow(note, accountViewModel)
+                    ReactionsRow(note, accountViewModel, navController)
 
                     Divider(
                         modifier = Modifier.padding(top = 10.dp),

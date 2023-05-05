@@ -20,8 +20,10 @@ class PollNoteViewModel {
     var consensusThreshold: BigDecimal? = null
 
     var totalZapped: BigDecimal = BigDecimal.ZERO
+    var wasZappedByAuthor: Boolean = false
 
-    fun load(note: Note?) {
+    fun load(acc: Account, note: Note?) {
+        account = acc
         pollNote = note
         pollEvent = pollNote?.event as PollNoteEvent
         pollOptions = pollEvent?.pollOptions()
@@ -31,6 +33,14 @@ class PollNoteViewModel {
         closedAt = pollEvent?.getTagInt(CLOSED_AT)
 
         totalZapped = totalZapped()
+        wasZappedByAuthor = note?.let { account?.calculateIfNoteWasZappedByAccount(it) } ?: false
+    }
+
+    fun canZap(): Boolean {
+        val account = account ?: return false
+        val user = account.userProfile() ?: return false
+        val note = pollNote ?: return false
+        return user != note.author && !wasZappedByAuthor
     }
 
     fun isVoteAmountAtomic() = valueMaximum != null && valueMinimum != null && valueMinimum == valueMaximum
@@ -87,14 +97,12 @@ class PollNoteViewModel {
     }
 
     fun isPollOptionZappedBy(option: Int, user: User): Boolean {
-        if (pollNote?.zaps?.any { it.key.author === user } == true) {
-            pollNote!!.zaps
-                .any {
-                    val event = it.value?.event as? LnZapEvent
-                    event?.zappedPollOption() == option && event.zappedRequestAuthor() == user.pubkeyHex
-                }
-        }
-        return false
+        return pollNote!!.zaps
+            .any {
+                val zapEvent = it.value?.event as? LnZapEvent
+                val privateZapAuthor = account?.decryptZapContentAuthor(it.key)
+                zapEvent?.zappedPollOption() == option && (it.key.author?.pubkeyHex == user.pubkeyHex || privateZapAuthor?.pubKey == user.pubkeyHex)
+            }
     }
 
     fun zappedPollOptionAmount(option: Int): BigDecimal {
@@ -110,7 +118,13 @@ class PollNoteViewModel {
 
     fun totalZapped(): BigDecimal {
         return pollNote?.zaps?.values?.sumOf {
-            (it?.event as? LnZapEvent)?.amount ?: BigDecimal(0)
+            val zapEvent = (it?.event as? LnZapEvent)
+
+            if (zapEvent?.zappedPollOption() != null) {
+                zapEvent.amount ?: BigDecimal(0)
+            } else {
+                BigDecimal(0)
+            }
         } ?: BigDecimal(0)
     }
 }

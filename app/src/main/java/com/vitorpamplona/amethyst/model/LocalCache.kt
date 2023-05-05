@@ -1,9 +1,11 @@
 package com.vitorpamplona.amethyst.model
 
 import android.util.Log
+import androidx.core.net.toUri
 import androidx.lifecycle.LiveData
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.BundledInsert
@@ -11,6 +13,9 @@ import fr.acinq.secp256k1.Hex
 import kotlinx.coroutines.*
 import nostr.postr.toNpub
 import java.io.ByteArrayInputStream
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -29,6 +34,9 @@ object LocalCache {
     val notes = ConcurrentHashMap<HexKey, Note>(5000)
     val channels = ConcurrentHashMap<HexKey, Channel>()
     val addressables = ConcurrentHashMap<String, AddressableNote>(100)
+
+    val awaitingPaymentRequests =
+        ConcurrentHashMap<HexKey, Pair<Note?, (LnZapPaymentResponseEvent) -> Unit>>(10)
 
     fun checkGetOrCreateUser(key: String): User? {
         if (isValidHexNpub(key)) {
@@ -148,6 +156,20 @@ object LocalCache {
             // Log.d("MT", "New User Metadata ${oldUser.pubkeyDisplayHex} ${oldUser.toBestDisplayName()}")
         } else {
             // Log.d("MT","Relay sent a previous Metadata Event ${oldUser.toBestDisplayName()} ${formattedDateTime(event.createdAt)} > ${formattedDateTime(oldUser.updatedAt)}")
+        }
+    }
+
+    fun consume(event: PeopleListEvent) {
+        val note = getOrCreateAddressableNote(event.address())
+        val author = getOrCreateUser(event.pubKey)
+
+        // Already processed this event.
+        if (note.event?.id() == event.id()) return
+
+        if (event.createdAt > (note.createdAt() ?: 0)) {
+            note.loadEvent(event, author, emptyList())
+
+            refreshObservers(note)
         }
     }
 
@@ -376,6 +398,7 @@ object LocalCache {
                     masterNote.removeBoost(deleteNote)
                     masterNote.removeReaction(deleteNote)
                     masterNote.removeZap(deleteNote)
+                    masterNote.removeZapPayment(deleteNote)
                     masterNote.removeReport(deleteNote)
                 }
 
@@ -593,7 +616,6 @@ object LocalCache {
 
     fun consume(event: LnZapEvent) {
         val note = getOrCreateNote(event.id)
-
         // Already processed this event.
         if (note.event != null) return
 
@@ -651,6 +673,136 @@ object LocalCache {
         refreshObservers(note)
     }
 
+    fun consume(event: FileHeaderEvent, relay: Relay?) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        note.loadEvent(event, author, emptyList())
+
+        refreshObservers(note)
+    }
+
+    fun consume(event: FileStorageHeaderEvent, relay: Relay?) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        note.loadEvent(event, author, emptyList())
+
+        refreshObservers(note)
+    }
+
+    fun consume(event: HighlightEvent, relay: Relay?) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        note.loadEvent(event, author, emptyList())
+
+        // Adds to user profile
+        author.addNote(note)
+
+        refreshObservers(note)
+    }
+
+    fun consume(event: FileStorageEvent, relay: Relay?) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        try {
+            val cachePath = File(Amethyst.instance.applicationContext.externalCacheDir, "NIP95")
+            cachePath.mkdirs()
+            val stream = FileOutputStream(File(cachePath, event.id))
+            stream.write(event.decode())
+            stream.close()
+            Log.e("EventLogger", "Saved to disk as ${File(cachePath, event.id).toUri()}")
+        } catch (e: IOException) {
+            Log.e("FileSotrageEvent", "FileStorageEvent save to disk error: " + event.id, e)
+        }
+
+        // this is an invalid event. But we don't need to keep the data in memory.
+        val eventNoData = FileStorageEvent(event.id, event.pubKey, event.createdAt, event.tags, "", event.sig)
+
+        note.loadEvent(eventNoData, author, emptyList())
+
+        refreshObservers(note)
+    }
+
+    fun consume(event: LnZapPaymentRequestEvent) {
+        // Does nothing without a response callback.
+    }
+
+    fun consume(event: LnZapPaymentRequestEvent, zappedNote: Note?, onResponse: (LnZapPaymentResponseEvent) -> Unit) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        note.loadEvent(event, author, emptyList())
+
+        zappedNote?.addZapPayment(note, null)
+
+        awaitingPaymentRequests.put(event.id, Pair(zappedNote, onResponse))
+
+        refreshObservers(note)
+    }
+
+    fun consume(event: LnZapPaymentResponseEvent) {
+        val requestId = event.requestId()
+        val pair = awaitingPaymentRequests[requestId] ?: return
+
+        val (zappedNote, responseCallback) = pair
+
+        val requestNote = requestId?.let { checkGetOrCreateNote(requestId) }
+
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        note.loadEvent(event, author, emptyList())
+
+        requestNote?.let { request ->
+            zappedNote?.addZapPayment(request, note)
+        }
+
+        if (responseCallback != null) {
+            responseCallback(event)
+        }
+    }
+
     fun findUsersStartingWith(username: String): List<User> {
         return users.values.filter {
             (it.anyNameStartsWith(username)) ||
@@ -699,11 +851,6 @@ object LocalCache {
             toBeRemoved.forEach {
                 notes.remove(it.idHex)
                 // Doesn't need to clean up the replies and mentions.. Too small to matter.
-
-                // reverts the add
-                val mentions =
-                    it.event?.tags()?.filter { it.firstOrNull() == "p" }?.mapNotNull { it.getOrNull(1) }
-                        ?.mapNotNull { checkGetOrCreateUser(it) }
 
                 // Counts the replies
                 it.replyTo?.forEach { _ ->

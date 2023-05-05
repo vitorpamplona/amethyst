@@ -35,6 +35,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.util.Date
 import java.util.UUID
+import kotlin.Error
 
 abstract class NostrDataSource(val debugName: String) {
     private var subscriptions = mapOf<String, Subscription>()
@@ -75,14 +76,21 @@ abstract class NostrDataSource(val debugName: String) {
                         is ContactListEvent -> LocalCache.consume(event)
                         is DeletionEvent -> LocalCache.consume(event)
 
+                        is FileHeaderEvent -> LocalCache.consume(event, relay)
+                        is FileStorageEvent -> LocalCache.consume(event, relay)
+                        is FileStorageHeaderEvent -> LocalCache.consume(event, relay)
+                        is HighlightEvent -> LocalCache.consume(event, relay)
                         is LnZapEvent -> {
                             event.zapRequest?.let { onEvent(it, subscriptionId, relay) }
                             LocalCache.consume(event)
                         }
                         is LnZapRequestEvent -> LocalCache.consume(event)
+                        is LnZapPaymentRequestEvent -> LocalCache.consume(event)
+                        is LnZapPaymentResponseEvent -> LocalCache.consume(event)
                         is LongTextNoteEvent -> LocalCache.consume(event, relay)
                         is MetadataEvent -> LocalCache.consume(event)
                         is PrivateDmEvent -> LocalCache.consume(event, relay)
+                        is PeopleListEvent -> LocalCache.consume(event)
                         is ReactionEvent -> LocalCache.consume(event)
                         is RecommendRelayEvent -> LocalCache.consume(event)
                         is ReportEvent -> LocalCache.consume(event, relay)
@@ -122,10 +130,19 @@ abstract class NostrDataSource(val debugName: String) {
 
         override fun onSendResponse(eventId: String, success: Boolean, message: String, relay: Relay) {
         }
+
+        override fun onAuth(relay: Relay, challenge: String) {
+            auth(relay, challenge)
+        }
     }
 
     init {
         Client.subscribe(clientListener)
+    }
+
+    fun destroy() {
+        stop()
+        Client.unsubscribe(clientListener)
     }
 
     open fun start() {
@@ -212,4 +229,5 @@ abstract class NostrDataSource(val debugName: String) {
     }
 
     abstract fun updateChannelFilters()
+    open fun auth(relay: Relay, challenge: String) = Unit
 }

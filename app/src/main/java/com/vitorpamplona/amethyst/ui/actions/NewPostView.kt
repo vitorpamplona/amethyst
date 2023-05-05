@@ -1,5 +1,9 @@
 package com.vitorpamplona.amethyst.ui.actions
 
+import android.graphics.Bitmap
+import android.net.Uri
+import android.os.Build
+import android.util.Size
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -13,10 +17,19 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowForwardIos
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CurrencyBitcoin
+import androidx.compose.material.icons.outlined.ArrowForwardIos
+import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -25,18 +38,22 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
@@ -44,13 +61,17 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.ui.components.*
 import com.vitorpamplona.amethyst.ui.note.ReplyInformation
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.UserLine
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = null, account: Account) {
+fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = null, account: Account, accountViewModel: AccountViewModel, navController: NavController) {
     val postViewModel: NewPostViewModel = viewModel()
 
     val context = LocalContext.current
@@ -167,7 +188,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                             )
 
                             if (postViewModel.wantsPoll) {
-                                postViewModel.pollOptions.values.forEachIndexed { index, element ->
+                                postViewModel.pollOptions.values.forEachIndexed { index, _ ->
                                     NewPollOption(postViewModel, index)
                                 }
 
@@ -186,10 +207,27 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                 }
                             }
 
+                            val url = postViewModel.contentToAddUrl
+                            if (url != null) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    ImageVideoDescription(
+                                        url,
+                                        account.defaultFileServer,
+                                        onAdd = { description, server ->
+                                            postViewModel.upload(url, description, server, context)
+                                            account.changeDefaultFileServer(server)
+                                        },
+                                        onCancel = {
+                                            postViewModel.contentToAddUrl = null
+                                        }
+                                    )
+                                }
+                            }
+
                             val user = postViewModel.account?.userProfile()
                             val lud16 = user?.info?.lnAddress()
 
-                            if (lud16 != null && user != null && postViewModel.wantsInvoice) {
+                            if (lud16 != null && postViewModel.wantsInvoice) {
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 5.dp)) {
                                     InvoiceRequest(
                                         lud16,
@@ -234,6 +272,14 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                         } else {
                                             UrlPreview(myUrlPreview, myUrlPreview)
                                         }
+                                    } else if (isBechLink(myUrlPreview)) {
+                                        BechLink(
+                                            myUrlPreview,
+                                            true,
+                                            MaterialTheme.colors.background,
+                                            accountViewModel,
+                                            navController
+                                        )
                                     } else if (noProtocolUrlValidator.matcher(myUrlPreview).matches()) {
                                         UrlPreview("https://$myUrlPreview", myUrlPreview)
                                     }
@@ -261,13 +307,18 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                         }
                     }
 
-                    Row(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         UploadFromGallery(
                             isUploading = postViewModel.isUploadingImage,
                             tint = MaterialTheme.colors.onBackground,
-                            modifier = Modifier.padding(bottom = 10.dp)
+                            modifier = Modifier
                         ) {
-                            postViewModel.upload(it, context)
+                            postViewModel.selectImage(it)
                         }
 
                         if (postViewModel.canUsePoll) {
@@ -282,6 +333,10 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                             AddLnInvoiceButton(postViewModel.wantsInvoice) {
                                 postViewModel.wantsInvoice = !postViewModel.wantsInvoice
                             }
+                        }
+
+                        ForwardZapTo(postViewModel) {
+                            postViewModel.wantsForwardZapTo = !postViewModel.wantsForwardZapTo
                         }
                     }
                 }
@@ -343,6 +398,87 @@ private fun AddLnInvoiceButton(
                 tint = BitcoinOrange
             )
         }
+    }
+}
+
+@Composable
+private fun ForwardZapTo(
+    postViewModel: NewPostViewModel,
+    onClick: () -> Unit
+) {
+    IconButton(
+        onClick = {
+            onClick()
+        }
+    ) {
+        Box(
+            Modifier
+                .height(20.dp)
+                .width(25.dp)
+        ) {
+            if (!postViewModel.wantsForwardZapTo) {
+                Icon(
+                    imageVector = Icons.Default.Bolt,
+                    contentDescription = stringResource(R.string.zaps),
+                    modifier = Modifier
+                        .size(20.dp)
+                        .align(Alignment.CenterStart),
+                    tint = MaterialTheme.colors.onBackground
+                )
+                Icon(
+                    imageVector = Icons.Default.ArrowForwardIos,
+                    contentDescription = stringResource(R.string.zaps),
+                    modifier = Modifier
+                        .size(13.dp)
+                        .align(Alignment.CenterEnd),
+                    tint = MaterialTheme.colors.onBackground
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Outlined.Bolt,
+                    contentDescription = stringResource(id = R.string.zaps),
+                    modifier = Modifier
+                        .size(20.dp)
+                        .align(Alignment.CenterStart),
+                    tint = BitcoinOrange
+                )
+                Icon(
+                    imageVector = Icons.Outlined.ArrowForwardIos,
+                    contentDescription = stringResource(id = R.string.zaps),
+                    modifier = Modifier
+                        .size(13.dp)
+                        .align(Alignment.CenterEnd),
+                    tint = BitcoinOrange
+                )
+            }
+        }
+    }
+
+    if (postViewModel.wantsForwardZapTo) {
+        OutlinedTextField(
+            value = postViewModel.forwardZapToEditting,
+            onValueChange = {
+                postViewModel.updateZapForwardTo(it)
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
+                .padding(0.dp),
+            placeholder = {
+                Text(
+                    text = stringResource(R.string.zap_forward_lnAddress),
+                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                    fontSize = 14.sp
+                )
+            },
+            colors = TextFieldDefaults
+                .outlinedTextFieldColors(
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedBorderColor = Color.Transparent
+                ),
+            visualTransformation = UrlUserTagTransformation(MaterialTheme.colors.primary),
+            textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+        )
     }
 }
 
@@ -445,5 +581,212 @@ fun SearchButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifier 
             modifier = Modifier.size(26.dp),
             tint = Color.White
         )
+    }
+}
+
+enum class ServersAvailable {
+    IMGUR,
+    NOSTR_BUILD,
+    NOSTRIMG,
+    IMGUR_NIP_94,
+    NOSTRIMG_NIP_94,
+    NOSTR_BUILD_NIP_94,
+    NIP95
+}
+
+@Composable
+fun ImageVideoDescription(
+    uri: Uri,
+    defaultServer: ServersAvailable,
+    onAdd: (String, ServersAvailable) -> Unit,
+    onCancel: () -> Unit
+) {
+    val resolver = LocalContext.current.contentResolver
+    val mediaType = resolver.getType(uri) ?: ""
+    val scope = rememberCoroutineScope()
+
+    val isImage = mediaType.startsWith("image")
+    val isVideo = mediaType.startsWith("video")
+
+    val fileServers = listOf(
+        Triple(ServersAvailable.IMGUR, stringResource(id = R.string.upload_server_imgur), stringResource(id = R.string.upload_server_imgur_explainer)),
+        Triple(ServersAvailable.NOSTRIMG, stringResource(id = R.string.upload_server_nostrimg), stringResource(id = R.string.upload_server_nostrimg_explainer)),
+        Triple(ServersAvailable.NOSTR_BUILD, stringResource(id = R.string.upload_server_nostrbuild), stringResource(id = R.string.upload_server_nostrbuild_explainer)),
+        Triple(ServersAvailable.IMGUR_NIP_94, stringResource(id = R.string.upload_server_imgur_nip94), stringResource(id = R.string.upload_server_imgur_nip94_explainer)),
+        Triple(ServersAvailable.NOSTRIMG_NIP_94, stringResource(id = R.string.upload_server_nostrimg_nip94), stringResource(id = R.string.upload_server_nostrimg_nip94_explainer)),
+        Triple(ServersAvailable.NOSTR_BUILD_NIP_94, stringResource(id = R.string.upload_server_nostrbuild_nip94), stringResource(id = R.string.upload_server_nostrbuild_nip94_explainer)),
+        Triple(ServersAvailable.NIP95, stringResource(id = R.string.upload_server_relays_nip95), stringResource(id = R.string.upload_server_relays_nip95_explainer))
+    )
+
+    val fileServerOptions = fileServers.map { it.second }
+    val fileServerExplainers = fileServers.map { it.third }
+
+    var selectedServer by remember { mutableStateOf(defaultServer) }
+    var message by remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 30.dp, end = 30.dp)
+            .clip(shape = RoundedCornerShape(10.dp))
+            .border(
+                1.dp,
+                MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
+                RoundedCornerShape(15.dp)
+            )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(30.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 10.dp)
+            ) {
+                Text(
+                    text = stringResource(
+                        if (isImage) {
+                            R.string.content_description_add_image
+                        } else {
+                            if (isVideo) {
+                                R.string.content_description_add_video
+                            } else {
+                                R.string.content_description_add_document
+                            }
+                        }
+                    ),
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.W500,
+                    modifier = Modifier
+                        .padding(start = 10.dp)
+                        .weight(1.0f)
+                        .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
+                )
+
+                IconButton(
+                    modifier = Modifier.size(30.dp),
+                    onClick = onCancel
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Cancel,
+                        null,
+                        modifier = Modifier
+                            .padding(end = 5.dp)
+                            .size(30.dp),
+                        tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    )
+                }
+            }
+
+            Divider()
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 10.dp)
+                    .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
+            ) {
+                if (mediaType.startsWith("image")) {
+                    AsyncImage(
+                        model = uri.toString(),
+                        contentDescription = uri.toString(),
+                        contentScale = ContentScale.FillWidth,
+                        modifier = Modifier
+                            .padding(top = 4.dp)
+                            .fillMaxWidth()
+                            .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
+                    )
+                } else if (mediaType.startsWith("video") && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    var bitmap by remember { mutableStateOf<Bitmap?>(null) }
+
+                    LaunchedEffect(key1 = uri) {
+                        scope.launch(Dispatchers.IO) {
+                            bitmap = resolver.loadThumbnail(uri, Size(1200, 1000), null)
+                        }
+                    }
+
+                    bitmap?.let {
+                        Image(
+                            bitmap = it.asImageBitmap(),
+                            contentDescription = "some useful description",
+                            contentScale = ContentScale.FillWidth,
+                            modifier = Modifier
+                                .padding(top = 4.dp)
+                                .fillMaxWidth()
+                        )
+                    }
+                } else {
+                    VideoView(uri)
+                }
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                TextSpinner(
+                    label = stringResource(id = R.string.file_server),
+                    placeholder = fileServers.filter { it.first == defaultServer }.firstOrNull()?.second ?: fileServers[0].second,
+                    options = fileServerOptions,
+                    explainers = fileServerExplainers,
+                    onSelect = {
+                        selectedServer = fileServers[it].first
+                    },
+                    modifier = Modifier
+                        .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
+                        .weight(1f)
+                )
+            }
+
+            if (selectedServer == ServersAvailable.NOSTRIMG_NIP_94 ||
+                selectedServer == ServersAvailable.IMGUR_NIP_94 ||
+                selectedServer == ServersAvailable.NOSTR_BUILD_NIP_94 ||
+                selectedServer == ServersAvailable.NIP95
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
+                ) {
+                    OutlinedTextField(
+                        label = { Text(text = stringResource(R.string.content_description)) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
+                        value = message,
+                        onValueChange = { message = it },
+                        placeholder = {
+                            Text(
+                                text = stringResource(R.string.content_description_example),
+                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                            )
+                        },
+                        keyboardOptions = KeyboardOptions.Default.copy(
+                            capitalization = KeyboardCapitalization.Sentences
+                        )
+                    )
+                }
+            }
+
+            Button(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 10.dp),
+                onClick = {
+                    onAdd(message, selectedServer)
+                },
+                shape = RoundedCornerShape(15.dp),
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = MaterialTheme.colors.primary
+                )
+            ) {
+                Text(text = stringResource(R.string.add_content), color = Color.White, fontSize = 20.sp)
+            }
+        }
     }
 }

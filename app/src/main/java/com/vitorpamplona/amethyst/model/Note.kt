@@ -2,7 +2,9 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
+import com.vitorpamplona.amethyst.service.lnurl.LnInvoiceUtil
 import com.vitorpamplona.amethyst.service.model.*
+import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.service.relays.EOSETime
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
@@ -20,6 +22,7 @@ val tagSearch = Pattern.compile("(?:\\s|\\A)\\#\\[([0-9]+)\\]")
 
 class AddressableNote(val address: ATag) : Note(address.toTag()) {
     override fun idNote() = address.toNAddr()
+    override fun toNEvent() = address.toNAddr()
     override fun idDisplayNote() = idNote().toShortenHex()
     override fun address() = address
     override fun createdAt() = (event as? LongTextNoteEvent)?.publishedAt() ?: event?.createdAt()
@@ -43,6 +46,8 @@ open class Note(val idHex: String) {
         private set
     var zaps = mapOf<Note, Note?>()
         private set
+    var zapPayments = mapOf<Note, Note?>()
+        private set
 
     var relays = setOf<String>()
         private set
@@ -51,6 +56,11 @@ open class Note(val idHex: String) {
 
     fun id() = Hex.decode(idHex)
     open fun idNote() = id().toNote()
+
+    open fun toNEvent(): String {
+        return Nip19.createNEvent(idHex, author?.pubkeyHex, event?.kind(), relays.firstOrNull())
+    }
+
     open fun idDisplayNote() = idNote().toShortenHex()
 
     fun channelHex(): HexKey? {
@@ -149,6 +159,17 @@ open class Note(val idHex: String) {
         }
     }
 
+    fun removeZapPayment(note: Note) {
+        if (zapPayments[note] != null) {
+            zapPayments = zapPayments.minus(note)
+            liveSet?.zaps?.invalidateData()
+        } else if (zapPayments.containsValue(note)) {
+            val toRemove = zapPayments.filterValues { it == note }
+            zapPayments = zapPayments.minus(toRemove.keys)
+            liveSet?.zaps?.invalidateData()
+        }
+    }
+
     fun addBoost(note: Note) {
         if (note !in boosts) {
             boosts = boosts + note
@@ -163,6 +184,17 @@ open class Note(val idHex: String) {
             liveSet?.zaps?.invalidateData()
         } else if (zapRequest in zaps.keys && zaps[zapRequest] == null) {
             zaps = zaps + Pair(zapRequest, zap)
+            liveSet?.zaps?.invalidateData()
+        }
+    }
+
+    @Synchronized
+    fun addZapPayment(zapPaymentRequest: Note, zapPayment: Note?) {
+        if (zapPaymentRequest !in zapPayments.keys) {
+            zapPayments = zapPayments + Pair(zapPaymentRequest, zapPayment)
+            liveSet?.zaps?.invalidateData()
+        } else if (zapPaymentRequest in zapPayments.keys && zapPayments[zapPaymentRequest] == null) {
+            zapPayments = zapPayments + Pair(zapPaymentRequest, zapPayment)
             liveSet?.zaps?.invalidateData()
         }
     }
@@ -193,9 +225,19 @@ open class Note(val idHex: String) {
         }
     }
 
-    fun isZappedBy(user: User): Boolean {
+    fun isZappedBy(user: User, account: Account): Boolean {
         // Zaps who the requester was the user
-        return zaps.any { it.key.author === user }
+        return zaps.any {
+            it.key.author === user || account.decryptZapContentAuthor(it.key)?.pubKey == user.pubkeyHex
+        } || zapPayments.any {
+            val zapResponseEvent = it.value?.event as? LnZapPaymentResponseEvent
+            val response = if (zapResponseEvent != null) {
+                account.decryptZapPaymentResponseEvent(zapResponseEvent)
+            } else {
+                null
+            }
+            response is PayInvoiceSuccessResponse && account.isNIP47Author(zapResponseEvent?.requestAuthor())
+        }
     }
 
     fun isReactedBy(user: User): Boolean {
@@ -224,12 +266,44 @@ open class Note(val idHex: String) {
         }.flatten()
     }
 
-    fun zappedAmount(): BigDecimal {
-        return zaps.mapNotNull { it.value?.event }
+    fun zappedAmount(privKey: ByteArray?, walletServicePubkey: ByteArray?): BigDecimal {
+        // Regular Zap Receipts
+        val completedZaps = zaps.asSequence()
+            .mapNotNull { it.value?.event }
             .filterIsInstance<LnZapEvent>()
-            .mapNotNull {
-                it.amount
-            }.sumOf { it }
+            .filter { it.amount != null }
+            .associate {
+                it.lnInvoice() to it.amount
+            }
+            .toMap()
+
+        val completedPayments = if (privKey != null && walletServicePubkey != null) {
+            // Payments confirmed by the User's Wallet
+            zapPayments
+                .asSequence()
+                .filter {
+                    val response = (it.value?.event as? LnZapPaymentResponseEvent)?.response(privKey, walletServicePubkey)
+                    response is PayInvoiceSuccessResponse
+                }
+                .associate {
+                    val lnInvoice = (it.key.event as? LnZapPaymentRequestEvent)?.lnInvoice(privKey, walletServicePubkey)
+                    val amount = try {
+                        if (lnInvoice == null) {
+                            null
+                        } else {
+                            LnInvoiceUtil.getAmountInSats(lnInvoice)
+                        }
+                    } catch (e: java.lang.Exception) {
+                        null
+                    }
+                    lnInvoice to amount
+                }
+                .toMap()
+        } else {
+            emptyMap()
+        }
+
+        return (completedZaps + completedPayments).values.filterNotNull().sumOf { it }
     }
 
     fun hasPledgeBy(user: User): Boolean {

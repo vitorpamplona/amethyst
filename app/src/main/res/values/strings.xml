@@ -287,14 +287,76 @@
     <string name="looking_for_event">"Looking for Event %1$s"</string>
 
     <string name="custom_zaps_add_a_message">Add a public message</string>
+    <string name="custom_zaps_add_a_message_private">Add a private message</string>
+    <string name="custom_zaps_add_a_message_nonzap">Add an invoice message</string>
+
     <string name="custom_zaps_add_a_message_example">Thank you for all your work!</string>
 
     <string name="lightning_create_and_add_invoice">Create and Add</string>
     <string name="poll_author_no_vote">Poll authors can\'t vote in their own polls.</string>
     <string name="poll_hashtag" translatable="false">#zappoll</string>
+
     <string name="connect_via_tor">Connect through your Orbot setup</string>
     <string name="do_you_really_want_to_disable_tor">Do you really want to disconnect from your Orbot setup?</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
     <string name="disconnect_from_your_orbot_setup">Disconnect from your Orbot setup</string>
+
+    <string name="hash_verification_passed">Image is the same since the post</string>
+    <string name="hash_verification_failed">Image has changed. The author might not have seen the change</string>
+
+    <string name="content_description_add_image">Add Image</string>
+    <string name="content_description_add_video">Add Video</string>
+    <string name="content_description_add_document">Add Document</string>
+
+    <string name="add_content">Add to Message</string>
+    <string name="content_description">Description of the contents</string>
+    <string name="content_description_example">A blue boat in a white sandy beach at sunset</string>
+
+    <string name="zap_type">Zap Type</string>
+    <string name="zap_type_explainer">Zap Type for all options</string>
+
+    <string name="zap_type_public">Public</string>
+    <string name="zap_type_public_explainer">Everybody can see the transaction and message</string>
+
+    <string name="zap_type_private">Private</string>
+    <string name="zap_type_private_explainer">Sender and Receiver can see each other and read the message</string>
+
+    <string name="zap_type_anonymous">Anonymous</string>
+    <string name="zap_type_anonymous_explainer">Receiver and the public does not know who sent the payment</string>
+
+    <string name="zap_type_nonzap">Non-Zap</string>
+    <string name="zap_type_nonzap_explainer">No trace in Nostr, only in Lightning</string>
+
+
+    <string name="file_server">File Server</string>
+    <string name="zap_forward_lnAddress">LnAddress or @User</string>
+
+    <string name="upload_server_imgur">imgur.com - trusted</string>
+    <string name="upload_server_imgur_explainer">Imgur can modify the file</string>
+
+    <string name="upload_server_nostrimg">nostrimg.com - trusted</string>
+    <string name="upload_server_nostrimg_explainer">NostrImg can modify the file</string>
+
+    <string name="upload_server_nostrbuild">nostr.build - trusted</string>
+    <string name="upload_server_nostrbuild_explainer">Nostr.build can modify the file</string>
+
+    <string name="upload_server_imgur_nip94">Verifiable Imgur (NIP-94)</string>
+    <string name="upload_server_imgur_nip94_explainer">Checks if Imgur modified the file. New NIP: other clients might not see it</string>
+
+    <string name="upload_server_nostrimg_nip94">Verifiable NostrImg (NIP-94)</string>
+    <string name="upload_server_nostrimg_nip94_explainer">Checks if NostrImg modified the file. New NIP: other clients might not see it</string>
+
+    <string name="upload_server_nostrbuild_nip94">Verifiable Nostr.build (NIP-94)</string>
+    <string name="upload_server_nostrbuild_nip94_explainer">Checks if Nostr.build modified the file. New NIP: other clients might not see it</string>
+
+    <string name="upload_server_relays_nip95">Your relays (NIP-95)</string>
+    <string name="upload_server_relays_nip95_explainer">Files are hosted by your relays. New NIP: check if they support</string>
+
+
+
+    <string name="follow_list_selection">Follow List</string>
+    <string name="follow_list_kind3follows">All Follows</string>
+    <string name="follow_list_global">Global</string>
+
 </resources>

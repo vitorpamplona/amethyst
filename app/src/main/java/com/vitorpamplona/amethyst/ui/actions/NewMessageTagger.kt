@@ -9,21 +9,21 @@ import com.vitorpamplona.amethyst.service.nip19.Nip19
 
 class NewMessageTagger(var channel: Channel?, var mentions: List<User>?, var replyTos: List<Note>?, var message: String) {
 
-    open fun addUserToMentions(user: User) {
+    fun addUserToMentions(user: User) {
         mentions = if (mentions?.contains(user) == true) mentions else mentions?.plus(user) ?: listOf(user)
     }
 
-    open fun addNoteToReplyTos(note: Note) {
+    fun addNoteToReplyTos(note: Note) {
         note.author?.let { addUserToMentions(it) }
         replyTos = if (replyTos?.contains(note) == true) replyTos else replyTos?.plus(note) ?: listOf(note)
     }
 
-    open fun tagIndex(user: User): Int {
+    fun tagIndex(user: User): Int {
         // Postr Events assembles replies before mentions in the tag order
         return (if (channel != null) 1 else 0) + (replyTos?.size ?: 0) + (mentions?.indexOf(user) ?: 0)
     }
 
-    open fun tagIndex(note: Note): Int {
+    fun tagIndex(note: Note): Int {
         // Postr Events assembles replies before mentions in the tag order
         return (if (channel != null) 1 else 0) + (replyTos?.indexOf(note) ?: 0)
     }
@@ -56,19 +56,19 @@ class NewMessageTagger(var channel: Channel?, var mentions: List<User>?, var rep
                 if (results?.key?.type == Nip19.Type.USER) {
                     val user = LocalCache.getOrCreateUser(results.key.hex)
 
-                    "#[${tagIndex(user)}]${results.restOfWord}"
+                    "nostr:${user.pubkeyNpub()}${results.restOfWord}"
                 } else if (results?.key?.type == Nip19.Type.NOTE) {
                     val note = LocalCache.getOrCreateNote(results.key.hex)
 
-                    "#[${tagIndex(note)}]${results.restOfWord}"
+                    "nostr:${note.toNEvent()}${results.restOfWord}"
                 } else if (results?.key?.type == Nip19.Type.EVENT) {
                     val note = LocalCache.getOrCreateNote(results.key.hex)
 
-                    "#[${tagIndex(note)}]${results.restOfWord}"
+                    "nostr:${note.toNEvent()}${results.restOfWord}"
                 } else if (results?.key?.type == Nip19.Type.ADDRESS) {
                     val note = LocalCache.checkGetOrCreateAddressableNote(results.key.hex)
                     if (note != null) {
-                        "#[${tagIndex(note)}]${results.restOfWord}"
+                        "nostr:${note.idNote()}${results.restOfWord}"
                     } else {
                         word
                     }

@@ -6,12 +6,16 @@ import android.content.SharedPreferences
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
+import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.model.toByteArray
 import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.model.ContactListEvent
 import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.Event.Companion.getRefinedEvent
+import com.vitorpamplona.amethyst.service.model.LnZapEvent
+import com.vitorpamplona.amethyst.ui.actions.ServersAvailable
 import com.vitorpamplona.amethyst.ui.note.Nip47URI
 import fr.acinq.secp256k1.Hex
 import nostr.postr.Persona
@@ -43,6 +47,10 @@ private object PrefKeys {
     const val LANGUAGE_PREFS = "languagePreferences"
     const val TRANSLATE_TO = "translateTo"
     const val ZAP_AMOUNTS = "zapAmounts"
+    const val DEFAULT_ZAPTYPE = "defaultZapType"
+    const val DEFAULT_FILE_SERVER = "defaultFileServer"
+    const val DEFAULT_HOME_FOLLOW_LIST = "defaultHomeFollowList"
+    const val DEFAULT_STORIES_FOLLOW_LIST = "defaultStoriesFollowList"
     const val ZAP_PAYMENT_REQUEST_SERVER = "zapPaymentServer"
     const val LATEST_CONTACT_LIST = "latestContactList"
     const val HIDE_DELETE_REQUEST_DIALOG = "hide_delete_request_dialog"
@@ -193,6 +201,10 @@ object LocalPreferences {
             putString(PrefKeys.LANGUAGE_PREFS, gson.toJson(account.languagePreferences))
             putString(PrefKeys.TRANSLATE_TO, account.translateTo)
             putString(PrefKeys.ZAP_AMOUNTS, gson.toJson(account.zapAmountChoices))
+            putString(PrefKeys.DEFAULT_ZAPTYPE, gson.toJson(account.defaultZapType))
+            putString(PrefKeys.DEFAULT_FILE_SERVER, gson.toJson(account.defaultFileServer))
+            putString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, account.defaultHomeFollowList)
+            putString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, account.defaultStoriesFollowList)
             putString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, gson.toJson(account.zapPaymentRequest))
             putString(PrefKeys.LATEST_CONTACT_LIST, Event.gson.toJson(account.backupContactList))
             putBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, account.hideDeleteRequestDialog)
@@ -215,11 +227,23 @@ object LocalPreferences {
 
             val dontTranslateFrom = getStringSet(PrefKeys.DONT_TRANSLATE_FROM, null) ?: setOf()
             val translateTo = getString(PrefKeys.TRANSLATE_TO, null) ?: Locale.getDefault().language
+            val defaultHomeFollowList = getString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, null) ?: KIND3_FOLLOWS
+            val defaultStoriesFollowList = getString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, null) ?: GLOBAL_FOLLOWS
 
             val zapAmountChoices = gson.fromJson(
                 getString(PrefKeys.ZAP_AMOUNTS, "[]"),
                 object : TypeToken<List<Long>>() {}.type
             ) ?: listOf(500L, 1000L, 5000L)
+
+            val defaultZapType = gson.fromJson(
+                getString(PrefKeys.DEFAULT_ZAPTYPE, "PUBLIC"),
+                object : TypeToken<LnZapEvent.ZapType>() {}.type
+            ) ?: LnZapEvent.ZapType.PUBLIC
+
+            val defaultFileServer = gson.fromJson(
+                getString(PrefKeys.DEFAULT_FILE_SERVER, "IMGUR"),
+                object : TypeToken<ServersAvailable>() {}.type
+            ) ?: ServersAvailable.IMGUR
 
             val zapPaymentRequestServer = try {
                 getString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, null)?.let {
@@ -266,6 +290,10 @@ object LocalPreferences {
                 languagePreferences,
                 translateTo,
                 zapAmountChoices,
+                defaultZapType,
+                defaultFileServer,
+                defaultHomeFollowList,
+                defaultStoriesFollowList,
                 zapPaymentRequestServer,
                 hideDeleteRequestDialog,
                 hideBlockAlertDialog,

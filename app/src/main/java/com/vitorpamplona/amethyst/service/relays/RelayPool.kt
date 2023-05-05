@@ -93,6 +93,8 @@ object RelayPool : Relay.Listener {
         fun onRelayStateChange(type: Relay.Type, relay: Relay, channel: String?)
 
         fun onSendResponse(eventId: String, success: Boolean, message: String, relay: Relay)
+
+        fun onAuth(relay: Relay, challenge: String)
     }
 
     override fun onEvent(relay: Relay, subscriptionId: String, event: Event) {
@@ -111,6 +113,10 @@ object RelayPool : Relay.Listener {
 
     override fun onSendResponse(relay: Relay, eventId: String, success: Boolean, message: String) {
         listeners.forEach { it.onSendResponse(eventId, success, message, relay) }
+    }
+
+    override fun onAuth(relay: Relay, challenge: String) {
+        listeners.forEach { it.onAuth(relay, challenge) }
     }
 
     // Observers line up here.

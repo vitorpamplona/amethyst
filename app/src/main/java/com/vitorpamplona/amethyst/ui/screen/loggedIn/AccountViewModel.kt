@@ -14,7 +14,9 @@ import com.vitorpamplona.amethyst.model.AccountState
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
+import com.vitorpamplona.amethyst.service.model.PayInvoiceErrorResponse
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -53,8 +55,16 @@ class AccountViewModel(private val account: Account) : ViewModel() {
         account.delete(account.boostsTo(note))
     }
 
+    fun zap(note: Note, amount: Long, pollOption: Int?, message: String, context: Context, onError: (String) -> Unit, onProgress: (percent: Float) -> Unit) {
+        zap(note, amount, pollOption, message, context, onError, onProgress, account.defaultZapType)
+    }
+
+    fun calculateIfNoteWasZappedByAccount(zappedNote: Note): Boolean {
+        return account.calculateIfNoteWasZappedByAccount(zappedNote)
+    }
+
     fun zap(note: Note, amount: Long, pollOption: Int?, message: String, context: Context, onError: (String) -> Unit, onProgress: (percent: Float) -> Unit, zapType: LnZapEvent.ZapType) {
-        val lud16 = note.author?.info?.lud16?.trim() ?: note.author?.info?.lud06?.trim()
+        val lud16 = note.event?.zapAddress() ?: note.author?.info?.lud16?.trim() ?: note.author?.info?.lud06?.trim()
 
         if (lud16.isNullOrBlank()) {
             onError(context.getString(R.string.user_does_not_have_a_lightning_address_setup_to_receive_sats))
@@ -80,7 +90,22 @@ class AccountViewModel(private val account: Account) : ViewModel() {
             onSuccess = {
                 onProgress(0.7f)
                 if (account.hasWalletConnectSetup()) {
-                    account.sendZapPaymentRequestFor(it)
+                    account.sendZapPaymentRequestFor(
+                        bolt11 = it,
+                        note,
+                        onResponse = { response ->
+                            if (response is PayInvoiceErrorResponse) {
+                                onProgress(0.0f)
+                                onError(
+                                    response.error?.message
+                                        ?: response.error?.code?.toString()
+                                        ?: "Error parsing error message"
+                                )
+                            } else {
+                                onProgress(0.99f)
+                            }
+                        }
+                    )
                     onProgress(0.8f)
 
                     // Awaits for the event to come back to LocalCache.
@@ -147,6 +172,10 @@ class AccountViewModel(private val account: Account) : ViewModel() {
 
     fun decrypt(note: Note): String? {
         return account.decryptContent(note)
+    }
+
+    fun decryptZap(note: Note): Event? {
+        return account.decryptZapContentAuthor(note)
     }
 
     fun hide(user: User) {

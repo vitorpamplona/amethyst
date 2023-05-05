@@ -12,8 +12,8 @@ android {
         applicationId "com.vitorpamplona.amethyst"
         minSdk 26
         targetSdk 33
-        versionCode 118
-        versionName "0.32.3"
+        versionCode 144
+        versionName "0.42.2"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -78,15 +78,15 @@ android {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
         }
     }
-
-    lintOptions {
+    lint {
         disable 'MissingTranslation'
     }
+
 }
 
 dependencies {
-    implementation 'androidx.core:core-ktx:1.9.0'
-    implementation 'androidx.activity:activity-compose:1.7.0-beta01'
+    implementation 'androidx.core:core-ktx:1.10.0'
+    implementation 'androidx.activity:activity-compose:1.7.0'
     implementation "androidx.compose.ui:ui:$compose_ui_version"
     implementation "androidx.compose.ui:ui-tooling-preview:$compose_ui_version"
 
@@ -108,13 +108,13 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-runtime-ktx:$lifecycle_version"
     implementation "androidx.lifecycle:lifecycle-livedata:$lifecycle_version"
 
-    implementation "net.engawapg.lib:zoomable:1.4.0"
+    implementation 'net.engawapg.lib:zoomable:1.4.2'
 
     // Biometrics
     implementation "androidx.biometric:biometric-ktx:1.2.0-alpha05"
 
     // Bitcoin secp256k1 bindings to Android
-    implementation 'fr.acinq.secp256k1:secp256k1-kmp-jni-android:0.8.0'
+    implementation 'fr.acinq.secp256k1:secp256k1-kmp-jni-android:0.9.0'
 
     // Nostr Base Protocol
     implementation('com.github.vitorpamplona.NostrPostr:nostrpostrlib:master-SNAPSHOT') {
@@ -127,17 +127,17 @@ dependencies {
     implementation 'com.squareup.okhttp3:okhttp:5.0.0-alpha.11'
 
     // Json Serialization TODO: We might need to converge between gson and Jackson (we are usin both)
-    implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.14.2'
+    implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.15.0'
     implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
 
     // link preview
     implementation 'tw.com.oneup.www:Baha-UrlPreview:1.0.1'
 
     // Encrypted Key Storage
-    implementation 'androidx.security:security-crypto-ktx:1.1.0-alpha05'
+    implementation 'androidx.security:security-crypto-ktx:1.1.0-alpha06'
 
     // view videos
-    implementation 'com.google.android.exoplayer:exoplayer:2.18.5'
+    implementation 'com.google.android.exoplayer:exoplayer:2.18.6'
 
     // Load images from the web.
     implementation "io.coil-kt:coil-compose:$coil_version"
@@ -146,14 +146,13 @@ dependencies {
     // view svgs
     implementation "io.coil-kt:coil-svg:$coil_version"
 
+    // create blurhash
+    implementation group: 'io.trbl', name: 'blurhash', version: '1.0.0'
+
     // Rendering clickable text
     implementation "com.google.accompanist:accompanist-flowlayout:$accompanist_version"
     // Permission to upload pictures:
     implementation "com.google.accompanist:accompanist-permissions:$accompanist_version"
-
-    // tabs for user profiles
-    implementation "com.google.accompanist:accompanist-pager:$accompanist_version" // Pager
-    implementation "com.google.accompanist:accompanist-pager-indicators:$accompanist_version"
 
     // Parses URLs from Text:
     implementation "io.github.url-detector:url-detector:0.1.23"
@@ -177,8 +176,8 @@ dependencies {
     debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.10'
 
     testImplementation 'junit:junit:4.13.2'
-    testImplementation "io.mockk:mockk:1.13.4"
-    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    testImplementation 'io.mockk:mockk:1.13.5'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.0-alpha01'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
     androidTestImplementation "androidx.compose.ui:ui-test-junit4:$compose_ui_version"
     debugImplementation "androidx.compose.ui:ui-tooling:$compose_ui_version"

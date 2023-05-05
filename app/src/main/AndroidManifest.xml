@@ -8,8 +8,10 @@
 
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.NFC" />
 
     <!-- Used for SDK < 29 -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
@@ -20,7 +22,7 @@
         android:name=".Amethyst"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
-        android:icon="@drawable/amethyst"
+        android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:enableOnBackInvokedCallback="true"
         android:supportsRtl="true"
@@ -48,10 +50,17 @@
             </intent-filter>
 
             <intent-filter android:label="Amethyst">
+                <action android:name="android.nfc.action.NDEF_DISCOVERED"/>
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="nostr" />
+            </intent-filter>
+
+            <intent-filter android:label="Amethyst">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="nostrwalletconnect" />
+                <data android:scheme="nostr+walletconnect" />
             </intent-filter>
 
             <meta-data

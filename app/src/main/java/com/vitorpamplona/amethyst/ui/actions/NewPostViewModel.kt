@@ -13,6 +13,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.*
+import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.ui.components.isValidURL
@@ -36,6 +37,10 @@ open class NewPostViewModel : ViewModel() {
 
     var userSuggestions by mutableStateOf<List<User>>(emptyList())
     var userSuggestionAnchor: TextRange? = null
+    var userSuggestionsMainMessage: Boolean? = null
+
+    // Images and Videos
+    var contentToAddUrl by mutableStateOf<Uri?>(null)
 
     // Polls
     var canUsePoll by mutableStateOf(false)
@@ -56,6 +61,11 @@ open class NewPostViewModel : ViewModel() {
     // Invoices
     var canAddInvoice by mutableStateOf(false)
     var wantsInvoice by mutableStateOf(false)
+
+    // Forward Zap to
+    var wantsForwardZapTo by mutableStateOf(false)
+    var forwardZapTo by mutableStateOf<User?>(null)
+    var forwardZapToEditting by mutableStateOf(TextFieldValue(""))
 
     open fun load(account: Account, replyingTo: Note?, quote: Note?) {
         originalNote = replyingTo
@@ -78,11 +88,17 @@ open class NewPostViewModel : ViewModel() {
         }
 
         quote?.let {
-            message = TextFieldValue(message.text + "\n\n@${it.idNote()}")
+            message = TextFieldValue(message.text + "\n\nnostr:${it.toNEvent()}")
+            urlPreview = findUrlInMessage()
         }
 
         canAddInvoice = account.userProfile().info?.lnAddress() != null
         canUsePoll = originalNote?.event !is PrivateDmEvent && originalNote?.channel() == null
+        contentToAddUrl = null
+
+        wantsForwardZapTo = false
+        forwardZapTo = null
+        forwardZapToEditting = TextFieldValue("")
 
         this.account = account
     }
@@ -91,45 +107,68 @@ open class NewPostViewModel : ViewModel() {
         val tagger = NewMessageTagger(originalNote?.channel(), mentions, replyTos, message.text)
         tagger.run()
 
-        if (wantsPoll) {
-            account?.sendPoll(tagger.message, tagger.replyTos, tagger.mentions, pollOptions, valueMaximum, valueMinimum, consensusThreshold, closedAt)
-        } else if (originalNote?.channel() != null) {
-            account?.sendChannelMessage(tagger.message, tagger.channel!!.idHex, tagger.replyTos, tagger.mentions)
-        } else if (originalNote?.event is PrivateDmEvent) {
-            account?.sendPrivateMessage(tagger.message, originalNote!!.author!!.pubkeyHex, originalNote!!, tagger.mentions)
+        val zapReceiver = if (wantsForwardZapTo) {
+            if (forwardZapTo != null) {
+                forwardZapTo?.info?.lud16 ?: forwardZapTo?.info?.lud06
+            } else {
+                forwardZapToEditting.text
+            }
         } else {
-            account?.sendPost(tagger.message, tagger.replyTos, tagger.mentions)
+            null
+        }
+
+        if (wantsPoll) {
+            account?.sendPoll(tagger.message, tagger.replyTos, tagger.mentions, pollOptions, valueMaximum, valueMinimum, consensusThreshold, closedAt, zapReceiver)
+        } else if (originalNote?.channel() != null) {
+            account?.sendChannelMessage(tagger.message, tagger.channel!!.idHex, tagger.replyTos, tagger.mentions, zapReceiver)
+        } else if (originalNote?.event is PrivateDmEvent) {
+            account?.sendPrivateMessage(tagger.message, originalNote!!.author!!.pubkeyHex, originalNote!!, tagger.mentions, zapReceiver)
+        } else {
+            account?.sendPost(tagger.message, tagger.replyTos, tagger.mentions, null, zapReceiver)
         }
 
         cancel()
     }
 
-    fun upload(it: Uri, context: Context) {
+    fun upload(it: Uri, description: String, server: ServersAvailable, context: Context) {
         isUploadingImage = true
+        contentToAddUrl = null
 
-        ImageUploader.uploadImage(
-            uri = it,
-            contentResolver = context.contentResolver,
-            onSuccess = { imageUrl ->
-                isUploadingImage = false
-                message = TextFieldValue(message.text + "\n\n" + imageUrl)
+        val contentResolver = context.contentResolver
 
-                viewModelScope.launch(Dispatchers.IO) {
-                    delay(2000)
-                    urlPreview = findUrlInMessage()
-                }
-            },
-            onError = {
-                isUploadingImage = false
-                viewModelScope.launch {
-                    imageUploadingError.emit("Failed to upload the image / video")
-                }
+        if (server == ServersAvailable.NIP95) {
+            val contentType = contentResolver.getType(it)
+            contentResolver.openInputStream(it)?.use {
+                createNIP95Record(it.readBytes(), contentType, description)
             }
-        )
+        } else {
+            ImageUploader.uploadImage(
+                uri = it,
+                server = server,
+                context = context,
+                contentResolver = contentResolver,
+                onSuccess = { imageUrl, mimeType ->
+                    if (server == ServersAvailable.IMGUR_NIP_94 || server == ServersAvailable.NOSTRIMG_NIP_94 || server == ServersAvailable.NOSTR_BUILD_NIP_94) {
+                        createNIP94Record(imageUrl, mimeType, description)
+                    } else {
+                        isUploadingImage = false
+                        message = TextFieldValue(message.text + "\n\n" + imageUrl)
+                        urlPreview = findUrlInMessage()
+                    }
+                },
+                onError = {
+                    isUploadingImage = false
+                    viewModelScope.launch {
+                        imageUploadingError.emit("Failed to upload the image / video")
+                    }
+                }
+            )
+        }
     }
 
     open fun cancel() {
         message = TextFieldValue("")
+        contentToAddUrl = null
         urlPreview = null
         isUploadingImage = false
         mentions = null
@@ -143,6 +182,14 @@ open class NewPostViewModel : ViewModel() {
         closedAt = null
 
         wantsInvoice = false
+
+        wantsForwardZapTo = false
+        forwardZapTo = null
+        forwardZapToEditting = TextFieldValue("")
+
+        userSuggestions = emptyList()
+        userSuggestionAnchor = null
+        userSuggestionsMainMessage = null
     }
 
     open fun findUrlInMessage(): String? {
@@ -164,6 +211,21 @@ open class NewPostViewModel : ViewModel() {
         if (it.selection.collapsed) {
             val lastWord = it.text.substring(0, it.selection.end).substringAfterLast("\n").substringAfterLast(" ")
             userSuggestionAnchor = it.selection
+            userSuggestionsMainMessage = true
+            if (lastWord.startsWith("@") && lastWord.length > 2) {
+                userSuggestions = LocalCache.findUsersStartingWith(lastWord.removePrefix("@"))
+            } else {
+                userSuggestions = emptyList()
+            }
+        }
+    }
+
+    open fun updateZapForwardTo(it: TextFieldValue) {
+        forwardZapToEditting = it
+        if (it.selection.collapsed) {
+            val lastWord = it.text.substring(0, it.selection.end).substringAfterLast("\n").substringAfterLast(" ")
+            userSuggestionAnchor = it.selection
+            userSuggestionsMainMessage = false
             if (lastWord.startsWith("@") && lastWord.length > 2) {
                 userSuggestions = LocalCache.findUsersStartingWith(lastWord.removePrefix("@"))
             } else {
@@ -174,15 +236,29 @@ open class NewPostViewModel : ViewModel() {
 
     open fun autocompleteWithUser(item: User) {
         userSuggestionAnchor?.let {
-            val lastWord = message.text.substring(0, it.end).substringAfterLast("\n").substringAfterLast(" ")
-            val lastWordStart = it.end - lastWord.length
-            val wordToInsert = "@${item.pubkeyNpub()}"
+            if (userSuggestionsMainMessage == true) {
+                val lastWord = message.text.substring(0, it.end).substringAfterLast("\n").substringAfterLast(" ")
+                val lastWordStart = it.end - lastWord.length
+                val wordToInsert = "@${item.pubkeyNpub()}"
 
-            message = TextFieldValue(
-                message.text.replaceRange(lastWordStart, it.end, wordToInsert),
-                TextRange(lastWordStart + wordToInsert.length, lastWordStart + wordToInsert.length)
-            )
+                message = TextFieldValue(
+                    message.text.replaceRange(lastWordStart, it.end, wordToInsert),
+                    TextRange(lastWordStart + wordToInsert.length, lastWordStart + wordToInsert.length)
+                )
+            } else {
+                val lastWord = forwardZapToEditting.text.substring(0, it.end).substringAfterLast("\n").substringAfterLast(" ")
+                val lastWordStart = it.end - lastWord.length
+                val wordToInsert = "@${item.pubkeyNpub()}"
+                forwardZapTo = item
+
+                forwardZapToEditting = TextFieldValue(
+                    forwardZapToEditting.text.replaceRange(lastWordStart, it.end, wordToInsert),
+                    TextRange(lastWordStart + wordToInsert.length, lastWordStart + wordToInsert.length)
+                )
+            }
+
             userSuggestionAnchor = null
+            userSuggestionsMainMessage = null
             userSuggestions = emptyList()
         }
     }
@@ -193,7 +269,7 @@ open class NewPostViewModel : ViewModel() {
 
     fun canPost(): Boolean {
         return message.text.isNotBlank() && !isUploadingImage && !wantsInvoice &&
-            (!wantsPoll || pollOptions.values.all { it.isNotEmpty() })
+            (!wantsPoll || pollOptions.values.all { it.isNotEmpty() }) && contentToAddUrl == null
     }
 
     fun includePollHashtagInMessage(include: Boolean, hashtag: String) {
@@ -207,5 +283,75 @@ open class NewPostViewModel : ViewModel() {
                 )
             )
         }
+    }
+
+    fun createNIP94Record(imageUrl: String, mimeType: String?, description: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            // Images don't seem to be ready immediately after upload
+
+            if (mimeType?.startsWith("image/") == true) {
+                delay(2000)
+            } else {
+                delay(5000)
+            }
+
+            FileHeader.prepare(
+                imageUrl,
+                mimeType,
+                description,
+                onReady = {
+                    val note = account?.sendHeader(it)
+
+                    isUploadingImage = false
+
+                    if (note == null) {
+                        message = TextFieldValue(message.text + "\n\n" + imageUrl)
+                    } else {
+                        message = TextFieldValue(message.text + "\n\nnostr:" + note.toNEvent())
+                    }
+
+                    urlPreview = findUrlInMessage()
+                },
+                onError = {
+                    isUploadingImage = false
+                    viewModelScope.launch {
+                        imageUploadingError.emit("Failed to upload the image / video")
+                    }
+                }
+            )
+        }
+    }
+
+    fun createNIP95Record(bytes: ByteArray, mimeType: String?, description: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            FileHeader.prepare(
+                bytes,
+                "",
+                mimeType,
+                description,
+                onReady = {
+                    val nip95 = account?.createNip95(bytes, headerInfo = it)
+                    val note = nip95?.let { it1 -> account?.sendNip95(it1.first, it1.second) }
+
+                    isUploadingImage = false
+
+                    note?.let {
+                        message = TextFieldValue(message.text + "\n\nnostr:" + it.toNEvent())
+                    }
+
+                    urlPreview = findUrlInMessage()
+                },
+                onError = {
+                    isUploadingImage = false
+                    viewModelScope.launch {
+                        imageUploadingError.emit("Failed to upload the image / video")
+                    }
+                }
+            )
+        }
+    }
+
+    fun selectImage(uri: Uri) {
+        contentToAddUrl = uri
     }
 }

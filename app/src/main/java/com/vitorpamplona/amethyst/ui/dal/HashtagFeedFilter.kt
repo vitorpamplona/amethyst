@@ -22,7 +22,7 @@ object HashtagFeedFilter : AdditiveFeedFilter<Note>() {
     }
 
     override fun applyFilter(collection: Set<Note>): Set<Note> {
-        return applyFilter(collection)
+        return innerApplyFilter(collection)
     }
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {

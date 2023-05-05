@@ -19,8 +19,10 @@ import coil.decode.ImageDecoderDecoder
 import coil.decode.SvgDecoder
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
+import com.vitorpamplona.amethyst.VideoCache
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.service.relays.Client
+import com.vitorpamplona.amethyst.ui.components.muted
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.Nip47
 import com.vitorpamplona.amethyst.ui.screen.AccountScreen
@@ -53,6 +55,9 @@ class MainActivity : FragmentActivity() {
         } catch (e: Exception) {
             null
         }
+
+        // Initializes video cache.
+        VideoCache.init(this.applicationContext)
 
         Coil.setImageLoader {
             ImageLoader.Builder(this).components {
@@ -88,6 +93,8 @@ class MainActivity : FragmentActivity() {
     @OptIn(DelicateCoroutinesApi::class)
     override fun onResume() {
         super.onResume()
+        // starts muted every time
+        muted.value = true
 
         // Only starts after login
         GlobalScope.launch(Dispatchers.IO) {

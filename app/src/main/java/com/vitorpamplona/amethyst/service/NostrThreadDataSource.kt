@@ -1,7 +1,7 @@
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.ThreadAssembler
-import com.vitorpamplona.amethyst.service.relays.FeedType
+import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 
@@ -18,14 +18,14 @@ object NostrThreadDataSource : NostrDataSource("SingleThreadFeed") {
             .ifEmpty { null } ?: return null
 
         return TypedFilter(
-            types = FeedType.values().toSet(),
+            types = COMMON_FEED_TYPES,
             filter = JsonFilter(
                 ids = eventsToLoad.map { it.substring(0, 8) }
             )
         )
     }
 
-    val loadEventsChannel = requestNewChannel() { eoseTime, relay ->
+    val loadEventsChannel = requestNewChannel() { _, _ ->
         // Many relays operate with limits in the amount of filters.
         // As information comes, the filters will be rotated to get more data.
         invalidateFilters()

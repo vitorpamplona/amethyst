@@ -1,17 +1,20 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Tab
 import androidx.compose.material.TabRow
-import androidx.compose.material.TabRowDefaults
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -23,10 +26,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
-import com.google.accompanist.pager.ExperimentalPagerApi
-import com.google.accompanist.pager.HorizontalPager
-import com.google.accompanist.pager.PagerState
-import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
 import com.vitorpamplona.amethyst.ui.dal.HomeConversationsFeedFilter
@@ -39,7 +38,7 @@ import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalPagerApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     homeFeedViewModel: NostrHomeFeedViewModel,
@@ -52,9 +51,11 @@ fun HomeScreen(
 ) {
     val coroutineScope = rememberCoroutineScope()
     val account = accountViewModel.accountLiveData.value?.account ?: return
-    var wantsToAddNip47 by remember { mutableStateOf<String?>(nip47) }
+    var wantsToAddNip47 by remember { mutableStateOf(nip47) }
 
-    LaunchedEffect(accountViewModel) {
+    val accountState = account.live.observeAsState()
+
+    LaunchedEffect(accountViewModel, accountState.value?.account?.defaultHomeFollowList) {
         HomeNewThreadFeedFilter.account = account
         HomeConversationsFeedFilter.account = account
         NostrHomeDataSource.resetFilters()
@@ -90,13 +91,7 @@ fun HomeScreen(
         ) {
             TabRow(
                 backgroundColor = MaterialTheme.colors.background,
-                selectedTabIndex = pagerState.currentPage,
-                indicator = { tabPositions ->
-                    TabRowDefaults.Indicator(
-                        Modifier.pagerTabIndicatorOffset(pagerState, tabPositions),
-                        color = MaterialTheme.colors.primary
-                    )
-                }
+                selectedTabIndex = pagerState.currentPage
             ) {
                 Tab(
                     selected = pagerState.currentPage == 0,
@@ -114,7 +109,7 @@ fun HomeScreen(
                     }
                 )
             }
-            HorizontalPager(count = 2, state = pagerState) {
+            HorizontalPager(pageCount = 2, state = pagerState) {
                 when (pagerState.currentPage) {
                     0 -> FeedView(homeFeedViewModel, accountViewModel, navController, Route.Home.base + "Follows", ScrollStateKeys.HOME_FOLLOWS, scrollToTop)
                     1 -> FeedView(repliesFeedViewModel, accountViewModel, navController, Route.Home.base + "FollowsReplies", ScrollStateKeys.HOME_REPLIES, scrollToTop)

@@ -2,9 +2,12 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
@@ -48,10 +51,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import com.google.accompanist.pager.ExperimentalPagerApi
-import com.google.accompanist.pager.HorizontalPager
-import com.google.accompanist.pager.pagerTabIndicatorOffset
-import com.google.accompanist.pager.rememberPagerState
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -61,6 +60,8 @@ import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
 import com.vitorpamplona.amethyst.service.model.IdentityClaim
+import com.vitorpamplona.amethyst.service.model.PayInvoiceErrorResponse
+import com.vitorpamplona.amethyst.service.model.PayInvoiceSuccessResponse
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
 import com.vitorpamplona.amethyst.ui.components.DisplayNip05ProfileStatus
@@ -70,6 +71,7 @@ import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
+import com.vitorpamplona.amethyst.ui.components.figureOutMimeType
 import com.vitorpamplona.amethyst.ui.dal.UserProfileBookmarksFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowersFeedFilter
@@ -98,7 +100,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 
-@OptIn(ExperimentalPagerApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navController: NavController) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
@@ -187,12 +189,6 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                     ScrollableTabRow(
                         backgroundColor = MaterialTheme.colors.background,
                         selectedTabIndex = pagerState.currentPage,
-                        indicator = { tabPositions ->
-                            TabRowDefaults.Indicator(
-                                Modifier.pagerTabIndicatorOffset(pagerState, tabPositions),
-                                color = MaterialTheme.colors.primary
-                            )
-                        },
                         edgePadding = 8.dp,
                         modifier = Modifier.onSizeChanged {
                             tabsSize = it
@@ -268,7 +264,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                         }
                     }
                     HorizontalPager(
-                        count = 8,
+                        pageCount = 8,
                         state = pagerState,
                         modifier = with(LocalDensity.current) {
                             Modifier.height((columnSize.height - tabsSize.height).toDp())
@@ -409,8 +405,9 @@ private fun ProfileHeader(
         }
     }
 
-    if (zoomImageDialogOpen) {
-        ZoomableImageDialog(baseUser.profilePicture()!!, onDismiss = { zoomImageDialogOpen = false })
+    val profilePic = baseUser.profilePicture()
+    if (zoomImageDialogOpen && profilePic != null) {
+        ZoomableImageDialog(figureOutMimeType(profilePic), onDismiss = { zoomImageDialogOpen = false })
     }
 }
 
@@ -426,6 +423,7 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewMode
     val uri = LocalUriHandler.current
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     Row(verticalAlignment = Alignment.Bottom) {
         user.bestDisplayName()?.let {
@@ -567,7 +565,27 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewMode
                     onSuccess = {
                         // pay directly
                         if (account.hasWalletConnectSetup()) {
-                            account.sendZapPaymentRequestFor(it)
+                            account.sendZapPaymentRequestFor(it, null) { response ->
+                                if (response is PayInvoiceSuccessResponse) {
+                                    scope.launch {
+                                        Toast.makeText(
+                                            context,
+                                            "Payment Successful", // Turn this into a UI animation
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    }
+                                } else if (response is PayInvoiceErrorResponse) {
+                                    scope.launch {
+                                        Toast.makeText(
+                                            context,
+                                            response.error?.message
+                                                ?: response.error?.code?.toString()
+                                                ?: "Error parsing error message",
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    }
+                                }
+                            }
                         } else {
                             runCatching {
                                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse("lightning:$it"))
@@ -655,6 +673,7 @@ fun BadgeThumb(
         if (image == null) {
             RobohashAsyncImage(
                 robot = "authornotfound",
+                robotSize = size,
                 contentDescription = stringResource(R.string.unknown_author),
                 modifier = pictureModifier
                     .width(size)
@@ -664,6 +683,7 @@ fun BadgeThumb(
         } else {
             RobohashFallbackAsyncImage(
                 robot = note.idHex,
+                robotSize = size,
                 model = image,
                 contentDescription = stringResource(id = R.string.profile_image),
                 modifier = pictureModifier
@@ -712,7 +732,7 @@ private fun DrawBanner(baseUser: User) {
         )
 
         if (zoomImageDialogOpen) {
-            ZoomableImageDialog(imageUrl = banner, onDismiss = { zoomImageDialogOpen = false })
+            ZoomableImageDialog(imageUrl = figureOutMimeType(banner), onDismiss = { zoomImageDialogOpen = false })
         }
     } else {
         Image(
@@ -740,7 +760,7 @@ fun TabNotesNewThreads(accountViewModel: AccountViewModel, navController: NavCon
             Column(
                 modifier = Modifier.padding(vertical = 0.dp)
             ) {
-                FeedView(feedViewModel, accountViewModel, navController, null)
+                FeedView(feedViewModel, accountViewModel, navController, null, enablePullRefresh = false)
             }
         }
     }
@@ -760,7 +780,7 @@ fun TabNotesConversations(accountViewModel: AccountViewModel, navController: Nav
             Column(
                 modifier = Modifier.padding(vertical = 0.dp)
             ) {
-                FeedView(feedViewModel, accountViewModel, navController, null)
+                FeedView(feedViewModel, accountViewModel, navController, null, enablePullRefresh = false)
             }
         }
     }
@@ -781,7 +801,7 @@ fun TabBookmarks(baseUser: User, accountViewModel: AccountViewModel, navControll
             Column(
                 modifier = Modifier.padding(vertical = 0.dp)
             ) {
-                FeedView(feedViewModel, accountViewModel, navController, null)
+                FeedView(feedViewModel, accountViewModel, navController, null, enablePullRefresh = false)
             }
         }
     }
@@ -801,7 +821,7 @@ fun TabFollows(baseUser: User, accountViewModel: AccountViewModel, navController
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            UserFeedView(feedViewModel, accountViewModel, navController)
+            UserFeedView(feedViewModel, accountViewModel, navController, enablePullRefresh = false)
         }
     }
 }
@@ -820,7 +840,7 @@ fun TabFollowers(baseUser: User, accountViewModel: AccountViewModel, navControll
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            UserFeedView(feedViewModel, accountViewModel, navController)
+            UserFeedView(feedViewModel, accountViewModel, navController, enablePullRefresh = false)
         }
     }
 }
@@ -839,7 +859,7 @@ fun TabReceivedZaps(baseUser: User, accountViewModel: AccountViewModel, navContr
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            LnZapFeedView(feedViewModel, accountViewModel, navController)
+            LnZapFeedView(feedViewModel, accountViewModel, navController, enablePullRefresh = false)
         }
     }
 }
@@ -858,7 +878,7 @@ fun TabReports(baseUser: User, accountViewModel: AccountViewModel, navController
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            FeedView(feedViewModel, accountViewModel, navController, null)
+            FeedView(feedViewModel, accountViewModel, navController, null, enablePullRefresh = false)
         }
     }
 }
@@ -893,7 +913,7 @@ fun TabRelays(user: User, accountViewModel: AccountViewModel) {
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            RelayFeedView(feedViewModel, accountViewModel)
+            RelayFeedView(feedViewModel, accountViewModel, enablePullRefresh = false)
         }
     }
 }

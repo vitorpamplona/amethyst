@@ -1,14 +1,18 @@
 package com.vitorpamplona.amethyst.model
 
 import android.content.res.Resources
+import android.util.Log
 import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
+import com.vitorpamplona.amethyst.service.FileHeader
+import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
 import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.RelayPool
+import com.vitorpamplona.amethyst.ui.actions.ServersAvailable
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.Nip47URI
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -17,6 +21,8 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import nostr.postr.Persona
 import java.net.Proxy
+import nostr.postr.Utils
+import java.math.BigDecimal
 import java.util.Locale
 
 val DefaultChannels = setOf(
@@ -33,6 +39,9 @@ fun getLanguagesSpokenByUser(): Set<String> {
     return codedList
 }
 
+val GLOBAL_FOLLOWS = " Global "
+val KIND3_FOLLOWS = " All Follows "
+
 @OptIn(DelicateCoroutinesApi::class)
 class Account(
     val loggedIn: Persona,
@@ -43,6 +52,10 @@ class Account(
     var languagePreferences: Map<String, String> = mapOf(),
     var translateTo: String = Locale.getDefault().language,
     var zapAmountChoices: List<Long> = listOf(500L, 1000L, 5000L),
+    var defaultZapType: LnZapEvent.ZapType = LnZapEvent.ZapType.PRIVATE,
+    var defaultFileServer: ServersAvailable = ServersAvailable.IMGUR,
+    var defaultHomeFollowList: String = KIND3_FOLLOWS,
+    var defaultStoriesFollowList: String = GLOBAL_FOLLOWS,
     var zapPaymentRequest: Nip47URI? = null,
     var hideDeleteRequestDialog: Boolean = false,
     var hideBlockAlertDialog: Boolean = false,
@@ -166,13 +179,51 @@ class Account(
         return zapPaymentRequest != null
     }
 
-    fun sendZapPaymentRequestFor(lnInvoice: String) {
+    fun isNIP47Author(pubkeyHex: String?): Boolean {
+        val privKey = zapPaymentRequest?.secret?.toByteArray() ?: loggedIn.privKey!!
+        val pubKey = Utils.pubkeyCreate(privKey).toHexKey()
+        return (pubKey == pubkeyHex)
+    }
+
+    fun decryptZapPaymentResponseEvent(zapResponseEvent: LnZapPaymentResponseEvent): Response? {
+        val myNip47 = zapPaymentRequest ?: return null
+        return zapResponseEvent.response(
+            myNip47.secret?.toByteArray() ?: loggedIn.privKey!!,
+            myNip47.pubKeyHex.toByteArray()
+        )
+    }
+
+    fun calculateIfNoteWasZappedByAccount(zappedNote: Note): Boolean {
+        return zappedNote.isZappedBy(userProfile(), this) == true
+    }
+
+    fun calculateZappedAmount(zappedNote: Note?): BigDecimal {
+        return zappedNote?.zappedAmount(
+            zapPaymentRequest?.secret?.toByteArray() ?: loggedIn.privKey!!,
+            zapPaymentRequest?.pubKeyHex?.toByteArray()
+        ) ?: BigDecimal.ZERO
+    }
+
+    fun sendZapPaymentRequestFor(bolt11: String, zappedNote: Note?, onResponse: (Response?) -> Unit) {
         if (!isWriteable()) return
 
-        zapPaymentRequest?.let {
-            val event = LnZapPaymentRequestEvent.create(lnInvoice, it.pubKeyHex, it.secret?.toByteArray() ?: loggedIn.privKey!!)
+        zapPaymentRequest?.let { nip47 ->
+            val event = LnZapPaymentRequestEvent.create(bolt11, nip47.pubKeyHex, nip47.secret?.toByteArray() ?: loggedIn.privKey!!)
 
-            Client.send(event, it.relayUri)
+            val wcListener = NostrLnZapPaymentResponseDataSource(nip47.pubKeyHex, event.pubKey, event.id)
+            wcListener.start()
+
+            LocalCache.consume(event, zappedNote) {
+                // After the response is received.
+                val privKey = nip47.secret?.toByteArray()
+                if (privKey != null) {
+                    onResponse(it.response(privKey, nip47.pubKeyHex.toByteArray()))
+                }
+            }
+
+            Client.send(event, nip47.relayUri, wcListener.feedTypes) {
+                wcListener.destroy()
+            }
         }
     }
 
@@ -359,7 +410,62 @@ class Account(
         }
     }
 
-    fun sendPost(message: String, replyTo: List<Note>?, mentions: List<User>?, tags: List<String>? = null) {
+    fun createNip95(byteArray: ByteArray, headerInfo: FileHeader): Pair<FileStorageEvent, FileStorageHeaderEvent>? {
+        if (!isWriteable()) return null
+
+        val data = FileStorageEvent.create(
+            mimeType = headerInfo.mimeType ?: "",
+            data = byteArray,
+            privateKey = loggedIn.privKey!!
+        )
+
+        val signedEvent = FileStorageHeaderEvent.create(
+            data,
+            mimeType = headerInfo.mimeType,
+            hash = headerInfo.hash,
+            size = headerInfo.size.toString(),
+            dimensions = headerInfo.dim,
+            blurhash = headerInfo.blurHash,
+            description = headerInfo.description,
+            privateKey = loggedIn.privKey!!
+        )
+
+        return Pair(data, signedEvent)
+    }
+
+    fun sendNip95(data: FileStorageEvent, signedEvent: FileStorageHeaderEvent): Note? {
+        if (!isWriteable()) return null
+
+        Client.send(data)
+        LocalCache.consume(data, null)
+
+        Client.send(signedEvent)
+        LocalCache.consume(signedEvent, null)
+
+        return LocalCache.notes[signedEvent.id]
+    }
+
+    fun sendHeader(headerInfo: FileHeader): Note? {
+        if (!isWriteable()) return null
+
+        val signedEvent = FileHeaderEvent.create(
+            url = headerInfo.url,
+            mimeType = headerInfo.mimeType,
+            hash = headerInfo.hash,
+            size = headerInfo.size.toString(),
+            dimensions = headerInfo.dim,
+            blurhash = headerInfo.blurHash,
+            description = headerInfo.description,
+            privateKey = loggedIn.privKey!!
+        )
+
+        Client.send(signedEvent)
+        LocalCache.consume(signedEvent, null)
+
+        return LocalCache.notes[signedEvent.id]
+    }
+
+    fun sendPost(message: String, replyTo: List<Note>?, mentions: List<User>?, tags: List<String>? = null, zapReceiver: String? = null) {
         if (!isWriteable()) return
 
         val repliesToHex = replyTo?.filter { it.address() == null }?.map { it.idHex }
@@ -372,6 +478,7 @@ class Account(
             mentions = mentionsHex,
             addresses = addresses,
             extraTags = tags,
+            zapReceiver = zapReceiver,
             privateKey = loggedIn.privKey!!
         )
 
@@ -387,7 +494,8 @@ class Account(
         valueMaximum: Int?,
         valueMinimum: Int?,
         consensusThreshold: Int?,
-        closedAt: Int?
+        closedAt: Int?,
+        zapReceiver: String? = null
     ) {
         if (!isWriteable()) return
 
@@ -405,14 +513,15 @@ class Account(
             valueMaximum = valueMaximum,
             valueMinimum = valueMinimum,
             consensusThreshold = consensusThreshold,
-            closedAt = closedAt
+            closedAt = closedAt,
+            zapReceiver = zapReceiver
         )
         // println("Sending new PollNoteEvent: %s".format(signedEvent.toJson()))
         Client.send(signedEvent)
         LocalCache.consume(signedEvent)
     }
 
-    fun sendChannelMessage(message: String, toChannel: String, replyTo: List<Note>?, mentions: List<User>?) {
+    fun sendChannelMessage(message: String, toChannel: String, replyTo: List<Note>?, mentions: List<User>?, zapReceiver: String? = null) {
         if (!isWriteable()) return
 
         // val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
@@ -424,13 +533,14 @@ class Account(
             channel = toChannel,
             replyTos = repliesToHex,
             mentions = mentionsHex,
+            zapReceiver = zapReceiver,
             privateKey = loggedIn.privKey!!
         )
         Client.send(signedEvent)
         LocalCache.consume(signedEvent, null)
     }
 
-    fun sendPrivateMessage(message: String, toUser: String, replyingTo: Note? = null, mentions: List<User>?) {
+    fun sendPrivateMessage(message: String, toUser: String, replyingTo: Note? = null, mentions: List<User>?, zapReceiver: String? = null) {
         if (!isWriteable()) return
         val user = LocalCache.users[toUser] ?: return
 
@@ -443,6 +553,7 @@ class Account(
             msg = message,
             replyTos = repliesToHex,
             mentions = mentionsHex,
+            zapReceiver = zapReceiver,
             privateKey = loggedIn.privKey!!,
             advertiseNip18 = false
         )
@@ -536,6 +647,12 @@ class Account(
         LocalCache.consume(event)
     }
 
+    fun createAuthEvent(relay: Relay, challenge: String): RelayAuthEvent? {
+        if (!isWriteable()) return null
+
+        return RelayAuthEvent.create(relay.url, challenge, loggedIn.privKey!!)
+    }
+
     fun removePublicBookmark(note: Note) {
         if (!isWriteable()) return
 
@@ -607,6 +724,30 @@ class Account(
         saveable.invalidateData()
     }
 
+    fun changeDefaultZapType(zapType: LnZapEvent.ZapType) {
+        defaultZapType = zapType
+        live.invalidateData()
+        saveable.invalidateData()
+    }
+
+    fun changeDefaultFileServer(server: ServersAvailable) {
+        defaultFileServer = server
+        live.invalidateData()
+        saveable.invalidateData()
+    }
+
+    fun changeDefaultHomeFollowList(name: String) {
+        defaultHomeFollowList = name
+        live.invalidateData()
+        saveable.invalidateData()
+    }
+
+    fun changeDefaultStoriesFollowList(name: String) {
+        defaultStoriesFollowList = name
+        live.invalidateData()
+        saveable.invalidateData()
+    }
+
     fun changeZapAmounts(newAmounts: List<Long>) {
         zapAmountChoices = newAmounts
         live.invalidateData()
@@ -617,6 +758,37 @@ class Account(
         zapPaymentRequest = newServer
         live.invalidateData()
         saveable.invalidateData()
+    }
+
+    fun selectedUsersFollowList(listName: String?): Set<String>? {
+        if (listName == GLOBAL_FOLLOWS) return null
+        if (listName == KIND3_FOLLOWS) return userProfile().cachedFollowingKeySet()
+
+        val privKey = loggedIn.privKey
+
+        return if (listName != null) {
+            val aTag = ATag(PeopleListEvent.kind, userProfile().pubkeyHex, listName, null).toTag()
+            val list = LocalCache.addressables[aTag]
+            if (list != null) {
+                val publicHexList = (list.event as? PeopleListEvent)?.bookmarkedPeople() ?: emptySet()
+                val privateHexList = privKey?.let {
+                    (list.event as? PeopleListEvent)?.privateTaggedUsers(it)
+                } ?: emptySet()
+
+                (publicHexList + privateHexList).toSet()
+            } else {
+                emptySet()
+            }
+        } else {
+            emptySet()
+        }
+    }
+
+    fun selectedTagsFollowList(listName: String?): Set<String>? {
+        if (listName == GLOBAL_FOLLOWS) return null
+        if (listName == KIND3_FOLLOWS) return userProfile().cachedFollowingTagSet()
+
+        return emptySet()
     }
 
     fun sendChangeChannel(name: String, about: String, picture: String, channel: Channel) {
@@ -652,8 +824,58 @@ class Account(
             }
 
             event.plainContent(loggedIn.privKey!!, pubkeyToUse.toByteArray())
+        } else if (event is LnZapRequestEvent && loggedIn.privKey != null) {
+            decryptZapContentAuthor(note)?.content()
         } else {
             event?.content()
+        }
+    }
+
+    fun decryptZapContentAuthor(note: Note): Event? {
+        val event = note.event
+        val loggedInPrivateKey = loggedIn.privKey
+
+        return if (event is LnZapRequestEvent && loggedInPrivateKey != null && event.isPrivateZap()) {
+            val recipientPK = event.zappedAuthor().firstOrNull()
+            val recipientPost = event.zappedPost().firstOrNull()
+
+            if (recipientPK == userProfile().pubkeyHex) {
+                // if the receiver is logged in, these are the params.
+                val privateKeyToUse = loggedInPrivateKey
+                val pubkeyToUse = event.pubKey
+
+                LnZapRequestEvent.checkForPrivateZap(event, privateKeyToUse, pubkeyToUse)
+            } else {
+                // if the sender is logged in, these are the params
+                val altPubkeyToUse = recipientPK
+                val altPrivateKeyToUse = if (recipientPost != null) {
+                    LnZapRequestEvent.createEncryptionPrivateKey(
+                        loggedInPrivateKey.toHexKey(),
+                        recipientPost,
+                        event.createdAt
+                    )
+                } else if (recipientPK != null) {
+                    LnZapRequestEvent.createEncryptionPrivateKey(
+                        loggedInPrivateKey.toHexKey(),
+                        recipientPK,
+                        event.createdAt
+                    )
+                } else {
+                    null
+                }
+
+                if (altPrivateKeyToUse != null && altPubkeyToUse != null) {
+                    val result = LnZapRequestEvent.checkForPrivateZap(event, altPrivateKeyToUse, altPubkeyToUse)
+                    if (result == null) {
+                        Log.w("Private ZAP Decrypt", "Fail to decrypt Zap from ${note.author?.toBestDisplayName()} ${note.idNote()}")
+                    }
+                    result
+                } else {
+                    null
+                }
+            }
+        } else {
+            null
         }
     }
 
@@ -731,11 +953,11 @@ class Account(
     fun isHidden(userHex: String) = userHex in hiddenUsers || userHex in transientHiddenUsers
 
     fun followingKeySet(): Set<HexKey> {
-        return userProfile().cachedFollowingKeySet() ?: emptySet()
+        return userProfile().cachedFollowingKeySet()
     }
 
     fun followingTagSet(): Set<HexKey> {
-        return userProfile().cachedFollowingTagSet() ?: emptySet()
+        return userProfile().cachedFollowingTagSet()
     }
 
     fun isAcceptable(user: User): Boolean {

@@ -113,6 +113,8 @@ fun ChatroomMessageCompose(
         var alignment: Arrangement.Horizontal
         var shape: Shape
 
+        val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+
         if (note.author == accountUser) {
             backgroundBubbleColor = MaterialTheme.colors.primary.copy(alpha = 0.32f)
             alignment = Arrangement.End
@@ -333,11 +335,11 @@ fun ChatroomMessageCompose(
                                 }
 
                                 Row() {
-                                    LikeReaction(baseNote, accountViewModel)
+                                    LikeReaction(baseNote, grayTint, accountViewModel)
                                     Spacer(modifier = Modifier.width(5.dp))
-                                    ZapReaction(baseNote, accountViewModel)
+                                    ZapReaction(baseNote, grayTint, accountViewModel)
                                     Spacer(modifier = Modifier.width(5.dp))
-                                    ReplyReaction(baseNote, accountViewModel, showCounter = false) {
+                                    ReplyReaction(baseNote, grayTint, accountViewModel, showCounter = false) {
                                         onWantsToReply(baseNote)
                                     }
                                 }
@@ -373,6 +375,7 @@ private fun RelayBadges(baseNote: Note) {
             ) {
                 RobohashFallbackAsyncImage(
                     robot = "https://$url/favicon.ico",
+                    robotSize = 15.dp,
                     model = "https://$url/favicon.ico",
                     contentDescription = stringResource(id = R.string.relay_icon),
                     colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }),

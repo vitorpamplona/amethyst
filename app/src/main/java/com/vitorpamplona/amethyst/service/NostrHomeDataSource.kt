@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.UserState
+import com.vitorpamplona.amethyst.service.model.HighlightEvent
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.PollNoteEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
@@ -44,7 +45,7 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
     }
 
     fun createFollowAccountsFilter(): TypedFilter {
-        val follows = account.followingKeySet()
+        val follows = account.selectedUsersFollowList(account.defaultHomeFollowList) ?: emptySet()
 
         val followKeys = follows.map {
             it.substring(0, 6)
@@ -55,7 +56,7 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
         return TypedFilter(
             types = setOf(FeedType.FOLLOWS),
             filter = JsonFilter(
-                kinds = listOf(TextNoteEvent.kind, LongTextNoteEvent.kind, PollNoteEvent.kind),
+                kinds = listOf(TextNoteEvent.kind, LongTextNoteEvent.kind, PollNoteEvent.kind, HighlightEvent.kind),
                 authors = followSet,
                 limit = 400,
                 since = latestEOSEs.users[account.userProfile()]?.relayList
@@ -64,14 +65,14 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
     }
 
     fun createFollowTagsFilter(): TypedFilter? {
-        val hashToLoad = account.followingTagSet()
+        val hashToLoad = account.selectedTagsFollowList(account.defaultHomeFollowList) ?: emptySet()
 
         if (hashToLoad.isEmpty()) return null
 
         return TypedFilter(
             types = setOf(FeedType.FOLLOWS),
             filter = JsonFilter(
-                kinds = listOf(TextNoteEvent.kind, LongTextNoteEvent.kind),
+                kinds = listOf(TextNoteEvent.kind, LongTextNoteEvent.kind, HighlightEvent.kind),
                 tags = mapOf(
                     "t" to hashToLoad.map {
                         listOf(it, it.lowercase(), it.uppercase(), it.capitalize())

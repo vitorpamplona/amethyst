@@ -11,6 +11,7 @@ import coil.fetch.Fetcher
 import coil.fetch.SourceResult
 import coil.request.ImageRequest
 import coil.request.Options
+import coil.size.Size
 import okio.Buffer
 import java.security.MessageDigest
 
@@ -61,6 +62,7 @@ private fun svgString(msg: String): String {
 
 class HashImageFetcher(
     private val context: Context,
+    private val size: Size,
     private val data: Uri
 ) : Fetcher {
 
@@ -79,16 +81,17 @@ class HashImageFetcher(
 
     object Factory : Fetcher.Factory<Uri> {
         override fun create(data: Uri, options: Options, imageLoader: ImageLoader): Fetcher {
-            return HashImageFetcher(options.context, data)
+            return HashImageFetcher(options.context, options.size, data)
         }
     }
 }
 object Robohash {
-    fun imageRequest(context: Context, message: String): ImageRequest {
+    fun imageRequest(context: Context, message: String, robotSize: Size): ImageRequest {
         return ImageRequest
             .Builder(context)
             .data("robohash:$message")
             .fetcherFactory(HashImageFetcher.Factory)
+            .size(robotSize)
             .crossfade(100)
             .build()
     }

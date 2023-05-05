@@ -3,7 +3,7 @@ package com.vitorpamplona.amethyst.service
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.*
-import com.vitorpamplona.amethyst.service.relays.FeedType
+import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 
@@ -22,7 +22,7 @@ object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
 
     fun createUserInfoFilter() = user?.let {
         TypedFilter(
-            types = FeedType.values().toSet(),
+            types = COMMON_FEED_TYPES,
             filter = JsonFilter(
                 kinds = listOf(MetadataEvent.kind),
                 authors = listOf(it.pubkeyHex),
@@ -33,9 +33,9 @@ object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
 
     fun createUserPostsFilter() = user?.let {
         TypedFilter(
-            types = FeedType.values().toSet(),
+            types = COMMON_FEED_TYPES,
             filter = JsonFilter(
-                kinds = listOf(TextNoteEvent.kind, RepostEvent.kind, LongTextNoteEvent.kind, PollNoteEvent.kind),
+                kinds = listOf(TextNoteEvent.kind, RepostEvent.kind, LongTextNoteEvent.kind, PollNoteEvent.kind, HighlightEvent.kind),
                 authors = listOf(it.pubkeyHex),
                 limit = 200
             )
@@ -44,7 +44,7 @@ object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
 
     fun createUserReceivedZapsFilter() = user?.let {
         TypedFilter(
-            types = FeedType.values().toSet(),
+            types = COMMON_FEED_TYPES,
             filter = JsonFilter(
                 kinds = listOf(LnZapEvent.kind),
                 tags = mapOf("p" to listOf(it.pubkeyHex))
@@ -54,7 +54,7 @@ object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
 
     fun createFollowFilter() = user?.let {
         TypedFilter(
-            types = FeedType.values().toSet(),
+            types = COMMON_FEED_TYPES,
             filter = JsonFilter(
                 kinds = listOf(ContactListEvent.kind),
                 authors = listOf(it.pubkeyHex),
@@ -65,7 +65,7 @@ object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
 
     fun createFollowersFilter() = user?.let {
         TypedFilter(
-            types = FeedType.values().toSet(),
+            types = COMMON_FEED_TYPES,
             filter = JsonFilter(
                 kinds = listOf(ContactListEvent.kind),
                 tags = mapOf("p" to listOf(it.pubkeyHex))
@@ -75,7 +75,7 @@ object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
 
     fun createAcceptedAwardsFilter() = user?.let {
         TypedFilter(
-            types = FeedType.values().toSet(),
+            types = COMMON_FEED_TYPES,
             filter = JsonFilter(
                 kinds = listOf(BadgeProfilesEvent.kind),
                 authors = listOf(it.pubkeyHex),
@@ -86,7 +86,7 @@ object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
 
     fun createBookmarksFilter() = user?.let {
         TypedFilter(
-            types = FeedType.values().toSet(),
+            types = COMMON_FEED_TYPES,
             filter = JsonFilter(
                 kinds = listOf(BookmarkListEvent.kind),
                 authors = listOf(it.pubkeyHex),
@@ -97,7 +97,7 @@ object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
 
     fun createReceivedAwardsFilter() = user?.let {
         TypedFilter(
-            types = FeedType.values().toSet(),
+            types = COMMON_FEED_TYPES,
             filter = JsonFilter(
                 kinds = listOf(BadgeAwardEvent.kind),
                 tags = mapOf("p" to listOf(it.pubkeyHex)),

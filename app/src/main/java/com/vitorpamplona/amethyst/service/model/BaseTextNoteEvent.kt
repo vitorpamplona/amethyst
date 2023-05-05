@@ -2,6 +2,8 @@ package com.vitorpamplona.amethyst.service.model
 
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.tagSearch
+import com.vitorpamplona.amethyst.service.nip19.Nip19
+import com.vitorpamplona.amethyst.service.nip19.Nip19.nip19regex
 
 open class BaseTextNoteEvent(
     id: HexKey,
@@ -31,6 +33,28 @@ open class BaseTextNoteEvent(
             } catch (e: Exception) {
             }
         }
+
+        val matcher2 = nip19regex.matcher(content)
+        while (matcher2.find()) {
+            val uriScheme = matcher2.group(1) // nostr:
+            val type = matcher2.group(2) // npub1
+            val key = matcher2.group(3) // bech32
+            val additionalChars = matcher2.group(4) // additional chars
+
+            val parsed = Nip19.parseComponents(uriScheme, type, key, additionalChars)
+
+            if (parsed != null) {
+                try {
+                    val tag = tags.firstOrNull { it.size > 1 && it[1] == parsed.hex }
+
+                    if (tag != null && tag[0] == "p") {
+                        returningList.add(tag[1])
+                    }
+                } catch (e: Exception) {
+                }
+            }
+        }
+
         citedUsersCache = returningList
         return returningList
     }
@@ -51,6 +75,31 @@ open class BaseTextNoteEvent(
             } catch (e: Exception) {
             }
         }
+
+        val matcher2 = nip19regex.matcher(content)
+        while (matcher2.find()) {
+            val uriScheme = matcher2.group(1) // nostr:
+            val type = matcher2.group(2) // npub1
+            val key = matcher2.group(3) // bech32
+            val additionalChars = matcher2.group(4) // additional chars
+
+            val parsed = Nip19.parseComponents(uriScheme, type, key, additionalChars)
+
+            if (parsed != null) {
+                try {
+                    val tag = tags.firstOrNull { it.size > 1 && it[1] == parsed.hex }
+
+                    if (tag != null && tag[0] == "e") {
+                        citations.add(tag[1])
+                    }
+                    if (tag != null && tag[0] == "a") {
+                        citations.add(tag[1])
+                    }
+                } catch (e: Exception) {
+                }
+            }
+        }
+
         return citations
     }
 

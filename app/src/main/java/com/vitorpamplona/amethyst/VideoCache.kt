@@ -18,7 +18,7 @@ object VideoCache {
 
     lateinit var cacheDataSourceFactory: CacheDataSource.Factory
 
-    fun get(context: Context): CacheDataSource.Factory {
+    fun init(context: Context) {
         if (!this::simpleCache.isInitialized) {
             exoDatabaseProvider = StandaloneDatabaseProvider(context)
 
@@ -35,7 +35,9 @@ object VideoCache {
                 )
                 .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
         }
+    }
 
+    fun get(): CacheDataSource.Factory {
         return cacheDataSourceFactory
     }
 }

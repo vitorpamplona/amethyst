@@ -7,14 +7,18 @@ import android.media.MediaScannerConnection
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import android.webkit.MimeTypeMap
 import androidx.annotation.RequiresApi
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.service.HttpClient
 import okhttp3.*
 import okio.BufferedSource
 import okio.IOException
+import okio.buffer
 import okio.sink
+import okio.source
 import java.io.File
+import java.util.UUID
 
 object ImageSaver {
     /**
@@ -75,6 +79,38 @@ object ImageSaver {
         })
     }
 
+    fun saveImage(
+        localFile: File,
+        mimeType: String?,
+        context: Context,
+        onSuccess: () -> Any?,
+        onError: (Throwable) -> Any?
+    ) {
+        try {
+            val extension = mimeType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
+            val buffer = localFile.inputStream().source().buffer()
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                saveContentQ(
+                    displayName = UUID.randomUUID().toString(),
+                    contentType = mimeType ?: "",
+                    contentSource = buffer,
+                    contentResolver = context.contentResolver
+                )
+            } else {
+                saveContentDefault(
+                    fileName = UUID.randomUUID().toString() + ".$extension",
+                    contentSource = buffer,
+                    context = context
+                )
+            }
+            onSuccess()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            onError(e)
+        }
+    }
+
     @RequiresApi(Build.VERSION_CODES.Q)
     private fun saveContentQ(
         displayName: String,
@@ -91,8 +127,14 @@ object ImageSaver {
             )
         }
 
+        val masterUri = if (contentType.startsWith("image")) {
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        } else {
+            MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+        }
+
         val uri =
-            contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+            contentResolver.insert(masterUri, contentValues)
         checkNotNull(uri) {
             "Can't insert the new content"
         }

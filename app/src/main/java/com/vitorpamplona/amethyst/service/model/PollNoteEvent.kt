@@ -48,7 +48,8 @@ class PollNoteEvent(
             valueMaximum: Int?,
             valueMinimum: Int?,
             consensusThreshold: Int?,
-            closedAt: Int?
+            closedAt: Int?,
+            zapReceiver: String?
         ): PollNoteEvent {
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf<List<String>>()
@@ -68,6 +69,11 @@ class PollNoteEvent(
             tags.add(listOf(VALUE_MINIMUM, valueMinimum.toString()))
             tags.add(listOf(CONSENSUS_THRESHOLD, consensusThreshold.toString()))
             tags.add(listOf(CLOSED_AT, closedAt.toString()))
+
+            if (zapReceiver != null) {
+                tags.add(listOf("zap", zapReceiver))
+            }
+
             val id = generateId(pubKey, createdAt, kind, tags, msg)
             val sig = Utils.sign(id, privateKey)
             return PollNoteEvent(id.toHexKey(), pubKey, createdAt, tags, msg, sig.toHexKey())

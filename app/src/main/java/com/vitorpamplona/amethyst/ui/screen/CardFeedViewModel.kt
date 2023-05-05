@@ -89,6 +89,8 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
                 if (zappedPost != null) {
                     val zapRequest = zappedPost.zaps.filter { it.value == zapEvent }.keys.firstOrNull()
                     if (zapRequest != null) {
+                        // var newZapRequestEvent = LocalCache.checkPrivateZap(zapRequest.event as Event)
+                        // zapRequest.event = newZapRequestEvent
                         zapsPerEvent.getOrPut(zappedPost, { mutableMapOf() }).put(zapRequest, zapEvent)
                     }
                 } else {

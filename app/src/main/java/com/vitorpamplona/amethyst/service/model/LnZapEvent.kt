@@ -16,7 +16,7 @@ class LnZapEvent(
     // This event is also kept in LocalCache (same object)
     @Transient val zapRequest: LnZapRequestEvent?
 
-    private fun containedPost(): LnZapRequestEvent? = try {
+    override fun containedPost(): LnZapRequestEvent? = try {
         description()?.ifBlank { null }?.let {
             fromJson(it, Client.lenient)
         } as? LnZapRequestEvent
@@ -53,12 +53,11 @@ class LnZapEvent(
             null
         }
     }
-
-    override fun message(): String {
+    override fun content(): String {
         return content
     }
 
-    private fun lnInvoice() = tags.firstOrNull { it.size > 1 && it[0] == "bolt11" }?.get(1)
+    fun lnInvoice() = tags.firstOrNull { it.size > 1 && it[0] == "bolt11" }?.get(1)
 
     private fun description() = tags.firstOrNull { it.size > 1 && it[0] == "description" }?.get(1)
 
@@ -68,7 +67,7 @@ class LnZapEvent(
 
     enum class ZapType() {
         PUBLIC,
-        PRIVATE, // not yet implemented
+        PRIVATE,
         ANONYMOUS,
         NONZAP
     }

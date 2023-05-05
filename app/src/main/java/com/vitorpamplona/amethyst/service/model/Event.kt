@@ -41,6 +41,10 @@ open class Event(
     fun taggedUsers() = tags.filter { it.size > 1 && it[0] == "p" }.map { it[1] }
     fun taggedEvents() = tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }
 
+    fun taggedUrls() = tags.filter { it.size > 1 && it[0] == "r" }.map { it[1] }
+
+    override fun zapAddress() = tags.firstOrNull { it.size > 1 && it[0] == "zap" }?.get(1)
+
     fun taggedAddresses() = tags.filter { it.size > 1 && it[0] == "a" }.mapNotNull {
         val aTagValue = it[1]
         val relay = it.getOrNull(2)
@@ -203,6 +207,8 @@ open class Event(
             .registerTypeAdapter(Event::class.java, EventDeserializer())
             .registerTypeAdapter(ByteArray::class.java, ByteArraySerializer())
             .registerTypeAdapter(ByteArray::class.java, ByteArrayDeserializer())
+            .registerTypeAdapter(Response::class.java, ResponseDeserializer())
+            .registerTypeAdapter(Request::class.java, RequestDeserializer())
             .create()
 
         fun fromJson(json: String, lenient: Boolean = false): Event = gson.fromJson(json, Event::class.java).getRefinedEvent(lenient)
@@ -222,11 +228,17 @@ open class Event(
             ContactListEvent.kind -> ContactListEvent(id, pubKey, createdAt, tags, content, sig)
             DeletionEvent.kind -> DeletionEvent(id, pubKey, createdAt, tags, content, sig)
 
+            FileHeaderEvent.kind -> FileHeaderEvent(id, pubKey, createdAt, tags, content, sig)
+            FileStorageEvent.kind -> FileStorageEvent(id, pubKey, createdAt, tags, content, sig)
+            FileStorageHeaderEvent.kind -> FileStorageHeaderEvent(id, pubKey, createdAt, tags, content, sig)
+            HighlightEvent.kind -> HighlightEvent(id, pubKey, createdAt, tags, content, sig)
             LnZapEvent.kind -> LnZapEvent(id, pubKey, createdAt, tags, content, sig)
             LnZapPaymentRequestEvent.kind -> LnZapPaymentRequestEvent(id, pubKey, createdAt, tags, content, sig)
+            LnZapPaymentResponseEvent.kind -> LnZapPaymentResponseEvent(id, pubKey, createdAt, tags, content, sig)
             LnZapRequestEvent.kind -> LnZapRequestEvent(id, pubKey, createdAt, tags, content, sig)
             LongTextNoteEvent.kind -> LongTextNoteEvent(id, pubKey, createdAt, tags, content, sig)
             MetadataEvent.kind -> MetadataEvent(id, pubKey, createdAt, tags, content, sig)
+            PeopleListEvent.kind -> PeopleListEvent(id, pubKey, createdAt, tags, content, sig)
             PollNoteEvent.kind -> PollNoteEvent(id, pubKey, createdAt, tags, content, sig)
             PrivateDmEvent.kind -> PrivateDmEvent(id, pubKey, createdAt, tags, content, sig)
             ReactionEvent.kind -> ReactionEvent(id, pubKey, createdAt, tags, content, sig)
