@@ -43,6 +43,8 @@ object ImageUploader {
             NostrImgServer()
         } else if (server == ServersAvailable.NOSTR_BUILD) {
             NostrBuildServer()
+        } else if (server == ServersAvailable.NOSTRFILES_DEV) {
+            NostrfilesDevServer()
         } else {
             ImgurServer()
         }
@@ -62,7 +64,7 @@ object ImageUploader {
         onSuccess: (String, String?) -> Unit,
         onError: (Throwable) -> Unit
     ) {
-        val category = contentType?.toMediaType()?.toString()?.split("/")?.get(0) ?: "image"
+        var category = contentType?.toMediaType()?.toString()?.split("/")?.get(0) ?: "image"
 
         val fileName = randomChars()
         val extension = contentType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
@@ -71,12 +73,17 @@ object ImageUploader {
         val requestBody: RequestBody
         val requestBuilder = Request.Builder()
 
-        if (serverType == ServersAvailable.NOSTR_BUILD) {
-            requestBuilder.addHeader("Content-Type", "multipart/form-data")
+        if (serverType == ServersAvailable.NOSTR_BUILD || serverType == ServersAvailable.NOSTRFILES_DEV) {
+            if (serverType == ServersAvailable.NOSTR_BUILD) {
+                requestBuilder.addHeader("Content-Type", "multipart/form-data")
+                category = "fileToUpload"
+            } else if (serverType == ServersAvailable.NOSTRFILES_DEV) {
+                category = "file"
+            }
             requestBody = MultipartBody.Builder()
                 .setType(MultipartBody.FORM)
                 .addFormDataPart(
-                    "fileToUpload",
+                    category,
                     "$fileName.$extension",
                     file.asRequestBody(contentType?.toMediaType())
 
@@ -208,6 +215,17 @@ class NostrBuildServer : FileServer() {
     override fun parseUrlFromSucess(body: String): String? {
         val url = jacksonObjectMapper().readTree(body) // return url.toString()
         return url.toString().replace("\"", "")
+    }
+
+    override fun clientID() = null
+}
+
+class NostrfilesDevServer : FileServer() {
+    override fun postUrl(contentType: String?) = "https://nostrfiles.dev/upload_image"
+    override fun parseUrlFromSucess(body: String): String? {
+        val tree = jacksonObjectMapper().readTree(body)
+        val url = tree?.get("url")?.asText()
+        return url
     }
 
     override fun clientID() = null

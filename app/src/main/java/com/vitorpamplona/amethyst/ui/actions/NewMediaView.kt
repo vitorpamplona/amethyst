@@ -109,6 +109,14 @@ fun NewMediaView(uri: Uri, onClose: () -> Unit, postViewModel: NewMediaModel, ac
     }
 }
 
+fun isNIP94Server(selectedServer: ServersAvailable?): Boolean {
+    return selectedServer == ServersAvailable.NOSTRIMG_NIP_94 ||
+            selectedServer == ServersAvailable.IMGUR_NIP_94 ||
+            selectedServer == ServersAvailable.NOSTR_BUILD_NIP_94 ||
+            selectedServer == ServersAvailable.NOSTRFILES_DEV_NIP_94
+}
+
+
 @Composable
 fun ImageVideoPost(postViewModel: NewMediaModel, acc: Account) {
     val scope = rememberCoroutineScope()
@@ -191,9 +199,7 @@ fun ImageVideoPost(postViewModel: NewMediaModel, acc: Account) {
         )
     }
 
-    if (postViewModel.selectedServer == ServersAvailable.NOSTRIMG_NIP_94 ||
-        postViewModel.selectedServer == ServersAvailable.IMGUR_NIP_94 ||
-        postViewModel.selectedServer == ServersAvailable.NOSTR_BUILD_NIP_94 ||
+    if (isNIP94Server(postViewModel.selectedServer) ||
         postViewModel.selectedServer == ServersAvailable.NIP95
     ) {
         Row(
