@@ -88,7 +88,7 @@ fun AppTopBar(navController: NavHostController, scaffoldState: ScaffoldState, ac
 @Composable
 fun StoriesTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
     GenericTopBar(scaffoldState, accountViewModel) { account ->
-        FollowList(account.defaultStoriesFollowList, account.userProfile(),true) { listName ->
+        FollowList(account.defaultStoriesFollowList, account.userProfile(), true) { listName ->
             account.changeDefaultStoriesFollowList(listName)
         }
     }
@@ -97,7 +97,7 @@ fun StoriesTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewMod
 @Composable
 fun HomeTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
     GenericTopBar(scaffoldState, accountViewModel) { account ->
-        FollowList(account.defaultHomeFollowList, account.userProfile(),false) { listName ->
+        FollowList(account.defaultHomeFollowList, account.userProfile(), false) { listName ->
             account.changeDefaultHomeFollowList(listName)
         }
     }
@@ -245,7 +245,7 @@ fun FollowList(listName: String, loggedIn: User, withGlobal: Boolean, onChange: 
             followLists = defaultOptions + LocalCache.addressables.mapNotNull {
                 val event = (it.value.event as? PeopleListEvent)
                 // Has to have an list
-                if (event != null && (event.tags.size > 1 || event.content.length > 50)) {
+                if (event != null && event.pubKey == loggedIn.pubkeyHex && (event.tags.size > 1 || event.content.length > 50)) {
                     Pair(event.dTag(), event.dTag())
                 } else {
                     null
