@@ -380,8 +380,7 @@ fun BechLink(word: String, canPreview: Boolean, backgroundColor: Color, accountV
                         MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
                         RoundedCornerShape(15.dp)
                     ),
-                parentBackgroundColor = MaterialTheme.colors.onSurface.copy(alpha = 0.05f)
-                    .compositeOver(backgroundColor),
+                parentBackgroundColor = backgroundColor,
                 isQuotedNote = true,
                 navController = navController
             )
@@ -530,8 +529,7 @@ fun TagLink(word: String, tags: List<List<String>>, canPreview: Boolean, backgro
                         MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
                         RoundedCornerShape(15.dp)
                     ),
-                parentBackgroundColor = MaterialTheme.colors.onSurface.copy(alpha = 0.05f)
-                    .compositeOver(backgroundColor),
+                parentBackgroundColor = backgroundColor,
                 isQuotedNote = true,
                 navController = navController
             )
