@@ -114,9 +114,6 @@ fun NoteComposeInner(
     accountViewModel: AccountViewModel,
     navController: NavController
 ) {
-    val defaultBackgroundColor = MaterialTheme.colors.background
-    val defaultPrimaryColor = MaterialTheme.colors.primary
-
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
     val loggedIn = account.userProfile()
@@ -178,7 +175,7 @@ fun NoteComposeInner(
     } else if (noteEvent is FileStorageHeaderEvent) {
         FileStorageHeaderDisplay(note)
     } else {
-        var backgroundColor by remember { mutableStateOf<Color>(defaultBackgroundColor) }
+        var isNew by remember { mutableStateOf<Boolean>(false) }
 
         LaunchedEffect(key1 = routeForLastRead) {
             withContext(Dispatchers.IO) {
@@ -186,25 +183,23 @@ fun NoteComposeInner(
                     val lastTime = NotificationCache.load(it)
 
                     val createdAt = note.createdAt()
-                    val isNew = if (createdAt != null) {
+                    if (createdAt != null) {
                         NotificationCache.markAsRead(it, createdAt)
-                        createdAt > lastTime
-                    } else {
-                        false
-                    }
-
-                    backgroundColor = if (isNew) {
-                        val newColor = defaultPrimaryColor.copy(0.12f)
-                        if (parentBackgroundColor != null) {
-                            newColor.compositeOver(parentBackgroundColor)
-                        } else {
-                            newColor.compositeOver(defaultBackgroundColor)
-                        }
-                    } else {
-                        parentBackgroundColor ?: defaultBackgroundColor
+                        isNew = createdAt > lastTime
                     }
                 }
             }
+        }
+
+        val backgroundColor = if (isNew) {
+            val newColor = MaterialTheme.colors.primary.copy(0.12f)
+            if (parentBackgroundColor != null) {
+                newColor.compositeOver(parentBackgroundColor)
+            } else {
+                newColor.compositeOver(MaterialTheme.colors.background)
+            }
+        } else {
+            parentBackgroundColor ?: MaterialTheme.colors.background
         }
 
         Column(
@@ -234,8 +229,7 @@ fun NoteComposeInner(
                     }
                 },
                 onLongClick = { popupExpanded = true }
-            )
-                .background(backgroundColor)
+            ).background(backgroundColor)
         ) {
             Row(
                 modifier = Modifier
