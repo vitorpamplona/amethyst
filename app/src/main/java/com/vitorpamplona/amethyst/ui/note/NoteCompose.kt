@@ -42,6 +42,7 @@ import androidx.core.graphics.drawable.toBitmap
 import androidx.core.graphics.get
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import coil.compose.AsyncImagePainter
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
@@ -99,7 +100,7 @@ fun NoteCompose(
     Log.d("Time", "Note Compose in $elapsed for ${baseNote.idHex} ${baseNote.event?.kind()} ${baseNote.event?.content()?.split("\n")?.get(0)?.take(100)}")
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalTime::class)
 @Composable
 fun NoteComposeInner(
     baseNote: Note,
@@ -199,12 +200,14 @@ fun NoteComposeInner(
         }
 
         Column(
-            modifier = modifier.combinedClickable(
-                onClick = {
-                    routeFor(note, loggedIn)?.let { navController.navigate(it) }
-                },
-                onLongClick = { popupExpanded = true }
-            ).background(backgroundColor)
+            modifier = modifier
+                .combinedClickable(
+                    onClick = {
+                        routeFor(note, loggedIn)?.let { navController.navigate(it) }
+                    },
+                    onLongClick = { popupExpanded = true }
+                )
+                .background(backgroundColor)
         ) {
             Row(
                 modifier = Modifier
@@ -222,20 +225,26 @@ fun NoteComposeInner(
                     modifier = Modifier
                         .padding(start = if (!isBoostedNote && !isQuotedNote) 10.dp else 0.dp)
                 ) {
-                    FirstUserInfoRow(
-                        baseNote = baseNote,
-                        showAuthorPicture = isQuotedNote,
-                        account = account,
-                        accountViewModel = accountViewModel,
-                        navController = navController
-                    )
+                    val (value, elapsed1) = measureTimedValue {
+                        FirstUserInfoRow(
+                            baseNote = baseNote,
+                            showAuthorPicture = isQuotedNote,
+                            account = account,
+                            accountViewModel = accountViewModel,
+                            navController = navController
+                        )
+                    }
+                    Log.d("Time", "$elapsed1 Line 1 of each post ${noteEvent.content()}")
 
                     if (noteEvent !is RepostEvent && !makeItShort && !isQuotedNote) {
-                        SecondUserInfoRow(
-                            note,
-                            account,
-                            navController
-                        )
+                        val (value, elapsed2) = measureTimedValue {
+                            SecondUserInfoRow(
+                                note,
+                                account,
+                                navController
+                            )
+                        }
+                        Log.d("Time", "$elapsed2 Line 2 of each post")
                     }
 
                     Spacer(modifier = Modifier.height(2.dp))
@@ -543,34 +552,46 @@ private fun RenderBadgeAward(
     if (note.replyTo.isNullOrEmpty()) return
 
     val noteEvent = note.event as? BadgeAwardEvent ?: return
+    var awardees by remember { mutableStateOf<List<User>>(listOf()) }
 
     Text(text = stringResource(R.string.award_granted_to))
-
-    FlowRow(modifier = Modifier.padding(top = 5.dp)) {
-        noteEvent.awardees()
-            .map { LocalCache.getOrCreateUser(it) }
-            .forEach {
-                UserPicture(
-                    user = it,
-                    navController = navController,
-                    userAccount = accountViewModel.userProfile(),
-                    size = 35.dp
-                )
+    /*
+        LaunchedEffect(key1 = note) {
+            withContext(Dispatchers.IO) {
+                awardees = noteEvent.awardees().mapNotNull { hex ->
+                    LocalCache.checkGetOrCreateUser(hex)
+                }
             }
-    }
+        }
 
-    note.replyTo?.firstOrNull()?.let {
-        NoteCompose(
-            it,
-            modifier = Modifier,
-            isBoostedNote = false,
-            isQuotedNote = true,
-            unPackReply = false,
-            parentBackgroundColor = backgroundColor,
-            accountViewModel = accountViewModel,
-            navController = navController
-        )
-    }
+            FlowRow(modifier = Modifier.padding(top = 5.dp)) {
+                awardees.forEach { user ->
+                    Row(modifier = Modifier.clickable {
+                            navController.navigate("User/${user.pubkeyHex}")
+                        },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        UserPicture(
+                            baseUser = user,
+                            baseUserAccount = accountViewModel.userProfile(),
+                            size = 35.dp
+                        )
+                    }
+                }
+            }
+
+            note.replyTo?.firstOrNull()?.let {
+                NoteCompose(
+                    it,
+                    modifier = Modifier,
+                    isBoostedNote = false,
+                    isQuotedNote = true,
+                    unPackReply = false,
+                    parentBackgroundColor = backgroundColor,
+                    accountViewModel = accountViewModel,
+                    navController = navController
+                )
+            }*/
 
     ReactionsRow(note, accountViewModel, navController)
 
@@ -762,34 +783,30 @@ private fun FirstUserInfoRow(
     navController: NavController
 ) {
     var moreActionsExpanded by remember { mutableStateOf(false) }
-    val context = LocalContext.current.applicationContext
+    val eventNote = baseNote.event ?: return
+    val time = baseNote.createdAt() ?: return
+    val loggedIn = account.userProfile()
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         if (showAuthorPicture) {
-            NoteAuthorPicture(baseNote, navController, account.userProfile(), 25.dp)
+            NoteAuthorPicture(baseNote, navController, loggedIn, 25.dp)
             Spacer(Modifier.padding(horizontal = 5.dp))
             NoteUsernameDisplay(baseNote, Modifier.weight(1f))
         } else {
             NoteUsernameDisplay(baseNote, Modifier.weight(1f))
         }
 
-        if (baseNote.event is RepostEvent) {
+        if (eventNote is RepostEvent) {
             Text(
                 "  ${stringResource(id = R.string.boosted)}",
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
             )
         } else {
-            baseNote.event?.let {
-                DisplayFollowingHashtagsInPost(it, account, navController)
-            }
+            DisplayFollowingHashtagsInPost(eventNote, account, navController)
         }
 
-        Text(
-            timeAgo(baseNote.createdAt(), context = context),
-            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-            maxLines = 1
-        )
+        TimeAgo(time)
 
         IconButton(
             modifier = Modifier.size(24.dp),
@@ -810,6 +827,25 @@ private fun FirstUserInfoRow(
             )
         }
     }
+}
+
+@Composable
+fun TimeAgo(time: Long) {
+    val context = LocalContext.current
+
+    var timeStr by remember { mutableStateOf("") }
+
+    LaunchedEffect(key1 = time) {
+        withContext(Dispatchers.IO) {
+            timeStr = timeAgo(time, context = context)
+        }
+    }
+
+    Text(
+        timeStr,
+        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+        maxLines = 1
+    )
 }
 
 @Composable
@@ -963,7 +999,7 @@ fun DisplayFollowingHashtagsInPost(
 ) {
     var firstTag by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(key1 = noteEvent) {
+    LaunchedEffect(key1 = noteEvent.id()) {
         withContext(Dispatchers.IO) {
             firstTag = noteEvent.firstIsTaggedHashes(account.followingTagSet())
         }
@@ -1102,7 +1138,24 @@ fun DisplayReward(
 fun BadgeDisplay(baseNote: Note) {
     val background = MaterialTheme.colors.background
     val badgeData = baseNote.event as? BadgeDefinitionEvent ?: return
-    var backgroundFromImage by remember { mutableStateOf(background) }
+
+    val image = badgeData.image()
+    val name = badgeData.name()
+    val description = badgeData.description()
+
+    var backgroundFromImage by remember { mutableStateOf(Pair(background, background)) }
+    var imageResult by remember { mutableStateOf<AsyncImagePainter.State.Success?>(null) }
+
+    LaunchedEffect(key1 = imageResult) {
+        withContext(Dispatchers.IO) {
+            imageResult?.let {
+                val backgroundColor = it.result.drawable.toBitmap(200, 200).copy(Bitmap.Config.ARGB_8888, false).get(0, 199)
+                val colorFromImage = Color(backgroundColor)
+                val textBackground = if (colorFromImage.luminance() > 0.5) lightColors().onBackground else darkColors().onBackground
+                backgroundFromImage = Pair(colorFromImage, textBackground)
+            }
+        }
+    }
 
     Row(
         modifier = Modifier
@@ -1113,26 +1166,25 @@ fun BadgeDisplay(baseNote: Note) {
                 MaterialTheme.colors.primary.copy(alpha = 0.32f),
                 CutCornerShape(20)
             )
-            .background(backgroundFromImage)
+            .background(backgroundFromImage.first)
     ) {
         Column {
-            badgeData.image()?.let {
+            image.let {
                 AsyncImage(
                     model = it,
                     contentDescription = stringResource(
                         R.string.badge_award_image_for,
-                        it
+                        name ?: ""
                     ),
                     contentScale = ContentScale.FillWidth,
                     modifier = Modifier.fillMaxWidth(),
                     onSuccess = {
-                        val backgroundColor = it.result.drawable.toBitmap(200, 200).copy(Bitmap.Config.ARGB_8888, false).get(0, 199)
-                        backgroundFromImage = Color(backgroundColor)
+                        imageResult = it
                     }
                 )
             }
 
-            badgeData.name()?.let {
+            name?.let {
                 Text(
                     text = it,
                     style = MaterialTheme.typography.body1,
@@ -1140,11 +1192,11 @@ fun BadgeDisplay(baseNote: Note) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(start = 10.dp, end = 10.dp),
-                    color = if (backgroundFromImage.luminance() > 0.5) lightColors().onBackground else darkColors().onBackground
+                    color = backgroundFromImage.second
                 )
             }
 
-            badgeData.description()?.let {
+            description?.let {
                 Text(
                     text = it,
                     style = MaterialTheme.typography.caption,
@@ -1499,6 +1551,7 @@ fun UserPicture(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun UserPicture(
     baseUser: User,
@@ -1516,27 +1569,38 @@ fun UserPicture(
 
     val showFollowingMark = accountUser.isFollowingCached(user) || user == accountUser
 
-    UserPicture(
-        userHex = user.pubkeyHex,
-        userPicture = user.profilePicture(),
-        showFollowingMark = showFollowingMark,
-        size = size,
-        modifier = modifier,
-        onClick = onClick?.let { { it(user) } },
-        onLongClick = onLongClick?.let { { it(user) } }
-    )
+    Row(
+        modifier = Modifier
+            .run {
+                if (onClick != null && onLongClick != null) {
+                    this.combinedClickable(
+                        onClick = { onClick(user) },
+                        onLongClick = { onLongClick(user) }
+                    )
+                } else if (onClick != null) {
+                    this.clickable(onClick = { onClick(user) })
+                } else {
+                    this
+                }
+            }
+    ) {
+        UserPicture(
+            userHex = user.pubkeyHex,
+            userPicture = user.profilePicture(),
+            showFollowingMark = showFollowingMark,
+            size = size,
+            modifier = modifier
+        )
+    }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun UserPicture(
     userHex: String,
     userPicture: String?,
     showFollowingMark: Boolean,
     size: Dp,
-    modifier: Modifier = Modifier,
-    onClick: (() -> Unit)? = null,
-    onLongClick: (() -> Unit)? = null
+    modifier: Modifier = Modifier
 ) {
     Box(
         Modifier
@@ -1552,16 +1616,6 @@ fun UserPicture(
                 .height(size)
                 .clip(shape = CircleShape)
                 .background(MaterialTheme.colors.background)
-                .run {
-                    if (onClick != null && onLongClick != null) {
-                        this.combinedClickable(onClick = onClick, onLongClick = onLongClick)
-                    } else if (onClick != null) {
-                        this.clickable(onClick = onClick)
-                    } else {
-                        this
-                    }
-                }
-
         )
 
         if (showFollowingMark) {

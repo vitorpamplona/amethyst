@@ -175,7 +175,7 @@ private fun FeedLoaded(
                     )
                 }
             }
-            Log.d("Time", "${item.javaClass.simpleName} Feed in $elapsed")
+            Log.d("Time", "${item.javaClass.simpleName} Feed in $elapsed ${item.id()}")
         }
     }
 }

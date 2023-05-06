@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -54,7 +55,6 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
-    val noteEvent = note?.event
     var popupExpanded by remember { mutableStateOf(false) }
 
     if (note == null) {
@@ -160,12 +160,7 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
                     }
 
                     Row(Modifier.fillMaxWidth()) {
-                        Box(
-                            modifier = Modifier
-                                .width(65.dp)
-                                .padding(0.dp)
-                        ) {
-                        }
+                        Spacer(modifier = Modifier.width(65.dp))
 
                         NoteCompose(
                             baseNote = multiSetCard.note,
@@ -216,14 +211,16 @@ private fun AuthorPictureAndComment(
     var content by remember { mutableStateOf<Pair<User, String?>>(Pair(author, null)) }
 
     LaunchedEffect(key1 = zapRequest.idHex) {
-        (zapRequest.event as? LnZapRequestEvent)?.let {
-            val decryptedContent = accountViewModel.decryptZap(zapRequest)
-            if (decryptedContent != null) {
-                val author = LocalCache.getOrCreateUser(decryptedContent.pubKey)
-                content = Pair(author, decryptedContent.content)
-            } else {
-                if (!zapRequest.event?.content().isNullOrBlank()) {
-                    content = Pair(author, zapRequest.event?.content())
+        withContext(Dispatchers.IO) {
+            (zapRequest.event as? LnZapRequestEvent)?.let {
+                val decryptedContent = accountViewModel.decryptZap(zapRequest)
+                if (decryptedContent != null) {
+                    val author = LocalCache.getOrCreateUser(decryptedContent.pubKey)
+                    content = Pair(author, decryptedContent.content)
+                } else {
+                    if (!zapRequest.event?.content().isNullOrBlank()) {
+                        content = Pair(author, zapRequest.event?.content())
+                    }
                 }
             }
         }
@@ -246,10 +243,14 @@ private fun AuthorPictureAndComment(
         Modifier
     }
 
-    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        modifier = modifier.clickable {
+            navController.navigate("User/${author.pubkeyHex}")
+        },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         FastNoteAuthorPicture(
             author = author,
-            navController = navController,
             userAccount = accountUser,
             size = 35.dp
         )
@@ -294,7 +295,6 @@ fun AuthorGallery(
 @Composable
 fun FastNoteAuthorPicture(
     author: User,
-    navController: NavController,
     userAccount: User,
     size: Dp,
     pictureModifier: Modifier = Modifier
@@ -303,14 +303,12 @@ fun FastNoteAuthorPicture(
     val user = userState?.user ?: return
 
     val showFollowingMark = userAccount.isFollowingCached(user) || user === userAccount
+
     UserPicture(
         userHex = user.pubkeyHex,
         userPicture = user.profilePicture(),
         showFollowingMark = showFollowingMark,
         size = size,
-        modifier = pictureModifier,
-        onClick = {
-            navController.navigate("User/${user.pubkeyHex}")
-        }
+        modifier = pictureModifier
     )
 }
