@@ -847,7 +847,7 @@ class Account(
                 val privateKeyToUse = loggedInPrivateKey
                 val pubkeyToUse = event.pubKey
 
-                LnZapRequestEvent.checkForPrivateZap(event, privateKeyToUse, pubkeyToUse)
+                event.getPrivateZapEvent(privateKeyToUse, pubkeyToUse)
             } else {
                 // if the sender is logged in, these are the params
                 val altPubkeyToUse = recipientPK
@@ -868,7 +868,7 @@ class Account(
                 }
 
                 if (altPrivateKeyToUse != null && altPubkeyToUse != null) {
-                    val result = LnZapRequestEvent.checkForPrivateZap(event, altPrivateKeyToUse, altPubkeyToUse)
+                    val result = event.getPrivateZapEvent(altPrivateKeyToUse, altPubkeyToUse)
                     if (result == null) {
                         Log.w("Private ZAP Decrypt", "Fail to decrypt Zap from ${note.author?.toBestDisplayName()} ${note.idNote()}")
                     }
