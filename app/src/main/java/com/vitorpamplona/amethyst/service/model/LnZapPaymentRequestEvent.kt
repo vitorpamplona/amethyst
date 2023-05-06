@@ -6,7 +6,7 @@ import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
 import com.google.gson.JsonParseException
 import com.vitorpamplona.amethyst.model.HexKey
-import com.vitorpamplona.amethyst.model.toByteArray
+import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
 import java.lang.reflect.Type
@@ -53,7 +53,7 @@ class LnZapPaymentRequestEvent(
             val content = Utils.encrypt(
                 serializedRequest,
                 privateKey,
-                walletServicePubkey.toByteArray()
+                walletServicePubkey.hexToByteArray()
             )
 
             val tags = mutableListOf<List<String>>()

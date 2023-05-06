@@ -59,7 +59,7 @@ class LnZapRequestEvent(
             } else if (zapType == LnZapEvent.ZapType.PRIVATE) {
                 var encryptionPrivateKey = createEncryptionPrivateKey(privateKey.toHexKey(), originalNote.id(), createdAt)
                 var noteJson = (create(privkey, 9733, listOf(tags[0], tags[1]), message)).toJson()
-                var encryptedContent = encryptPrivateZapMessage(noteJson, encryptionPrivateKey, originalNote.pubKey().toByteArray())
+                var encryptedContent = encryptPrivateZapMessage(noteJson, encryptionPrivateKey, originalNote.pubKey().hexToByteArray())
                 tags = tags + listOf(listOf("anon", encryptedContent))
                 content = "" // make sure public content is empty, as the content is encrypted
                 privkey = encryptionPrivateKey // sign event with generated privkey
@@ -92,7 +92,7 @@ class LnZapRequestEvent(
             } else if (zapType == LnZapEvent.ZapType.PRIVATE) {
                 var encryptionPrivateKey = createEncryptionPrivateKey(privateKey.toHexKey(), userHex, createdAt)
                 var noteJson = (create(privkey, 9733, listOf(tags[0], tags[1]), message)).toJson()
-                var encryptedContent = encryptPrivateZapMessage(noteJson, encryptionPrivateKey, userHex.toByteArray())
+                var encryptedContent = encryptPrivateZapMessage(noteJson, encryptionPrivateKey, userHex.hexToByteArray())
                 tags = tags + listOf(listOf("anon", encryptedContent))
                 content = ""
                 privkey = encryptionPrivateKey
@@ -157,7 +157,7 @@ class LnZapRequestEvent(
                 val encnote = anonTag[1]
                 if (encnote.isNotBlank()) {
                     try {
-                        val note = decryptPrivateZapMessage(encnote, loggedInUserPrivKey, pubKey.toByteArray())
+                        val note = decryptPrivateZapMessage(encnote, loggedInUserPrivKey, pubKey.hexToByteArray())
                         val decryptedEvent = fromJson(note)
                         if (decryptedEvent.kind == 9733) {
                             return decryptedEvent

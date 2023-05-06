@@ -178,7 +178,7 @@ class Account(
     }
 
     fun isNIP47Author(pubkeyHex: String?): Boolean {
-        val privKey = zapPaymentRequest?.secret?.toByteArray() ?: loggedIn.privKey
+        val privKey = zapPaymentRequest?.secret?.hexToByteArray() ?: loggedIn.privKey
 
         if (privKey == null) return false
 
@@ -189,8 +189,8 @@ class Account(
     fun decryptZapPaymentResponseEvent(zapResponseEvent: LnZapPaymentResponseEvent): Response? {
         val myNip47 = zapPaymentRequest ?: return null
 
-        val privKey = myNip47.secret?.toByteArray() ?: loggedIn.privKey
-        val pubKey = myNip47.pubKeyHex.toByteArray()
+        val privKey = myNip47.secret?.hexToByteArray() ?: loggedIn.privKey
+        val pubKey = myNip47.pubKeyHex.hexToByteArray()
 
         if (privKey == null) return null
 
@@ -202,8 +202,8 @@ class Account(
     }
 
     fun calculateZappedAmount(zappedNote: Note?): BigDecimal {
-        val privKey = zapPaymentRequest?.secret?.toByteArray() ?: loggedIn.privKey
-        val pubKey = zapPaymentRequest?.pubKeyHex?.toByteArray()
+        val privKey = zapPaymentRequest?.secret?.hexToByteArray() ?: loggedIn.privKey
+        val pubKey = zapPaymentRequest?.pubKeyHex?.hexToByteArray()
         return zappedNote?.zappedAmount(privKey, pubKey) ?: BigDecimal.ZERO
     }
 
@@ -211,16 +211,16 @@ class Account(
         if (!isWriteable()) return
 
         zapPaymentRequest?.let { nip47 ->
-            val event = LnZapPaymentRequestEvent.create(bolt11, nip47.pubKeyHex, nip47.secret?.toByteArray() ?: loggedIn.privKey!!)
+            val event = LnZapPaymentRequestEvent.create(bolt11, nip47.pubKeyHex, nip47.secret?.hexToByteArray() ?: loggedIn.privKey!!)
 
             val wcListener = NostrLnZapPaymentResponseDataSource(nip47.pubKeyHex, event.pubKey, event.id)
             wcListener.start()
 
             LocalCache.consume(event, zappedNote) {
                 // After the response is received.
-                val privKey = nip47.secret?.toByteArray()
+                val privKey = nip47.secret?.hexToByteArray()
                 if (privKey != null) {
-                    onResponse(it.response(privKey, nip47.pubKeyHex.toByteArray()))
+                    onResponse(it.response(privKey, nip47.pubKeyHex.hexToByteArray()))
                 }
             }
 
@@ -826,7 +826,7 @@ class Account(
                 pubkeyToUse = recepientPK
             }
 
-            event.plainContent(loggedIn.privKey!!, pubkeyToUse.toByteArray())
+            event.plainContent(loggedIn.privKey!!, pubkeyToUse.hexToByteArray())
         } else if (event is LnZapRequestEvent && loggedIn.privKey != null) {
             decryptZapContentAuthor(note)?.content()
         } else {
