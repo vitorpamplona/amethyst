@@ -29,7 +29,6 @@ import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.ui.screen.ZapSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -70,15 +69,7 @@ fun ZapSetCompose(zapSetCard: ZapSetCard, isInnerNote: Boolean = false, routeFor
         Column(
             modifier = Modifier.background(backgroundColor).combinedClickable(
                 onClick = {
-                    if (noteEvent !is ChannelMessageEvent) {
-                        navController.navigate("Note/${note.idHex}") {
-                            launchSingleTop = true
-                        }
-                    } else {
-                        note.channel()?.let {
-                            navController.navigate("Channel/${it.idHex}")
-                        }
-                    }
+                    routeFor(note, account.userProfile())?.let { navController.navigate(it) }
                 },
                 onLongClick = { popupExpanded = true }
             )
@@ -113,7 +104,7 @@ fun ZapSetCompose(zapSetCard: ZapSetCard, isInnerNote: Boolean = false, routeFor
                     FlowRow() {
                         zapSetCard.zapEvents.forEach {
                             NoteAuthorPicture(
-                                note = it.key,
+                                baseNote = it.key,
                                 navController = navController,
                                 userAccount = account.userProfile(),
                                 size = 35.dp

@@ -26,9 +26,6 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.ui.screen.MessageSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
@@ -66,30 +63,7 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, isInnerNote: Boolean = fal
         Column(
             modifier = Modifier.background(backgroundColor).combinedClickable(
                 onClick = {
-                    if (noteEvent is ChannelMessageEvent) {
-                        note.channel()?.let {
-                            navController.navigate("Channel/${it.idHex}")
-                        }
-                    } else if (noteEvent is PrivateDmEvent) {
-                        val replyAuthorBase =
-                            (note.event as? PrivateDmEvent)
-                                ?.recipientPubKey()
-                                ?.let { LocalCache.getOrCreateUser(it) }
-
-                        var userToComposeOn = note.author!!
-
-                        if (replyAuthorBase != null) {
-                            if (note.author == accountViewModel.userProfile()) {
-                                userToComposeOn = replyAuthorBase
-                            }
-                        }
-
-                        navController.navigate("Room/${userToComposeOn.pubkeyHex}")
-                    } else {
-                        navController.navigate("Note/${note.idHex}") {
-                            launchSingleTop = true
-                        }
-                    }
+                    routeFor(note, accountViewModel.userProfile())?.let { navController.navigate(it) }
                 },
                 onLongClick = { popupExpanded = true }
             )
@@ -120,7 +94,7 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, isInnerNote: Boolean = fal
 
                 Column(modifier = Modifier.padding(start = if (!isInnerNote) 10.dp else 0.dp)) {
                     NoteCompose(
-                        baseNote = note,
+                        baseNote = messageSetCard.note,
                         routeForLastRead = null,
                         isBoostedNote = true,
                         addMarginTop = false,

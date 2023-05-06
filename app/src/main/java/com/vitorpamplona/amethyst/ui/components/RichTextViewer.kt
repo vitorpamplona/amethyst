@@ -359,9 +359,9 @@ fun BechLink(word: String, canPreview: Boolean, backgroundColor: Color, accountV
                     LocalCache.checkGetOrCreateNote(it.hex)?.let { note ->
                         baseNotePair = Pair(note, it.additionalChars)
                     }
-                } else {
-                    nip19Route = it
                 }
+
+                nip19Route = it
             }
         }
     }

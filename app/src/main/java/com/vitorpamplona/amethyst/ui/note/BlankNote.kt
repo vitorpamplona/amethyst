@@ -74,7 +74,7 @@ fun HiddenNote(reports: Set<Note>, loggedIn: User, modifier: Modifier = Modifier
                         FlowRow(modifier = Modifier.padding(top = 10.dp)) {
                             reports.forEach {
                                 NoteAuthorPicture(
-                                    note = it,
+                                    baseNote = it,
                                     navController = navController,
                                     userAccount = loggedIn,
                                     size = 35.dp

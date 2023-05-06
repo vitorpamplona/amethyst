@@ -34,7 +34,6 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.ui.screen.BadgeCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
@@ -48,7 +47,6 @@ fun BadgeCompose(likeSetCard: BadgeCard, isInnerNote: Boolean = false, routeForL
 
     val context = LocalContext.current.applicationContext
 
-    val noteEvent = note?.event
     var popupExpanded by remember { mutableStateOf(false) }
 
     if (note == null) {
@@ -73,15 +71,7 @@ fun BadgeCompose(likeSetCard: BadgeCard, isInnerNote: Boolean = false, routeForL
         Column(
             modifier = Modifier.background(backgroundColor).combinedClickable(
                 onClick = {
-                    if (noteEvent !is ChannelMessageEvent) {
-                        navController.navigate("Note/${note.idHex}") {
-                            launchSingleTop = true
-                        }
-                    } else {
-                        note.channel()?.let {
-                            navController.navigate("Channel/${it.idHex}")
-                        }
-                    }
+                    routeFor(note, accountViewModel.userProfile())?.let { navController.navigate(it) }
                 },
                 onLongClick = { popupExpanded = true }
             )

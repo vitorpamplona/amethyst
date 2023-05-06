@@ -31,6 +31,11 @@ class PrivateDmEvent(
      */
     fun replyTo() = tags.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)
 
+    fun with(pubkeyHex: String): Boolean {
+        return pubkeyHex == pubKey ||
+            tags.firstOrNull { it.size > 1 && it[0] == "p" }?.getOrNull(1) == pubkeyHex
+    }
+
     fun plainContent(privKey: ByteArray, pubKey: ByteArray): String? {
         return try {
             val sharedSecret = Utils.getSharedSecret(privKey, pubKey)

@@ -37,9 +37,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.MultiSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -83,32 +81,7 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
                 .background(backgroundColor)
                 .combinedClickable(
                     onClick = {
-                        if (noteEvent is ChannelMessageEvent) {
-                            note
-                                .channel()
-                                ?.let {
-                                    navController.navigate("Channel/${it.idHex}")
-                                }
-                        } else if (noteEvent is PrivateDmEvent) {
-                            val replyAuthorBase =
-                                (note.event as? PrivateDmEvent)
-                                    ?.recipientPubKey()
-                                    ?.let { LocalCache.getOrCreateUser(it) }
-
-                            var userToComposeOn = note.author!!
-
-                            if (replyAuthorBase != null) {
-                                if (note.author == accountViewModel.userProfile()) {
-                                    userToComposeOn = replyAuthorBase
-                                }
-                            }
-
-                            navController.navigate("Room/${userToComposeOn.pubkeyHex}")
-                        } else {
-                            navController.navigate("Note/${note.idHex}") {
-                                launchSingleTop = true
-                            }
-                        }
+                        routeFor(note, account.userProfile())?.let { navController.navigate(it) }
                     },
                     onLongClick = { popupExpanded = true }
                 )
@@ -195,7 +168,7 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
                         }
 
                         NoteCompose(
-                            baseNote = note,
+                            baseNote = multiSetCard.note,
                             routeForLastRead = null,
                             modifier = Modifier.padding(top = 5.dp),
                             isBoostedNote = true,
@@ -225,7 +198,7 @@ fun AuthorGalleryZaps(
     Column(modifier = Modifier.padding(start = 10.dp)) {
         FlowRow() {
             authorNotes.forEach {
-                AuthorPictureAndComment(it.key, it.value, navController, accountUser, accountViewModel)
+                AuthorPictureAndComment(it.key, navController, accountUser, accountViewModel)
             }
         }
     }
@@ -234,7 +207,6 @@ fun AuthorGalleryZaps(
 @Composable
 private fun AuthorPictureAndComment(
     zapRequest: Note,
-    zapEvent: Note,
     navController: NavController,
     accountUser: User,
     accountViewModel: AccountViewModel
