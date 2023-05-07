@@ -9,7 +9,6 @@ import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.fail
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.Base64
@@ -21,12 +20,12 @@ class ImageUploadTesting {
 
     @Test()
     fun testImgurUpload() = runBlocking {
-        val inputStream = Base64.getDecoder().decode(image).inputStream()
-
-        println("Uploading")
+        val bytes = Base64.getDecoder().decode(image)
+        val inputStream = bytes.inputStream()
 
         ImageUploader.uploadImage(
             inputStream,
+            bytes.size.toLong(),
             "image/gif",
             ImgurServer(),
             onSuccess = { url, contentType ->
@@ -43,14 +42,13 @@ class ImageUploadTesting {
     }
 
     @Test()
-    @Ignore
     fun testNostrBuildUpload() = runBlocking {
-        val inputStream = Base64.getDecoder().decode(image).inputStream()
-
-        println("Uploading")
+        val bytes = Base64.getDecoder().decode(image)
+        val inputStream = bytes.inputStream()
 
         ImageUploader.uploadImage(
             inputStream,
+            bytes.size.toLong(),
             "image/gif",
             NostrBuildServer(),
             onSuccess = { url, contentType ->
@@ -68,12 +66,12 @@ class ImageUploadTesting {
 
     @Test()
     fun testNostrImgUpload() = runBlocking {
-        val inputStream = Base64.getDecoder().decode(image).inputStream()
-
-        println("Uploading")
+        val bytes = Base64.getDecoder().decode(image)
+        val inputStream = bytes.inputStream()
 
         ImageUploader.uploadImage(
             inputStream,
+            bytes.size.toLong(),
             "image/gif",
             NostrImgServer(),
             onSuccess = { url, contentType ->

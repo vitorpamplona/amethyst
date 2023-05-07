@@ -77,7 +77,6 @@ open class NewMediaModel : ViewModel() {
             ImageUploader.uploadImage(
                 uri = uri,
                 server = serverToUse,
-                context = context,
                 contentResolver = contentResolver,
                 onSuccess = { imageUrl, mimeType ->
                     createNIP94Record(imageUrl, mimeType, description)
@@ -115,18 +114,24 @@ open class NewMediaModel : ViewModel() {
             uploadingDescription.value = "Server Processing"
             // Images don't seem to be ready immediately after upload
 
-            if (mimeType?.startsWith("image/") == true) {
-                delay(2000)
-            } else {
-                delay(15000)
+            var imageData: ByteArray? = null
+            var tentatives = 0
+
+            // Servers are usually not ready.. so tries to download it for 15 times/seconds.
+            while (imageData == null && tentatives < 15) {
+                imageData = try {
+                    URL(imageUrl).readBytes()
+                } catch (e: Exception) {
+                    tentatives++
+                    delay(1000)
+                    null
+                }
             }
 
             uploadingDescription.value = "Downloading"
             uploadingPercentage.value = 0.60f
 
-            try {
-                val imageData = URL(imageUrl).readBytes()
-
+            if (imageData != null) {
                 uploadingPercentage.value = 0.80f
                 uploadingDescription.value = "Hashing"
 
@@ -154,8 +159,8 @@ open class NewMediaModel : ViewModel() {
                         }
                     }
                 )
-            } catch (e: Exception) {
-                Log.e("ImageDownload", "Couldn't download image from server: ${e.message}")
+            } else {
+                Log.e("ImageDownload", "Couldn't download image from server")
                 cancel()
                 uploadingPercentage.value = 0.00f
                 uploadingDescription.value = null
