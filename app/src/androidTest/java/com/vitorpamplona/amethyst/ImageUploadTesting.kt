@@ -4,6 +4,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.amethyst.ui.actions.ImageUploader
 import com.vitorpamplona.amethyst.ui.actions.ImgurServer
 import com.vitorpamplona.amethyst.ui.actions.NostrBuildServer
+import com.vitorpamplona.amethyst.ui.actions.NostrFilesDevServer
 import com.vitorpamplona.amethyst.ui.actions.NostrImgServer
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.fail
@@ -38,7 +39,7 @@ class ImageUploadTesting {
             }
         )
 
-        delay(1000)
+        delay(5000)
     }
 
     @Test()
@@ -85,5 +86,28 @@ class ImageUploadTesting {
         )
 
         delay(1000)
+    }
+
+    @Test()
+    fun testNostrFilesDevUpload() = runBlocking {
+        val bytes = Base64.getDecoder().decode(image)
+        val inputStream = bytes.inputStream()
+
+        ImageUploader.uploadImage(
+            inputStream,
+            bytes.size.toLong(),
+            "image/gif",
+            NostrFilesDevServer(),
+            onSuccess = { url, contentType ->
+                println("Uploaded to $url")
+                assertNotNull(url)
+            },
+            onError = {
+                println("Failed to Upload")
+                fail("${it.message}")
+            }
+        )
+
+        delay(5000)
     }
 }
