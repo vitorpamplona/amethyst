@@ -249,7 +249,11 @@ fun NoteComposeInner(
                     val createdAt = note.createdAt()
                     if (createdAt != null) {
                         NotificationCache.markAsRead(it, createdAt)
-                        isNew = createdAt > lastTime
+
+                        val newIsNew = createdAt > lastTime
+                        if (newIsNew != isNew) {
+                            isNew = newIsNew
+                        }
                     }
                 }
             }
@@ -420,7 +424,8 @@ private fun RenderTextEvent(
 ) {
     val noteEvent = note.event ?: return
 
-    val eventContent = accountViewModel.decrypt(note)
+    val eventContent = remember { accountViewModel.decrypt(note) }
+    val modifier = remember { Modifier.fillMaxWidth() }
 
     if (eventContent != null) {
         if (makeItShort && accountViewModel.isLoggedUser(note.author)) {
@@ -434,7 +439,7 @@ private fun RenderTextEvent(
             TranslatableRichTextViewer(
                 content = eventContent,
                 canPreview = canPreview && !makeItShort,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = modifier,
                 tags = noteEvent.tags(),
                 backgroundColor = backgroundColor,
                 accountViewModel = accountViewModel,
@@ -548,10 +553,10 @@ private fun RenderPrivateMessage(
     navController: NavController
 ) {
     val noteEvent = note.event as? PrivateDmEvent ?: return
-    val withMe = noteEvent.with(accountViewModel.userProfile().pubkeyHex)
+    val withMe = remember { noteEvent.with(accountViewModel.userProfile().pubkeyHex) }
 
     if (withMe) {
-        val eventContent = accountViewModel.decrypt(note)
+        val eventContent = remember { accountViewModel.decrypt(note) }
 
         if (eventContent != null) {
             if (makeItShort && accountViewModel.isLoggedUser(note.author)) {
@@ -908,7 +913,7 @@ fun TimeAgo(time: Long) {
 
 @Composable
 private fun DrawAuthorImages(baseNote: Note, loggedIn: User, navController: NavController) {
-    val baseChannel = baseNote.channel()
+    val baseChannel = remember { baseNote.channel() }
 
     Column(Modifier.width(55.dp)) {
         // Draws the boosted picture outside the boosted card.
@@ -1002,7 +1007,13 @@ fun DisplayHighlight(
     accountViewModel: AccountViewModel,
     navController: NavController
 ) {
-    val quote = highlight.split("\n").map { "> *${it.removeSuffix(" ")}*" }.joinToString("\n")
+    val quote =
+        remember {
+            highlight
+                .split("\n")
+                .map { "> *${it.removeSuffix(" ")}*" }
+                .joinToString("\n")
+        }
 
     TranslatableRichTextViewer(
         quote,
@@ -1205,9 +1216,9 @@ fun BadgeDisplay(baseNote: Note) {
     val background = MaterialTheme.colors.background
     val badgeData = baseNote.event as? BadgeDefinitionEvent ?: return
 
-    val image = badgeData.image()
-    val name = badgeData.name()
-    val description = badgeData.description()
+    val image = remember { badgeData.image() }
+    val name = remember { badgeData.name() }
+    val description = remember { badgeData.description() }
 
     var backgroundFromImage by remember { mutableStateOf(Pair(background, background)) }
     var imageResult by remember { mutableStateOf<AsyncImagePainter.State.Success?>(null) }

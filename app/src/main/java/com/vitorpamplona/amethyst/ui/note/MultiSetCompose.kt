@@ -68,9 +68,13 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
 
         LaunchedEffect(key1 = multiSetCard.createdAt()) {
             scope.launch(Dispatchers.IO) {
-                isNew = multiSetCard.createdAt > NotificationCache.load(routeForLastRead)
+                val newIsNew = multiSetCard.createdAt > NotificationCache.load(routeForLastRead)
 
                 NotificationCache.markAsRead(routeForLastRead, multiSetCard.createdAt)
+
+                if (newIsNew != isNew) {
+                    isNew = newIsNew
+                }
             }
         }
 

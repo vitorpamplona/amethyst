@@ -209,7 +209,9 @@ private fun LocalImageView(
         mutableStateOf<AsyncImagePainter.State?>(null)
     }
 
-    val ratio = aspectRatio(content.dim)
+    val ratio = remember {
+        aspectRatio(content.dim)
+    }
 
     BoxWithConstraints(contentAlignment = Alignment.Center) {
         val myModifier = mainImageModifier.also {
@@ -257,6 +259,7 @@ private fun UrlImageView(
     content: ZoomableUrlImage,
     mainImageModifier: Modifier
 ) {
+    println("UrlImageView")
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -269,7 +272,9 @@ private fun UrlImageView(
         mutableStateOf<Boolean?>(null)
     }
 
-    val ratio = aspectRatio(content.dim)
+    val ratio = remember {
+        aspectRatio(content.dim)
+    }
 
     LaunchedEffect(key1 = content.url, key2 = imageState) {
         if (imageState is AsyncImagePainter.State.Success) {
