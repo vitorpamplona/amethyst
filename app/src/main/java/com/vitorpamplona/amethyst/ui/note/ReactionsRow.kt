@@ -318,7 +318,7 @@ fun ZapReaction(
     var zappingProgress by remember { mutableStateOf(0f) }
 
     var wasZappedByLoggedInUser by remember { mutableStateOf(false) }
-    var zapAmount by remember { mutableStateOf<BigDecimal?>(null) }
+    var zapAmountTxt by remember { mutableStateOf<String>("") }
 
     LaunchedEffect(key1 = zapsState) {
         scope.launch(Dispatchers.IO) {
@@ -326,7 +326,7 @@ fun ZapReaction(
                 wasZappedByLoggedInUser = accountViewModel.calculateIfNoteWasZappedByAccount(zappedNote)
             }
 
-            zapAmount = account.calculateZappedAmount(zappedNote)
+            zapAmountTxt = showAmount(account.calculateZappedAmount(zappedNote))
         }
     }
 
@@ -456,7 +456,7 @@ fun ZapReaction(
     }
 
     Text(
-        showAmount(zapAmount),
+        zapAmountTxt,
         fontSize = 14.sp,
         color = grayTint,
         modifier = textModifier
