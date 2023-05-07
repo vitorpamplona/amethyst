@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.runtime.Composable
@@ -286,11 +287,15 @@ fun AuthorGallery(
 
     Column(modifier = Modifier.padding(start = 10.dp)) {
         FlowRow() {
-            authorNotes.forEach {
+            authorNotes.take(50).forEach {
                 val author = it.author
                 if (author != null) {
                     AuthorPictureAndComment(author, null, navController, accountUser, accountViewModel)
                 }
+            }
+
+            if (authorNotes.size > 50) {
+                Text(" and ${authorNotes.size - 50} others")
             }
         }
     }
