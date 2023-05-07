@@ -868,11 +868,21 @@ class Account(
                 }
 
                 if (altPrivateKeyToUse != null && altPubkeyToUse != null) {
-                    val result = event.getPrivateZapEvent(altPrivateKeyToUse, altPubkeyToUse)
-                    if (result == null) {
-                        Log.w("Private ZAP Decrypt", "Fail to decrypt Zap from ${note.author?.toBestDisplayName()} ${note.idNote()}")
+                    val altPubKeyFromPrivate = Utils.pubkeyCreate(altPrivateKeyToUse).toHexKey()
+
+                    if (altPubKeyFromPrivate == event.pubKey) {
+                        val result = event.getPrivateZapEvent(altPrivateKeyToUse, altPubkeyToUse)
+
+                        if (result == null) {
+                            Log.w(
+                                "Private ZAP Decrypt",
+                                "Fail to decrypt Zap from ${note.author?.toBestDisplayName()} ${note.idNote()}"
+                            )
+                        }
+                        result
+                    } else {
+                        null
                     }
-                    result
                 } else {
                     null
                 }
