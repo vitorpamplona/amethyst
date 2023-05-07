@@ -820,7 +820,7 @@ class Account(
         return if (event is PrivateDmEvent && loggedIn.privKey != null) {
             var pubkeyToUse = event.pubKey
 
-            val recepientPK = event.recipientPubKey()
+            val recepientPK = event.verifiedRecipientPubKey()
 
             if (note.author == userProfile() && recepientPK != null) {
                 pubkeyToUse = recepientPK

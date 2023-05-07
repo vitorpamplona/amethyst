@@ -60,8 +60,10 @@ import java.io.File
 public var muted = mutableStateOf(true)
 
 @Composable
-fun VideoView(localFile: File, description: String? = null, onDialog: ((Boolean) -> Unit)? = null) {
-    VideoView(localFile.toUri(), description, onDialog)
+fun VideoView(localFile: File?, description: String? = null, onDialog: ((Boolean) -> Unit)? = null) {
+    if (localFile != null) {
+        VideoView(localFile.toUri(), description, onDialog)
+    }
 }
 
 @Composable

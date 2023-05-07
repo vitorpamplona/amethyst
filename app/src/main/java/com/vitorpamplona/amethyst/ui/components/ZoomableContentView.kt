@@ -111,7 +111,7 @@ class ZoomableUrlVideo(
 ) : ZoomableUrlContent(url, description, hash, dim, uri)
 
 abstract class ZoomablePreloadedContent(
-    val localFile: File,
+    val localFile: File?,
     description: String? = null,
     val mimeType: String? = null,
     val isVerified: Boolean? = null,
@@ -120,7 +120,7 @@ abstract class ZoomablePreloadedContent(
 ) : ZoomableContent(description, dim)
 
 class ZoomableLocalImage(
-    localFile: File,
+    localFile: File?,
     mimeType: String? = null,
     description: String? = null,
     val blurhash: String? = null,
@@ -130,7 +130,7 @@ class ZoomableLocalImage(
 ) : ZoomablePreloadedContent(localFile, description, mimeType, isVerified, dim, uri)
 
 class ZoomableLocalVideo(
-    localFile: File,
+    localFile: File?,
     mimeType: String? = null,
     description: String? = null,
     dim: String? = null,
@@ -219,7 +219,7 @@ private fun LocalImageView(
         }
         val contentScale = if (maxHeight.isFinite) ContentScale.Fit else ContentScale.FillWidth
 
-        if (content.localFile.exists()) {
+        if (content.localFile != null && content.localFile.exists()) {
             AsyncImage(
                 model = content.localFile,
                 contentDescription = content.description,
@@ -246,7 +246,7 @@ private fun LocalImageView(
             }
         }
 
-        if (imageState is AsyncImagePainter.State.Error || !content.localFile.exists()) {
+        if (imageState is AsyncImagePainter.State.Error || content.localFile == null || !content.localFile.exists()) {
             BlankNote()
         }
     }

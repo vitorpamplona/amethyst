@@ -89,7 +89,6 @@ import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.EventInterface
 import com.vitorpamplona.amethyst.service.model.FileHeaderEvent
-import com.vitorpamplona.amethyst.service.model.FileStorageEvent
 import com.vitorpamplona.amethyst.service.model.FileStorageHeaderEvent
 import com.vitorpamplona.amethyst.service.model.HighlightEvent
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
@@ -122,6 +121,7 @@ import com.vitorpamplona.amethyst.ui.theme.Following
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import nostr.postr.toNpub
 import java.io.File
 import java.math.BigDecimal
 import java.net.URL
@@ -387,7 +387,7 @@ fun routeFor(note: Note, loggedIn: User): String? {
     } else if (noteEvent is PrivateDmEvent) {
         val replyAuthorBase =
             (note.event as? PrivateDmEvent)
-                ?.recipientPubKey()
+                ?.verifiedRecipientPubKey()
                 ?.let { LocalCache.getOrCreateUser(it) }
 
         var userToComposeOn = note.author!!
@@ -573,13 +573,13 @@ private fun RenderPrivateMessage(
             }
         }
     } else {
-        val recipient = noteEvent.recipientPubKey()?.let { LocalCache.checkGetOrCreateUser(it) }
+        val recipient = noteEvent.recipientPubKeyBytes()?.toNpub() ?: "Someone"
 
         TranslatableRichTextViewer(
             stringResource(
                 id = R.string.private_conversation_notification,
                 "@${note.author?.pubkeyNpub()}",
-                "@${recipient?.pubkeyNpub()}"
+                "@$recipient"
             ),
             canPreview = !makeItShort,
             Modifier.fillMaxWidth(),
@@ -797,13 +797,8 @@ private fun ReplyRow(
 
         Spacer(modifier = Modifier.height(5.dp))
     } else if (noteEvent is ChannelMessageEvent && (note.replyTo != null || noteEvent.hasAnyTaggedUser())) {
-        val sortedMentions = noteEvent.mentions()
-            .mapNotNull { LocalCache.checkGetOrCreateUser(it) }
-            .toSet()
-            .sortedBy { account.isFollowing(it) }
-
         note.channel()?.let {
-            ReplyInformationChannel(note.replyTo, sortedMentions, it, navController)
+            ReplyInformationChannel(note.replyTo, noteEvent.mentions(), it, account, navController)
         }
 
         Spacer(modifier = Modifier.height(5.dp))
@@ -1016,11 +1011,19 @@ fun DisplayHighlight(
         navController
     )
 
+    var userBase by remember { mutableStateOf<User?>(null) }
+
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            if (authorHex != null) {
+                userBase = LocalCache.checkGetOrCreateUser(authorHex)
+            }
+        }
+    }
+
     FlowRow() {
         authorHex?.let { authorHex ->
-            val userBase = LocalCache.checkGetOrCreateUser(authorHex)
-
-            if (userBase != null) {
+            userBase?.let { userBase ->
                 val userState by userBase.live().metadata.observeAsState()
                 val user = userState?.user
 
@@ -1307,20 +1310,23 @@ fun FileStorageHeaderDisplay(baseNote: Note) {
     val appContext = LocalContext.current.applicationContext
     val eventHeader = (baseNote.event as? FileStorageHeaderEvent) ?: return
 
-    val fileNote = eventHeader.dataEventId()?.let { LocalCache.checkGetOrCreateNote(it) } ?: return
+    var fileNote by remember { mutableStateOf<Note?>(null) }
 
-    val noteState by fileNote.live().metadata.observeAsState()
-    val note = noteState?.note
+    LaunchedEffect(key1 = eventHeader.id) {
+        withContext(Dispatchers.IO) {
+            fileNote = eventHeader.dataEventId()?.let { LocalCache.checkGetOrCreateNote(it) }
+        }
+    }
 
-    val eventBytes = (note?.event as? FileStorageEvent)
+    val noteState = fileNote?.live()?.metadata?.observeAsState()
+    val note = noteState?.value?.note
 
     var content by remember { mutableStateOf<ZoomableContent?>(null) }
 
-    LaunchedEffect(key1 = eventHeader.id, key2 = noteState) {
+    LaunchedEffect(key1 = eventHeader.id, key2 = noteState, key3 = note?.event) {
         withContext(Dispatchers.IO) {
             val uri = "nostr:" + baseNote.toNEvent()
-            val localDir = File(File(appContext.externalCacheDir, "NIP95"), fileNote.idHex)
-            val bytes = eventBytes?.decode()
+            val localDir = note?.idHex?.let { File(File(appContext.externalCacheDir, "NIP95"), it) }
             val blurHash = eventHeader.blurhash()
             val dimensions = eventHeader.dimensions()
             val description = eventHeader.content
@@ -1337,18 +1343,14 @@ fun FileStorageHeaderDisplay(baseNote: Note) {
                     uri = uri
                 )
             } else {
-                if (bytes != null) {
-                    ZoomableLocalVideo(
-                        localFile = localDir,
-                        mimeType = mimeType,
-                        description = description,
-                        dim = dimensions,
-                        isVerified = true,
-                        uri = uri
-                    )
-                } else {
-                    null
-                }
+                ZoomableLocalVideo(
+                    localFile = localDir,
+                    mimeType = mimeType,
+                    description = description,
+                    dim = dimensions,
+                    isVerified = true,
+                    uri = uri
+                )
             }
         }
     }

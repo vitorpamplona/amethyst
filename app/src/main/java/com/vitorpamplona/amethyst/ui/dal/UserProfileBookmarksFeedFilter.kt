@@ -9,9 +9,9 @@ object UserProfileBookmarksFeedFilter : FeedFilter<Note>() {
     lateinit var account: Account
     var user: User? = null
 
-    fun loadUserProfile(accountLoggedIn: Account, userId: String) {
+    fun loadUserProfile(accountLoggedIn: Account, user: User?) {
         account = accountLoggedIn
-        user = LocalCache.users[userId]
+        this.user = user
     }
 
     override fun feed(): List<Note> {

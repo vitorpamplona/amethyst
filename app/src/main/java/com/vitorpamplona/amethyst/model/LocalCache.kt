@@ -359,7 +359,7 @@ object LocalCache {
         // Already processed this event.
         if (note.event != null) return
 
-        val recipient = event.recipientPubKey()?.let { getOrCreateUser(it) }
+        val recipient = event.verifiedRecipientPubKey()?.let { getOrCreateUser(it) }
 
         // Log.d("PM", "${author.toBestDisplayName()} to ${recipient?.toBestDisplayName()}")
 
@@ -407,7 +407,7 @@ object LocalCache {
 
                 if (deleteNote.event is PrivateDmEvent) {
                     val author = deleteNote.author
-                    val recipient = (deleteNote.event as? PrivateDmEvent)?.recipientPubKey()?.let { checkGetOrCreateUser(it) }
+                    val recipient = (deleteNote.event as? PrivateDmEvent)?.verifiedRecipientPubKey()?.let { checkGetOrCreateUser(it) }
 
                     if (recipient != null && author != null) {
                         author.removeMessage(recipient, deleteNote)

@@ -134,7 +134,7 @@ fun ChatroomCompose(
     } else {
         val replyAuthorBase =
             (note.event as? PrivateDmEvent)
-                ?.recipientPubKey()
+                ?.verifiedRecipientPubKey()
                 ?.let { LocalCache.getOrCreateUser(it) }
 
         var userToComposeOn = note.author!!

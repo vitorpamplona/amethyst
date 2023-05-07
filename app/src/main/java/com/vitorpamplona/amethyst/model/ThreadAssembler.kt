@@ -6,7 +6,7 @@ import kotlin.time.measureTimedValue
 
 class ThreadAssembler {
 
-    fun searchRoot(note: Note, testedNotes: MutableSet<Note> = mutableSetOf()): Note? {
+    private fun searchRoot(note: Note, testedNotes: MutableSet<Note> = mutableSetOf()): Note? {
         if (note.replyTo == null || note.replyTo?.isEmpty() == true) return note
 
         testedNotes.add(note)
