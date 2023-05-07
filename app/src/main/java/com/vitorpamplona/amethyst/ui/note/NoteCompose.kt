@@ -190,16 +190,19 @@ fun NoteComposeInner(
     var popupExpanded by remember { mutableStateOf(false) }
     var showHiddenNote by remember { mutableStateOf(false) }
 
-    var isAcceptable by remember { mutableStateOf(true) }
-    var canPreview by remember { mutableStateOf(true) }
+    var isAcceptableAndCanPreview by remember { mutableStateOf(Pair(true, true)) }
 
     LaunchedEffect(key1 = noteReportsState) {
         withContext(Dispatchers.IO) {
-            canPreview = note?.author === loggedIn ||
+            val newCanPreview = note?.author === loggedIn ||
                 (note?.author?.let { loggedIn.isFollowingCached(it) } ?: true) ||
                 !noteForReports.hasAnyReports()
 
-            isAcceptable = account.isAcceptable(noteForReports)
+            val newIsAcceptable = account.isAcceptable(noteForReports)
+
+            if (newIsAcceptable != isAcceptableAndCanPreview.first && newCanPreview != isAcceptableAndCanPreview.second) {
+                isAcceptableAndCanPreview = Pair(newIsAcceptable, newCanPreview)
+            }
         }
     }
 
@@ -214,7 +217,7 @@ fun NoteComposeInner(
             ),
             isBoostedNote
         )
-    } else if (!isAcceptable && !showHiddenNote) {
+    } else if (!isAcceptableAndCanPreview.first && !showHiddenNote) {
         if (!account.isHidden(noteForReports.author!!)) {
             HiddenNote(
                 account.getRelevantReports(noteForReports),
@@ -340,18 +343,18 @@ fun NoteComposeInner(
                         }
 
                         is PrivateDmEvent -> {
-                            RenderPrivateMessage(note, makeItShort, canPreview, backgroundColor, accountViewModel, navController)
+                            RenderPrivateMessage(note, makeItShort, isAcceptableAndCanPreview.second, backgroundColor, accountViewModel, navController)
                         }
 
                         is HighlightEvent -> {
-                            RenderHighlight(note, makeItShort, canPreview, backgroundColor, accountViewModel, navController)
+                            RenderHighlight(note, makeItShort, isAcceptableAndCanPreview.second, backgroundColor, accountViewModel, navController)
                         }
 
                         is PollNoteEvent -> {
                             RenderPoll(
                                 note,
                                 makeItShort,
-                                canPreview,
+                                isAcceptableAndCanPreview.second,
                                 backgroundColor,
                                 accountViewModel,
                                 navController
@@ -362,7 +365,7 @@ fun NoteComposeInner(
                             RenderTextEvent(
                                 note,
                                 makeItShort,
-                                canPreview,
+                                isAcceptableAndCanPreview.second,
                                 backgroundColor,
                                 accountViewModel,
                                 navController
