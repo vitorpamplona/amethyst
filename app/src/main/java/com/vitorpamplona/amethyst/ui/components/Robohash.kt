@@ -92,7 +92,6 @@ object Robohash {
             .data("robohash:$message")
             .fetcherFactory(HashImageFetcher.Factory)
             .size(robotSize)
-            .crossfade(100)
             .build()
     }
 }

@@ -59,7 +59,6 @@ object BlurHashRequester {
             .Builder(context)
             .data("bluehash:$encodedMessage")
             .fetcherFactory(BlurHashFetcher.Factory)
-            .crossfade(100)
             .build()
     }
 }

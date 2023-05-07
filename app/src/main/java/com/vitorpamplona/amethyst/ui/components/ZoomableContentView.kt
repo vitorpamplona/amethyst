@@ -337,9 +337,10 @@ private fun aspectRatio(dim: String?): Float? {
 @Composable
 private fun DisplayUrlWithLoadingSymbol(content: ZoomableContent) {
     var cnt by remember { mutableStateOf<ZoomableContent?>(null) }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        withContext(Dispatchers.IO) {
+        scope.launch(Dispatchers.IO) {
             delay(200)
             cnt = content
         }
