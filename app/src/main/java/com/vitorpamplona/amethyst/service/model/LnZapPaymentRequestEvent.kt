@@ -6,7 +6,7 @@ import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
 import com.google.gson.JsonParseException
 import com.vitorpamplona.amethyst.model.HexKey
-import com.vitorpamplona.amethyst.model.toByteArray
+import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
 import java.lang.reflect.Type
@@ -21,9 +21,17 @@ class LnZapPaymentRequestEvent(
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
 
+    // Once one of an app user decrypts the payment, all users else can see it.
+    @Transient
+    private var lnInvoice: String? = null
+
     fun walletServicePubKey() = tags.firstOrNull() { it.size > 1 && it[0] == "p" }?.get(1)
 
     fun lnInvoice(privKey: ByteArray, pubkey: ByteArray): String? {
+        if (lnInvoice != null) {
+            return lnInvoice
+        }
+
         return try {
             val sharedSecret = Utils.getSharedSecret(privKey, pubkey)
 
@@ -31,7 +39,9 @@ class LnZapPaymentRequestEvent(
 
             val payInvoiceMethod = gson.fromJson(jsonText, Request::class.java)
 
-            return (payInvoiceMethod as? PayInvoiceMethod)?.params?.invoice
+            lnInvoice = (payInvoiceMethod as? PayInvoiceMethod)?.params?.invoice
+
+            return lnInvoice
         } catch (e: Exception) {
             Log.w("BookmarkList", "Error decrypting the message ${e.message}")
             null
@@ -53,7 +63,7 @@ class LnZapPaymentRequestEvent(
             val content = Utils.encrypt(
                 serializedRequest,
                 privateKey,
-                walletServicePubkey.toByteArray()
+                walletServicePubkey.hexToByteArray()
             )
 
             val tags = mutableListOf<List<String>>()

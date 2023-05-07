@@ -78,7 +78,7 @@ class PrivateZapTests {
         if (recepientPK != null && recepientPost != null) {
             val privateKey = createEncryptionPrivateKey(loggedIn.toHexKey(), recepientPost, privateZapRequest.createdAt)
             val decodedPrivateZap =
-                LnZapRequestEvent.checkForPrivateZap(privateZapRequest, privateKey, recepientPK)
+                privateZapRequest.getPrivateZapEvent(privateKey, recepientPK)
 
             println(decodedPrivateZap?.toJson())
             assertNotNull(decodedPrivateZap)
@@ -127,8 +127,7 @@ class PrivateZapTests {
 
         if (recepientPK != null && recepientPost != null) {
             val privateKey = createEncryptionPrivateKey(loggedIn.toHexKey(), recepientPost, privateZapRequest.createdAt)
-            val decodedPrivateZap =
-                LnZapRequestEvent.checkForPrivateZap(privateZapRequest, privateKey, recepientPK)
+            val decodedPrivateZap = privateZapRequest.getPrivateZapEvent(privateKey, recepientPK)
 
             println(decodedPrivateZap?.toJson())
             assertNotNull(decodedPrivateZap)

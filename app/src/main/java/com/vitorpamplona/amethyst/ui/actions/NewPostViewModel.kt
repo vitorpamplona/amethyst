@@ -145,7 +145,6 @@ open class NewPostViewModel : ViewModel() {
             ImageUploader.uploadImage(
                 uri = it,
                 server = server,
-                context = context,
                 contentResolver = contentResolver,
                 onSuccess = { imageUrl, mimeType ->
                     if (isNIP94Server(server)) {

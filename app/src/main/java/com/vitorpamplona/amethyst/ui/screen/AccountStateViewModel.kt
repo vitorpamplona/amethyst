@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.toByteArray
+import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import fr.acinq.secp256k1.Hex
 import kotlinx.coroutines.CoroutineScope
@@ -42,7 +42,7 @@ class AccountStateViewModel() : ViewModel() {
     fun startUI(key: String) {
         val pattern = Pattern.compile(".+@.+\\.[a-z]+")
         val parsed = Nip19.uriToRoute(key)
-        val pubKeyParsed = parsed?.hex?.toByteArray()
+        val pubKeyParsed = parsed?.hex?.hexToByteArray()
 
         val account =
             if (key.startsWith("nsec")) {

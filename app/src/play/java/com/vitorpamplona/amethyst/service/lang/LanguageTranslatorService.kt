@@ -4,6 +4,7 @@ import android.util.LruCache
 import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
 import com.google.mlkit.nl.languageid.LanguageIdentification
+import com.google.mlkit.nl.languageid.LanguageIdentificationOptions
 import com.google.mlkit.nl.translate.TranslateLanguage
 import com.google.mlkit.nl.translate.Translation
 import com.google.mlkit.nl.translate.Translator
@@ -20,7 +21,8 @@ class ResultOrError(
 )
 
 object LanguageTranslatorService {
-    private val languageIdentification = LanguageIdentification.getClient()
+    private val options = LanguageIdentificationOptions.Builder().setConfidenceThreshold(0.6f).build()
+    private val languageIdentification = LanguageIdentification.getClient(options)
     val lnRegex = Pattern.compile("\\blnbc[a-z0-9]+\\b", Pattern.CASE_INSENSITIVE)
     val tagRegex = Pattern.compile("(nostr:)?@?(nsec1|npub1|nevent1|naddr1|note1|nprofile1|nrelay1)([qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)", Pattern.CASE_INSENSITIVE)
 

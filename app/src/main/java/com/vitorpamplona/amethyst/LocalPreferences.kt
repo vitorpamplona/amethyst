@@ -9,7 +9,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
-import com.vitorpamplona.amethyst.model.toByteArray
+import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.service.model.ContactListEvent
 import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.Event.Companion.getRefinedEvent
@@ -276,7 +276,7 @@ object LocalPreferences {
             val hideBlockAlertDialog = getBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, false)
 
             val a = Account(
-                Persona(privKey = privKey?.toByteArray(), pubKey = pubKey.toByteArray()),
+                Persona(privKey = privKey?.hexToByteArray(), pubKey = pubKey.hexToByteArray()),
                 followingChannels,
                 hiddenUsers,
                 localRelays,

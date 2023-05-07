@@ -5,6 +5,7 @@ import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -17,13 +18,23 @@ import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun ReplyInformation(replyTo: List<Note>?, mentions: List<String>, account: Account, navController: NavController) {
-    val dupMentions = mentions.mapNotNull { LocalCache.checkGetOrCreateUser(it) }
+    var dupMentions by remember { mutableStateOf<List<User>?>(null) }
 
-    ReplyInformation(replyTo, dupMentions, account) {
-        navController.navigate("User/${it.pubkeyHex}")
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            dupMentions = mentions.mapNotNull { LocalCache.checkGetOrCreateUser(it) }
+        }
+    }
+
+    if (dupMentions != null) {
+        ReplyInformation(replyTo, dupMentions, account) {
+            navController.navigate("User/${it.pubkeyHex}")
+        }
     }
 }
 
@@ -99,6 +110,34 @@ fun ReplyInformation(replyTo: List<Note>?, dupMentions: List<User>?, account: Ac
                 }
             }
         }
+    }
+}
+
+@Composable
+fun ReplyInformationChannel(replyTo: List<Note>?, mentions: List<String>, channel: Channel, account: Account, navController: NavController) {
+    var sortedMentions by remember { mutableStateOf<List<User>?>(null) }
+
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            sortedMentions = mentions
+                .mapNotNull { LocalCache.checkGetOrCreateUser(it) }
+                .toSet()
+                .sortedBy { account.isFollowing(it) }
+        }
+    }
+
+    if (sortedMentions != null) {
+        ReplyInformationChannel(
+            replyTo,
+            sortedMentions,
+            channel,
+            onUserTagClick = {
+                navController.navigate("User/${it.pubkeyHex}")
+            },
+            onChannelTagClick = {
+                navController.navigate("Channel/${it.idHex}")
+            }
+        )
     }
 }
 

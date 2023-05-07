@@ -9,9 +9,9 @@ object UserProfileNewThreadFeedFilter : FeedFilter<Note>() {
     var account: Account? = null
     var user: User? = null
 
-    fun loadUserProfile(accountLoggedIn: Account, userId: String) {
+    fun loadUserProfile(accountLoggedIn: Account, user: User) {
         account = accountLoggedIn
-        user = LocalCache.checkGetOrCreateUser(userId)
+        this.user = user
     }
 
     override fun feed(): List<Note> {

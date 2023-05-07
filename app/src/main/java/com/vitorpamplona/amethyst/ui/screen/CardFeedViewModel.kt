@@ -175,7 +175,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
         }
     }
 
-    fun refreshFromOldState(newItems: Set<Note>) {
+    private fun refreshFromOldState(newItems: Set<Note>) {
         val oldNotesState = _feedContent.value
 
         val thisAccount = (localFilter as? NotificationFeedFilter)?.account

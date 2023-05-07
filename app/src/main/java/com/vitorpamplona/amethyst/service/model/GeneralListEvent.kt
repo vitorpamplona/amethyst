@@ -3,7 +3,7 @@ package com.vitorpamplona.amethyst.service.model
 import android.util.Log
 import com.google.gson.reflect.TypeToken
 import com.vitorpamplona.amethyst.model.HexKey
-import com.vitorpamplona.amethyst.model.toByteArray
+import com.vitorpamplona.amethyst.model.hexToByteArray
 import nostr.postr.Utils
 
 abstract class GeneralListEvent(
@@ -24,7 +24,7 @@ abstract class GeneralListEvent(
 
     fun plainContent(privKey: ByteArray): String? {
         return try {
-            val sharedSecret = Utils.getSharedSecret(privKey, pubKey.toByteArray())
+            val sharedSecret = Utils.getSharedSecret(privKey, pubKey.hexToByteArray())
 
             return Utils.decrypt(content, sharedSecret)
         } catch (e: Exception) {

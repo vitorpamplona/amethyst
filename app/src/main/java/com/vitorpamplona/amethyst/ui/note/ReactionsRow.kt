@@ -61,7 +61,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 import java.math.RoundingMode
 import kotlin.math.roundToInt
@@ -319,21 +318,22 @@ fun ZapReaction(
     var zappingProgress by remember { mutableStateOf(0f) }
 
     var wasZappedByLoggedInUser by remember { mutableStateOf(false) }
-    var zapAmount by remember { mutableStateOf<BigDecimal?>(null) }
+    var zapAmountTxt by remember { mutableStateOf<String>("") }
 
     LaunchedEffect(key1 = zapsState) {
-        withContext(Dispatchers.IO) {
+        scope.launch(Dispatchers.IO) {
             if (!wasZappedByLoggedInUser) {
                 wasZappedByLoggedInUser = accountViewModel.calculateIfNoteWasZappedByAccount(zappedNote)
             }
 
-            zapAmount = account.calculateZappedAmount(zappedNote)
+            zapAmountTxt = showAmount(account.calculateZappedAmount(zappedNote))
         }
     }
 
     Row(
         verticalAlignment = CenterVertically,
-        modifier = Modifier.size(iconSize)
+        modifier = Modifier
+            .size(iconSize)
             .combinedClickable(
                 role = Role.Button,
                 interactionSource = remember { MutableInteractionSource() },
@@ -456,7 +456,7 @@ fun ZapReaction(
     }
 
     Text(
-        showAmount(zapAmount),
+        zapAmountTxt,
         fontSize = 14.sp,
         color = grayTint,
         modifier = textModifier

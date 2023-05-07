@@ -1,7 +1,7 @@
 package com.vitorpamplona.amethyst.service.nip19
 
 import android.util.Log
-import com.vitorpamplona.amethyst.model.toByteArray
+import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Bech32
 import nostr.postr.bechToBytes
@@ -147,8 +147,8 @@ object Nip19 {
 
     public fun createNEvent(idHex: String, author: String?, kind: Int?, relay: String?): String {
         val kind = kind?.toByteArray()
-        val author = author?.toByteArray()
-        val idHex = idHex.toByteArray()
+        val author = author?.hexToByteArray()
+        val idHex = idHex.hexToByteArray()
         val relay = relay?.toByteArray(Charsets.UTF_8)
 
         var fullArray = byteArrayOf(Tlv.Type.SPECIAL.id, idHex.size.toByte()) + idHex

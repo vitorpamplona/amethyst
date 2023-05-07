@@ -94,7 +94,7 @@ fun ZapUserSetCompose(zapSetCard: ZapUserSetCard, isInnerNote: Boolean = false, 
                 FlowRow() {
                     zapSetCard.zapEvents.forEach {
                         NoteAuthorPicture(
-                            note = it.key,
+                            baseNote = it.key,
                             navController = navController,
                             userAccount = account.userProfile(),
                             size = 35.dp
