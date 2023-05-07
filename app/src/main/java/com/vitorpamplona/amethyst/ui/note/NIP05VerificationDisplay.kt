@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
@@ -92,61 +93,72 @@ fun ObserveDisplayNip05Status(baseUser: User, columnModifier: Modifier = Modifie
     val userState by baseUser.live().metadata.observeAsState()
     val user = userState?.user ?: return
 
-    val uri = LocalUriHandler.current
-
     user.nip05()?.let { nip05 ->
-        if (nip05.split("@").size == 2) {
+        val parts = nip05.split("@")
+        if (parts.size == 2) {
+            val nip05Verified by nip05VerificationAsAState(user.info!!, user.pubkeyHex)
+
             Column(modifier = columnModifier) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (nip05.split("@")[0] != "_") {
-                        Text(
-                            text = AnnotatedString(nip05.split("@")[0]),
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-
-                    val nip05Verified by nip05VerificationAsAState(user.info!!, user.pubkeyHex)
-                    if (nip05Verified == null) {
-                        Icon(
-                            tint = Color.Yellow,
-                            imageVector = Icons.Default.Downloading,
-                            contentDescription = "Downloading",
-                            modifier = Modifier
-                                .size(14.dp)
-                                .padding(top = 1.dp)
-                        )
-                    } else if (nip05Verified == true) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_verified),
-                            "NIP-05 Verified",
-                            tint = Nip05.copy(0.52f),
-                            modifier = Modifier
-                                .size(14.dp)
-                                .padding(top = 1.dp)
-                        )
-                    } else {
-                        Icon(
-                            tint = Color.Red,
-                            imageVector = Icons.Default.Report,
-                            contentDescription = "Invalid Nip05",
-                            modifier = Modifier
-                                .size(14.dp)
-                                .padding(top = 1.dp)
-                        )
-                    }
-
-                    ClickableText(
-                        text = AnnotatedString(nip05.split("@")[1]),
-                        onClick = { nip05.let { runCatching { uri.openUri("https://${it.split("@")[1]}") } } },
-                        style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(0.52f)),
-                        maxLines = 1,
-                        overflow = TextOverflow.Visible
-                    )
-                }
+                DisplayNIP05(parts[0], parts[1], nip05Verified)
             }
         }
+    }
+}
+
+@Composable
+private fun DisplayNIP05(
+    user: String,
+    domain: String,
+    nip05Verified: Boolean?
+) {
+    val uri = LocalUriHandler.current
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (user != "_") {
+            Text(
+                text = AnnotatedString(user),
+                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        if (nip05Verified == null) {
+            Icon(
+                tint = Color.Yellow,
+                imageVector = Icons.Default.Downloading,
+                contentDescription = "Downloading",
+                modifier = Modifier
+                    .size(14.dp)
+                    .padding(top = 1.dp)
+            )
+        } else if (nip05Verified == true) {
+            Icon(
+                painter = painterResource(R.drawable.ic_verified),
+                "NIP-05 Verified",
+                tint = Nip05.copy(0.52f),
+                modifier = Modifier
+                    .size(14.dp)
+                    .padding(top = 1.dp)
+            )
+        } else {
+            Icon(
+                tint = Color.Red,
+                imageVector = Icons.Default.Report,
+                contentDescription = "Invalid Nip05",
+                modifier = Modifier
+                    .size(14.dp)
+                    .padding(top = 1.dp)
+            )
+        }
+
+        ClickableText(
+            text = AnnotatedString(domain),
+            onClick = { runCatching { uri.openUri("https://${domain}") } },
+            style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(0.52f)),
+            maxLines = 1,
+            overflow = TextOverflow.Visible
+        )
     }
 }
 

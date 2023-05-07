@@ -225,26 +225,20 @@ fun NoteComposeInner(
                     modifier = Modifier
                         .padding(start = if (!isBoostedNote && !isQuotedNote) 10.dp else 0.dp)
                 ) {
-                    val (value, elapsed1) = measureTimedValue {
-                        FirstUserInfoRow(
-                            baseNote = baseNote,
-                            showAuthorPicture = isQuotedNote,
-                            account = account,
-                            accountViewModel = accountViewModel,
-                            navController = navController
-                        )
-                    }
-                    Log.d("Time", "$elapsed1 Line 1 of each post ${noteEvent.content()}")
+                    FirstUserInfoRow(
+                        baseNote = baseNote,
+                        showAuthorPicture = isQuotedNote,
+                        account = account,
+                        accountViewModel = accountViewModel,
+                        navController = navController
+                    )
 
                     if (noteEvent !is RepostEvent && !makeItShort && !isQuotedNote) {
-                        val (value, elapsed2) = measureTimedValue {
-                            SecondUserInfoRow(
-                                note,
-                                account,
-                                navController
-                            )
-                        }
-                        Log.d("Time", "$elapsed2 Line 2 of each post")
+                        SecondUserInfoRow(
+                            note,
+                            account,
+                            navController
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(2.dp))
@@ -555,43 +549,43 @@ private fun RenderBadgeAward(
     var awardees by remember { mutableStateOf<List<User>>(listOf()) }
 
     Text(text = stringResource(R.string.award_granted_to))
-    /*
-        LaunchedEffect(key1 = note) {
-            withContext(Dispatchers.IO) {
-                awardees = noteEvent.awardees().mapNotNull { hex ->
-                    LocalCache.checkGetOrCreateUser(hex)
-                }
+
+    LaunchedEffect(key1 = note) {
+        withContext(Dispatchers.IO) {
+            awardees = noteEvent.awardees().mapNotNull { hex ->
+                LocalCache.checkGetOrCreateUser(hex)
             }
         }
+    }
 
-            FlowRow(modifier = Modifier.padding(top = 5.dp)) {
-                awardees.forEach { user ->
-                    Row(modifier = Modifier.clickable {
-                            navController.navigate("User/${user.pubkeyHex}")
-                        },
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        UserPicture(
-                            baseUser = user,
-                            baseUserAccount = accountViewModel.userProfile(),
-                            size = 35.dp
-                        )
-                    }
-                }
-            }
-
-            note.replyTo?.firstOrNull()?.let {
-                NoteCompose(
-                    it,
-                    modifier = Modifier,
-                    isBoostedNote = false,
-                    isQuotedNote = true,
-                    unPackReply = false,
-                    parentBackgroundColor = backgroundColor,
-                    accountViewModel = accountViewModel,
-                    navController = navController
+    FlowRow(modifier = Modifier.padding(top = 5.dp)) {
+        awardees.forEach { user ->
+            Row(modifier = Modifier.clickable {
+                    navController.navigate("User/${user.pubkeyHex}")
+                },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                UserPicture(
+                    baseUser = user,
+                    baseUserAccount = accountViewModel.userProfile(),
+                    size = 35.dp
                 )
-            }*/
+            }
+        }
+    }
+
+    note.replyTo?.firstOrNull()?.let {
+        NoteCompose(
+            it,
+            modifier = Modifier,
+            isBoostedNote = false,
+            isQuotedNote = true,
+            unPackReply = false,
+            parentBackgroundColor = backgroundColor,
+            accountViewModel = accountViewModel,
+            navController = navController
+        )
+    }
 
     ReactionsRow(note, accountViewModel, navController)
 
@@ -704,9 +698,7 @@ private fun ReplyRow(
 ) {
     val noteEvent = note.event
 
-    if (noteEvent is TextNoteEvent &&
-        (note.replyTo != null || noteEvent.mentions().isNotEmpty())
-    ) {
+    if (noteEvent is TextNoteEvent && (note.replyTo != null || noteEvent.hasAnyTaggedUser())) {
         val replyingDirectlyTo = note.replyTo?.lastOrNull()
         if (replyingDirectlyTo != null && unPackReply) {
             NoteCompose(
@@ -733,10 +725,7 @@ private fun ReplyRow(
         }
 
         Spacer(modifier = Modifier.height(5.dp))
-    } else if (
-        noteEvent is ChannelMessageEvent &&
-        (note.replyTo != null || noteEvent.mentions().isNotEmpty())
-    ) {
+    } else if (noteEvent is ChannelMessageEvent && (note.replyTo != null || noteEvent.hasAnyTaggedUser())) {
         val sortedMentions = noteEvent.mentions()
             .mapNotNull { LocalCache.checkGetOrCreateUser(it) }
             .toSet()
