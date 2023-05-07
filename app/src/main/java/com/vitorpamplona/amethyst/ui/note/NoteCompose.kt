@@ -560,7 +560,8 @@ private fun RenderBadgeAward(
 
     FlowRow(modifier = Modifier.padding(top = 5.dp)) {
         awardees.forEach { user ->
-            Row(modifier = Modifier.clickable {
+            Row(
+                modifier = Modifier.clickable {
                     navController.navigate("User/${user.pubkeyHex}")
                 },
                 verticalAlignment = Alignment.CenterVertically

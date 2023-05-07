@@ -23,7 +23,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
@@ -154,7 +153,7 @@ private fun DisplayNIP05(
 
         ClickableText(
             text = AnnotatedString(domain),
-            onClick = { runCatching { uri.openUri("https://${domain}") } },
+            onClick = { runCatching { uri.openUri("https://$domain") } },
             style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(0.52f)),
             maxLines = 1,
             overflow = TextOverflow.Visible
