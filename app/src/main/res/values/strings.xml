@@ -336,6 +336,10 @@
     <string name="upload_server_nostrbuild">nostr.build - trusted</string>
     <string name="upload_server_nostrbuild_explainer">Nostr.build can modify the file</string>
 
+    <string name="upload_server_nostrfilesdev">nostrfiles.dev - trusted</string>
+    <string name="upload_server_nostrfilesdev_explainer">Nostrfiles.dev can modify the file</string>
+
+
     <string name="upload_server_imgur_nip94">Verifiable Imgur (NIP-94)</string>
     <string name="upload_server_imgur_nip94_explainer">Checks if Imgur modified the file. New NIP: other clients might not see it</string>
 
@@ -344,6 +348,10 @@
 
     <string name="upload_server_nostrbuild_nip94">Verifiable Nostr.build (NIP-94)</string>
     <string name="upload_server_nostrbuild_nip94_explainer">Checks if Nostr.build modified the file. New NIP: other clients might not see it</string>
+
+    <string name="upload_server_nostrfilesdev_nip94">Verifiable Nostrfiles.dev (NIP-94)</string>
+    <string name="upload_server_nostrfilesdev_nip94_explainer">Checks if Nostrfiles.dev modified the file. New NIP: other clients might not see it</string>
+
 
     <string name="upload_server_relays_nip95">Your relays (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Files are hosted by your relays. New NIP: check if they support</string>

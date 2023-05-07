@@ -44,6 +44,8 @@ object ImageUploader {
             NostrImgServer()
         } else if (server == ServersAvailable.NOSTR_BUILD) {
             NostrBuildServer()
+        } else if (server == ServersAvailable.NOSTRFILES_DEV) {
+            NostrfilesDevServer()
         } else {
             ImgurServer()
         }
@@ -172,6 +174,17 @@ class NostrBuildServer : FileServer() {
 
     override fun inputParameterName(contentType: String?): String {
         return "fileToUpload"
+    }
+
+    override fun clientID() = null
+}
+
+class NostrfilesDevServer : FileServer() {
+    override fun postUrl(contentType: String?) = "https://nostrfiles.dev/upload_image"
+    override fun parseUrlFromSucess(body: String): String? {
+        val tree = jacksonObjectMapper().readTree(body)
+        val url = tree?.get("url")?.asText()
+        return url
     }
 
     override fun clientID() = null

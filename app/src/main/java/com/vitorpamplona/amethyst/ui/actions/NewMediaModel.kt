@@ -46,6 +46,8 @@ open class NewMediaModel : ViewModel() {
             selectedServer = ServersAvailable.NOSTRIMG_NIP_94
         } else if (selectedServer == ServersAvailable.NOSTR_BUILD) {
             selectedServer = ServersAvailable.NOSTR_BUILD_NIP_94
+        } else if (selectedServer == ServersAvailable.NOSTRFILES_DEV) {
+            selectedServer = ServersAvailable.NOSTRFILES_DEV_NIP_94
         }
     }
 
