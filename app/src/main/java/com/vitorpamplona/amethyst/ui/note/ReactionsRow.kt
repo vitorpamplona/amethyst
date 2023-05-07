@@ -61,7 +61,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 import java.math.RoundingMode
 import kotlin.math.roundToInt
@@ -322,7 +321,7 @@ fun ZapReaction(
     var zapAmount by remember { mutableStateOf<BigDecimal?>(null) }
 
     LaunchedEffect(key1 = zapsState) {
-        withContext(Dispatchers.IO) {
+        scope.launch(Dispatchers.IO) {
             if (!wasZappedByLoggedInUser) {
                 wasZappedByLoggedInUser = accountViewModel.calculateIfNoteWasZappedByAccount(zappedNote)
             }
@@ -333,7 +332,8 @@ fun ZapReaction(
 
     Row(
         verticalAlignment = CenterVertically,
-        modifier = Modifier.size(iconSize)
+        modifier = Modifier
+            .size(iconSize)
             .combinedClickable(
                 role = Role.Button,
                 interactionSource = remember { MutableInteractionSource() },

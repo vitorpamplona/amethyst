@@ -18,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -34,7 +35,7 @@ import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.service.lang.ResultOrError
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 @Composable
@@ -57,8 +58,10 @@ fun TranslatableRichTextViewer(
     val accountState by accountViewModel.accountLanguagesLiveData.observeAsState()
     val account = accountState?.account ?: return
 
+    val scope = rememberCoroutineScope()
+
     LaunchedEffect(accountState) {
-        withContext(Dispatchers.IO) {
+        scope.launch(Dispatchers.IO) {
             LanguageTranslatorService.autoTranslate(
                 content,
                 account.dontTranslateFrom,

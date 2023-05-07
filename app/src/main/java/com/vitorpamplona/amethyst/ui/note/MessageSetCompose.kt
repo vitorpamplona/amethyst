@@ -17,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,7 +30,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.screen.MessageSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -40,13 +41,15 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, isInnerNote: Boolean = fal
     val noteEvent = note?.event
     var popupExpanded by remember { mutableStateOf(false) }
 
+    val scope = rememberCoroutineScope()
+
     if (note == null) {
         BlankNote(Modifier, isInnerNote)
     } else {
         var isNew by remember { mutableStateOf<Boolean>(false) }
 
         LaunchedEffect(key1 = messageSetCard.createdAt()) {
-            withContext(Dispatchers.IO) {
+            scope.launch(Dispatchers.IO) {
                 isNew =
                     messageSetCard.createdAt() > NotificationCache.load(routeForLastRead)
 

@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Following
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.math.BigDecimal
@@ -174,8 +175,10 @@ fun NoteComposeInner(
     } else {
         var isNew by remember { mutableStateOf<Boolean>(false) }
 
+        val scope = rememberCoroutineScope()
+
         LaunchedEffect(key1 = routeForLastRead) {
-            withContext(Dispatchers.IO) {
+            scope.launch(Dispatchers.IO) {
                 routeForLastRead?.let {
                     val lastTime = NotificationCache.load(it)
 

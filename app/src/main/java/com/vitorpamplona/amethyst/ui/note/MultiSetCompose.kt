@@ -22,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,7 +45,7 @@ import com.vitorpamplona.amethyst.ui.screen.MultiSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -57,13 +58,15 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
 
     var popupExpanded by remember { mutableStateOf(false) }
 
+    val scope = rememberCoroutineScope()
+
     if (note == null) {
         BlankNote(Modifier, false)
     } else {
         var isNew by remember { mutableStateOf<Boolean>(false) }
 
         LaunchedEffect(key1 = multiSetCard.createdAt()) {
-            withContext(Dispatchers.IO) {
+            scope.launch(Dispatchers.IO) {
                 isNew = multiSetCard.createdAt > NotificationCache.load(routeForLastRead)
 
                 NotificationCache.markAsRead(routeForLastRead, multiSetCard.createdAt)
@@ -209,9 +212,10 @@ private fun AuthorPictureAndComment(
     val author = zapRequest.author ?: return
 
     var content by remember { mutableStateOf<Pair<User, String?>>(Pair(author, null)) }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(key1 = zapRequest.idHex) {
-        withContext(Dispatchers.IO) {
+        scope.launch(Dispatchers.IO) {
             (zapRequest.event as? LnZapRequestEvent)?.let {
                 val decryptedContent = accountViewModel.decryptZap(zapRequest)
                 if (decryptedContent != null) {

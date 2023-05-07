@@ -7,6 +7,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.baha.url.preview.IUrlPreviewCallback
@@ -14,7 +15,7 @@ import com.baha.url.preview.UrlInfoItem
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 
 @Composable
 fun UrlPreview(url: String, urlText: String) {
@@ -28,11 +29,12 @@ fun UrlPreview(url: String, urlText: String) {
     val context = LocalContext.current
 
     var urlPreviewState by remember { mutableStateOf<UrlPreviewState>(default) }
+    val scope = rememberCoroutineScope()
 
     // Doesn't use a viewModel because of viewModel reusing issues (too many UrlPreview are created).
     LaunchedEffect(url) {
         if (urlPreviewState == UrlPreviewState.Loading) {
-            withContext(Dispatchers.IO) {
+            scope.launch(Dispatchers.IO) {
                 UrlCachedPreviewer.previewInfo(
                     url,
                     object : IUrlPreviewCallback {
