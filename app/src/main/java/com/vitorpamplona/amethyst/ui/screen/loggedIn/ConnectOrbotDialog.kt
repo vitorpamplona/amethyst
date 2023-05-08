@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -15,12 +16,11 @@ import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -32,14 +32,14 @@ import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.material.MaterialRichText
 import com.halilibo.richtext.ui.resolveDefaults
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.PostButton
+import kotlinx.coroutines.launch
 
 @Composable
-fun ConnectOrbotDialog(account: Account, onClose: () -> Unit, onPost: () -> Unit) {
-    var portNumber by remember { mutableStateOf("9050") }
-
+fun ConnectOrbotDialog(onClose: () -> Unit, onPost: () -> Unit, portNumber: MutableState<String>) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     Dialog(
         onDismissRequest = onClose,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -62,6 +62,19 @@ fun ConnectOrbotDialog(account: Account, onClose: () -> Unit, onPost: () -> Unit
 
                     PostButton(
                         onPost = {
+                            try {
+                                Integer.parseInt(portNumber.value)
+                            } catch (_: Exception) {
+                                scope.launch {
+                                    Toast.makeText(
+                                        context,
+                                        "Invalid port number",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                                return@PostButton
+                            }
+
                             onPost()
                         },
                         isActive = true
@@ -84,8 +97,8 @@ fun ConnectOrbotDialog(account: Account, onClose: () -> Unit, onPost: () -> Unit
                     Spacer(modifier = Modifier.height(10.dp))
 
                     OutlinedTextField(
-                        value = portNumber,
-                        onValueChange = { portNumber = it },
+                        value = portNumber.value,
+                        onValueChange = { portNumber.value = it },
                         keyboardOptions = KeyboardOptions.Default.copy(
                             capitalization = KeyboardCapitalization.None,
                             keyboardType = KeyboardType.Number

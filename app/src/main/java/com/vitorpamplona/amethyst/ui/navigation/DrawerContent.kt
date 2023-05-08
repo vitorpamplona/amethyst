@@ -27,6 +27,7 @@ import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -241,6 +242,7 @@ fun ListContent(
     var checked by remember { mutableStateOf(account.proxy != null) }
     val openDialog = remember { mutableStateOf(false) }
     var conectOrbotDialogOpen by remember { mutableStateOf(false) }
+    var proxyPort = remember { mutableStateOf(account.proxyPort.toString()) }
 
     Column(modifier = modifier.fillMaxHeight()) {
         if (accountUser != null) {
@@ -310,14 +312,14 @@ fun ListContent(
 
     if (conectOrbotDialogOpen) {
         ConnectOrbotDialog(
-            account = account,
             onClose = { conectOrbotDialogOpen = false },
             onPost = {
                 conectOrbotDialogOpen = false
                 openDialog.value = false
                 checked = true
-                enableTor(account, true)
-            }
+                enableTor(account, true, proxyPort)
+            },
+            proxyPort
         )
     }
 
@@ -330,7 +332,7 @@ fun ListContent(
                     onClick = {
                         openDialog.value = false
                         checked = false
-                        enableTor(account, false)
+                        enableTor(account, false, proxyPort)
                     }
                 ) {
                     Text(text = stringResource(R.string.yes))
@@ -351,9 +353,11 @@ fun ListContent(
 
 private fun enableTor(
     account: Account,
-    checked: Boolean
+    checked: Boolean,
+    portNumber: MutableState<String>
 ) {
-    account.proxy = HttpClient.initProxy(checked, "127.0.0.1", 9050)
+    account.proxyPort = portNumber.value.toInt()
+    account.proxy = HttpClient.initProxy(checked, "127.0.0.1", account.proxyPort)
     LocalPreferences.saveToEncryptedStorage(account)
     ServiceManager.pause()
     ServiceManager.start()

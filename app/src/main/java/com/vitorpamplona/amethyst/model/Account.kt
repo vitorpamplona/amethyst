@@ -60,7 +60,8 @@ class Account(
     var hideDeleteRequestDialog: Boolean = false,
     var hideBlockAlertDialog: Boolean = false,
     var backupContactList: ContactListEvent? = null,
-    var proxy: Proxy?
+    var proxy: Proxy?,
+    var proxyPort: Int
 ) {
     var transientHiddenUsers: Set<String> = setOf()
 

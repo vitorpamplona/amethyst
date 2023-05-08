@@ -56,6 +56,7 @@ private object PrefKeys {
     const val HIDE_DELETE_REQUEST_DIALOG = "hide_delete_request_dialog"
     const val HIDE_BLOCK_ALERT_DIALOG = "hide_block_alert_dialog"
     const val USE_PROXY = "use_proxy"
+    const val PROXY_PORT = "proxy_port"
     val LAST_READ: (String) -> String = { route -> "last_read_route_$route" }
 }
 
@@ -209,8 +210,8 @@ object LocalPreferences {
             putString(PrefKeys.LATEST_CONTACT_LIST, Event.gson.toJson(account.backupContactList))
             putBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, account.hideDeleteRequestDialog)
             putBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, account.hideBlockAlertDialog)
-            println(account.proxy != null)
             putBoolean(PrefKeys.USE_PROXY, account.proxy != null)
+            putInt(PrefKeys.PROXY_PORT, account.proxyPort)
         }.apply()
     }
 
@@ -279,7 +280,8 @@ object LocalPreferences {
             val hideDeleteRequestDialog = getBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, false)
             val hideBlockAlertDialog = getBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, false)
             val useProxy = getBoolean(PrefKeys.USE_PROXY, false)
-            val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", 9050)
+            val proxyPort = getInt(PrefKeys.PROXY_PORT, 9050)
+            val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", proxyPort)
 
             val a = Account(
                 Persona(privKey = privKey?.toByteArray(), pubKey = pubKey.toByteArray()),
@@ -298,7 +300,8 @@ object LocalPreferences {
                 hideDeleteRequestDialog,
                 hideBlockAlertDialog,
                 latestContactList,
-                proxy
+                proxy,
+                proxyPort
             )
 
             return a

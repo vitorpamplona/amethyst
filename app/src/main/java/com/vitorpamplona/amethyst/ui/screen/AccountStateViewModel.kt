@@ -40,22 +40,22 @@ class AccountStateViewModel() : ViewModel() {
         }
     }
 
-    fun startUI(key: String, useProxy: Boolean) {
+    fun startUI(key: String, useProxy: Boolean, proxyPort: Int) {
         val pattern = Pattern.compile(".+@.+\\.[a-z]+")
         val parsed = Nip19.uriToRoute(key)
         val pubKeyParsed = parsed?.hex?.toByteArray()
-        val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", 9050)
+        val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", proxyPort)
 
         val account =
             if (key.startsWith("nsec")) {
-                Account(Persona(privKey = key.bechToBytes()), proxy = proxy)
+                Account(Persona(privKey = key.bechToBytes()), proxy = proxy, proxyPort = proxyPort)
             } else if (pubKeyParsed != null) {
-                Account(Persona(pubKey = pubKeyParsed), proxy = proxy)
+                Account(Persona(pubKey = pubKeyParsed), proxy = proxy, proxyPort = proxyPort)
             } else if (pattern.matcher(key).matches()) {
                 // Evaluate NIP-5
-                Account(Persona(), proxy = proxy)
+                Account(Persona(), proxy = proxy, proxyPort = proxyPort)
             } else {
-                Account(Persona(Hex.decode(key)), proxy = proxy)
+                Account(Persona(Hex.decode(key)), proxy = proxy, proxyPort = proxyPort)
             }
 
         LocalPreferences.updatePrefsForLogin(account)
@@ -68,9 +68,9 @@ class AccountStateViewModel() : ViewModel() {
         tryLoginExistingAccount()
     }
 
-    fun newKey(useProxy: Boolean) {
-        var proxy = HttpClient.initProxy(useProxy, "127.0.0.1", 9050)
-        val account = Account(Persona(), proxy = proxy)
+    fun newKey(useProxy: Boolean, proxyPort: Int) {
+        val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", proxyPort)
+        val account = Account(Persona(), proxy = proxy, proxyPort = proxyPort)
         // saves to local preferences
         LocalPreferences.updatePrefsForLogin(account)
         startUI(account)

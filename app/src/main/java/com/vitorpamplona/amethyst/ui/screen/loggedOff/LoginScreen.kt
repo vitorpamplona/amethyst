@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
 import java.util.*
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -57,6 +58,8 @@ fun LoginPage(
         mutableStateOf(false)
     }
     val useProxy = remember { mutableStateOf(false) }
+    val proxyPort = remember { mutableStateOf("9050") }
+    var connectOrbotDialogOpen by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -160,7 +163,7 @@ fun LoginPage(
                 keyboardActions = KeyboardActions(
                     onGo = {
                         try {
-                            accountViewModel.startUI(key.value.text, useProxy.value)
+                            accountViewModel.startUI(key.value.text, useProxy.value, proxyPort.value.toInt())
                         } catch (e: Exception) {
                             errorMessage = context.getString(R.string.invalid_key)
                         }
@@ -227,10 +230,25 @@ fun LoginPage(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(
                         checked = useProxy.value,
-                        onCheckedChange = { useProxy.value = it }
+                        onCheckedChange = {
+                            if (it) {
+                                connectOrbotDialogOpen = true
+                            }
+                        }
                     )
 
                     Text(stringResource(R.string.connect_via_tor))
+                }
+
+                if (connectOrbotDialogOpen) {
+                    ConnectOrbotDialog(
+                        onClose = { connectOrbotDialogOpen = false },
+                        onPost = {
+                            connectOrbotDialogOpen = false
+                            useProxy.value = true
+                        },
+                        proxyPort
+                    )
                 }
             }
 
@@ -250,7 +268,7 @@ fun LoginPage(
 
                         if (acceptedTerms.value && key.value.text.isNotBlank()) {
                             try {
-                                accountViewModel.startUI(key.value.text, useProxy.value)
+                                accountViewModel.startUI(key.value.text, useProxy.value, proxyPort.value.toInt())
                             } catch (e: Exception) {
                                 errorMessage = context.getString(R.string.invalid_key)
                             }
@@ -278,7 +296,7 @@ fun LoginPage(
                 .fillMaxWidth(),
             onClick = {
                 if (acceptedTerms.value) {
-                    accountViewModel.newKey(useProxy.value)
+                    accountViewModel.newKey(useProxy.value, proxyPort.value.toInt())
                 } else {
                     termsAcceptanceIsRequired =
                         context.getString(R.string.acceptance_of_terms_is_required)
