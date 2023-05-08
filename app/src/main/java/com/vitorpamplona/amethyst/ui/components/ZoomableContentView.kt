@@ -259,7 +259,6 @@ private fun UrlImageView(
     content: ZoomableUrlImage,
     mainImageModifier: Modifier
 ) {
-    println("UrlImageView")
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 

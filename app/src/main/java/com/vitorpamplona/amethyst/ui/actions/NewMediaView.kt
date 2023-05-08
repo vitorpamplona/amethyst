@@ -110,7 +110,10 @@ fun NewMediaView(uri: Uri, onClose: () -> Unit, postViewModel: NewMediaModel, ac
 }
 
 fun isNIP94Server(selectedServer: ServersAvailable?): Boolean {
-    return selectedServer == ServersAvailable.NOSTRIMG_NIP_94 || selectedServer == ServersAvailable.IMGUR_NIP_94 || selectedServer == ServersAvailable.NOSTR_BUILD_NIP_94 || selectedServer == ServersAvailable.NOSTRFILES_DEV_NIP_94
+    return selectedServer == ServersAvailable.NOSTRIMG_NIP_94
+        || selectedServer == ServersAvailable.IMGUR_NIP_94
+        || selectedServer == ServersAvailable.NOSTR_BUILD_NIP_94
+        || selectedServer == ServersAvailable.NOSTRFILES_DEV_NIP_94
 }
 
 @Composable

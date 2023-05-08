@@ -14,7 +14,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
+import java.net.HttpURLConnection
 import java.net.URL
+
 
 open class NewMediaModel : ViewModel() {
     var account: Account? = null
@@ -116,19 +118,7 @@ open class NewMediaModel : ViewModel() {
             uploadingDescription.value = "Server Processing"
             // Images don't seem to be ready immediately after upload
 
-            var imageData: ByteArray? = null
-            var tentatives = 0
-
-            // Servers are usually not ready.. so tries to download it for 15 times/seconds.
-            while (imageData == null && tentatives < 15) {
-                imageData = try {
-                    URL(imageUrl).readBytes()
-                } catch (e: Exception) {
-                    tentatives++
-                    delay(1000)
-                    null
-                }
-            }
+            val imageData: ByteArray? = ImageDownloader().waitAndGetImage(imageUrl)
 
             uploadingDescription.value = "Downloading"
             uploadingPercentage.value = 0.60f

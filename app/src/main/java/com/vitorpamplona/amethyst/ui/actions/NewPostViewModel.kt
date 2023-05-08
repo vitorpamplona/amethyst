@@ -287,13 +287,6 @@ open class NewPostViewModel : ViewModel() {
     fun createNIP94Record(imageUrl: String, mimeType: String?, description: String) {
         viewModelScope.launch(Dispatchers.IO) {
             // Images don't seem to be ready immediately after upload
-
-            if (mimeType?.startsWith("image/") == true) {
-                delay(2000)
-            } else {
-                delay(5000)
-            }
-
             FileHeader.prepare(
                 imageUrl,
                 mimeType,

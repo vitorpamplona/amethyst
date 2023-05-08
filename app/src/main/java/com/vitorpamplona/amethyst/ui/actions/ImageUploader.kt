@@ -38,16 +38,22 @@ object ImageUploader {
         checkNotNull(imageInputStream) {
             "Can't open the image input stream"
         }
-        val myServer = if (server == ServersAvailable.IMGUR) {
-            ImgurServer()
-        } else if (server == ServersAvailable.NOSTRIMG) {
-            NostrImgServer()
-        } else if (server == ServersAvailable.NOSTR_BUILD) {
-            NostrBuildServer()
-        } else if (server == ServersAvailable.NOSTRFILES_DEV) {
-            NostrFilesDevServer()
-        } else {
-            ImgurServer()
+        val myServer = when (server) {
+            ServersAvailable.IMGUR, ServersAvailable.IMGUR_NIP_94 -> {
+                ImgurServer()
+            }
+            ServersAvailable.NOSTRIMG, ServersAvailable.NOSTRIMG_NIP_94 -> {
+                NostrImgServer()
+            }
+            ServersAvailable.NOSTR_BUILD, ServersAvailable.NOSTR_BUILD_NIP_94 -> {
+                NostrBuildServer()
+            }
+            ServersAvailable.NOSTRFILES_DEV, ServersAvailable.NOSTRFILES_DEV_NIP_94 -> {
+                NostrFilesDevServer()
+            }
+            else -> {
+                ImgurServer()
+            }
         }
 
         uploadImage(imageInputStream, length, contentType, myServer, onSuccess, onError)
@@ -101,7 +107,7 @@ object ImageUploader {
                 try {
                     check(response.isSuccessful)
                     response.body.use { body ->
-                        val url = server.parseUrlFromSucess(body.string())
+                        val url = server.parseUrlFromSuccess(body.string())
                         checkNotNull(url) {
                             "There must be an uploaded image URL in the response"
                         }
@@ -124,7 +130,7 @@ object ImageUploader {
 
 abstract class FileServer {
     abstract fun postUrl(contentType: String?): String
-    abstract fun parseUrlFromSucess(body: String): String?
+    abstract fun parseUrlFromSuccess(body: String): String?
     abstract fun inputParameterName(contentType: String?): String
 
     open fun clientID(): String? = null
@@ -133,7 +139,7 @@ abstract class FileServer {
 class NostrImgServer : FileServer() {
     override fun postUrl(contentType: String?) = "https://nostrimg.com/api/upload"
 
-    override fun parseUrlFromSucess(body: String): String? {
+    override fun parseUrlFromSuccess(body: String): String? {
         val tree = jacksonObjectMapper().readTree(body)
         val url = tree?.get("data")?.get("link")?.asText()
         return url
@@ -152,7 +158,7 @@ class ImgurServer : FileServer() {
         return if (category == "image") "https://api.imgur.com/3/image" else "https://api.imgur.com/3/upload"
     }
 
-    override fun parseUrlFromSucess(body: String): String? {
+    override fun parseUrlFromSuccess(body: String): String? {
         val tree = jacksonObjectMapper().readTree(body)
         val url = tree?.get("data")?.get("link")?.asText()
         return url
@@ -167,7 +173,7 @@ class ImgurServer : FileServer() {
 
 class NostrBuildServer : FileServer() {
     override fun postUrl(contentType: String?) = "https://nostr.build/api/upload/android.php"
-    override fun parseUrlFromSucess(body: String): String? {
+    override fun parseUrlFromSuccess(body: String): String? {
         val url = jacksonObjectMapper().readTree(body) // return url.toString()
         return url.toString().replace("\"", "")
     }
@@ -181,10 +187,9 @@ class NostrBuildServer : FileServer() {
 
 class NostrFilesDevServer : FileServer() {
     override fun postUrl(contentType: String?) = "https://nostrfiles.dev/upload_image"
-    override fun parseUrlFromSucess(body: String): String? {
+    override fun parseUrlFromSuccess(body: String): String? {
         val tree = jacksonObjectMapper().readTree(body)
-        val url = tree?.get("url")?.asText()
-        return url
+        return tree?.get("url")?.asText()
     }
 
     override fun inputParameterName(contentType: String?): String {
