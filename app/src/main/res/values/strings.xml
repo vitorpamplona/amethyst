@@ -2,9 +2,9 @@
     <string name="app_name_release" translatable="false">Amethyst</string>
     <string name="app_name_debug" translatable="false">Amethyst Debug</string>
     <string name="point_to_the_qr_code">اشاره کنید QR به کد</string>
-    <string name="show_qr">را نشان بده QR</string>
+    <string name="show_qr">کد را نشان بده QR</string>
     <string name="profile_image">تصویر پروفایل</string>
-    <string name="scan_qr"> QRاسکن</string>
+    <string name="scan_qr">کد QR اسکن</string>
     <string name="show_anyway">بهر حال نشان بده</string>
     <string name="post_was_flagged_as_inappropriate_by">این پست توسط این افراد نامناسب اعلام شده</string>
     <string name="post_not_found">این پست یافت نشد</string>
@@ -25,14 +25,14 @@
     <string name="broadcast">انتشار</string>
     <string name="request_deletion">درخواست حذف/string>
     <string name="block_hide_user">بلاک/پنهان کردن کاربر</string>
-    <string name="report_spam_scam">گزارش اسپم/ کلاهبرداری</string>
+    <string name="report_spam_scam">گزارش اسپم/کلاهبرداری</string>
     <string name="report_impersonation">گزارش جعل هویت</string>
     <string name="report_explicit_content">گزارش محتوای نامناسب</string>
     <string name="report_illegal_behaviour">گزارش رفتار ناهنجار</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">با کلید خصوصی وارد شوید تا بتوانید پاسخ دهید</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">با کلید خصوصی وارد شوید تا بتوانید نوت را بازارسال کنید</string>
     <string name="login_with_a_private_key_to_like_posts">با کلید خصوصی وارد شوید تا بتوانید نوت را لایک کنید</string>
-    <string name="no_zap_amount_setup_long_press_to_change">مقداری برای زب تعیین نشده. نگه دارید تا تغییر دهید</string>
+    <string name="no_zap_amount_setup_long_press_to_change">مقداری برای زپ تعیین نشده. نگه دارید تا تغییر دهید</string>
     <string name="login_with_a_private_key_to_be_able_to_send_zaps">با کلید خصوصی وارد شوید تا بتوانید زپ کنید</string>
     <string name="zaps">زپ</string>
     <string name="view_count">دیدن تعداد</string>
@@ -45,8 +45,8 @@
     <string name="and">" و "</string>
     <string name="in_channel">"در کانال "</string>
     <string name="profile_banner">بنر پروفایل</string>
-    <string name="following">" دنبال شونده"</string>
-    <string name="followers">" دنبال کننده"</string>
+    <string name="following">"دنبال شونده"</string>
+    <string name="followers">"دنبال کننده"</string>
     <string name="profile">پروفایل</string>
     <string name="security_filters">فیلترهای ایمنی</string>
     <string name="log_out">خروج</string>
@@ -93,11 +93,11 @@
     <string name="ln_address">آدرس لایتنینگ</string>
     <string name="ln_url_outdated">آدرس لایتنینگ(نقل شده)</string>
     <string name="image_saved_to_the_gallery">تصویر در گالری ذخیره شد</string>
-    <string name="failed_to_save_the_image">تصویر خیره نشد</string>
+    <string name="failed_to_save_the_image">تصویر ذخیره نشد</string>
     <string name="upload_image">بارگذاری تصویر</string>
-    <string name="uploading">در حال بارگذازی...</string>
-    <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">کاربر آدرس لایتنینگ برای دریافت ساتوشی تنظیم نکرده است</string>
-    <string name="reply_here">"اینجا پاسخ دهید... "</string>
+    <string name="uploading">...در حال بارگذاری</string>
+    <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">این کاربر آدرس لایتنینگ برای دریافت ساتوشی تنظیم نکرده است</string>
+    <string name="reply_here">"...اینجا پاسخ دهید "</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">شناسه نوت را برای اشتراک گذاری در کلیپبورد ذخیره می کند </string>
     <string name="copy_channel_id_note_to_the_clipboard">ذخیره شناسه کانال در کلیپبورد</string>
     <string name="edits_the_channel_metadata">متادیتای کانال را ذخیره می کند</string>
@@ -138,32 +138,32 @@
     <string name="acceptance_of_terms_is_required">پذیرش شرایط الازمیست</string>
     <string name="key_is_required">کلید الزامیست</string>
     <string name="login">ورود</string>
-    <string name="generate_a_new_key">ساختن کلید جدید</string>
-    <string name="loading_feed">Loading feed</string>
-    <string name="error_loading_replies">"Error loading replies: "</string>
-    <string name="try_again">Try again</string>
-    <string name="feed_is_empty">Feed is empty.</string>
-    <string name="refresh">Refresh</string>
-    <string name="created">created</string>
-    <string name="with_description_of">with description of</string>
-    <string name="and_picture">and picture</string>
-    <string name="changed_chat_name_to">changed chat name to</string>
-    <string name="description_to">description to</string>
-    <string name="and_picture_to">and picture to</string>
-    <string name="leave">Leave</string>
-    <string name="unfollow">Unfollow</string>
-    <string name="channel_created">Channel created</string>
-    <string name="channel_information_changed_to">"Channel Information changed to"</string>
-    <string name="public_chat">Public Chat</string>
-    <string name="posts_received">posts received</string>
-    <string name="remove">Remove</string>
-    <string name="sats" translatable="false">sats</string>
-    <string name="translations_auto">Auto</string>
-    <string name="translations_translated_from">translated from</string>
-    <string name="translations_to">to</string>
-    <string name="translations_show_in_lang_first">Show in %1$s first</string>
-    <string name="translations_always_translate_to_lang">Always translate to %1$s</string>
-    <string name="translations_never_translate_from_lang">Never translate from %1$s</string>
+    <string name="generate_a_new_key">ساختن جفت کلید جدید</string>
+    <string name="loading_feed">در حال بارگذاری خبرنامه</string>
+    <string name="error_loading_replies">" :خطا در بارگذاری پاسخ ها"</string>
+    <string name="try_again">دوباره تلاش کنید</string>
+    <string name="feed_is_empty">خبرنامه خالیست</string>
+    <string name="refresh">تازه سازی</string>
+    <string name="created">ساخته شد</string>
+    <string name="with_description_of">با توصیف</string>
+    <string name="and_picture">و تصویر</string>
+    <string name="changed_chat_name_to">نام گفتگو تغییر کرد به</string>
+    <string name="description_to">تصویر</string>
+    <string name="and_picture_to">و تصویر به</string>
+    <string name="leave">ترک کردن</string>
+    <string name="unfollow">دنبال نکردن</string>
+    <string name="channel_created">کانال ساخته شد</string>
+    <string name="channel_information_changed_to">"اطلاعات کانال تغییر کرد به"</string>
+    <string name="public_chat">گفتگوی عمومی</string>
+    <string name="posts_received">نوت های دریافت شده</string>
+    <string name="remove">بیرون کردن</string>
+    <string name="sats" translatable="false">ساتوشی</string>
+    <string name="translations_auto">خودکار</string>
+    <string name="translations_translated_from">ترجمه از</string>
+    <string name="translations_to">به</string>
+    <string name="translations_show_in_lang_first">نشان بده s%1$ ابتدا به</string>
+    <string name="translations_always_translate_to_lang">همیشه به  ترجمه کن %1$s</string>
+    <string name="translations_never_translate_from_lang">هرگز به ترجمه نکن %1$s</string>
     <string name="nip_05" translatable="false">NIP-05</string>
     <string name="lnurl" translatable="false">LNURL...</string>
     <string name="never">never</string>
