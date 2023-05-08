@@ -916,7 +916,7 @@ object LocalCache {
 class LocalCacheLiveData : LiveData<Set<Note>>(setOf<Note>()) {
 
     // Refreshes observers in batches.
-    private val bundler = BundledInsert<Note>(300, Dispatchers.Main)
+    private val bundler = BundledInsert<Note>(300, Dispatchers.IO)
 
     fun invalidateData(newNote: Note) {
         bundler.invalidateList(newNote) { bundledNewNotes ->

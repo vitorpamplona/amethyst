@@ -55,18 +55,14 @@ class AntiSpamFilter {
 class AntiSpamLiveData(val cache: AntiSpamFilter) : LiveData<AntiSpamState>(AntiSpamState(cache)) {
 
     // Refreshes observers in batches.
-    private val bundler = BundledUpdate(300, Dispatchers.Main) {
+    private val bundler = BundledUpdate(300, Dispatchers.IO) {
         if (hasActiveObservers()) {
-            refresh()
+            postValue(AntiSpamState(cache))
         }
     }
 
     fun invalidateData() {
         bundler.invalidate()
-    }
-
-    private fun refresh() {
-        postValue(AntiSpamState(cache))
     }
 }
 

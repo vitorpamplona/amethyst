@@ -67,7 +67,7 @@ fun ChatroomFeedView(viewModel: FeedViewModel, accountViewModel: AccountViewMode
                         }
                     }
                 }
-                FeedState.Loading -> {
+                is FeedState.Loading -> {
                     LoadingFeed()
                 }
             }

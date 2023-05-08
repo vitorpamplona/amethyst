@@ -89,7 +89,9 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
                 .background(backgroundColor)
                 .combinedClickable(
                     onClick = {
-                        routeFor(note, account.userProfile())?.let { navController.navigate(it) }
+                        scope.launch {
+                            routeFor(note, account.userProfile())?.let { navController.navigate(it) }
+                        }
                     },
                     onLongClick = { popupExpanded = true }
                 )

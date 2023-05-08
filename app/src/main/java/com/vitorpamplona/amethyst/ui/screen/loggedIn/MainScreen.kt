@@ -41,7 +41,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: AccountStateViewModel, startingPage: String? = null) {
-    val coroutineScope = rememberCoroutineScope()
+    val scope = rememberCoroutineScope()
     val navController = rememberNavController()
     val scaffoldState = rememberScaffoldState(rememberDrawerState(DrawerValue.Closed))
     val sheetState = rememberModalBottomSheetState(
@@ -69,7 +69,7 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
             drawerContent = {
                 DrawerContent(navController, scaffoldState, sheetState, accountViewModel)
                 BackHandler(enabled = scaffoldState.drawerState.isOpen) {
-                    coroutineScope.launch { scaffoldState.drawerState.close() }
+                    scope.launch { scaffoldState.drawerState.close() }
                 }
             },
             floatingActionButton = {

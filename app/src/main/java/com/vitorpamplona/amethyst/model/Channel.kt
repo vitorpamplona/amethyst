@@ -74,18 +74,14 @@ class Channel(val idHex: String) {
 
 class ChannelLiveData(val channel: Channel) : LiveData<ChannelState>(ChannelState(channel)) {
     // Refreshes observers in batches.
-    private val bundler = BundledUpdate(300, Dispatchers.Main) {
+    private val bundler = BundledUpdate(300, Dispatchers.IO) {
         if (hasActiveObservers()) {
-            refresh()
+            postValue(ChannelState(channel))
         }
     }
 
     fun invalidateData() {
         bundler.invalidate()
-    }
-
-    private fun refresh() {
-        postValue(ChannelState(channel))
     }
 
     override fun onActive() {

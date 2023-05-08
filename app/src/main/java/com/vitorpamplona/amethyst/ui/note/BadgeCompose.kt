@@ -75,10 +75,12 @@ fun BadgeCompose(likeSetCard: BadgeCard, isInnerNote: Boolean = false, routeForL
                 .background(backgroundColor)
                 .combinedClickable(
                     onClick = {
-                        routeFor(
-                            note,
-                            accountViewModel.userProfile()
-                        )?.let { navController.navigate(it) }
+                        scope.launch {
+                            routeFor(
+                                note,
+                                accountViewModel.userProfile()
+                            )?.let { navController.navigate(it) }
+                        }
                     },
                     onLongClick = { popupExpanded = true }
                 )
