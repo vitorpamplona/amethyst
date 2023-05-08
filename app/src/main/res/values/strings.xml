@@ -217,7 +217,7 @@
     <string name="account_switch_pubkey_only">فقط خواندن، کلید خصوصی ندارد</string>
     <string name="back">بازگشت</string>
     <string name="quick_action_select">انتخاب</string>
-    <string name="quick_action_share_browser_link">اشتراک گذاری لینک پیمایش</string>
+    <string name="quick_action_share_browser_link">اشتراک گذاری لینک پیماینده</string>
     <string name="quick_action_share">اشتراک گذاری</string>
     <string name="quick_action_copy_user_id">شناسه نویسنده</string>
     <string name="quick_action_copy_note_id">شناسه نوت</string>
@@ -238,120 +238,120 @@
     <string name="report_dialog_impersonation">جعل هویت بدخواهانه</string>
     <string name="report_dialog_nudity">محتوای برهنگی یا نمایان</string>
     <string name="report_dialog_illegal">رفتار ناهنجار</string>
-    <string name="report_dialog_blocking_a_user">Blocking a user will hide their content in your app. Your notes are still publicly viewable, including to people you block. Blocked users are listed on the Security Filters screen.</string>
+    <string name="report_dialog_blocking_a_user">بلاک کردن کاربر محتوای ایشان را در اپ شما پنهان می کند. نوت های شما همچنا بطور عمومی دیده می شوند که شامل کاربران بلاک شده توسط شما نیز هست. کاربران بلاک شده در صفحه فیلترهای ایمنی ففهرست می شوند.</string>
     <string name="report_dialog_block_hide_user_btn"><![CDATA[Block & Hide User]]></string>
-    <string name="report_dialog_report_btn">Report Abuse</string>
-    <string name="report_dialog_reminder_public">All reports posted will be publicly visible.</string>
-    <string name="report_dialog_additional_reason_placeholder">Optionally provide additional context about your report…</string>
-    <string name="report_dialog_additional_reason_label">Additional Context</string>
-    <string name="report_dialog_select_reason_label">Reason</string>
-    <string name="report_dialog_select_reason_placeholder">Select a reason…</string>
-    <string name="report_dialog_post_report_btn">Post Report</string>
-    <string name="report_dialog_title">Block and Report</string>
-    <string name="block_only">Block</string>
+    <string name="report_dialog_report_btn">گزارش سواستفاده</string>
+    <string name="report_dialog_reminder_public">تمام گزارش ها بطور عمومی دیده می شوند</string>
+    <string name="report_dialog_additional_reason_placeholder">در صورت تمایل توضیحاتی به گزارش خود بیفزایید...</string>
+    <string name="report_dialog_additional_reason_label">توضیحات اضافه</string>
+    <string name="report_dialog_select_reason_label">دلایل</string>
+    <string name="report_dialog_select_reason_placeholder">دلیلی انتخاب کنید...</string>
+    <string name="report_dialog_post_report_btn">گزارش نوت</string>
+    <string name="report_dialog_title">بلاک و گزارش</string>
+    <string name="block_only">بلاک</string>
 
-    <string name="bookmarks">Bookmarks</string>
-    <string name="private_bookmarks">Private Bookmarks</string>
-    <string name="public_bookmarks">Public Bookmarks</string>
-    <string name="add_to_private_bookmarks">Add to Private Bookmarks</string>
-    <string name="add_to_public_bookmarks">Add to Public Bookmarks</string>
-    <string name="remove_from_private_bookmarks">Remove from Private Bookmarks</string>
-    <string name="remove_from_public_bookmarks">Remove from Public Bookmarks</string>
+    <string name="bookmarks">علامت گذاشته ها</string>
+    <string name="private_bookmarks">علامت گاشته های خصوصی</string>
+    <string name="public_bookmarks">علامت گذاشته های عمومی</string>
+    <string name="add_to_private_bookmarks">افزودن به علامت گذاشته های خصوصی</string>
+    <string name="add_to_public_bookmarks">افزودن به علامت گذاشته های عمومی</string>
+    <string name="remove_from_private_bookmarks">برداشتن از علامت گذاشته های خصوصی</string>
+    <string name="remove_from_public_bookmarks">برداشتن از علامت گذاشته های خصوصی</string>
 
-    <string name="wallet_connect_service">Wallet Connect Service</string>
-    <string name="wallet_connect_service_explainer">Authorizes a Nostr Secret to pay zaps without leaving the app. Keep the secret safe and use a private relay if possible</string>
-    <string name="wallet_connect_service_pubkey">Wallet Connect Pubkey</string>
-    <string name="wallet_connect_service_relay">Wallet Connect Relay</string>
-    <string name="wallet_connect_service_secret">Wallet Connect Secret</string>
-    <string name="wallet_connect_service_show_secret">Show secret key</string>
-    <string name="wallet_connect_service_secret_placeholder">nsec / hex private key</string>
+    <string name="wallet_connect_service">خدمات اتصال به کیف پول</string>
+    <string name="wallet_connect_service_explainer">اجازه رمز نوستر برای پرداخت زپ بدون خارج شدن از اپ. رمز را ایمن نگه دارید و در صورت امکان از رله خصوصی استفاده کنید.</string>
+    <string name="wallet_connect_service_pubkey">کلید عمومی اتصال به کیف پول</string>
+    <string name="wallet_connect_service_relay">رله اتصال به کیف پول</string>
+    <string name="wallet_connect_service_secret">رمز اتصال به کیف پول</string>
+    <string name="wallet_connect_service_show_secret">نمایش کلید خصوصی</string>
+    <string name="wallet_connect_service_secret_placeholder">nsec / hex کلید خصوصی</string>
 
-    <string name="pledge_amount_in_sats">Pledge Amount in Sats</string>
-    <string name="post_poll">Post Poll</string>
-    <string name="poll_heading_required">Required fields:</string>
-    <string name="poll_zap_recipients">Zap recipients</string>
-    <string name="poll_primary_description">Primary poll description…</string>
-    <string name="poll_option_index">Option %s</string>
-    <string name="poll_option_description">Poll option description</string>
-    <string name="poll_heading_optional">Optional fields:</string>
-    <string name="poll_zap_value_min">Zap minimum</string>
-    <string name="poll_zap_value_max">Zap maximum</string>
-    <string name="poll_consensus_threshold">Consensus</string>
+    <string name="pledge_amount_in_sats">مبلغ وثیقه به ساتوشی</string>
+    <string name="post_poll">ارسال نظرسنجی</string>
+    <string name="poll_heading_required">قسمت های الزامی:</string>
+    <string name="poll_zap_recipients">دریافت کنندگان زپ</string>
+    <string name="poll_primary_description">توضیحات اولیه نظرسنجی…</string>
+    <string name="poll_option_index">گزینه ها %s</string>
+    <string name="poll_option_description">توضیح گزینه های نظرسنجی</string>
+    <string name="poll_heading_optional">قسمت های اختیاری:</string>
+    <string name="poll_zap_value_min">حداقل زپ</string>
+    <string name="poll_zap_value_max">حداکثر زپ</string>
+    <string name="poll_consensus_threshold">توافق نظر</string>
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
-    <string name="poll_closing_time">Close after</string>
-    <string name="poll_closing_time_days">days</string>
-    <string name="poll_is_closed">Poll is closed to new votes</string>
-    <string name="poll_zap_amount">Zap amount</string>
-    <string name="one_vote_per_user_on_atomic_votes">Only one vote per user is allowed on this type of poll</string>
+    <string name="poll_closing_time">بسته شدن پس از</string>
+    <string name="poll_closing_time_days">روز</string>
+    <string name="poll_is_closed">نظر سنجی برای رای جدید بسته است</string>
+    <string name="poll_zap_amount">مبلغ زپ</string>
+    <string name="one_vote_per_user_on_atomic_votes"فقط یک رای به ازای هر کاربر در این نوع نظرسنجی مجاز است</string>
 
-    <string name="looking_for_event">"Looking for Event %1$s"</string>
+    <string name="looking_for_event">"جستجوی رویداد %1$s"</string>
 
-    <string name="custom_zaps_add_a_message">Add a public message</string>
-    <string name="custom_zaps_add_a_message_private">Add a private message</string>
-    <string name="custom_zaps_add_a_message_nonzap">Add an invoice message</string>
+    <string name="custom_zaps_add_a_message">افزودن پیام عمومی</string>
+    <string name="custom_zaps_add_a_message_private">افزودن پیام خصوصی</string>
+    <string name="custom_zaps_add_a_message_nonzap">افزودن پیام اینویس</string>
 
-    <string name="custom_zaps_add_a_message_example">Thank you for all your work!</string>
+    <string name="custom_zaps_add_a_message_example">از زحمات شما متشکریم!</string>
 
-    <string name="lightning_create_and_add_invoice">Create and Add</string>
-    <string name="poll_author_no_vote">Poll authors can\'t vote in their own polls.</string>
-    <string name="poll_hashtag" translatable="false">#zappoll</string>
-
-
-    <string name="hash_verification_passed">Image is the same since the post</string>
-    <string name="hash_verification_failed">Image has changed. The author might not have seen the change</string>
-
-    <string name="content_description_add_image">Add Image</string>
-    <string name="content_description_add_video">Add Video</string>
-    <string name="content_description_add_document">Add Document</string>
-
-    <string name="add_content">Add to Message</string>
-    <string name="content_description">Description of the contents</string>
-    <string name="content_description_example">A blue boat in a white sandy beach at sunset</string>
-
-    <string name="zap_type">Zap Type</string>
-    <string name="zap_type_explainer">Zap Type for all options</string>
-
-    <string name="zap_type_public">Public</string>
-    <string name="zap_type_public_explainer">Everybody can see the transaction and message</string>
-
-    <string name="zap_type_private">Private</string>
-    <string name="zap_type_private_explainer">Sender and Receiver can see each other and read the message</string>
-
-    <string name="zap_type_anonymous">Anonymous</string>
-    <string name="zap_type_anonymous_explainer">Receiver and the public does not know who sent the payment</string>
-
-    <string name="zap_type_nonzap">Non-Zap</string>
-    <string name="zap_type_nonzap_explainer">No trace in Nostr, only in Lightning</string>
+    <string name="lightning_create_and_add_invoice">ساختن و افزودن</string>
+    <string name="poll_author_no_vote">سازندگان نظرسنجی نمی توانند در نظر سنجی خود رای دهند.</string>
+    <string name="poll_hashtag" translatable="false">#زپ_نظرسنجی</string>
 
 
-    <string name="file_server">File Server</string>
-    <string name="zap_forward_lnAddress">LnAddress or @User</string>
+    <string name="hash_verification_passed">تصویر از زمان ارسال یکسان است</string>
+    <string name="hash_verification_failed">تصویر تغییر کرده است. ممکن است نویسنده تغییر را ندیده باشد.</string>
 
-    <string name="upload_server_imgur">imgur.com - trusted</string>
-    <string name="upload_server_imgur_explainer">Imgur can modify the file</string>
+    <string name="content_description_add_image">افزودن تصویر</string>
+    <string name="content_description_add_video">افزودن فیلم</string>
+    <string name="content_description_add_document">افزودن مدارک</string>
 
-    <string name="upload_server_nostrimg">nostrimg.com - trusted</string>
-    <string name="upload_server_nostrimg_explainer">NostrImg can modify the file</string>
+    <string name="add_content">افزودن به پیام</string>
+    <string name="content_description">توصیف محتوا</string>
+    <string name="content_description_example">قایقی آبی در ساحل شنی سفید هنگام غروب</string>
 
-    <string name="upload_server_nostrbuild">nostr.build - trusted</string>
+    <string name="zap_type">نوع زپ</string>
+    <string name="zap_type_explainer">نوع زپ برای همه گزینه ها</string>
+
+    <string name="zap_type_public">عمومی</string>
+    <string name="zap_type_public_explainer">همه می توانند تراکنش و پیام را ببینند</string>
+
+    <string name="zap_type_private">خصوصی</string>
+    <string name="zap_type_private_explainer">فرستنده و گیرنده می توانند یکدیگر و پیام را ببینند</string>
+
+    <string name="zap_type_anonymous">ناشناس</string>
+    <string name="zap_type_anonymous_explainer">گیرنده و دیگران نمی دانند چه کسی پرداخت کرده است</string>
+
+    <string name="zap_type_nonzap">غیرزپ</string>
+    <string name="zap_type_nonzap_explainer">هیچ ردی در نوستر نمی ماند، فقط در شبکه لایتنینگ انجام می شود</string>
+
+
+    <string name="file_server">سرور فایل</string>
+    <string name="zap_forward_lnAddress">آدرس لایتنینگ یا @User</string>
+
+    <string name="upload_server_imgur">imgur.com - معتمد</string>
+    <string name="upload_server_imgur_explainer">Imgur میتواند فایل را بهینه کند</string>
+
+    <string name="upload_server_nostrimg">nostrimg.com - معتمد</string>
+    <string name="upload_server_nostrimg_explainer">NostrImg میتواند فایل را بهینه کند</string>
+
+    <string name="upload_server_nostrbuild">nostr.build - معتمد</string>
     <string name="upload_server_nostrbuild_explainer">Nostr.build can modify the file</string>
 
-    <string name="upload_server_imgur_nip94">Verifiable Imgur (NIP-94)</string>
-    <string name="upload_server_imgur_nip94_explainer">Checks if Imgur modified the file. New NIP: other clients might not see it</string>
+    <string name="upload_server_imgur_nip94">قابل بررسی Imgur (NIP-94)</string>
+    <string name="upload_server_imgur_nip94_explainer">بررسی کنید که Imgur فایل را بهینه کرده یا خیر . NIPجدید : سایر کلاینت ها ممکن است آن را نبینند. </string>
 
-    <string name="upload_server_nostrimg_nip94">Verifiable NostrImg (NIP-94)</string>
-    <string name="upload_server_nostrimg_nip94_explainer">Checks if NostrImg modified the file. New NIP: other clients might not see it</string>
+    <string name="upload_server_nostrimg_nip94">قابل بررسی NostrImg (NIP-94)</string>
+    <string name="upload_server_nostrimg_nip94_explainer">بررسی کنید که NostrImg فایل را بهینه کرده یا خیر . NIPجدید : سایر کلاینت ها ممکن است آن را نبینند.</string>
 
     <string name="upload_server_nostrbuild_nip94">Verifiable Nostr.build (NIP-94)</string>
-    <string name="upload_server_nostrbuild_nip94_explainer">Checks if Nostr.build modified the file. New NIP: other clients might not see it</string>
+    <string name="upload_server_nostrbuild_nip94_explainer">بررسی کنید که Nostr.build فایل را بهینه کرده یا خیر . NIPجدید : سایر کلاینت ها ممکن است آن را نبینند.</string>
 
-    <string name="upload_server_relays_nip95">Your relays (NIP-95)</string>
-    <string name="upload_server_relays_nip95_explainer">Files are hosted by your relays. New NIP: check if they support</string>
+    <string name="upload_server_relays_nip95">رله های شما (NIP-95)</string>
+    <string name="upload_server_relays_nip95_explainer">فایل ها در رله های شما میزبانی می شوند. NIPجدید: بررسی کنید آیا پشتیبانی می کنند یا خیر </string>
 
 
 
-    <string name="follow_list_selection">Follow List</string>
-    <string name="follow_list_kind3follows">All Follows</string>
-    <string name="follow_list_global">Global</string>
+    <string name="follow_list_selection">لیست دنبال ها </string>
+    <string name="follow_list_kind3follows">همه دنبال ها</string>
+    <string name="follow_list_global">همگانی</string>
 
 </resources>
