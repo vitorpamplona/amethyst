@@ -288,8 +288,8 @@ fun ProfileScreen(user: User, accountViewModel: AccountViewModel, navController:
                         modifier = with(LocalDensity.current) {
                             Modifier.height((columnSize.height - tabsSize.height).toDp())
                         }
-                    ) {
-                        when (pagerState.currentPage) {
+                    ) { page ->
+                        when (page) {
                             0 -> TabNotesNewThreads(accountViewModel, navController)
                             1 -> TabNotesConversations(accountViewModel, navController)
                             2 -> TabFollows(baseUser, accountViewModel, navController)

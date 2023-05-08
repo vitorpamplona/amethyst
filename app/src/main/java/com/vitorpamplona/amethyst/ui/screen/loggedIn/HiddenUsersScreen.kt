@@ -53,8 +53,8 @@ fun HiddenUsersScreen(accountViewModel: AccountViewModel, navController: NavCont
                         }
                     )
                 }
-                HorizontalPager(pageCount = 1, state = pagerState) {
-                    when (pagerState.currentPage) {
+                HorizontalPager(pageCount = 1, state = pagerState) { page ->
+                    when (page) {
                         0 -> UserFeedView(feedViewModel, accountViewModel, navController)
                     }
                 }

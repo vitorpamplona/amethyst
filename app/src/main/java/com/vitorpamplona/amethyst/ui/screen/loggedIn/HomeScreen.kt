@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.ui.dal.HomeNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountDialog
 import com.vitorpamplona.amethyst.ui.screen.FeedView
+import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
@@ -85,6 +86,15 @@ fun HomeScreen(
         }
     }
 
+    val tabs by remember(homeFeedViewModel, repliesFeedViewModel) {
+        mutableStateOf(
+            listOf(
+                TabItem(R.string.new_threads, homeFeedViewModel, Route.Home.base + "Follows", ScrollStateKeys.HOME_FOLLOWS),
+                TabItem(R.string.conversations, repliesFeedViewModel, Route.Home.base + "FollowsReplies", ScrollStateKeys.HOME_REPLIES)
+            )
+        )
+    }
+
     Column(Modifier.fillMaxHeight()) {
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
@@ -93,28 +103,31 @@ fun HomeScreen(
                 backgroundColor = MaterialTheme.colors.background,
                 selectedTabIndex = pagerState.currentPage
             ) {
-                Tab(
-                    selected = pagerState.currentPage == 0,
-                    onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
-                    text = {
-                        Text(text = stringResource(R.string.new_threads))
-                    }
-                )
-
-                Tab(
-                    selected = pagerState.currentPage == 1,
-                    onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
-                    text = {
-                        Text(text = stringResource(R.string.conversations))
-                    }
-                )
-            }
-            HorizontalPager(pageCount = 2, state = pagerState) {
-                when (pagerState.currentPage) {
-                    0 -> FeedView(homeFeedViewModel, accountViewModel, navController, Route.Home.base + "Follows", ScrollStateKeys.HOME_FOLLOWS, scrollToTop)
-                    1 -> FeedView(repliesFeedViewModel, accountViewModel, navController, Route.Home.base + "FollowsReplies", ScrollStateKeys.HOME_REPLIES, scrollToTop)
+                tabs.forEachIndexed { index, tab ->
+                    Tab(
+                        selected = pagerState.currentPage == index,
+                        text = {
+                            Text(text = stringResource(tab.resource))
+                        },
+                        onClick = {
+                            coroutineScope.launch { pagerState.animateScrollToPage(index) }
+                        }
+                    )
                 }
+            }
+
+            HorizontalPager(pageCount = 2, state = pagerState) { page ->
+                FeedView(
+                    viewModel = tabs[page].viewModel,
+                    accountViewModel = accountViewModel,
+                    navController = navController,
+                    routeForLastRead = tabs[page].routeForLastRead,
+                    scrollStateKey = tabs[page].scrollStateKey,
+                    scrollToTop = scrollToTop
+                )
             }
         }
     }
 }
+
+class TabItem(val resource: Int, val viewModel: FeedViewModel, val routeForLastRead: String, val scrollStateKey: String)
