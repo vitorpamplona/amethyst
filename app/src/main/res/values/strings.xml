@@ -376,5 +376,6 @@
         \n6. Press the post button to use Orbot as a proxy
     </string>
     <string name="orbot_socks_port">Orbot Socks Port</string>
+    <string name="invalid_port_number">Invalid port number</string>
 
 </resources>

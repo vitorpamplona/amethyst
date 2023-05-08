@@ -60,6 +60,8 @@ fun ConnectOrbotDialog(onClose: () -> Unit, onPost: () -> Unit, portNumber: Muta
                         onClose()
                     })
 
+                    val toastMessage = stringResource(R.string.invalid_port_number)
+
                     PostButton(
                         onPost = {
                             try {
@@ -68,7 +70,7 @@ fun ConnectOrbotDialog(onClose: () -> Unit, onPost: () -> Unit, portNumber: Muta
                                 scope.launch {
                                     Toast.makeText(
                                         context,
-                                        "Invalid port number",
+                                        toastMessage,
                                         Toast.LENGTH_LONG
                                     ).show()
                                 }
