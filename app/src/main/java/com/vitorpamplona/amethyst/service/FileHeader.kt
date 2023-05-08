@@ -6,7 +6,6 @@ import android.util.Log
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.ui.actions.ImageDownloader
 import io.trbl.blurhash.BlurHash
-import java.net.URL
 import java.security.MessageDigest
 import kotlin.math.roundToInt
 
@@ -24,9 +23,9 @@ class FileHeader(
             try {
                 val imageData: ByteArray? = ImageDownloader().waitAndGetImage(fileUrl)
 
-                if (imageData != null)
+                if (imageData != null) {
                     prepare(imageData, fileUrl, mimeType, description, onReady, onError)
-                else {
+                } else {
                     onError()
                 }
             } catch (e: Exception) {
