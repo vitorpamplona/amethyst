@@ -50,12 +50,12 @@ fun HomeScreen(
     nip47: String? = null
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val account = accountViewModel.accountLiveData.value?.account ?: return
     var wantsToAddNip47 by remember { mutableStateOf(nip47) }
 
-    val accountState = account.live.observeAsState()
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val account = accountState?.account ?: return
 
-    LaunchedEffect(accountViewModel, accountState.value?.account?.defaultHomeFollowList) {
+    LaunchedEffect(accountViewModel, account.defaultHomeFollowList) {
         HomeNewThreadFeedFilter.account = account
         HomeConversationsFeedFilter.account = account
         NostrHomeDataSource.resetFilters()
