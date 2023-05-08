@@ -166,39 +166,39 @@
     <string name="translations_never_translate_from_lang">هرگز به ترجمه نکن %1$s</string>
     <string name="nip_05" translatable="false">NIP-05</string>
     <string name="lnurl" translatable="false">LNURL...</string>
-    <string name="never">never</string>
-    <string name="now">now</string>
+    <string name="never">هرگز</string>
+    <string name="now">اکنون</string>
     <string name="h">h</string>
     <string name="m">m</string>
     <string name="d">d</string>
-    <string name="nudity">Nudity</string>
-    <string name="profanity_hateful_speech">Profanity / Hateful speech</string>
-    <string name="report_hateful_speech">Report Hateful speech</string>
-    <string name="report_nudity_porn">Report Nudity / Porn</string>
-    <string name="others">others</string>
-    <string name="mark_all_known_as_read">Mark all Known as read</string>
-    <string name="mark_all_new_as_read">Mark all New as read</string>
-    <string name="mark_all_as_read">Mark all as read</string>
-    <string name="backup_keys">Backup Keys</string>
+    <string name="nudity">برهنگی</string>
+    <string name="profanity_hateful_speech">ناسزا / نفرت پراکنی</string>
+    <string name="report_hateful_speech">گزارش نفرت پراکنی</string>
+    <string name="report_nudity_porn">گزارش برهنگی / پورن</string>
+    <string name="others">سایر</string>
+    <string name="mark_all_known_as_read">همه شناس ها خوانده شده کن</string>
+    <string name="mark_all_new_as_read">همه جدیدها را خوانده شده کن</string>
+    <string name="mark_all_as_read">همه را خوانده شده کن</string>
+    <string name="backup_keys">بازیابی کلیدها</string>
     <string name="account_backup_tips_md" tools:ignore="Typos">
-        ## Key Backup and Safety Tips
-        \n\nYour account is secured by a secret key. The key is long random string starting with **nsec1**. Anyone who has access to your secret key can publish content using your identity.
-        \n\n- Do **not** put your secret key in any website or software you do not trust.
-        \n- Amethyst developers will **never** ask you for your secret key.
-        \n- **Do** keep a secure backup of your secret key for account recovery. We recommend using a password manager.
+        ## راهنمایی برای ایمنی و بازیابی کلید 
+        \n\n-  حساب کاربری شما با یک کلید خصوصی ایمن می شود. این کلید یک رشته تصادفی اعداد و ارقام است که با **nsec1** آغاز می گردد. 
+        \n\n- هر کس به کلید خصوصی شما دست یابد می تواند به هویت شما اقدام به انتشار محتوا نماید. کلید خصوصی خود را در هیچ نرم افزار یا وب سایتی که به آن اعتماد ندارید قرار ندیهید.  
+        \n- سازندگان آماتیست **هرگز** از ما کلید خصوصی تان را نمی خواهند. 
+        \n- حتما یه کپی از کلید خصوصی را برای بازیابی حساب کاربری نزد خود نگه دارد. ما استفاده از یک نرم افزار مدیریت پسورد را توصیه می نماییم. 
     </string>
-    <string name="secret_key_copied_to_clipboard">Secret key (nsec) copied to clipboard</string>
-    <string name="copy_my_secret_key">Copy my secret key</string>
-    <string name="biometric_authentication_failed">Authentication failed</string>
-    <string name="biometric_error">Error</string>
-    <string name="badge_created_by">"Created by %1$s"</string>
-    <string name="badge_award_image_for">"Badge award image for %1$s"</string>
-    <string name="new_badge_award_notif">You Received a new Badge Award</string>
-    <string name="award_granted_to">Badge award granted to</string>
-    <string name="copied_note_text_to_clipboard">Copied note text to clipboard</string>
-    <string name="copied_user_id_to_clipboard" tools:ignore="Typos">Copied author’s @npub to clipboard</string>
-    <string name="copied_note_id_to_clipboard" tools:ignore="Typos">Copied note ID (@note1) to clipboard</string>
-    <string name="select_text_dialog_top">Select Text</string>
+    <string name="secret_key_copied_to_clipboard">کلید خصوصی در کلیپبورد کپی شد</string>
+    <string name="copy_my_secret_key">کلید خصوصیم را کپی کن</string>
+    <string name="biometric_authentication_failed">صحت سنجی انجام نشد</string>
+    <string name="biometric_error">خطا</string>
+    <string name="badge_created_by">"ساخته شده توسط %1$s"</string>
+    <string name="badge_award_image_for">"تصویر مدال پاداش برای %1$s"</string>
+    <string name="new_badge_award_notif">یک مدال پاداش دریافت کردید</string>
+    <string name="award_granted_to">مدال پاداش داده شد به</string>
+    <string name="copied_note_text_to_clipboard">نوت در کلیپبورد کپی شد</string>
+    <string name="copied_user_id_to_clipboard" tools:ignore="Typos">نویسنده در کلیپبورد کپی شد @npub</string>
+    <string name="copied_note_id_to_clipboard" tools:ignore="Typos">شناسه نوت در کلیپبورد کپی شد (@note1)</string>
+    <string name="select_text_dialog_top">انتخاب متن</string>
     <string name="github" translatable="false">Github Gist w/ Proof</string>
     <string name="telegram" translatable="false">Telegram</string>
     <string name="mastodon" translatable="false">Mastodon Post ID w/ Proof</string>
@@ -207,37 +207,37 @@
     <string name="telegram_proof_url_template" translatable="false">https://t.me/&lt;proof post&gt;</string>
     <string name="mastodon_proof_url_template" translatable="false">https://&lt;server&gt;/&lt;user&gt;/&lt;proof post&gt;</string>
     <string name="twitter_proof_url_template" translatable="false">https://twitter.com/&lt;user&gt;/status/&lt;proof post&gt;</string>
-    <string name="private_conversation_notification">"&lt;Unable to decrypt private message&gt;\n\nYou were cited in a private/encrypted conversation between %1$s and %2$s."</string>
-    <string name="account_switch_add_account_dialog_title">Add New Account</string>
-    <string name="drawer_accounts">Accounts</string>
-    <string name="account_switch_select_account">Select Account</string>
-    <string name="account_switch_add_account_btn">Add New Account</string>
-    <string name="account_switch_active_account">Active account</string>
-    <string name="account_switch_has_private_key">Has private key</string>
-    <string name="account_switch_pubkey_only">Read only, no private key</string>
-    <string name="back">Back</string>
-    <string name="quick_action_select">Select</string>
-    <string name="quick_action_share_browser_link">Share Browser Link</string>
-    <string name="quick_action_share">Share</string>
-    <string name="quick_action_copy_user_id">Author ID</string>
-    <string name="quick_action_copy_note_id">Note ID</string>
-    <string name="quick_action_copy_text">Copy Text</string>
-    <string name="quick_action_delete">Delete</string>
-    <string name="quick_action_unfollow">Unfollow</string>
-    <string name="quick_action_follow">Follow</string>
+    <string name="private_conversation_notification">"&lt;نمی توان پیام خصوصی را رمزگشایی کردن&gt;\n\nYou در پیام خصوصی/رمزگذاری شده بین و به شما اشاره شده %1$s  %2$s."</string>
+    <string name="account_switch_add_account_dialog_title">افزودن حساب کاربری جدید</string>
+    <string name="drawer_accounts">حساب های کاربری</string>
+    <string name="account_switch_select_account">انتخاب حساب کارگری</string>
+    <string name="account_switch_add_account_btn">افزودن حساب کاربری جدید</string>
+    <string name="account_switch_active_account">حساب کاربری فعال</string>
+    <string name="account_switch_has_private_key">کلید خصوصی دارد</string>
+    <string name="account_switch_pubkey_only">فقط خواندن، کلید خصوصی ندارد</string>
+    <string name="back">بازگشت</string>
+    <string name="quick_action_select">انتخاب</string>
+    <string name="quick_action_share_browser_link">اشتراک گذاری لینک پیمایش</string>
+    <string name="quick_action_share">اشتراک گذاری</string>
+    <string name="quick_action_copy_user_id">شناسه نویسنده</string>
+    <string name="quick_action_copy_note_id">شناسه نوت</string>
+    <string name="quick_action_copy_text">کپی متن</string>
+    <string name="quick_action_delete">حذف</string>
+    <string name="quick_action_unfollow">دنبال نکردن</string>
+    <string name="quick_action_follow">دنبال کردن</string>
     <string name="quick_action_request_deletion_alert_title">Request Deletion</string>
-    <string name="quick_action_request_deletion_alert_body">Amethyst will request that your note be deleted from the relays you are currently connected to. There is no guarantee that your note will be permanently deleted from those relays, or from other relays where it may be stored.</string>
-    <string name="quick_action_block_dialog_btn">Block</string>
-    <string name="quick_action_delete_dialog_btn">Delete</string>
-    <string name="quick_action_block">Block</string>
-    <string name="quick_action_report">Report</string>
-    <string name="quick_action_delete_button">Delete</string>
-    <string name="quick_action_dont_show_again_button">Don\'t show again</string>
-    <string name="report_dialog_spam">Spam or scams</string>
-    <string name="report_dialog_profanity">Profanity or hateful conduct</string>
-    <string name="report_dialog_impersonation">Malicious impersonation</string>
-    <string name="report_dialog_nudity">Nudity or graphic content</string>
-    <string name="report_dialog_illegal">Illegal Behavior</string>
+    <string name="quick_action_request_deletion_alert_body">آماتیست درخواست می کند که نوت شما از رله هایی که درحال حاضر به آن متصل هستید حذف شود. هیچ تضمینی نیست که نوت شما برای همیشه از آن رله ها یا از رله های دیگری که ممکن است در آنها ذخیره شده باشد حذف خواهد شد.. </string>
+    <string name="quick_action_block_dialog_btn">بلاک</string>
+    <string name="quick_action_delete_dialog_btn">حذف</string>
+    <string name="quick_action_block">بلاک</string>
+    <string name="quick_action_report">گزارش</string>
+    <string name="quick_action_delete_button">حذف</string>
+    <string name="quick_action_dont_show_again_button">دوباره نشان نده</string>
+    <string name="report_dialog_spam">اسپم یا کلاهبرداری</string>
+    <string name="report_dialog_profanity">محتوای نفرت پراکنی یا ناسزا</string>
+    <string name="report_dialog_impersonation">جعل هویت بدخواهانه</string>
+    <string name="report_dialog_nudity">محتوای برهنگی یا نمایان</string>
+    <string name="report_dialog_illegal">رفتار ناهنجار</string>
     <string name="report_dialog_blocking_a_user">Blocking a user will hide their content in your app. Your notes are still publicly viewable, including to people you block. Blocked users are listed on the Security Filters screen.</string>
     <string name="report_dialog_block_hide_user_btn"><![CDATA[Block & Hide User]]></string>
     <string name="report_dialog_report_btn">Report Abuse</string>
