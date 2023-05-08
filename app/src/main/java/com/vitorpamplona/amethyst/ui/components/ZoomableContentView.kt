@@ -75,7 +75,6 @@ import com.vitorpamplona.amethyst.ui.theme.Nip05
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import net.engawapg.lib.zoomable.rememberZoomState
 import net.engawapg.lib.zoomable.zoomable
 import java.io.File
@@ -112,7 +111,7 @@ class ZoomableUrlVideo(
 ) : ZoomableUrlContent(url, description, hash, dim, uri)
 
 abstract class ZoomablePreloadedContent(
-    val localFile: File,
+    val localFile: File?,
     description: String? = null,
     val mimeType: String? = null,
     val isVerified: Boolean? = null,
@@ -121,7 +120,7 @@ abstract class ZoomablePreloadedContent(
 ) : ZoomableContent(description, dim)
 
 class ZoomableLocalImage(
-    localFile: File,
+    localFile: File?,
     mimeType: String? = null,
     description: String? = null,
     val blurhash: String? = null,
@@ -131,7 +130,7 @@ class ZoomableLocalImage(
 ) : ZoomablePreloadedContent(localFile, description, mimeType, isVerified, dim, uri)
 
 class ZoomableLocalVideo(
-    localFile: File,
+    localFile: File?,
     mimeType: String? = null,
     description: String? = null,
     dim: String? = null,
@@ -210,7 +209,9 @@ private fun LocalImageView(
         mutableStateOf<AsyncImagePainter.State?>(null)
     }
 
-    val ratio = aspectRatio(content.dim)
+    val ratio = remember {
+        aspectRatio(content.dim)
+    }
 
     BoxWithConstraints(contentAlignment = Alignment.Center) {
         val myModifier = mainImageModifier.also {
@@ -220,7 +221,7 @@ private fun LocalImageView(
         }
         val contentScale = if (maxHeight.isFinite) ContentScale.Fit else ContentScale.FillWidth
 
-        if (content.localFile.exists()) {
+        if (content.localFile != null && content.localFile.exists()) {
             AsyncImage(
                 model = content.localFile,
                 contentDescription = content.description,
@@ -247,7 +248,7 @@ private fun LocalImageView(
             }
         }
 
-        if (imageState is AsyncImagePainter.State.Error || !content.localFile.exists()) {
+        if (imageState is AsyncImagePainter.State.Error || content.localFile == null || !content.localFile.exists()) {
             BlankNote()
         }
     }
@@ -270,7 +271,9 @@ private fun UrlImageView(
         mutableStateOf<Boolean?>(null)
     }
 
-    val ratio = aspectRatio(content.dim)
+    val ratio = remember {
+        aspectRatio(content.dim)
+    }
 
     LaunchedEffect(key1 = content.url, key2 = imageState) {
         if (imageState is AsyncImagePainter.State.Success) {
@@ -337,9 +340,10 @@ private fun aspectRatio(dim: String?): Float? {
 @Composable
 private fun DisplayUrlWithLoadingSymbol(content: ZoomableContent) {
     var cnt by remember { mutableStateOf<ZoomableContent?>(null) }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        withContext(Dispatchers.IO) {
+        scope.launch(Dispatchers.IO) {
             delay(200)
             cnt = content
         }

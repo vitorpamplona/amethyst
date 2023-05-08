@@ -181,44 +181,49 @@ class Account(
     }
 
     fun isNIP47Author(pubkeyHex: String?): Boolean {
-        val privKey = zapPaymentRequest?.secret?.toByteArray() ?: loggedIn.privKey!!
+        val privKey = zapPaymentRequest?.secret?.hexToByteArray() ?: loggedIn.privKey
+
+        if (privKey == null) return false
+
         val pubKey = Utils.pubkeyCreate(privKey).toHexKey()
         return (pubKey == pubkeyHex)
     }
 
     fun decryptZapPaymentResponseEvent(zapResponseEvent: LnZapPaymentResponseEvent): Response? {
         val myNip47 = zapPaymentRequest ?: return null
-        return zapResponseEvent.response(
-            myNip47.secret?.toByteArray() ?: loggedIn.privKey!!,
-            myNip47.pubKeyHex.toByteArray()
-        )
+
+        val privKey = myNip47.secret?.hexToByteArray() ?: loggedIn.privKey
+        val pubKey = myNip47.pubKeyHex.hexToByteArray()
+
+        if (privKey == null) return null
+
+        return zapResponseEvent.response(privKey, pubKey)
     }
 
-    fun calculateIfNoteWasZappedByAccount(zappedNote: Note): Boolean {
-        return zappedNote.isZappedBy(userProfile(), this) == true
+    fun calculateIfNoteWasZappedByAccount(zappedNote: Note?): Boolean {
+        return zappedNote?.isZappedBy(userProfile(), this) == true
     }
 
     fun calculateZappedAmount(zappedNote: Note?): BigDecimal {
-        return zappedNote?.zappedAmount(
-            zapPaymentRequest?.secret?.toByteArray() ?: loggedIn.privKey!!,
-            zapPaymentRequest?.pubKeyHex?.toByteArray()
-        ) ?: BigDecimal.ZERO
+        val privKey = zapPaymentRequest?.secret?.hexToByteArray() ?: loggedIn.privKey
+        val pubKey = zapPaymentRequest?.pubKeyHex?.hexToByteArray()
+        return zappedNote?.zappedAmount(privKey, pubKey) ?: BigDecimal.ZERO
     }
 
     fun sendZapPaymentRequestFor(bolt11: String, zappedNote: Note?, onResponse: (Response?) -> Unit) {
         if (!isWriteable()) return
 
         zapPaymentRequest?.let { nip47 ->
-            val event = LnZapPaymentRequestEvent.create(bolt11, nip47.pubKeyHex, nip47.secret?.toByteArray() ?: loggedIn.privKey!!)
+            val event = LnZapPaymentRequestEvent.create(bolt11, nip47.pubKeyHex, nip47.secret?.hexToByteArray() ?: loggedIn.privKey!!)
 
             val wcListener = NostrLnZapPaymentResponseDataSource(nip47.pubKeyHex, event.pubKey, event.id)
             wcListener.start()
 
             LocalCache.consume(event, zappedNote) {
                 // After the response is received.
-                val privKey = nip47.secret?.toByteArray()
+                val privKey = nip47.secret?.hexToByteArray()
                 if (privKey != null) {
-                    onResponse(it.response(privKey, nip47.pubKeyHex.toByteArray()))
+                    onResponse(it.response(privKey, nip47.pubKeyHex.hexToByteArray()))
                 }
             }
 
@@ -818,13 +823,13 @@ class Account(
         return if (event is PrivateDmEvent && loggedIn.privKey != null) {
             var pubkeyToUse = event.pubKey
 
-            val recepientPK = event.recipientPubKey()
+            val recepientPK = event.verifiedRecipientPubKey()
 
             if (note.author == userProfile() && recepientPK != null) {
                 pubkeyToUse = recepientPK
             }
 
-            event.plainContent(loggedIn.privKey!!, pubkeyToUse.toByteArray())
+            event.plainContent(loggedIn.privKey!!, pubkeyToUse.hexToByteArray())
         } else if (event is LnZapRequestEvent && loggedIn.privKey != null) {
             decryptZapContentAuthor(note)?.content()
         } else {
@@ -845,7 +850,7 @@ class Account(
                 val privateKeyToUse = loggedInPrivateKey
                 val pubkeyToUse = event.pubKey
 
-                LnZapRequestEvent.checkForPrivateZap(event, privateKeyToUse, pubkeyToUse)
+                event.getPrivateZapEvent(privateKeyToUse, pubkeyToUse)
             } else {
                 // if the sender is logged in, these are the params
                 val altPubkeyToUse = recipientPK
@@ -866,11 +871,21 @@ class Account(
                 }
 
                 if (altPrivateKeyToUse != null && altPubkeyToUse != null) {
-                    val result = LnZapRequestEvent.checkForPrivateZap(event, altPrivateKeyToUse, altPubkeyToUse)
-                    if (result == null) {
-                        Log.w("Private ZAP Decrypt", "Fail to decrypt Zap from ${note.author?.toBestDisplayName()} ${note.idNote()}")
+                    val altPubKeyFromPrivate = Utils.pubkeyCreate(altPrivateKeyToUse).toHexKey()
+
+                    if (altPubKeyFromPrivate == event.pubKey) {
+                        val result = event.getPrivateZapEvent(altPrivateKeyToUse, altPubkeyToUse)
+
+                        if (result == null) {
+                            Log.w(
+                                "Private ZAP Decrypt",
+                                "Fail to decrypt Zap from ${note.author?.toBestDisplayName()} ${note.idNote()}"
+                            )
+                        }
+                        result
+                    } else {
+                        null
                     }
-                    result
                 } else {
                     null
                 }

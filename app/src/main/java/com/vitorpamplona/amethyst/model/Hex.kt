@@ -29,7 +29,7 @@ fun ByteArray.toHexKey(): HexKey {
     return toHex()
 }
 
-fun HexKey.toByteArray(): ByteArray {
+fun HexKey.hexToByteArray(): ByteArray {
     return Hex.decode(this)
 }
 
@@ -39,7 +39,7 @@ fun HexKey.toDisplayHexKey(): String {
 
 fun decodePublicKey(key: String): ByteArray {
     val parsed = Nip19.uriToRoute(key)
-    val pubKeyParsed = parsed?.hex?.toByteArray()
+    val pubKeyParsed = parsed?.hex?.hexToByteArray()
 
     return if (key.startsWith("nsec")) {
         Persona(privKey = key.bechToBytes()).pubKey

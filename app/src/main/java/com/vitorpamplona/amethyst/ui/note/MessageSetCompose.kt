@@ -17,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,13 +27,10 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.ui.screen.MessageSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -40,8 +38,9 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, isInnerNote: Boolean = fal
     val noteState by messageSetCard.note.live().metadata.observeAsState()
     val note = noteState?.note
 
-    val noteEvent = note?.event
     var popupExpanded by remember { mutableStateOf(false) }
+
+    val scope = rememberCoroutineScope()
 
     if (note == null) {
         BlankNote(Modifier, isInnerNote)
@@ -49,11 +48,15 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, isInnerNote: Boolean = fal
         var isNew by remember { mutableStateOf<Boolean>(false) }
 
         LaunchedEffect(key1 = messageSetCard.createdAt()) {
-            withContext(Dispatchers.IO) {
-                isNew =
+            scope.launch(Dispatchers.IO) {
+                val newIsNew =
                     messageSetCard.createdAt() > NotificationCache.load(routeForLastRead)
 
                 NotificationCache.markAsRead(routeForLastRead, messageSetCard.createdAt())
+
+                if (newIsNew != isNew) {
+                    isNew = newIsNew
+                }
             }
         }
 
@@ -66,30 +69,7 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, isInnerNote: Boolean = fal
         Column(
             modifier = Modifier.background(backgroundColor).combinedClickable(
                 onClick = {
-                    if (noteEvent is ChannelMessageEvent) {
-                        note.channel()?.let {
-                            navController.navigate("Channel/${it.idHex}")
-                        }
-                    } else if (noteEvent is PrivateDmEvent) {
-                        val replyAuthorBase =
-                            (note.event as? PrivateDmEvent)
-                                ?.recipientPubKey()
-                                ?.let { LocalCache.getOrCreateUser(it) }
-
-                        var userToComposeOn = note.author!!
-
-                        if (replyAuthorBase != null) {
-                            if (note.author == accountViewModel.userProfile()) {
-                                userToComposeOn = replyAuthorBase
-                            }
-                        }
-
-                        navController.navigate("Room/${userToComposeOn.pubkeyHex}")
-                    } else {
-                        navController.navigate("Note/${note.idHex}") {
-                            launchSingleTop = true
-                        }
-                    }
+                    routeFor(note, accountViewModel.userProfile())?.let { navController.navigate(it) }
                 },
                 onLongClick = { popupExpanded = true }
             )
@@ -120,7 +100,7 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, isInnerNote: Boolean = fal
 
                 Column(modifier = Modifier.padding(start = if (!isInnerNote) 10.dp else 0.dp)) {
                     NoteCompose(
-                        baseNote = note,
+                        baseNote = messageSetCard.note,
                         routeForLastRead = null,
                         isBoostedNote = true,
                         addMarginTop = false,

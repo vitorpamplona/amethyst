@@ -41,7 +41,6 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlin.time.ExperimentalTime
 
 val bottomNavigationItems = listOf(
@@ -159,15 +158,16 @@ private fun NotifiableIcon(route: Route, selected: Boolean, accountViewModel: Ac
         val notif = notifState.value ?: return
 
         var hasNewItems by remember { mutableStateOf<Boolean>(false) }
+        val scope = rememberCoroutineScope()
 
         LaunchedEffect(key1 = notif) {
-            withContext(Dispatchers.IO) {
+            scope.launch(Dispatchers.IO) {
                 hasNewItems = route.hasNewItems(account, notif.cache, emptySet())
             }
         }
 
         LaunchedEffect(key1 = db) {
-            withContext(Dispatchers.IO) {
+            scope.launch(Dispatchers.IO) {
                 hasNewItems = route.hasNewItems(account, notif.cache, db)
             }
         }

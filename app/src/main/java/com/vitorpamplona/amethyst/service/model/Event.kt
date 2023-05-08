@@ -38,6 +38,8 @@ open class Event(
 
     override fun toJson(): String = gson.toJson(this)
 
+    fun hasAnyTaggedUser() = tags.any { it.size > 1 && it[0] == "p" }
+
     fun taggedUsers() = tags.filter { it.size > 1 && it[0] == "p" }.map { it[1] }
     fun taggedEvents() = tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }
 
@@ -83,7 +85,7 @@ open class Event(
 
     override fun getReward(): BigDecimal? {
         return try {
-            tags.filter { it.firstOrNull() == "reward" }.mapNotNull { it.getOrNull(1)?.let { BigDecimal(it) } }.firstOrNull()
+            tags.firstOrNull { it.size > 1 && it[0] == "reward" }?.get(1)?.let { BigDecimal(it) }
         } catch (e: Exception) {
             null
         }

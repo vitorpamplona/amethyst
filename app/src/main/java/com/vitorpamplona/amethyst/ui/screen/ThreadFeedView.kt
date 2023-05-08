@@ -249,7 +249,7 @@ fun NoteMaster(
                     })
             ) {
                 NoteAuthorPicture(
-                    note = baseNote,
+                    baseNote = baseNote,
                     navController = navController,
                     userAccount = account.userProfile(),
                     size = 55.dp

@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,11 +35,10 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.ui.screen.BadgeCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -48,8 +48,8 @@ fun BadgeCompose(likeSetCard: BadgeCard, isInnerNote: Boolean = false, routeForL
 
     val context = LocalContext.current.applicationContext
 
-    val noteEvent = note?.event
     var popupExpanded by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     if (note == null) {
         BlankNote(Modifier, isInnerNote)
@@ -57,7 +57,7 @@ fun BadgeCompose(likeSetCard: BadgeCard, isInnerNote: Boolean = false, routeForL
         var isNew by remember { mutableStateOf<Boolean>(false) }
 
         LaunchedEffect(key1 = likeSetCard) {
-            withContext(Dispatchers.IO) {
+            scope.launch(Dispatchers.IO) {
                 isNew = likeSetCard.createdAt() > NotificationCache.load(routeForLastRead)
 
                 NotificationCache.markAsRead(routeForLastRead, likeSetCard.createdAt())
@@ -71,20 +71,17 @@ fun BadgeCompose(likeSetCard: BadgeCard, isInnerNote: Boolean = false, routeForL
         }
 
         Column(
-            modifier = Modifier.background(backgroundColor).combinedClickable(
-                onClick = {
-                    if (noteEvent !is ChannelMessageEvent) {
-                        navController.navigate("Note/${note.idHex}") {
-                            launchSingleTop = true
-                        }
-                    } else {
-                        note.channel()?.let {
-                            navController.navigate("Channel/${it.idHex}")
-                        }
-                    }
-                },
-                onLongClick = { popupExpanded = true }
-            )
+            modifier = Modifier
+                .background(backgroundColor)
+                .combinedClickable(
+                    onClick = {
+                        routeFor(
+                            note,
+                            accountViewModel.userProfile()
+                        )?.let { navController.navigate(it) }
+                    },
+                    onLongClick = { popupExpanded = true }
+                )
         ) {
             Row(
                 modifier = Modifier
@@ -104,7 +101,9 @@ fun BadgeCompose(likeSetCard: BadgeCard, isInnerNote: Boolean = false, routeForL
                         Icon(
                             imageVector = Icons.Default.MilitaryTech,
                             null,
-                            modifier = Modifier.size(25.dp).align(Alignment.TopEnd),
+                            modifier = Modifier
+                                .size(25.dp)
+                                .align(Alignment.TopEnd),
                             tint = MaterialTheme.colors.primary
                         )
                     }
@@ -115,7 +114,9 @@ fun BadgeCompose(likeSetCard: BadgeCard, isInnerNote: Boolean = false, routeForL
                         Text(
                             stringResource(R.string.new_badge_award_notif),
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(bottom = 5.dp).weight(1f)
+                            modifier = Modifier
+                                .padding(bottom = 5.dp)
+                                .weight(1f)
                         )
 
                         Text(

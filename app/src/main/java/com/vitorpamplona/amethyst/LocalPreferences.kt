@@ -9,7 +9,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
-import com.vitorpamplona.amethyst.model.toByteArray
+import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.model.ContactListEvent
 import com.vitorpamplona.amethyst.service.model.Event
@@ -284,7 +284,7 @@ object LocalPreferences {
             val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", proxyPort)
 
             val a = Account(
-                Persona(privKey = privKey?.toByteArray(), pubKey = pubKey.toByteArray()),
+                Persona(privKey = privKey?.hexToByteArray(), pubKey = pubKey.hexToByteArray()),
                 followingChannels,
                 hiddenUsers,
                 localRelays,

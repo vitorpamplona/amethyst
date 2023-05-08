@@ -181,7 +181,7 @@ class User(val pubkeyHex: String) {
     }
 
     @Synchronized
-    fun getOrCreatePrivateChatroom(user: User): Chatroom {
+    private fun getOrCreatePrivateChatroom(user: User): Chatroom {
         return privateChatrooms[user] ?: run {
             val privateChatroom = Chatroom(setOf<Note>())
             privateChatrooms = privateChatrooms + Pair(user, privateChatroom)

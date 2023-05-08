@@ -92,18 +92,20 @@ private fun OptionNote(
             var optionTally by remember { mutableStateOf(Pair(BigDecimal.ZERO, defaultColor)) }
 
             LaunchedEffect(key1 = optionNumber, key2 = pollViewModel) {
-                val myTally = pollViewModel.optionVoteTally(optionNumber)
-                val color = if (
-                    pollViewModel.consensusThreshold != null &&
-                    myTally >= pollViewModel.consensusThreshold!!
-                ) {
-                    Color.Green.copy(alpha = 0.32f)
-                } else {
-                    defaultColor
-                }
+                withContext(Dispatchers.IO) {
+                    val myTally = pollViewModel.optionVoteTally(optionNumber)
+                    val color = if (
+                        pollViewModel.consensusThreshold != null &&
+                        myTally >= pollViewModel.consensusThreshold!!
+                    ) {
+                        Color.Green.copy(alpha = 0.32f)
+                    } else {
+                        defaultColor
+                    }
 
-                if (myTally > optionTally.first || color != optionTally.second) {
-                    optionTally = Pair(myTally, color)
+                    if (myTally > optionTally.first || color != optionTally.second) {
+                        optionTally = Pair(myTally, color)
+                    }
                 }
             }
 

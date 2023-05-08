@@ -28,7 +28,6 @@ import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.ui.screen.LikeSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
@@ -68,15 +67,7 @@ fun LikeSetCompose(likeSetCard: LikeSetCard, isInnerNote: Boolean = false, route
         Column(
             modifier = Modifier.background(backgroundColor).combinedClickable(
                 onClick = {
-                    if (noteEvent !is ChannelMessageEvent) {
-                        navController.navigate("Note/${note.idHex}") {
-                            launchSingleTop = true
-                        }
-                    } else {
-                        note.channel()?.let {
-                            navController.navigate("Channel/${it.idHex}")
-                        }
-                    }
+                    routeFor(note, account.userProfile())?.let { navController.navigate(it) }
                 },
                 onLongClick = { popupExpanded = true }
             )
@@ -109,7 +100,7 @@ fun LikeSetCompose(likeSetCard: LikeSetCard, isInnerNote: Boolean = false, route
                     FlowRow() {
                         likeSetCard.likeEvents.forEach {
                             NoteAuthorPicture(
-                                note = it,
+                                baseNote = it,
                                 navController = navController,
                                 userAccount = account.userProfile(),
                                 size = 35.dp

@@ -11,10 +11,8 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.*
 import com.vitorpamplona.amethyst.service.FileHeader
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
-import java.net.URL
 
 open class NewMediaModel : ViewModel() {
     var account: Account? = null
@@ -46,6 +44,8 @@ open class NewMediaModel : ViewModel() {
             selectedServer = ServersAvailable.NOSTRIMG_NIP_94
         } else if (selectedServer == ServersAvailable.NOSTR_BUILD) {
             selectedServer = ServersAvailable.NOSTR_BUILD_NIP_94
+        } else if (selectedServer == ServersAvailable.NOSTRFILES_DEV) {
+            selectedServer = ServersAvailable.NOSTRFILES_DEV_NIP_94
         }
     }
 
@@ -77,7 +77,6 @@ open class NewMediaModel : ViewModel() {
             ImageUploader.uploadImage(
                 uri = uri,
                 server = serverToUse,
-                context = context,
                 contentResolver = contentResolver,
                 onSuccess = { imageUrl, mimeType ->
                     createNIP94Record(imageUrl, mimeType, description)
@@ -115,18 +114,12 @@ open class NewMediaModel : ViewModel() {
             uploadingDescription.value = "Server Processing"
             // Images don't seem to be ready immediately after upload
 
-            if (mimeType?.startsWith("image/") == true) {
-                delay(2000)
-            } else {
-                delay(15000)
-            }
+            val imageData: ByteArray? = ImageDownloader().waitAndGetImage(imageUrl)
 
             uploadingDescription.value = "Downloading"
             uploadingPercentage.value = 0.60f
 
-            try {
-                val imageData = URL(imageUrl).readBytes()
-
+            if (imageData != null) {
                 uploadingPercentage.value = 0.80f
                 uploadingDescription.value = "Hashing"
 
@@ -154,8 +147,8 @@ open class NewMediaModel : ViewModel() {
                         }
                     }
                 )
-            } catch (e: Exception) {
-                Log.e("ImageDownload", "Couldn't download image from server: ${e.message}")
+            } else {
+                Log.e("ImageDownload", "Couldn't download image from server")
                 cancel()
                 uploadingPercentage.value = 0.00f
                 uploadingDescription.value = null
