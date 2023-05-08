@@ -75,7 +75,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
             filter = JsonFilter(
                 kinds = listOf(ReportEvent.kind),
                 authors = listOf(account.userProfile().pubkeyHex),
-                since = latestEOSEs.users[account.userProfile()]?.relayList
+                since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultNotificationFollowList)?.relayList
             )
         )
     }
@@ -96,12 +96,12 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
             ),
             tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
             limit = 400,
-            since = latestEOSEs.users[account.userProfile()]?.relayList
+            since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultNotificationFollowList)?.relayList
         )
     )
 
     val accountChannel = requestNewChannel { time, relayUrl ->
-        latestEOSEs.addOrUpdate(account.userProfile(), relayUrl, time)
+        latestEOSEs.addOrUpdate(account.userProfile(), account.defaultNotificationFollowList, relayUrl, time)
     }
 
     override fun updateChannelFilters() {

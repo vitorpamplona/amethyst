@@ -59,7 +59,7 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
                 kinds = listOf(TextNoteEvent.kind, LongTextNoteEvent.kind, PollNoteEvent.kind, HighlightEvent.kind),
                 authors = followSet,
                 limit = 400,
-                since = latestEOSEs.users[account.userProfile()]?.relayList
+                since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultHomeFollowList)?.relayList
             )
         )
     }
@@ -79,13 +79,13 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
                     }.flatten()
                 ),
                 limit = 100,
-                since = latestEOSEs.users[account.userProfile()]?.relayList
+                since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultHomeFollowList)?.relayList
             )
         )
     }
 
     val followAccountChannel = requestNewChannel { time, relayUrl ->
-        latestEOSEs.addOrUpdate(account.userProfile(), relayUrl, time)
+        latestEOSEs.addOrUpdate(account.userProfile(), account.defaultHomeFollowList, relayUrl, time)
     }
 
     override fun updateChannelFilters() {
