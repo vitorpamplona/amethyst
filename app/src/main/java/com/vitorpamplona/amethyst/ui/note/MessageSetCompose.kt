@@ -38,7 +38,6 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, isInnerNote: Boolean = fal
     val noteState by messageSetCard.note.live().metadata.observeAsState()
     val note = noteState?.note
 
-    val noteEvent = note?.event
     var popupExpanded by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
@@ -50,10 +49,14 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, isInnerNote: Boolean = fal
 
         LaunchedEffect(key1 = messageSetCard.createdAt()) {
             scope.launch(Dispatchers.IO) {
-                isNew =
+                val newIsNew =
                     messageSetCard.createdAt() > NotificationCache.load(routeForLastRead)
 
                 NotificationCache.markAsRead(routeForLastRead, messageSetCard.createdAt())
+
+                if (newIsNew != isNew) {
+                    isNew = newIsNew
+                }
             }
         }
 
@@ -66,7 +69,12 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, isInnerNote: Boolean = fal
         Column(
             modifier = Modifier.background(backgroundColor).combinedClickable(
                 onClick = {
-                    routeFor(note, accountViewModel.userProfile())?.let { navController.navigate(it) }
+                    scope.launch {
+                        routeFor(
+                            note,
+                            accountViewModel.userProfile()
+                        )?.let { navController.navigate(it) }
+                    }
                 },
                 onLongClick = { popupExpanded = true }
             )

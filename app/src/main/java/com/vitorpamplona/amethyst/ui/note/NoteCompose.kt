@@ -190,16 +190,19 @@ fun NoteComposeInner(
     var popupExpanded by remember { mutableStateOf(false) }
     var showHiddenNote by remember { mutableStateOf(false) }
 
-    var isAcceptable by remember { mutableStateOf(true) }
-    var canPreview by remember { mutableStateOf(true) }
+    var isAcceptableAndCanPreview by remember { mutableStateOf(Pair(true, true)) }
 
     LaunchedEffect(key1 = noteReportsState) {
         withContext(Dispatchers.IO) {
-            canPreview = note?.author === loggedIn ||
+            val newCanPreview = note?.author === loggedIn ||
                 (note?.author?.let { loggedIn.isFollowingCached(it) } ?: true) ||
                 !noteForReports.hasAnyReports()
 
-            isAcceptable = account.isAcceptable(noteForReports)
+            val newIsAcceptable = account.isAcceptable(noteForReports)
+
+            if (newIsAcceptable != isAcceptableAndCanPreview.first && newCanPreview != isAcceptableAndCanPreview.second) {
+                isAcceptableAndCanPreview = Pair(newIsAcceptable, newCanPreview)
+            }
         }
     }
 
@@ -214,7 +217,7 @@ fun NoteComposeInner(
             ),
             isBoostedNote
         )
-    } else if (!isAcceptable && !showHiddenNote) {
+    } else if (!isAcceptableAndCanPreview.first && !showHiddenNote) {
         if (!account.isHidden(noteForReports.author!!)) {
             HiddenNote(
                 account.getRelevantReports(noteForReports),
@@ -246,7 +249,11 @@ fun NoteComposeInner(
                     val createdAt = note.createdAt()
                     if (createdAt != null) {
                         NotificationCache.markAsRead(it, createdAt)
-                        isNew = createdAt > lastTime
+
+                        val newIsNew = createdAt > lastTime
+                        if (newIsNew != isNew) {
+                            isNew = newIsNew
+                        }
                     }
                 }
             }
@@ -267,7 +274,9 @@ fun NoteComposeInner(
             modifier = modifier
                 .combinedClickable(
                     onClick = {
-                        routeFor(note, loggedIn)?.let { navController.navigate(it) }
+                        scope.launch {
+                            routeFor(note, loggedIn)?.let { navController.navigate(it) }
+                        }
                     },
                     onLongClick = { popupExpanded = true }
                 )
@@ -340,18 +349,18 @@ fun NoteComposeInner(
                         }
 
                         is PrivateDmEvent -> {
-                            RenderPrivateMessage(note, makeItShort, canPreview, backgroundColor, accountViewModel, navController)
+                            RenderPrivateMessage(note, makeItShort, isAcceptableAndCanPreview.second, backgroundColor, accountViewModel, navController)
                         }
 
                         is HighlightEvent -> {
-                            RenderHighlight(note, makeItShort, canPreview, backgroundColor, accountViewModel, navController)
+                            RenderHighlight(note, makeItShort, isAcceptableAndCanPreview.second, backgroundColor, accountViewModel, navController)
                         }
 
                         is PollNoteEvent -> {
                             RenderPoll(
                                 note,
                                 makeItShort,
-                                canPreview,
+                                isAcceptableAndCanPreview.second,
                                 backgroundColor,
                                 accountViewModel,
                                 navController
@@ -362,7 +371,7 @@ fun NoteComposeInner(
                             RenderTextEvent(
                                 note,
                                 makeItShort,
-                                canPreview,
+                                isAcceptableAndCanPreview.second,
                                 backgroundColor,
                                 accountViewModel,
                                 navController
@@ -417,7 +426,8 @@ private fun RenderTextEvent(
 ) {
     val noteEvent = note.event ?: return
 
-    val eventContent = accountViewModel.decrypt(note)
+    val eventContent = remember { accountViewModel.decrypt(note) }
+    val modifier = remember { Modifier.fillMaxWidth() }
 
     if (eventContent != null) {
         if (makeItShort && accountViewModel.isLoggedUser(note.author)) {
@@ -431,7 +441,7 @@ private fun RenderTextEvent(
             TranslatableRichTextViewer(
                 content = eventContent,
                 canPreview = canPreview && !makeItShort,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = modifier,
                 tags = noteEvent.tags(),
                 backgroundColor = backgroundColor,
                 accountViewModel = accountViewModel,
@@ -545,10 +555,10 @@ private fun RenderPrivateMessage(
     navController: NavController
 ) {
     val noteEvent = note.event as? PrivateDmEvent ?: return
-    val withMe = noteEvent.with(accountViewModel.userProfile().pubkeyHex)
+    val withMe = remember { noteEvent.with(accountViewModel.userProfile().pubkeyHex) }
 
     if (withMe) {
-        val eventContent = accountViewModel.decrypt(note)
+        val eventContent = remember { accountViewModel.decrypt(note) }
 
         if (eventContent != null) {
             if (makeItShort && accountViewModel.isLoggedUser(note.author)) {
@@ -905,7 +915,7 @@ fun TimeAgo(time: Long) {
 
 @Composable
 private fun DrawAuthorImages(baseNote: Note, loggedIn: User, navController: NavController) {
-    val baseChannel = baseNote.channel()
+    val baseChannel = remember { baseNote.channel() }
 
     Column(Modifier.width(55.dp)) {
         // Draws the boosted picture outside the boosted card.
@@ -999,7 +1009,13 @@ fun DisplayHighlight(
     accountViewModel: AccountViewModel,
     navController: NavController
 ) {
-    val quote = highlight.split("\n").map { "> *${it.removeSuffix(" ")}*" }.joinToString("\n")
+    val quote =
+        remember {
+            highlight
+                .split("\n")
+                .map { "> *${it.removeSuffix(" ")}*" }
+                .joinToString("\n")
+        }
 
     TranslatableRichTextViewer(
         quote,
@@ -1202,9 +1218,9 @@ fun BadgeDisplay(baseNote: Note) {
     val background = MaterialTheme.colors.background
     val badgeData = baseNote.event as? BadgeDefinitionEvent ?: return
 
-    val image = badgeData.image()
-    val name = badgeData.name()
-    val description = badgeData.description()
+    val image = remember { badgeData.image() }
+    val name = remember { badgeData.name() }
+    val description = remember { badgeData.description() }
 
     var backgroundFromImage by remember { mutableStateOf(Pair(background, background)) }
     var imageResult by remember { mutableStateOf<AsyncImagePainter.State.Success?>(null) }

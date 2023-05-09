@@ -4,8 +4,8 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
 import com.vitorpamplona.amethyst.model.toHexKey
+import com.vitorpamplona.amethyst.ui.actions.ImageDownloader
 import io.trbl.blurhash.BlurHash
-import java.net.URL
 import java.security.MessageDigest
 import kotlin.math.roundToInt
 
@@ -19,11 +19,15 @@ class FileHeader(
     val description: String? = null
 ) {
     companion object {
-        fun prepare(fileUrl: String, mimeType: String?, description: String?, onReady: (FileHeader) -> Unit, onError: () -> Unit) {
+        suspend fun prepare(fileUrl: String, mimeType: String?, description: String?, onReady: (FileHeader) -> Unit, onError: () -> Unit) {
             try {
-                val imageData = URL(fileUrl).readBytes()
+                val imageData: ByteArray? = ImageDownloader().waitAndGetImage(fileUrl)
 
-                prepare(imageData, fileUrl, mimeType, description, onReady, onError)
+                if (imageData != null) {
+                    prepare(imageData, fileUrl, mimeType, description, onReady, onError)
+                } else {
+                    onError()
+                }
             } catch (e: Exception) {
                 Log.e("ImageDownload", "Couldn't download image from server: ${e.message}")
                 onError()

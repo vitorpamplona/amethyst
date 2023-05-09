@@ -1,0 +1,357 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="app_name_release" translatable="false">Amethyst</string>
+    <string name="app_name_debug" translatable="false">Amethyst Debug</string>
+    <string name="point_to_the_qr_code">اشاره کنید QR به کد</string>
+    <string name="show_qr">کد را نشان بده QR</string>
+    <string name="profile_image">تصویر پروفایل</string>
+    <string name="scan_qr">کد QR اسکن</string>
+    <string name="show_anyway">بهر حال نشان بده</string>
+    <string name="post_was_flagged_as_inappropriate_by">این پست توسط این افراد نامناسب اعلام شده</string>
+    <string name="post_not_found">این پست یافت نشد</string>
+    <string name="channel_image">تصویر کانال</string>
+    <string name="referenced_event_not_found">رویداد مربوطه یافت نشد</string>
+    <string name="could_not_decrypt_the_message">قادر به رمزگشایی پیام نیست</string>
+    <string name="group_picture">تصویر گروه</string>
+    <string name="explicit_content">محتوای نامناسب</string>
+    <string name="spam">اسپم</string>
+    <string name="impersonation">جعل هویت</string>
+    <string name="illegal_behavior">رفتار ناهنجار</string>
+    <string name="unknown">ناشناس</string>
+    <string name="relay_icon">آیکن رله</string>
+    <string name="unknown_author">نویسنده ناشناس</string>
+    <string name="copy_text">کپی متن</string>
+    <string name="copy_user_pubkey">کپی شناسه نویسنده</string>
+    <string name="copy_note_id">کپی شناسه نوت</string>
+    <string name="broadcast">انتشار</string>
+    <string name="request_deletion">درخواست حذف/string></string>
+    <string name="block_hide_user">بلاک/پنهان کردن کاربر</string>
+    <string name="report_spam_scam">گزارش اسپم/کلاهبرداری</string>
+    <string name="report_impersonation">گزارش جعل هویت</string>
+    <string name="report_explicit_content">گزارش محتوای نامناسب</string>
+    <string name="report_illegal_behaviour">گزارش رفتار ناهنجار</string>
+    <string name="login_with_a_private_key_to_be_able_to_reply">با کلید خصوصی وارد شوید تا بتوانید پاسخ دهید</string>
+    <string name="login_with_a_private_key_to_be_able_to_boost_posts">با کلید خصوصی وارد شوید تا بتوانید نوت را بازارسال کنید</string>
+    <string name="login_with_a_private_key_to_like_posts">با کلید خصوصی وارد شوید تا بتوانید نوت را لایک کنید</string>
+    <string name="no_zap_amount_setup_long_press_to_change">مقداری برای زپ تعیین نشده. نگه دارید تا تغییر دهید</string>
+    <string name="login_with_a_private_key_to_be_able_to_send_zaps">با کلید خصوصی وارد شوید تا بتوانید زپ کنید</string>
+    <string name="zaps">زپ</string>
+    <string name="view_count">دیدن تعداد</string>
+    <string name="boost">بازارسال</string>
+    <string name="boosted">بازارسال شده</string>
+    <string name="quote">نقل قول</string>
+    <string name="new_amount_in_sats">مبلغ جدید به ساتوشی</string>
+    <string name="add">افزودن</string>
+    <string name="replying_to">" پاسخ به"</string>
+    <string name="and">" و "</string>
+    <string name="in_channel">"در کانال "</string>
+    <string name="profile_banner">بنر پروفایل</string>
+    <string name="following">"دنبال شونده"</string>
+    <string name="followers">"دنبال کننده"</string>
+    <string name="profile">پروفایل</string>
+    <string name="security_filters">فیلترهای ایمنی</string>
+    <string name="log_out">خروج</string>
+    <string name="show_more">ادامه</string>
+    <string name="lightning_invoice">اینویس لایتنینگ</string>
+    <string name="pay">پرداخت</string>
+    <string name="lightning_tips">انعام لایتنینگ</string>
+    <string name="note_to_receiver">یادداشت برای گیرنده</string>
+    <string name="thank_you_so_much">!خیلی ممنون</string>
+    <string name="amount_in_sats">مبلغ به ساتوشی</string>
+    <string name="send_sats">ارسال ساتوشی</string>
+    <string name="error_parsing_preview_for">" %1$s : %2$s خطا در تبدیل"</string>
+    <string name="preview_card_image_for">"%1$s پیش نمایش تصویر کارت برای"</string>
+    <string name="new_channel">کانال جدید</string>
+    <string name="channel_name">نام کانال</string>
+    <string name="my_awesome_group">گروه باحال من</string>
+    <string name="picture_url">آدرس تصویر</string>
+    <string name="description">توصیف</string>
+    <string name="about_us">"درباره ما.. "</string>
+    <string name="what_s_on_your_mind">به چی فکر میکنی؟</string>
+    <string name="post">ارسال</string>
+    <string name="save">ذخیره</string>
+    <string name="create">ساختن</string>
+    <string name="cancel">لغو</string>
+    <string name="failed_to_upload_the_image">تصویر بارگذاری نشد</string>
+    <string name="relay_address">آدرس رله</string>
+    <string name="posts">نوت ها</string>
+    <string name="bytes">بایت</string>
+    <string name="errors">خطاها</string>
+    <string name="home_feed">خبرنامه اصلی</string>
+    <string name="private_message_feed">پیام خصوصی</string>
+    <string name="public_chat_feed">گفتگوی عمومی</string>
+    <string name="global_feed">خبرنامه همگانی</string>
+    <string name="search_feed">جستجو در خبرنامه</string>
+    <string name="add_a_relay">افزودن رله</string>
+    <string name="display_name">نمایش نام</string>
+    <string name="my_display_name">نام من</string>
+    <string name="username">نام کاربری</string>
+    <string name="my_username">نام کاربری من</string>
+    <string name="about_me">درباره من</string>
+    <string name="avatar_url">آدرس آواتار</string>
+    <string name="banner_url">آدرس بنر</string>
+    <string name="website_url">آدری وبسایت</string>
+    <string name="ln_address">آدرس لایتنینگ</string>
+    <string name="ln_url_outdated">آدرس لایتنینگ(نقل شده)</string>
+    <string name="image_saved_to_the_gallery">تصویر در گالری ذخیره شد</string>
+    <string name="failed_to_save_the_image">تصویر ذخیره نشد</string>
+    <string name="upload_image">بارگذاری تصویر</string>
+    <string name="uploading">...در حال بارگذاری</string>
+    <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">این کاربر آدرس لایتنینگ برای دریافت ساتوشی تنظیم نکرده است</string>
+    <string name="reply_here">"...اینجا پاسخ دهید "</string>
+    <string name="copies_the_note_id_to_the_clipboard_for_sharing">شناسه نوت را برای اشتراک گذاری در کلیپبورد ذخیره می کند </string>
+    <string name="copy_channel_id_note_to_the_clipboard">ذخیره شناسه کانال در کلیپبورد</string>
+    <string name="edits_the_channel_metadata">متادیتای کانال را ذخیره می کند</string>
+    <string name="join">پیوستن</string>
+    <string name="known">شناس</string>
+    <string name="new_requests">در خواست جدید</string>
+    <string name="blocked_users">کاربران بلاک شده</string>
+    <string name="new_threads">رشته جدید</string>
+    <string name="conversations">گفتگوها</string>
+    <string name="notes">نوت ها</string>
+    <string name="replies">پاسخ ها</string>
+    <string name="follows">"دنبال شوندگان"</string>
+    <string name="reports">"گزارش ها"</string>
+    <string name="more_options">انتخاب های بیشتر</string>
+    <string name="relays">"رله ها"</string>
+    <string name="website">وبسایت</string>
+    <string name="lightning_address">آدرس لایتنینگ</string>
+    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">شناسه کلید خصوصی (پسوردتان) را در کلیپبورد کپی می کند(</string>
+    <string name="copy_private_key_to_the_clipboard">کپی کردن کلید خصوصی در کلیپبورد</string>
+    <string name="copies_the_public_key_to_the_clipboard_for_sharing">کلید عمومی را برای اشتراک گذاری در کلیپبورد ذخیره می کند</string>
+    <string name="copy_public_key_npub_to_the_clipboard">کپی کردن کلید عمومی در کلیپبورد</string>
+    <string name="send_a_direct_message">ارسال پیام مستقیم</string>
+    <string name="edits_the_user_s_metadata">متادیتای کاربر را ویرایش می کند</string>
+    <string name="follow">دنبال کردن</string>
+    <string name="follow_back">دنبال کردن متقابل</string>
+    <string name="unblock">از بلاک درآوردن</string>
+    <string name="copy_user_id">کپی شناسه کاربر</string>
+    <string name="unblock_user">از بلاک درآوردن کاربر</string>
+    <string name="npub_hex_username">"npub, hex, نام کاربری "</string>
+    <string name="clear">پاک کردن</string>
+    <string name="app_logo">لوگوی اپ</string>
+    <string name="nsec_npub_hex_private_key">nsec / npub / hex کلید خصوصی</string>
+    <string name="show_password">نشان دادن پسورد</string>
+    <string name="hide_password">پنهان کردن پسورد</string>
+    <string name="invalid_key">کلید نامعتبر</string>
+    <string name="i_accept_the">"می پذیرم "</string>
+    <string name="terms_of_use">شرایط استفاده</string>
+    <string name="acceptance_of_terms_is_required">پذیرش شرایط الازمیست</string>
+    <string name="key_is_required">کلید الزامیست</string>
+    <string name="login">ورود</string>
+    <string name="generate_a_new_key">ساختن جفت کلید جدید</string>
+    <string name="loading_feed">در حال بارگذاری خبرنامه</string>
+    <string name="error_loading_replies">" :خطا در بارگذاری پاسخ ها"</string>
+    <string name="try_again">دوباره تلاش کنید</string>
+    <string name="feed_is_empty">خبرنامه خالیست</string>
+    <string name="refresh">تازه سازی</string>
+    <string name="created">ساخته شد</string>
+    <string name="with_description_of">با توصیف</string>
+    <string name="and_picture">و تصویر</string>
+    <string name="changed_chat_name_to">نام گفتگو تغییر کرد به</string>
+    <string name="description_to">تصویر</string>
+    <string name="and_picture_to">و تصویر به</string>
+    <string name="leave">ترک کردن</string>
+    <string name="unfollow">دنبال نکردن</string>
+    <string name="channel_created">کانال ساخته شد</string>
+    <string name="channel_information_changed_to">"اطلاعات کانال تغییر کرد به"</string>
+    <string name="public_chat">گفتگوی عمومی</string>
+    <string name="posts_received">نوت های دریافت شده</string>
+    <string name="remove">بیرون کردن</string>
+    <string name="sats" translatable="false">ساتوشی</string>
+    <string name="translations_auto">خودکار</string>
+    <string name="translations_translated_from">ترجمه از</string>
+    <string name="translations_to">به</string>
+    <string name="translations_show_in_lang_first">نشان بده s%1$ ابتدا به</string>
+    <string name="translations_always_translate_to_lang">همیشه به  ترجمه کن %1$s</string>
+    <string name="translations_never_translate_from_lang">هرگز به ترجمه نکن %1$s</string>
+    <string name="nip_05" translatable="false">NIP-05</string>
+    <string name="lnurl" translatable="false">LNURL...</string>
+    <string name="never">هرگز</string>
+    <string name="now">اکنون</string>
+    <string name="h">h</string>
+    <string name="m">m</string>
+    <string name="d">d</string>
+    <string name="nudity">برهنگی</string>
+    <string name="profanity_hateful_speech">ناسزا / نفرت پراکنی</string>
+    <string name="report_hateful_speech">گزارش نفرت پراکنی</string>
+    <string name="report_nudity_porn">گزارش برهنگی / پورن</string>
+    <string name="others">سایر</string>
+    <string name="mark_all_known_as_read">همه شناس ها خوانده شده کن</string>
+    <string name="mark_all_new_as_read">همه جدیدها را خوانده شده کن</string>
+    <string name="mark_all_as_read">همه را خوانده شده کن</string>
+    <string name="backup_keys">بازیابی کلیدها</string>
+    <string name="account_backup_tips_md" tools:ignore="Typos">
+        ## راهنمایی برای ایمنی و بازیابی کلید 
+        \n\n-  حساب کاربری شما با یک کلید خصوصی ایمن می شود. این کلید یک رشته تصادفی اعداد و ارقام است که با **nsec1** آغاز می گردد. 
+        \n\n- هر کس به کلید خصوصی شما دست یابد می تواند به هویت شما اقدام به انتشار محتوا نماید. کلید خصوصی خود را در هیچ نرم افزار یا وب سایتی که به آن اعتماد ندارید قرار ندیهید.  
+        \n- سازندگان آماتیست **هرگز** از ما کلید خصوصی تان را نمی خواهند. 
+        \n- حتما یه کپی از کلید خصوصی را برای بازیابی حساب کاربری نزد خود نگه دارد. ما استفاده از یک نرم افزار مدیریت پسورد را توصیه می نماییم. 
+    </string>
+    <string name="secret_key_copied_to_clipboard">کلید خصوصی در کلیپبورد کپی شد</string>
+    <string name="copy_my_secret_key">کلید خصوصیم را کپی کن</string>
+    <string name="biometric_authentication_failed">صحت سنجی انجام نشد</string>
+    <string name="biometric_error">خطا</string>
+    <string name="badge_created_by">"ساخته شده توسط %1$s"</string>
+    <string name="badge_award_image_for">"تصویر مدال پاداش برای %1$s"</string>
+    <string name="new_badge_award_notif">یک مدال پاداش دریافت کردید</string>
+    <string name="award_granted_to">مدال پاداش داده شد به</string>
+    <string name="copied_note_text_to_clipboard">نوت در کلیپبورد کپی شد</string>
+    <string name="copied_user_id_to_clipboard" tools:ignore="Typos">نویسنده در کلیپبورد کپی شد @npub</string>
+    <string name="copied_note_id_to_clipboard" tools:ignore="Typos">شناسه نوت در کلیپبورد کپی شد (@note1)</string>
+    <string name="select_text_dialog_top">انتخاب متن</string>
+    <string name="github" translatable="false">Github Gist w/ Proof</string>
+    <string name="telegram" translatable="false">Telegram</string>
+    <string name="mastodon" translatable="false">Mastodon Post ID w/ Proof</string>
+    <string name="twitter" translatable="false">Twitter Status w/ Proof</string>
+    <string name="github_proof_url_template" translatable="false">https://gist.github.com/&lt;user&gt;/&lt;gist&gt;</string>
+    <string name="telegram_proof_url_template" translatable="false">https://t.me/&lt;proof post&gt;</string>
+    <string name="mastodon_proof_url_template" translatable="false">https://&lt;server&gt;/&lt;user&gt;/&lt;proof post&gt;</string>
+    <string name="twitter_proof_url_template" translatable="false">https://twitter.com/&lt;user&gt;/status/&lt;proof post&gt;</string>
+    <string name="private_conversation_notification">"&lt;نمی توان پیام خصوصی را رمزگشایی کردن&gt;\n\nYou در پیام خصوصی/رمزگذاری شده بین و به شما اشاره شده %1$s  %2$s."</string>
+    <string name="account_switch_add_account_dialog_title">افزودن حساب کاربری جدید</string>
+    <string name="drawer_accounts">حساب های کاربری</string>
+    <string name="account_switch_select_account">انتخاب حساب کارگری</string>
+    <string name="account_switch_add_account_btn">افزودن حساب کاربری جدید</string>
+    <string name="account_switch_active_account">حساب کاربری فعال</string>
+    <string name="account_switch_has_private_key">کلید خصوصی دارد</string>
+    <string name="account_switch_pubkey_only">فقط خواندن، کلید خصوصی ندارد</string>
+    <string name="back">بازگشت</string>
+    <string name="quick_action_select">انتخاب</string>
+    <string name="quick_action_share_browser_link">اشتراک گذاری لینک پیماینده</string>
+    <string name="quick_action_share">اشتراک گذاری</string>
+    <string name="quick_action_copy_user_id">شناسه نویسنده</string>
+    <string name="quick_action_copy_note_id">شناسه نوت</string>
+    <string name="quick_action_copy_text">کپی متن</string>
+    <string name="quick_action_delete">حذف</string>
+    <string name="quick_action_unfollow">دنبال نکردن</string>
+    <string name="quick_action_follow">دنبال کردن</string>
+    <string name="quick_action_request_deletion_alert_title">Request Deletion</string>
+    <string name="quick_action_request_deletion_alert_body">آماتیست درخواست می کند که نوت شما از رله هایی که درحال حاضر به آن متصل هستید حذف شود. هیچ تضمینی نیست که نوت شما برای همیشه از آن رله ها یا از رله های دیگری که ممکن است در آنها ذخیره شده باشد حذف خواهد شد.. </string>
+    <string name="quick_action_block_dialog_btn">بلاک</string>
+    <string name="quick_action_delete_dialog_btn">حذف</string>
+    <string name="quick_action_block">بلاک</string>
+    <string name="quick_action_report">گزارش</string>
+    <string name="quick_action_delete_button">حذف</string>
+    <string name="quick_action_dont_show_again_button">دوباره نشان نده</string>
+    <string name="report_dialog_spam">اسپم یا کلاهبرداری</string>
+    <string name="report_dialog_profanity">محتوای نفرت پراکنی یا ناسزا</string>
+    <string name="report_dialog_impersonation">جعل هویت بدخواهانه</string>
+    <string name="report_dialog_nudity">محتوای برهنگی یا نمایان</string>
+    <string name="report_dialog_illegal">رفتار ناهنجار</string>
+    <string name="report_dialog_blocking_a_user">بلاک کردن کاربر محتوای ایشان را در اپ شما پنهان می کند. نوت های شما همچنا بطور عمومی دیده می شوند که شامل کاربران بلاک شده توسط شما نیز هست. کاربران بلاک شده در صفحه فیلترهای ایمنی ففهرست می شوند.</string>
+    <string name="report_dialog_block_hide_user_btn"><![CDATA[Block & Hide User]]></string>
+    <string name="report_dialog_report_btn">گزارش سواستفاده</string>
+    <string name="report_dialog_reminder_public">تمام گزارش ها بطور عمومی دیده می شوند</string>
+    <string name="report_dialog_additional_reason_placeholder">در صورت تمایل توضیحاتی به گزارش خود بیفزایید...</string>
+    <string name="report_dialog_additional_reason_label">توضیحات اضافه</string>
+    <string name="report_dialog_select_reason_label">دلایل</string>
+    <string name="report_dialog_select_reason_placeholder">دلیلی انتخاب کنید...</string>
+    <string name="report_dialog_post_report_btn">گزارش نوت</string>
+    <string name="report_dialog_title">بلاک و گزارش</string>
+    <string name="block_only">بلاک</string>
+
+    <string name="bookmarks">علامت گذاشته ها</string>
+    <string name="private_bookmarks">علامت گاشته های خصوصی</string>
+    <string name="public_bookmarks">علامت گذاشته های عمومی</string>
+    <string name="add_to_private_bookmarks">افزودن به علامت گذاشته های خصوصی</string>
+    <string name="add_to_public_bookmarks">افزودن به علامت گذاشته های عمومی</string>
+    <string name="remove_from_private_bookmarks">برداشتن از علامت گذاشته های خصوصی</string>
+    <string name="remove_from_public_bookmarks">برداشتن از علامت گذاشته های خصوصی</string>
+
+    <string name="wallet_connect_service">خدمات اتصال به کیف پول</string>
+    <string name="wallet_connect_service_explainer">اجازه رمز نوستر برای پرداخت زپ بدون خارج شدن از اپ. رمز را ایمن نگه دارید و در صورت امکان از رله خصوصی استفاده کنید.</string>
+    <string name="wallet_connect_service_pubkey">کلید عمومی اتصال به کیف پول</string>
+    <string name="wallet_connect_service_relay">رله اتصال به کیف پول</string>
+    <string name="wallet_connect_service_secret">رمز اتصال به کیف پول</string>
+    <string name="wallet_connect_service_show_secret">نمایش کلید خصوصی</string>
+    <string name="wallet_connect_service_secret_placeholder">nsec / hex کلید خصوصی</string>
+
+    <string name="pledge_amount_in_sats">مبلغ وثیقه به ساتوشی</string>
+    <string name="post_poll">ارسال نظرسنجی</string>
+    <string name="poll_heading_required">قسمت های الزامی:</string>
+    <string name="poll_zap_recipients">دریافت کنندگان زپ</string>
+    <string name="poll_primary_description">توضیحات اولیه نظرسنجی…</string>
+    <string name="poll_option_index">گزینه ها %s</string>
+    <string name="poll_option_description">توضیح گزینه های نظرسنجی</string>
+    <string name="poll_heading_optional">قسمت های اختیاری:</string>
+    <string name="poll_zap_value_min">حداقل زپ</string>
+    <string name="poll_zap_value_max">حداکثر زپ</string>
+    <string name="poll_consensus_threshold">توافق نظر</string>
+    <string name="poll_consensus_threshold_percent">(0–100)%</string>
+    <string name="poll_closing_time">بسته شدن پس از</string>
+    <string name="poll_closing_time_days">روز</string>
+    <string name="poll_is_closed">نظر سنجی برای رای جدید بسته است</string>
+    <string name="poll_zap_amount">مبلغ زپ</string>
+    <string name="one_vote_per_user_on_atomic_votes">فقط یک رای به ازای هر کاربر در این نوع نظرسنجی مجاز است</string>
+
+    <string name="looking_for_event">"جستجوی رویداد %1$s"</string>
+
+    <string name="custom_zaps_add_a_message">افزودن پیام عمومی</string>
+    <string name="custom_zaps_add_a_message_private">افزودن پیام خصوصی</string>
+    <string name="custom_zaps_add_a_message_nonzap">افزودن پیام اینویس</string>
+
+    <string name="custom_zaps_add_a_message_example">از زحمات شما متشکریم!</string>
+
+    <string name="lightning_create_and_add_invoice">ساختن و افزودن</string>
+    <string name="poll_author_no_vote">سازندگان نظرسنجی نمی توانند در نظر سنجی خود رای دهند.</string>
+    <string name="poll_hashtag" translatable="false">#زپ_نظرسنجی</string>
+
+
+    <string name="hash_verification_passed">تصویر از زمان ارسال یکسان است</string>
+    <string name="hash_verification_failed">تصویر تغییر کرده است. ممکن است نویسنده تغییر را ندیده باشد.</string>
+
+    <string name="content_description_add_image">افزودن تصویر</string>
+    <string name="content_description_add_video">افزودن فیلم</string>
+    <string name="content_description_add_document">افزودن مدارک</string>
+
+    <string name="add_content">افزودن به پیام</string>
+    <string name="content_description">توصیف محتوا</string>
+    <string name="content_description_example">قایقی آبی در ساحل شنی سفید هنگام غروب</string>
+
+    <string name="zap_type">نوع زپ</string>
+    <string name="zap_type_explainer">نوع زپ برای همه گزینه ها</string>
+
+    <string name="zap_type_public">عمومی</string>
+    <string name="zap_type_public_explainer">همه می توانند تراکنش و پیام را ببینند</string>
+
+    <string name="zap_type_private">خصوصی</string>
+    <string name="zap_type_private_explainer">فرستنده و گیرنده می توانند یکدیگر و پیام را ببینند</string>
+
+    <string name="zap_type_anonymous">ناشناس</string>
+    <string name="zap_type_anonymous_explainer">گیرنده و دیگران نمی دانند چه کسی پرداخت کرده است</string>
+
+    <string name="zap_type_nonzap">غیرزپ</string>
+    <string name="zap_type_nonzap_explainer">هیچ ردی در نوستر نمی ماند، فقط در شبکه لایتنینگ انجام می شود</string>
+
+
+    <string name="file_server">سرور فایل</string>
+    <string name="zap_forward_lnAddress">آدرس لایتنینگ یا @User</string>
+
+    <string name="upload_server_imgur">imgur.com - معتمد</string>
+    <string name="upload_server_imgur_explainer">Imgur میتواند فایل را بهینه کند</string>
+
+    <string name="upload_server_nostrimg">nostrimg.com - معتمد</string>
+    <string name="upload_server_nostrimg_explainer">NostrImg میتواند فایل را بهینه کند</string>
+
+    <string name="upload_server_nostrbuild">nostr.build - معتمد</string>
+    <string name="upload_server_nostrbuild_explainer">Nostr.build can modify the file</string>
+
+    <string name="upload_server_imgur_nip94">قابل بررسی Imgur (NIP-94)</string>
+    <string name="upload_server_imgur_nip94_explainer">بررسی کنید که Imgur فایل را بهینه کرده یا خیر . NIPجدید : سایر کلاینت ها ممکن است آن را نبینند. </string>
+
+    <string name="upload_server_nostrimg_nip94">قابل بررسی NostrImg (NIP-94)</string>
+    <string name="upload_server_nostrimg_nip94_explainer">بررسی کنید که NostrImg فایل را بهینه کرده یا خیر . NIPجدید : سایر کلاینت ها ممکن است آن را نبینند.</string>
+
+    <string name="upload_server_nostrbuild_nip94">Verifiable Nostr.build (NIP-94)</string>
+    <string name="upload_server_nostrbuild_nip94_explainer">بررسی کنید که Nostr.build فایل را بهینه کرده یا خیر . NIPجدید : سایر کلاینت ها ممکن است آن را نبینند.</string>
+
+    <string name="upload_server_relays_nip95">رله های شما (NIP-95)</string>
+    <string name="upload_server_relays_nip95_explainer">فایل ها در رله های شما میزبانی می شوند. NIPجدید: بررسی کنید آیا پشتیبانی می کنند یا خیر </string>
+
+
+
+    <string name="follow_list_selection">لیست دنبال ها </string>
+    <string name="follow_list_kind3follows">همه دنبال ها</string>
+    <string name="follow_list_global">همگانی</string>
+
+</resources>

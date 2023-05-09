@@ -8,11 +8,12 @@ object ChatroomListNewFeedFilter : FeedFilter<Note>() {
 
     // returns the last Note of each user.
     override fun feed(): List<Note> {
-        val me = ChatroomListKnownFeedFilter.account.userProfile()
+        val me = account.userProfile()
+        val followingKeySet = ChatroomListKnownFeedFilter.account.followingKeySet()
 
         val privateChatrooms = account.userProfile().privateChatrooms
         val messagingWith = privateChatrooms.keys.filter {
-            !me.hasSentMessagesTo(it) && account.isAcceptable(it)
+            it.pubkeyHex !in followingKeySet && !me.hasSentMessagesTo(it) && account.isAcceptable(it)
         }
 
         val privateMessages = messagingWith.mapNotNull { it ->

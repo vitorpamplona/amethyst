@@ -19,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,6 +34,7 @@ import com.vitorpamplona.amethyst.ui.screen.ZapSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -46,6 +48,7 @@ fun ZapSetCompose(zapSetCard: ZapSetCard, isInnerNote: Boolean = false, routeFor
 
     val noteEvent = note?.event
     var popupExpanded by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     if (note == null) {
         BlankNote(Modifier, isInnerNote)
@@ -67,12 +70,19 @@ fun ZapSetCompose(zapSetCard: ZapSetCard, isInnerNote: Boolean = false, routeFor
         }
 
         Column(
-            modifier = Modifier.background(backgroundColor).combinedClickable(
-                onClick = {
-                    routeFor(note, account.userProfile())?.let { navController.navigate(it) }
-                },
-                onLongClick = { popupExpanded = true }
-            )
+            modifier = Modifier
+                .background(backgroundColor)
+                .combinedClickable(
+                    onClick = {
+                        scope.launch {
+                            routeFor(
+                                note,
+                                account.userProfile()
+                            )?.let { navController.navigate(it) }
+                        }
+                    },
+                    onLongClick = { popupExpanded = true }
+                )
         ) {
             Row(
                 modifier = Modifier

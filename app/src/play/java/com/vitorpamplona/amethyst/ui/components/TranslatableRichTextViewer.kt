@@ -73,8 +73,6 @@ fun TranslatableRichTextViewer(
                         showOriginal = preference == task.result.sourceLang
                     }
                     translatedTextState.value = task.result
-                } else {
-                    translatedTextState.value = ResultOrError(content, null, null, null)
                 }
             }
         }

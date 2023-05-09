@@ -3,21 +3,22 @@ package com.vitorpamplona.amethyst.ui.dal
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
 
 object ChatroomFeedFilter : AdditiveFeedFilter<Note>() {
     var account: Account? = null
-    var withUser: User? = null
+    var withUser: String? = null
 
     fun loadMessagesBetween(accountIn: Account, userId: String) {
         account = accountIn
-        withUser = LocalCache.checkGetOrCreateUser(userId)
+        withUser = userId
     }
 
     // returns the last Note of each user.
     override fun feed(): List<Note> {
+        val processingUser = withUser ?: return emptyList()
+
         val myAccount = account
-        val myUser = withUser
+        val myUser = LocalCache.checkGetOrCreateUser(processingUser)
 
         if (myAccount == null || myUser == null) return emptyList()
 
@@ -32,8 +33,10 @@ object ChatroomFeedFilter : AdditiveFeedFilter<Note>() {
     }
 
     override fun applyFilter(collection: Set<Note>): Set<Note> {
+        val processingUser = withUser ?: return emptySet()
+
         val myAccount = account
-        val myUser = withUser
+        val myUser = LocalCache.checkGetOrCreateUser(processingUser)
 
         if (myAccount == null || myUser == null) return emptySet()
 

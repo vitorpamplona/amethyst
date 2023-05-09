@@ -72,8 +72,8 @@ fun BookmarkListScreen(accountViewModel: AccountViewModel, navController: NavCon
                         }
                     )
                 }
-                HorizontalPager(pageCount = 2, state = pagerState) {
-                    when (pagerState.currentPage) {
+                HorizontalPager(pageCount = 2, state = pagerState) { page ->
+                    when (page) {
                         0 -> FeedView(privateFeedViewModel, accountViewModel, navController, null)
                         1 -> FeedView(publicFeedViewModel, accountViewModel, navController, null)
                     }

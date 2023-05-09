@@ -396,18 +396,14 @@ class UserMetadata {
 
 class UserLiveData(val user: User) : LiveData<UserState>(UserState(user)) {
     // Refreshes observers in batches.
-    private val bundler = BundledUpdate(300, Dispatchers.Main) {
+    private val bundler = BundledUpdate(300, Dispatchers.IO) {
         if (hasActiveObservers()) {
-            refresh()
+            postValue(UserState(user))
         }
     }
 
     fun invalidateData() {
         bundler.invalidate()
-    }
-
-    private fun refresh() {
-        postValue(UserState(user))
     }
 
     override fun onActive() {

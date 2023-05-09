@@ -81,6 +81,7 @@ fun AppTopBar(navController: NavHostController, scaffoldState: ScaffoldState, ac
         // Route.Profile.route -> TopBarWithBackButton(navController)
         Route.Home.base -> HomeTopBar(scaffoldState, accountViewModel)
         Route.Video.base -> StoriesTopBar(scaffoldState, accountViewModel)
+        Route.Notification.base -> NotificationTopBar(scaffoldState, accountViewModel)
         else -> MainTopBar(scaffoldState, accountViewModel)
     }
 }
@@ -99,6 +100,15 @@ fun HomeTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
     GenericTopBar(scaffoldState, accountViewModel) { account ->
         FollowList(account.defaultHomeFollowList, account.userProfile(), false) { listName ->
             account.changeDefaultHomeFollowList(listName)
+        }
+    }
+}
+
+@Composable
+fun NotificationTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
+    GenericTopBar(scaffoldState, accountViewModel) { account ->
+        FollowList(account.defaultNotificationFollowList, account.userProfile(), true) { listName ->
+            account.changeDefaultNotificationFollowList(listName)
         }
     }
 }
@@ -273,13 +283,13 @@ fun SimpleTextSpinner(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     var optionsShowing by remember { mutableStateOf(false) }
-    var currentText by remember { mutableStateOf(placeholder) }
+    var currentText by remember(placeholder) { mutableStateOf(placeholder) }
 
     Box(
         modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
-        Text(currentText)
+        Text(placeholder)
         Box(
             modifier = Modifier
                 .matchParentSize()
