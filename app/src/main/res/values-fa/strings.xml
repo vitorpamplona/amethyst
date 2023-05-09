@@ -23,7 +23,7 @@
     <string name="copy_user_pubkey">کپی شناسه نویسنده</string>
     <string name="copy_note_id">کپی شناسه نوت</string>
     <string name="broadcast">انتشار</string>
-    <string name="request_deletion">درخواست حذف/string>
+    <string name="request_deletion">درخواست حذف/string></string>
     <string name="block_hide_user">بلاک/پنهان کردن کاربر</string>
     <string name="report_spam_scam">گزارش اسپم/کلاهبرداری</string>
     <string name="report_impersonation">گزارش جعل هویت</string>
@@ -282,7 +282,7 @@
     <string name="poll_closing_time_days">روز</string>
     <string name="poll_is_closed">نظر سنجی برای رای جدید بسته است</string>
     <string name="poll_zap_amount">مبلغ زپ</string>
-    <string name="one_vote_per_user_on_atomic_votes"فقط یک رای به ازای هر کاربر در این نوع نظرسنجی مجاز است</string>
+    <string name="one_vote_per_user_on_atomic_votes">فقط یک رای به ازای هر کاربر در این نوع نظرسنجی مجاز است</string>
 
     <string name="looking_for_event">"جستجوی رویداد %1$s"</string>
 
