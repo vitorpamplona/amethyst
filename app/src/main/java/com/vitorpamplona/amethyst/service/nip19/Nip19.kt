@@ -13,7 +13,7 @@ object Nip19 {
         USER, NOTE, EVENT, RELAY, ADDRESS
     }
 
-    val nip19regex = Pattern.compile("(nostr:)?@?(nsec1|npub1|nevent1|naddr1|note1|nprofile1|nrelay1)([qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)(.*)", Pattern.CASE_INSENSITIVE)
+    val nip19regex = Pattern.compile("(nostr:)?@?(nsec1|npub1|nevent1|naddr1|note1|nprofile1|nrelay1)([qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)([\\S]*)", Pattern.CASE_INSENSITIVE)
 
     data class Return(
         val type: Type,
