@@ -82,7 +82,7 @@ object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
         TypedFilter(
             types = COMMON_FEED_TYPES,
             filter = JsonFilter(
-                kinds = listOf(BookmarkListEvent.kind),
+                kinds = listOf(BookmarkListEvent.kind, PeopleListEvent.kind),
                 authors = listOf(it.pubkeyHex),
                 limit = 1
             )
