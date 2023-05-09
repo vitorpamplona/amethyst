@@ -100,23 +100,42 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navController: NavController) {
+    if (userId == null) return
+
+    var userBase by remember { mutableStateOf<User?>(null) }
+
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            userBase = LocalCache.checkGetOrCreateUser(userId)
+        }
+    }
+
+    userBase?.let {
+        ProfileScreen(
+            user = it,
+            accountViewModel = accountViewModel,
+            navController = navController
+        )
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun ProfileScreen(user: User, accountViewModel: AccountViewModel, navController: NavController) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
-    if (userId == null) return
+    UserProfileNewThreadFeedFilter.loadUserProfile(account, user)
+    UserProfileConversationsFeedFilter.loadUserProfile(account, user)
+    UserProfileFollowersFeedFilter.loadUserProfile(account, user)
+    UserProfileFollowsFeedFilter.loadUserProfile(account, user)
+    UserProfileZapsFeedFilter.loadUserProfile(user)
+    UserProfileReportsFeedFilter.loadUserProfile(user)
+    UserProfileBookmarksFeedFilter.loadUserProfile(account, user)
 
-    UserProfileNewThreadFeedFilter.loadUserProfile(account, userId)
-    UserProfileConversationsFeedFilter.loadUserProfile(account, userId)
-    UserProfileFollowersFeedFilter.loadUserProfile(account, userId)
-    UserProfileFollowsFeedFilter.loadUserProfile(account, userId)
-    UserProfileZapsFeedFilter.loadUserProfile(userId)
-    UserProfileReportsFeedFilter.loadUserProfile(userId)
-    UserProfileBookmarksFeedFilter.loadUserProfile(account, userId)
-
-    NostrUserProfileDataSource.loadUserProfile(userId)
+    NostrUserProfileDataSource.loadUserProfile(user)
 
     val lifeCycleOwner = LocalLifecycleOwner.current
 
@@ -124,7 +143,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Profidle Start")
-                NostrUserProfileDataSource.loadUserProfile(userId)
+                NostrUserProfileDataSource.loadUserProfile(user)
                 NostrUserProfileDataSource.start()
             }
             if (event == Lifecycle.Event.ON_PAUSE) {
@@ -269,8 +288,8 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
                         modifier = with(LocalDensity.current) {
                             Modifier.height((columnSize.height - tabsSize.height).toDp())
                         }
-                    ) {
-                        when (pagerState.currentPage) {
+                    ) { page ->
+                        when (page) {
                             0 -> TabNotesNewThreads(accountViewModel, navController)
                             1 -> TabNotesConversations(accountViewModel, navController)
                             2 -> TabFollows(baseUser, accountViewModel, navController)

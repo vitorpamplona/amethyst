@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.service
 
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
@@ -10,13 +9,8 @@ import com.vitorpamplona.amethyst.service.relays.TypedFilter
 object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
     var user: User? = null
 
-    fun loadUserProfile(userId: String?) {
-        if (userId != null) {
-            user = LocalCache.getOrCreateUser(userId)
-        } else {
-            user = null
-        }
-
+    fun loadUserProfile(user: User?) {
+        this.user = user
         resetFilters()
     }
 
@@ -88,7 +82,7 @@ object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
         TypedFilter(
             types = COMMON_FEED_TYPES,
             filter = JsonFilter(
-                kinds = listOf(BookmarkListEvent.kind),
+                kinds = listOf(BookmarkListEvent.kind, PeopleListEvent.kind),
                 authors = listOf(it.pubkeyHex),
                 limit = 1
             )

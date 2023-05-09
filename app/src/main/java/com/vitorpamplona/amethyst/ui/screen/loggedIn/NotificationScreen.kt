@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
+import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.CardFeedView
@@ -34,9 +35,11 @@ fun NotificationScreen(
         notifFeedViewModel.clear()
     }
 
-    LaunchedEffect(accountViewModel) {
+    LaunchedEffect(account.userProfile().pubkeyHex, account.defaultNotificationFollowList) {
+        NostrAccountDataSource.resetFilters()
         NotificationFeedFilter.account = account
-        notifFeedViewModel.invalidateData()
+        notifFeedViewModel.clear()
+        notifFeedViewModel.refresh()
     }
 
     val lifeCycleOwner = LocalLifecycleOwner.current

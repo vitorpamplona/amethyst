@@ -21,7 +21,11 @@ class PrivateDmEvent(
      * nip-04 EncryptedDmEvent but may omit the recipient, too. This value can be queried and used
      * for initial messages.
      */
-    fun recipientPubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.run { Hex.decode(this[1]).toHexKey() } // makes sure its a valid one
+    fun recipientPubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }
+
+    fun recipientPubKeyBytes() = recipientPubKey()?.runCatching { Hex.decode(this[1]) }?.getOrNull()
+
+    fun verifiedRecipientPubKey() = recipientPubKey()?.runCatching { Hex.decode(this[1]).toHexKey() }?.getOrNull() // makes sure its a valid one
 
     /**
      * To be fully compatible with nip-04, we read e-tags that are in violation to nip-18.
@@ -30,6 +34,11 @@ class PrivateDmEvent(
      * `[](e/c06f795e1234a9a1aecc731d768d4f3ca73e80031734767067c82d67ce82e506).
      */
     fun replyTo() = tags.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)
+
+    fun with(pubkeyHex: String): Boolean {
+        return pubkeyHex == pubKey ||
+            tags.firstOrNull { it.size > 1 && it[0] == "p" }?.getOrNull(1) == pubkeyHex
+    }
 
     fun plainContent(privKey: ByteArray, pubKey: ByteArray): String? {
         return try {

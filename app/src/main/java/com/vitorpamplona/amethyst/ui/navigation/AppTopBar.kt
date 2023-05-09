@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
@@ -80,6 +81,7 @@ fun AppTopBar(navController: NavHostController, scaffoldState: ScaffoldState, ac
         // Route.Profile.route -> TopBarWithBackButton(navController)
         Route.Home.base -> HomeTopBar(scaffoldState, accountViewModel)
         Route.Video.base -> StoriesTopBar(scaffoldState, accountViewModel)
+        Route.Notification.base -> NotificationTopBar(scaffoldState, accountViewModel)
         else -> MainTopBar(scaffoldState, accountViewModel)
     }
 }
@@ -87,7 +89,7 @@ fun AppTopBar(navController: NavHostController, scaffoldState: ScaffoldState, ac
 @Composable
 fun StoriesTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
     GenericTopBar(scaffoldState, accountViewModel) { account ->
-        FollowList(account.defaultStoriesFollowList, true) { listName ->
+        FollowList(account.defaultStoriesFollowList, account.userProfile(), true) { listName ->
             account.changeDefaultStoriesFollowList(listName)
         }
     }
@@ -96,8 +98,17 @@ fun StoriesTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewMod
 @Composable
 fun HomeTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
     GenericTopBar(scaffoldState, accountViewModel) { account ->
-        FollowList(account.defaultHomeFollowList, false) { listName ->
+        FollowList(account.defaultHomeFollowList, account.userProfile(), false) { listName ->
             account.changeDefaultHomeFollowList(listName)
+        }
+    }
+}
+
+@Composable
+fun NotificationTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
+    GenericTopBar(scaffoldState, accountViewModel) { account ->
+        FollowList(account.defaultNotificationFollowList, account.userProfile(), true) { listName ->
+            account.changeDefaultNotificationFollowList(listName)
         }
     }
 }
@@ -226,7 +237,7 @@ private fun LoggedInUserPictureDrawer(
 }
 
 @Composable
-fun FollowList(listName: String, withGlobal: Boolean, onChange: (String) -> Unit) {
+fun FollowList(listName: String, loggedIn: User, withGlobal: Boolean, onChange: (String) -> Unit) {
     // Notification
     val dbState = LocalCache.live.observeAsState()
     val db = dbState.value ?: return
@@ -244,7 +255,7 @@ fun FollowList(listName: String, withGlobal: Boolean, onChange: (String) -> Unit
             followLists = defaultOptions + LocalCache.addressables.mapNotNull {
                 val event = (it.value.event as? PeopleListEvent)
                 // Has to have an list
-                if (event != null && (event.tags.size > 1 || event.content.length > 50)) {
+                if (event != null && event.pubKey == loggedIn.pubkeyHex && (event.tags.size > 1 || event.content.length > 50)) {
                     Pair(event.dTag(), event.dTag())
                 } else {
                     null
@@ -254,7 +265,7 @@ fun FollowList(listName: String, withGlobal: Boolean, onChange: (String) -> Unit
     }
 
     SimpleTextSpinner(
-        placeholder = followLists.firstOrNull { it.first == listName }?.first ?: KIND3_FOLLOWS,
+        placeholder = followLists.firstOrNull { it.first == listName }?.second ?: "Select an Option",
         options = followNames.value,
         onSelect = {
             onChange(followLists.getOrNull(it)?.first ?: KIND3_FOLLOWS)
@@ -272,13 +283,13 @@ fun SimpleTextSpinner(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     var optionsShowing by remember { mutableStateOf(false) }
-    var currentText by remember { mutableStateOf(placeholder) }
+    var currentText by remember(placeholder) { mutableStateOf(placeholder) }
 
     Box(
         modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
-        Text(currentText)
+        Text(placeholder)
         Box(
             modifier = Modifier
                 .matchParentSize()

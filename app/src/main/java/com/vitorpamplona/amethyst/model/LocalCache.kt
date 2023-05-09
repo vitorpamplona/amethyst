@@ -359,7 +359,7 @@ object LocalCache {
         // Already processed this event.
         if (note.event != null) return
 
-        val recipient = event.recipientPubKey()?.let { getOrCreateUser(it) }
+        val recipient = event.verifiedRecipientPubKey()?.let { getOrCreateUser(it) }
 
         // Log.d("PM", "${author.toBestDisplayName()} to ${recipient?.toBestDisplayName()}")
 
@@ -407,7 +407,7 @@ object LocalCache {
 
                 if (deleteNote.event is PrivateDmEvent) {
                     val author = deleteNote.author
-                    val recipient = (deleteNote.event as? PrivateDmEvent)?.recipientPubKey()?.let { checkGetOrCreateUser(it) }
+                    val recipient = (deleteNote.event as? PrivateDmEvent)?.verifiedRecipientPubKey()?.let { checkGetOrCreateUser(it) }
 
                     if (recipient != null && author != null) {
                         author.removeMessage(recipient, deleteNote)
@@ -736,19 +736,23 @@ object LocalCache {
             note.addRelay(relay)
         }
 
+        val file = File(Amethyst.instance.applicationContext.externalCacheDir, "NIP95")
+
+        if (!file.exists()) {
+            try {
+                val cachePath = File(Amethyst.instance.applicationContext.externalCacheDir, "NIP95")
+                cachePath.mkdirs()
+                val stream = FileOutputStream(File(cachePath, event.id))
+                stream.write(event.decode())
+                stream.close()
+                Log.e("EventLogger", "Saved to disk as ${File(cachePath, event.id).toUri()}")
+            } catch (e: IOException) {
+                Log.e("FileSotrageEvent", "FileStorageEvent save to disk error: " + event.id, e)
+            }
+        }
+
         // Already processed this event.
         if (note.event != null) return
-
-        try {
-            val cachePath = File(Amethyst.instance.applicationContext.externalCacheDir, "NIP95")
-            cachePath.mkdirs()
-            val stream = FileOutputStream(File(cachePath, event.id))
-            stream.write(event.decode())
-            stream.close()
-            Log.e("EventLogger", "Saved to disk as ${File(cachePath, event.id).toUri()}")
-        } catch (e: IOException) {
-            Log.e("FileSotrageEvent", "FileStorageEvent save to disk error: " + event.id, e)
-        }
 
         // this is an invalid event. But we don't need to keep the data in memory.
         val eventNoData = FileStorageEvent(event.id, event.pubKey, event.createdAt, event.tags, "", event.sig)
@@ -912,7 +916,7 @@ object LocalCache {
 class LocalCacheLiveData : LiveData<Set<Note>>(setOf<Note>()) {
 
     // Refreshes observers in batches.
-    private val bundler = BundledInsert<Note>(300, Dispatchers.Main)
+    private val bundler = BundledInsert<Note>(300, Dispatchers.IO)
 
     fun invalidateData(newNote: Note) {
         bundler.invalidateList(newNote) { bundledNewNotes ->

@@ -31,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,7 +64,7 @@ import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 
 val ChatBubbleShapeMe = RoundedCornerShape(15.dp, 15.dp, 3.dp, 15.dp)
 val ChatBubbleShapeThem = RoundedCornerShape(3.dp, 15.dp, 15.dp, 15.dp)
@@ -94,6 +95,7 @@ fun ChatroomMessageCompose(
     var showHiddenNote by remember { mutableStateOf(false) }
 
     val context = LocalContext.current.applicationContext
+    val scope = rememberCoroutineScope()
 
     if (note?.event == null) {
         BlankNote(Modifier)
@@ -135,7 +137,7 @@ fun ChatroomMessageCompose(
 
         LaunchedEffect(key1 = routeForLastRead) {
             routeForLastRead?.let {
-                withContext(Dispatchers.IO) {
+                scope.launch(Dispatchers.IO) {
                     val lastTime = NotificationCache.load(it)
 
                     val createdAt = note.createdAt()

@@ -22,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,7 +51,7 @@ import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 
 @Composable
 fun ChatroomCompose(
@@ -63,6 +64,8 @@ fun ChatroomCompose(
 
     val notificationCacheState = NotificationCache.live.observeAsState()
     val notificationCache = notificationCacheState.value ?: return
+
+    val scope = rememberCoroutineScope()
 
     if (note?.event == null) {
         BlankNote(Modifier)
@@ -86,7 +89,7 @@ fun ChatroomCompose(
             var hasNewMessages by remember { mutableStateOf<Boolean>(false) }
 
             LaunchedEffect(key1 = notificationCache, key2 = note) {
-                withContext(Dispatchers.IO) {
+                scope.launch(Dispatchers.IO) {
                     note.createdAt()?.let { timestamp ->
                         hasNewMessages =
                             timestamp > notificationCache.cache.load("Channel/${chan.idHex}")
@@ -131,7 +134,7 @@ fun ChatroomCompose(
     } else {
         val replyAuthorBase =
             (note.event as? PrivateDmEvent)
-                ?.recipientPubKey()
+                ?.verifiedRecipientPubKey()
                 ?.let { LocalCache.getOrCreateUser(it) }
 
         var userToComposeOn = note.author!!
@@ -148,7 +151,7 @@ fun ChatroomCompose(
             var hasNewMessages by remember { mutableStateOf<Boolean>(false) }
 
             LaunchedEffect(key1 = notificationCache, key2 = note) {
-                withContext(Dispatchers.IO) {
+                scope.launch(Dispatchers.IO) {
                     noteEvent?.let {
                         hasNewMessages = it.createdAt() > notificationCache.cache.load(
                             "Room/${userToComposeOn.pubkeyHex}"

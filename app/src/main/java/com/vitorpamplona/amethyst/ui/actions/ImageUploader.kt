@@ -1,20 +1,15 @@
 package com.vitorpamplona.amethyst.ui.actions
 
 import android.content.ContentResolver
-import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
-import android.util.Log
 import android.webkit.MimeTypeMap
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.BuildConfig
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.RequestBody.Companion.asRequestBody
 import okio.BufferedSink
 import okio.source
-import java.io.File
-import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
 
@@ -27,43 +22,51 @@ object ImageUploader {
     fun uploadImage(
         uri: Uri,
         server: ServersAvailable,
-        context: Context,
         contentResolver: ContentResolver,
         onSuccess: (String, String?) -> Unit,
         onError: (Throwable) -> Unit
     ) {
         val contentType = contentResolver.getType(uri)
         val imageInputStream = contentResolver.openInputStream(uri)
+
+        val length = contentResolver.query(uri, null, null, null, null)?.use {
+            it.moveToFirst()
+            val sizeIndex = it.getColumnIndex(OpenableColumns.SIZE)
+            it.getLong(sizeIndex)
+        } ?: 0
+
         checkNotNull(imageInputStream) {
             "Can't open the image input stream"
         }
-        val myServer = if (server == ServersAvailable.IMGUR) {
-            ImgurServer()
-        } else if (server == ServersAvailable.NOSTRIMG) {
-            NostrImgServer()
-        } else if (server == ServersAvailable.NOSTR_BUILD) {
-            NostrBuildServer()
-        } else {
-            ImgurServer()
+        val myServer = when (server) {
+            ServersAvailable.IMGUR, ServersAvailable.IMGUR_NIP_94 -> {
+                ImgurServer()
+            }
+            ServersAvailable.NOSTRIMG, ServersAvailable.NOSTRIMG_NIP_94 -> {
+                NostrImgServer()
+            }
+            ServersAvailable.NOSTR_BUILD, ServersAvailable.NOSTR_BUILD_NIP_94 -> {
+                NostrBuildServer()
+            }
+            ServersAvailable.NOSTRFILES_DEV, ServersAvailable.NOSTRFILES_DEV_NIP_94 -> {
+                NostrFilesDevServer()
+            }
+            else -> {
+                ImgurServer()
+            }
         }
 
-        val file = getRealPathFromURI(uri, context)?.let { File(it) } // create path from uri
-        if (file != null) {
-            uploadImage(file, imageInputStream, contentType, myServer, server, onSuccess, onError)
-        }
+        uploadImage(imageInputStream, length, contentType, myServer, onSuccess, onError)
     }
 
     fun uploadImage(
-        file: File,
         inputStream: InputStream,
+        length: Long,
         contentType: String?,
         server: FileServer,
-        serverType: ServersAvailable,
         onSuccess: (String, String?) -> Unit,
         onError: (Throwable) -> Unit
     ) {
-        val category = contentType?.toMediaType()?.toString()?.split("/")?.get(0) ?: "image"
-
         val fileName = randomChars()
         val extension = contentType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
 
@@ -71,35 +74,23 @@ object ImageUploader {
         val requestBody: RequestBody
         val requestBuilder = Request.Builder()
 
-        if (serverType == ServersAvailable.NOSTR_BUILD) {
-            requestBuilder.addHeader("Content-Type", "multipart/form-data")
-            requestBody = MultipartBody.Builder()
-                .setType(MultipartBody.FORM)
-                .addFormDataPart(
-                    "fileToUpload",
-                    "$fileName.$extension",
-                    file.asRequestBody(contentType?.toMediaType())
+        requestBody = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart(
+                server.inputParameterName(contentType),
+                "$fileName.$extension",
 
-                )
-                .build()
-        } else {
-            requestBody = MultipartBody.Builder()
-                .setType(MultipartBody.FORM)
-                .addFormDataPart(
-                    category,
-                    "$fileName.$extension",
+                object : RequestBody() {
+                    override fun contentType() = contentType?.toMediaType()
 
-                    object : RequestBody() {
-                        override fun contentType(): MediaType? =
-                            contentType?.toMediaType()
+                    override fun contentLength() = length
 
-                        override fun writeTo(sink: BufferedSink) {
-                            inputStream.source().use(sink::writeAll)
-                        }
+                    override fun writeTo(sink: BufferedSink) {
+                        inputStream.source().use(sink::writeAll)
                     }
-                )
-                .build()
-        }
+                }
+            )
+            .build()
 
         server.clientID()?.let {
             requestBuilder.addHeader("Authorization", it)
@@ -116,7 +107,7 @@ object ImageUploader {
                 try {
                     check(response.isSuccessful)
                     response.body.use { body ->
-                        val url = server.parseUrlFromSucess(body.string())
+                        val url = server.parseUrlFromSuccess(body.string())
                         checkNotNull(url) {
                             "There must be an uploaded image URL in the response"
                         }
@@ -137,41 +128,10 @@ object ImageUploader {
     }
 }
 
-fun getRealPathFromURI(uri: Uri, context: Context): String? {
-    val returnCursor = context.contentResolver.query(uri, null, null, null, null)
-    val nameIndex = returnCursor!!.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-    returnCursor.moveToFirst()
-    val name = returnCursor.getString(nameIndex)
-    val file = File(context.filesDir, name)
-    try {
-        val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
-        val outputStream = FileOutputStream(file)
-        var read = 0
-        val maxBufferSize = 1 * 1024 * 1024
-        val bytesAvailable: Int = inputStream?.available() ?: 0
-        val bufferSize = Math.min(bytesAvailable, maxBufferSize)
-        val buffers = ByteArray(bufferSize)
-        while (inputStream?.read(buffers).also {
-            if (it != null) {
-                read = it
-            }
-        } != -1
-        ) {
-            outputStream.write(buffers, 0, read)
-        }
-        Log.e("File Size", "Size " + file.length())
-        inputStream?.close()
-        outputStream.close()
-        Log.e("File Path", "Path " + file.path)
-    } catch (e: java.lang.Exception) {
-        Log.e("Exception", e.message!!)
-    }
-    return file.path
-}
-
 abstract class FileServer {
     abstract fun postUrl(contentType: String?): String
-    abstract fun parseUrlFromSucess(body: String): String?
+    abstract fun parseUrlFromSuccess(body: String): String?
+    abstract fun inputParameterName(contentType: String?): String
 
     open fun clientID(): String? = null
 }
@@ -179,10 +139,14 @@ abstract class FileServer {
 class NostrImgServer : FileServer() {
     override fun postUrl(contentType: String?) = "https://nostrimg.com/api/upload"
 
-    override fun parseUrlFromSucess(body: String): String? {
+    override fun parseUrlFromSuccess(body: String): String? {
         val tree = jacksonObjectMapper().readTree(body)
         val url = tree?.get("data")?.get("link")?.asText()
         return url
+    }
+
+    override fun inputParameterName(contentType: String?): String {
+        return contentType?.toMediaType()?.toString()?.split("/")?.get(0) ?: "image"
     }
 
     override fun clientID() = null
@@ -194,10 +158,14 @@ class ImgurServer : FileServer() {
         return if (category == "image") "https://api.imgur.com/3/image" else "https://api.imgur.com/3/upload"
     }
 
-    override fun parseUrlFromSucess(body: String): String? {
+    override fun parseUrlFromSuccess(body: String): String? {
         val tree = jacksonObjectMapper().readTree(body)
         val url = tree?.get("data")?.get("link")?.asText()
         return url
+    }
+
+    override fun inputParameterName(contentType: String?): String {
+        return contentType?.toMediaType()?.toString()?.split("/")?.get(0) ?: "image"
     }
 
     override fun clientID() = "Client-ID e6aea87296f3f96"
@@ -205,9 +173,27 @@ class ImgurServer : FileServer() {
 
 class NostrBuildServer : FileServer() {
     override fun postUrl(contentType: String?) = "https://nostr.build/api/upload/android.php"
-    override fun parseUrlFromSucess(body: String): String? {
+    override fun parseUrlFromSuccess(body: String): String? {
         val url = jacksonObjectMapper().readTree(body) // return url.toString()
         return url.toString().replace("\"", "")
+    }
+
+    override fun inputParameterName(contentType: String?): String {
+        return "fileToUpload"
+    }
+
+    override fun clientID() = null
+}
+
+class NostrFilesDevServer : FileServer() {
+    override fun postUrl(contentType: String?) = "https://nostrfiles.dev/upload_image"
+    override fun parseUrlFromSuccess(body: String): String? {
+        val tree = jacksonObjectMapper().readTree(body)
+        return tree?.get("url")?.asText()
+    }
+
+    override fun inputParameterName(contentType: String?): String {
+        return "file"
     }
 
     override fun clientID() = null

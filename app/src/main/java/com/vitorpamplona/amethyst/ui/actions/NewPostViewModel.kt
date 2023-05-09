@@ -19,7 +19,6 @@ import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.ui.components.isValidURL
 import com.vitorpamplona.amethyst.ui.components.noProtocolUrlValidator
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 
@@ -145,10 +144,9 @@ open class NewPostViewModel : ViewModel() {
             ImageUploader.uploadImage(
                 uri = it,
                 server = server,
-                context = context,
                 contentResolver = contentResolver,
                 onSuccess = { imageUrl, mimeType ->
-                    if (server == ServersAvailable.IMGUR_NIP_94 || server == ServersAvailable.NOSTRIMG_NIP_94 || server == ServersAvailable.NOSTR_BUILD_NIP_94) {
+                    if (isNIP94Server(server)) {
                         createNIP94Record(imageUrl, mimeType, description)
                     } else {
                         isUploadingImage = false
@@ -288,13 +286,6 @@ open class NewPostViewModel : ViewModel() {
     fun createNIP94Record(imageUrl: String, mimeType: String?, description: String) {
         viewModelScope.launch(Dispatchers.IO) {
             // Images don't seem to be ready immediately after upload
-
-            if (mimeType?.startsWith("image/") == true) {
-                delay(2000)
-            } else {
-                delay(5000)
-            }
-
             FileHeader.prepare(
                 imageUrl,
                 mimeType,

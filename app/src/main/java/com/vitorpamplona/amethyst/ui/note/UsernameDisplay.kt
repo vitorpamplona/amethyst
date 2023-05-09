@@ -28,41 +28,55 @@ fun UsernameDisplay(baseUser: User, weight: Modifier = Modifier) {
     val userState by baseUser.live().metadata.observeAsState()
     val user = userState?.user ?: return
 
-    if (user.bestUsername() != null && user.bestDisplayName() != null) {
+    val bestUserName = user.bestUsername()
+    val bestDisplayName = user.bestDisplayName()
+    val npubDisplay = user.pubkeyDisplayHex()
+
+    UserNameDisplay(bestUserName, bestDisplayName, npubDisplay, weight)
+}
+
+@Composable
+private fun UserNameDisplay(
+    bestUserName: String?,
+    bestDisplayName: String?,
+    npubDisplay: String,
+    modifier: Modifier
+) {
+    if (bestUserName != null && bestDisplayName != null) {
         Text(
-            user.bestDisplayName() ?: "",
+            bestDisplayName,
             fontWeight = FontWeight.Bold
         )
         Text(
-            "@${(user.bestUsername() ?: "")}",
+            "@$bestUserName",
             color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = weight
+            modifier = modifier
         )
-    } else if (user.bestDisplayName() != null) {
+    } else if (bestDisplayName != null) {
         Text(
-            user.bestDisplayName() ?: "",
+            bestDisplayName,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = weight
+            modifier = modifier
         )
-    } else if (user.bestUsername() != null) {
+    } else if (bestUserName != null) {
         Text(
-            "@${(user.bestUsername() ?: "")}",
+            "@$bestUserName",
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = weight
+            modifier = modifier
         )
     } else {
         Text(
-            user.pubkeyDisplayHex(),
+            npubDisplay,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = weight
+            modifier = modifier
         )
     }
 }

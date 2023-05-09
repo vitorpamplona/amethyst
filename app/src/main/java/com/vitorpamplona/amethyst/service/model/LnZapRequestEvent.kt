@@ -20,11 +20,36 @@ class LnZapRequestEvent(
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
 
+    @Transient
+    private var privateZapEvent: Event? = null
+
     fun zappedPost() = tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }
 
     fun zappedAuthor() = tags.filter { it.size > 1 && it[0] == "p" }.map { it[1] }
 
     fun isPrivateZap() = tags.any { t -> t.size >= 2 && t[0] == "anon" && t[1].isNotBlank() }
+
+    fun getPrivateZapEvent(loggedInUserPrivKey: ByteArray, pubKey: HexKey): Event? {
+        if (privateZapEvent != null) return privateZapEvent
+
+        val anonTag = tags.firstOrNull { t -> t.size >= 2 && t[0] == "anon" }
+        if (anonTag != null) {
+            val encnote = anonTag[1]
+            if (encnote.isNotBlank()) {
+                try {
+                    val note = decryptPrivateZapMessage(encnote, loggedInUserPrivKey, pubKey.hexToByteArray())
+                    val decryptedEvent = fromJson(note)
+                    if (decryptedEvent.kind == 9733) {
+                        privateZapEvent = decryptedEvent
+                        return privateZapEvent
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+        return null
+    }
 
     companion object {
         const val kind = 9734
@@ -59,7 +84,7 @@ class LnZapRequestEvent(
             } else if (zapType == LnZapEvent.ZapType.PRIVATE) {
                 var encryptionPrivateKey = createEncryptionPrivateKey(privateKey.toHexKey(), originalNote.id(), createdAt)
                 var noteJson = (create(privkey, 9733, listOf(tags[0], tags[1]), message)).toJson()
-                var encryptedContent = encryptPrivateZapMessage(noteJson, encryptionPrivateKey, originalNote.pubKey().toByteArray())
+                var encryptedContent = encryptPrivateZapMessage(noteJson, encryptionPrivateKey, originalNote.pubKey().hexToByteArray())
                 tags = tags + listOf(listOf("anon", encryptedContent))
                 content = "" // make sure public content is empty, as the content is encrypted
                 privkey = encryptionPrivateKey // sign event with generated privkey
@@ -92,7 +117,7 @@ class LnZapRequestEvent(
             } else if (zapType == LnZapEvent.ZapType.PRIVATE) {
                 var encryptionPrivateKey = createEncryptionPrivateKey(privateKey.toHexKey(), userHex, createdAt)
                 var noteJson = (create(privkey, 9733, listOf(tags[0], tags[1]), message)).toJson()
-                var encryptedContent = encryptPrivateZapMessage(noteJson, encryptionPrivateKey, userHex.toByteArray())
+                var encryptedContent = encryptPrivateZapMessage(noteJson, encryptionPrivateKey, userHex.hexToByteArray())
                 tags = tags + listOf(listOf("anon", encryptedContent))
                 content = ""
                 privkey = encryptionPrivateKey
@@ -109,7 +134,7 @@ class LnZapRequestEvent(
             return sha256.digest(strbyte)
         }
 
-        fun encryptPrivateZapMessage(msg: String, privkey: ByteArray, pubkey: ByteArray): String {
+        private fun encryptPrivateZapMessage(msg: String, privkey: ByteArray, pubkey: ByteArray): String {
             var sharedSecret = Utils.getSharedSecret(privkey, pubkey)
             val iv = ByteArray(16)
             SecureRandom().nextBytes(iv)
@@ -128,7 +153,7 @@ class LnZapRequestEvent(
             return encryptedMsgBech32 + "_" + ivBech32
         }
 
-        fun decryptPrivateZapMessage(msg: String, privkey: ByteArray, pubkey: ByteArray): String {
+        private fun decryptPrivateZapMessage(msg: String, privkey: ByteArray, pubkey: ByteArray): String {
             var sharedSecret = Utils.getSharedSecret(privkey, pubkey)
             if (sharedSecret.size != 16 && sharedSecret.size != 32) {
                 throw IllegalArgumentException("Invalid shared secret size")
@@ -150,61 +175,5 @@ class LnZapRequestEvent(
                 throw IllegalArgumentException("Bad padding: ${ex.message}")
             }
         }
-
-        fun checkForPrivateZap(zapRequest: LnZapRequestEvent, loggedInUserPrivKey: ByteArray, pubKey: HexKey): Event? {
-            val anonTag = zapRequest.tags.firstOrNull { t -> t.size >= 2 && t[0] == "anon" }
-            if (anonTag != null) {
-                val encnote = anonTag[1]
-                if (encnote.isNotBlank()) {
-                    try {
-                        val note = decryptPrivateZapMessage(encnote, loggedInUserPrivKey, pubKey.toByteArray())
-                        val decryptedEvent = fromJson(note)
-                        if (decryptedEvent.kind == 9733) {
-                            return decryptedEvent
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
-            }
-            return null
-        }
     }
 }
-/*
-{
-  "pubkey": "32e1827635450ebb3c5a7d12c1f8e7b2b514439ac10a67eef3d9fd9c5c68e245",
-  "content": "",
-  "id": "d9cc14d50fcb8c27539aacf776882942c1a11ea4472f8cdec1dea82fab66279d",
-  "created_at": 1674164539,
-  "sig": "77127f636577e9029276be060332ea565deaf89ff215a494ccff16ae3f757065e2bc59b2e8c113dd407917a010b3abd36c8d7ad84c0e3ab7dab3a0b0caa9835d",
-  "kind": 9734,
-  "tags": [
-  [
-    "e",
-    "3624762a1274dd9636e0c552b53086d70bc88c165bc4dc0f9e836a1eaf86c3b8"
-  ],
-  [
-    "p",
-    "32e1827635450ebb3c5a7d12c1f8e7b2b514439ac10a67eef3d9fd9c5c68e245"
-  ],
-  [
-    "relays",
-    "wss://relay.damus.io",
-    "wss://nostr-relay.wlvs.space",
-    "wss://nostr.fmt.wiz.biz",
-    "wss://relay.nostr.bg",
-    "wss://nostr.oxtr.dev",
-    "wss://nostr.v0l.io",
-    "wss://brb.io",
-    "wss://nostr.bitcoiner.social",
-    "ws://monad.jb55.com:8080",
-    "wss://relay.snort.social"
-  ],
-  [
-    "poll_option", "n"
-  ]
-  ],
-  "ots": <base64-encoded OTS file data> // TODO
-}
-*/

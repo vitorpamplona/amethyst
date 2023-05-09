@@ -17,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,10 +29,10 @@ import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.ui.screen.LikeSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -45,6 +46,7 @@ fun LikeSetCompose(likeSetCard: LikeSetCard, isInnerNote: Boolean = false, route
 
     val noteEvent = note?.event
     var popupExpanded by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     if (note == null) {
         BlankNote(Modifier, isInnerNote)
@@ -66,20 +68,19 @@ fun LikeSetCompose(likeSetCard: LikeSetCard, isInnerNote: Boolean = false, route
         }
 
         Column(
-            modifier = Modifier.background(backgroundColor).combinedClickable(
-                onClick = {
-                    if (noteEvent !is ChannelMessageEvent) {
-                        navController.navigate("Note/${note.idHex}") {
-                            launchSingleTop = true
+            modifier = Modifier
+                .background(backgroundColor)
+                .combinedClickable(
+                    onClick = {
+                        scope.launch {
+                            routeFor(
+                                note,
+                                account.userProfile()
+                            )?.let { navController.navigate(it) }
                         }
-                    } else {
-                        note.channel()?.let {
-                            navController.navigate("Channel/${it.idHex}")
-                        }
-                    }
-                },
-                onLongClick = { popupExpanded = true }
-            )
+                    },
+                    onLongClick = { popupExpanded = true }
+                )
         ) {
             Row(
                 modifier = Modifier
@@ -99,7 +100,9 @@ fun LikeSetCompose(likeSetCard: LikeSetCard, isInnerNote: Boolean = false, route
                         Icon(
                             painter = painterResource(R.drawable.ic_liked),
                             null,
-                            modifier = Modifier.size(16.dp).align(Alignment.TopEnd),
+                            modifier = Modifier
+                                .size(16.dp)
+                                .align(Alignment.TopEnd),
                             tint = Color.Unspecified
                         )
                     }
@@ -109,7 +112,7 @@ fun LikeSetCompose(likeSetCard: LikeSetCard, isInnerNote: Boolean = false, route
                     FlowRow() {
                         likeSetCard.likeEvents.forEach {
                             NoteAuthorPicture(
-                                note = it,
+                                baseNote = it,
                                 navController = navController,
                                 userAccount = account.userProfile(),
                                 size = 35.dp

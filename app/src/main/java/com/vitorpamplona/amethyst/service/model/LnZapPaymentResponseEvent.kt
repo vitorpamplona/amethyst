@@ -19,10 +19,14 @@ class LnZapPaymentResponseEvent(
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
 
+    // Once one of an app user decrypts the payment, all users else can see it.
+    @Transient
+    private var response: Response? = null
+
     fun requestAuthor() = tags.firstOrNull() { it.size > 1 && it[0] == "p" }?.get(1)
     fun requestId() = tags.firstOrNull() { it.size > 1 && it[0] == "e" }?.get(1)
 
-    fun decrypt(privKey: ByteArray, pubKey: ByteArray): String? {
+    private fun decrypt(privKey: ByteArray, pubKey: ByteArray): String? {
         return try {
             val sharedSecret = Utils.getSharedSecret(privKey, pubKey)
 
@@ -39,16 +43,21 @@ class LnZapPaymentResponseEvent(
         }
     }
 
-    fun response(privKey: ByteArray, pubKey: ByteArray): Response? = try {
-        if (content.isNotEmpty()) {
-            val decrypted = decrypt(privKey, pubKey)
-            gson.fromJson(decrypted, Response::class.java)
-        } else {
+    fun response(privKey: ByteArray, pubKey: ByteArray): Response? {
+        if (response != null) response
+
+        return try {
+            if (content.isNotEmpty()) {
+                val decrypted = decrypt(privKey, pubKey)
+                response = gson.fromJson(decrypted, Response::class.java)
+                response
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            Log.w("LnZapPaymentResponseEvent", "Can't parse content as a payment response: $content", e)
             null
         }
-    } catch (e: Exception) {
-        Log.w("LnZapPaymentResponseEvent", "Can't parse content as a payment response: $content", e)
-        null
     }
 
     companion object {

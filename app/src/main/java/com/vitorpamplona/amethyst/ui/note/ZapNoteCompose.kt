@@ -34,7 +34,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.UnfollowButton
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 
 @Composable
@@ -95,7 +94,7 @@ fun ZapNoteCompose(baseNote: Pair<Note, Note>, accountViewModel: AccountViewMode
                 var zapAmount by remember { mutableStateOf<BigDecimal?>(null) }
 
                 LaunchedEffect(key1 = noteZap) {
-                    withContext(Dispatchers.IO) {
+                    coroutineScope.launch(Dispatchers.IO) {
                         zapAmount = (noteZap.event as? LnZapEvent)?.amount
                     }
                 }

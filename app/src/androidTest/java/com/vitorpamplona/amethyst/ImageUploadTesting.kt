@@ -4,12 +4,12 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.amethyst.ui.actions.ImageUploader
 import com.vitorpamplona.amethyst.ui.actions.ImgurServer
 import com.vitorpamplona.amethyst.ui.actions.NostrBuildServer
+import com.vitorpamplona.amethyst.ui.actions.NostrFilesDevServer
 import com.vitorpamplona.amethyst.ui.actions.NostrImgServer
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.fail
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.Base64
@@ -21,12 +21,12 @@ class ImageUploadTesting {
 
     @Test()
     fun testImgurUpload() = runBlocking {
-        val inputStream = Base64.getDecoder().decode(image).inputStream()
-
-        println("Uploading")
+        val bytes = Base64.getDecoder().decode(image)
+        val inputStream = bytes.inputStream()
 
         ImageUploader.uploadImage(
             inputStream,
+            bytes.size.toLong(),
             "image/gif",
             ImgurServer(),
             onSuccess = { url, contentType ->
@@ -39,18 +39,17 @@ class ImageUploadTesting {
             }
         )
 
-        delay(1000)
+        delay(5000)
     }
 
     @Test()
-    @Ignore
     fun testNostrBuildUpload() = runBlocking {
-        val inputStream = Base64.getDecoder().decode(image).inputStream()
-
-        println("Uploading")
+        val bytes = Base64.getDecoder().decode(image)
+        val inputStream = bytes.inputStream()
 
         ImageUploader.uploadImage(
             inputStream,
+            bytes.size.toLong(),
             "image/gif",
             NostrBuildServer(),
             onSuccess = { url, contentType ->
@@ -68,12 +67,12 @@ class ImageUploadTesting {
 
     @Test()
     fun testNostrImgUpload() = runBlocking {
-        val inputStream = Base64.getDecoder().decode(image).inputStream()
-
-        println("Uploading")
+        val bytes = Base64.getDecoder().decode(image)
+        val inputStream = bytes.inputStream()
 
         ImageUploader.uploadImage(
             inputStream,
+            bytes.size.toLong(),
             "image/gif",
             NostrImgServer(),
             onSuccess = { url, contentType ->
@@ -87,5 +86,28 @@ class ImageUploadTesting {
         )
 
         delay(1000)
+    }
+
+    @Test()
+    fun testNostrFilesDevUpload() = runBlocking {
+        val bytes = Base64.getDecoder().decode(image)
+        val inputStream = bytes.inputStream()
+
+        ImageUploader.uploadImage(
+            inputStream,
+            bytes.size.toLong(),
+            "image/gif",
+            NostrFilesDevServer(),
+            onSuccess = { url, contentType ->
+                println("Uploaded to $url")
+                assertNotNull(url)
+            },
+            onError = {
+                println("Failed to Upload")
+                fail("${it.message}")
+            }
+        )
+
+        delay(5000)
     }
 }

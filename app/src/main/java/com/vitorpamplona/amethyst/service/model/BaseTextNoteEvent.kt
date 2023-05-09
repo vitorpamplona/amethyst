@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.service.model
 
+import android.util.Log
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.tagSearch
 import com.vitorpamplona.amethyst.service.nip19.Nip19
@@ -41,17 +42,18 @@ open class BaseTextNoteEvent(
             val key = matcher2.group(3) // bech32
             val additionalChars = matcher2.group(4) // additional chars
 
-            val parsed = Nip19.parseComponents(uriScheme, type, key, additionalChars)
+            try {
+                val parsed = Nip19.parseComponents(uriScheme, type, key, additionalChars)
 
-            if (parsed != null) {
-                try {
+                if (parsed != null) {
                     val tag = tags.firstOrNull { it.size > 1 && it[1] == parsed.hex }
 
                     if (tag != null && tag[0] == "p") {
                         returningList.add(tag[1])
                     }
-                } catch (e: Exception) {
                 }
+            } catch (e: Exception) {
+                Log.w("Unable to parse cited users that matched a NIP19 regex", e)
             }
         }
 

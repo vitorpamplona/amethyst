@@ -1,7 +1,7 @@
 package com.vitorpamplona.amethyst.service.nip19
 
 import android.util.Log
-import com.vitorpamplona.amethyst.model.toByteArray
+import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Bech32
 import nostr.postr.bechToBytes
@@ -13,7 +13,7 @@ object Nip19 {
         USER, NOTE, EVENT, RELAY, ADDRESS
     }
 
-    val nip19regex = Pattern.compile("(nostr:)?@?(nsec1|npub1|nevent1|naddr1|note1|nprofile1|nrelay1)([qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)(.*)", Pattern.CASE_INSENSITIVE)
+    val nip19regex = Pattern.compile("(nostr:)?@?(nsec1|npub1|nevent1|naddr1|note1|nprofile1|nrelay1)([qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)([\\S]*)", Pattern.CASE_INSENSITIVE)
 
     data class Return(
         val type: Type,
@@ -147,8 +147,8 @@ object Nip19 {
 
     public fun createNEvent(idHex: String, author: String?, kind: Int?, relay: String?): String {
         val kind = kind?.toByteArray()
-        val author = author?.toByteArray()
-        val idHex = idHex.toByteArray()
+        val author = author?.hexToByteArray()
+        val idHex = idHex.hexToByteArray()
         val relay = relay?.toByteArray(Charsets.UTF_8)
 
         var fullArray = byteArrayOf(Tlv.Type.SPECIAL.id, idHex.size.toByte()) + idHex
