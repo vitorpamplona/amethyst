@@ -6,8 +6,8 @@
     <string name="profile_image">تصویر پروفایل</string>
     <string name="scan_qr">کد QR اسکن</string>
     <string name="show_anyway">بهر حال نشان بده</string>
-    <string name="post_was_flagged_as_inappropriate_by">این پست توسط این افراد نامناسب اعلام شده</string>
-    <string name="post_not_found">این پست یافت نشد</string>
+    <string name="post_was_flagged_as_inappropriate_by">این نوت توسط این افراد نامناسب اعلام شده</string>
+    <string name="post_not_found">این نوت یافت نشد</string>
     <string name="channel_image">تصویر کانال</string>
     <string name="referenced_event_not_found">رویداد مربوطه یافت نشد</string>
     <string name="could_not_decrypt_the_message">قادر به رمزگشایی پیام نیست</string>
