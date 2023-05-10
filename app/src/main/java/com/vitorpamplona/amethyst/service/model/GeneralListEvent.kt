@@ -23,12 +23,14 @@ abstract class GeneralListEvent(
     fun bookmarkedPeople() = taggedUsers()
 
     fun plainContent(privKey: ByteArray): String? {
+        if (content.isBlank()) return null
+
         return try {
             val sharedSecret = Utils.getSharedSecret(privKey, pubKey.hexToByteArray())
 
             return Utils.decrypt(content, sharedSecret)
         } catch (e: Exception) {
-            Log.w("GeneralList", "Error decrypting the message ${e.message}")
+            Log.w("GeneralList", "Error decrypting the message ${e.message} for ${dTag()}")
             null
         }
     }
