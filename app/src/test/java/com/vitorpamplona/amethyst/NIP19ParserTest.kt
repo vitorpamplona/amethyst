@@ -61,7 +61,7 @@ class NIP19ParserTest {
         assertEquals("31337:27241bb702d145a975260cfedee6265936dcd939eaecb88ea0e4071752c30402:xx1xulrf7wdbdlbc31far", result?.hex)
         assertEquals(null, result?.relay)
         assertEquals("27241bb702d145a975260cfedee6265936dcd939eaecb88ea0e4071752c30402", result?.author)
-        assertEquals(31337L, result?.kind)
+        assertEquals(31337, result?.kind)
     }
 
     @Test
@@ -71,7 +71,7 @@ class NIP19ParserTest {
         assertEquals("30023:46fcbe3065eaf1ae7811465924e48923363ff3f526bd6f73d7c184b16bd8ce4d:613f014d2911fb9df52e048aae70268c0d216790287b5814910e1e781e8e0509", result?.hex)
         assertEquals(null, result?.relay)
         assertEquals("46fcbe3065eaf1ae7811465924e48923363ff3f526bd6f73d7c184b16bd8ce4d", result?.author)
-        assertEquals(30023L, result?.kind)
+        assertEquals(30023, result?.kind)
     }
 
     @Test
@@ -81,7 +81,7 @@ class NIP19ParserTest {
         assertEquals("30023:46fcbe3065eaf1ae7811465924e48923363ff3f526bd6f73d7c184b16bd8ce4d:1679509418", result?.hex)
         assertEquals(null, result?.relay)
         assertEquals("46fcbe3065eaf1ae7811465924e48923363ff3f526bd6f73d7c184b16bd8ce4d", result?.author)
-        assertEquals(30023L, result?.kind)
+        assertEquals(30023, result?.kind)
     }
 
     @Test
@@ -101,7 +101,7 @@ class NIP19ParserTest {
         assertEquals("b60ffa7256d3dd7543d830eb717ae50d05a6c32c5f791ed15b867c2bb0b954ac", result?.hex)
         assertEquals("wss://nostr.mom", result?.relay)
         assertEquals("f8ff11c7a7d3478355d3b4d174e5a473797a906ea4aa61aa9b6bc0652c1ea17a", result?.author)
-        assertEquals(1L, result?.kind)
+        assertEquals(1, result?.kind)
     }
 
     @Test
@@ -112,7 +112,7 @@ class NIP19ParserTest {
         assertEquals("1f878e82063d80f41a781d3a2ef7bc336f1beb7942bf3b49b42aee1251eb5cf0", result?.hex)
         assertEquals("wss://relay.damus.io", result?.relay)
         assertEquals("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c", result?.author)
-        assertEquals(1L, result?.kind)
+        assertEquals(1, result?.kind)
     }
 
     @Test
@@ -123,7 +123,7 @@ class NIP19ParserTest {
         assertEquals("4300ec7fa2f98a276f033908349651620aa8e282b76030ab22abca63e85e07e6", result?.hex)
         assertEquals("wss://relay.damus.io", result?.relay)
         assertEquals("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c", result?.author)
-        assertEquals(1L, result?.kind)
+        assertEquals(1, result?.kind)
     }
 
     @Test
