@@ -161,9 +161,9 @@
     <string name="translations_auto">خودکار</string>
     <string name="translations_translated_from">ترجمه از</string>
     <string name="translations_to">به</string>
-    <string name="translations_show_in_lang_first">نشان بده s%1$ ابتدا به</string>
+    <string name="translations_show_in_lang_first">ابتدا به  نشان بده %1$s</string>
     <string name="translations_always_translate_to_lang">همیشه به  ترجمه کن %1$s</string>
-    <string name="translations_never_translate_from_lang">هرگز به ترجمه نکن %1$s</string>
+    <string name="translations_never_translate_from_lang">هرگز به  ترجمه نکن %1$s</string>
     <string name="nip_05" translatable="false">NIP-05</string>
     <string name="lnurl" translatable="false">LNURL...</string>
     <string name="never">هرگز</string>
@@ -196,8 +196,8 @@
     <string name="new_badge_award_notif">یک مدال پاداش دریافت کردید</string>
     <string name="award_granted_to">مدال پاداش داده شد به</string>
     <string name="copied_note_text_to_clipboard">نوت در کلیپبورد کپی شد</string>
-    <string name="copied_user_id_to_clipboard" tools:ignore="Typos">نویسنده در کلیپبورد کپی شد @npub</string>
-    <string name="copied_note_id_to_clipboard" tools:ignore="Typos">شناسه نوت در کلیپبورد کپی شد (@note1)</string>
+    <string name="copied_user_id_to_clipboard" tools:ignore="Typos">@npubنویسنده در کلیپبورد کپی شد </string>
+    <string name="copied_note_id_to_clipboard" tools:ignore="Typos">(@note1)شناسه نوت در کلیپبورد کپی شد</string>
     <string name="select_text_dialog_top">انتخاب متن</string>
     <string name="github" translatable="false">Github Gist w/ Proof</string>
     <string name="telegram" translatable="false">Telegram</string>
