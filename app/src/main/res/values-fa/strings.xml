@@ -1,10 +1,10 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name_release" translatable="false">Amethyst</string>
     <string name="app_name_debug" translatable="false">Amethyst Debug</string>
-    <string name="point_to_the_qr_code">اشاره کنید QR به کد</string>
-    <string name="show_qr">کد را نشان بده QR</string>
+    <string name="point_to_the_qr_code"> به QRکد اشاره کنید</string>
+    <string name="show_qr">QR کد را نشان بده </string>
     <string name="profile_image">تصویر پروفایل</string>
-    <string name="scan_qr">کد QR اسکن</string>
+    <string name="scan_qr">اسکن QRکد </string>
     <string name="show_anyway">بهر حال نشان بده</string>
     <string name="post_was_flagged_as_inappropriate_by">این نوت توسط این افراد نامناسب اعلام شده</string>
     <string name="post_not_found">این نوت یافت نشد</string>
@@ -181,11 +181,11 @@
     <string name="mark_all_as_read">همه را خوانده شده کن</string>
     <string name="backup_keys">بازیابی کلیدها</string>
     <string name="account_backup_tips_md" tools:ignore="Typos">
-        ## راهنمایی برای ایمنی و بازیابی کلید 
+        ## راهنمای ایمنی و بازیابی کلید 
         \n\n-  حساب کاربری شما با یک کلید خصوصی ایمن می شود. این کلید یک رشته تصادفی اعداد و ارقام است که با **nsec1** آغاز می گردد. 
-        \n\n- هر کس به کلید خصوصی شما دست یابد می تواند به هویت شما اقدام به انتشار محتوا نماید. کلید خصوصی خود را در هیچ نرم افزار یا وب سایتی که به آن اعتماد ندارید قرار ندیهید.  
-        \n- سازندگان آماتیست **هرگز** از ما کلید خصوصی تان را نمی خواهند. 
-        \n- حتما یه کپی از کلید خصوصی را برای بازیابی حساب کاربری نزد خود نگه دارد. ما استفاده از یک نرم افزار مدیریت پسورد را توصیه می نماییم. 
+        \n\n- هر کس به کلید خصوصی شما دست یابد می تواند با هویت شما اقدام به انتشار محتوا نماید. کلید خصوصی خود را در هیچ نرم افزار یا وب سایتی که به آن اعتماد ندارید قرار ندهید.  
+        \n- سازندگان آماتیست **هرگز** از شما کلید خصوصی تان را نمی خواهند. 
+        \n- حتما یک کپی از کلید خصوصی را برای بازیابی حساب کاربری نزد خود نگه دارد. ما استفاده از یک نرم افزار مدیریت پسورد را توصیه می نماییم. 
     </string>
     <string name="secret_key_copied_to_clipboard">کلید خصوصی در کلیپبورد کپی شد</string>
     <string name="copy_my_secret_key">کلید خصوصیم را کپی کن</string>
@@ -238,7 +238,7 @@
     <string name="report_dialog_impersonation">جعل هویت بدخواهانه</string>
     <string name="report_dialog_nudity">محتوای برهنگی یا نمایان</string>
     <string name="report_dialog_illegal">رفتار ناهنجار</string>
-    <string name="report_dialog_blocking_a_user">بلاک کردن کاربر محتوای ایشان را در اپ شما پنهان می کند. نوت های شما همچنا بطور عمومی دیده می شوند که شامل کاربران بلاک شده توسط شما نیز هست. کاربران بلاک شده در صفحه فیلترهای ایمنی ففهرست می شوند.</string>
+    <string name="report_dialog_blocking_a_user">بلاک کردن کاربر محتوای ایشان را در اپ شما پنهان می کند. نوت های شما همچنان بطور عمومی دیده می شوند که شامل کاربران بلاک شده توسط شما نیز هست. کاربران بلاک شده در صفحه فیلترهای ایمنی فهرست می شوند.</string>
     <string name="report_dialog_block_hide_user_btn"><![CDATA[Block & Hide User]]></string>
     <string name="report_dialog_report_btn">گزارش سواستفاده</string>
     <string name="report_dialog_reminder_public">تمام گزارش ها بطور عمومی دیده می شوند</string>
