@@ -15,13 +15,14 @@ object NostrChatroomListDataSource : NostrDataSource("MailBoxFeed") {
     lateinit var account: Account
 
     val latestEOSEs = EOSEAccount()
+    val chatRoomList = "ChatroomList"
 
     fun createMessagesToMeFilter() = TypedFilter(
         types = setOf(FeedType.PRIVATE_DMS),
         filter = JsonFilter(
             kinds = listOf(PrivateDmEvent.kind),
             tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
-            since = latestEOSEs.users[account.userProfile()]?.relayList
+            since = latestEOSEs.users[account.userProfile()]?.followList?.get(chatRoomList)?.relayList
         )
     )
 
@@ -30,7 +31,7 @@ object NostrChatroomListDataSource : NostrDataSource("MailBoxFeed") {
         filter = JsonFilter(
             kinds = listOf(PrivateDmEvent.kind),
             authors = listOf(account.userProfile().pubkeyHex),
-            since = latestEOSEs.users[account.userProfile()]?.relayList
+            since = latestEOSEs.users[account.userProfile()]?.followList?.get(chatRoomList)?.relayList
         )
     )
 
@@ -39,7 +40,7 @@ object NostrChatroomListDataSource : NostrDataSource("MailBoxFeed") {
         filter = JsonFilter(
             kinds = listOf(ChannelCreateEvent.kind, ChannelMetadataEvent.kind),
             authors = listOf(account.userProfile().pubkeyHex),
-            since = latestEOSEs.users[account.userProfile()]?.relayList
+            since = latestEOSEs.users[account.userProfile()]?.followList?.get(chatRoomList)?.relayList
         )
     )
 
@@ -48,7 +49,7 @@ object NostrChatroomListDataSource : NostrDataSource("MailBoxFeed") {
         filter = JsonFilter(
             kinds = listOf(ChannelCreateEvent.kind),
             ids = account.followingChannels.toList(),
-            since = latestEOSEs.users[account.userProfile()]?.relayList
+            since = latestEOSEs.users[account.userProfile()]?.followList?.get(chatRoomList)?.relayList
         )
     )
 
@@ -72,7 +73,7 @@ object NostrChatroomListDataSource : NostrDataSource("MailBoxFeed") {
                 filter = JsonFilter(
                     kinds = listOf(ChannelMessageEvent.kind),
                     tags = mapOf("e" to listOf(it)),
-                    since = latestEOSEs.users[account.userProfile()]?.relayList,
+                    since = latestEOSEs.users[account.userProfile()]?.followList?.get(chatRoomList)?.relayList,
                     limit = 25 // Remember to consider spam that is being removed from the UI
                 )
             )
@@ -80,7 +81,7 @@ object NostrChatroomListDataSource : NostrDataSource("MailBoxFeed") {
     }
 
     val chatroomListChannel = requestNewChannel { time, relayUrl ->
-        latestEOSEs.addOrUpdate(account.userProfile(), relayUrl, time)
+        latestEOSEs.addOrUpdate(account.userProfile(), chatRoomList, relayUrl, time)
     }
 
     override fun updateChannelFilters() {

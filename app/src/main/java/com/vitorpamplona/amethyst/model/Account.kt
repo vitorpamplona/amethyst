@@ -56,6 +56,7 @@ class Account(
     var defaultFileServer: ServersAvailable = ServersAvailable.IMGUR,
     var defaultHomeFollowList: String = KIND3_FOLLOWS,
     var defaultStoriesFollowList: String = GLOBAL_FOLLOWS,
+    var defaultNotificationFollowList: String = GLOBAL_FOLLOWS,
     var zapPaymentRequest: Nip47URI? = null,
     var hideDeleteRequestDialog: Boolean = false,
     var hideBlockAlertDialog: Boolean = false,
@@ -754,6 +755,12 @@ class Account(
         saveable.invalidateData()
     }
 
+    fun changeDefaultNotificationFollowList(name: String) {
+        defaultNotificationFollowList = name
+        live.invalidateData()
+        saveable.invalidateData()
+    }
+
     fun changeZapAmounts(newAmounts: List<Long>) {
         zapAmountChoices = newAmounts
         live.invalidateData()
@@ -1034,14 +1041,7 @@ class Account(
         saveable.invalidateData()
     }
 
-    init {
-        backupContactList?.let {
-            println("Loading saved contacts ${it.toJson()}")
-            if (userProfile().latestContactList == null) {
-                LocalCache.consume(it)
-            }
-        }
-
+    fun registerObservers() {
         // Observes relays to restart connections
         userProfile().live().relays.observeForever {
             GlobalScope.launch(Dispatchers.IO) {
@@ -1065,6 +1065,15 @@ class Account(
                         }
                     }
                 }
+            }
+        }
+    }
+
+    init {
+        backupContactList?.let {
+            println("Loading saved contacts ${it.toJson()}")
+            if (userProfile().latestContactList == null) {
+                LocalCache.consume(it)
             }
         }
     }

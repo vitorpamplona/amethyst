@@ -13,14 +13,14 @@ object Nip19 {
         USER, NOTE, EVENT, RELAY, ADDRESS
     }
 
-    val nip19regex = Pattern.compile("(nostr:)?@?(nsec1|npub1|nevent1|naddr1|note1|nprofile1|nrelay1)([qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)(.*)", Pattern.CASE_INSENSITIVE)
+    val nip19regex = Pattern.compile("(nostr:)?@?(nsec1|npub1|nevent1|naddr1|note1|nprofile1|nrelay1)([qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)([\\S]*)", Pattern.CASE_INSENSITIVE)
 
     data class Return(
         val type: Type,
         val hex: String,
         val relay: String? = null,
         val author: String? = null,
-        val kind: Long? = null,
+        val kind: Int? = null,
         val additionalChars: String = ""
     )
 
@@ -109,7 +109,7 @@ object Nip19 {
 
         val kind = tlv.get(Tlv.Type.KIND.id)
             ?.get(0)
-            ?.let { Tlv.toInt32(it) }?.toLong()
+            ?.let { Tlv.toInt32(it) }
 
         return Return(Type.EVENT, hex, relay, author, kind)
     }
@@ -140,7 +140,7 @@ object Nip19 {
 
         val kind = tlv.get(Tlv.Type.KIND.id)
             ?.get(0)
-            ?.let { Tlv.toInt32(it) }?.toLong()
+            ?.let { Tlv.toInt32(it) }
 
         return Return(Type.ADDRESS, "$kind:$author:$d", relay, author, kind)
     }

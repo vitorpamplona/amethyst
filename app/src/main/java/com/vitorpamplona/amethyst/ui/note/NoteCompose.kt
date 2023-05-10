@@ -274,7 +274,9 @@ fun NoteComposeInner(
             modifier = modifier
                 .combinedClickable(
                     onClick = {
-                        routeFor(note, loggedIn)?.let { navController.navigate(it) }
+                        scope.launch {
+                            routeFor(note, loggedIn)?.let { navController.navigate(it) }
+                        }
                     },
                     onLongClick = { popupExpanded = true }
                 )

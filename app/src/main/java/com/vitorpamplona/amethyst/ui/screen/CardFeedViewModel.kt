@@ -38,7 +38,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
     private var lastAccount: Account? = null
     private var lastNotes: List<Note>? = null
 
-    private fun refresh() {
+    fun refresh() {
         val scope = CoroutineScope(Job() + Dispatchers.Default)
         scope.launch {
             refreshSuspended()

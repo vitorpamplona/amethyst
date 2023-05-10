@@ -362,7 +362,6 @@
     <string name="upload_server_relays_nip95_explainer">Files are hosted by your relays. New NIP: check if they support</string>
 
 
-
     <string name="follow_list_selection">Follow List</string>
     <string name="follow_list_kind3follows">All Follows</string>
     <string name="follow_list_global">Global</string>
@@ -378,4 +377,17 @@
     <string name="orbot_socks_port">Orbot Socks Port</string>
     <string name="invalid_port_number">Invalid port number</string>
 
+    <string name="app_notification_channel_id" translatable="false">DefaultChannelID</string>
+    <string name="app_notification_private_message" translatable="false">New notification arrived</string>
+
+    <string name="app_notification_dms_channel_id" translatable="false">PrivateMessagesID</string>
+    <string name="app_notification_dms_channel_name">Private Messages</string>
+    <string name="app_notification_dms_channel_description">Notifies you when a private message arrives</string>
+
+    <string name="app_notification_zaps_channel_id" translatable="false">ZapsID</string>
+    <string name="app_notification_zaps_channel_name">Zaps Received</string>
+    <string name="app_notification_zaps_channel_description">Notifies you when somebody zaps you</string>
+    <string name="app_notification_zaps_channel_message">%1$s sats</string>
+    <string name="app_notification_zaps_channel_message_from">From %1$s</string>
+    <string name="app_notification_zaps_channel_message_for">for %1$s</string>
 </resources>

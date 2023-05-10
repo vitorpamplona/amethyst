@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -18,6 +19,10 @@ object NotificationFeedFilter : AdditiveFeedFilter<Note>() {
     }
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
+        val isGlobal = account.defaultNotificationFollowList == GLOBAL_FOLLOWS
+
+        val followingKeySet = account.selectedUsersFollowList(account.defaultNotificationFollowList) ?: emptySet()
+
         val loggedInUser = account.userProfile()
         val loggedInUserHex = loggedInUser.pubkeyHex
 
@@ -28,6 +33,7 @@ object NotificationFeedFilter : AdditiveFeedFilter<Note>() {
                 it.event !is BadgeDefinitionEvent &&
                 it.event !is BadgeProfilesEvent &&
                 it.author !== loggedInUser &&
+                (isGlobal || it.author?.pubkeyHex in followingKeySet) &&
                 it.event?.isTaggedUser(loggedInUserHex) ?: false &&
                 (it.author == null || !account.isHidden(it.author!!.pubkeyHex)) &&
                 tagsAnEventByUser(it, loggedInUser)

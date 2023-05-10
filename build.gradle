@@ -2,16 +2,19 @@ buildscript {
     ext {
         fragment_version = "1.5.7"
         lifecycle_version = '2.6.1'
-        compose_ui_version = '1.4.2'
+        compose_ui_version = '1.4.3'
         nav_version = "2.5.3"
         room_version = "2.4.3"
         accompanist_version = '0.30.0'
         coil_version = '2.3.0'
     }
+    dependencies {
+        classpath 'com.google.gms:google-services:4.3.15'
+    }
 }// Top-level build file where you can add configuration options common to all sub-projects/modules.
 plugins {
-    id 'com.android.application' version '8.0.0' apply false
-    id 'com.android.library' version '8.0.0' apply false
+    id 'com.android.application' version '8.0.1' apply false
+    id 'com.android.library' version '8.0.1' apply false
     id 'org.jetbrains.kotlin.android' version '1.8.10' apply false
     id 'org.jetbrains.kotlin.jvm' version '1.8.10' apply false
 }

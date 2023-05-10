@@ -2,6 +2,7 @@ plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
     id 'org.jlleitschuh.gradle.ktlint' version "11.3.1"
+    id 'com.google.gms.google-services'
 }
 
 android {
@@ -12,8 +13,8 @@ android {
         applicationId "com.vitorpamplona.amethyst"
         minSdk 26
         targetSdk 33
-        versionCode 150
-        versionName "0.43.2"
+        versionCode 152
+        versionName "0.45.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -86,7 +87,7 @@ android {
 
 dependencies {
     implementation 'androidx.core:core-ktx:1.10.0'
-    implementation 'androidx.activity:activity-compose:1.7.0'
+    implementation 'androidx.activity:activity-compose:1.7.1'
     implementation "androidx.compose.ui:ui:$compose_ui_version"
     implementation "androidx.compose.ui:ui-tooling-preview:$compose_ui_version"
 
@@ -171,6 +172,10 @@ dependencies {
 
     // Google services model the translate text
     playImplementation 'com.google.mlkit:translate:17.0.1'
+
+    // PushNotifications
+    playImplementation platform('com.google.firebase:firebase-bom:32.0.0')
+    playImplementation 'com.google.firebase:firebase-messaging-ktx'
 
     // Automatic memory leak detection
     debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.10'

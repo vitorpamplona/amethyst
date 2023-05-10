@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -44,6 +45,7 @@ import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
 import com.vitorpamplona.amethyst.ui.dal.ChatroomListKnownFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ChatroomListNewFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.ChatroomListFeedView
+import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListKnownFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListNewFeedViewModel
 import kotlinx.coroutines.launch
@@ -58,6 +60,48 @@ fun ChatroomListScreen(accountViewModel: AccountViewModel, navController: NavCon
     val markKnownAsRead = remember { mutableStateOf(false) }
     val markNewAsRead = remember { mutableStateOf(false) }
 
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val account = accountState?.account ?: return
+
+    ChatroomListKnownFeedFilter.account = account
+    val knownFeedViewModel: NostrChatroomListKnownFeedViewModel = viewModel()
+
+    ChatroomListNewFeedFilter.account = account
+    val newFeedViewModel: NostrChatroomListNewFeedViewModel = viewModel()
+
+    LaunchedEffect(accountViewModel) {
+        NostrChatroomListDataSource.account = account
+        NostrChatroomListDataSource.start()
+        knownFeedViewModel.invalidateData()
+        newFeedViewModel.invalidateData()
+    }
+
+    val lifeCycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(accountViewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                NostrChatroomListDataSource.account = account
+                NostrChatroomListDataSource.start()
+                knownFeedViewModel.invalidateData()
+                newFeedViewModel.invalidateData()
+            }
+        }
+
+        lifeCycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifeCycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    val tabs by remember {
+        derivedStateOf {
+            listOf(
+                ChatroomListTabItem(R.string.known, knownFeedViewModel, markKnownAsRead),
+                ChatroomListTabItem(R.string.new_requests, newFeedViewModel, markNewAsRead)
+            )
+        }
+    }
+
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxHeight()) {
             Column(
@@ -68,21 +112,17 @@ fun ChatroomListScreen(accountViewModel: AccountViewModel, navController: NavCon
                         backgroundColor = MaterialTheme.colors.background,
                         selectedTabIndex = pagerState.currentPage
                     ) {
-                        Tab(
-                            selected = pagerState.currentPage == 0,
-                            onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
-                            text = {
-                                Text(text = stringResource(R.string.known))
-                            }
-                        )
-
-                        Tab(
-                            selected = pagerState.currentPage == 1,
-                            onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
-                            text = {
-                                Text(text = stringResource(R.string.new_requests))
-                            }
-                        )
+                        tabs.forEachIndexed { index, tab ->
+                            Tab(
+                                selected = pagerState.currentPage == index,
+                                text = {
+                                    Text(text = stringResource(tab.resource))
+                                },
+                                onClick = {
+                                    coroutineScope.launch { pagerState.animateScrollToPage(index) }
+                                }
+                            )
+                        }
                     }
 
                     IconButton(
@@ -107,102 +147,20 @@ fun ChatroomListScreen(accountViewModel: AccountViewModel, navController: NavCon
                     }
                 }
 
-                HorizontalPager(pageCount = 2, state = pagerState) {
-                    when (pagerState.currentPage) {
-                        0 -> TabKnown(accountViewModel, navController, markKnownAsRead)
-                        1 -> TabNew(accountViewModel, navController, markNewAsRead)
-                    }
+                HorizontalPager(pageCount = 2, state = pagerState) { page ->
+                    ChatroomListFeedView(
+                        viewModel = tabs[page].viewModel,
+                        accountViewModel = accountViewModel,
+                        navController = navController,
+                        markAsRead = tabs[page].markAsRead
+                    )
                 }
             }
         }
     }
 }
 
-@Composable
-fun TabKnown(
-    accountViewModel: AccountViewModel,
-    navController: NavController,
-    markAsRead: MutableState<Boolean>
-) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
-
-    ChatroomListKnownFeedFilter.account = account
-    val feedViewModel: NostrChatroomListKnownFeedViewModel = viewModel()
-
-    LaunchedEffect(accountViewModel) {
-        NostrChatroomListDataSource.account = account
-        NostrChatroomListDataSource.start()
-        feedViewModel.invalidateData()
-    }
-
-    val lifeCycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(accountViewModel) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                NostrChatroomListDataSource.account = account
-                NostrChatroomListDataSource.start()
-                feedViewModel.invalidateData()
-            }
-        }
-
-        lifeCycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifeCycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
-
-    Column(Modifier.fillMaxHeight()) {
-        Column(
-            modifier = Modifier.padding(vertical = 0.dp)
-        ) {
-            ChatroomListFeedView(feedViewModel, accountViewModel, navController, markAsRead)
-        }
-    }
-}
-
-@Composable
-fun TabNew(
-    accountViewModel: AccountViewModel,
-    navController: NavController,
-    markAsRead: MutableState<Boolean>
-) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
-
-    ChatroomListNewFeedFilter.account = account
-    val feedViewModel: NostrChatroomListNewFeedViewModel = viewModel()
-
-    LaunchedEffect(accountViewModel) {
-        NostrChatroomListDataSource.account = account
-        NostrChatroomListDataSource.start()
-        feedViewModel.invalidateData()
-    }
-
-    val lifeCycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(accountViewModel) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                NostrChatroomListDataSource.account = account
-                NostrChatroomListDataSource.start()
-                feedViewModel.invalidateData()
-            }
-        }
-
-        lifeCycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifeCycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
-
-    Column(Modifier.fillMaxHeight()) {
-        Column(
-            modifier = Modifier.padding(vertical = 0.dp)
-        ) {
-            ChatroomListFeedView(feedViewModel, accountViewModel, navController, markAsRead)
-        }
-    }
-}
+class ChatroomListTabItem(val resource: Int, val viewModel: FeedViewModel, val markAsRead: MutableState<Boolean>)
 
 @Composable
 fun ChatroomTabMenu(
