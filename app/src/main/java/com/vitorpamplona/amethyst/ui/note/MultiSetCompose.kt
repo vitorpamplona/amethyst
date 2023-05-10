@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -40,6 +41,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.MultiSetCard
@@ -52,19 +54,19 @@ import kotlinx.coroutines.launch
 @Composable
 fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accountViewModel: AccountViewModel, navController: NavController) {
     val noteState by multiSetCard.note.live().metadata.observeAsState()
-    val note = noteState?.note
+    val note = remember(noteState) { noteState?.note }
 
     val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
+    val account = remember(accountState) { accountState?.account }
 
     var popupExpanded by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
 
-    if (note == null) {
+    if (note == null || account == null) {
         BlankNote(Modifier, false)
     } else {
-        var isNew by remember { mutableStateOf<Boolean>(false) }
+        var isNew by remember { mutableStateOf(false) }
 
         LaunchedEffect(key1 = multiSetCard.createdAt()) {
             scope.launch(Dispatchers.IO) {
@@ -84,109 +86,154 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
             MaterialTheme.colors.background
         }
 
-        Column(
-            modifier = Modifier
+        val columnModifier = remember {
+            Modifier
                 .background(backgroundColor)
+                .padding(
+                    start = 12.dp,
+                    end = 12.dp,
+                    top = 10.dp
+                )
                 .combinedClickable(
                     onClick = {
                         scope.launch {
-                            routeFor(note, account.userProfile())?.let { navController.navigate(it) }
+                            routeFor(
+                                note,
+                                account.userProfile()
+                            )?.let { navController.navigate(it) }
                         }
                     },
                     onLongClick = { popupExpanded = true }
                 )
-        ) {
-            Row(
-                modifier = Modifier
-                    .padding(
-                        start = 12.dp,
-                        end = 12.dp,
-                        top = 10.dp
-                    )
-            ) {
-                Column(Modifier.fillMaxWidth()) {
-                    if (multiSetCard.zapEvents.isNotEmpty()) {
-                        Row(Modifier.fillMaxWidth()) {
-                            // Draws the like picture outside the boosted card.
-                            Box(
-                                modifier = Modifier
-                                    .width(55.dp)
-                                    .padding(0.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Bolt,
-                                    contentDescription = "Zaps",
-                                    tint = BitcoinOrange,
-                                    modifier = Modifier
-                                        .size(25.dp)
-                                        .align(Alignment.TopEnd)
-                                )
-                            }
+                .fillMaxWidth()
+        }
 
-                            AuthorGalleryZaps(multiSetCard.zapEvents, navController, account, accountViewModel)
-                        }
-                    }
+        val zapEvents = remember { multiSetCard.zapEvents }
+        val boostEvents = remember { multiSetCard.boostEvents }
+        val likeEvents = remember { multiSetCard.likeEvents }
 
-                    if (multiSetCard.boostEvents.isNotEmpty()) {
-                        Row(Modifier.fillMaxWidth()) {
-                            Box(
-                                modifier = Modifier
-                                    .width(55.dp)
-                                    .padding(end = 4.dp)
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_retweeted),
-                                    null,
-                                    modifier = Modifier
-                                        .size(18.dp)
-                                        .align(Alignment.TopEnd),
-                                    tint = Color.Unspecified
-                                )
-                            }
+        Column(modifier = columnModifier) {
+            if (zapEvents.isNotEmpty()) {
+                RenderZapGallery(zapEvents, navController, account, accountViewModel)
+            }
 
-                            AuthorGallery(multiSetCard.boostEvents, navController, account, accountViewModel)
-                        }
-                    }
+            if (boostEvents.isNotEmpty()) {
+                RenderBoostGallery(boostEvents, navController, account, accountViewModel)
+            }
 
-                    if (multiSetCard.likeEvents.isNotEmpty()) {
-                        Row(Modifier.fillMaxWidth()) {
-                            Box(
-                                modifier = Modifier
-                                    .width(55.dp)
-                                    .padding(end = 5.dp)
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_liked),
-                                    null,
-                                    modifier = Modifier
-                                        .size(16.dp)
-                                        .align(Alignment.TopEnd),
-                                    tint = Color.Unspecified
-                                )
-                            }
+            if (likeEvents.isNotEmpty()) {
+                RenderLikeGallery(likeEvents, navController, account, accountViewModel)
+            }
 
-                            AuthorGallery(multiSetCard.likeEvents, navController, account, accountViewModel)
-                        }
-                    }
+            Row(Modifier.fillMaxWidth()) {
+                Spacer(modifier = Modifier.width(65.dp))
 
-                    Row(Modifier.fillMaxWidth()) {
-                        Spacer(modifier = Modifier.width(65.dp))
+                NoteCompose(
+                    baseNote = multiSetCard.note,
+                    routeForLastRead = null,
+                    modifier = Modifier.padding(top = 5.dp),
+                    isBoostedNote = true,
+                    parentBackgroundColor = backgroundColor,
+                    accountViewModel = accountViewModel,
+                    navController = navController
+                )
 
-                        NoteCompose(
-                            baseNote = multiSetCard.note,
-                            routeForLastRead = null,
-                            modifier = Modifier.padding(top = 5.dp),
-                            isBoostedNote = true,
-                            parentBackgroundColor = backgroundColor,
-                            accountViewModel = accountViewModel,
-                            navController = navController
-                        )
-
-                        NoteDropDownMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
-                    }
-                }
+                NoteDropDownMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
             }
         }
+    }
+}
+
+@Composable
+private fun RenderLikeGallery(
+    likeEvents: List<Note>,
+    navController: NavController,
+    account: Account,
+    accountViewModel: AccountViewModel
+) {
+    Row(Modifier.fillMaxWidth()) {
+        Box(
+            modifier = remember {
+                Modifier
+                    .width(55.dp)
+                    .padding(end = 5.dp)
+            }
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_liked),
+                null,
+                modifier = remember {
+                    Modifier
+                        .size(16.dp)
+                        .align(Alignment.TopEnd)
+                },
+                tint = Color.Unspecified
+            )
+        }
+
+        AuthorGallery(likeEvents, navController, account, accountViewModel)
+    }
+}
+
+@Composable
+private fun RenderZapGallery(
+    zapEvents: Map<Note, Note>,
+    navController: NavController,
+    account: Account,
+    accountViewModel: AccountViewModel
+) {
+    Row(Modifier.fillMaxWidth()) {
+        Box(
+            modifier = remember {
+                Modifier
+                    .width(55.dp)
+                    .padding(0.dp)
+            }
+        ) {
+            Icon(
+                imageVector = Icons.Default.Bolt,
+                contentDescription = "Zaps",
+                tint = BitcoinOrange,
+                modifier = remember {
+                    Modifier
+                        .size(25.dp)
+                        .align(Alignment.TopEnd)
+                }
+            )
+        }
+
+        AuthorGalleryZaps(zapEvents, navController, account, accountViewModel)
+    }
+}
+
+@Composable
+private fun RenderBoostGallery(
+    boostEvents: List<Note>,
+    navController: NavController,
+    account: Account,
+    accountViewModel: AccountViewModel
+) {
+    Row(Modifier.fillMaxWidth()) {
+        Box(
+            modifier = remember {
+                Modifier
+                    .width(55.dp)
+                    .padding(end = 4.dp)
+            }
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_retweeted),
+                null,
+                modifier = remember {
+                    Modifier
+                        .size(18.dp)
+                        .align(Alignment.TopEnd)
+                },
+                tint = Color.Unspecified
+            )
+        }
+
+        AuthorGallery(boostEvents, navController, account, accountViewModel)
     }
 }
 
@@ -197,13 +244,16 @@ fun AuthorGalleryZaps(
     account: Account,
     accountViewModel: AccountViewModel
 ) {
-    val accountState by account.userProfile().live().follows.observeAsState()
-    val accountUser = accountState?.user ?: return
+    val accountState = account.userProfile().live().follows.observeAsState()
+
+    val listToRender = remember {
+        authorNotes.keys.take(50)
+    }
 
     Column(modifier = Modifier.padding(start = 10.dp)) {
         FlowRow() {
-            authorNotes.forEach {
-                AuthorPictureAndComment(it.key, navController, accountUser, accountViewModel)
+            listToRender.forEach {
+                AuthorPictureAndComment(it, navController, accountState, accountViewModel)
             }
         }
     }
@@ -213,7 +263,7 @@ fun AuthorGalleryZaps(
 private fun AuthorPictureAndComment(
     zapRequest: Note,
     navController: NavController,
-    accountUser: User,
+    accountUser: State<UserState?>,
     accountViewModel: AccountViewModel
 ) {
     val author = zapRequest.author ?: return
@@ -245,19 +295,25 @@ private fun AuthorPictureAndComment(
     author: User,
     comment: String?,
     navController: NavController,
-    accountUser: User,
+    accountUser: State<UserState?>,
     accountViewModel: AccountViewModel
 ) {
-    val modifier = if (!comment.isNullOrBlank()) {
-        Modifier.fillMaxWidth()
-    } else {
-        Modifier
+    val modifier = remember(comment) {
+        if (!comment.isNullOrBlank()) {
+            Modifier
+                .fillMaxWidth()
+                .clickable {
+                    navController.navigate("User/${author.pubkeyHex}")
+                }
+        } else {
+            Modifier.clickable {
+                navController.navigate("User/${author.pubkeyHex}")
+            }
+        }
     }
 
     Row(
-        modifier = modifier.clickable {
-            navController.navigate("User/${author.pubkeyHex}")
-        },
+        modifier = modifier,
         verticalAlignment = Alignment.CenterVertically
     ) {
         FastNoteAuthorPicture(
@@ -288,20 +344,22 @@ fun AuthorGallery(
     account: Account,
     accountViewModel: AccountViewModel
 ) {
-    val accountState by account.userProfile().live().follows.observeAsState()
-    val accountUser = accountState?.user ?: return
+    val accountState = account.userProfile().live().follows.observeAsState()
+    val listToRender = remember {
+        Pair(
+            authorNotes.take(50).mapNotNull { it.author },
+            authorNotes.size
+        )
+    }
 
     Column(modifier = Modifier.padding(start = 10.dp)) {
         FlowRow() {
-            authorNotes.take(50).forEach {
-                val author = it.author
-                if (author != null) {
-                    AuthorPictureAndComment(author, null, navController, accountUser, accountViewModel)
-                }
+            listToRender.first.forEach { author ->
+                AuthorPictureAndComment(author, null, navController, accountState, accountViewModel)
             }
 
-            if (authorNotes.size > 50) {
-                Text(" and ${authorNotes.size - 50} others")
+            if (listToRender.second > 50) {
+                Text(" and ${listToRender.second - 50} others")
             }
         }
     }
@@ -310,18 +368,26 @@ fun AuthorGallery(
 @Composable
 fun FastNoteAuthorPicture(
     author: User,
-    userAccount: User,
+    userAccount: State<UserState?>,
     size: Dp,
     pictureModifier: Modifier = Modifier
 ) {
     val userState by author.live().metadata.observeAsState()
-    val user = userState?.user ?: return
+    val profilePicture = remember(userState) {
+        userState?.user?.profilePicture()
+    }
 
-    val showFollowingMark = userAccount.isFollowingCached(user) || user === userAccount
+    val authorPubKey = remember {
+        author.pubkeyHex
+    }
+
+    val showFollowingMark = remember(userAccount.value) {
+        userAccount.value?.user?.isFollowingCached(author) == true || (author === userAccount.value?.user)
+    }
 
     UserPicture(
-        userHex = user.pubkeyHex,
-        userPicture = user.profilePicture(),
+        userHex = authorPubKey,
+        userPicture = profilePicture,
         showFollowingMark = showFollowingMark,
         size = size,
         modifier = pictureModifier

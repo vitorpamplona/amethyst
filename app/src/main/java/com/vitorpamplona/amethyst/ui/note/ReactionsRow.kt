@@ -68,7 +68,7 @@ import kotlin.math.roundToInt
 @Composable
 fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel, navController: NavController) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
+    val account = remember(accountState) { accountState?.account } ?: return
 
     val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
 
@@ -123,13 +123,21 @@ fun ReplyReaction(
     onPress: () -> Unit
 ) {
     val repliesState by baseNote.live().replies.observeAsState()
-    val replies = repliesState?.note?.replies ?: emptySet()
+    val replies = remember(repliesState) { repliesState?.note?.replies } ?: emptySet()
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    val iconButtonModifier = remember {
+        Modifier.size(iconSize)
+    }
+
+    val iconModifier = remember {
+        Modifier.size(iconSize)
+    }
+
     IconButton(
-        modifier = Modifier.size(iconSize),
+        modifier = iconButtonModifier,
         onClick = {
             if (accountViewModel.isWriteable()) {
                 onPress()
@@ -147,7 +155,7 @@ fun ReplyReaction(
         Icon(
             painter = painterResource(R.drawable.ic_comment),
             null,
-            modifier = Modifier.size(iconSize),
+            modifier = iconModifier,
             tint = grayTint
         )
     }
@@ -162,7 +170,7 @@ fun ReplyReaction(
 }
 
 @Composable
-public fun BoostReaction(
+fun BoostReaction(
     baseNote: Note,
     grayTint: Color,
     accountViewModel: AccountViewModel,
@@ -170,17 +178,32 @@ public fun BoostReaction(
     onQuotePress: () -> Unit
 ) {
     val boostsState by baseNote.live().boosts.observeAsState()
-    val boostedNote = boostsState?.note
+    val boostedNote = remember(boostsState) { boostsState?.note } ?: return
+
+    val hasBoosted = remember(boostsState) { accountViewModel.hasBoosted(baseNote) }
+    val wasBoostedByLoggedIn = remember(boostsState) { boostedNote.isBoostedBy(accountViewModel.userProfile()) }
+    val isWriteable = remember { accountViewModel.isWriteable() }
+
+    val boostCount = remember(boostsState) { showCount(boostedNote.boosts.size) }
+
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     var wantsToBoost by remember { mutableStateOf(false) }
 
+    val iconButtonModifier = remember {
+        Modifier.size(iconSize)
+    }
+
+    val iconModifier = remember {
+        Modifier.size(iconSize)
+    }
+
     IconButton(
-        modifier = Modifier.then(Modifier.size(iconSize)),
+        modifier = iconButtonModifier,
         onClick = {
-            if (accountViewModel.isWriteable()) {
-                if (accountViewModel.hasBoosted(baseNote)) {
+            if (isWriteable) {
+                if (hasBoosted) {
                     accountViewModel.deleteBoostsTo(baseNote)
                 } else {
                     wantsToBoost = true
@@ -210,25 +233,16 @@ public fun BoostReaction(
             )
         }
 
-        if (boostedNote?.isBoostedBy(accountViewModel.userProfile()) == true) {
-            Icon(
-                painter = painterResource(R.drawable.ic_retweeted),
-                null,
-                modifier = Modifier.size(iconSize),
-                tint = Color.Unspecified
-            )
-        } else {
-            Icon(
-                painter = painterResource(R.drawable.ic_retweet),
-                null,
-                modifier = Modifier.size(iconSize),
-                tint = grayTint
-            )
-        }
+        Icon(
+            painter = painterResource(R.drawable.ic_retweeted),
+            null,
+            modifier = iconModifier,
+            tint = if (wasBoostedByLoggedIn) Color.Unspecified else grayTint
+        )
     }
 
     Text(
-        " ${showCount(boostedNote?.boosts?.size)}",
+        " $boostCount",
         fontSize = 14.sp,
         color = grayTint
     )
@@ -243,16 +257,30 @@ fun LikeReaction(
     heartSize: Dp = 16.dp
 ) {
     val reactionsState by baseNote.live().reactions.observeAsState()
-    val reactedNote = reactionsState?.note ?: return
+    val reactedNote = remember(reactionsState) { reactionsState?.note } ?: return
+
+    val hasReacted = remember(reactionsState) { accountViewModel.hasReactedTo(baseNote) }
+    val wasReactedByLoggedIn = remember(reactionsState) { reactedNote.isReactedBy(accountViewModel.userProfile()) }
+    val isWriteable = remember { accountViewModel.isWriteable() }
+
+    val reactionCount = remember(reactionsState) { showCount(reactedNote.reactions.size) }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    val iconButtonModifier = remember {
+        Modifier.size(iconSize)
+    }
+
+    val iconModifier = remember {
+        Modifier.size(heartSize)
+    }
+
     IconButton(
-        modifier = Modifier.then(Modifier.size(iconSize)),
+        modifier = iconButtonModifier,
         onClick = {
-            if (accountViewModel.isWriteable()) {
-                if (accountViewModel.hasReactedTo(baseNote)) {
+            if (isWriteable) {
+                if (hasReacted) {
                     accountViewModel.deleteReactionTo(baseNote)
                 } else {
                     accountViewModel.reactTo(baseNote)
@@ -268,25 +296,25 @@ fun LikeReaction(
             }
         }
     ) {
-        if (reactedNote.isReactedBy(accountViewModel.userProfile())) {
+        if (wasReactedByLoggedIn) {
             Icon(
                 painter = painterResource(R.drawable.ic_liked),
                 null,
-                modifier = Modifier.size(heartSize),
+                modifier = iconModifier,
                 tint = Color.Unspecified
             )
         } else {
             Icon(
                 painter = painterResource(R.drawable.ic_like),
                 null,
-                modifier = Modifier.size(heartSize),
+                modifier = iconModifier,
                 tint = grayTint
             )
         }
     }
 
     Text(
-        " ${showCount(reactedNote.reactions.size)}",
+        " $reactionCount",
         fontSize = 14.sp,
         color = grayTint
     )
@@ -472,6 +500,19 @@ public fun ViewCountReaction(
     numberSize: Dp = 24.dp
 ) {
     val uri = LocalUriHandler.current
+    val context = LocalContext.current
+
+    val iconButtonModifier = remember {
+        Modifier.size(barChartSize)
+    }
+
+    val iconModifier = remember {
+        Modifier.height(numberSize)
+    }
+
+    val colorFilter = remember {
+        ColorFilter.tint(grayTint)
+    }
 
     IconButton(
         modifier = Modifier.size(iconSize),
@@ -480,21 +521,25 @@ public fun ViewCountReaction(
         Icon(
             imageVector = Icons.Outlined.BarChart,
             null,
-            modifier = Modifier.size(barChartSize),
+            modifier = iconButtonModifier,
             tint = grayTint
         )
     }
 
-    Row() {
+    val request = remember {
+        ImageRequest.Builder(context)
+            .data("https://counter.amethyst.social/$idHex.svg?label=+&color=00000000")
+            .diskCachePolicy(CachePolicy.DISABLED)
+            .memoryCachePolicy(CachePolicy.ENABLED)
+            .build()
+    }
+
+    Row {
         AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data("https://counter.amethyst.social/$idHex.svg?label=+&color=00000000")
-                .diskCachePolicy(CachePolicy.DISABLED)
-                .memoryCachePolicy(CachePolicy.ENABLED)
-                .build(),
+            model = request,
             contentDescription = stringResource(R.string.view_count),
-            modifier = Modifier.height(numberSize),
-            colorFilter = ColorFilter.tint(grayTint)
+            modifier = iconModifier,
+            colorFilter = colorFilter
         )
     }
 }

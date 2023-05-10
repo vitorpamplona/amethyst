@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
@@ -30,24 +31,31 @@ fun RobohashAsyncImage(
     colorFilter: ColorFilter? = null,
     filterQuality: FilterQuality = DrawScope.DefaultFilterQuality
 ) {
-    with(LocalDensity.current) {
-        AsyncImage(
-            model = Robohash.imageRequest(
-                LocalContext.current,
-                robot,
-                Size(robotSize.roundToPx(), robotSize.roundToPx())
-            ),
-            contentDescription = contentDescription,
-            modifier = modifier,
-            transform = transform,
-            onState = onState,
-            alignment = alignment,
-            contentScale = contentScale,
-            alpha = alpha,
-            colorFilter = colorFilter,
-            filterQuality = filterQuality
+    val context = LocalContext.current
+    val size = with(LocalDensity.current) {
+        robotSize.roundToPx()
+    }
+
+    val imageRequest = remember(size, robot) {
+        Robohash.imageRequest(
+            context,
+            robot,
+            Size(size, size)
         )
     }
+
+    AsyncImage(
+        model = imageRequest,
+        contentDescription = contentDescription,
+        modifier = modifier,
+        transform = transform,
+        onState = onState,
+        alignment = alignment,
+        contentScale = contentScale,
+        alpha = alpha,
+        colorFilter = colorFilter,
+        filterQuality = filterQuality
+    )
 }
 
 var imageErrors = setOf<String>()
@@ -120,7 +128,7 @@ fun RobohashAsyncImageProxy(
     colorFilter: ColorFilter? = null,
     filterQuality: FilterQuality = DrawScope.DefaultFilterQuality
 ) {
-    val proxy = model.proxyUrl()
+    val proxy = remember(model) { model.proxyUrl() }
     if (proxy == null) {
         RobohashAsyncImage(
             robot = robot,
