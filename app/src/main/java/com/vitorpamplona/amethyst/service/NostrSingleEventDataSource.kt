@@ -152,22 +152,30 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
     }
 
     fun add(eventId: Note) {
-        eventsToWatch = eventsToWatch.plus(eventId)
-        invalidateFilters()
+        if (!eventsToWatch.contains(eventId)) {
+            eventsToWatch = eventsToWatch.plus(eventId)
+            invalidateFilters()
+        }
     }
 
     fun remove(eventId: Note) {
-        eventsToWatch = eventsToWatch.minus(eventId)
-        invalidateFilters()
+        if (eventsToWatch.contains(eventId)) {
+            eventsToWatch = eventsToWatch.minus(eventId)
+            invalidateFilters()
+        }
     }
 
     fun addAddress(aTag: Note) {
-        addressesToWatch = addressesToWatch.plus(aTag)
-        invalidateFilters()
+        if (!addressesToWatch.contains(aTag)) {
+            addressesToWatch = addressesToWatch.plus(aTag)
+            invalidateFilters()
+        }
     }
 
     fun removeAddress(aTag: Note) {
-        addressesToWatch = addressesToWatch.minus(aTag)
-        invalidateFilters()
+        if (addressesToWatch.contains(aTag)) {
+            addressesToWatch = addressesToWatch.minus(aTag)
+            invalidateFilters()
+        }
     }
 }

@@ -64,12 +64,16 @@ object NostrSingleUserDataSource : NostrDataSource("SingleUserFeed") {
     }
 
     fun add(user: User) {
-        usersToWatch = usersToWatch.plus(user)
-        invalidateFilters()
+        if (!usersToWatch.contains(user)) {
+            usersToWatch = usersToWatch.plus(user)
+            invalidateFilters()
+        }
     }
 
     fun remove(user: User) {
-        usersToWatch = usersToWatch.minus(user)
-        invalidateFilters()
+        if (usersToWatch.contains(user)) {
+            usersToWatch = usersToWatch.minus(user)
+            invalidateFilters()
+        }
     }
 }
