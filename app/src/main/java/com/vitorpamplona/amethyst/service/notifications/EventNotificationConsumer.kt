@@ -74,10 +74,12 @@ class EventNotificationConsumer(private val applicationContext: Context) {
                     }
                 }
 
-                val zappedContent = noteZapped?.event?.content()?.split("\n")?.get(0)?.take(50)
+                val zappedContent =
+                    noteZapped?.let { it1 -> acc.decryptContent(it1)?.split("\n")?.get(0)?.take(50) }
+
                 val user = senderInfo?.first?.toBestDisplayName() ?: ""
                 var title = applicationContext.getString(R.string.app_notification_zaps_channel_message, amount)
-                senderInfo?.second?.let {
+                senderInfo?.second?.ifBlank { null }?.let {
                     title += " ($it)"
                 }
                 var content = applicationContext.getString(R.string.app_notification_zaps_channel_message_from, user)
