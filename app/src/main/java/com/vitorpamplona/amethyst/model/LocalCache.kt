@@ -347,7 +347,7 @@ object LocalCache {
         }
     }
 
-    fun consume(event: PrivateDmEvent, relay: Relay?) {
+    fun consume(event: PrivateDmEvent, relay: Relay?): Note {
         val note = getOrCreateNote(event.id)
         val author = getOrCreateUser(event.pubKey)
 
@@ -357,7 +357,7 @@ object LocalCache {
         }
 
         // Already processed this event.
-        if (note.event != null) return
+        if (note.event != null) return note
 
         val recipient = event.verifiedRecipientPubKey()?.let { getOrCreateUser(it) }
 
@@ -374,6 +374,8 @@ object LocalCache {
         }
 
         refreshObservers(note)
+
+        return note
     }
 
     fun consume(event: DeletionEvent) {
@@ -910,6 +912,60 @@ object LocalCache {
 
     private fun refreshObservers(newNote: Note) {
         live.invalidateData(newNote)
+    }
+
+    fun consume(event: Event, relay: Relay?) {
+        if (!event.hasValidSignature()) return
+
+        try {
+            when (event) {
+                is BadgeAwardEvent -> consume(event)
+                is BadgeDefinitionEvent -> consume(event)
+                is BadgeProfilesEvent -> consume(event)
+                is BookmarkListEvent -> consume(event)
+                is ChannelCreateEvent -> consume(event)
+                is ChannelHideMessageEvent -> consume(event)
+                is ChannelMessageEvent -> consume(event, relay)
+                is ChannelMetadataEvent -> consume(event)
+                is ChannelMuteUserEvent -> consume(event)
+                is ContactListEvent -> consume(event)
+                is DeletionEvent -> consume(event)
+
+                is FileHeaderEvent -> consume(event, relay)
+                is FileStorageEvent -> consume(event, relay)
+                is FileStorageHeaderEvent -> consume(event, relay)
+                is HighlightEvent -> consume(event, relay)
+                is LnZapEvent -> {
+                    event.zapRequest?.let {
+                        consume(it, relay)
+                    }
+                    consume(event)
+                }
+                is LnZapRequestEvent -> consume(event)
+                is LnZapPaymentRequestEvent -> consume(event)
+                is LnZapPaymentResponseEvent -> consume(event)
+                is LongTextNoteEvent -> consume(event, relay)
+                is MetadataEvent -> consume(event)
+                is PrivateDmEvent -> consume(event, relay)
+                is PeopleListEvent -> consume(event)
+                is ReactionEvent -> consume(event)
+                is RecommendRelayEvent -> consume(event)
+                is ReportEvent -> consume(event, relay)
+                is RepostEvent -> {
+                    event.containedPost()?.let {
+                        consume(it, relay)
+                    }
+                    consume(event)
+                }
+                is TextNoteEvent -> consume(event, relay)
+                is PollNoteEvent -> consume(event, relay)
+                else -> {
+                    Log.w("Event Not Supported", event.toJson())
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 }
 

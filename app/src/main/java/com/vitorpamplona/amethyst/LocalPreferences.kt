@@ -213,7 +213,13 @@ object LocalPreferences {
     }
 
     fun loadFromEncryptedStorage(): Account? {
-        encryptedPreferences(currentAccount()).apply {
+        val acc = loadFromEncryptedStorage(currentAccount())
+        acc?.registerObservers()
+        return acc
+    }
+
+    fun loadFromEncryptedStorage(npub: String?): Account? {
+        encryptedPreferences(npub).apply {
             val pubKey = getString(PrefKeys.NOSTR_PUBKEY, null) ?: return null
             val privKey = getString(PrefKeys.NOSTR_PRIVKEY, null)
             val followingChannels = getStringSet(PrefKeys.FOLLOWING_CHANNELS, null) ?: setOf()

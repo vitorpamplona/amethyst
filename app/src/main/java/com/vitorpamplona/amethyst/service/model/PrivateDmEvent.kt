@@ -21,7 +21,7 @@ class PrivateDmEvent(
      * nip-04 EncryptedDmEvent but may omit the recipient, too. This value can be queried and used
      * for initial messages.
      */
-    fun recipientPubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }
+    private fun recipientPubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }
 
     fun recipientPubKeyBytes() = recipientPubKey()?.runCatching { Hex.decode(this[1]) }?.getOrNull()
 

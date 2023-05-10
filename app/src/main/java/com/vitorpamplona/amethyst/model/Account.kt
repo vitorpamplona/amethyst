@@ -1037,14 +1037,7 @@ class Account(
         saveable.invalidateData()
     }
 
-    init {
-        backupContactList?.let {
-            println("Loading saved contacts ${it.toJson()}")
-            if (userProfile().latestContactList == null) {
-                LocalCache.consume(it)
-            }
-        }
-
+    fun registerObservers() {
         // Observes relays to restart connections
         userProfile().live().relays.observeForever {
             GlobalScope.launch(Dispatchers.IO) {
@@ -1068,6 +1061,15 @@ class Account(
                         }
                     }
                 }
+            }
+        }
+    }
+
+    init {
+        backupContactList?.let {
+            println("Loading saved contacts ${it.toJson()}")
+            if (userProfile().latestContactList == null) {
+                LocalCache.consume(it)
             }
         }
     }
