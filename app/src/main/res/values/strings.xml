@@ -372,6 +372,6 @@
     <string name="app_notification_zaps_channel_name">Zaps Received</string>
     <string name="app_notification_zaps_channel_description">Notifies you when somebody zaps you</string>
     <string name="app_notification_zaps_channel_message">%1$s sats</string>
-    <string name="app_notification_zaps_channel_message_from">from %1$s</string>
+    <string name="app_notification_zaps_channel_message_from">From %1$s</string>
     <string name="app_notification_zaps_channel_message_for">for %1$s</string>
 </resources>
