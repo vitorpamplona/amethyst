@@ -318,18 +318,35 @@
     <string name="file_server">File server</string>
     <string name="zap_forward_lnAddress">LnAddress of @User</string>
 
-    <string name="upload_server_imgur">imgur.com - minder beveiligd</string>
-    <string name="upload_server_imgur_explainer">Upload naar Imgur. Imgur kan uw afbeelding/video op elk moment wijzigen</string>
+    <string name="upload_server_imgur">imgur.com - vertrouwd</string>
+    <string name="upload_server_imgur_explainer">Imgur kan het bestand aanpassen</string>
 
-    <string name="upload_server_nostrimg">nostrimg.com - minder beveiligd</string>
-    <string name="upload_server_nostrimg_explainer">Upload naar NostrImg. NostrImg kan uw afbeelding/video op elk moment wijzigen</string>
+    <string name="upload_server_nostrimg">nostrimg.com - vertrouwd</string>
+    <string name="upload_server_nostrimg_explainer">NostrImg  kan het bestand aanpassen</string>
+	
+    <string name="upload_server_nostrbuild">nostr.build - vertrouwd</string>
+    <string name="upload_server_nostrbuild_explainer">Nostr.build  kan het bestand aanpassen</string>
+
+    <string name="upload_server_nostrfilesdev">nostrfiles.dev - vertrouwd</string>
+    <string name="upload_server_nostrfilesdev_explainer">Nostrfiles.dev  kan het bestand aanpassen</string>
 
     <string name="upload_server_imgur_nip94">Verifieerbare Imgur (NIP-94)</string>
-    <string name="upload_server_imgur_nip94_explainer">Beschermt tegen het achteraf wijzigen van de inhoud door Imgur. Dit is een nieuwe NIP: andere clients zien de afbeelding misschien niet.</string>
+    <string name="upload_server_imgur_nip94_explainer">Checkt of Imgur het bestand heeft aangepast. Dit is een nieuwe NIP: andere clients zien het misschien niet.</string>
 
     <string name="upload_server_nostrimg_nip94">Verifieerbare NostrImg (NIP-94)</string>
-    <string name="upload_server_nostrimg_nip94_explainer">Beschermt tegen het achteraf wijzigen van de inhoud door NostrImg. Dit is een nieuwe NIP: andere clients zien de afbeelding misschien niet.</string>
+    <string name="upload_server_nostrimg_nip94_explainer">Checkt of NostrImg het bestand heeft aangepast. Dit is een nieuwe NIP: andere clients zien het misschien niet.</string>
+	
+    <string name="upload_server_nostrbuild_nip94">Verifieerbare Nostr.build (NIP-94)</string>
+    <string name="upload_server_nostrbuild_nip94_explainer">Checkt of Nostr.build het bestand heeft aangepast. Dit is een nieuwe NIP: andere clients zien het misschien niet.</string>
+
+    <string name="upload_server_nostrfilesdev_nip94">Verifieerbare Nostrfiles.dev (NIP-94)</string>
+    <string name="upload_server_nostrfilesdev_nip94_explainer">Checkt of Nostrfiles.dev het bestand heeft aangepast. Dit is een nieuwe NIP: andere clients zien het misschien niet.</string>
 
     <string name="upload_server_relays_nip95">Uw relays (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Bestanden worden geüpload naar en gehost door relays. Ze zijn vrij van een vaste url (afhankelijkheid van derden). Zorg ervoor dat u een NIP-95 relay in uw lijst met relays hebt.</string>
+	
+    <string name="follow_list_selection">Volgerslijst</string>
+    <string name="follow_list_kind3follows">Alle gevolgden</string>
+    <string name="follow_list_global">Globaal</string>
+	
 </resources>
