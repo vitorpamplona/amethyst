@@ -10,6 +10,7 @@ import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.model.hexToByteArray
+import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.model.ContactListEvent
 import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.Event.Companion.getRefinedEvent
@@ -55,6 +56,8 @@ private object PrefKeys {
     const val LATEST_CONTACT_LIST = "latestContactList"
     const val HIDE_DELETE_REQUEST_DIALOG = "hide_delete_request_dialog"
     const val HIDE_BLOCK_ALERT_DIALOG = "hide_block_alert_dialog"
+    const val USE_PROXY = "use_proxy"
+    const val PROXY_PORT = "proxy_port"
     val LAST_READ: (String) -> String = { route -> "last_read_route_$route" }
 }
 
@@ -209,6 +212,8 @@ object LocalPreferences {
             putString(PrefKeys.LATEST_CONTACT_LIST, Event.gson.toJson(account.backupContactList))
             putBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, account.hideDeleteRequestDialog)
             putBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, account.hideBlockAlertDialog)
+            putBoolean(PrefKeys.USE_PROXY, account.proxy != null)
+            putInt(PrefKeys.PROXY_PORT, account.proxyPort)
         }.apply()
     }
 
@@ -283,6 +288,9 @@ object LocalPreferences {
 
             val hideDeleteRequestDialog = getBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, false)
             val hideBlockAlertDialog = getBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, false)
+            val useProxy = getBoolean(PrefKeys.USE_PROXY, false)
+            val proxyPort = getInt(PrefKeys.PROXY_PORT, 9050)
+            val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", proxyPort)
 
             val a = Account(
                 Persona(privKey = privKey?.hexToByteArray(), pubKey = pubKey.hexToByteArray()),
@@ -301,7 +309,9 @@ object LocalPreferences {
                 zapPaymentRequestServer,
                 hideDeleteRequestDialog,
                 hideBlockAlertDialog,
-                latestContactList
+                latestContactList,
+                proxy,
+                proxyPort
             )
 
             return a

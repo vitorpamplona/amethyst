@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.AlertDialog
 import androidx.compose.material.Divider
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.Icon
@@ -24,7 +25,9 @@ import androidx.compose.material.ModalBottomSheetState
 import androidx.compose.material.ScaffoldState
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
+import androidx.compose.material.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -45,13 +48,17 @@ import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
+import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountBackupDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterialApi::class)
@@ -100,7 +107,12 @@ fun DrawerContent(
 }
 
 @Composable
-fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffoldState: ScaffoldState, navController: NavController) {
+fun ProfileContent(
+    baseAccountUser: User,
+    modifier: Modifier = Modifier,
+    scaffoldState: ScaffoldState,
+    navController: NavController
+) {
     val coroutineScope = rememberCoroutineScope()
 
     val accountUserState by baseAccountUser.live().metadata.observeAsState()
@@ -197,11 +209,17 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
                     })
             ) {
                 Row() {
-                    Text("${accountUserFollows.cachedFollowCount() ?: "--"}", fontWeight = FontWeight.Bold)
+                    Text(
+                        "${accountUserFollows.cachedFollowCount() ?: "--"}",
+                        fontWeight = FontWeight.Bold
+                    )
                     Text(stringResource(R.string.following))
                 }
                 Row(modifier = Modifier.padding(start = 10.dp)) {
-                    Text("${accountUserFollows.cachedFollowerCount() ?: "--"}", fontWeight = FontWeight.Bold)
+                    Text(
+                        "${accountUserFollows.cachedFollowerCount() ?: "--"}",
+                        fontWeight = FontWeight.Bold
+                    )
                     Text(stringResource(R.string.followers))
                 }
             }
@@ -221,6 +239,10 @@ fun ListContent(
 ) {
     val coroutineScope = rememberCoroutineScope()
     var backupDialogOpen by remember { mutableStateOf(false) }
+    var checked by remember { mutableStateOf(account.proxy != null) }
+    val openDialog = remember { mutableStateOf(false) }
+    var conectOrbotDialogOpen by remember { mutableStateOf(false) }
+    var proxyPort = remember { mutableStateOf(account.proxyPort.toString()) }
 
     Column(modifier = modifier.fillMaxHeight()) {
         if (accountUser != null) {
@@ -259,6 +281,21 @@ fun ListContent(
             onClick = { backupDialogOpen = true }
         )
 
+        val textTorProxy = if (checked) stringResource(R.string.disconnect_from_your_orbot_setup) else stringResource(R.string.connect_via_tor)
+
+        IconRow(
+            title = textTorProxy,
+            icon = R.drawable.ic_tor,
+            tint = MaterialTheme.colors.onBackground,
+            onClick = {
+                if (checked) {
+                    openDialog.value = true
+                } else {
+                    conectOrbotDialogOpen = true
+                }
+            }
+        )
+
         Spacer(modifier = Modifier.weight(1f))
 
         IconRow(
@@ -272,6 +309,58 @@ fun ListContent(
     if (backupDialogOpen) {
         AccountBackupDialog(account, onClose = { backupDialogOpen = false })
     }
+
+    if (conectOrbotDialogOpen) {
+        ConnectOrbotDialog(
+            onClose = { conectOrbotDialogOpen = false },
+            onPost = {
+                conectOrbotDialogOpen = false
+                openDialog.value = false
+                checked = true
+                enableTor(account, true, proxyPort)
+            },
+            proxyPort
+        )
+    }
+
+    if (openDialog.value) {
+        AlertDialog(
+            text = { Text(text = stringResource(R.string.do_you_really_want_to_disable_tor)) },
+            onDismissRequest = { },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        openDialog.value = false
+                        checked = false
+                        enableTor(account, false, proxyPort)
+                    }
+                ) {
+                    Text(text = stringResource(R.string.yes))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        openDialog.value = false
+                    }
+                ) {
+                    Text(text = stringResource(R.string.no))
+                }
+            }
+        )
+    }
+}
+
+private fun enableTor(
+    account: Account,
+    checked: Boolean,
+    portNumber: MutableState<String>
+) {
+    account.proxyPort = portNumber.value.toInt()
+    account.proxy = HttpClient.initProxy(checked, "127.0.0.1", account.proxyPort)
+    LocalPreferences.saveToEncryptedStorage(account)
+    ServiceManager.pause()
+    ServiceManager.start()
 }
 
 @Composable

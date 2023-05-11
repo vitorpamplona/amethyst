@@ -11,6 +11,8 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
+import java.net.Proxy
+import java.time.Duration
 import java.util.Date
 
 enum class FeedType {
@@ -23,9 +25,16 @@ class Relay(
     var url: String,
     var read: Boolean = true,
     var write: Boolean = true,
-    var activeTypes: Set<FeedType> = FeedType.values().toSet()
+    var activeTypes: Set<FeedType> = FeedType.values().toSet(),
+    proxy: Proxy?
 ) {
+    val seconds = if (proxy != null) 20L else 10L
+    val duration = Duration.ofSeconds(seconds)
     private val httpClient = OkHttpClient.Builder()
+        .proxy(proxy)
+        .readTimeout(duration)
+        .connectTimeout(duration)
+        .writeTimeout(duration)
         .followRedirects(true)
         .followSslRedirects(true)
         .build()

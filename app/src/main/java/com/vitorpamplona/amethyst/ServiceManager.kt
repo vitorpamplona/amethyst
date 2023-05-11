@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
@@ -26,7 +27,7 @@ object ServiceManager {
 
     fun start() {
         val myAccount = account
-
+        HttpClient.start(account)
         if (myAccount != null) {
             Client.connect(myAccount.activeRelays() ?: myAccount.convertLocalRelays())
 

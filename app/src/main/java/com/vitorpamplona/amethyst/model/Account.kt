@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
 import nostr.postr.Persona
 import nostr.postr.Utils
 import java.math.BigDecimal
+import java.net.Proxy
 import java.util.Locale
 
 val DefaultChannels = setOf(
@@ -59,7 +60,9 @@ class Account(
     var zapPaymentRequest: Nip47URI? = null,
     var hideDeleteRequestDialog: Boolean = false,
     var hideBlockAlertDialog: Boolean = false,
-    var backupContactList: ContactListEvent? = null
+    var backupContactList: ContactListEvent? = null,
+    var proxy: Proxy?,
+    var proxyPort: Int
 ) {
     var transientHiddenUsers: Set<String> = setOf()
 
@@ -936,7 +939,7 @@ class Account(
     fun activeRelays(): Array<Relay>? {
         var usersRelayList = userProfile().latestContactList?.relays()?.map {
             val localFeedTypes = localRelays.firstOrNull() { localRelay -> localRelay.url == it.key }?.feedTypes ?: FeedType.values().toSet()
-            Relay(it.key, it.value.read, it.value.write, localFeedTypes)
+            Relay(it.key, it.value.read, it.value.write, localFeedTypes, proxy)
         } ?: return null
 
         // Ugly, but forces nostr.band as the only search-supporting relay today.
@@ -946,7 +949,8 @@ class Account(
                 Constants.forcedRelayForSearch.url,
                 Constants.forcedRelayForSearch.read,
                 Constants.forcedRelayForSearch.write,
-                Constants.forcedRelayForSearch.feedTypes
+                Constants.forcedRelayForSearch.feedTypes,
+                proxy
             )
         }
 
@@ -955,7 +959,7 @@ class Account(
 
     fun convertLocalRelays(): Array<Relay> {
         return localRelays.map {
-            Relay(it.url, it.read, it.write, it.feedTypes)
+            Relay(it.url, it.read, it.write, it.feedTypes, proxy)
         }.toTypedArray()
     }
 

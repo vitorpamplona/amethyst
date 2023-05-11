@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedOff
 
+import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -38,6 +39,7 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
 import java.util.*
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -55,6 +57,9 @@ fun LoginPage(
     var dialogOpen by remember {
         mutableStateOf(false)
     }
+    val useProxy = remember { mutableStateOf(false) }
+    val proxyPort = remember { mutableStateOf("9050") }
+    var connectOrbotDialogOpen by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -158,7 +163,7 @@ fun LoginPage(
                 keyboardActions = KeyboardActions(
                     onGo = {
                         try {
-                            accountViewModel.startUI(key.value.text)
+                            accountViewModel.startUI(key.value.text, useProxy.value, proxyPort.value.toInt())
                         } catch (e: Exception) {
                             errorMessage = context.getString(R.string.invalid_key)
                         }
@@ -221,6 +226,32 @@ fun LoginPage(
                 }
             }
 
+            if (isPackageInstalled(context, "org.torproject.android")) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = useProxy.value,
+                        onCheckedChange = {
+                            if (it) {
+                                connectOrbotDialogOpen = true
+                            }
+                        }
+                    )
+
+                    Text(stringResource(R.string.connect_via_tor))
+                }
+
+                if (connectOrbotDialogOpen) {
+                    ConnectOrbotDialog(
+                        onClose = { connectOrbotDialogOpen = false },
+                        onPost = {
+                            connectOrbotDialogOpen = false
+                            useProxy.value = true
+                        },
+                        proxyPort
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(20.dp))
 
             Box(modifier = Modifier.padding(40.dp, 0.dp, 40.dp, 0.dp)) {
@@ -237,7 +268,7 @@ fun LoginPage(
 
                         if (acceptedTerms.value && key.value.text.isNotBlank()) {
                             try {
-                                accountViewModel.startUI(key.value.text)
+                                accountViewModel.startUI(key.value.text, useProxy.value, proxyPort.value.toInt())
                             } catch (e: Exception) {
                                 errorMessage = context.getString(R.string.invalid_key)
                             }
@@ -265,7 +296,7 @@ fun LoginPage(
                 .fillMaxWidth(),
             onClick = {
                 if (acceptedTerms.value) {
-                    accountViewModel.newKey()
+                    accountViewModel.newKey(useProxy.value, proxyPort.value.toInt())
                 } else {
                     termsAcceptanceIsRequired =
                         context.getString(R.string.acceptance_of_terms_is_required)
@@ -279,4 +310,8 @@ fun LoginPage(
             )
         )
     }
+}
+
+fun isPackageInstalled(context: Context, target: String): Boolean {
+    return context.packageManager.getInstalledApplications(0).find { info -> info.packageName == target } != null
 }

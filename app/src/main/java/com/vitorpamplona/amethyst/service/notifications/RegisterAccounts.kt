@@ -4,13 +4,13 @@ import android.util.Log
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.model.RelayAuthEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
@@ -54,7 +54,7 @@ class RegisterAccounts(
                 .post(body)
                 .build()
 
-            val client = OkHttpClient.Builder().build()
+            val client = HttpClient.getHttpClient()
 
             client.newCall(request).execute()
         } catch (e: java.lang.Exception) {

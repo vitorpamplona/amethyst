@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.service.relays
 
+import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.EventInterface
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -91,7 +92,7 @@ object Client : RelayPool.Listener {
 
     @OptIn(DelicateCoroutinesApi::class)
     fun newSporadicRelay(url: String, feedTypes: Set<FeedType>?, onConnected: (Relay) -> Unit, onDone: (() -> Unit)?) {
-        val relay = Relay(url, true, true, feedTypes ?: emptySet())
+        val relay = Relay(url, true, true, feedTypes ?: emptySet(), HttpClient.getProxy())
         RelayPool.addRelay(relay)
 
         relay.requestAndWatch {

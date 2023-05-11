@@ -10,6 +10,7 @@ import android.provider.MediaStore
 import android.webkit.MimeTypeMap
 import androidx.annotation.RequiresApi
 import com.vitorpamplona.amethyst.BuildConfig
+import com.vitorpamplona.amethyst.service.HttpClient
 import okhttp3.*
 import okio.BufferedSource
 import okio.IOException
@@ -32,7 +33,7 @@ object ImageSaver {
         onSuccess: () -> Any?,
         onError: (Throwable) -> Any?
     ) {
-        val client = OkHttpClient.Builder().build()
+        val client = HttpClient.getHttpClient()
 
         val request = Request.Builder()
             .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
