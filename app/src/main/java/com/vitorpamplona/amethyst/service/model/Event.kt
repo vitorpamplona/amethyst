@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.service.model
 
+import android.util.Log
 import com.google.gson.*
 import com.google.gson.annotations.SerializedName
 import com.vitorpamplona.amethyst.model.HexKey
@@ -110,11 +111,12 @@ open class Event(
     }
 
     override fun hasValidSignature(): Boolean {
-        if (!id.contentEquals(generateId())) {
-            return false
+        return try {
+            id.contentEquals(generateId()) && secp256k1.verifySchnorr(Hex.decode(sig), Hex.decode(id), Hex.decode(pubKey))
+        } catch (e: Exception) {
+            Log.e("Event", "Fail checking if event $id has a valid signature", e)
+            false
         }
-
-        return secp256k1.verifySchnorr(Hex.decode(sig), Hex.decode(id), Hex.decode(pubKey))
     }
 
     private fun generateId(): String {
