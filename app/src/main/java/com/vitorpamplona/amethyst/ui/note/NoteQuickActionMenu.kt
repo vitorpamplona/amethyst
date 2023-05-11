@@ -354,9 +354,7 @@ private fun QuickActionAlertDialog(
         },
         buttons = {
             Row(
-                modifier = Modifier
-                    .padding(all = 8.dp)
-                    .fillMaxWidth(),
+                modifier = Modifier.padding(all = 8.dp).fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 TextButton(onClick = onClickDontShowAgain) {

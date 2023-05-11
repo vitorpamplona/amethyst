@@ -14,7 +14,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.AlertDialog
 import androidx.compose.material.Divider
 import androidx.compose.material.ExperimentalMaterialApi
@@ -240,11 +242,11 @@ fun ListContent(
     val coroutineScope = rememberCoroutineScope()
     var backupDialogOpen by remember { mutableStateOf(false) }
     var checked by remember { mutableStateOf(account.proxy != null) }
-    val openDialog = remember { mutableStateOf(false) }
+    var disconnectTorDialog by remember { mutableStateOf(false) }
     var conectOrbotDialogOpen by remember { mutableStateOf(false) }
     var proxyPort = remember { mutableStateOf(account.proxyPort.toString()) }
 
-    Column(modifier = modifier.fillMaxHeight()) {
+    Column(modifier = modifier.fillMaxHeight().verticalScroll(rememberScrollState())) {
         if (accountUser != null) {
             NavigationRow(
                 title = stringResource(R.string.profile),
@@ -278,10 +280,15 @@ fun ListContent(
             title = stringResource(R.string.backup_keys),
             icon = R.drawable.ic_key,
             tint = MaterialTheme.colors.onBackground,
-            onClick = { backupDialogOpen = true }
+            onClick = {
+                coroutineScope.launch {
+                    scaffoldState.drawerState.close()
+                }
+                backupDialogOpen = true
+            }
         )
 
-        val textTorProxy = if (checked) stringResource(R.string.disconnect_from_your_orbot_setup) else stringResource(R.string.connect_via_tor)
+        val textTorProxy = if (checked) stringResource(R.string.disconnect_from_your_orbot_setup) else stringResource(R.string.connect_via_tor_short)
 
         IconRow(
             title = textTorProxy,
@@ -289,8 +296,11 @@ fun ListContent(
             tint = MaterialTheme.colors.onBackground,
             onClick = {
                 if (checked) {
-                    openDialog.value = true
+                    disconnectTorDialog = true
                 } else {
+                    coroutineScope.launch {
+                        scaffoldState.drawerState.close()
+                    }
                     conectOrbotDialogOpen = true
                 }
             }
@@ -315,7 +325,7 @@ fun ListContent(
             onClose = { conectOrbotDialogOpen = false },
             onPost = {
                 conectOrbotDialogOpen = false
-                openDialog.value = false
+                disconnectTorDialog = false
                 checked = true
                 enableTor(account, true, proxyPort)
             },
@@ -323,14 +333,21 @@ fun ListContent(
         )
     }
 
-    if (openDialog.value) {
+    if (disconnectTorDialog) {
         AlertDialog(
-            text = { Text(text = stringResource(R.string.do_you_really_want_to_disable_tor)) },
-            onDismissRequest = { },
+            title = {
+                Text(text = stringResource(R.string.do_you_really_want_to_disable_tor_title))
+            },
+            text = {
+                Text(text = stringResource(R.string.do_you_really_want_to_disable_tor_text))
+            },
+            onDismissRequest = {
+                disconnectTorDialog = false
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        openDialog.value = false
+                        disconnectTorDialog = false
                         checked = false
                         enableTor(account, false, proxyPort)
                     }
@@ -341,7 +358,7 @@ fun ListContent(
             dismissButton = {
                 TextButton(
                     onClick = {
-                        openDialog.value = false
+                        disconnectTorDialog = false
                     }
                 ) {
                     Text(text = stringResource(R.string.no))
