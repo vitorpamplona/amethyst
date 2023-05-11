@@ -11,7 +11,6 @@ object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
 
     fun loadUserProfile(user: User?) {
         this.user = user
-        resetFilters()
     }
 
     fun createUserInfoFilter() = user?.let {
