@@ -67,7 +67,7 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, 
             MaterialTheme.colors.background
         }
 
-        val columnModifier = remember {
+        val columnModifier = remember(isNew) {
             Modifier
                 .background(backgroundColor)
                 .padding(

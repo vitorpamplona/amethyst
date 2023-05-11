@@ -86,7 +86,7 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
             MaterialTheme.colors.background
         }
 
-        val columnModifier = remember {
+        val columnModifier = remember(isNew) {
             Modifier
                 .background(backgroundColor)
                 .padding(
