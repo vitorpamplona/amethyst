@@ -12,6 +12,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,6 +25,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
+import androidx.compose.material.Button
+import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Divider
 import androidx.compose.material.DropdownMenu
 import androidx.compose.material.DropdownMenuItem
@@ -50,6 +53,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
@@ -81,6 +85,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
 import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
@@ -92,6 +97,7 @@ import com.vitorpamplona.amethyst.service.model.FileHeaderEvent
 import com.vitorpamplona.amethyst.service.model.FileStorageHeaderEvent
 import com.vitorpamplona.amethyst.service.model.HighlightEvent
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
+import com.vitorpamplona.amethyst.service.model.PeopleListEvent
 import com.vitorpamplona.amethyst.service.model.PollNoteEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
@@ -366,6 +372,10 @@ fun NoteComposeInner(
                                 RenderBadgeAward(note, backgroundColor, accountViewModel, navController)
                             }
 
+                            is PeopleListEvent -> {
+                                RenderPeopleList(noteState, backgroundColor, accountViewModel, navController)
+                            }
+
                             is PrivateDmEvent -> {
                                 RenderPrivateMessage(note, makeItShort, isAcceptableAndCanPreview.second, backgroundColor, accountViewModel, navController)
                             }
@@ -628,6 +638,114 @@ private fun RenderPrivateMessage(
         modifier = Modifier.padding(top = 10.dp),
         thickness = 0.25.dp
     )
+}
+
+@Composable
+fun RenderPeopleList(
+    noteState: NoteState?,
+    backgroundColor: Color,
+    accountViewModel: AccountViewModel,
+    navController: NavController
+) {
+    DisplayPeopleList(noteState, backgroundColor, accountViewModel, navController)
+
+    noteState?.note?.let {
+        ReactionsRow(it, accountViewModel, navController)
+    }
+
+    Divider(
+        modifier = Modifier.padding(top = 10.dp),
+        thickness = 0.25.dp
+    )
+}
+
+@Composable
+fun DisplayPeopleList(
+    noteState: NoteState?,
+    backgroundColor: Color,
+    accountViewModel: AccountViewModel,
+    navController: NavController
+) {
+    val note = remember(noteState) { noteState?.note } ?: return
+    val noteEvent = note.event as? PeopleListEvent ?: return
+
+    var members by remember { mutableStateOf<List<User>>(listOf()) }
+
+    val account = accountViewModel.userProfile()
+    var expanded by remember {
+        mutableStateOf(false)
+    }
+
+    val toMembersShow = if (expanded) {
+        members
+    } else {
+        members.take(3)
+    }
+
+    Text(
+        text = "#${noteEvent.dTag()}",
+        fontWeight = FontWeight.Bold,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(5.dp),
+        textAlign = TextAlign.Center
+    )
+
+    LaunchedEffect(key1 = noteState) {
+        withContext(Dispatchers.IO) {
+            members = noteEvent.bookmarkedPeople().mapNotNull { hex ->
+                LocalCache.checkGetOrCreateUser(hex)
+            }.sortedBy { account.isFollowing(it) }.reversed()
+        }
+    }
+
+    Box {
+        FlowRow(modifier = Modifier.padding(top = 5.dp)) {
+            toMembersShow.forEach { user ->
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    UserCompose(
+                        user,
+                        overallModifier = Modifier,
+                        accountViewModel = accountViewModel,
+                        navController = navController
+                    )
+                }
+            }
+        }
+
+        if (members.size > 3 && !expanded) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                backgroundColor.copy(alpha = 0f),
+                                backgroundColor
+                            )
+                        )
+                    )
+            ) {
+                Button(
+                    modifier = Modifier.padding(top = 10.dp),
+                    onClick = { expanded = !expanded },
+                    shape = RoundedCornerShape(20.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        backgroundColor = MaterialTheme.colors.primary.copy(alpha = 0.32f)
+                            .compositeOver(MaterialTheme.colors.background)
+                    ),
+                    contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
+                ) {
+                    Text(text = stringResource(R.string.show_more), color = Color.White)
+                }
+            }
+        }
+    }
 }
 
 @Composable

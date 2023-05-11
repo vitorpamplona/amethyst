@@ -48,7 +48,15 @@ object NotificationFeedFilter : AdditiveFeedFilter<Note>() {
         val event = note.event
 
         if (event is BaseTextNoteEvent) {
-            return (event.citedUsers().contains(author.pubkeyHex) || note.replyTo?.any { it.author === author } == true)
+            val isAuthoredPostCited = event.findCitations().any {
+                LocalCache.notes[it]?.author === author || LocalCache.addressables[it]?.author === author
+            }
+
+            return isAuthoredPostCited ||
+                (
+                    event.citedUsers().contains(author.pubkeyHex) ||
+                        note.replyTo?.any { it.author === author } == true
+                    )
         }
 
         if (event is ReactionEvent) {

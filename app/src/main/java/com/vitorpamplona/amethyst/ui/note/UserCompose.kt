@@ -25,7 +25,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Composable
-fun UserCompose(baseUser: User, accountViewModel: AccountViewModel, navController: NavController) {
+fun UserCompose(
+    baseUser: User,
+    overallModifier: Modifier = Modifier
+        .padding(
+            start = 12.dp,
+            end = 12.dp,
+            top = 10.dp
+        ),
+    accountViewModel: AccountViewModel,
+    navController: NavController
+) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
@@ -41,12 +51,7 @@ fun UserCompose(baseUser: User, accountViewModel: AccountViewModel, navControlle
         )
     ) {
         Row(
-            modifier = Modifier
-                .padding(
-                    start = 12.dp,
-                    end = 12.dp,
-                    top = 10.dp
-                ),
+            modifier = overallModifier,
             verticalAlignment = Alignment.CenterVertically
         ) {
             UserPicture(baseUser, navController, account.userProfile(), 55.dp)
