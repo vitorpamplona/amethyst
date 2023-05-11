@@ -66,13 +66,13 @@ fun FeedView(
                 when (state) {
                     is FeedState.Empty -> {
                         FeedEmpty {
-                            refreshing = true
+                            refresh()
                         }
                     }
 
                     is FeedState.FeedError -> {
                         FeedError(state.errorMessage) {
-                            refreshing = true
+                            refresh()
                         }
                     }
 
