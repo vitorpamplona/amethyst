@@ -875,7 +875,6 @@ fun TabBookmarks(baseUser: User, accountViewModel: AccountViewModel, navControll
 
 @Composable
 fun TabFollows(baseUser: User, accountViewModel: AccountViewModel, navController: NavController) {
-    println("TabFollows")
     val feedViewModel: NostrUserProfileFollowsUserFeedViewModel = viewModel()
 
     val userState by baseUser.live().follows.observeAsState()
