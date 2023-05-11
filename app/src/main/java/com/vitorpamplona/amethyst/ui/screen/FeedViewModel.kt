@@ -98,8 +98,9 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
         val oldNotesState = _feedContent.value
         if (localFilter is AdditiveFeedFilter && oldNotesState is FeedState.Loaded) {
             val newList = localFilter.updateListWith(oldNotesState.feed.value, newItems.toSet())
-            if (newList !== oldNotesState.feed.value)
+            if (newList !== oldNotesState.feed.value) {
                 updateFeed(newList)
+            }
         } else {
             // Refresh Everything
             refreshSuspended()
