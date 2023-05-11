@@ -24,7 +24,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
-import com.vitorpamplona.amethyst.buttons.NewChannelButton
+import com.vitorpamplona.amethyst.ui.buttons.ChannelFabColumn
 import com.vitorpamplona.amethyst.ui.buttons.NewNoteButton
 import com.vitorpamplona.amethyst.ui.navigation.*
 import com.vitorpamplona.amethyst.ui.navigation.AccountSwitchBottomSheet
@@ -101,7 +101,7 @@ fun FloatingButtons(navController: NavHostController, accountViewModel: AccountV
                     NewNoteButton(state.account, accountViewModel, navController)
                 }
                 if (currentRoute(navController) == Route.Message.base) {
-                    NewChannelButton(state.account)
+                    ChannelFabColumn(state.account, navController)
                 }
                 if (currentRoute(navController)?.substringBefore("?") == Route.Video.base) {
                     NewImageButton(accountViewModel, navController)

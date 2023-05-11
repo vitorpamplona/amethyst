@@ -386,7 +386,6 @@ private fun JoinButton(account: Account, channel: Channel, navController: NavCon
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
             account.joinChannel(channel.idHex)
-            navController.navigate(Route.Message.route)
         },
         shape = RoundedCornerShape(20.dp),
         colors = ButtonDefaults

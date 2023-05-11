@@ -6,69 +6,78 @@ import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedButton
+import androidx.compose.material.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.ui.actions.NewPollView
+import com.vitorpamplona.amethyst.ui.actions.JoinUserOrChannelView
+import com.vitorpamplona.amethyst.ui.actions.NewChannelView
 
 @Composable
-fun FabColumn(account: Account) {
+fun ChannelFabColumn(account: Account, navController: NavController) {
     var isOpen by remember {
         mutableStateOf(false)
     }
-    var wantsToPoll by remember {
+
+    var wantsToJoinChannelOrUser by remember {
         mutableStateOf(false)
     }
-    var wantsToPost by remember {
+
+    var wantsToCreateChannel by remember {
         mutableStateOf(false)
+    }
+
+    if (wantsToCreateChannel) {
+        NewChannelView({ wantsToCreateChannel = false }, account = account)
+    }
+
+    if (wantsToJoinChannelOrUser) {
+        JoinUserOrChannelView({ wantsToJoinChannelOrUser = false }, account = account, navController = navController)
     }
 
     Column() {
         if (isOpen) {
             OutlinedButton(
-                onClick = {
-                    wantsToPoll = true
-                    isOpen = false
-                },
-                modifier = Modifier.size(45.dp),
+                onClick = { wantsToJoinChannelOrUser = true; isOpen = false },
+                modifier = Modifier.size(55.dp),
                 shape = CircleShape,
                 colors = ButtonDefaults.outlinedButtonColors(backgroundColor = MaterialTheme.colors.primary),
-                contentPadding = PaddingValues(0.dp)
+                contentPadding = PaddingValues(bottom = 3.dp)
             ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_poll),
-                    null,
-                    modifier = Modifier.size(26.dp),
-                    tint = Color.White
+                Text(
+                    text = stringResource(R.string.channel_list_join_channel),
+                    color = Color.White,
+                    textAlign = TextAlign.Center
                 )
             }
 
             Spacer(modifier = Modifier.height(20.dp))
 
             OutlinedButton(
-                onClick = {
-                    wantsToPost = true
-                    isOpen = false
-                },
-                modifier = Modifier.size(45.dp),
+                onClick = { wantsToCreateChannel = true; isOpen = false },
+                modifier = Modifier.size(55.dp),
                 shape = CircleShape,
                 colors = ButtonDefaults.outlinedButtonColors(backgroundColor = MaterialTheme.colors.primary),
-                contentPadding = PaddingValues(0.dp)
+                contentPadding = PaddingValues(bottom = 3.dp)
             ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_lists),
-                    null,
-                    modifier = Modifier.size(26.dp),
-                    tint = Color.White
+                Text(
+                    text = stringResource(R.string.channel_list_create_channel),
+                    color = Color.White,
+                    textAlign = TextAlign.Center
                 )
             }
 
             Spacer(modifier = Modifier.height(20.dp))
         }
+
         OutlinedButton(
             onClick = { isOpen = !isOpen },
             modifier = Modifier.size(55.dp),
@@ -77,19 +86,11 @@ fun FabColumn(account: Account) {
             contentPadding = PaddingValues(0.dp)
         ) {
             Icon(
-                painter = painterResource(R.drawable.ic_compose),
-                null,
+                imageVector = Icons.Outlined.Add,
+                contentDescription = stringResource(R.string.new_channel),
                 modifier = Modifier.size(26.dp),
                 tint = Color.White
             )
         }
-    }
-
-    if (wantsToPost) {
-        // NewPostView({ wantsToPost = false }, account = NostrAccountDataSource.account)
-    }
-
-    if (wantsToPoll) {
-        NewPollView({ wantsToPoll = false }, account = account)
     }
 }
