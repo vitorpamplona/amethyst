@@ -198,8 +198,8 @@ open class NewPostViewModel : ViewModel() {
         }
     }
 
-    open fun removeFromReplyList(it: User) {
-        mentions = mentions?.minus(it)
+    open fun removeFromReplyList(userToRemove: User) {
+        mentions = mentions?.filter { it != userToRemove }
     }
 
     open fun updateMessage(it: TextFieldValue) {

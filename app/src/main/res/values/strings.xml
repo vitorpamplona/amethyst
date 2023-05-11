@@ -394,4 +394,6 @@
     <string name="app_notification_zaps_channel_message">%1$s sats</string>
     <string name="app_notification_zaps_channel_message_from">From %1$s</string>
     <string name="app_notification_zaps_channel_message_for">for %1$s</string>
+
+    <string name="reply_notify">Notify: </string>
 </resources>
