@@ -877,23 +877,28 @@ class Account(
                     null
                 }
 
-                if (altPrivateKeyToUse != null && altPubkeyToUse != null) {
-                    val altPubKeyFromPrivate = Utils.pubkeyCreate(altPrivateKeyToUse).toHexKey()
+                try {
+                    if (altPrivateKeyToUse != null && altPubkeyToUse != null) {
+                        val altPubKeyFromPrivate = Utils.pubkeyCreate(altPrivateKeyToUse).toHexKey()
 
-                    if (altPubKeyFromPrivate == event.pubKey) {
-                        val result = event.getPrivateZapEvent(altPrivateKeyToUse, altPubkeyToUse)
+                        if (altPubKeyFromPrivate == event.pubKey) {
+                            val result = event.getPrivateZapEvent(altPrivateKeyToUse, altPubkeyToUse)
 
-                        if (result == null) {
-                            Log.w(
-                                "Private ZAP Decrypt",
-                                "Fail to decrypt Zap from ${note.author?.toBestDisplayName()} ${note.idNote()}"
-                            )
+                            if (result == null) {
+                                Log.w(
+                                    "Private ZAP Decrypt",
+                                    "Fail to decrypt Zap from ${note.author?.toBestDisplayName()} ${note.idNote()}"
+                                )
+                            }
+                            result
+                        } else {
+                            null
                         }
-                        result
                     } else {
                         null
                     }
-                } else {
+                } catch (e: Exception) {
+                    Log.e("Account", "Failed to create pubkey for ZapRequest ${event.id}", e)
                     null
                 }
             }
