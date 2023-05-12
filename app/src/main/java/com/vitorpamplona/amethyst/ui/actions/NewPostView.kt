@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.ui.actions
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import android.util.Size
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
@@ -82,6 +83,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
     val keyboardController = LocalSoftwareKeyboardController.current
 
     val scroolState = rememberScrollState()
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         postViewModel.load(account, baseReplyTo, quote)
@@ -218,6 +220,11 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                         },
                                         onCancel = {
                                             postViewModel.contentToAddUrl = null
+                                        },
+                                        onError = {
+                                            scope.launch {
+                                                postViewModel.imageUploadingError.emit(it)
+                                            }
                                         }
                                     )
                                 }
@@ -641,7 +648,8 @@ fun ImageVideoDescription(
     uri: Uri,
     defaultServer: ServersAvailable,
     onAdd: (String, ServersAvailable) -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
+    onError: (String) -> Unit
 ) {
     val resolver = LocalContext.current.contentResolver
     val mediaType = resolver.getType(uri) ?: ""
@@ -749,7 +757,12 @@ fun ImageVideoDescription(
 
                     LaunchedEffect(key1 = uri) {
                         scope.launch(Dispatchers.IO) {
-                            bitmap = resolver.loadThumbnail(uri, Size(1200, 1000), null)
+                            try {
+                                bitmap = resolver.loadThumbnail(uri, Size(1200, 1000), null)
+                            } catch (e: Exception) {
+                                onError("Unable to load file")
+                                Log.e("NewPostView", "Couldn't create thumbnail for $uri")
+                            }
                         }
                     }
 
