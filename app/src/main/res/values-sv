@@ -182,9 +182,9 @@
     <string name="backup_keys">Backup-nycklar</string>
     <string name="account_backup_tips_md" tools:ignore="Typos">
         ## Nyckelsäkerhetskopiering och säkerhetstips
-        \n\nDitt konto är skyddat av en hemlig nyckel. Nyckeln är en lång slumpmässig sträng som börjar med **nsec1**. Alla som har tillgång till din hemliga nyckel kan publicera innehåll med din identitet.
+        \n\nDitt konto är skyddat av en hemlig nyckel. Nyckeln är en lång slumpmässig sträng som börjar med **nsec1**. Alla som har tillgång till din privata nyckel kan publicera innehåll med din identitet.
         \n\n- Lägg **inte** in din hemliga nyckel på någon webbplats eller programvara som du inte litar på.
-        \n- Amethyst-utvecklare kommer **aldrig** att be dig om din hemliga nyckel.
+        \n- Amethyst-utvecklare kommer **aldrig** att be dig om din privata nyckel.
         \n- **Behåll en säker säkerhetskopia av din hemliga nyckel för kontoåterställning. Vi rekommenderar att du använder en lösenordshanterare.    </string>
     <string name="secret_key_copied_to_clipboard">Hemlig nyckel (nsec) kopierad till urklipp</string>
     <string name="copy_my_secret_key">Kopiera min hemliga nyckel</string>
