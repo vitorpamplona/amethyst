@@ -2,7 +2,6 @@ package com.vitorpamplona.amethyst.model
 
 import android.util.Log
 import androidx.core.net.toUri
-import androidx.lifecycle.LiveData
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.Amethyst
@@ -11,6 +10,8 @@ import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.BundledInsert
 import fr.acinq.secp256k1.Hex
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import nostr.postr.toNpub
 import java.io.ByteArrayInputStream
 import java.io.File
@@ -969,16 +970,16 @@ object LocalCache {
     }
 }
 
-class LocalCacheLiveData : LiveData<Set<Note>>(setOf<Note>()) {
+class LocalCacheLiveData {
+    private val _newEventBundles = MutableSharedFlow<Set<Note>>()
+    val newEventBundles = _newEventBundles.asSharedFlow() // read-only public view
 
     // Refreshes observers in batches.
     private val bundler = BundledInsert<Note>(300, Dispatchers.IO)
 
     fun invalidateData(newNote: Note) {
         bundler.invalidateList(newNote) { bundledNewNotes ->
-            if (hasActiveObservers()) {
-                postValue(bundledNewNotes)
-            }
+            _newEventBundles.emit(bundledNewNotes)
         }
     }
 }

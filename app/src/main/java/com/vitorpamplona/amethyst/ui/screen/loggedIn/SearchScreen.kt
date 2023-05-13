@@ -191,19 +191,17 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
 
     val onlineSearch = NostrSearchEventOrUserDataSource
 
-    val dbState = LocalCache.live.observeAsState()
-    val db = dbState.value ?: return
-
     // Create a channel for processing search queries.
     val searchTextChanges = remember {
         CoroutineChannel<String>(CoroutineChannel.CONFLATED)
     }
 
-    LaunchedEffect(db) {
-        withContext(Dispatchers.IO) {
-            if (searchBarViewModel.isSearching()) {
-                println("Search Active")
-                searchBarViewModel.invalidateData()
+    LaunchedEffect(Unit) {
+        scope.launch(Dispatchers.IO) {
+            LocalCache.live.newEventBundles.collect {
+                if (searchBarViewModel.isSearching()) {
+                    searchBarViewModel.invalidateData()
+                }
             }
         }
     }
