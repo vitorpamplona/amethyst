@@ -51,7 +51,6 @@ import java.net.URISyntaxException
 import java.net.URL
 import java.util.regex.Pattern
 import kotlin.time.ExperimentalTime
-import kotlin.time.measureTimedValue
 
 val imageExtensions = listOf("png", "jpg", "gif", "bmp", "jpeg", "webp", "svg")
 val videoExtensions = listOf("mp4", "avi", "wmv", "mpg", "amv", "webm", "mov", "mp3")
@@ -125,7 +124,7 @@ private fun RenderRegular(
     navController: NavController
 ) {
     var processedState by remember {
-        mutableStateOf<RichTextViewerState?>(RichTextViewerState(content, emptySet(), emptyMap(),  emptyList()))
+        mutableStateOf<RichTextViewerState?>(RichTextViewerState(content, emptySet(), emptyMap(), emptyList()))
     }
 
     val scope = rememberCoroutineScope()
@@ -146,8 +145,9 @@ private fun RenderRegular(
             }.associateBy { it.url }
             val imageList = imagesForPager.values.toList()
 
-            if (urlSet.isNotEmpty())
+            if (urlSet.isNotEmpty()) {
                 processedState = RichTextViewerState(content, urlSet, imagesForPager, imageList)
+            }
         }
     }
 
