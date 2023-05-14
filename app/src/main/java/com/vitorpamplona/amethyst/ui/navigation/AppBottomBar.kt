@@ -41,7 +41,6 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlin.time.ExperimentalTime
 
 val bottomNavigationItems = listOf(
     Route.Home,
@@ -136,9 +135,10 @@ fun AppBottomBar(navController: NavHostController, accountViewModel: AccountView
     }
 }
 
-@OptIn(ExperimentalTime::class)
 @Composable
 private fun NotifiableIcon(route: Route, selected: Boolean, accountViewModel: AccountViewModel) {
+    val scope = rememberCoroutineScope()
+
     Box(Modifier.size(if ("Home" == route.base) 25.dp else 23.dp)) {
         Icon(
             painter = painterResource(id = route.icon),
@@ -150,15 +150,10 @@ private fun NotifiableIcon(route: Route, selected: Boolean, accountViewModel: Ac
         val accountState by accountViewModel.accountLiveData.observeAsState()
         val account = accountState?.account ?: return
 
-        // Notification
-        val dbState = LocalCache.live.observeAsState()
-        val db = dbState.value ?: return
-
         val notifState = NotificationCache.live.observeAsState()
         val notif = notifState.value ?: return
 
         var hasNewItems by remember { mutableStateOf<Boolean>(false) }
-        val scope = rememberCoroutineScope()
 
         LaunchedEffect(key1 = notif) {
             scope.launch(Dispatchers.IO) {
@@ -166,9 +161,11 @@ private fun NotifiableIcon(route: Route, selected: Boolean, accountViewModel: Ac
             }
         }
 
-        LaunchedEffect(key1 = db) {
+        LaunchedEffect(Unit) {
             scope.launch(Dispatchers.IO) {
-                hasNewItems = route.hasNewItems(account, notif.cache, db)
+                LocalCache.live.newEventBundles.collect {
+                    hasNewItems = route.hasNewItems(account, notif.cache, it)
+                }
             }
         }
 

@@ -271,10 +271,6 @@ private fun UrlImageView(
         mutableStateOf<Boolean?>(null)
     }
 
-    val ratio = remember {
-        aspectRatio(content.dim)
-    }
-
     LaunchedEffect(key1 = content.url, key2 = imageState) {
         if (imageState is AsyncImagePainter.State.Success) {
             scope.launch(Dispatchers.IO) {
@@ -284,10 +280,10 @@ private fun UrlImageView(
     }
 
     BoxWithConstraints(contentAlignment = Alignment.Center) {
-        val myModifier = mainImageModifier.also {
-            if (ratio != null) {
-                it.aspectRatio(ratio, maxHeight.isFinite)
-            }
+        val myModifier = mainImageModifier.run {
+            aspectRatio(content.dim)?.let { ratio ->
+                this.aspectRatio(ratio, maxHeight.isFinite)
+            } ?: this
         }
         val contentScale = if (maxHeight.isFinite) ContentScale.Fit else ContentScale.FillWidth
 

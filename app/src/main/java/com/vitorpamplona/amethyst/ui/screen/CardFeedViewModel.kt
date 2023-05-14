@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.ui.screen
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -222,17 +223,19 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
         }
     }
 
-    private val cacheListener: (Set<Note>) -> Unit = { newNotes ->
-        if (localFilter is AdditiveFeedFilter && _feedContent.value is CardFeedState.Loaded) {
-            invalidateInsertData(newNotes)
-        } else {
-            // Refresh Everything
-            invalidateData()
-        }
-    }
+    var collectorJob: Job? = null
 
     init {
-        LocalCache.live.observeForever(cacheListener)
+        collectorJob = viewModelScope.launch(Dispatchers.IO) {
+            LocalCache.live.newEventBundles.collect { newNotes ->
+                if (localFilter is AdditiveFeedFilter && _feedContent.value is CardFeedState.Loaded) {
+                    invalidateInsertData(newNotes)
+                } else {
+                    // Refresh Everything
+                    invalidateData()
+                }
+            }
+        }
     }
 
     fun clear() {
@@ -242,7 +245,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
 
     override fun onCleared() {
         clear()
-        LocalCache.live.removeObserver(cacheListener)
+        collectorJob?.cancel()
         super.onCleared()
     }
 }

@@ -44,11 +44,13 @@ import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.net.MalformedURLException
 import java.net.URISyntaxException
 import java.net.URL
 import java.util.regex.Pattern
+import kotlin.time.ExperimentalTime
 
 val imageExtensions = listOf("png", "jpg", "gif", "bmp", "jpeg", "webp", "svg")
 val videoExtensions = listOf("mp4", "avi", "wmv", "mpg", "amv", "webm", "mov", "mp3")
@@ -106,11 +108,12 @@ fun RichTextViewer(
 
 class RichTextViewerState(
     val content: String,
-    val urlSet: LinkedHashSet<String>,
+    val urlSet: Set<String>,
     val imagesForPager: Map<String, ZoomableUrlContent>,
     val imageList: List<ZoomableUrlContent>
 )
 
+@OptIn(ExperimentalTime::class)
 @Composable
 private fun RenderRegular(
     content: String,
@@ -121,11 +124,13 @@ private fun RenderRegular(
     navController: NavController
 ) {
     var processedState by remember {
-        mutableStateOf<RichTextViewerState?>(null)
+        mutableStateOf<RichTextViewerState?>(RichTextViewerState(content, emptySet(), emptyMap(), emptyList()))
     }
 
+    val scope = rememberCoroutineScope()
+
     LaunchedEffect(key1 = content) {
-        withContext(Dispatchers.IO) {
+        scope.launch(Dispatchers.IO) {
             val urls = UrlDetector(content, UrlDetectorOptions.Default).detect()
             val urlSet = urls.mapTo(LinkedHashSet(urls.size)) { it.originalUrl }
             val imagesForPager = urlSet.mapNotNull { fullUrl ->
@@ -140,7 +145,9 @@ private fun RenderRegular(
             }.associateBy { it.url }
             val imageList = imagesForPager.values.toList()
 
-            processedState = RichTextViewerState(content, urlSet, imagesForPager, imageList)
+            if (urlSet.isNotEmpty()) {
+                processedState = RichTextViewerState(content, urlSet, imagesForPager, imageList)
+            }
         }
     }
 

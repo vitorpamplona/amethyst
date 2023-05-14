@@ -8,8 +8,8 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicReference
 
 /**
  * This class is designed to have a waiting time between two calls of invalidate
@@ -54,23 +54,26 @@ class BundledInsert<T>(
     val dispatcher: CoroutineDispatcher = Dispatchers.Default
 ) {
     private var onlyOneInBlock = AtomicBoolean()
-    private var atomicSet = AtomicReference<Set<T>>(setOf<T>())
+    private var queue = LinkedBlockingQueue<T>()
 
-    fun invalidateList(newObject: T, onUpdate: (Set<T>) -> Unit) {
-        atomicSet.updateAndGet() {
-            it + newObject
-        }
-
+    fun invalidateList(newObject: T, onUpdate: suspend (Set<T>) -> Unit) {
+        queue.put(newObject)
         if (onlyOneInBlock.getAndSet(true)) {
             return
         }
 
         val scope = CoroutineScope(Job() + dispatcher)
-        scope.launch {
+        scope.launch(Dispatchers.IO) {
             try {
-                onUpdate(atomicSet.getAndSet(emptySet()))
+                val mySet = mutableSetOf<T>()
+                queue.drainTo(mySet)
+                onUpdate(mySet)
+
                 delay(delay)
-                onUpdate(atomicSet.getAndSet(emptySet()))
+
+                mySet.clear()
+                queue.drainTo(mySet)
+                onUpdate(mySet)
             } finally {
                 withContext(NonCancellable) {
                     onlyOneInBlock.set(false)
