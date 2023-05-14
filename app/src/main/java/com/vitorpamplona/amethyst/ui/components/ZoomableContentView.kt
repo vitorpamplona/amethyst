@@ -219,7 +219,7 @@ private fun LocalImageView(
                 it.aspectRatio(ratio, maxHeight.isFinite)
             }
         }
-        val contentScale = if (maxHeight.isFinite) ContentScale.Fit else ContentScale.FillWidth
+        val contentScale = if (maxHeight.isFinite) ContentScale.Inside else ContentScale.FillWidth
 
         if (content.localFile != null && content.localFile.exists()) {
             AsyncImage(
@@ -285,7 +285,7 @@ private fun UrlImageView(
                 this.aspectRatio(ratio, maxHeight.isFinite)
             } ?: this
         }
-        val contentScale = if (maxHeight.isFinite) ContentScale.Fit else ContentScale.FillWidth
+        val contentScale = if (maxHeight.isFinite) ContentScale.Inside else ContentScale.FillWidth
 
         AsyncImage(
             model = content.url,
