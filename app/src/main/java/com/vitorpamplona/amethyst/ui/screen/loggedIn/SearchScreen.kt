@@ -335,7 +335,7 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
     }
 }
 
-val hashtagSearch = Pattern.compile("(?:\\s|\\A)#([A-Za-z0-9_\\-]+)")
+val hashtagSearch = Pattern.compile("(?:\\s|\\A)#([^\\s!@#\$%^&*()=+./,\\[{\\]};:'\"?><]+)")
 
 fun findHashtags(content: String): List<String> {
     val matcher = hashtagSearch.matcher(content)
