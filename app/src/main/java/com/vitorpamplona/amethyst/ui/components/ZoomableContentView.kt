@@ -17,9 +17,11 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -209,17 +211,21 @@ private fun LocalImageView(
         mutableStateOf<AsyncImagePainter.State?>(null)
     }
 
-    val ratio = remember {
-        aspectRatio(content.dim)
-    }
-
     BoxWithConstraints(contentAlignment = Alignment.Center) {
-        val myModifier = mainImageModifier.also {
-            if (ratio != null) {
-                it.aspectRatio(ratio, maxHeight.isFinite)
-            }
+        val myModifier = remember {
+            mainImageModifier
+                .widthIn(max = maxWidth)
+                .heightIn(max = maxHeight)
+                .run {
+                    aspectRatio(content.dim)?.let { ratio ->
+                        this.aspectRatio(ratio, false)
+                    } ?: this
+                }
         }
-        val contentScale = if (maxHeight.isFinite) ContentScale.Inside else ContentScale.FillWidth
+
+        val contentScale = remember {
+            if (maxHeight.isFinite) ContentScale.Fit else ContentScale.FillWidth
+        }
 
         if (content.localFile != null && content.localFile.exists()) {
             AsyncImage(
@@ -281,14 +287,18 @@ private fun UrlImageView(
 
     BoxWithConstraints(contentAlignment = Alignment.Center) {
         val myModifier = remember {
-            mainImageModifier.run {
-                aspectRatio(content.dim)?.let { ratio ->
-                    this.aspectRatio(ratio, maxHeight.isFinite)
-                } ?: this
-            }
+            mainImageModifier
+                .widthIn(max = maxWidth)
+                .heightIn(max = maxHeight)
+                .run {
+                    aspectRatio(content.dim)?.let { ratio ->
+                        this.aspectRatio(ratio, false)
+                    } ?: this
+                }
         }
+
         val contentScale = remember {
-            if (maxHeight.isFinite) ContentScale.Inside else ContentScale.FillWidth
+            if (maxHeight.isFinite) ContentScale.Fit else ContentScale.FillWidth
         }
 
         AsyncImage(
