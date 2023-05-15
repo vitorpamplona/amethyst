@@ -175,7 +175,10 @@ fun Modifier.onVisibilityChanges(onVisibilityChanges: (Boolean) -> Unit): Modifi
     }
 
     onGloballyPositioned { coordinates ->
-        isVisible = coordinates.isCompletelyVisible(view)
+        val newIsVisible = coordinates.isCompletelyVisible(view)
+        if (isVisible != newIsVisible) {
+            isVisible = newIsVisible
+        }
     }
 }
 
