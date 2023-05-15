@@ -36,7 +36,7 @@ class RepostEvent(
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             var tags: List<List<String>> = boostedPost.tags().plus(listOf(replyToPost, replyToAuthor))
 
-            if (boostedPost is LongTextNoteEvent) {
+            if (boostedPost is AddressableEvent) {
                 tags = tags + listOf(listOf("a", boostedPost.address().toTag()))
             }
 

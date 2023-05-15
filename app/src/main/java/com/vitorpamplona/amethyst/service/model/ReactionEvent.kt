@@ -32,7 +32,7 @@ class ReactionEvent(
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
 
             var tags = listOf(listOf("e", originalNote.id()), listOf("p", originalNote.pubKey()))
-            if (originalNote is LongTextNoteEvent) {
+            if (originalNote is AddressableEvent) {
                 tags = tags + listOf(listOf("a", originalNote.address().toTag()))
             }
 

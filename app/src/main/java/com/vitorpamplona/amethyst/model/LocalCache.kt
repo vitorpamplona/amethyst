@@ -281,6 +281,18 @@ object LocalCache {
         refreshObservers(note)
     }
 
+    private fun consume(event: AudioTrackEvent) {
+        val note = getOrCreateAddressableNote(event.address())
+        val author = getOrCreateUser(event.pubKey)
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        note.loadEvent(event, author, emptyList())
+
+        refreshObservers(note)
+    }
+
     fun consume(event: BadgeDefinitionEvent) {
         val note = getOrCreateAddressableNote(event.address())
         val author = getOrCreateUser(event.pubKey)
@@ -920,6 +932,7 @@ object LocalCache {
 
         try {
             when (event) {
+                is AudioTrackEvent -> consume(event)
                 is BadgeAwardEvent -> consume(event)
                 is BadgeDefinitionEvent -> consume(event)
                 is BadgeProfilesEvent -> consume(event)

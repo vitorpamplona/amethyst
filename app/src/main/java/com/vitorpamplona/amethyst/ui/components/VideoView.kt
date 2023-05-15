@@ -1,6 +1,8 @@
 package com.vitorpamplona.amethyst.ui.components
 
+import android.graphics.drawable.Drawable
 import android.net.Uri
+import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -28,6 +30,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -46,6 +49,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import coil.imageLoader
+import coil.request.ImageRequest
 import com.google.android.exoplayer2.C
 import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.MediaItem
@@ -55,6 +60,8 @@ import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
 import com.google.android.exoplayer2.ui.StyledPlayerView
 import com.vitorpamplona.amethyst.VideoCache
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.io.File
 
 public var muted = mutableStateOf(true)
@@ -62,19 +69,54 @@ public var muted = mutableStateOf(true)
 @Composable
 fun VideoView(localFile: File?, description: String? = null, onDialog: ((Boolean) -> Unit)? = null) {
     if (localFile != null) {
-        VideoView(localFile.toUri(), description, onDialog)
+        VideoView(localFile.toUri(), description, null, onDialog)
     }
 }
 
 @Composable
 fun VideoView(videoUri: String, description: String? = null, onDialog: ((Boolean) -> Unit)? = null) {
-    VideoView(Uri.parse(videoUri), description, onDialog)
+    VideoView(Uri.parse(videoUri), description, null, onDialog)
 }
 
 @Composable
-fun VideoView(videoUri: Uri, description: String? = null, onDialog: ((Boolean) -> Unit)? = null) {
+fun VideoView(videoUri: String, description: String? = null, thumbUri: String, onDialog: ((Boolean) -> Unit)? = null) {
+    var loadingFinished by remember { mutableStateOf<Pair<Boolean, Drawable?>>(Pair(false, null)) }
+
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        scope.launch(Dispatchers.IO) {
+            try {
+                val request = ImageRequest.Builder(context).data(thumbUri).build()
+                val myCover = context.imageLoader.execute(request).drawable
+                if (myCover != null) {
+                    loadingFinished = Pair(true, myCover)
+                } else {
+                    loadingFinished = Pair(true, null)
+                }
+            } catch (e: Exception) {
+                Log.e("VideoView", "Fail to load cover $thumbUri", e)
+                loadingFinished = Pair(true, null)
+            }
+        }
+    }
+
+    if (loadingFinished.first) {
+        if (loadingFinished.second != null) {
+            VideoView(Uri.parse(videoUri), description, loadingFinished.second, onDialog)
+        } else {
+            VideoView(videoUri, description, onDialog)
+        }
+    }
+}
+
+@Composable
+fun VideoView(videoUri: Uri, description: String? = null, thumb: Drawable? = null, onDialog: ((Boolean) -> Unit)? = null) {
     val context = LocalContext.current
     val lifecycleOwner = rememberUpdatedState(LocalLifecycleOwner.current)
+
+    println("loading audio with artwork $thumb")
 
     val exoPlayer = remember(videoUri) {
         val mediaBuilder = MediaItem.Builder().setUri(videoUri)
@@ -130,6 +172,7 @@ fun VideoView(videoUri: Uri, description: String? = null, onDialog: ((Boolean) -
                             ViewGroup.LayoutParams.WRAP_CONTENT
                         )
                         controllerAutoShow = false
+                        thumb?.let { defaultArtwork = thumb }
                         hideController()
                         resizeMode = if (maxHeight.isFinite) AspectRatioFrameLayout.RESIZE_MODE_FIT else AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
                         onDialog?.let { innerOnDialog ->
@@ -146,7 +189,6 @@ fun VideoView(videoUri: Uri, description: String? = null, onDialog: ((Boolean) -
                 muted.value = !muted.value
             }
         }
-
     ) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {

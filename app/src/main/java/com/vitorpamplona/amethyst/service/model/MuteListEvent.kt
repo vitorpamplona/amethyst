@@ -15,9 +15,9 @@ class MuteListEvent(
     tags: List<List<String>>,
     content: String,
     sig: HexKey
-) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
-    fun dTag() = tags.filter { it.firstOrNull() == "d" }.mapNotNull { it.getOrNull(1) }.firstOrNull() ?: ""
-    fun address() = ATag(kind, pubKey, dTag(), null)
+) : Event(id, pubKey, createdAt, kind, tags, content, sig), AddressableEvent {
+    override fun dTag() = tags.filter { it.firstOrNull() == "d" }.mapNotNull { it.getOrNull(1) }.firstOrNull() ?: ""
+    override fun address() = ATag(kind, pubKey, dTag(), null)
 
     fun plainContent(privKey: ByteArray): String? {
         return try {
