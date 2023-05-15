@@ -280,12 +280,16 @@ private fun UrlImageView(
     }
 
     BoxWithConstraints(contentAlignment = Alignment.Center) {
-        val myModifier = mainImageModifier.run {
-            aspectRatio(content.dim)?.let { ratio ->
-                this.aspectRatio(ratio, maxHeight.isFinite)
-            } ?: this
+        val myModifier = remember {
+            mainImageModifier.run {
+                aspectRatio(content.dim)?.let { ratio ->
+                    this.aspectRatio(ratio, maxHeight.isFinite)
+                } ?: this
+            }
         }
-        val contentScale = if (maxHeight.isFinite) ContentScale.Inside else ContentScale.FillWidth
+        val contentScale = remember {
+            if (maxHeight.isFinite) ContentScale.Inside else ContentScale.FillWidth
+        }
 
         AsyncImage(
             model = content.url,

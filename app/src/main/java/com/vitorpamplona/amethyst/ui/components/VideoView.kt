@@ -116,9 +116,9 @@ fun VideoView(videoUri: Uri, description: String? = null, onDialog: ((Boolean) -
                     .defaultMinSize(minHeight = 70.dp)
                     .align(Alignment.Center)
                     .onVisibilityChanges { visible ->
-                        if (visible) {
+                        if (visible && !exoPlayer.isPlaying) {
                             exoPlayer.play()
-                        } else {
+                        } else if (!visible && exoPlayer.isPlaying) {
                             exoPlayer.pause()
                         }
                     },
