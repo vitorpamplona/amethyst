@@ -50,7 +50,6 @@ import java.net.MalformedURLException
 import java.net.URISyntaxException
 import java.net.URL
 import java.util.regex.Pattern
-import kotlin.time.ExperimentalTime
 
 val imageExtensions = listOf("png", "jpg", "gif", "bmp", "jpeg", "webp", "svg")
 val videoExtensions = listOf("mp4", "avi", "wmv", "mpg", "amv", "webm", "mov", "mp3")
@@ -113,7 +112,6 @@ class RichTextViewerState(
     val imageList: List<ZoomableUrlContent>
 )
 
-@OptIn(ExperimentalTime::class)
 @Composable
 private fun RenderRegular(
     content: String,

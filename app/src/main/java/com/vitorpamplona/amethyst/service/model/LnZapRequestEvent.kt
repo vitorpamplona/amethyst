@@ -71,7 +71,7 @@ class LnZapRequestEvent(
                 listOf("p", originalNote.pubKey()),
                 listOf("relays") + relays
             )
-            if (originalNote is LongTextNoteEvent) {
+            if (originalNote is AddressableEvent) {
                 tags = tags + listOf(listOf("a", originalNote.address().toTag()))
             }
             if (pollOption != null && pollOption >= 0) {

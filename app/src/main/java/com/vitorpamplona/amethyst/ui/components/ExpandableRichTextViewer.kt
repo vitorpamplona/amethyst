@@ -13,6 +13,7 @@ import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,10 +51,14 @@ fun ExpandableRichTextViewer(
         minOf(firstSpaceAfterCut, firstNewLineAfterCut)
     }
 
-    val text = if (showFullText) {
-        content
-    } else {
-        content.take(whereToCut)
+    val text by remember(content) {
+        derivedStateOf {
+            if (showFullText) {
+                content
+            } else {
+                content.take(whereToCut)
+            }
+        }
     }
 
     Box {

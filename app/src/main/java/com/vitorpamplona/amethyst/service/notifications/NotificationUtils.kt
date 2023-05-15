@@ -15,10 +15,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.MainActivity
 
 object NotificationUtils {
-
-    // Notification ID.
-    private var notificationId = 0
-
     private var dmChannel: NotificationChannel? = null
     private var zapChannel: NotificationChannel? = null
 
@@ -63,6 +59,7 @@ object NotificationUtils {
     }
 
     fun NotificationManager.sendZapNotification(
+        id: String,
         messageBody: String,
         messageTitle: String,
         pictureUrl: String?,
@@ -72,10 +69,11 @@ object NotificationUtils {
         val zapChannel = getOrCreateZapChannel(applicationContext)
         val channelId = applicationContext.getString(R.string.app_notification_zaps_channel_id)
 
-        sendNotification(messageBody, messageTitle, pictureUrl, uri, channelId, applicationContext)
+        sendNotification(id, messageBody, messageTitle, pictureUrl, uri, channelId, applicationContext)
     }
 
     fun NotificationManager.sendDMNotification(
+        id: String,
         messageBody: String,
         messageTitle: String,
         pictureUrl: String?,
@@ -85,10 +83,11 @@ object NotificationUtils {
         val dmChannel = getOrCreateDMChannel(applicationContext)
         val channelId = applicationContext.getString(R.string.app_notification_dms_channel_id)
 
-        sendNotification(messageBody, messageTitle, pictureUrl, uri, channelId, applicationContext)
+        sendNotification(id, messageBody, messageTitle, pictureUrl, uri, channelId, applicationContext)
     }
 
     fun NotificationManager.sendNotification(
+        id: String,
         messageBody: String,
         messageTitle: String,
         pictureUrl: String?,
@@ -104,6 +103,7 @@ object NotificationUtils {
             val imageLoader = ImageLoader(applicationContext)
             val imageResult = imageLoader.executeBlocking(request)
             sendNotification(
+                id = id,
                 messageBody = messageBody,
                 messageTitle = messageTitle,
                 picture = imageResult.drawable as? BitmapDrawable,
@@ -113,6 +113,7 @@ object NotificationUtils {
             )
         } else {
             sendNotification(
+                id = id,
                 messageBody = messageBody,
                 messageTitle = messageTitle,
                 picture = null,
@@ -124,6 +125,7 @@ object NotificationUtils {
     }
 
     private fun NotificationManager.sendNotification(
+        id: String,
         messageBody: String,
         messageTitle: String,
         picture: BitmapDrawable?,
@@ -137,7 +139,7 @@ object NotificationUtils {
 
         val contentPendingIntent = PendingIntent.getActivity(
             applicationContext,
-            notificationId,
+            id.hashCode(),
             contentIntent,
             PendingIntent.FLAG_MUTABLE
         )
@@ -171,9 +173,7 @@ object NotificationUtils {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
 
-        notify(notificationId, builder.build())
-
-        notificationId++
+        notify(id.hashCode(), builder.build())
     }
 
     /**

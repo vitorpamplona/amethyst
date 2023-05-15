@@ -46,7 +46,7 @@ class EventNotificationConsumer(private val applicationContext: Context) {
                     val user = note.author?.toBestDisplayName() ?: ""
                     val userPicture = note.author?.profilePicture()
                     val noteUri = note.toNEvent()
-                    notificationManager().sendDMNotification(content, user, userPicture, noteUri, applicationContext)
+                    notificationManager().sendDMNotification(event.id, content, user, userPicture, noteUri, applicationContext)
                 }
             }
         }
@@ -88,7 +88,7 @@ class EventNotificationConsumer(private val applicationContext: Context) {
                 }
                 val userPicture = senderInfo?.first?.profilePicture()
                 val noteUri = "nostr:Notifications"
-                notificationManager().sendZapNotification(content, title, userPicture, noteUri, applicationContext)
+                notificationManager().sendZapNotification(event.id, content, title, userPicture, noteUri, applicationContext)
             }
         }
     }

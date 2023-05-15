@@ -63,7 +63,7 @@ class ReportEvent(
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             var tags: List<List<String>> = listOf(reportPostTag, reportAuthorTag)
 
-            if (reportedPost is LongTextNoteEvent) {
+            if (reportedPost is AddressableEvent) {
                 tags = tags + listOf(listOf("a", reportedPost.address().toTag()))
             }
 

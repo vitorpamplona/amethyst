@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -41,13 +42,15 @@ fun UrlPreviewCard(
             )
     ) {
         Column {
-            val validatedUrl = URL(previewInfo.url)
+            val validatedUrl = remember { URL(previewInfo.url) }
 
             // correctly treating relative images
-            val imageUrl = if (previewInfo.image.startsWith("/")) {
-                URL(validatedUrl, previewInfo.image).toString()
-            } else {
-                previewInfo.image
+            val imageUrl = remember {
+                if (previewInfo.image.startsWith("/")) {
+                    URL(validatedUrl, previewInfo.image).toString()
+                } else {
+                    previewInfo.image
+                }
             }
 
             AsyncImage(

@@ -411,9 +411,9 @@ class NoteLiveSet(u: Note) {
 class NoteLiveData(val note: Note) : LiveData<NoteState>(NoteState(note)) {
     // Refreshes observers in batches.
     private val bundler = BundledUpdate(300, Dispatchers.IO) {
-        if (hasActiveObservers()) {
-            postValue(NoteState(note))
-        }
+        // if (hasObservers()) {
+        postValue(NoteState(note))
+        // }
     }
 
     fun invalidateData() {

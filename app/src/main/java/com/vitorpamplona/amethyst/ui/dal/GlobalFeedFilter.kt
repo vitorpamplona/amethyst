@@ -27,7 +27,7 @@ object GlobalFeedFilter : AdditiveFeedFilter<Note>() {
         return collection
             .asSequence()
             .filter {
-                it.event is BaseTextNoteEvent && it.replyTo.isNullOrEmpty()
+                (it.event is BaseTextNoteEvent || it.event is AudioTrackEvent) && it.replyTo.isNullOrEmpty()
             }
             .filter {
                 val channel = it.channelHex()
