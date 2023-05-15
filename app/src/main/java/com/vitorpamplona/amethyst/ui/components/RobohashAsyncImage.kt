@@ -16,6 +16,7 @@ import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
 import coil.size.Size
+import java.util.Date
 
 @Composable
 fun RobohashAsyncImage(
@@ -58,7 +59,7 @@ fun RobohashAsyncImage(
     )
 }
 
-var imageErrors = setOf<String>()
+var imageErrors = mapOf<String, Long>()
 
 @Composable
 fun RobohashFallbackAsyncImage(
@@ -73,7 +74,9 @@ fun RobohashFallbackAsyncImage(
     colorFilter: ColorFilter? = null,
     filterQuality: FilterQuality = DrawScope.DefaultFilterQuality
 ) {
-    if (imageErrors.contains(model)) {
+    val errorCache = remember(imageErrors) { imageErrors[model] }
+
+    if (errorCache != null && (Date().time / 1000) - errorCache < (60 * 5)) {
         RobohashAsyncImage(
             robot = robot,
             robotSize = robotSize,
@@ -110,7 +113,7 @@ fun RobohashFallbackAsyncImage(
             colorFilter = colorFilter,
             filterQuality = filterQuality,
             onError = {
-                imageErrors = imageErrors + model
+                imageErrors = imageErrors + Pair(model, Date().time / 1000)
             }
         )
     }
