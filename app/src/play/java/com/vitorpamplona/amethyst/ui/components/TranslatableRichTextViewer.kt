@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -56,7 +57,7 @@ fun TranslatableRichTextViewer(
     var langSettingsPopupExpanded by remember { mutableStateOf(false) }
 
     val accountState by accountViewModel.accountLanguagesLiveData.observeAsState()
-    val account = accountState?.account ?: return
+    val account = remember(accountState) { accountState?.account } ?: return
 
     val scope = rememberCoroutineScope()
 
@@ -78,7 +79,11 @@ fun TranslatableRichTextViewer(
         }
     }
 
-    val toBeViewed = if (showOriginal) content else translatedTextState.value.result ?: content
+    val toBeViewed by remember {
+        derivedStateOf {
+            if (showOriginal) content else translatedTextState.value.result ?: content
+        }
+    }
 
     Column() {
         ExpandableRichTextViewer(
