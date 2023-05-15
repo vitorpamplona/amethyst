@@ -62,6 +62,8 @@ import androidx.core.graphics.ColorUtils
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
+import com.vitorpamplona.amethyst.service.model.PeopleListEvent
 import com.vitorpamplona.amethyst.ui.components.SelectTextDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
@@ -81,8 +83,12 @@ val externalLinkForNote = { note: Note ->
     if (note is AddressableNote) {
         if (note.event?.getReward() != null) {
             "https://nostrbounties.com/b/${note.address().toNAddr()}"
+        } else if (note.event is PeopleListEvent) {
+            "https://listr.lol/a/${note.address()?.toNAddr()}"
+        } else if (note.event is AudioTrackEvent) {
+            "https://zapstr.live/?track=${note.address()?.toNAddr()}"
         } else {
-            "https://habla.news/a/${note.address().toNAddr()}"
+            "https://habla.news/a/${note.address()?.toNAddr()}"
         }
     } else {
         "https://snort.social/e/${note.toNEvent()}"
