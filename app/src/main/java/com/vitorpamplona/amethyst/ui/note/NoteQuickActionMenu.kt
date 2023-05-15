@@ -128,7 +128,7 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
 
     if (popupExpanded) {
         val isOwnNote = accountViewModel.isLoggedUser(note.author)
-        val isFollowingUser = !isOwnNote && accountViewModel.isFollowing(note.author!!)
+        val isFollowingUser = !isOwnNote && accountViewModel.isFollowing(note.author)
 
         Popup(onDismissRequest = onDismiss) {
             Card(
