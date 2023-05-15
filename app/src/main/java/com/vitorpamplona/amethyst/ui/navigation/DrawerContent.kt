@@ -1,9 +1,11 @@
 package com.vitorpamplona.amethyst.ui.navigation
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -294,6 +296,12 @@ fun ListContent(
             title = textTorProxy,
             icon = R.drawable.ic_tor,
             tint = MaterialTheme.colors.onBackground,
+            onLongClick = {
+                coroutineScope.launch {
+                    scaffoldState.drawerState.close()
+                }
+                conectOrbotDialogOpen = true
+            },
             onClick = {
                 if (checked) {
                     disconnectTorDialog = true
@@ -401,12 +409,16 @@ fun NavigationRow(
     })
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun IconRow(title: String, icon: Int, tint: Color, onClick: () -> Unit) {
+fun IconRow(title: String, icon: Int, tint: Color, onClick: () -> Unit, onLongClick: (() -> Unit)? = null) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
     ) {
         Row(
             modifier = Modifier
