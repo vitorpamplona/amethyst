@@ -66,6 +66,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.capitalize
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -87,6 +88,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
 import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
 import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
@@ -97,6 +99,7 @@ import com.vitorpamplona.amethyst.service.model.FileHeaderEvent
 import com.vitorpamplona.amethyst.service.model.FileStorageHeaderEvent
 import com.vitorpamplona.amethyst.service.model.HighlightEvent
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
+import com.vitorpamplona.amethyst.service.model.Participant
 import com.vitorpamplona.amethyst.service.model.PeopleListEvent
 import com.vitorpamplona.amethyst.service.model.PollNoteEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
@@ -113,6 +116,7 @@ import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.components.ZoomableContent
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.components.ZoomableLocalImage
@@ -132,6 +136,7 @@ import nostr.postr.toNpub
 import java.io.File
 import java.math.BigDecimal
 import java.net.URL
+import java.util.Locale
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTimedValue
 
@@ -374,6 +379,10 @@ fun NoteComposeInner(
 
                             is PeopleListEvent -> {
                                 RenderPeopleList(noteState, backgroundColor, accountViewModel, navController)
+                            }
+
+                            is AudioTrackEvent -> {
+                                RenderAudioTrack(note, loggedIn, accountViewModel, navController)
                             }
 
                             is PrivateDmEvent -> {
@@ -866,6 +875,25 @@ private fun RenderRepost(
             navController = navController
         )
     }
+}
+
+@Composable
+private fun RenderAudioTrack(
+    note: Note,
+    loggedIn: User,
+    accountViewModel: AccountViewModel,
+    navController: NavController
+) {
+    val noteEvent = note.event as? AudioTrackEvent ?: return
+
+    AudioTrackHeader(noteEvent, note, loggedIn, navController)
+
+    ReactionsRow(note, accountViewModel, navController)
+
+    Divider(
+        modifier = Modifier.padding(top = 10.dp),
+        thickness = 0.25.dp
+    )
 }
 
 @Composable
@@ -1550,6 +1578,81 @@ fun FileStorageHeaderDisplay(baseNote: Note) {
 
     content?.let {
         ZoomableContentView(content = it, listOf(it))
+    }
+}
+
+@Composable
+fun AudioTrackHeader(noteEvent: AudioTrackEvent, note: Note, loggedIn: User, navController: NavController) {
+    val media = remember { noteEvent.media() }
+    val cover = remember { noteEvent.cover() }
+    val subject = remember { noteEvent.subject() }
+    val content = remember { noteEvent.content() }
+    val participants = remember { noteEvent.participants() }
+
+    var participantUsers by remember { mutableStateOf<List<Pair<Participant, User>>>(emptyList()) }
+
+    LaunchedEffect(key1 = participants) {
+        withContext(Dispatchers.IO) {
+            participantUsers = participants.mapNotNull { part -> LocalCache.checkGetOrCreateUser(part.key)?.let { Pair(part, it) } }
+        }
+    }
+
+    Row(modifier = Modifier.padding(top = 5.dp)) {
+        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Row() {
+                subject?.let {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)) {
+                        Text(
+                            text = it,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 3,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
+
+            participantUsers.forEach {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 5.dp, start = 10.dp, end = 10.dp).clickable {
+                        navController.navigate("User/${it.second.pubkeyHex}")
+                    }
+                ) {
+                    UserPicture(it.second, loggedIn, 25.dp)
+                    Spacer(Modifier.width(5.dp))
+                    UsernameDisplay(it.second, Modifier.weight(1f))
+                    Spacer(Modifier.width(5.dp))
+                    it.first.role?.let {
+                        Text(
+                            text = it.capitalize(Locale.ROOT),
+                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
+
+            media?.let { media ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(10.dp)
+                ) {
+                    cover?.let { cover ->
+                        VideoView(
+                            videoUri = media,
+                            description = noteEvent.subject(),
+                            thumbUri = cover
+                        )
+                    }
+                        ?: VideoView(
+                            videoUri = media,
+                            noteEvent.subject()
+                        )
+                }
+            }
+        }
     }
 }
 

@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -48,7 +49,7 @@ fun TranslatableRichTextViewer(
     accountViewModel: AccountViewModel,
     navController: NavController
 ) {
-    val translatedTextState = remember {
+    var translatedTextState by remember {
         mutableStateOf(ResultOrError(content, null, null, null))
     }
 
@@ -56,7 +57,7 @@ fun TranslatableRichTextViewer(
     var langSettingsPopupExpanded by remember { mutableStateOf(false) }
 
     val accountState by accountViewModel.accountLanguagesLiveData.observeAsState()
-    val account = accountState?.account ?: return
+    val account = remember(accountState) { accountState?.account } ?: return
 
     val scope = rememberCoroutineScope()
 
@@ -72,13 +73,17 @@ fun TranslatableRichTextViewer(
                         val preference = account.preferenceBetween(task.result.sourceLang!!, task.result.targetLang!!)
                         showOriginal = preference == task.result.sourceLang
                     }
-                    translatedTextState.value = task.result
+                    translatedTextState = task.result
                 }
             }
         }
     }
 
-    val toBeViewed = if (showOriginal) content else translatedTextState.value.result ?: content
+    val toBeViewed by remember {
+        derivedStateOf {
+            if (showOriginal) content else translatedTextState.result ?: content
+        }
+    }
 
     Column() {
         ExpandableRichTextViewer(
@@ -91,8 +96,8 @@ fun TranslatableRichTextViewer(
             navController
         )
 
-        val target = translatedTextState.value.targetLang
-        val source = translatedTextState.value.sourceLang
+        val target = translatedTextState.targetLang
+        val source = translatedTextState.sourceLang
 
         if (source != null && target != null) {
             if (source != target) {

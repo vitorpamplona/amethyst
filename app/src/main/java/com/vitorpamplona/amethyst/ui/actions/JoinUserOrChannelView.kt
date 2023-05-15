@@ -137,9 +137,6 @@ private fun RenderSeach(
 
     val onlineSearch = NostrSearchEventOrUserDataSource
 
-    val dbState = LocalCache.live.observeAsState()
-    val db = dbState.value ?: return
-
     val lifeCycleOwner = LocalLifecycleOwner.current
 
     // Create a channel for processing search queries.
@@ -147,10 +144,12 @@ private fun RenderSeach(
         Channel<String>(Channel.CONFLATED)
     }
 
-    LaunchedEffect(db) {
-        withContext(Dispatchers.IO) {
-            if (searchBarViewModel.isSearching()) {
-                searchBarViewModel.invalidateData()
+    LaunchedEffect(Unit) {
+        scope.launch(Dispatchers.IO) {
+            LocalCache.live.newEventBundles.collect {
+                if (searchBarViewModel.isSearching()) {
+                    searchBarViewModel.invalidateData()
+                }
             }
         }
     }

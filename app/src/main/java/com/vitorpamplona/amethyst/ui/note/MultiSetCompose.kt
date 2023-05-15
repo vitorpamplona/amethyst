@@ -276,8 +276,8 @@ private fun AuthorPictureAndComment(
             (zapRequest.event as? LnZapRequestEvent)?.let {
                 val decryptedContent = accountViewModel.decryptZap(zapRequest)
                 if (decryptedContent != null) {
-                    val author = LocalCache.getOrCreateUser(decryptedContent.pubKey)
-                    content = Pair(author, decryptedContent.content)
+                    val newAuthor = LocalCache.getOrCreateUser(decryptedContent.pubKey)
+                    content = Pair(newAuthor, decryptedContent.content)
                 } else {
                     if (!zapRequest.event?.content().isNullOrBlank()) {
                         content = Pair(author, zapRequest.event?.content())

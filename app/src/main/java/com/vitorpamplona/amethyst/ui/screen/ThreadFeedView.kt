@@ -53,6 +53,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
 import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.HighlightEvent
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
@@ -352,6 +353,8 @@ fun NoteMaster(
                 Column() {
                     if (noteEvent is PeopleListEvent) {
                         DisplayPeopleList(noteState, MaterialTheme.colors.background, accountViewModel, navController)
+                    } else if (noteEvent is AudioTrackEvent) {
+                        AudioTrackHeader(noteEvent, note, account.userProfile(), navController)
                     } else if (noteEvent is HighlightEvent) {
                         DisplayHighlight(
                             noteEvent.quote(),

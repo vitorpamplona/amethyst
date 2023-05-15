@@ -13,8 +13,8 @@ android {
         applicationId "com.vitorpamplona.amethyst"
         minSdk 26
         targetSdk 33
-        versionCode 155
-        versionName "0.46.1"
+        versionCode 161
+        versionName "0.47.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -115,7 +115,7 @@ dependencies {
     implementation "androidx.biometric:biometric-ktx:1.2.0-alpha05"
 
     // Bitcoin secp256k1 bindings to Android
-    implementation 'fr.acinq.secp256k1:secp256k1-kmp-jni-android:0.9.0'
+    implementation 'fr.acinq.secp256k1:secp256k1-kmp-jni-android:0.10.0'
 
     // Nostr Base Protocol
     implementation('com.github.vitorpamplona.NostrPostr:nostrpostrlib:master-SNAPSHOT') {

@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
@@ -67,16 +68,18 @@ open class LnZapFeedViewModel(val dataSource: FeedFilter<Pair<Note, Note>>) : Vi
         bundler.invalidate()
     }
 
-    private val cacheListener: (Set<Note>) -> Unit = { newNotes ->
-        invalidateData()
-    }
+    var collectorJob: Job? = null
 
     init {
-        LocalCache.live.observeForever(cacheListener)
+        collectorJob = viewModelScope.launch(Dispatchers.IO) {
+            LocalCache.live.newEventBundles.collect { newNotes ->
+                invalidateData()
+            }
+        }
     }
 
     override fun onCleared() {
-        LocalCache.live.removeObserver(cacheListener)
+        collectorJob?.cancel()
         super.onCleared()
     }
 }

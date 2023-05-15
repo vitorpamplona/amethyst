@@ -220,6 +220,7 @@ open class Event(
         fun fromJson(json: JsonElement, lenient: Boolean = false): Event = gson.fromJson(json, Event::class.java).getRefinedEvent(lenient)
 
         fun Event.getRefinedEvent(lenient: Boolean = false): Event = when (kind) {
+            AudioTrackEvent.kind -> AudioTrackEvent(id, pubKey, createdAt, tags, content, sig)
             BadgeAwardEvent.kind -> BadgeAwardEvent(id, pubKey, createdAt, tags, content, sig)
             BadgeDefinitionEvent.kind -> BadgeDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
             BadgeProfilesEvent.kind -> BadgeProfilesEvent(id, pubKey, createdAt, tags, content, sig)
@@ -281,4 +282,9 @@ open class Event(
             return Event(id.toHexKey(), pubKey, createdAt, kind, tags, content, sig)
         }
     }
+}
+
+interface AddressableEvent {
+    fun dTag(): String
+    fun address(): ATag
 }
