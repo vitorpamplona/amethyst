@@ -51,7 +51,7 @@ fun ExpandableRichTextViewer(
         minOf(firstSpaceAfterCut, firstNewLineAfterCut)
     }
 
-    val text by remember {
+    val text by remember(content) {
         derivedStateOf {
             if (showFullText) {
                 content

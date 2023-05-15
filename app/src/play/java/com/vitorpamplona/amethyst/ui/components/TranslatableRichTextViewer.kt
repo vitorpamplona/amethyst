@@ -49,7 +49,7 @@ fun TranslatableRichTextViewer(
     accountViewModel: AccountViewModel,
     navController: NavController
 ) {
-    val translatedTextState = remember {
+    var translatedTextState by remember {
         mutableStateOf(ResultOrError(content, null, null, null))
     }
 
@@ -73,7 +73,7 @@ fun TranslatableRichTextViewer(
                         val preference = account.preferenceBetween(task.result.sourceLang!!, task.result.targetLang!!)
                         showOriginal = preference == task.result.sourceLang
                     }
-                    translatedTextState.value = task.result
+                    translatedTextState = task.result
                 }
             }
         }
@@ -81,7 +81,7 @@ fun TranslatableRichTextViewer(
 
     val toBeViewed by remember {
         derivedStateOf {
-            if (showOriginal) content else translatedTextState.value.result ?: content
+            if (showOriginal) content else translatedTextState.result ?: content
         }
     }
 
@@ -96,8 +96,8 @@ fun TranslatableRichTextViewer(
             navController
         )
 
-        val target = translatedTextState.value.targetLang
-        val source = translatedTextState.value.sourceLang
+        val target = translatedTextState.targetLang
+        val source = translatedTextState.sourceLang
 
         if (source != null && target != null) {
             if (source != target) {
