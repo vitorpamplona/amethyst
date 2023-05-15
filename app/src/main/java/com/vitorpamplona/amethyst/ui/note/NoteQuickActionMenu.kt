@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
+import com.vitorpamplona.amethyst.service.model.FileHeaderEvent
 import com.vitorpamplona.amethyst.service.model.PeopleListEvent
 import com.vitorpamplona.amethyst.ui.components.SelectTextDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -91,7 +92,11 @@ val externalLinkForNote = { note: Note ->
             "https://habla.news/a/${note.address()?.toNAddr()}"
         }
     } else {
-        "https://snort.social/e/${note.toNEvent()}"
+        if (note.event is FileHeaderEvent) {
+            "https://filestr.vercel.app/e/${note.toNEvent()}"
+        } else {
+            "https://snort.social/e/${note.toNEvent()}"
+        }
     }
 }
 
