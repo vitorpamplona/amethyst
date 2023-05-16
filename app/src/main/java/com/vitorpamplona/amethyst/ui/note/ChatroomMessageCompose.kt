@@ -46,7 +46,6 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
@@ -58,11 +57,9 @@ import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
-import com.vitorpamplona.amethyst.service.model.EventInterface
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
@@ -103,10 +100,12 @@ fun ChatroomMessageCompose(
     var popupExpanded by remember { mutableStateOf(false) }
 
     if (noteEvent == null) {
-        BlankNote(Modifier.combinedClickable(
-            onClick = { },
-            onLongClick = { popupExpanded = true }
-        ))
+        BlankNote(
+            Modifier.combinedClickable(
+                onClick = { },
+                onLongClick = { popupExpanded = true }
+            )
+        )
 
         note?.let {
             NoteQuickActionMenu(it, popupExpanded, { popupExpanded = false }, accountViewModel)
@@ -119,8 +118,8 @@ fun ChatroomMessageCompose(
             withContext(Dispatchers.IO) {
                 account.userProfile().let { loggedIn ->
                     val newCanPreview = note.author === loggedIn ||
-                            (note.author?.let { loggedIn.isFollowingCached(it) } ?: true) ||
-                            !(noteForReports.hasAnyReports())
+                        (note.author?.let { loggedIn.isFollowingCached(it) } ?: true) ||
+                        !(noteForReports.hasAnyReports())
 
                     val newIsAcceptable = account.isAcceptable(noteForReports)
 
@@ -142,7 +141,6 @@ fun ChatroomMessageCompose(
                     onClick = { showHiddenNote = true }
                 )
             }
-
         } else {
             val backgroundBubbleColor: Color
             val alignment: Arrangement.Horizontal
@@ -398,15 +396,15 @@ private fun RenderChangeChannelMetadataNote(
     val channelInfo = noteEvent.channelInfo()
     val text = note.author?.toBestDisplayName()
         .toString() + " ${stringResource(R.string.changed_chat_name_to)} '" + (
-            channelInfo.name
-                ?: ""
-            ) + "', ${stringResource(R.string.description_to)} '" + (
-            channelInfo.about
-                ?: ""
-            ) + "', ${stringResource(R.string.and_picture_to)} '" + (
-            channelInfo.picture
-                ?: ""
-            ) + "'"
+        channelInfo.name
+            ?: ""
+        ) + "', ${stringResource(R.string.description_to)} '" + (
+        channelInfo.about
+            ?: ""
+        ) + "', ${stringResource(R.string.and_picture_to)} '" + (
+        channelInfo.picture
+            ?: ""
+        ) + "'"
 
     CreateTextWithEmoji(
         text = text,
@@ -421,15 +419,15 @@ private fun RenderCreateChannelNote(note: Note) {
 
     val text = note.author?.toBestDisplayName()
         .toString() + " ${stringResource(R.string.created)} " + (
-            channelInfo.name
-                ?: ""
-            ) + " ${stringResource(R.string.with_description_of)} '" + (
-            channelInfo.about
-                ?: ""
-            ) + "', ${stringResource(R.string.and_picture)} '" + (
-            channelInfo.picture
-                ?: ""
-            ) + "'"
+        channelInfo.name
+            ?: ""
+        ) + " ${stringResource(R.string.with_description_of)} '" + (
+        channelInfo.about
+            ?: ""
+        ) + "', ${stringResource(R.string.and_picture)} '" + (
+        channelInfo.picture
+            ?: ""
+        ) + "'"
 
     CreateTextWithEmoji(
         text = text,
