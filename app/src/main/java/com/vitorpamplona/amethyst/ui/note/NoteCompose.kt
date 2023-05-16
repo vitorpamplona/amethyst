@@ -942,7 +942,7 @@ fun PinListHeader(
                     Icon(
                         imageVector = Icons.Default.PushPin,
                         contentDescription = null,
-                        tint = MaterialTheme.colors.onBackground.copy(0.12f),
+                        tint = MaterialTheme.colors.onBackground.copy(0.32f),
                         modifier = Modifier.size(15.dp)
                     )
 
