@@ -225,6 +225,7 @@ fun ChatroomMessageCompose(
                                         suffix = "",
                                         tags = author.info?.latestMetadata?.tags,
                                         fontWeight = FontWeight.Bold,
+                                        overrideColor = MaterialTheme.colors.onBackground,
                                         route = "User/${author.pubkeyHex}",
                                         navController = navController
                                     )
