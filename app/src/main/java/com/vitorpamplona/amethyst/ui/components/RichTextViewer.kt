@@ -109,7 +109,8 @@ class RichTextViewerState(
     val content: String,
     val urlSet: Set<String>,
     val imagesForPager: Map<String, ZoomableUrlContent>,
-    val imageList: List<ZoomableUrlContent>
+    val imageList: List<ZoomableUrlContent>,
+    val customEmoji: Map<String, String>
 )
 
 @Composable
@@ -122,7 +123,7 @@ private fun RenderRegular(
     navController: NavController
 ) {
     var processedState by remember {
-        mutableStateOf<RichTextViewerState?>(RichTextViewerState(content, emptySet(), emptyMap(), emptyList()))
+        mutableStateOf<RichTextViewerState?>(RichTextViewerState(content, emptySet(), emptyMap(), emptyList(), emptyMap()))
     }
 
     val scope = rememberCoroutineScope()
@@ -143,8 +144,10 @@ private fun RenderRegular(
             }.associateBy { it.url }
             val imageList = imagesForPager.values.toList()
 
-            if (urlSet.isNotEmpty()) {
-                processedState = RichTextViewerState(content, urlSet, imagesForPager, imageList)
+            val emojiMap = tags?.filter { it.size > 2 && it[0] == "emoji" }?.associate { ":${it[1]}:" to it[2] } ?: emptyMap()
+
+            if (urlSet.isNotEmpty() || emojiMap.isNotEmpty()) {
+                processedState = RichTextViewerState(content, urlSet, imagesForPager, imageList, emojiMap)
             }
         }
     }
@@ -167,6 +170,8 @@ private fun RenderRegular(
                             ZoomableContentView(img, state.imageList)
                         } else if (state.urlSet.contains(word)) {
                             UrlPreview(word, "$word ")
+                        } else if (state.customEmoji.any { word.contains(it.key) }) {
+                            RenderCustomEmoji(word, state.customEmoji)
                         } else if (word.startsWith("lnbc", true)) {
                             MayBeInvoicePreview(word)
                         } else if (word.startsWith("lnurl", true)) {
@@ -235,6 +240,8 @@ private fun RenderRegular(
                                     style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
                                 )
                             }
+                        } else if (state.customEmoji.any { word.contains(it.key) }) {
+                            RenderCustomEmoji(word, state.customEmoji)
                         } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
                             ClickableEmail(word)
                         } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
@@ -291,6 +298,14 @@ private fun RenderRegular(
             }
         }
     }
+}
+
+@Composable
+fun RenderCustomEmoji(word: String, customEmoji: Map<String, String>) {
+    CreateTextWithEmoji(
+        text = "$word ",
+        emojis = customEmoji
+    )
 }
 
 @Composable
@@ -600,8 +615,10 @@ fun TagLink(word: String, tags: List<List<String>>, canPreview: Boolean, backgro
     var baseUserPair by remember { mutableStateOf<Pair<User, String?>?>(null) }
     var baseNotePair by remember { mutableStateOf<Pair<Note, String?>?>(null) }
 
+    val scope = rememberCoroutineScope()
+
     LaunchedEffect(key1 = word) {
-        withContext(Dispatchers.IO) {
+        scope.launch(Dispatchers.IO) {
             val matcher = tagIndex.matcher(word)
             val (index, suffix) = try {
                 matcher.find()
@@ -630,8 +647,24 @@ fun TagLink(word: String, tags: List<List<String>>, canPreview: Boolean, backgro
     }
 
     baseUserPair?.let {
-        ClickableUserTag(it.first, navController)
-        Text(text = "${it.second} ")
+        val innerUserState by it.first.live().metadata.observeAsState()
+        val displayName = remember(innerUserState) {
+            innerUserState?.user?.toBestDisplayName() ?: ""
+        }
+        val route = remember(innerUserState) {
+            "User/${it.first.pubkeyHex}"
+        }
+        val userTags = remember(innerUserState) {
+            innerUserState?.user?.info?.latestMetadata?.tags
+        }
+
+        CreateClickableTextWithEmoji(
+            clickablePart = displayName,
+            suffix = "${it.second} ",
+            tags = userTags,
+            route = route,
+            navController = navController
+        )
     }
 
     baseNotePair?.let {

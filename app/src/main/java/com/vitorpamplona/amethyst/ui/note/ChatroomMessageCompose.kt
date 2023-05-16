@@ -58,6 +58,8 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
+import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
+import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
@@ -218,14 +220,13 @@ fun ChatroomMessageCompose(
                                             })
                                     )
 
-                                    Text(
-                                        "  ${author.toBestDisplayName()}",
+                                    CreateClickableTextWithEmoji(
+                                        clickablePart = "  ${author.toBestDisplayName()}",
+                                        suffix = "",
+                                        tags = author.info?.latestMetadata?.tags,
                                         fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.clickable(onClick = {
-                                            author.let {
-                                                navController.navigate("User/${it.pubkeyHex}")
-                                            }
-                                        })
+                                        route = "User/${author.pubkeyHex}",
+                                        navController = navController
                                     )
                                 }
                             }
@@ -251,33 +252,39 @@ fun ChatroomMessageCompose(
                                 val event = note.event
                                 if (event is ChannelCreateEvent) {
                                     val channelInfo = event.channelInfo()
-                                    Text(
-                                        text = note.author?.toBestDisplayName()
-                                            .toString() + " ${stringResource(R.string.created)} " + (
-                                            channelInfo.name
-                                                ?: ""
-                                            ) + " ${stringResource(R.string.with_description_of)} '" + (
-                                            channelInfo.about
-                                                ?: ""
-                                            ) + "', ${stringResource(R.string.and_picture)} '" + (
-                                            channelInfo.picture
-                                                ?: ""
-                                            ) + "'"
+                                    val text = note.author?.toBestDisplayName()
+                                        .toString() + " ${stringResource(R.string.created)} " + (
+                                        channelInfo.name
+                                            ?: ""
+                                        ) + " ${stringResource(R.string.with_description_of)} '" + (
+                                        channelInfo.about
+                                            ?: ""
+                                        ) + "', ${stringResource(R.string.and_picture)} '" + (
+                                        channelInfo.picture
+                                            ?: ""
+                                        ) + "'"
+
+                                    CreateTextWithEmoji(
+                                        text = text,
+                                        tags = note.author?.info?.latestMetadata?.tags
                                     )
                                 } else if (event is ChannelMetadataEvent) {
                                     val channelInfo = event.channelInfo()
-                                    Text(
-                                        text = note.author?.toBestDisplayName()
-                                            .toString() + " ${stringResource(R.string.changed_chat_name_to)} '" + (
-                                            channelInfo.name
-                                                ?: ""
-                                            ) + "$', {stringResource(R.string.description_to)} '" + (
-                                            channelInfo.about
-                                                ?: ""
-                                            ) + "', ${stringResource(R.string.and_picture_to)} '" + (
-                                            channelInfo.picture
-                                                ?: ""
-                                            ) + "'"
+                                    val text = note.author?.toBestDisplayName()
+                                        .toString() + " ${stringResource(R.string.changed_chat_name_to)} '" + (
+                                        channelInfo.name
+                                            ?: ""
+                                        ) + "', ${stringResource(R.string.description_to)} '" + (
+                                        channelInfo.about
+                                            ?: ""
+                                        ) + "', ${stringResource(R.string.and_picture_to)} '" + (
+                                        channelInfo.picture
+                                            ?: ""
+                                        ) + "'"
+
+                                    CreateTextWithEmoji(
+                                        text = text,
+                                        tags = note.author?.info?.latestMetadata?.tags
                                     )
                                 } else {
                                     val eventContent = accountViewModel.decrypt(note)

@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountBackupDialog
@@ -168,8 +169,9 @@ fun ProfileContent(
                     })
             )
             if (accountUser.bestDisplayName() != null) {
-                Text(
-                    accountUser.bestDisplayName() ?: "",
+                CreateTextWithEmoji(
+                    text = accountUser.bestDisplayName() ?: "",
+                    tags = accountUser.info?.latestMetadata?.tags,
                     modifier = Modifier
                         .padding(top = 7.dp)
                         .clickable(onClick = {
@@ -185,19 +187,22 @@ fun ProfileContent(
                 )
             }
             if (accountUser.bestUsername() != null) {
-                Text(
-                    " @${accountUser.bestUsername()}",
+                CreateTextWithEmoji(
+                    text = " @${accountUser.bestUsername()}",
+                    tags = accountUser.info?.latestMetadata?.tags,
                     color = Color.LightGray,
                     modifier = Modifier
                         .padding(top = 15.dp)
-                        .clickable(onClick = {
-                            accountUser.let {
-                                navController.navigate("User/${it.pubkeyHex}")
+                        .clickable(
+                            onClick = {
+                                accountUser.let {
+                                    navController.navigate("User/${it.pubkeyHex}")
+                                }
+                                coroutineScope.launch {
+                                    scaffoldState.drawerState.close()
+                                }
                             }
-                            coroutineScope.launch {
-                                scaffoldState.drawerState.close()
-                            }
-                        })
+                        )
                 )
             }
             Row(

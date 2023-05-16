@@ -34,6 +34,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
+import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.qrcode.NIP19QrCodeScanner
@@ -83,10 +84,10 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
                                         .background(MaterialTheme.colors.background)
                                 )
                             }
-                            Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-                                Text(
-                                    user.bestDisplayName() ?: "",
-                                    modifier = Modifier.padding(top = 5.dp),
+                            Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth().padding(top = 5.dp)) {
+                                CreateTextWithEmoji(
+                                    text = user.bestDisplayName() ?: user.bestUsername() ?: "",
+                                    tags = user.info?.latestMetadata?.tags,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 18.sp
                                 )

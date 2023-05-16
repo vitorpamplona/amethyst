@@ -380,8 +380,9 @@ fun Notifying(baseMentions: List<User>?, onClick: (User) -> Unit) {
                             onClick(myUser)
                         }
                     ) {
-                        Text(
-                            "✖ ${myUser.toBestDisplayName()}",
+                        CreateTextWithEmoji(
+                            text = "✖ ${myUser.toBestDisplayName()}",
+                            tags = myUser.info?.latestMetadata?.tags,
                             color = Color.White,
                             textAlign = TextAlign.Center
                         )

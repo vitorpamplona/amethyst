@@ -64,6 +64,7 @@ import com.vitorpamplona.amethyst.service.model.PayInvoiceErrorResponse
 import com.vitorpamplona.amethyst.service.model.PayInvoiceSuccessResponse
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
+import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.DisplayNip05ProfileStatus
 import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
@@ -470,29 +471,36 @@ private fun ProfileActions(
 private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewModel: AccountViewModel, navController: NavController) {
     val userState by baseUser.live().metadata.observeAsState()
     val user = remember(userState) { userState?.user } ?: return
+    val tags = remember(userState) { userState?.user?.info?.latestMetadata?.tags }
 
     val uri = LocalUriHandler.current
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    Row(verticalAlignment = Alignment.Bottom) {
-        user.bestDisplayName()?.let {
-            Text(
-                it,
-                modifier = Modifier.padding(top = 7.dp),
+    (user.bestDisplayName() ?: user.bestUsername())?.let {
+        Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 7.dp)) {
+            CreateTextWithEmoji(
+                text = it,
+                tags = tags,
                 fontWeight = FontWeight.Bold,
                 fontSize = 25.sp
             )
         }
     }
-    Row(verticalAlignment = Alignment.CenterVertically) {
+
+    if (user.bestDisplayName() != null) {
         user.bestUsername()?.let {
-            Text(
-                "@$it",
-                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(top = 1.dp, bottom = 1.dp)
-            )
+            ) {
+                CreateTextWithEmoji(
+                    text = "@$it",
+                    tags = tags,
+                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                )
+            }
         }
     }
 

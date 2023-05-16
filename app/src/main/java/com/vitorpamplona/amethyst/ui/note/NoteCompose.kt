@@ -109,7 +109,7 @@ import com.vitorpamplona.amethyst.service.model.ReportedKey
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
-import com.vitorpamplona.amethyst.ui.components.CreateClickableText
+import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
@@ -1245,13 +1245,15 @@ fun DisplayHighlight(
                 val userState by userBase.live().metadata.observeAsState()
                 val route = remember { "User/${userBase.pubkeyHex}" }
                 val userDisplayName = remember(userState) { userState?.user?.toBestDisplayName() }
+                val userTags = remember(userState) { userState?.user?.info?.latestMetadata?.tags }
 
                 if (userDisplayName != null) {
-                    CreateClickableText(
-                        userDisplayName,
-                        "",
-                        route,
-                        navController
+                    CreateClickableTextWithEmoji(
+                        clickablePart = userDisplayName,
+                        suffix = "",
+                        tags = userTags,
+                        route = route,
+                        navController = navController
                     )
                 }
             }

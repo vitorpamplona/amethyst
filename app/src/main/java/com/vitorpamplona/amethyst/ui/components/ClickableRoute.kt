@@ -1,6 +1,14 @@
 package com.vitorpamplona.amethyst.ui.components
 
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.ClickableText
+import androidx.compose.foundation.text.InlineTextContent
+import androidx.compose.foundation.text.appendInlineContent
+import androidx.compose.material.LocalContentAlpha
+import androidx.compose.material.LocalContentColor
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
@@ -11,12 +19,31 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.takeOrElse
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.NIP30Parser
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.nip19.Nip19
@@ -64,28 +91,28 @@ private fun DisplayEvent(
         if (note.event is ChannelCreateEvent) {
             CreateClickableText(
                 note.idDisplayNote(),
-                nip19.additionalChars,
+                "${nip19.additionalChars} ",
                 "Channel/${nip19.hex}",
                 navController
             )
         } else if (note.event is PrivateDmEvent) {
             CreateClickableText(
                 note.idDisplayNote(),
-                nip19.additionalChars,
+                "${nip19.additionalChars} ",
                 "Room/${note.author?.pubkeyHex}",
                 navController
             )
         } else if (channel != null) {
             CreateClickableText(
                 channel.toBestDisplayName(),
-                nip19.additionalChars,
+                "${nip19.additionalChars} ",
                 "Channel/${note.channel()?.idHex}",
                 navController
             )
         } else {
             CreateClickableText(
                 note.idDisplayNote(),
-                nip19.additionalChars,
+                "${nip19.additionalChars} ",
                 "Event/${nip19.hex}",
                 navController
             )
@@ -114,34 +141,34 @@ private fun DisplayNote(
 
     noteBase?.let {
         val noteState by it.live().metadata.observeAsState()
-        val note = noteState?.note ?: return
+        val note = remember(noteState) { noteState?.note } ?: return
         val channel = note.channel()
 
         if (note.event is ChannelCreateEvent) {
             CreateClickableText(
                 note.idDisplayNote(),
-                nip19.additionalChars,
+                "${nip19.additionalChars} ",
                 "Channel/${nip19.hex}",
                 navController
             )
         } else if (note.event is PrivateDmEvent) {
             CreateClickableText(
                 note.idDisplayNote(),
-                nip19.additionalChars,
+                "${nip19.additionalChars} ",
                 "Room/${note.author?.pubkeyHex}",
                 navController
             )
         } else if (channel != null) {
             CreateClickableText(
                 channel.toBestDisplayName(),
-                nip19.additionalChars,
+                "${nip19.additionalChars} ",
                 "Channel/${note.channel()?.idHex}",
                 navController
             )
         } else {
             CreateClickableText(
                 note.idDisplayNote(),
-                nip19.additionalChars,
+                "${nip19.additionalChars} ",
                 "Note/${nip19.hex}",
                 navController
             )
@@ -174,7 +201,7 @@ private fun DisplayAddress(
 
         CreateClickableText(
             note.idDisplayNote(),
-            nip19.additionalChars,
+            "${nip19.additionalChars} ",
             "Note/${nip19.hex}",
             navController
         )
@@ -202,14 +229,19 @@ private fun DisplayUser(
 
     userBase?.let {
         val userState by it.live().metadata.observeAsState()
-        val user = userState?.user ?: return
+        val route = remember { "User/${it.pubkeyHex}" }
+        val userDisplayName = remember(userState) { userState?.user?.toBestDisplayName() }
+        val userTags = remember(userState) { userState?.user?.info?.latestMetadata?.tags }
 
-        CreateClickableText(
-            user.toBestDisplayName(),
-            nip19.additionalChars,
-            "User/${nip19.hex}",
-            navController
-        )
+        if (userDisplayName != null) {
+            CreateClickableTextWithEmoji(
+                clickablePart = userDisplayName,
+                suffix = "${nip19.additionalChars} ",
+                tags = userTags,
+                route = route,
+                navController = navController
+            )
+        }
     }
 
     if (userBase == null) {
@@ -231,9 +263,264 @@ fun CreateClickableText(clickablePart: String, suffix: String, route: String, na
             withStyle(
                 LocalTextStyle.current.copy(color = MaterialTheme.colors.onBackground).toSpanStyle()
             ) {
-                append("$suffix ")
+                append(suffix)
             }
         },
         onClick = { navController.navigate(route) }
+    )
+}
+
+@Composable
+fun CreateTextWithEmoji(
+    text: String,
+    tags: List<List<String>>?,
+    color: Color = Color.Unspecified,
+    textAlign: TextAlign? = null,
+    fontWeight: FontWeight? = null,
+    fontSize: TextUnit = TextUnit.Unspecified,
+    maxLines: Int = Int.MAX_VALUE,
+    overflow: TextOverflow = TextOverflow.Clip,
+    modifier: Modifier = Modifier
+) {
+    val emojis = remember {
+        tags?.filter { it.size > 2 && it[0] == "emoji" }?.associate { ":${it[1]}:" to it[2] } ?: emptyMap()
+    }
+
+    CreateTextWithEmoji(text, emojis, color, textAlign, fontWeight, fontSize, maxLines, overflow, modifier)
+}
+
+@Composable
+fun CreateTextWithEmoji(
+    text: String,
+    emojis: Map<String, String>,
+    color: Color = Color.Unspecified,
+    textAlign: TextAlign? = null,
+    fontWeight: FontWeight? = null,
+    fontSize: TextUnit = TextUnit.Unspecified,
+    maxLines: Int = Int.MAX_VALUE,
+    overflow: TextOverflow = TextOverflow.Clip,
+    modifier: Modifier = Modifier
+) {
+    val textColor = color.takeOrElse {
+        LocalTextStyle.current.color.takeOrElse {
+            LocalContentColor.current.copy(alpha = LocalContentAlpha.current)
+        }
+    }
+
+    if (emojis.isEmpty()) {
+        Text(
+            text = text,
+            color = textColor,
+            textAlign = textAlign,
+            fontWeight = fontWeight,
+            fontSize = fontSize,
+            maxLines = maxLines,
+            overflow = overflow,
+            modifier = modifier
+        )
+    } else {
+        val myList = remember {
+            assembleAnnotatedList(text, emojis)
+        }
+
+        val style = LocalTextStyle.current.merge(
+            TextStyle(
+                color = textColor,
+                textAlign = textAlign,
+                fontWeight = fontWeight,
+                fontSize = fontSize
+            )
+        ).toSpanStyle()
+
+        InLineIconRenderer(myList, style, maxLines, overflow, modifier)
+    }
+}
+
+@Composable
+fun CreateClickableTextWithEmoji(
+    clickablePart: String,
+    tags: List<List<String>>?,
+    style: TextStyle,
+    onClick: (Int) -> Unit
+) {
+    val emojis = remember(tags) {
+        tags?.filter { it.size > 2 && it[0] == "emoji" }?.associate { ":${it[1]}:" to it[2] } ?: emptyMap()
+    }
+
+    if (emojis.isEmpty()) {
+        ClickableText(
+            AnnotatedString(clickablePart),
+            style = style,
+            onClick = onClick
+        )
+    } else {
+        val myList = remember {
+            assembleAnnotatedList(clickablePart, emojis)
+        }
+
+        ClickableInLineIconRenderer(myList, style.toSpanStyle()) {
+            onClick(it)
+        }
+    }
+}
+
+@Composable
+fun CreateClickableTextWithEmoji(
+    clickablePart: String,
+    suffix: String,
+    tags: List<List<String>>?,
+    fontWeight: FontWeight = FontWeight.Normal,
+    route: String,
+    navController: NavController
+) {
+    val emojis = remember(tags) {
+        tags?.filter { it.size > 2 && it[0] == "emoji" }?.associate { ":${it[1]}:" to it[2] } ?: emptyMap()
+    }
+
+    if (emojis.isEmpty()) {
+        CreateClickableText(clickablePart, suffix, route, navController)
+    } else {
+        val myList = remember {
+            assembleAnnotatedList(clickablePart, emojis)
+        }
+
+        ClickableInLineIconRenderer(myList, LocalTextStyle.current.copy(color = MaterialTheme.colors.primary, fontWeight = fontWeight).toSpanStyle()) {
+            navController.navigate(route)
+        }
+
+        val myList2 = remember {
+            assembleAnnotatedList(suffix, emojis)
+        }
+
+        InLineIconRenderer(myList2, LocalTextStyle.current.copy(color = MaterialTheme.colors.onBackground, fontWeight = fontWeight).toSpanStyle())
+    }
+}
+
+fun assembleAnnotatedList(text: String, emojis: Map<String, String>): List<Renderable> {
+    return NIP30Parser().buildArray(text).map {
+        val url = emojis[it]
+        if (url != null) {
+            ImageUrlType(url)
+        } else {
+            TextType(it)
+        }
+    }
+}
+
+open class Renderable()
+class TextType(val text: String) : Renderable()
+class ImageUrlType(val url: String) : Renderable()
+
+@Composable
+fun ClickableInLineIconRenderer(wordsInOrder: List<Renderable>, style: SpanStyle, onClick: (Int) -> Unit) {
+    val inlineContent = wordsInOrder.mapIndexedNotNull { idx, value ->
+        if (value is ImageUrlType) {
+            Pair(
+                "inlineContent$idx",
+                InlineTextContent(
+                    Placeholder(
+                        width = 17.sp,
+                        height = 17.sp,
+                        placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+                    )
+                ) {
+                    AsyncImage(
+                        model = value.url,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize().padding(1.dp),
+                        colorFilter = ColorFilter.tint(style.color)
+                    )
+                }
+            )
+        } else {
+            null
+        }
+    }.associate { it.first to it.second }
+
+    val annotatedText = buildAnnotatedString {
+        wordsInOrder.forEachIndexed { idx, value ->
+            withStyle(
+                style
+            ) {
+                if (value is TextType) {
+                    append(value.text)
+                } else if (value is ImageUrlType) {
+                    appendInlineContent("inlineContent$idx", "[icon]")
+                }
+            }
+        }
+    }
+
+    val layoutResult = remember { mutableStateOf<TextLayoutResult?>(null) }
+    val pressIndicator = Modifier.pointerInput(onClick) {
+        detectTapGestures { pos ->
+            layoutResult.value?.let { layoutResult ->
+                onClick(layoutResult.getOffsetForPosition(pos))
+            }
+        }
+    }
+
+    BasicText(
+        text = annotatedText,
+        modifier = pressIndicator,
+        inlineContent = inlineContent,
+        onTextLayout = {
+            layoutResult.value = it
+        }
+    )
+}
+
+@Composable
+fun InLineIconRenderer(
+    wordsInOrder: List<Renderable>,
+    style: SpanStyle,
+    maxLines: Int = Int.MAX_VALUE,
+    overflow: TextOverflow = TextOverflow.Clip,
+    modifier: Modifier = Modifier
+) {
+    val inlineContent = wordsInOrder.mapIndexedNotNull { idx, value ->
+        if (value is ImageUrlType) {
+            Pair(
+                "inlineContent$idx",
+                InlineTextContent(
+                    Placeholder(
+                        width = 17.sp,
+                        height = 17.sp,
+                        placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+                    )
+                ) {
+                    AsyncImage(
+                        model = value.url,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize().padding(1.dp),
+                        colorFilter = ColorFilter.tint(style.color)
+                    )
+                }
+            )
+        } else {
+            null
+        }
+    }.associate { it.first to it.second }
+
+    val annotatedText = buildAnnotatedString {
+        wordsInOrder.forEachIndexed { idx, value ->
+            withStyle(
+                style
+            ) {
+                if (value is TextType) {
+                    append(value.text)
+                } else if (value is ImageUrlType) {
+                    appendInlineContent("inlineContent$idx", "[icon]")
+                }
+            }
+        }
+    }
+
+    Text(
+        text = annotatedText,
+        inlineContent = inlineContent,
+        maxLines = maxLines,
+        overflow = overflow,
+        modifier = modifier
     )
 }
