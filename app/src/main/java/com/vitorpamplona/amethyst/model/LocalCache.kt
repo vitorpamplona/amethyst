@@ -1,7 +1,6 @@
 package com.vitorpamplona.amethyst.model
 
 import android.util.Log
-import androidx.core.net.toUri
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.Amethyst
@@ -763,19 +762,18 @@ object LocalCache {
             note.addRelay(relay)
         }
 
-        val file = File(Amethyst.instance.applicationContext.externalCacheDir, "NIP95")
-
-        if (!file.exists()) {
-            try {
-                val cachePath = File(Amethyst.instance.applicationContext.externalCacheDir, "NIP95")
-                cachePath.mkdirs()
-                val stream = FileOutputStream(File(cachePath, event.id))
+        try {
+            val cachePath = File(Amethyst.instance.applicationContext.externalCacheDir, "NIP95")
+            cachePath.mkdirs()
+            val file = File(cachePath, event.id)
+            if (!file.exists()) {
+                val stream = FileOutputStream(file)
                 stream.write(event.decode())
                 stream.close()
-                Log.e("EventLogger", "Saved to disk as ${File(cachePath, event.id).toUri()}")
-            } catch (e: IOException) {
-                Log.e("FileSotrageEvent", "FileStorageEvent save to disk error: " + event.id, e)
+                // Log.i("FileStorageEvent", "Saved to disk as ${File(cachePath, event.id).toUri()}")
             }
+        } catch (e: IOException) {
+            Log.e("FileStorageEvent", "FileStorageEvent save to disk error: " + event.id, e)
         }
 
         // Already processed this event.

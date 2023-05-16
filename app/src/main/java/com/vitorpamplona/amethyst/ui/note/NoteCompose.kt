@@ -1657,45 +1657,47 @@ fun FileStorageHeaderDisplay(baseNote: Note) {
         }
     }
 
-    val noteState = fileNote?.live()?.metadata?.observeAsState()
-    val note = noteState?.value?.note
+    fileNote?.let { fileNote2 ->
+        val noteState by fileNote2.live().metadata.observeAsState()
+        val note = remember(noteState) { noteState?.note }
 
-    var content by remember { mutableStateOf<ZoomableContent?>(null) }
+        var content by remember { mutableStateOf<ZoomableContent?>(null) }
 
-    LaunchedEffect(key1 = eventHeader.id, key2 = noteState, key3 = note?.event) {
-        withContext(Dispatchers.IO) {
-            val uri = "nostr:" + baseNote.toNEvent()
-            val localDir = note?.idHex?.let { File(File(appContext.externalCacheDir, "NIP95"), it) }
-            val blurHash = eventHeader.blurhash()
-            val dimensions = eventHeader.dimensions()
-            val description = eventHeader.content
-            val mimeType = eventHeader.mimeType()
+        LaunchedEffect(key1 = eventHeader.id, key2 = noteState, key3 = note?.event) {
+            withContext(Dispatchers.IO) {
+                val uri = "nostr:" + baseNote.toNEvent()
+                val localDir = note?.idHex?.let { File(File(appContext.externalCacheDir, "NIP95"), it) }
+                val blurHash = eventHeader.blurhash()
+                val dimensions = eventHeader.dimensions()
+                val description = eventHeader.content
+                val mimeType = eventHeader.mimeType()
 
-            content = if (mimeType?.startsWith("image") == true) {
-                ZoomableLocalImage(
-                    localFile = localDir,
-                    mimeType = mimeType,
-                    description = description,
-                    blurhash = blurHash,
-                    dim = dimensions,
-                    isVerified = true,
-                    uri = uri
-                )
-            } else {
-                ZoomableLocalVideo(
-                    localFile = localDir,
-                    mimeType = mimeType,
-                    description = description,
-                    dim = dimensions,
-                    isVerified = true,
-                    uri = uri
-                )
+                content = if (mimeType?.startsWith("image") == true) {
+                    ZoomableLocalImage(
+                        localFile = localDir,
+                        mimeType = mimeType,
+                        description = description,
+                        blurhash = blurHash,
+                        dim = dimensions,
+                        isVerified = true,
+                        uri = uri
+                    )
+                } else {
+                    ZoomableLocalVideo(
+                        localFile = localDir,
+                        mimeType = mimeType,
+                        description = description,
+                        dim = dimensions,
+                        isVerified = true,
+                        uri = uri
+                    )
+                }
             }
         }
-    }
 
-    content?.let {
-        ZoomableContentView(content = it, listOf(it))
+        content?.let {
+            ZoomableContentView(content = it, listOf(it))
+        }
     }
 }
 
