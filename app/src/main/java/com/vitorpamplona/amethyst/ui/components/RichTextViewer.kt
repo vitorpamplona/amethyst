@@ -81,7 +81,8 @@ fun isMarkdown(content: String): Boolean {
         content.startsWith("# ") ||
         content.contains("##") ||
         content.contains("__") ||
-        content.contains("```")
+        content.contains("```") ||
+        content.contains("](")
 }
 
 @Composable
@@ -413,7 +414,7 @@ private fun RenderContentAsMarkdown(content: String, backgroundColor: Color) {
 
 private fun getDisplayNameFromNip19(nip19: Nip19.Return): String? {
     if (nip19.type == Nip19.Type.USER) {
-        return LocalCache.users[nip19.hex]?.bestDisplayName()
+        return LocalCache.users[nip19.hex]?.toBestDisplayName()
     } else if (nip19.type == Nip19.Type.NOTE) {
         return LocalCache.notes[nip19.hex]?.idDisplayNote()
     } else if (nip19.type == Nip19.Type.ADDRESS) {
