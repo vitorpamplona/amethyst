@@ -1941,7 +1941,7 @@ private fun RelayIconCompose(url: String) {
             .clickable(onClick = { uri.openUri("https://$url") })
     }
     val colorFilter = remember {
-        ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+        ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0.5f) })
     }
 
     Box(boxModifier) {
