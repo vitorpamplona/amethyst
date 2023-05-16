@@ -21,7 +21,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.AnnotatedString
@@ -427,8 +426,7 @@ fun ClickableInLineIconRenderer(wordsInOrder: List<Renderable>, style: SpanStyle
                     AsyncImage(
                         model = value.url,
                         contentDescription = null,
-                        modifier = Modifier.fillMaxSize().padding(1.dp),
-                        colorFilter = ColorFilter.tint(style.color)
+                        modifier = Modifier.fillMaxSize().padding(1.dp)
                     )
                 }
             )
@@ -492,8 +490,7 @@ fun InLineIconRenderer(
                     AsyncImage(
                         model = value.url,
                         contentDescription = null,
-                        modifier = Modifier.fillMaxSize().padding(1.dp),
-                        colorFilter = ColorFilter.tint(style.color)
+                        modifier = Modifier.fillMaxSize().padding(1.dp)
                     )
                 }
             )
