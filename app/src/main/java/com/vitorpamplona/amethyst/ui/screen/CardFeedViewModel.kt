@@ -59,7 +59,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
             if (newCards.isNotEmpty()) {
                 lastNotes = notes
                 lastAccount = (localFilter as? NotificationFeedFilter)?.account
-                updateFeed((oldNotesState.feed.value + newCards).distinctBy { it.id() }.sortedBy { it.createdAt() }.reversed())
+                updateFeed((oldNotesState.feed.value + newCards).distinctBy { it.id() }.sortedWith(compareBy({ it.createdAt() }, { it.id() })).reversed())
             }
         } else {
             val cards = convertToCard(notes)
@@ -129,7 +129,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
             val reactionsInCard = reactionsPerEvent[baseNote] ?: emptyList()
             val zapsInCard = zapsPerEvent[baseNote] ?: emptyMap()
 
-            val singleList = (boostsInCard + zapsInCard.values + reactionsInCard).sortedBy { it.createdAt() }.reversed()
+            val singleList = (boostsInCard + zapsInCard.values + reactionsInCard).sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
             singleList.chunked(50).map { chunk ->
                 MultiSetCard(
                     baseNote,
@@ -157,7 +157,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
             }
         }
 
-        return (multiCards + textNoteCards + userZaps).sortedBy { it.createdAt() }.reversed()
+        return (multiCards + textNoteCards + userZaps).sortedWith(compareBy({ it.createdAt() }, { it.id() })).reversed()
     }
 
     private fun updateFeed(notes: List<Card>) {
@@ -190,7 +190,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
             if (newCards.isNotEmpty()) {
                 lastNotes = lastNotesCopy + newItems
                 lastAccount = (localFilter as? NotificationFeedFilter)?.account
-                updateFeed((oldNotesState.feed.value + newCards).distinctBy { it.id() }.sortedBy { it.createdAt() }.reversed())
+                updateFeed((oldNotesState.feed.value + newCards).distinctBy { it.id() }.sortedWith(compareBy({ it.createdAt() }, { it.id() })).reversed())
             }
         } else {
             // Refresh Everything

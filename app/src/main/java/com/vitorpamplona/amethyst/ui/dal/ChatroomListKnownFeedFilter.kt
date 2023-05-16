@@ -19,20 +19,20 @@ object ChatroomListKnownFeedFilter : FeedFilter<Note>() {
         val privateMessages = messagingWith.mapNotNull { it ->
             privateChatrooms[it]
                 ?.roomMessages
-                ?.sortedBy { it.createdAt() }
+                ?.sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
                 ?.lastOrNull { it.event != null }
         }
 
         val publicChannels = account.followingChannels().map { it ->
             it.notes.values
                 .filter { account.isAcceptable(it) }
-                .sortedBy { it.createdAt() }
+                .sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
                 .lastOrNull { it.event != null }
         }
 
         return (privateMessages + publicChannels)
             .filterNotNull()
-            .sortedBy { it.createdAt() }
+            .sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
             .reversed()
     }
 }

@@ -28,7 +28,7 @@ object ChatroomFeedFilter : AdditiveFeedFilter<Note>() {
 
         return messages.roomMessages
             .filter { myAccount.isAcceptable(it) }
-            .sortedBy { it.createdAt() }
+            .sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
             .reversed()
     }
 
@@ -50,6 +50,6 @@ object ChatroomFeedFilter : AdditiveFeedFilter<Note>() {
     }
 
     override fun sort(collection: Set<Note>): List<Note> {
-        return collection.sortedBy { it.createdAt() }.reversed()
+        return collection.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
     }
 }

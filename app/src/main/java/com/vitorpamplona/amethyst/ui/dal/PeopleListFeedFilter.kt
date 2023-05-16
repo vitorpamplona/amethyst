@@ -19,7 +19,7 @@ object PeopleListFeedFilter : FeedFilter<Note>() {
             .toSet()
 
         return lists
-            .sortedBy { it.createdAt() }
+            .sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
             .reversed()
     }
 }

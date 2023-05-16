@@ -157,7 +157,7 @@ class SearchBarViewModel : ViewModel() {
 
         hashtagResults.value = findHashtags(searchValue)
         searchResults.value = LocalCache.findUsersStartingWith(searchValue)
-        searchResultsNotes.value = LocalCache.findNotesStartingWith(searchValue).sortedBy { it.createdAt() }.reversed()
+        searchResultsNotes.value = LocalCache.findNotesStartingWith(searchValue).sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
         searchResultsChannels.value = LocalCache.findChannelsStartingWith(searchValue)
     }
 

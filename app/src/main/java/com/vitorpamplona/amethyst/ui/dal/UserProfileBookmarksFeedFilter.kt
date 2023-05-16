@@ -25,7 +25,7 @@ object UserProfileBookmarksFeedFilter : FeedFilter<Note>() {
 
         return (notes + addresses)
             .filter { account.isAcceptable(it) }
-            .sortedBy { it.createdAt() }
+            .sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
             .reversed()
     }
 }
