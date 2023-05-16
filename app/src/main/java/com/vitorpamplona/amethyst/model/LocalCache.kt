@@ -12,8 +12,6 @@ import fr.acinq.secp256k1.Hex
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import nostr.postr.Persona
-import nostr.postr.bechToBytes
 import nostr.postr.toNpub
 import java.io.ByteArrayInputStream
 import java.io.File

@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.service
 
-import com.vitorpamplona.amethyst.model.decodePublicKey
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.nip19.Nip19
@@ -9,8 +8,6 @@ import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import fr.acinq.secp256k1.Hex
-import nostr.postr.bechToBytes
-import nostr.postr.toHex
 
 object NostrSearchEventOrUserDataSource : NostrDataSource("SingleEventFeed") {
     private var searchString: String? = null
