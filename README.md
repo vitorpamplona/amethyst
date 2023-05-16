@@ -15,7 +15,7 @@ Or get the latest APK from the [Releases Section](https://github.com/vitorpamplo
 
 # Current Features
 
-- [x] Event Builders / WebSocket Subscriptions (NIP-01, NIP-15)
+- [x] Event Builders / WebSocket Subscriptions (NIP-01)
 - [x] Home Feed
 - [x] Notifications Feed
 - [x] Global Feed
@@ -34,7 +34,8 @@ Or get the latest APK from the [Releases Section](https://github.com/vitorpamplo
 - [x] Lightning Tips
 - [x] Zaps (private, public, anon, non-zap) (NIP-57)
 - [x] URI Support (NIP-21)
-- [x] Event Deletion (NIP-09: like, boost, text notes and reports)
+- [x] Created_at Limits (NIP-22)
+- [x] Event Deletion (NIP-09)
 - [x] Identity Verification (NIP-05)
 - [x] Long-form Content (NIP-23)
 - [x] Parameterized Replaceable Events (NIP-33)
@@ -54,13 +55,18 @@ Or get the latest APK from the [Releases Section](https://github.com/vitorpamplo
 - [x] Markdown Support
 - [x] Relay Authentication (NIP-42)
 - [x] Content stored in relays themselves (NIP-95)
+- [x] Custom Emoji (NIP-30)
+- [x] Text Note References (NIP-27)
+- [x] Audio Tracks (zapstr.live) (NIP-TBD)
+- [x] Push Notifications (Zaps and Messages)
+- [x] Generic Tags (NIP-12)
+- [ ] Marketplace (NIP-15)
 - [ ] Image/Video Capture in the app
 - [ ] Local Database 
 - [ ] View Individual Reactions (Like, Boost, Zaps, Reports) per Post
 - [ ] Bookmarks, Pinned Posts, Muted Events (NIP-51)
 - [ ] Sensitive Content (NIP-36) 
 - [ ] Relay Pages (NIP-11)
-- [ ] Generic Tags (NIP-12)
 - [ ] Proof of Work in the Phone (NIP-13, NIP-20)
 - [ ] Events with a Subject (NIP-14)
 - [ ] Workspaces
@@ -69,8 +75,10 @@ Or get the latest APK from the [Releases Section](https://github.com/vitorpamplo
 - [ ] Relay List Metadata (NIP-65)
 - [ ] Signing Requests (NIP-46)
 - [ ] Delegated Event Signing (NIP-26)
-- [ ] Account Creation / Backup Guidance (NIP-06)
+- [ ] Account Creation / Backup Guidance
+- [ ] Mnemonic seed phrase (NIP-06)
 - [ ] Message Sent feedback (NIP-20)
+- [ ] OpenTimestamps Attestations (NIP-03)
 
 
 # Development Overview
