@@ -315,18 +315,18 @@ private fun StatusRow(
     val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
     val time = remember { baseNote.createdAt() ?: 0 }
 
-    Row() {
+    Row(verticalAlignment = Alignment.CenterVertically) {
         ChatTimeAgo(time)
         RelayBadges(baseNote)
         Spacer(modifier = Modifier.width(10.dp))
     }
 
-    Row() {
+    Row(verticalAlignment = Alignment.CenterVertically) {
         LikeReaction(baseNote, grayTint, accountViewModel)
         Spacer(modifier = Modifier.width(5.dp))
         ZapReaction(baseNote, grayTint, accountViewModel)
         Spacer(modifier = Modifier.width(5.dp))
-        ReplyReaction(baseNote, grayTint, accountViewModel, showCounter = false) {
+        ReplyReaction(baseNote, grayTint, accountViewModel, showCounter = false, iconSize = 16.dp) {
             onWantsToReply(baseNote)
         }
     }
@@ -479,17 +479,29 @@ private fun DrawAuthorInfo(
     }
 }
 
+data class RelayBadgesState(
+    val shouldDisplayExpandButton: Boolean,
+    val noteRelays: List<String>,
+    val noteRelaysSimple: List<String>
+)
+
 @Composable
 private fun RelayBadges(baseNote: Note) {
     val noteRelaysState by baseNote.live().relays.observeAsState()
-    val noteRelays = remember(noteRelaysState) { noteRelaysState?.note?.relays ?: emptySet() }
-    val noteRelaysSimple = remember(noteRelaysState) { noteRelaysState?.note?.relays?.take(3) ?: emptySet() }
+
+    val state: RelayBadgesState by remember(noteRelaysState) {
+        val newShouldDisplayExpandButton = (noteRelaysState?.note?.relays?.size ?: 0) > 3
+        val noteRelays = noteRelaysState?.note?.relays?.toList() ?: emptyList()
+        val noteRelaysSimple = noteRelaysState?.note?.relays?.take(3)?.toList() ?: emptyList()
+
+        mutableStateOf(RelayBadgesState(newShouldDisplayExpandButton, noteRelays, noteRelaysSimple))
+    }
 
     var expanded by remember { mutableStateOf(false) }
 
     val relaysToDisplay by remember {
         derivedStateOf {
-            if (expanded) noteRelays else noteRelaysSimple
+            if (expanded) state.noteRelays else state.noteRelaysSimple
         }
     }
 
@@ -497,19 +509,19 @@ private fun RelayBadges(baseNote: Note) {
         relaysToDisplay.forEach {
             RenderRelay(it)
         }
+    }
 
-        if (noteRelays.size > 3 && !expanded) {
-            IconButton(
-                modifier = Modifier.then(Modifier.size(15.dp)),
-                onClick = { expanded = true }
-            ) {
-                Icon(
-                    imageVector = Icons.Default.ChevronRight,
-                    null,
-                    modifier = Modifier.size(15.dp),
-                    tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                )
-            }
+    if (state.shouldDisplayExpandButton && !expanded) {
+        IconButton(
+            modifier = Modifier.then(Modifier.size(15.dp)),
+            onClick = { expanded = true }
+        ) {
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                null,
+                modifier = Modifier.size(15.dp),
+                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+            )
         }
     }
 }
@@ -526,24 +538,33 @@ private fun RenderRelay(dirtyUrl: String) {
         "https://$cleanUrl/favicon.ico"
     }
 
+    val clickableModifier = remember {
+        Modifier
+            .size(15.dp)
+            .padding(1.dp)
+            .clickable(onClick = { uri.openUri(website) })
+    }
+
+    val colorFilter = remember {
+        ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0.5f) })
+    }
+
+    val iconModifier = remember {
+        Modifier
+            .fillMaxSize(1f)
+            .clip(shape = CircleShape)
+    }
+
     Box(
-        remember {
-            Modifier
-                .size(15.dp)
-                .padding(1.dp)
-        }
+        modifier = clickableModifier
     ) {
         RobohashFallbackAsyncImage(
             robot = iconUrl,
             robotSize = 15.dp,
             model = iconUrl,
             contentDescription = stringResource(id = R.string.relay_icon),
-            colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }),
-            modifier = Modifier
-                .fillMaxSize(1f)
-                .clip(shape = CircleShape)
-                .background(MaterialTheme.colors.background)
-                .clickable(onClick = { uri.openUri(website) })
+            colorFilter = colorFilter,
+            modifier = iconModifier.background(MaterialTheme.colors.background)
         )
     }
 }
