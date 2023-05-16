@@ -281,6 +281,18 @@ object LocalCache {
         refreshObservers(note)
     }
 
+    private fun consume(event: PinListEvent) {
+        val note = getOrCreateAddressableNote(event.address())
+        val author = getOrCreateUser(event.pubKey)
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        note.loadEvent(event, author, emptyList())
+
+        refreshObservers(note)
+    }
+
     private fun consume(event: AudioTrackEvent) {
         val note = getOrCreateAddressableNote(event.address())
         val author = getOrCreateUser(event.pubKey)
@@ -961,6 +973,7 @@ object LocalCache {
                 is LongTextNoteEvent -> consume(event, relay)
                 is MetadataEvent -> consume(event)
                 is PrivateDmEvent -> consume(event, relay)
+                is PinListEvent -> consume(event)
                 is PeopleListEvent -> consume(event)
                 is ReactionEvent -> consume(event)
                 is RecommendRelayEvent -> consume(event)

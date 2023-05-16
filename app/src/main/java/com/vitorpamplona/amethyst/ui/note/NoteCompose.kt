@@ -40,6 +40,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.lightColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -51,6 +52,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -66,7 +68,6 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.capitalize
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -101,6 +102,7 @@ import com.vitorpamplona.amethyst.service.model.HighlightEvent
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.Participant
 import com.vitorpamplona.amethyst.service.model.PeopleListEvent
+import com.vitorpamplona.amethyst.service.model.PinListEvent
 import com.vitorpamplona.amethyst.service.model.PollNoteEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
@@ -383,6 +385,10 @@ fun NoteComposeInner(
 
                             is AudioTrackEvent -> {
                                 RenderAudioTrack(note, loggedIn, accountViewModel, navController)
+                            }
+
+                            is PinListEvent -> {
+                                RenderPinListEvent(noteState, backgroundColor, accountViewModel, navController)
                             }
 
                             is PrivateDmEvent -> {
@@ -874,6 +880,116 @@ private fun RenderRepost(
             accountViewModel = accountViewModel,
             navController = navController
         )
+    }
+}
+
+@Composable
+private fun RenderPinListEvent(
+    noteState: NoteState?,
+    backgroundColor: Color,
+    accountViewModel: AccountViewModel,
+    navController: NavController
+) {
+    val noteEvent = noteState?.note?.event as? PinListEvent ?: return
+
+    PinListHeader(noteState, backgroundColor, accountViewModel, navController)
+
+    ReactionsRow(noteState?.note, accountViewModel, navController)
+
+    Divider(
+        modifier = Modifier.padding(top = 10.dp),
+        thickness = 0.25.dp
+    )
+}
+
+@Composable
+fun PinListHeader(
+    noteState: NoteState?,
+    backgroundColor: Color,
+    accountViewModel: AccountViewModel,
+    navController: NavController
+) {
+    val note = remember(noteState) { noteState?.note } ?: return
+    val noteEvent = note.event as? PinListEvent ?: return
+
+    var pins by remember { mutableStateOf<List<String>>(noteEvent.pins()) }
+
+    var expanded by remember {
+        mutableStateOf(false)
+    }
+
+    val pinsToShow = if (expanded) {
+        pins
+    } else {
+        pins.take(3)
+    }
+
+    Text(
+        text = "#${noteEvent.dTag()}",
+        fontWeight = FontWeight.Bold,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(5.dp),
+        textAlign = TextAlign.Center
+    )
+
+    Box {
+        FlowRow(modifier = Modifier.padding(top = 5.dp)) {
+            pinsToShow.forEach { pin ->
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.PushPin,
+                        contentDescription = null,
+                        tint = MaterialTheme.colors.onBackground.copy(0.12f),
+                        modifier = Modifier.size(15.dp)
+                    )
+
+                    Spacer(modifier = Modifier.width(5.dp))
+
+                    TranslatableRichTextViewer(
+                        content = pin,
+                        canPreview = true,
+                        tags = emptyList(),
+                        backgroundColor = backgroundColor,
+                        accountViewModel = accountViewModel,
+                        navController = navController
+                    )
+                }
+            }
+        }
+
+        if (pins.size > 3 && !expanded) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                backgroundColor.copy(alpha = 0f),
+                                backgroundColor
+                            )
+                        )
+                    )
+            ) {
+                Button(
+                    modifier = Modifier.padding(top = 10.dp),
+                    onClick = { expanded = !expanded },
+                    shape = RoundedCornerShape(20.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        backgroundColor = MaterialTheme.colors.primary.copy(alpha = 0.32f)
+                            .compositeOver(MaterialTheme.colors.background)
+                    ),
+                    contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
+                ) {
+                    Text(text = stringResource(R.string.show_more), color = Color.White)
+                }
+            }
+        }
     }
 }
 
@@ -1618,9 +1734,11 @@ fun AudioTrackHeader(noteEvent: AudioTrackEvent, note: Note, loggedIn: User, nav
             participantUsers.forEach {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(top = 5.dp, start = 10.dp, end = 10.dp).clickable {
-                        navController.navigate("User/${it.second.pubkeyHex}")
-                    }
+                    modifier = Modifier
+                        .padding(top = 5.dp, start = 10.dp, end = 10.dp)
+                        .clickable {
+                            navController.navigate("User/${it.second.pubkeyHex}")
+                        }
                 ) {
                     UserPicture(it.second, loggedIn, 25.dp)
                     Spacer(Modifier.width(5.dp))

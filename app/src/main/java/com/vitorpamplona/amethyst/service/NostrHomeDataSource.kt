@@ -5,6 +5,7 @@ import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
 import com.vitorpamplona.amethyst.service.model.HighlightEvent
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
+import com.vitorpamplona.amethyst.service.model.PinListEvent
 import com.vitorpamplona.amethyst.service.model.PollNoteEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.service.relays.EOSEAccount
@@ -57,7 +58,7 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
         return TypedFilter(
             types = setOf(FeedType.FOLLOWS),
             filter = JsonFilter(
-                kinds = listOf(TextNoteEvent.kind, LongTextNoteEvent.kind, PollNoteEvent.kind, HighlightEvent.kind, AudioTrackEvent.kind),
+                kinds = listOf(TextNoteEvent.kind, LongTextNoteEvent.kind, PollNoteEvent.kind, HighlightEvent.kind, AudioTrackEvent.kind, PinListEvent.kind),
                 authors = followSet,
                 limit = 400,
                 since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultHomeFollowList)?.relayList
@@ -73,7 +74,7 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
         return TypedFilter(
             types = setOf(FeedType.FOLLOWS),
             filter = JsonFilter(
-                kinds = listOf(TextNoteEvent.kind, LongTextNoteEvent.kind, HighlightEvent.kind, AudioTrackEvent.kind),
+                kinds = listOf(TextNoteEvent.kind, LongTextNoteEvent.kind, HighlightEvent.kind, AudioTrackEvent.kind, PinListEvent.kind),
                 tags = mapOf(
                     "t" to hashToLoad.map {
                         listOf(it, it.lowercase(), it.uppercase(), it.capitalize())

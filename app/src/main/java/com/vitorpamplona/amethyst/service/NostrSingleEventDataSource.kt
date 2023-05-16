@@ -29,7 +29,7 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
                             ReactionEvent.kind, RepostEvent.kind, ReportEvent.kind,
                             LnZapEvent.kind, LnZapRequestEvent.kind,
                             BadgeAwardEvent.kind, BadgeDefinitionEvent.kind, BadgeProfilesEvent.kind,
-                            PollNoteEvent.kind, AudioTrackEvent.kind
+                            PollNoteEvent.kind, AudioTrackEvent.kind, PinListEvent.kind
                         ),
                         tags = mapOf("a" to listOf(aTag.toTag())),
                         since = it.lastReactionsDownloadTime
@@ -81,7 +81,8 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
                         LnZapRequestEvent.kind,
                         PollNoteEvent.kind,
                         HighlightEvent.kind,
-                        AudioTrackEvent.kind
+                        AudioTrackEvent.kind,
+                        PinListEvent.kind
                     ),
                     tags = mapOf("e" to listOf(it.idHex)),
                     since = it.lastReactionsDownloadTime
@@ -120,7 +121,7 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
                         BadgeDefinitionEvent.kind, BadgeAwardEvent.kind, BadgeProfilesEvent.kind,
                         PrivateDmEvent.kind,
                         FileHeaderEvent.kind, FileStorageEvent.kind, FileStorageHeaderEvent.kind,
-                        HighlightEvent.kind, AudioTrackEvent.kind
+                        HighlightEvent.kind, AudioTrackEvent.kind, PinListEvent.kind
                     ),
                     ids = interestedEvents.toList()
                 )
