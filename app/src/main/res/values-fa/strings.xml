@@ -139,8 +139,8 @@
     <string name="key_is_required">کلید الزامیست</string>
     <string name="login">ورود</string>
     <string name="generate_a_new_key">ساختن جفت کلید جدید</string>
-    <string name="loading_feed">در حال بارگذاری خبرنامه</string>
-    <string name="error_loading_replies">" :خطا در بارگذاری پاسخ ها"</string>
+    <string name="loading_feed">در حال بارگیری خبرنامه</string>
+    <string name="error_loading_replies">" :خطا در بارگیری پاسخ ها"</string>
     <string name="try_again">دوباره تلاش کنید</string>
     <string name="feed_is_empty">خبرنامه خالیست</string>
     <string name="refresh">تازه سازی</string>
@@ -217,7 +217,7 @@
     <string name="account_switch_pubkey_only">فقط خواندن، کلید خصوصی ندارد</string>
     <string name="back">بازگشت</string>
     <string name="quick_action_select">انتخاب</string>
-    <string name="quick_action_share_browser_link">اشتراک گذاری لینک پیماینده</string>
+    <string name="quick_action_share_browser_link">اشتراک گذاری لینک مرورگر</string>
     <string name="quick_action_share">اشتراک گذاری</string>
     <string name="quick_action_copy_user_id">شناسه نویسنده</string>
     <string name="quick_action_copy_note_id">شناسه نوت</string>
