@@ -131,6 +131,8 @@ fun SearchScreen(
 }
 
 class SearchBarViewModel : ViewModel() {
+    var account: Account? = null
+
     var searchValue by mutableStateOf("")
     val searchResults = mutableStateOf<List<User>>(emptyList())
     val searchResultsNotes = mutableStateOf<List<Note>>(emptyList())
@@ -156,7 +158,7 @@ class SearchBarViewModel : ViewModel() {
         }
 
         hashtagResults.value = findHashtags(searchValue)
-        searchResults.value = LocalCache.findUsersStartingWith(searchValue)
+        searchResults.value = LocalCache.findUsersStartingWith(searchValue).sortedWith(compareBy({ account?.isFollowing(it) }, { it.toBestDisplayName() })).reversed()
         searchResultsNotes.value = LocalCache.findNotesStartingWith(searchValue).sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
         searchResultsChannels.value = LocalCache.findChannelsStartingWith(searchValue)
     }
@@ -185,6 +187,7 @@ class SearchBarViewModel : ViewModel() {
 @Composable
 private fun SearchBar(accountViewModel: AccountViewModel, navController: NavController) {
     val searchBarViewModel: SearchBarViewModel = viewModel()
+    searchBarViewModel.account = accountViewModel.accountLiveData.value?.account
 
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
