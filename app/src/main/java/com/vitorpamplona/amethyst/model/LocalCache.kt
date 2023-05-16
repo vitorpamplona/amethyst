@@ -770,7 +770,7 @@ object LocalCache {
                 val stream = FileOutputStream(file)
                 stream.write(event.decode())
                 stream.close()
-                // Log.i("FileStorageEvent", "Saved to disk as ${File(cachePath, event.id).toUri()}")
+                Log.i("FileStorageEvent", "NIP95 File received from ${relay?.url} and saved to disk as $file")
             }
         } catch (e: IOException) {
             Log.e("FileStorageEvent", "FileStorageEvent save to disk error: " + event.id, e)
