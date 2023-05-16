@@ -5,12 +5,15 @@ import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.service.model.*
+import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.BundledInsert
 import fr.acinq.secp256k1.Hex
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import nostr.postr.Persona
+import nostr.postr.bechToBytes
 import nostr.postr.toNpub
 import java.io.ByteArrayInputStream
 import java.io.File
@@ -833,6 +836,12 @@ object LocalCache {
     }
 
     fun findUsersStartingWith(username: String): List<User> {
+        val key = decodePublicKeyAsHexOrNull(username)
+
+        if (key != null && users[key] != null) {
+            return listOfNotNull(users[key])
+        }
+
         return users.values.filter {
             (it.anyNameStartsWith(username)) ||
                 it.pubkeyHex.startsWith(username, true) ||
@@ -841,6 +850,16 @@ object LocalCache {
     }
 
     fun findNotesStartingWith(text: String): List<Note> {
+        val key = try {
+            Nip19.uriToRoute(text)?.hex ?: Hex.decode(text).toHexKey()
+        } catch (e: Exception) {
+            null
+        }
+
+        if (key != null && (notes[key] ?: addressables[key]) != null) {
+            return listOfNotNull(notes[key] ?: addressables[key])
+        }
+
         return notes.values.filter {
             (it.event is TextNoteEvent && it.event?.content()?.contains(text, true) ?: false) ||
                 (it.event is PollNoteEvent && it.event?.content()?.contains(text, true) ?: false) ||
@@ -856,6 +875,16 @@ object LocalCache {
     }
 
     fun findChannelsStartingWith(text: String): List<Channel> {
+        val key = try {
+            Nip19.uriToRoute(text)?.hex ?: Hex.decode(text).toHexKey()
+        } catch (e: Exception) {
+            null
+        }
+
+        if (key != null && channels[key] != null) {
+            return listOfNotNull(channels[key])
+        }
+
         return channels.values.filter {
             it.anyNameStartsWith(text) ||
                 it.idHex.startsWith(text, true) ||

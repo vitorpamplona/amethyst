@@ -50,6 +50,23 @@ fun decodePublicKey(key: String): ByteArray {
     }
 }
 
+fun decodePublicKeyAsHexOrNull(key: String): HexKey? {
+    return try {
+        val parsed = Nip19.uriToRoute(key)
+        val pubKeyParsed = parsed?.hex
+
+        if (key.startsWith("nsec")) {
+            Persona(privKey = key.bechToBytes()).pubKey.toHexKey()
+        } else if (pubKeyParsed != null) {
+            pubKeyParsed
+        } else {
+            Hex.decode(key).toHexKey()
+        }
+    } catch (e: Exception) {
+        null
+    }
+}
+
 data class DirtyKeyInfo(val key: Nip19.Return, val restOfWord: String)
 
 fun parseDirtyWordForKey(mightBeAKey: String): DirtyKeyInfo? {
