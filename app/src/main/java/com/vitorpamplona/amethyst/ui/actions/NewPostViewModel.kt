@@ -214,8 +214,8 @@ open class NewPostViewModel : ViewModel() {
             userSuggestionAnchor = it.selection
             userSuggestionsMainMessage = true
             if (lastWord.startsWith("@") && lastWord.length > 2) {
+                NostrSearchEventOrUserDataSource.search(lastWord.removePrefix("@"))
                 userSuggestions = LocalCache.findUsersStartingWith(lastWord.removePrefix("@")).sortedWith(compareBy({ account?.isFollowing(it) }, { it.toBestDisplayName() })).reversed()
-                println("AAAA" + lastWord.removePrefix("@") + userSuggestions.size)
             } else {
                 NostrSearchEventOrUserDataSource.clear()
                 userSuggestions = emptyList()
