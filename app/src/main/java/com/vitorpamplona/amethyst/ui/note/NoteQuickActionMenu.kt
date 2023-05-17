@@ -217,10 +217,11 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
 
                         VerticalDivider(primaryLight)
                         NoteQuickActionItem(
-                            icon = ImageVector.vectorResource(id = R.drawable.text_select_move_forward_character),
-                            label = stringResource(R.string.quick_action_select)
+                            icon = ImageVector.vectorResource(id = R.drawable.relays),
+                            label = stringResource(R.string.broadcast)
                         ) {
-                            showSelectTextDialog = true
+                            accountViewModel.broadcast(note)
+                            // showSelectTextDialog = true
                             onDismiss()
                         }
                         VerticalDivider(primaryLight)

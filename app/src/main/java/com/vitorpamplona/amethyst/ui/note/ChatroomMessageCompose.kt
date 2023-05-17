@@ -90,12 +90,12 @@ fun ChatroomMessageCompose(
     val loggedIn = remember(accountState) { accountState?.account?.userProfile() } ?: return
 
     val noteState by baseNote.live().metadata.observeAsState()
-    val note = remember(noteState) { noteState?.note }
+    val note = remember(noteState) { noteState?.note } ?: return
 
     val noteReportsState by baseNote.live().reports.observeAsState()
     val noteForReports = remember(noteReportsState) { noteReportsState?.note } ?: return
 
-    val noteEvent = note?.event
+    val noteEvent = remember(noteState) { note.event }
 
     var popupExpanded by remember { mutableStateOf(false) }
 
@@ -107,7 +107,7 @@ fun ChatroomMessageCompose(
             )
         )
 
-        note?.let {
+        note.let {
             NoteQuickActionMenu(it, popupExpanded, { popupExpanded = false }, accountViewModel)
         }
     } else if (account.isHidden(noteForReports.author!!)) {
@@ -209,7 +209,11 @@ fun ChatroomMessageCompose(
                             shape = shape,
                             modifier = Modifier
                                 .combinedClickable(
-                                    onClick = { },
+                                    onClick = {
+                                        if (noteEvent is ChannelCreateEvent) {
+                                            navController.navigate("Channel/${note.idHex}")
+                                        }
+                                    },
                                     onLongClick = { popupExpanded = true }
                                 )
                         ) {
@@ -228,12 +232,14 @@ fun ChatroomMessageCompose(
                                         alignment,
                                         navController
                                     )
+                                } else {
+                                    Spacer(modifier = Modifier.height(5.dp))
                                 }
 
                                 val replyTo = note.replyTo
                                 if (!innerQuote && !replyTo.isNullOrEmpty()) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        replyTo.toSet().mapIndexed { _, note ->
+                                        replyTo.lastOrNull()?.let { note ->
                                             ChatroomMessageCompose(
                                                 note,
                                                 null,

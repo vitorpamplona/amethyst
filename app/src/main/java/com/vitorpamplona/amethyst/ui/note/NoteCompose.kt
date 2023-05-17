@@ -196,13 +196,13 @@ fun NoteComposeInner(
     val loggedIn = remember(accountState) { accountState?.account?.userProfile() } ?: return
 
     val noteState by baseNote.live().metadata.observeAsState()
-    val note = remember(noteState) { noteState?.note }
+    val note = remember(noteState) { noteState?.note } ?: return
 
     val noteReportsState by baseNote.live().reports.observeAsState()
     val noteForReports = remember(noteReportsState) { noteReportsState?.note } ?: return
 
-    val noteEvent = note?.event
-    val baseChannel = note?.channel()
+    val noteEvent = remember(noteState) { note.event }
+    val baseChannel = remember(noteState) { note.channel() }
 
     var popupExpanded by remember { mutableStateOf(false) }
 
@@ -217,7 +217,7 @@ fun NoteComposeInner(
             isBoostedNote
         )
 
-        note?.let {
+        note.let {
             NoteQuickActionMenu(it, popupExpanded, { popupExpanded = false }, accountViewModel)
         }
     } else if (account.isHidden(noteForReports.author!!)) {

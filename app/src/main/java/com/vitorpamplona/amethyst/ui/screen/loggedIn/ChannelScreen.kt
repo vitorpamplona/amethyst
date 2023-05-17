@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.widget.Toast
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -253,7 +254,11 @@ fun ChannelHeader(baseChannel: Channel, account: Account, navController: NavCont
 
     val context = LocalContext.current.applicationContext
 
-    Column() {
+    Column(
+        Modifier.clickable {
+            navController.navigate("Channel/${baseChannel.idHex}")
+        }
+    ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RobohashAsyncImageProxy(
