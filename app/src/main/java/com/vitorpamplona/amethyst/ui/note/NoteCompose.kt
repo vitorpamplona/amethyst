@@ -2183,13 +2183,15 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
     val actContext = LocalContext.current
     var reportDialogShowing by remember { mutableStateOf(false) }
 
+    val bookmarkState by accountViewModel.userProfile().live().bookmarks.observeAsState()
+
     var state by remember {
         mutableStateOf<DropDownParams>(
             DropDownParams(false, false, false, false)
         )
     }
 
-    LaunchedEffect(key1 = note) {
+    LaunchedEffect(key1 = note, key2 = bookmarkState) {
         withContext(Dispatchers.IO) {
             state = DropDownParams(
                 accountViewModel.isFollowing(note.author),
