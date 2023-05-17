@@ -13,7 +13,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -35,34 +34,32 @@ import com.patrykandpatrick.vico.compose.style.ProvideChartStyle
 import com.patrykandpatrick.vico.core.DefaultAlpha
 import com.patrykandpatrick.vico.core.axis.AxisPosition
 import com.patrykandpatrick.vico.core.axis.formatter.AxisValueFormatter
-import com.patrykandpatrick.vico.core.chart.composed.ComposedChartEntryModel
 import com.patrykandpatrick.vico.core.chart.composed.plus
 import com.patrykandpatrick.vico.core.chart.line.LineChart
 import com.patrykandpatrick.vico.core.chart.values.ChartValues
 import com.patrykandpatrick.vico.core.component.shape.shader.DynamicShaders
-import com.patrykandpatrick.vico.core.entry.ChartEntryModel
-import com.patrykandpatrick.vico.core.entry.ChartEntryModelProducer
 import com.patrykandpatrick.vico.core.entry.composed.plus
-import com.patrykandpatrick.vico.core.entry.entryOf
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.note.OneGiga
+import com.vitorpamplona.amethyst.ui.note.OneKilo
+import com.vitorpamplona.amethyst.ui.note.OneMega
 import com.vitorpamplona.amethyst.ui.note.UserReactionsRow
 import com.vitorpamplona.amethyst.ui.note.UserReactionsViewModel
-import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.note.showCount
 import com.vitorpamplona.amethyst.ui.screen.CardFeedView
 import com.vitorpamplona.amethyst.ui.screen.NotificationViewModel
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
-import kotlinx.coroutines.launch
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
+import java.math.BigDecimal
+import java.math.RoundingMode
 import kotlin.math.roundToInt
 
 @Composable
 fun NotificationScreen(
     notifFeedViewModel: NotificationViewModel,
+    userReactionsStatsModel: UserReactionsViewModel,
     accountViewModel: AccountViewModel,
     navController: NavController,
     scrollToTop: Boolean = false
@@ -100,7 +97,7 @@ fun NotificationScreen(
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            SummaryBar(accountViewModel, navController)
+            SummaryBar(userReactionsStatsModel, accountViewModel, navController)
             CardFeedView(
                 viewModel = notifFeedViewModel,
                 accountViewModel = accountViewModel,
@@ -114,47 +111,9 @@ fun NotificationScreen(
 }
 
 @Composable
-fun SummaryBar(accountViewModel: AccountViewModel, navController: NavController) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val accountUser = remember(accountState) { accountState?.account?.userProfile() } ?: return
-
-    val model: UserReactionsViewModel = viewModel()
-
-    var chartModel by remember(accountState) { mutableStateOf<ComposedChartEntryModel<ChartEntryModel>?>(null) }
-    var axisLabels by remember(accountState) { mutableStateOf<List<String>>(emptyList()) }
-
-    val scope = rememberCoroutineScope()
-
+fun SummaryBar(model: UserReactionsViewModel, accountViewModel: AccountViewModel, navController: NavController) {
     var showChart by remember {
         mutableStateOf(false)
-    }
-
-    LaunchedEffect(accountUser.pubkeyHex) {
-        scope.launch {
-            model.load(accountUser)
-            model.refreshSuspended()
-            val day = 24 * 60 * 60L
-            val now = LocalDateTime.now()
-            val displayAxisFormatter = DateTimeFormatter.ofPattern("EEE")
-
-            val dataAxisLabels = listOf(6, 5, 4, 3, 2, 1, 0).map { model.sdf.format(now.minusSeconds(day * it)) }
-            axisLabels = listOf(6, 5, 4, 3, 2, 1, 0).map { displayAxisFormatter.format(now.minusSeconds(day * it)) }
-
-            val listOfCountCurves = listOf(
-                dataAxisLabels.mapIndexed { index, dateStr -> entryOf(index, model.replies[dateStr]?.toFloat() ?: 0f) },
-                dataAxisLabels.mapIndexed { index, dateStr -> entryOf(index, model.boosts[dateStr]?.toFloat() ?: 0f) },
-                dataAxisLabels.mapIndexed { index, dateStr -> entryOf(index, model.reactions[dateStr]?.toFloat() ?: 0f) }
-            )
-
-            val listOfValueCurves = listOf(
-                dataAxisLabels.mapIndexed { index, dateStr -> entryOf(index, model.zaps[dateStr]?.toFloat() ?: 0f) }
-            )
-
-            val chartEntryModelProducer1 = ChartEntryModelProducer(listOfCountCurves).getModel()
-            val chartEntryModelProducer2 = ChartEntryModelProducer(listOfValueCurves).getModel()
-
-            chartModel = chartEntryModelProducer1.plus(chartEntryModelProducer2)
-        }
     }
 
     UserReactionsRow(model, accountViewModel, navController) {
@@ -197,9 +156,13 @@ fun SummaryBar(accountViewModel: AccountViewModel, navController: NavController)
             targetVerticalAxisPosition = AxisPosition.Vertical.End
         )
 
-    chartModel?.let {
+    model.chartModel?.let {
         if (showChart) {
-            Row(modifier = Modifier.padding(vertical = 10.dp, horizontal = 20.dp).clickable(onClick = { showChart = !showChart })) {
+            Row(
+                modifier = Modifier
+                    .padding(vertical = 10.dp, horizontal = 20.dp)
+                    .clickable(onClick = { showChart = !showChart })
+            ) {
                 ProvideChartStyle() {
                     Chart(
                         chart = remember(lineChartCount, lineChartZaps) {
@@ -213,7 +176,7 @@ fun SummaryBar(accountViewModel: AccountViewModel, navController: NavController)
                             valueFormatter = AmountAxisValueFormatter()
                         ),
                         bottomAxis = bottomAxis(
-                            valueFormatter = LabelValueFormatter(axisLabels)
+                            valueFormatter = LabelValueFormatter(model.axisLabels)
                         )
                     )
                 }
@@ -249,6 +212,18 @@ class AmountAxisValueFormatter() : AxisValueFormatter<AxisPosition.Vertical.End>
         value: Float,
         chartValues: ChartValues
     ): String {
-        return showAmount(value.toBigDecimal())
+        return showAmountAxis(value.toBigDecimal())
+    }
+}
+
+fun showAmountAxis(amount: BigDecimal?): String {
+    if (amount == null) return ""
+    if (amount.abs() < BigDecimal(0.01)) return ""
+
+    return when {
+        amount >= OneGiga -> "%.0fG".format(amount.div(OneGiga).setScale(0, RoundingMode.HALF_UP))
+        amount >= OneMega -> "%.0fM".format(amount.div(OneMega).setScale(0, RoundingMode.HALF_UP))
+        amount >= OneKilo -> "%.0fk".format(amount.div(OneKilo).setScale(0, RoundingMode.HALF_UP))
+        else -> "%.0f".format(amount)
     }
 }
