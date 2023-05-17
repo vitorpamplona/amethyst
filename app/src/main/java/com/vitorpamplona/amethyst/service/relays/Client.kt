@@ -70,7 +70,7 @@ object Client : RelayPool.Listener {
         if (relay == null) {
             RelayPool.send(signedEvent)
         } else {
-            val useConnectedRelayIfPresent = relays.filter { it.url == relay }
+            val useConnectedRelayIfPresent = RelayPool.getRelays(relay)
 
             if (useConnectedRelayIfPresent.isNotEmpty()) {
                 useConnectedRelayIfPresent.forEach {
@@ -103,7 +103,7 @@ object Client : RelayPool.Listener {
             onConnected(relay)
 
             GlobalScope.launch(Dispatchers.IO) {
-                delay(10000) // waits for a reply
+                delay(60000) // waits for a reply
                 relay.disconnect()
                 RelayPool.removeRelay(relay)
 

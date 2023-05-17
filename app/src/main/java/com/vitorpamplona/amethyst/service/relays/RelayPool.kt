@@ -30,6 +30,10 @@ object RelayPool : Relay.Listener {
         return relays.firstOrNull() { it.url == url }
     }
 
+    fun getRelays(url: String): List<Relay> {
+        return relays.filter { it.url == url }
+    }
+
     fun loadRelays(relayList: List<Relay>) {
         if (!relayList.isNullOrEmpty()) {
             relayList.forEach { addRelay(it) }
