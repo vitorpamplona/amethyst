@@ -43,6 +43,7 @@ class TextNoteEvent(
             }
             findHashtags(msg).forEach {
                 tags.add(listOf("t", it))
+                tags.add(listOf("t", it.lowercase()))
             }
             extraTags?.forEach {
                 tags.add(listOf("t", it))
