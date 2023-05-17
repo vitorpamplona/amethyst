@@ -110,6 +110,8 @@ fun ChatroomMessageCompose(
         note?.let {
             NoteQuickActionMenu(it, popupExpanded, { popupExpanded = false }, accountViewModel)
         }
+    } else if (account.isHidden(noteForReports.author!!)) {
+        // Does nothing
     } else {
         var showHiddenNote by remember { mutableStateOf(false) }
         var isAcceptableAndCanPreview by remember { mutableStateOf(Pair(true, true)) }
@@ -131,16 +133,14 @@ fun ChatroomMessageCompose(
         }
 
         if (!isAcceptableAndCanPreview.first && !showHiddenNote) {
-            if (!account.isHidden(noteForReports.author!!)) {
-                HiddenNote(
-                    account.getRelevantReports(noteForReports),
-                    account.userProfile(),
-                    Modifier,
-                    innerQuote,
-                    navController,
-                    onClick = { showHiddenNote = true }
-                )
-            }
+            HiddenNote(
+                account.getRelevantReports(noteForReports),
+                account.userProfile(),
+                Modifier,
+                innerQuote,
+                navController,
+                onClick = { showHiddenNote = true }
+            )
         } else {
             val backgroundBubbleColor: Color
             val alignment: Arrangement.Horizontal

@@ -220,6 +220,8 @@ fun NoteComposeInner(
         note?.let {
             NoteQuickActionMenu(it, popupExpanded, { popupExpanded = false }, accountViewModel)
         }
+    } else if (account.isHidden(noteForReports.author!!)) {
+        // Does nothing
     } else {
         var showHiddenNote by remember { mutableStateOf(false) }
         var isAcceptableAndCanPreview by remember { mutableStateOf(Pair(true, true)) }
@@ -241,16 +243,14 @@ fun NoteComposeInner(
         }
 
         if (!isAcceptableAndCanPreview.first && !showHiddenNote) {
-            if (!account.isHidden(noteForReports.author!!)) {
-                HiddenNote(
-                    account.getRelevantReports(noteForReports),
-                    account.userProfile(),
-                    modifier,
-                    isBoostedNote,
-                    navController,
-                    onClick = { showHiddenNote = true }
-                )
-            }
+            HiddenNote(
+                account.getRelevantReports(noteForReports),
+                account.userProfile(),
+                modifier,
+                isBoostedNote,
+                navController,
+                onClick = { showHiddenNote = true }
+            )
         } else if ((noteEvent is ChannelCreateEvent || noteEvent is ChannelMetadataEvent) && baseChannel != null) {
             ChannelHeader(baseChannel = baseChannel, account = account, navController = navController)
         } else if (noteEvent is BadgeDefinitionEvent) {
