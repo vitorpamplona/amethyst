@@ -7,9 +7,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.Icon
+import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -52,13 +54,25 @@ import java.time.format.DateTimeFormatter
 
 @Composable
 fun UserReactionsRow(model: UserReactionsViewModel, accountViewModel: AccountViewModel, navController: NavController, onClick: () -> Unit) {
-    Row(verticalAlignment = CenterVertically, modifier = Modifier.clickable(onClick = onClick).padding(10.dp)) {
-        Text(
-            text = "Today",
-            fontWeight = FontWeight.Bold,
-            fontSize = 18.sp,
-            modifier = Modifier.width(65.dp)
-        )
+    Row(
+        verticalAlignment = CenterVertically,
+        modifier = Modifier
+            .clickable(onClick = onClick)
+            .padding(10.dp)
+    ) {
+        Row(verticalAlignment = CenterVertically, modifier = Modifier.width(68.dp)) {
+            Text(
+                text = stringResource(id = R.string.today),
+                fontWeight = FontWeight.Bold
+            )
+
+            Icon(
+                imageVector = Icons.Default.ExpandMore,
+                null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+            )
+        }
 
         Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
             UserReplyReaction(model.replies[model.today])
