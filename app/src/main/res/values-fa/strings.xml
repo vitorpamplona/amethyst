@@ -3,11 +3,11 @@
     <string name="app_name_debug" translatable="false">Amethyst Debug</string>
     <string name="point_to_the_qr_code"> به QRکد اشاره کنید</string>
     <string name="show_qr">QR کد را نشان بده </string>
-    <string name="profile_image">تصویر پروفایل</string>
+    <string name="profile_image">تصویر نمایه</string>
     <string name="scan_qr">اسکن QRکد </string>
     <string name="show_anyway">بهر حال نشان بده</string>
-    <string name="post_was_flagged_as_inappropriate_by">این نوت توسط این افراد نامناسب اعلام شده</string>
-    <string name="post_not_found">این نوت یافت نشد</string>
+    <string name="post_was_flagged_as_inappropriate_by">این یادداشت توسط این افراد نامناسب اعلام شده</string>
+    <string name="post_not_found">این یادداشت یافت نشد</string>
     <string name="channel_image">تصویر کانال</string>
     <string name="referenced_event_not_found">رویداد مربوطه یافت نشد</string>
     <string name="could_not_decrypt_the_message">قادر به رمزگشایی پیام نیست</string>
@@ -21,7 +21,7 @@
     <string name="unknown_author">نویسنده ناشناس</string>
     <string name="copy_text">کپی متن</string>
     <string name="copy_user_pubkey">کپی شناسه نویسنده</string>
-    <string name="copy_note_id">کپی شناسه نوت</string>
+    <string name="copy_note_id">کپی شناسه یادداشت</string>
     <string name="broadcast">انتشار</string>
     <string name="request_deletion">درخواست حذف/string></string>
     <string name="block_hide_user">بلاک/پنهان کردن کاربر</string>
@@ -30,8 +30,8 @@
     <string name="report_explicit_content">گزارش محتوای نامناسب</string>
     <string name="report_illegal_behaviour">گزارش رفتار ناهنجار</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">با کلید خصوصی وارد شوید تا بتوانید پاسخ دهید</string>
-    <string name="login_with_a_private_key_to_be_able_to_boost_posts">با کلید خصوصی وارد شوید تا بتوانید نوت را بازارسال کنید</string>
-    <string name="login_with_a_private_key_to_like_posts">با کلید خصوصی وارد شوید تا بتوانید نوت را لایک کنید</string>
+    <string name="login_with_a_private_key_to_be_able_to_boost_posts">با کلید خصوصی وارد شوید تا بتوانید یادداشت را بازنشر کنید</string>
+    <string name="login_with_a_private_key_to_like_posts">با کلید خصوصی وارد شوید تا بتوانید یادداشت را لایک کنید</string>
     <string name="no_zap_amount_setup_long_press_to_change">مقداری برای زپ تعیین نشده. نگه دارید تا تغییر دهید</string>
     <string name="login_with_a_private_key_to_be_able_to_send_zaps">با کلید خصوصی وارد شوید تا بتوانید زپ کنید</string>
     <string name="zaps">زپ</string>
@@ -51,7 +51,7 @@
     <string name="security_filters">فیلترهای ایمنی</string>
     <string name="log_out">خروج</string>
     <string name="show_more">ادامه</string>
-    <string name="lightning_invoice">اینویس لایتنینگ</string>
+    <string name="lightning_invoice">صورتحساب لایتنینگ</string>
     <string name="pay">پرداخت</string>
     <string name="lightning_tips">انعام لایتنینگ</string>
     <string name="note_to_receiver">یادداشت برای گیرنده</string>
@@ -73,7 +73,7 @@
     <string name="cancel">لغو</string>
     <string name="failed_to_upload_the_image">تصویر بارگذاری نشد</string>
     <string name="relay_address">آدرس رله</string>
-    <string name="posts">نوت ها</string>
+    <string name="posts">یادداشت ها</string>
     <string name="bytes">بایت</string>
     <string name="errors">خطاها</string>
     <string name="home_feed">خبرنامه اصلی</string>
@@ -98,7 +98,7 @@
     <string name="uploading">...در حال بارگذاری</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">این کاربر آدرس لایتنینگ برای دریافت ساتوشی تنظیم نکرده است</string>
     <string name="reply_here">"...اینجا پاسخ دهید "</string>
-    <string name="copies_the_note_id_to_the_clipboard_for_sharing">شناسه نوت را برای اشتراک گذاری در کلیپبورد ذخیره می کند </string>
+    <string name="copies_the_note_id_to_the_clipboard_for_sharing">شناسه یادداشت را برای اشتراک گذاری در کلیپبورد ذخیره می کند </string>
     <string name="copy_channel_id_note_to_the_clipboard">ذخیره شناسه کانال در کلیپبورد</string>
     <string name="edits_the_channel_metadata">متادیتای کانال را ذخیره می کند</string>
     <string name="join">پیوستن</string>
@@ -107,7 +107,7 @@
     <string name="blocked_users">کاربران بلاک شده</string>
     <string name="new_threads">رشته جدید</string>
     <string name="conversations">گفتگوها</string>
-    <string name="notes">نوت ها</string>
+    <string name="notes">یادداشت ها</string>
     <string name="replies">پاسخ ها</string>
     <string name="follows">"دنبال شوندگان"</string>
     <string name="reports">"گزارش ها"</string>
@@ -155,7 +155,7 @@
     <string name="channel_created">کانال ساخته شد</string>
     <string name="channel_information_changed_to">"اطلاعات کانال تغییر کرد به"</string>
     <string name="public_chat">گفتگوی عمومی</string>
-    <string name="posts_received">نوت های دریافت شده</string>
+    <string name="posts_received">یادداشت های دریافت شده</string>
     <string name="remove">بیرون کردن</string>
     <string name="sats" translatable="false">ساتوشی</string>
     <string name="translations_auto">خودکار</string>
@@ -195,9 +195,9 @@
     <string name="badge_award_image_for">"تصویر مدال پاداش برای %1$s"</string>
     <string name="new_badge_award_notif">یک مدال پاداش دریافت کردید</string>
     <string name="award_granted_to">مدال پاداش داده شد به</string>
-    <string name="copied_note_text_to_clipboard">نوت در کلیپبورد کپی شد</string>
+    <string name="copied_note_text_to_clipboard">یادداشت در کلیپبورد کپی شد</string>
     <string name="copied_user_id_to_clipboard" tools:ignore="Typos">@npubنویسنده در کلیپبورد کپی شد </string>
-    <string name="copied_note_id_to_clipboard" tools:ignore="Typos">(@note1)شناسه نوت در کلیپبورد کپی شد</string>
+    <string name="copied_note_id_to_clipboard" tools:ignore="Typos">(@note1)شناسه یادداشت در کلیپبورد کپی شد</string>
     <string name="select_text_dialog_top">انتخاب متن</string>
     <string name="github" translatable="false">Github Gist w/ Proof</string>
     <string name="telegram" translatable="false">Telegram</string>
@@ -220,13 +220,13 @@
     <string name="quick_action_share_browser_link">اشتراک گذاری لینک مرورگر</string>
     <string name="quick_action_share">اشتراک گذاری</string>
     <string name="quick_action_copy_user_id">شناسه نویسنده</string>
-    <string name="quick_action_copy_note_id">شناسه نوت</string>
+    <string name="quick_action_copy_note_id">شناسه یادداشت</string>
     <string name="quick_action_copy_text">کپی متن</string>
     <string name="quick_action_delete">حذف</string>
     <string name="quick_action_unfollow">دنبال نکردن</string>
     <string name="quick_action_follow">دنبال کردن</string>
     <string name="quick_action_request_deletion_alert_title">Request Deletion</string>
-    <string name="quick_action_request_deletion_alert_body">آماتیست درخواست می کند که نوت شما از رله هایی که درحال حاضر به آن متصل هستید حذف شود. هیچ تضمینی نیست که نوت شما برای همیشه از آن رله ها یا از رله های دیگری که ممکن است در آنها ذخیره شده باشد حذف خواهد شد.. </string>
+    <string name="quick_action_request_deletion_alert_body">آماتیست درخواست می کند که یادداشت شما از رله هایی که درحال حاضر به آن متصل هستید حذف شود. هیچ تضمینی نیست که یادداشت شما برای همیشه از آن رله ها یا از رله های دیگری که ممکن است در آنها ذخیره شده باشد حذف خواهد شد.. </string>
     <string name="quick_action_block_dialog_btn">بلاک</string>
     <string name="quick_action_delete_dialog_btn">حذف</string>
     <string name="quick_action_block">بلاک</string>
@@ -238,7 +238,7 @@
     <string name="report_dialog_impersonation">جعل هویت بدخواهانه</string>
     <string name="report_dialog_nudity">محتوای برهنگی یا نمایان</string>
     <string name="report_dialog_illegal">رفتار ناهنجار</string>
-    <string name="report_dialog_blocking_a_user">بلاک کردن کاربر محتوای ایشان را در اپ شما پنهان می کند. نوت های شما همچنان بطور عمومی دیده می شوند که شامل کاربران بلاک شده توسط شما نیز هست. کاربران بلاک شده در صفحه فیلترهای ایمنی فهرست می شوند.</string>
+    <string name="report_dialog_blocking_a_user">بلاک کردن کاربر محتوای ایشان را در اپ شما پنهان می کند. یادداشت های شما همچنان بطور عمومی دیده می شوند که شامل کاربران بلاک شده توسط شما نیز هست. کاربران بلاک شده در صفحه فیلترهای ایمنی فهرست می شوند.</string>
     <string name="report_dialog_block_hide_user_btn"><![CDATA[Block & Hide User]]></string>
     <string name="report_dialog_report_btn">گزارش سواستفاده</string>
     <string name="report_dialog_reminder_public">تمام گزارش ها بطور عمومی دیده می شوند</string>
@@ -246,7 +246,7 @@
     <string name="report_dialog_additional_reason_label">توضیحات اضافه</string>
     <string name="report_dialog_select_reason_label">دلایل</string>
     <string name="report_dialog_select_reason_placeholder">دلیلی انتخاب کنید...</string>
-    <string name="report_dialog_post_report_btn">گزارش نوت</string>
+    <string name="report_dialog_post_report_btn">گزارش یادداشت</string>
     <string name="report_dialog_title">بلاک و گزارش</string>
     <string name="block_only">بلاک</string>
 
@@ -288,7 +288,7 @@
 
     <string name="custom_zaps_add_a_message">افزودن پیام عمومی</string>
     <string name="custom_zaps_add_a_message_private">افزودن پیام خصوصی</string>
-    <string name="custom_zaps_add_a_message_nonzap">افزودن پیام اینویس</string>
+    <string name="custom_zaps_add_a_message_nonzap">افزودن پیام صورتحساب</string>
 
     <string name="custom_zaps_add_a_message_example">از زحمات شما متشکریم!</string>
 
