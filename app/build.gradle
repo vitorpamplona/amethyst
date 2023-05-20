@@ -13,8 +13,8 @@ android {
         applicationId "com.vitorpamplona.amethyst"
         minSdk 26
         targetSdk 33
-        versionCode 165
-        versionName "0.49.2"
+        versionCode 172
+        versionName "0.50.4"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -176,6 +176,12 @@ dependencies {
     // PushNotifications
     playImplementation platform('com.google.firebase:firebase-bom:32.0.0')
     playImplementation 'com.google.firebase:firebase-messaging-ktx'
+
+    // Charts
+    implementation "com.patrykandpatrick.vico:core:${vico_version}"
+    implementation "com.patrykandpatrick.vico:compose:${vico_version}"
+    implementation "com.patrykandpatrick.vico:views:${vico_version}"
+    implementation "com.patrykandpatrick.vico:compose-m2:${vico_version}"
 
     // Automatic memory leak detection
     debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.10'

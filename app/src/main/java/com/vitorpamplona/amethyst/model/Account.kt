@@ -593,18 +593,33 @@ class Account(
 
         val bookmarks = userProfile().latestBookmarkList
 
-        val event = BookmarkListEvent.create(
-            "bookmark",
-            bookmarks?.taggedEvents() ?: emptyList(),
-            bookmarks?.taggedUsers() ?: emptyList(),
-            bookmarks?.taggedAddresses() ?: emptyList(),
+        val event = if (note is AddressableNote) {
+            BookmarkListEvent.create(
+                "bookmark",
+                bookmarks?.taggedEvents() ?: emptyList(),
+                bookmarks?.taggedUsers() ?: emptyList(),
+                bookmarks?.taggedAddresses() ?: emptyList(),
 
-            bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!)?.plus(note.idHex) ?: listOf(note.idHex),
-            bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
-            bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!)?.plus(note.address) ?: listOf(note.address),
 
-            loggedIn.privKey!!
-        )
+                loggedIn.privKey!!
+            )
+        } else {
+            BookmarkListEvent.create(
+                "bookmark",
+                bookmarks?.taggedEvents() ?: emptyList(),
+                bookmarks?.taggedUsers() ?: emptyList(),
+                bookmarks?.taggedAddresses() ?: emptyList(),
+
+                bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!)?.plus(note.idHex) ?: listOf(note.idHex),
+                bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
+
+                loggedIn.privKey!!
+            )
+        }
 
         Client.send(event)
         LocalCache.consume(event)
@@ -615,18 +630,33 @@ class Account(
 
         val bookmarks = userProfile().latestBookmarkList
 
-        val event = BookmarkListEvent.create(
-            "bookmark",
-            bookmarks?.taggedEvents()?.plus(note.idHex) ?: listOf(note.idHex),
-            bookmarks?.taggedUsers() ?: emptyList(),
-            bookmarks?.taggedAddresses() ?: emptyList(),
+        val event = if (note is AddressableNote) {
+            BookmarkListEvent.create(
+                "bookmark",
+                bookmarks?.taggedEvents() ?: emptyList(),
+                bookmarks?.taggedUsers() ?: emptyList(),
+                bookmarks?.taggedAddresses()?.plus(note.address) ?: listOf(note.address),
 
-            bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!) ?: emptyList(),
-            bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
-            bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
 
-            loggedIn.privKey!!
-        )
+                loggedIn.privKey!!
+            )
+        } else {
+            BookmarkListEvent.create(
+                "bookmark",
+                bookmarks?.taggedEvents()?.plus(note.idHex) ?: listOf(note.idHex),
+                bookmarks?.taggedUsers() ?: emptyList(),
+                bookmarks?.taggedAddresses() ?: emptyList(),
+
+                bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
+
+                loggedIn.privKey!!
+            )
+        }
 
         Client.send(event)
         LocalCache.consume(event)
@@ -637,18 +667,33 @@ class Account(
 
         val bookmarks = userProfile().latestBookmarkList
 
-        val event = BookmarkListEvent.create(
-            "bookmark",
-            bookmarks?.taggedEvents() ?: emptyList(),
-            bookmarks?.taggedUsers() ?: emptyList(),
-            bookmarks?.taggedAddresses() ?: emptyList(),
+        val event = if (note is AddressableNote) {
+            BookmarkListEvent.create(
+                "bookmark",
+                bookmarks?.taggedEvents() ?: emptyList(),
+                bookmarks?.taggedUsers() ?: emptyList(),
+                bookmarks?.taggedAddresses() ?: emptyList(),
 
-            bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!)?.minus(note.idHex) ?: listOf(),
-            bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
-            bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!)?.minus(note.address) ?: listOf(),
 
-            loggedIn.privKey!!
-        )
+                loggedIn.privKey!!
+            )
+        } else {
+            BookmarkListEvent.create(
+                "bookmark",
+                bookmarks?.taggedEvents() ?: emptyList(),
+                bookmarks?.taggedUsers() ?: emptyList(),
+                bookmarks?.taggedAddresses() ?: emptyList(),
+
+                bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!)?.minus(note.idHex) ?: listOf(),
+                bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
+
+                loggedIn.privKey!!
+            )
+        }
 
         Client.send(event)
         LocalCache.consume(event)
@@ -665,18 +710,33 @@ class Account(
 
         val bookmarks = userProfile().latestBookmarkList
 
-        val event = BookmarkListEvent.create(
-            "bookmark",
-            bookmarks?.taggedEvents()?.minus(note.idHex),
-            bookmarks?.taggedUsers() ?: emptyList(),
-            bookmarks?.taggedAddresses() ?: emptyList(),
+        val event = if (note is AddressableNote) {
+            BookmarkListEvent.create(
+                "bookmark",
+                bookmarks?.taggedEvents() ?: emptyList(),
+                bookmarks?.taggedUsers() ?: emptyList(),
+                bookmarks?.taggedAddresses()?.minus(note.address),
 
-            bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!) ?: emptyList(),
-            bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
-            bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
 
-            loggedIn.privKey!!
-        )
+                loggedIn.privKey!!
+            )
+        } else {
+            BookmarkListEvent.create(
+                "bookmark",
+                bookmarks?.taggedEvents()?.minus(note.idHex),
+                bookmarks?.taggedUsers() ?: emptyList(),
+                bookmarks?.taggedAddresses() ?: emptyList(),
+
+                bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
+
+                loggedIn.privKey!!
+            )
+        }
 
         Client.send(event)
         LocalCache.consume(event)

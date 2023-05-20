@@ -75,6 +75,7 @@ import kotlinx.coroutines.withContext
 @Composable
 fun JoinUserOrChannelView(onClose: () -> Unit, account: Account, navController: NavController) {
     val searchBarViewModel: SearchBarViewModel = viewModel()
+    searchBarViewModel.account = account
 
     Dialog(
         onDismissRequest = {

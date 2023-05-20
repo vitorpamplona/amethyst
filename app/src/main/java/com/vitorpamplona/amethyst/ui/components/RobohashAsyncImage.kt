@@ -37,7 +37,7 @@ fun RobohashAsyncImage(
         robotSize.roundToPx()
     }
 
-    val imageRequest = remember(size, robot) {
+    val imageRequest = remember(robotSize, robot) {
         Robohash.imageRequest(
             context,
             robot,

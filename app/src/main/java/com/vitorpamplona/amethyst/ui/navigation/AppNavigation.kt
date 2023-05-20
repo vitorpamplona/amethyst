@@ -8,6 +8,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -18,6 +19,7 @@ import com.vitorpamplona.amethyst.ui.dal.HomeConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.VideoFeedFilter
+import com.vitorpamplona.amethyst.ui.note.UserReactionsViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrGlobalFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
@@ -37,6 +39,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.ProfileScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SearchScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ThreadScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.VideoScreen
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -50,7 +54,8 @@ fun AppNavigation(
 
     // Avoids creating ViewModels for performance reasons (up to 1 second delays)
     val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
+    val account = remember(accountState) { accountState?.account } ?: return
+    val accountHex = remember(accountState) { accountState?.account?.userProfile()?.pubkeyHex }
 
     HomeNewThreadFeedFilter.account = account
     HomeConversationsFeedFilter.account = account
@@ -66,6 +71,16 @@ fun AppNavigation(
 
     NotificationFeedFilter.account = account
     val notifFeedViewModel: NotificationViewModel = viewModel()
+
+    val userReactionsStatsModel: UserReactionsViewModel = viewModel()
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(accountHex) {
+        scope.launch(Dispatchers.IO) {
+            userReactionsStatsModel.load(account.userProfile())
+            userReactionsStatsModel.initializeSuspend()
+        }
+    }
 
     NavHost(navController, startDestination = Route.Home.route) {
         Route.Video.let { route ->
@@ -135,6 +150,7 @@ fun AppNavigation(
 
                 NotificationScreen(
                     notifFeedViewModel = notifFeedViewModel,
+                    userReactionsStatsModel = userReactionsStatsModel,
                     accountViewModel = accountViewModel,
                     navController = navController,
                     scrollToTop = scrollToTop

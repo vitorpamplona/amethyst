@@ -24,7 +24,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 
 @Composable
-fun BlankNote(modifier: Modifier = Modifier, isQuote: Boolean = false) {
+fun BlankNote(modifier: Modifier = Modifier, isQuote: Boolean = false, idHex: String? = null) {
     Column(modifier = modifier) {
         Row(modifier = Modifier.padding(horizontal = if (!isQuote) 12.dp else 6.dp)) {
             Column(modifier = Modifier.padding(start = if (!isQuote) 10.dp else 5.dp)) {
@@ -39,7 +39,7 @@ fun BlankNote(modifier: Modifier = Modifier, isQuote: Boolean = false) {
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = stringResource(R.string.post_not_found),
+                        text = stringResource(R.string.post_not_found) + if (idHex != null) ": $idHex" else "",
                         modifier = Modifier.padding(30.dp),
                         color = Color.Gray
                     )

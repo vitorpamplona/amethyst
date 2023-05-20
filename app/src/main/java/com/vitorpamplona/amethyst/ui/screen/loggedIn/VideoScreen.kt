@@ -275,7 +275,7 @@ private fun RenderVideoOrPictureNote(
                             Icon(
                                 imageVector = Icons.Default.MoreVert,
                                 null,
-                                modifier = Modifier.size(15.dp),
+                                modifier = Modifier.size(20.dp),
                                 tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                             )
 

@@ -553,17 +553,20 @@ object LocalCache {
         // Log.d("MT", "New Event ${event.content} ${event.id.toHex()}")
         val oldChannel = getOrCreateChannel(event.id)
         val author = getOrCreateUser(event.pubKey)
+
+        val note = getOrCreateNote(event.id)
+        if (note.event == null) {
+            oldChannel.addNote(note)
+            note.loadEvent(event, author, emptyList())
+
+            refreshObservers(note)
+        }
+
         if (event.createdAt <= oldChannel.updatedMetadataAt) {
             return // older data, does nothing
         }
         if (oldChannel.creator == null || oldChannel.creator == author) {
             oldChannel.updateChannelInfo(author, event.channelInfo(), event.createdAt)
-
-            val note = getOrCreateNote(event.id)
-            oldChannel.addNote(note)
-            note.loadEvent(event, author, emptyList())
-
-            refreshObservers(note)
         }
     }
 
@@ -578,15 +581,17 @@ object LocalCache {
         if (event.createdAt > oldChannel.updatedMetadataAt) {
             if (oldChannel.creator == null || oldChannel.creator == author) {
                 oldChannel.updateChannelInfo(author, event.channelInfo(), event.createdAt)
-
-                val note = getOrCreateNote(event.id)
-                oldChannel.addNote(note)
-                note.loadEvent(event, author, emptyList())
-
-                refreshObservers(note)
             }
         } else {
             // Log.d("MT","Relay sent a previous Metadata Event ${oldUser.toBestDisplayName()} ${formattedDateTime(event.createdAt)} > ${formattedDateTime(oldUser.updatedAt)}")
+        }
+
+        val note = getOrCreateNote(event.id)
+        if (note.event == null) {
+            oldChannel.addNote(note)
+            note.loadEvent(event, author, emptyList())
+
+            refreshObservers(note)
         }
     }
 

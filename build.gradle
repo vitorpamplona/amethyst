@@ -7,6 +7,7 @@ buildscript {
         room_version = "2.4.3"
         accompanist_version = '0.30.0'
         coil_version = '2.3.0'
+        vico_version = '1.6.5'
     }
     dependencies {
         classpath 'com.google.gms:google-services:4.3.15'

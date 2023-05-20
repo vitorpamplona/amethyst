@@ -196,13 +196,13 @@ fun NoteComposeInner(
     val loggedIn = remember(accountState) { accountState?.account?.userProfile() } ?: return
 
     val noteState by baseNote.live().metadata.observeAsState()
-    val note = remember(noteState) { noteState?.note }
+    val note = remember(noteState) { noteState?.note } ?: return
 
     val noteReportsState by baseNote.live().reports.observeAsState()
     val noteForReports = remember(noteReportsState) { noteReportsState?.note } ?: return
 
-    val noteEvent = note?.event
-    val baseChannel = note?.channel()
+    val noteEvent = remember(noteState) { note.event }
+    val baseChannel = remember(noteState) { note.channel() }
 
     var popupExpanded by remember { mutableStateOf(false) }
 
@@ -217,9 +217,11 @@ fun NoteComposeInner(
             isBoostedNote
         )
 
-        note?.let {
+        note.let {
             NoteQuickActionMenu(it, popupExpanded, { popupExpanded = false }, accountViewModel)
         }
+    } else if (account.isHidden(noteForReports.author!!)) {
+        // Does nothing
     } else {
         var showHiddenNote by remember { mutableStateOf(false) }
         var isAcceptableAndCanPreview by remember { mutableStateOf(Pair(true, true)) }
@@ -241,16 +243,14 @@ fun NoteComposeInner(
         }
 
         if (!isAcceptableAndCanPreview.first && !showHiddenNote) {
-            if (!account.isHidden(noteForReports.author!!)) {
-                HiddenNote(
-                    account.getRelevantReports(noteForReports),
-                    account.userProfile(),
-                    modifier,
-                    isBoostedNote,
-                    navController,
-                    onClick = { showHiddenNote = true }
-                )
-            }
+            HiddenNote(
+                account.getRelevantReports(noteForReports),
+                account.userProfile(),
+                modifier,
+                isBoostedNote,
+                navController,
+                onClick = { showHiddenNote = true }
+            )
         } else if ((noteEvent is ChannelCreateEvent || noteEvent is ChannelMetadataEvent) && baseChannel != null) {
             ChannelHeader(baseChannel = baseChannel, account = account, navController = navController)
         } else if (noteEvent is BadgeDefinitionEvent) {
@@ -1941,7 +1941,7 @@ private fun RelayIconCompose(url: String) {
             .clickable(onClick = { uri.openUri("https://$url") })
     }
     val colorFilter = remember {
-        ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+        ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0.5f) })
     }
 
     Box(boxModifier) {
@@ -2183,13 +2183,15 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
     val actContext = LocalContext.current
     var reportDialogShowing by remember { mutableStateOf(false) }
 
+    val bookmarkState by accountViewModel.userProfile().live().bookmarks.observeAsState()
+
     var state by remember {
         mutableStateOf<DropDownParams>(
             DropDownParams(false, false, false, false)
         )
     }
 
-    LaunchedEffect(key1 = note) {
+    LaunchedEffect(key1 = note, key2 = bookmarkState) {
         withContext(Dispatchers.IO) {
             state = DropDownParams(
                 accountViewModel.isFollowing(note.author),
