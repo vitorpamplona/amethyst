@@ -1366,7 +1366,7 @@ fun DisplayHighlight(
                 if (userDisplayName != null) {
                     CreateClickableTextWithEmoji(
                         clickablePart = userDisplayName,
-                        suffix = "",
+                        suffix = " ",
                         tags = userTags,
                         route = route,
                         navController = navController
