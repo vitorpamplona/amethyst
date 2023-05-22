@@ -34,8 +34,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.vitorpamplona.amethyst.NotificationCache
@@ -96,7 +98,77 @@ fun AppBottomBar(navController: NavHostController, accountViewModel: AccountView
                 backgroundColor = MaterialTheme.colors.background
             ) {
                 bottomNavigationItems.forEach { item ->
-                    BottomIcon(item, accountViewModel, navController)
+                    HasNewItemsIcon(item, accountViewModel, navController)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RowScope.HasNewItemsIcon(
+    route: Route,
+    accountViewModel: AccountViewModel,
+    navController: NavHostController
+) {
+    val scope = rememberCoroutineScope()
+
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val account = remember(accountState) { accountState?.account } ?: return
+
+    val notifState = NotificationCache.live.observeAsState()
+    val notif = remember(notifState) { notifState.value } ?: return
+
+    var hasNewItems by remember { mutableStateOf<Boolean>(false) }
+
+    LaunchedEffect(key1 = notif) {
+        scope.launch(Dispatchers.IO) {
+            val newHasNewItems = route.hasNewItems(account, notif.cache, emptySet())
+            if (newHasNewItems != hasNewItems) {
+                hasNewItems = newHasNewItems
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        scope.launch(Dispatchers.IO) {
+            LocalCache.live.newEventBundles.collect {
+                val newHasNewItems = route.hasNewItems(account, notif.cache, it)
+                if (newHasNewItems != hasNewItems) {
+                    hasNewItems = newHasNewItems
+                }
+            }
+        }
+    }
+
+    BottomIcon(
+        icon = route.icon,
+        size = if ("Home" == route.base) 25.dp else 23.dp,
+        iconSize = if ("Home" == route.base) 24.dp else 20.dp,
+        base = route.base,
+        hasNewItems = hasNewItems,
+        navController
+    ) { selected ->
+        scope.launch {
+            if (!selected) {
+                navController.navigate(route.base) {
+                    navController.graph.startDestinationRoute?.let { start ->
+                        popUpTo(start)
+                        restoreState = true
+                    }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            } else {
+                val newRoute = route.route.replace("{scrollToTop}", "true")
+                navController.navigate(newRoute) {
+                    navController.graph.startDestinationRoute?.let { start ->
+                        popUpTo(start) { inclusive = newRoute == Route.Home.route }
+                        restoreState = true
+                    }
+
+                    launchSingleTop = true
+                    restoreState = true
                 }
             }
         }
@@ -105,83 +177,46 @@ fun AppBottomBar(navController: NavHostController, accountViewModel: AccountView
 
 @Composable
 private fun RowScope.BottomIcon(
-    item: Route,
-    accountViewModel: AccountViewModel,
-    navController: NavHostController
+    icon: Int,
+    size: Dp,
+    iconSize: Dp,
+    base: String,
+    hasNewItems: Boolean,
+    navController: NavController,
+    onClick: (Boolean) -> Unit
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
 
-    navBackStackEntry?.let { navBackStackEntry ->
-        val currentRoute = remember(navBackStackEntry) { navBackStackEntry.destination.route }
-        val currentRouteBase = remember(navBackStackEntry) { navBackStackEntry.destination.route?.substringBefore("?") }
-        val selected = remember(navBackStackEntry) { currentRouteBase == item.base }
-        val coroutineScope = rememberCoroutineScope()
+    navBackStackEntry?.let {
+        val selected = remember(it) {
+            it.destination.route?.substringBefore("?") == base
+        }
 
         BottomNavigationItem(
-            icon = { NotifiableIcon(item, selected, accountViewModel) },
+            icon = {
+                NotifiableIcon(
+                    icon,
+                    size,
+                    iconSize,
+                    selected,
+                    hasNewItems
+                )
+            },
             selected = selected,
-            onClick = {
-                coroutineScope.launch {
-                    if (!selected) {
-                        navController.navigate(item.base) {
-                            navController.graph.startDestinationRoute?.let { start ->
-                                popUpTo(start)
-                                restoreState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    } else if (currentRoute != null) {
-                        val route = currentRoute.replace("{scrollToTop}", "true")
-                        navController.navigate(route) {
-                            navController.graph.startDestinationRoute?.let { start ->
-                                popUpTo(start) { inclusive = item.route == Route.Home.route }
-                                restoreState = true
-                            }
-
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
-                }
-            }
+            onClick = { onClick(selected) }
         )
     }
 }
 
 @Composable
-private fun NotifiableIcon(route: Route, selected: Boolean, accountViewModel: AccountViewModel) {
-    val scope = rememberCoroutineScope()
-
-    Box(Modifier.size(if ("Home" == route.base) 25.dp else 23.dp)) {
+private fun NotifiableIcon(icon: Int, size: Dp, iconSize: Dp, selected: Boolean, hasNewItems: Boolean) {
+    Box(Modifier.size(size)) {
         Icon(
-            painter = painterResource(id = route.icon),
+            painter = painterResource(id = icon),
             contentDescription = null,
-            modifier = Modifier.size(if ("Home" == route.base) 24.dp else 20.dp),
+            modifier = Modifier.size(iconSize),
             tint = if (selected) MaterialTheme.colors.primary else Color.Unspecified
         )
-
-        val accountState by accountViewModel.accountLiveData.observeAsState()
-        val account = accountState?.account ?: return
-
-        val notifState = NotificationCache.live.observeAsState()
-        val notif = notifState.value ?: return
-
-        var hasNewItems by remember { mutableStateOf<Boolean>(false) }
-
-        LaunchedEffect(key1 = notif) {
-            scope.launch(Dispatchers.IO) {
-                hasNewItems = route.hasNewItems(account, notif.cache, emptySet())
-            }
-        }
-
-        LaunchedEffect(Unit) {
-            scope.launch(Dispatchers.IO) {
-                LocalCache.live.newEventBundles.collect {
-                    hasNewItems = route.hasNewItems(account, notif.cache, it)
-                }
-            }
-        }
 
         if (hasNewItems) {
             Box(
