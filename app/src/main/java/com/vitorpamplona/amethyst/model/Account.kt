@@ -53,7 +53,7 @@ class Account(
     var translateTo: String = Locale.getDefault().language,
     var zapAmountChoices: List<Long> = listOf(500L, 1000L, 5000L),
     var defaultZapType: LnZapEvent.ZapType = LnZapEvent.ZapType.PRIVATE,
-    var defaultFileServer: ServersAvailable = ServersAvailable.IMGUR,
+    var defaultFileServer: ServersAvailable = ServersAvailable.NOSTR_BUILD,
     var defaultHomeFollowList: String = KIND3_FOLLOWS,
     var defaultStoriesFollowList: String = GLOBAL_FOLLOWS,
     var defaultNotificationFollowList: String = GLOBAL_FOLLOWS,

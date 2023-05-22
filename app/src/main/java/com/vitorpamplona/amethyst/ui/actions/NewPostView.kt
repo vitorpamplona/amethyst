@@ -641,11 +641,12 @@ fun SearchButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifier 
 }
 
 enum class ServersAvailable {
-    IMGUR,
+    // IMGUR,
     NOSTR_BUILD,
     NOSTRIMG,
     NOSTRFILES_DEV,
-    IMGUR_NIP_94,
+
+    // IMGUR_NIP_94,
     NOSTRIMG_NIP_94,
     NOSTR_BUILD_NIP_94,
     NOSTRFILES_DEV_NIP_94,
@@ -668,11 +669,11 @@ fun ImageVideoDescription(
     val isVideo = mediaType.startsWith("video")
 
     val fileServers = listOf(
-        Triple(ServersAvailable.IMGUR, stringResource(id = R.string.upload_server_imgur), stringResource(id = R.string.upload_server_imgur_explainer)),
+        // Triple(ServersAvailable.IMGUR, stringResource(id = R.string.upload_server_imgur), stringResource(id = R.string.upload_server_imgur_explainer)),
         Triple(ServersAvailable.NOSTRIMG, stringResource(id = R.string.upload_server_nostrimg), stringResource(id = R.string.upload_server_nostrimg_explainer)),
         Triple(ServersAvailable.NOSTR_BUILD, stringResource(id = R.string.upload_server_nostrbuild), stringResource(id = R.string.upload_server_nostrbuild_explainer)),
         Triple(ServersAvailable.NOSTRFILES_DEV, stringResource(id = R.string.upload_server_nostrfilesdev), stringResource(id = R.string.upload_server_nostrfilesdev_explainer)),
-        Triple(ServersAvailable.IMGUR_NIP_94, stringResource(id = R.string.upload_server_imgur_nip94), stringResource(id = R.string.upload_server_imgur_nip94_explainer)),
+        // Triple(ServersAvailable.IMGUR_NIP_94, stringResource(id = R.string.upload_server_imgur_nip94), stringResource(id = R.string.upload_server_imgur_nip94_explainer)),
         Triple(ServersAvailable.NOSTRIMG_NIP_94, stringResource(id = R.string.upload_server_nostrimg_nip94), stringResource(id = R.string.upload_server_nostrimg_nip94_explainer)),
         Triple(ServersAvailable.NOSTR_BUILD_NIP_94, stringResource(id = R.string.upload_server_nostrbuild_nip94), stringResource(id = R.string.upload_server_nostrbuild_nip94_explainer)),
         Triple(ServersAvailable.NOSTRFILES_DEV_NIP_94, stringResource(id = R.string.upload_server_nostrfilesdev_nip94), stringResource(id = R.string.upload_server_nostrfilesdev_nip94_explainer)),

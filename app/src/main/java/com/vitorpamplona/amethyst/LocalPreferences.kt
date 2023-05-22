@@ -251,9 +251,9 @@ object LocalPreferences {
             ) ?: LnZapEvent.ZapType.PUBLIC
 
             val defaultFileServer = gson.fromJson(
-                getString(PrefKeys.DEFAULT_FILE_SERVER, "IMGUR"),
+                getString(PrefKeys.DEFAULT_FILE_SERVER, "NOSTR_BUILD"),
                 object : TypeToken<ServersAvailable>() {}.type
-            ) ?: ServersAvailable.IMGUR
+            ) ?: ServersAvailable.NOSTR_BUILD
 
             val zapPaymentRequestServer = try {
                 getString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, null)?.let {
