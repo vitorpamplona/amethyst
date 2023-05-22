@@ -96,7 +96,7 @@ fun DrawerContent(
                 modifier = Modifier.padding(top = 20.dp)
             )
             ListContent(
-                account.userProfile(),
+                account.userProfile().pubkeyHex,
                 navController,
                 scaffoldState,
                 sheetState,
@@ -121,16 +121,25 @@ fun ProfileContent(
     val coroutineScope = rememberCoroutineScope()
 
     val accountUserState by baseAccountUser.live().metadata.observeAsState()
-    val accountUser = accountUserState?.user ?: return
+    val accountUser = remember (accountUserState) { accountUserState?.user } ?: return
+
+    val profilePubHex = remember (accountUserState) { accountUserState?.user?.pubkeyHex } ?: return
+
+    val profileBanner = remember (accountUserState) { accountUserState?.user?.info?.banner?.ifBlank { null } }
+    val profilePicture = remember (accountUserState) { accountUserState?.user?.profilePicture()?.ifBlank { null }?.let { ResizeImage(it, 100.dp) } }
+    val bestUserName = remember(accountUserState) { accountUserState?.user?.bestUsername() }
+    val bestDisplayName = remember(accountUserState) { accountUserState?.user?.bestDisplayName() }
+    val tags = remember(accountUserState) { accountUserState?.user?.info?.latestMetadata?.tags }
+    val route = remember(accountUserState) { "User/${accountUserState?.user?.pubkeyHex}" }
 
     val accountUserFollowsState by baseAccountUser.live().follows.observeAsState()
-    val accountUserFollows = accountUserFollowsState?.user ?: return
+    val followingCount = remember(accountUserFollowsState) { accountUserFollowsState?.user?.cachedFollowCount()?.toString() ?: "--" }
+    val followerCount = remember(accountUserFollowsState) { accountUserFollowsState?.user?.cachedFollowerCount()?.toString() ?: "--"}
 
     Box {
-        val banner = accountUser.info?.banner
-        if (!banner.isNullOrBlank()) {
+        if (profileBanner != null) {
             AsyncImage(
-                model = banner,
+                model = profileBanner,
                 contentDescription = stringResource(id = R.string.profile_image),
                 contentScale = ContentScale.FillWidth,
                 modifier = Modifier
@@ -149,35 +158,34 @@ fun ProfileContent(
         }
 
         Column(modifier = modifier) {
-            RobohashAsyncImageProxy(
-                robot = accountUser.pubkeyHex,
-                model = ResizeImage(accountUser.profilePicture(), 100.dp),
-                contentDescription = stringResource(id = R.string.profile_image),
-                modifier = Modifier
-                    .width(100.dp)
-                    .height(100.dp)
-                    .clip(shape = CircleShape)
-                    .border(3.dp, MaterialTheme.colors.background, CircleShape)
-                    .background(MaterialTheme.colors.background)
-                    .clickable(onClick = {
-                        accountUser.let {
-                            navController.navigate("User/${it.pubkeyHex}")
-                        }
-                        coroutineScope.launch {
-                            scaffoldState.drawerState.close()
-                        }
-                    })
-            )
-            if (accountUser.bestDisplayName() != null) {
+            profilePicture?.let {
+                RobohashAsyncImageProxy(
+                    robot = profilePubHex,
+                    model = profilePicture,
+                    contentDescription = stringResource(id = R.string.profile_image),
+                    modifier = Modifier
+                        .width(100.dp)
+                        .height(100.dp)
+                        .clip(shape = CircleShape)
+                        .border(3.dp, MaterialTheme.colors.background, CircleShape)
+                        .background(MaterialTheme.colors.background)
+                        .clickable(onClick = {
+                            navController.navigate(route)
+                            coroutineScope.launch {
+                                scaffoldState.drawerState.close()
+                            }
+                        })
+                )
+            }
+
+            if (bestDisplayName != null) {
                 CreateTextWithEmoji(
-                    text = accountUser.bestDisplayName() ?: "",
-                    tags = accountUser.info?.latestMetadata?.tags,
+                    text = bestDisplayName,
+                    tags = tags,
                     modifier = Modifier
                         .padding(top = 7.dp)
                         .clickable(onClick = {
-                            accountUser.let {
-                                navController.navigate("User/${it.pubkeyHex}")
-                            }
+                            navController.navigate(route)
                             coroutineScope.launch {
                                 scaffoldState.drawerState.close()
                             }
@@ -186,18 +194,16 @@ fun ProfileContent(
                     fontSize = 18.sp
                 )
             }
-            if (accountUser.bestUsername() != null) {
+            if (bestUserName != null) {
                 CreateTextWithEmoji(
-                    text = " @${accountUser.bestUsername()}",
+                    text = " @${bestUserName}",
                     tags = accountUser.info?.latestMetadata?.tags,
                     color = Color.LightGray,
                     modifier = Modifier
                         .padding(top = 15.dp)
                         .clickable(
                             onClick = {
-                                accountUser.let {
-                                    navController.navigate("User/${it.pubkeyHex}")
-                                }
+                                navController.navigate(route)
                                 coroutineScope.launch {
                                     scaffoldState.drawerState.close()
                                 }
@@ -209,9 +215,7 @@ fun ProfileContent(
                 modifier = Modifier
                     .padding(top = 15.dp)
                     .clickable(onClick = {
-                        accountUser.let {
-                            navController.navigate("User/${it.pubkeyHex}")
-                        }
+                        navController.navigate(route)
                         coroutineScope.launch {
                             scaffoldState.drawerState.close()
                         }
@@ -219,14 +223,14 @@ fun ProfileContent(
             ) {
                 Row() {
                     Text(
-                        "${accountUserFollows.cachedFollowCount() ?: "--"}",
+                        text = followingCount,
                         fontWeight = FontWeight.Bold
                     )
                     Text(stringResource(R.string.following))
                 }
                 Row(modifier = Modifier.padding(start = 10.dp)) {
                     Text(
-                        "${accountUserFollows.cachedFollowerCount() ?: "--"}",
+                        text = followerCount,
                         fontWeight = FontWeight.Bold
                     )
                     Text(stringResource(R.string.followers))
@@ -239,7 +243,7 @@ fun ProfileContent(
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun ListContent(
-    accountUser: User?,
+    accountUserPubKey: String?,
     navController: NavHostController,
     scaffoldState: ScaffoldState,
     sheetState: ModalBottomSheetState,
@@ -254,14 +258,14 @@ fun ListContent(
     var proxyPort = remember { mutableStateOf(account.proxyPort.toString()) }
 
     Column(modifier = modifier.fillMaxHeight().verticalScroll(rememberScrollState())) {
-        if (accountUser != null) {
+        if (accountUserPubKey != null) {
             NavigationRow(
                 title = stringResource(R.string.profile),
                 icon = Route.Profile.icon,
                 tint = MaterialTheme.colors.primary,
                 navController = navController,
                 scaffoldState = scaffoldState,
-                route = "User/${accountUser.pubkeyHex}"
+                route = "User/$accountUserPubKey"
             )
 
             NavigationRow(
