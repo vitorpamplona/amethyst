@@ -299,7 +299,11 @@ fun NoteComposeInner(
                         onClick = {
                             scope.launch {
                                 routeFor(note, loggedIn)?.let {
-                                    navController.navigate(it)
+                                    if (note.idHex != navController.currentBackStackEntry?.arguments?.getString("id")) {
+                                        navController.navigate(it)
+                                    } else {
+                                        Log.d("Amethyst-Navigation", "Note already exists in the backstack!")
+                                    }
                                 }
                             }
                         },
@@ -1994,7 +1998,11 @@ fun NoteAuthorPicture(
     pictureModifier: Modifier = Modifier
 ) {
     NoteAuthorPicture(baseNote, userAccount, size, pictureModifier) {
-        navController.navigate("User/${it.pubkeyHex}")
+        if (it.pubkeyHex != navController.currentBackStackEntry?.arguments?.getString("id")) {
+            navController.navigate("User/${it.pubkeyHex}")
+        } else {
+            Log.d("Amethyst-Navigation", "Profile destination already exists in the backstack!")
+        }
     }
 }
 
@@ -2047,7 +2055,11 @@ fun UserPicture(
     pictureModifier: Modifier = Modifier
 ) {
     UserPicture(user, userAccount, size, pictureModifier) {
-        navController.navigate("User/${it.pubkeyHex}")
+        if (it.pubkeyHex != navController.currentBackStackEntry?.arguments?.getString("id")) {
+            navController.navigate("User/${it.pubkeyHex}")
+        } else {
+            Log.d("Amethyst-Navigation", "Profile destination already exists in the backstack!")
+        }
     }
 }
 
