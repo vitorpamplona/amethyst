@@ -5,6 +5,7 @@ import android.view.ViewTreeObserver
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -36,6 +37,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -82,11 +84,7 @@ fun keyboardAsState(): State<Keyboard> {
 
 @Composable
 fun AppBottomBar(navController: NavHostController, accountViewModel: AccountViewModel) {
-    val currentRoute = currentRoute(navController)
-    val currentRouteBase = currentRoute?.substringBefore("?")
-    val coroutineScope = rememberCoroutineScope()
     val isKeyboardOpen by keyboardAsState()
-
     if (isKeyboardOpen == Keyboard.Closed) {
         Column() {
             Divider(
@@ -98,40 +96,56 @@ fun AppBottomBar(navController: NavHostController, accountViewModel: AccountView
                 backgroundColor = MaterialTheme.colors.background
             ) {
                 bottomNavigationItems.forEach { item ->
-                    val selected = currentRouteBase == item.base
-
-                    BottomNavigationItem(
-                        icon = { NotifiableIcon(item, selected, accountViewModel) },
-                        selected = selected,
-                        onClick = {
-                            coroutineScope.launch {
-                                if (currentRouteBase != item.base) {
-                                    navController.navigate(item.base) {
-                                        navController.graph.startDestinationRoute?.let { start ->
-                                            popUpTo(start)
-                                            restoreState = true
-                                        }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                } else {
-                                    val route = currentRoute.replace("{scrollToTop}", "true")
-                                    navController.navigate(route) {
-                                        navController.graph.startDestinationRoute?.let { start ->
-                                            popUpTo(start) { inclusive = item.route == Route.Home.route }
-                                            restoreState = true
-                                        }
-
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                }
-                            }
-                        }
-                    )
+                    BottomIcon(item, accountViewModel, navController)
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun RowScope.BottomIcon(
+    item: Route,
+    accountViewModel: AccountViewModel,
+    navController: NavHostController
+) {
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+
+    navBackStackEntry?.let { navBackStackEntry ->
+        val currentRoute = remember(navBackStackEntry) { navBackStackEntry.destination.route }
+        val currentRouteBase = remember(navBackStackEntry) { navBackStackEntry.destination.route?.substringBefore("?") }
+        val selected = remember(navBackStackEntry) { currentRouteBase == item.base }
+        val coroutineScope = rememberCoroutineScope()
+
+        BottomNavigationItem(
+            icon = { NotifiableIcon(item, selected, accountViewModel) },
+            selected = selected,
+            onClick = {
+                coroutineScope.launch {
+                    if (!selected) {
+                        navController.navigate(item.base) {
+                            navController.graph.startDestinationRoute?.let { start ->
+                                popUpTo(start)
+                                restoreState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    } else if (currentRoute != null) {
+                        val route = currentRoute.replace("{scrollToTop}", "true")
+                        navController.navigate(route) {
+                            navController.graph.startDestinationRoute?.let { start ->
+                                popUpTo(start) { inclusive = item.route == Route.Home.route }
+                                restoreState = true
+                            }
+
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                }
+            }
+        )
     }
 }
 
