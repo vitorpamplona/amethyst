@@ -77,8 +77,9 @@ fun FeedView(
                     }
 
                     is FeedState.Loaded -> {
-                        if (refreshing)
+                        if (refreshing) {
                             refreshing = false
+                        }
                         FeedLoaded(
                             state,
                             routeForLastRead,

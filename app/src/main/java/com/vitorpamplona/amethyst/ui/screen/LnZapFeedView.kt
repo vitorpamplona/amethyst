@@ -60,9 +60,10 @@ fun LnZapFeedView(
                         }
                     }
                     is LnZapFeedState.Loaded -> {
-                        if (refreshing)
+                        if (refreshing) {
                             refreshing = false
-                        
+                        }
+
                         LnZapFeedLoaded(state, accountViewModel, navController)
                     }
                     is LnZapFeedState.Loading -> {
