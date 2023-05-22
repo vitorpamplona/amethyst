@@ -67,7 +67,9 @@ fun CardFeedView(
                         }
                     }
                     is CardFeedState.Loaded -> {
-                        refreshing = false
+                        if (refreshing)
+                            refreshing = false
+
                         FeedLoaded(
                             state = state,
                             accountViewModel = accountViewModel,

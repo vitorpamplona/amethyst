@@ -65,7 +65,8 @@ fun ChatroomListFeedView(
                     }
 
                     is FeedState.Loaded -> {
-                        refreshing = false
+                        if (refreshing)
+                            refreshing = false
                         FeedLoaded(state, accountViewModel, navController, markAsRead)
                     }
 
