@@ -246,15 +246,19 @@ fun NoteCompose(
                 }
             }
 
-            val backgroundColor = if (isNew) {
-                val newColor = MaterialTheme.colors.primary.copy(0.12f)
-                if (parentBackgroundColor != null) {
-                    newColor.compositeOver(parentBackgroundColor)
+            val primaryColor = MaterialTheme.colors.primary.copy(0.12f)
+            val defaultBackgroundColor = MaterialTheme.colors.background
+
+            val backgroundColor = remember(isNew, parentBackgroundColor) {
+                if (isNew) {
+                    if (parentBackgroundColor != null) {
+                        primaryColor.compositeOver(parentBackgroundColor)
+                    } else {
+                        primaryColor.compositeOver(defaultBackgroundColor)
+                    }
                 } else {
-                    newColor.compositeOver(MaterialTheme.colors.background)
+                    parentBackgroundColor ?: defaultBackgroundColor
                 }
-            } else {
-                parentBackgroundColor ?: MaterialTheme.colors.background
             }
 
             val columnModifier = remember(backgroundColor) {
@@ -436,11 +440,11 @@ private fun RenderTextEvent(
     accountViewModel: AccountViewModel,
     navController: NavController
 ) {
-    val tags = remember { note.event?.tags() }
-    val hashtags = remember { note.event?.hashtags() ?: emptyList() }
-    val eventContent = remember { accountViewModel.decrypt(note) }
-    val modifier = remember { Modifier.fillMaxWidth() }
-    val isAuthorTheLoggedUser = remember { accountViewModel.isLoggedUser(note.author) }
+    val tags = remember(note.event?.id()) { note.event?.tags() }
+    val hashtags = remember(note.event?.id()) { note.event?.hashtags() ?: emptyList() }
+    val eventContent = remember(note.event?.id()) { accountViewModel.decrypt(note) }
+    val modifier = remember(note.event?.id()) { Modifier.fillMaxWidth() }
+    val isAuthorTheLoggedUser = remember(note.event?.id()) { accountViewModel.isLoggedUser(note.author) }
 
     if (eventContent != null) {
         if (makeItShort && isAuthorTheLoggedUser) {
