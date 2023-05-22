@@ -217,7 +217,12 @@ class Account(
         zapPaymentRequest?.let { nip47 ->
             val event = LnZapPaymentRequestEvent.create(bolt11, nip47.pubKeyHex, nip47.secret?.hexToByteArray() ?: loggedIn.privKey!!)
 
-            val wcListener = NostrLnZapPaymentResponseDataSource(nip47.pubKeyHex, event.pubKey, event.id)
+            val wcListener = NostrLnZapPaymentResponseDataSource(
+                fromServiceHex = nip47.pubKeyHex,
+                toUserHex = event.pubKey,
+                replyingToHex = event.id,
+                authSigningKey = nip47.secret?.hexToByteArray() ?: loggedIn.privKey!!
+            )
             wcListener.start()
 
             LocalCache.consume(event, zappedNote) {
