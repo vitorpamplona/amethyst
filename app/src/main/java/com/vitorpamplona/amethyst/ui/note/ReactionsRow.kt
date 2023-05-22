@@ -331,15 +331,15 @@ fun ZapReaction(
     animationSize: Dp = 14.dp
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
+    val account = remember(accountState) { accountState?.account } ?: return
 
     val zapsState by baseNote.live().zaps.observeAsState()
-    val zappedNote = zapsState?.note ?: return
-    val zapMessage = ""
+    val zappedNote = remember(zapsState) { zapsState?.note } ?: return
 
     var wantsToZap by remember { mutableStateOf(false) }
     var wantsToChangeZapAmount by remember { mutableStateOf(false) }
     var wantsToSetCustomZap by remember { mutableStateOf(false) }
+
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -352,6 +352,7 @@ fun ZapReaction(
         scope.launch(Dispatchers.IO) {
             if (!wasZappedByLoggedInUser) {
                 wasZappedByLoggedInUser = accountViewModel.calculateIfNoteWasZappedByAccount(zappedNote)
+                zappingProgress = 1f
             }
 
             zapAmountTxt = showAmount(account.calculateZappedAmount(zappedNote))
@@ -393,7 +394,7 @@ fun ZapReaction(
                                 baseNote,
                                 account.zapAmountChoices.first() * 1000,
                                 null,
-                                zapMessage,
+                                "",
                                 context,
                                 onError = {
                                     scope.launch {
@@ -457,7 +458,6 @@ fun ZapReaction(
         }
 
         if (wasZappedByLoggedInUser) {
-            zappingProgress = 1f
             Icon(
                 imageVector = Icons.Default.Bolt,
                 contentDescription = stringResource(R.string.zaps),
