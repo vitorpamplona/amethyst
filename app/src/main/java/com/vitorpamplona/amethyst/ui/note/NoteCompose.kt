@@ -139,46 +139,10 @@ import java.io.File
 import java.math.BigDecimal
 import java.net.URL
 import java.util.Locale
-import kotlin.time.ExperimentalTime
-import kotlin.time.measureTimedValue
 
-@OptIn(ExperimentalTime::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun NoteCompose(
-    baseNote: Note,
-    routeForLastRead: String? = null,
-    modifier: Modifier = Modifier,
-    isBoostedNote: Boolean = false,
-    isQuotedNote: Boolean = false,
-    unPackReply: Boolean = true,
-    makeItShort: Boolean = false,
-    addMarginTop: Boolean = true,
-    parentBackgroundColor: Color? = null,
-    accountViewModel: AccountViewModel,
-    navController: NavController
-) {
-    val (value, elapsed) = measureTimedValue {
-        NoteComposeInner(
-            baseNote,
-            routeForLastRead,
-            modifier,
-            isBoostedNote,
-            isQuotedNote,
-            unPackReply,
-            makeItShort,
-            addMarginTop,
-            parentBackgroundColor,
-            accountViewModel,
-            navController
-        )
-    }
-
-    Log.d("Time", "Note Compose in $elapsed for ${baseNote.idHex} ${baseNote.event?.kind()} ${baseNote.event?.content()?.split("\n")?.get(0)?.take(100)}")
-}
-
-@OptIn(ExperimentalFoundationApi::class, ExperimentalTime::class)
-@Composable
-fun NoteComposeInner(
     baseNote: Note,
     routeForLastRead: String? = null,
     modifier: Modifier = Modifier,
@@ -1870,7 +1834,7 @@ private fun LongFormHeader(noteEvent: LongTextNoteEvent, note: Note, loggedIn: U
 @Composable
 private fun RelayBadges(baseNote: Note) {
     val noteRelaysState by baseNote.live().relays.observeAsState()
-    val noteRelays = noteRelaysState?.note ?: return
+    val noteRelays = remember(noteRelaysState) { noteRelaysState?.note } ?: return
 
     var expanded by remember { mutableStateOf(false) }
     var showShowMore by remember { mutableStateOf(false) }
