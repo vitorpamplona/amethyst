@@ -505,7 +505,7 @@ private fun RelayBadges(baseNote: Note) {
 
     var expanded by remember { mutableStateOf(false) }
 
-    val relaysToDisplay by remember {
+    val relaysToDisplay by remember(noteRelaysState) {
         derivedStateOf {
             if (expanded) state.noteRelays else state.noteRelaysSimple
         }
