@@ -53,17 +53,19 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accountViewModel: AccountViewModel, navController: NavController) {
-    val noteState by multiSetCard.note.live().metadata.observeAsState()
-    val note = remember(noteState) { noteState?.note }
+    val baseNote = remember { multiSetCard.note }
+
+    val noteState by baseNote.live().metadata.observeAsState()
+    val note = remember(noteState) { noteState?.note } ?: return
 
     val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = remember(accountState) { accountState?.account }
+    val account = remember(accountState) { accountState?.account } ?: return
 
     var popupExpanded by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
 
-    if (note == null || account == null) {
+    if (note.event == null) {
         BlankNote(Modifier, false)
     } else {
         var isNew by remember { mutableStateOf(false) }
@@ -98,7 +100,7 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
                     onClick = {
                         scope.launch {
                             routeFor(
-                                note,
+                                baseNote,
                                 account.userProfile()
                             )?.let { navController.navigate(it) }
                         }
@@ -129,7 +131,7 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
                 Spacer(modifier = Modifier.width(65.dp))
 
                 NoteCompose(
-                    baseNote = multiSetCard.note,
+                    baseNote = baseNote,
                     routeForLastRead = null,
                     modifier = Modifier.padding(top = 5.dp),
                     isBoostedNote = true,
