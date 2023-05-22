@@ -75,19 +75,19 @@ fun UserReactionsRow(model: UserReactionsViewModel, accountViewModel: AccountVie
         }
 
         Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
-            UserReplyReaction(model.replies[model.today])
+            UserReplyReaction(model.replies[model.today()])
         }
 
         Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
-            UserBoostReaction(model.boosts[model.today])
+            UserBoostReaction(model.boosts[model.today()])
         }
 
         Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
-            UserLikeReaction(model.reactions[model.today])
+            UserLikeReaction(model.reactions[model.today()])
         }
 
         Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
-            UserZapReaction(model.zaps[model.today])
+            UserZapReaction(model.zaps[model.today()])
         }
     }
 }
@@ -103,7 +103,6 @@ class UserReactionsViewModel : ViewModel() {
     var takenIntoAccount = setOf<HexKey>()
 
     val sdf = DateTimeFormatter.ofPattern("yyyy-MM-dd") // SimpleDateFormat()
-    val today = sdf.format(LocalDateTime.now())
 
     var chartModel by mutableStateOf<ComposedChartEntryModel<ChartEntryModel>?>(null)
     var axisLabels by mutableStateOf<List<String>>(emptyList())
@@ -124,6 +123,8 @@ class UserReactionsViewModel : ViewModel() {
                 .toLocalDateTime()
         )
     }
+
+    fun today() = sdf.format(LocalDateTime.now())
 
     fun initializeSuspend() {
         val currentUser = user?.pubkeyHex ?: return
