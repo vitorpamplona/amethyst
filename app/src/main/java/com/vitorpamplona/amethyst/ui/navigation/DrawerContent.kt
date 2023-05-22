@@ -121,12 +121,12 @@ fun ProfileContent(
     val coroutineScope = rememberCoroutineScope()
 
     val accountUserState by baseAccountUser.live().metadata.observeAsState()
-    val accountUser = remember (accountUserState) { accountUserState?.user } ?: return
+    val accountUser = remember(accountUserState) { accountUserState?.user } ?: return
 
-    val profilePubHex = remember (accountUserState) { accountUserState?.user?.pubkeyHex } ?: return
+    val profilePubHex = remember(accountUserState) { accountUserState?.user?.pubkeyHex } ?: return
 
-    val profileBanner = remember (accountUserState) { accountUserState?.user?.info?.banner?.ifBlank { null } }
-    val profilePicture = remember (accountUserState) { accountUserState?.user?.profilePicture()?.ifBlank { null }?.let { ResizeImage(it, 100.dp) } }
+    val profileBanner = remember(accountUserState) { accountUserState?.user?.info?.banner?.ifBlank { null } }
+    val profilePicture = remember(accountUserState) { accountUserState?.user?.profilePicture()?.ifBlank { null }?.let { ResizeImage(it, 100.dp) } }
     val bestUserName = remember(accountUserState) { accountUserState?.user?.bestUsername() }
     val bestDisplayName = remember(accountUserState) { accountUserState?.user?.bestDisplayName() }
     val tags = remember(accountUserState) { accountUserState?.user?.info?.latestMetadata?.tags }
@@ -134,7 +134,7 @@ fun ProfileContent(
 
     val accountUserFollowsState by baseAccountUser.live().follows.observeAsState()
     val followingCount = remember(accountUserFollowsState) { accountUserFollowsState?.user?.cachedFollowCount()?.toString() ?: "--" }
-    val followerCount = remember(accountUserFollowsState) { accountUserFollowsState?.user?.cachedFollowerCount()?.toString() ?: "--"}
+    val followerCount = remember(accountUserFollowsState) { accountUserFollowsState?.user?.cachedFollowerCount()?.toString() ?: "--" }
 
     Box {
         if (profileBanner != null) {
@@ -196,7 +196,7 @@ fun ProfileContent(
             }
             if (bestUserName != null) {
                 CreateTextWithEmoji(
-                    text = " @${bestUserName}",
+                    text = " @$bestUserName",
                     tags = accountUser.info?.latestMetadata?.tags,
                     color = Color.LightGray,
                     modifier = Modifier
