@@ -149,7 +149,7 @@
     <string name="description_to">descrição para</string>
     <string name="and_picture_to">e foto para</string>
     <string name="leave">Sair</string>
-    <string name="unfollow">Remover seguidor</string>
+    <string name="unfollow">Desseguir</string>
     <string name="channel_created">Canal criado</string>
     <string name="channel_information_changed_to">Informação do canal mudou para</string>
     <string name="public_chat">Chat público</string>
