@@ -31,8 +31,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
@@ -42,13 +44,16 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserState
+import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.MultiSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.math.BigDecimal
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -253,14 +258,10 @@ fun AuthorGalleryZaps(
 ) {
     val accountState = account.userProfile().live().follows.observeAsState()
 
-    val listToRender = remember {
-        authorNotes.keys.take(50)
-    }
-
     Column(modifier = Modifier.padding(start = 10.dp)) {
         FlowRow() {
-            listToRender.forEach {
-                AuthorPictureAndComment(it, navController, accountState, accountViewModel)
+            authorNotes.forEach {
+                AuthorPictureAndComment(it.key, it.value, navController, accountState, accountViewModel)
             }
         }
     }
@@ -269,38 +270,48 @@ fun AuthorGalleryZaps(
 @Composable
 private fun AuthorPictureAndComment(
     zapRequest: Note,
+    zapEvent: Note?,
     navController: NavController,
     accountUser: State<UserState?>,
     accountViewModel: AccountViewModel
 ) {
     val author = zapRequest.author ?: return
 
-    var content by remember { mutableStateOf<Pair<User, String?>>(Pair(author, null)) }
+    var content by remember { mutableStateOf<Triple<User, String?, BigDecimal?>>(Triple(author, null, null)) }
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(key1 = zapRequest.idHex) {
+    LaunchedEffect(key1 = zapRequest.idHex, key2 = zapEvent?.idHex) {
         scope.launch(Dispatchers.IO) {
             (zapRequest.event as? LnZapRequestEvent)?.let {
                 val decryptedContent = accountViewModel.decryptZap(zapRequest)
+                val amount = (zapEvent?.event as? LnZapEvent)?.amount
                 if (decryptedContent != null) {
                     val newAuthor = LocalCache.getOrCreateUser(decryptedContent.pubKey)
-                    content = Pair(newAuthor, decryptedContent.content)
+                    content = Triple(newAuthor, decryptedContent.content, amount)
                 } else {
-                    if (!zapRequest.event?.content().isNullOrBlank()) {
-                        content = Pair(author, zapRequest.event?.content())
+                    if (!zapRequest.event?.content().isNullOrBlank() || amount != null) {
+                        content = Triple(author, zapRequest.event?.content(), amount)
                     }
                 }
             }
         }
     }
 
-    AuthorPictureAndComment(content.first, content.second, navController, accountUser, accountViewModel)
+    AuthorPictureAndComment(
+        author = content.first,
+        comment = content.second,
+        amount = showAmountAxis(content.third),
+        navController = navController,
+        accountUser = accountUser,
+        accountViewModel = accountViewModel
+    )
 }
 
 @Composable
 private fun AuthorPictureAndComment(
     author: User,
     comment: String?,
+    amount: String?,
     navController: NavController,
     accountUser: State<UserState?>,
     accountViewModel: AccountViewModel
@@ -323,11 +334,29 @@ private fun AuthorPictureAndComment(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        FastNoteAuthorPicture(
-            author = author,
-            userAccount = accountUser,
-            size = 35.dp
-        )
+        Box(modifier = remember { Modifier.size(35.dp) }, contentAlignment = Alignment.BottomCenter) {
+            FastNoteAuthorPicture(
+                author = author,
+                userAccount = accountUser,
+                size = 35.dp
+            )
+
+            amount?.let {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colors.background.copy(0.52f)),
+                    contentAlignment = Alignment.BottomCenter
+                ) {
+                    Text(
+                        text = it,
+                        fontWeight = FontWeight.Bold,
+                        color = BitcoinOrange,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        }
 
         if (!comment.isNullOrBlank()) {
             Spacer(modifier = Modifier.width(5.dp))
@@ -362,7 +391,7 @@ fun AuthorGallery(
     Column(modifier = Modifier.padding(start = 10.dp)) {
         FlowRow() {
             listToRender.first.forEach { author ->
-                AuthorPictureAndComment(author, null, navController, accountState, accountViewModel)
+                AuthorPictureAndComment(author, null, null, navController, accountState, accountViewModel)
             }
 
             if (listToRender.second > 50) {

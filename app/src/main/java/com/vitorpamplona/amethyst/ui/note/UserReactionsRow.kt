@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -345,7 +346,7 @@ fun UserZapReaction(
     Spacer(modifier = Modifier.width(8.dp))
 
     Text(
-        showAmount(amount),
+        showAmountAxis(amount),
         fontWeight = FontWeight.Bold,
         fontSize = 18.sp
     )
