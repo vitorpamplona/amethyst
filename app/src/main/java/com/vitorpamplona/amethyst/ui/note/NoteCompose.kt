@@ -2132,7 +2132,7 @@ fun UserPicture(
             }
 
             val myIconModifier = remember {
-                Modifier.fillMaxSize()
+                Modifier.width(size.div(3.5f)).height(size.div(3.5f))
             }
 
             Box(myIconBoxModifier, contentAlignment = Alignment.Center) {
