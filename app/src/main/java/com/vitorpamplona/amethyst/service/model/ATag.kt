@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.service.model
 
 import android.util.Log
+import com.google.errorprone.annotations.Immutable
 import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.nip19.Tlv
@@ -9,6 +10,7 @@ import nostr.postr.Bech32
 import nostr.postr.bechToBytes
 import nostr.postr.toByteArray
 
+@Immutable
 data class ATag(val kind: Int, val pubKeyHex: String, val dTag: String, val relay: String?) {
     fun toTag() = "$kind:$pubKeyHex:$dTag"
 

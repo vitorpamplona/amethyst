@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.service.model
 
 import android.util.Log
+import com.google.errorprone.annotations.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
 import fr.acinq.secp256k1.Hex
@@ -8,6 +9,7 @@ import nostr.postr.Utils
 import nostr.postr.toHex
 import java.util.Date
 
+@Immutable
 class PrivateDmEvent(
     id: HexKey,
     pubKey: HexKey,

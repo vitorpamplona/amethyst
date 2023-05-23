@@ -124,6 +124,10 @@ private fun FeedLoaded(
         }
     }
 
+    val baseModifier = remember {
+        Modifier
+    }
+
     LazyColumn(
         contentPadding = PaddingValues(
             top = 10.dp,
@@ -134,8 +138,9 @@ private fun FeedLoaded(
         itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
             NoteCompose(
                 item,
-                isBoostedNote = false,
                 routeForLastRead = routeForLastRead,
+                modifier = baseModifier,
+                isBoostedNote = false,
                 accountViewModel = accountViewModel,
                 navController = navController
             )

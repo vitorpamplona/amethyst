@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.service.model
 
 import android.util.Log
+import com.google.errorprone.annotations.Immutable
 import com.google.gson.*
 import com.google.gson.annotations.SerializedName
 import com.vitorpamplona.amethyst.model.HexKey
@@ -14,6 +15,7 @@ import java.math.BigDecimal
 import java.security.MessageDigest
 import java.util.*
 
+@Immutable
 open class Event(
     val id: HexKey,
     @SerializedName("pubkey") val pubKey: HexKey,
@@ -285,6 +287,7 @@ open class Event(
     }
 }
 
+@Immutable
 interface AddressableEvent {
     fun dTag(): String
     fun address(): ATag

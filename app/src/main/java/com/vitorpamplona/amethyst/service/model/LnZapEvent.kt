@@ -1,10 +1,12 @@
 package com.vitorpamplona.amethyst.service.model
 
 import android.util.Log
+import com.google.errorprone.annotations.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.service.lnurl.LnInvoiceUtil
 import com.vitorpamplona.amethyst.service.relays.Client
 
+@Immutable
 class LnZapEvent(
     id: HexKey,
     pubKey: HexKey,

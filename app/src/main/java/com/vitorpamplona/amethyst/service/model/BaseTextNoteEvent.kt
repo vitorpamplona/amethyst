@@ -1,11 +1,13 @@
 package com.vitorpamplona.amethyst.service.model
 
 import android.util.Log
+import com.google.errorprone.annotations.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.tagSearch
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.service.nip19.Nip19.nip19regex
 
+@Immutable
 open class BaseTextNoteEvent(
     id: HexKey,
     pubKey: HexKey,

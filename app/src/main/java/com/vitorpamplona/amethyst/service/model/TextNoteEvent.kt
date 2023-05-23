@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.service.model
 
+import com.google.errorprone.annotations.Immutable
 import com.linkedin.urls.detection.UrlDetector
 import com.linkedin.urls.detection.UrlDetectorOptions
 import com.vitorpamplona.amethyst.model.HexKey
@@ -8,6 +9,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.findHashtags
 import nostr.postr.Utils
 import java.util.Date
 
+@Immutable
 class TextNoteEvent(
     id: HexKey,
     pubKey: HexKey,

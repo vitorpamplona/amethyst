@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.model
 
+import androidx.compose.runtime.Stable
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.lnurl.LnInvoiceUtil
@@ -20,6 +21,7 @@ import java.util.regex.Pattern
 
 val tagSearch = Pattern.compile("(?:\\s|\\A)\\#\\[([0-9]+)\\]")
 
+@Stable
 class AddressableNote(val address: ATag) : Note(address.toTag()) {
     override fun idNote() = address.toNAddr()
     override fun toNEvent() = address.toNAddr()
@@ -28,6 +30,7 @@ class AddressableNote(val address: ATag) : Note(address.toTag()) {
     override fun createdAt() = (event as? LongTextNoteEvent)?.publishedAt() ?: event?.createdAt()
 }
 
+@Stable
 open class Note(val idHex: String) {
     // These fields are only available after the Text Note event is received.
     // They are immutable after that.
