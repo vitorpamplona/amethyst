@@ -352,10 +352,13 @@ fun ZapReaction(
         scope.launch(Dispatchers.IO) {
             if (!wasZappedByLoggedInUser) {
                 wasZappedByLoggedInUser = accountViewModel.calculateIfNoteWasZappedByAccount(zappedNote)
-                zappingProgress = 1f
             }
 
             zapAmountTxt = showAmount(account.calculateZappedAmount(zappedNote))
+
+            if (wasZappedByLoggedInUser) {
+                zappingProgress = 1f
+            }
         }
     }
 

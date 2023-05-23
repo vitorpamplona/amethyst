@@ -84,8 +84,8 @@ private fun DisplayEvent(
 
     noteBase?.let {
         val noteState by it.live().metadata.observeAsState()
-        val note = noteState?.note ?: return
-        val channel = note.channel()
+        val note = remember(noteState) { noteState?.note } ?: return
+        val channel = remember(noteState) { note.channel() }
 
         if (note.event is ChannelCreateEvent) {
             CreateClickableText(
@@ -105,7 +105,7 @@ private fun DisplayEvent(
             CreateClickableText(
                 clickablePart = channel.toBestDisplayName(),
                 suffix = "${nip19.additionalChars} ",
-                route = "Channel/${note.channel()?.idHex}",
+                route = "Channel/${channel.idHex}",
                 navController = navController
             )
         } else {
@@ -196,7 +196,7 @@ private fun DisplayAddress(
 
     noteBase?.let {
         val noteState by it.live().metadata.observeAsState()
-        val note = noteState?.note ?: return
+        val note = remember(noteState) { noteState?.note } ?: return
 
         CreateClickableText(
             clickablePart = "@${note.idDisplayNote()}",

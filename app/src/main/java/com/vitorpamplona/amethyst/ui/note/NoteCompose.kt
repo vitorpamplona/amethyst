@@ -1169,12 +1169,14 @@ private fun FirstUserInfoRow(
 @Composable
 fun TimeAgo(time: Long) {
     val context = LocalContext.current
-
     var timeStr by remember { mutableStateOf("") }
 
     LaunchedEffect(key1 = time) {
         withContext(Dispatchers.IO) {
-            timeStr = timeAgo(time, context = context)
+            val newTimeStr = timeAgo(time, context = context)
+            if (newTimeStr != timeStr) {
+                timeStr = newTimeStr
+            }
         }
     }
 

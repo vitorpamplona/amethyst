@@ -19,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -34,7 +35,7 @@ import com.vitorpamplona.amethyst.model.UserMetadata
 import com.vitorpamplona.amethyst.service.Nip05Verifier
 import com.vitorpamplona.amethyst.ui.theme.Nip05
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 import java.util.Date
 
 @Composable
@@ -50,9 +51,11 @@ fun nip05VerificationAsAState(user: UserMetadata, pubkeyHex: String): State<Bool
         mutableStateOf(default)
     }
 
+    val scope = rememberCoroutineScope()
+
     LaunchedEffect(key1 = user) {
         if (nip05Verified.value == null) {
-            withContext(Dispatchers.IO) {
+            scope.launch(Dispatchers.IO) {
                 user.nip05?.ifBlank { null }?.let { nip05 ->
                     Nip05Verifier().verifyNip05(
                         nip05,

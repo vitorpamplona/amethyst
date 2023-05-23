@@ -82,10 +82,15 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
             }
         }
 
-        val backgroundColor = if (isNew) {
-            MaterialTheme.colors.primary.copy(0.12f).compositeOver(MaterialTheme.colors.background)
-        } else {
-            MaterialTheme.colors.background
+        val primaryColor = MaterialTheme.colors.primary.copy(0.12f)
+        val defaultBackgroundColor = MaterialTheme.colors.background
+
+        val backgroundColor = remember(isNew) {
+            if (isNew) {
+                primaryColor.compositeOver(defaultBackgroundColor)
+            } else {
+                defaultBackgroundColor
+            }
         }
 
         val columnModifier = remember(isNew) {
