@@ -163,7 +163,7 @@ private fun RowScope.HasNewItemsIcon(
                 val newRoute = route.route.replace("{scrollToTop}", "true")
                 navController.navigate(newRoute) {
                     navController.graph.startDestinationRoute?.let { start ->
-                        popUpTo(start) { inclusive = newRoute == Route.Home.route }
+                        popUpTo(start) { inclusive = route.route == Route.Home.route }
                         restoreState = true
                     }
 
