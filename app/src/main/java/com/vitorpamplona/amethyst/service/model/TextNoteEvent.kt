@@ -1,6 +1,6 @@
 package com.vitorpamplona.amethyst.service.model
 
-import com.google.errorprone.annotations.Immutable
+import androidx.compose.runtime.Immutable
 import com.linkedin.urls.detection.UrlDetector
 import com.linkedin.urls.detection.UrlDetectorOptions
 import com.vitorpamplona.amethyst.model.HexKey

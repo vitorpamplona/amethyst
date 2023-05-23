@@ -1,7 +1,7 @@
 package com.vitorpamplona.amethyst.service.model
 
 import android.util.Log
-import com.google.errorprone.annotations.Immutable
+import androidx.compose.runtime.Immutable
 import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement

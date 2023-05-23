@@ -1,6 +1,6 @@
 package com.vitorpamplona.amethyst.service.model
 
-import com.google.errorprone.annotations.Immutable
+import androidx.compose.runtime.Immutable
 import java.math.BigDecimal
 
 @Immutable

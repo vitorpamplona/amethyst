@@ -1,7 +1,7 @@
 package com.vitorpamplona.amethyst.service.model
 
 import android.util.Log
-import com.google.errorprone.annotations.Immutable
+import androidx.compose.runtime.Immutable
 import com.google.gson.Gson
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.HexKey

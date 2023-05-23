@@ -1,6 +1,6 @@
 package com.vitorpamplona.amethyst.service.model
 
-import com.google.errorprone.annotations.Immutable
+import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.*
 import nostr.postr.Bech32
 import nostr.postr.Utils

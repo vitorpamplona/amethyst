@@ -1,7 +1,7 @@
 package com.vitorpamplona.amethyst.service.model
 
 import android.util.Log
-import com.google.errorprone.annotations.Immutable
+import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.tagSearch
 import com.vitorpamplona.amethyst.service.nip19.Nip19
