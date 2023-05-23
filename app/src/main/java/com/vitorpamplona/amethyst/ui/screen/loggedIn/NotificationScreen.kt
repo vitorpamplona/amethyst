@@ -75,7 +75,7 @@ fun NotificationScreen(
         NostrAccountDataSource.resetFilters()
         NotificationFeedFilter.account = account
         notifFeedViewModel.clear()
-        notifFeedViewModel.refresh()
+        notifFeedViewModel.invalidateData()
     }
 
     val lifeCycleOwner = LocalLifecycleOwner.current

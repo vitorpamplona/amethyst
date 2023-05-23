@@ -48,7 +48,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
 
     @Synchronized
     private fun refreshSuspended() {
-        val notes = localFilter.loadTop()
+        val notes = localFilter.feed()
 
         val thisAccount = (localFilter as? NotificationFeedFilter)?.account
         val lastNotesCopy = if (thisAccount == lastAccount) lastNotes else null
@@ -59,7 +59,12 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
             if (newCards.isNotEmpty()) {
                 lastNotes = notes.toSet()
                 lastAccount = (localFilter as? NotificationFeedFilter)?.account
-                updateFeed((oldNotesState.feed.value + newCards).distinctBy { it.id() }.sortedWith(compareBy({ it.createdAt() }, { it.id() })).reversed())
+                val singleList = (oldNotesState.feed.value + newCards)
+                    .distinctBy { it.id() }
+                    .sortedWith(compareBy({ it.createdAt() }, { it.id() }))
+                    .reversed()
+                    .take(1000)
+                updateFeed(singleList)
             }
         } else {
             val cards = convertToCard(notes)
