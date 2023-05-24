@@ -21,7 +21,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -30,7 +29,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 fun UserFeedView(
     viewModel: UserFeedViewModel,
     accountViewModel: AccountViewModel,
-    navController: NavController,
+    nav: (String) -> Unit,
     enablePullRefresh: Boolean = true
 ) {
     val feedState by viewModel.feedContent.collectAsState()
@@ -61,7 +60,7 @@ fun UserFeedView(
                     }
                     is UserFeedState.Loaded -> {
                         refreshing = false
-                        FeedLoaded(state, accountViewModel, navController)
+                        FeedLoaded(state, accountViewModel, nav)
                     }
                     is UserFeedState.Loading -> {
                         LoadingFeed()
@@ -80,7 +79,7 @@ fun UserFeedView(
 private fun FeedLoaded(
     state: UserFeedState.Loaded,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     val listState = rememberLazyListState()
 
@@ -92,7 +91,7 @@ private fun FeedLoaded(
         state = listState
     ) {
         itemsIndexed(state.feed.value, key = { _, item -> item.pubkeyHex }) { _, item ->
-            UserCompose(item, accountViewModel = accountViewModel, navController = navController)
+            UserCompose(item, accountViewModel = accountViewModel, nav = nav)
         }
     }
 }

@@ -49,7 +49,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
@@ -82,7 +81,7 @@ import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: AccountViewModel, navController: NavController) {
+fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val feedState by viewModel.feedContent.collectAsState()
 
     val listState = rememberLazyListState()
@@ -139,7 +138,7 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
                                             if (item.idHex == noteId) MaterialTheme.colors.primary.copy(alpha = 0.52f) else MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                                         ),
                                         accountViewModel = accountViewModel,
-                                        navController = navController
+                                        nav = nav
                                     )
                                 } else {
                                     Column() {
@@ -155,7 +154,7 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
                                                 isBoostedNote = false,
                                                 unPackReply = false,
                                                 accountViewModel = accountViewModel,
-                                                navController = navController
+                                                nav = nav
                                             )
                                         }
                                     }
@@ -204,7 +203,7 @@ fun NoteMaster(
     baseNote: Note,
     modifier: Modifier = Modifier,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     val noteState by baseNote.live().metadata.observeAsState()
     val note = noteState?.note
@@ -233,7 +232,7 @@ fun NoteMaster(
             account.userProfile(),
             Modifier,
             false,
-            navController,
+            nav,
             onClick = { showHiddenNote = true }
         )
     } else {
@@ -247,13 +246,13 @@ fun NoteMaster(
                     .padding(start = 12.dp, end = 12.dp)
                     .clickable(onClick = {
                         note.author?.let {
-                            navController.navigate("User/${it.pubkeyHex}")
+                            nav("User/${it.pubkeyHex}")
                         }
                     })
             ) {
                 NoteAuthorPicture(
                     baseNote = baseNote,
-                    navController = navController,
+                    nav = nav,
                     userAccount = account.userProfile(),
                     size = 55.dp
                 )
@@ -262,7 +261,7 @@ fun NoteMaster(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         NoteUsernameDisplay(baseNote, Modifier.weight(1f))
 
-                        DisplayFollowingHashtagsInPost(noteEvent, account, navController)
+                        DisplayFollowingHashtagsInPost(noteEvent, account, nav)
 
                         Text(
                             timeAgo(note.createdAt(), context = context),
@@ -290,7 +289,7 @@ fun NoteMaster(
 
                         val baseReward = noteEvent.getReward()
                         if (baseReward != null) {
-                            DisplayReward(baseReward, baseNote, account, navController)
+                            DisplayReward(baseReward, baseNote, account, nav)
                         }
 
                         val pow = noteEvent.getPoWRank()
@@ -353,11 +352,11 @@ fun NoteMaster(
             ) {
                 Column() {
                     if (noteEvent is PeopleListEvent) {
-                        DisplayPeopleList(noteState, MaterialTheme.colors.background, accountViewModel, navController)
+                        DisplayPeopleList(noteState, MaterialTheme.colors.background, accountViewModel, nav)
                     } else if (noteEvent is AudioTrackEvent) {
-                        AudioTrackHeader(noteEvent, note, account.userProfile(), navController)
+                        AudioTrackHeader(noteEvent, note, account.userProfile(), nav)
                     } else if (noteEvent is PinListEvent) {
-                        PinListHeader(noteState, MaterialTheme.colors.background, accountViewModel, navController)
+                        PinListHeader(noteState, MaterialTheme.colors.background, accountViewModel, nav)
                     } else if (noteEvent is HighlightEvent) {
                         DisplayHighlight(
                             noteEvent.quote(),
@@ -367,7 +366,7 @@ fun NoteMaster(
                             true,
                             backgroundColor,
                             accountViewModel,
-                            navController
+                            nav
                         )
                     } else {
                         val eventContent = note.event?.content()
@@ -384,10 +383,10 @@ fun NoteMaster(
                                 note.event?.tags(),
                                 MaterialTheme.colors.background,
                                 accountViewModel,
-                                navController
+                                nav
                             )
 
-                            DisplayUncitedHashtags(noteEvent.hashtags(), eventContent, navController)
+                            DisplayUncitedHashtags(noteEvent.hashtags(), eventContent, nav)
 
                             if (noteEvent is PollNoteEvent) {
                                 PollNote(
@@ -395,13 +394,13 @@ fun NoteMaster(
                                     canPreview,
                                     backgroundColor,
                                     accountViewModel,
-                                    navController
+                                    nav
                                 )
                             }
                         }
                     }
 
-                    ReactionsRow(note, accountViewModel, navController)
+                    ReactionsRow(note, accountViewModel, nav)
 
                     Divider(
                         modifier = Modifier.padding(top = 10.dp),

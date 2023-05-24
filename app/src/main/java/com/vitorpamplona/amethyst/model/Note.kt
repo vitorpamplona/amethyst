@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.model
 
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
@@ -442,4 +443,5 @@ class NoteLiveData(val note: Note) : LiveData<NoteState>(NoteState(note)) {
     }
 }
 
+@Immutable
 class NoteState(val note: Note)

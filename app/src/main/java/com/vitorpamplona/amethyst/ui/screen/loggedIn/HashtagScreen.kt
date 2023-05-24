@@ -22,7 +22,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.NostrHashtagDataSource
 import com.vitorpamplona.amethyst.ui.dal.HashtagFeedFilter
@@ -32,7 +31,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Composable
-fun HashtagScreen(tag: String?, accountViewModel: AccountViewModel, navController: NavController) {
+fun HashtagScreen(tag: String?, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
@@ -76,7 +75,7 @@ fun HashtagScreen(tag: String?, accountViewModel: AccountViewModel, navControlle
                 modifier = Modifier.padding(vertical = 0.dp)
             ) {
                 HashtagHeader(tag, account)
-                FeedView(feedViewModel, accountViewModel, navController, null)
+                FeedView(feedViewModel, accountViewModel, nav, null)
             }
         }
     }

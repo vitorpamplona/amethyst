@@ -37,7 +37,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.vitorpamplona.amethyst.NotificationCache
@@ -116,24 +115,26 @@ private fun RowScope.HasNewItemsIcon(
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = remember(accountState) { accountState?.account } ?: return
 
-    val notifState = NotificationCache.live.observeAsState()
-    val notif = remember(notifState) { notifState.value } ?: return
+    val notifState by NotificationCache.live.observeAsState()
+    val notif = remember(notifState) { notifState?.cache } ?: return
 
     var hasNewItems by remember { mutableStateOf<Boolean>(false) }
 
-    LaunchedEffect(key1 = notif) {
+    LaunchedEffect(key1 = notifState, key2 = accountState) {
         scope.launch(Dispatchers.IO) {
-            val newHasNewItems = route.hasNewItems(account, notif.cache, emptySet())
+            val newHasNewItems = route.hasNewItems(account, notif, emptySet())
+            println("Notification Change ${route.route} $hasNewItems -> $newHasNewItems")
             if (newHasNewItems != hasNewItems) {
                 hasNewItems = newHasNewItems
             }
         }
     }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(accountState) {
         scope.launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect {
-                val newHasNewItems = route.hasNewItems(account, notif.cache, it)
+                val newHasNewItems = route.hasNewItems(account, notif, it)
+                println("Notification From Base ${route.route} $hasNewItems -> $newHasNewItems")
                 if (newHasNewItems != hasNewItems) {
                     hasNewItems = newHasNewItems
                 }
@@ -182,7 +183,7 @@ private fun RowScope.BottomIcon(
     iconSize: Dp,
     base: String,
     hasNewItems: Boolean,
-    navController: NavController,
+    navController: NavHostController,
     onClick: (Boolean) -> Unit
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()

@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.ui.screen
 
-import android.util.Log
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
@@ -23,7 +22,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.ui.note.BadgeCompose
 import com.vitorpamplona.amethyst.ui.note.BoostSetCompose
 import com.vitorpamplona.amethyst.ui.note.LikeSetCompose
@@ -33,15 +31,13 @@ import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.ZapSetCompose
 import com.vitorpamplona.amethyst.ui.note.ZapUserSetCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import kotlin.time.ExperimentalTime
-import kotlin.time.measureTimedValue
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun CardFeedView(
     viewModel: CardFeedViewModel,
     accountViewModel: AccountViewModel,
-    navController: NavController,
+    nav: (String) -> Unit,
     routeForLastRead: String,
     scrollStateKey: String? = null,
     scrollToTop: Boolean = false
@@ -74,7 +70,7 @@ fun CardFeedView(
                         FeedLoaded(
                             state = state,
                             accountViewModel = accountViewModel,
-                            navController = navController,
+                            nav = nav,
                             routeForLastRead = routeForLastRead,
                             scrollStateKey = scrollStateKey,
                             scrollToTop = scrollToTop
@@ -91,12 +87,11 @@ fun CardFeedView(
     }
 }
 
-@OptIn(ExperimentalTime::class)
 @Composable
 private fun FeedLoaded(
     state: CardFeedState.Loaded,
     accountViewModel: AccountViewModel,
-    navController: NavController,
+    nav: (String) -> Unit,
     routeForLastRead: String,
     scrollStateKey: String?,
     scrollToTop: Boolean = false
@@ -121,64 +116,61 @@ private fun FeedLoaded(
         state = listState
     ) {
         itemsIndexed(state.feed.value, key = { _, item -> item.id() }) { _, item ->
-            val (value, elapsed) = measureTimedValue {
-                when (item) {
-                    is NoteCard -> NoteCompose(
-                        item.note,
-                        isBoostedNote = false,
-                        accountViewModel = accountViewModel,
-                        navController = navController,
-                        routeForLastRead = routeForLastRead
-                    )
-                    is ZapSetCard -> ZapSetCompose(
-                        item,
-                        isInnerNote = false,
-                        accountViewModel = accountViewModel,
-                        navController = navController,
-                        routeForLastRead = routeForLastRead
-                    )
-                    is ZapUserSetCard -> ZapUserSetCompose(
-                        item,
-                        isInnerNote = false,
-                        accountViewModel = accountViewModel,
-                        navController = navController,
-                        routeForLastRead = routeForLastRead
-                    )
-                    is LikeSetCard -> LikeSetCompose(
-                        item,
-                        isInnerNote = false,
-                        accountViewModel = accountViewModel,
-                        navController = navController,
-                        routeForLastRead = routeForLastRead
-                    )
-                    is BoostSetCard -> BoostSetCompose(
-                        item,
-                        isInnerNote = false,
-                        accountViewModel = accountViewModel,
-                        navController = navController,
-                        routeForLastRead = routeForLastRead
-                    )
-                    is MultiSetCard -> MultiSetCompose(
-                        item,
-                        accountViewModel = accountViewModel,
-                        navController = navController,
-                        routeForLastRead = routeForLastRead
-                    )
-                    is BadgeCard -> BadgeCompose(
-                        item,
-                        accountViewModel = accountViewModel,
-                        navController = navController,
-                        routeForLastRead = routeForLastRead
-                    )
-                    is MessageSetCard -> MessageSetCompose(
-                        messageSetCard = item,
-                        routeForLastRead = routeForLastRead,
-                        accountViewModel = accountViewModel,
-                        navController = navController
-                    )
-                }
+            when (item) {
+                is NoteCard -> NoteCompose(
+                    item.note,
+                    isBoostedNote = false,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    routeForLastRead = routeForLastRead
+                )
+                is ZapSetCard -> ZapSetCompose(
+                    item,
+                    isInnerNote = false,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    routeForLastRead = routeForLastRead
+                )
+                is ZapUserSetCard -> ZapUserSetCompose(
+                    item,
+                    isInnerNote = false,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    routeForLastRead = routeForLastRead
+                )
+                is LikeSetCard -> LikeSetCompose(
+                    item,
+                    isInnerNote = false,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    routeForLastRead = routeForLastRead
+                )
+                is BoostSetCard -> BoostSetCompose(
+                    item,
+                    isInnerNote = false,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    routeForLastRead = routeForLastRead
+                )
+                is MultiSetCard -> MultiSetCompose(
+                    item,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    routeForLastRead = routeForLastRead
+                )
+                is BadgeCard -> BadgeCompose(
+                    item,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    routeForLastRead = routeForLastRead
+                )
+                is MessageSetCard -> MessageSetCompose(
+                    messageSetCard = item,
+                    routeForLastRead = routeForLastRead,
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
             }
-            Log.d("Time", "${item.javaClass.simpleName} Feed in $elapsed ${item.id()}")
         }
     }
 }

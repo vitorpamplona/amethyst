@@ -82,7 +82,6 @@ android {
     lint {
         disable 'MissingTranslation'
     }
-
 }
 
 dependencies {
@@ -182,6 +181,9 @@ dependencies {
     implementation "com.patrykandpatrick.vico:compose:${vico_version}"
     implementation "com.patrykandpatrick.vico:views:${vico_version}"
     implementation "com.patrykandpatrick.vico:compose-m2:${vico_version}"
+
+    // immutable collections to avoid recomposition
+    implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable:0.3.5")
 
     // Automatic memory leak detection
     debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.11'

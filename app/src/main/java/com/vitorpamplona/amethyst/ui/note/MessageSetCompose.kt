@@ -25,7 +25,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.screen.MessageSetCard
@@ -35,7 +34,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, accountViewModel: AccountViewModel, navController: NavController) {
+fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val noteState by messageSetCard.note.live().metadata.observeAsState()
     val note = remember(noteState) { noteState?.note }
 
@@ -81,7 +80,7 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, 
                             routeFor(
                                 note,
                                 accountViewModel.userProfile()
-                            )?.let { navController.navigate(it) }
+                            )?.let { nav(it) }
                         }
                     },
                     onLongClick = { popupExpanded = true }
@@ -108,7 +107,7 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, 
                         addMarginTop = false,
                         parentBackgroundColor = backgroundColor,
                         accountViewModel = accountViewModel,
-                        navController = navController
+                        nav = nav
                     )
 
                     NoteDropDownMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)

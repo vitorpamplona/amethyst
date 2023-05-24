@@ -132,6 +132,7 @@ fun RobohashAsyncImageProxy(
     filterQuality: FilterQuality = DrawScope.DefaultFilterQuality
 ) {
     val proxy = remember(model) { model.proxyUrl() }
+
     if (proxy == null) {
         RobohashAsyncImage(
             robot = robot,

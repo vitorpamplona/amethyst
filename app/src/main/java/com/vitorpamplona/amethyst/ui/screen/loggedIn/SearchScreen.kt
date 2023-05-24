@@ -48,7 +48,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Channel
@@ -83,7 +82,7 @@ import kotlinx.coroutines.channels.Channel as CoroutineChannel
 fun SearchScreen(
     searchFeedViewModel: NostrGlobalFeedViewModel,
     accountViewModel: AccountViewModel,
-    navController: NavController,
+    nav: (String) -> Unit,
     scrollToTop: Boolean = false
 ) {
     val lifeCycleOwner = LocalLifecycleOwner.current
@@ -124,8 +123,8 @@ fun SearchScreen(
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            SearchBar(accountViewModel, navController)
-            FeedView(searchFeedViewModel, accountViewModel, navController, null, ScrollStateKeys.GLOBAL_SCREEN, scrollToTop)
+            SearchBar(accountViewModel, nav)
+            FeedView(searchFeedViewModel, accountViewModel, nav, null, ScrollStateKeys.GLOBAL_SCREEN, scrollToTop)
         }
     }
 }
@@ -185,7 +184,7 @@ class SearchBarViewModel : ViewModel() {
 
 @OptIn(FlowPreview::class)
 @Composable
-private fun SearchBar(accountViewModel: AccountViewModel, navController: NavController) {
+private fun SearchBar(accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val searchBarViewModel: SearchBarViewModel = viewModel()
     searchBarViewModel.account = accountViewModel.accountLiveData.value?.account
 
@@ -306,12 +305,12 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
         ) {
             itemsIndexed(searchBarViewModel.hashtagResults.value, key = { _, item -> "#" + item }) { _, item ->
                 HashtagLine(item) {
-                    navController.navigate("Hashtag/$item")
+                    nav("Hashtag/$item")
                 }
             }
 
             itemsIndexed(searchBarViewModel.searchResults.value, key = { _, item -> "u" + item.pubkeyHex }) { _, item ->
-                UserCompose(item, accountViewModel = accountViewModel, navController = navController)
+                UserCompose(item, accountViewModel = accountViewModel, nav = nav)
             }
 
             itemsIndexed(searchBarViewModel.searchResultsChannels.value, key = { _, item -> "c" + item.idHex }) { _, item ->
@@ -327,12 +326,12 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
                     channelLastTime = null,
                     channelLastContent = item.info.about,
                     false,
-                    onClick = { navController.navigate("Channel/${item.idHex}") }
+                    onClick = { nav("Channel/${item.idHex}") }
                 )
             }
 
             itemsIndexed(searchBarViewModel.searchResultsNotes.value, key = { _, item -> "n" + item.idHex }) { _, item ->
-                NoteCompose(item, accountViewModel = accountViewModel, navController = navController)
+                NoteCompose(item, accountViewModel = accountViewModel, nav = nav)
             }
         }
     }

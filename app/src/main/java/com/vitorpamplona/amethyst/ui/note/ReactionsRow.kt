@@ -50,7 +50,6 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
-import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
@@ -66,7 +65,7 @@ import java.math.RoundingMode
 import kotlin.math.roundToInt
 
 @Composable
-fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel, navController: NavController) {
+fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = remember(accountState) { accountState?.account } ?: return
 
@@ -81,11 +80,11 @@ fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel, navControll
     }
 
     if (wantsToReplyTo != null) {
-        NewPostView({ wantsToReplyTo = null }, wantsToReplyTo, null, account, accountViewModel, navController)
+        NewPostView({ wantsToReplyTo = null }, wantsToReplyTo, null, account, accountViewModel, nav)
     }
 
     if (wantsToQuote != null) {
-        NewPostView({ wantsToQuote = null }, null, wantsToQuote, account, accountViewModel, navController)
+        NewPostView({ wantsToQuote = null }, null, wantsToQuote, account, accountViewModel, nav)
     }
 
     Spacer(modifier = Modifier.height(8.dp))

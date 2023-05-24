@@ -60,7 +60,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Channel
@@ -83,7 +82,7 @@ import com.vitorpamplona.amethyst.ui.screen.NostrChannelFeedViewModel
 fun ChannelScreen(
     channelId: String?,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account
@@ -143,7 +142,7 @@ fun ChannelScreen(
             ChannelHeader(
                 channel,
                 account,
-                navController = navController
+                nav = nav
             )
 
             Column(
@@ -152,7 +151,7 @@ fun ChannelScreen(
                     .padding(vertical = 0.dp)
                     .weight(1f, true)
             ) {
-                ChatroomFeedView(feedViewModel, accountViewModel, navController, "Channel/$channelId") {
+                ChatroomFeedView(feedViewModel, accountViewModel, nav, "Channel/$channelId") {
                     replyTo.value = it
                 }
             }
@@ -168,7 +167,7 @@ fun ChannelScreen(
                             null,
                             innerQuote = true,
                             accountViewModel = accountViewModel,
-                            navController = navController,
+                            nav = nav,
                             onWantsToReply = {
                                 replyTo.value = it
                             }
@@ -248,7 +247,7 @@ fun ChannelScreen(
 }
 
 @Composable
-fun ChannelHeader(baseChannel: Channel, account: Account, navController: NavController) {
+fun ChannelHeader(baseChannel: Channel, account: Account, nav: (String) -> Unit) {
     val channelState by baseChannel.live.observeAsState()
     val channel = channelState?.channel ?: return
 
@@ -256,7 +255,7 @@ fun ChannelHeader(baseChannel: Channel, account: Account, navController: NavCont
 
     Column(
         Modifier.clickable {
-            navController.navigate("Channel/${baseChannel.idHex}")
+            nav("Channel/${baseChannel.idHex}")
         }
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
@@ -306,9 +305,9 @@ fun ChannelHeader(baseChannel: Channel, account: Account, navController: NavCont
                     }
 
                     if (account.followingChannels.contains(channel.idHex)) {
-                        LeaveButton(account, channel, navController)
+                        LeaveButton(account, channel, nav)
                     } else {
-                        JoinButton(account, channel, navController)
+                        JoinButton(account, channel, nav)
                     }
                 }
             }
@@ -386,7 +385,7 @@ private fun EditButton(account: Account, channel: Channel) {
 }
 
 @Composable
-private fun JoinButton(account: Account, channel: Channel, navController: NavController) {
+private fun JoinButton(account: Account, channel: Channel, nav: (String) -> Unit) {
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
@@ -404,12 +403,12 @@ private fun JoinButton(account: Account, channel: Channel, navController: NavCon
 }
 
 @Composable
-private fun LeaveButton(account: Account, channel: Channel, navController: NavController) {
+private fun LeaveButton(account: Account, channel: Channel, nav: (String) -> Unit) {
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
             account.leaveChannel(channel.idHex)
-            navController.navigate(Route.Message.route)
+            nav(Route.Message.route)
         },
         shape = RoundedCornerShape(20.dp),
         colors = ButtonDefaults

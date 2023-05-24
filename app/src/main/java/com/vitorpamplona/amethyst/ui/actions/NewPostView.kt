@@ -57,7 +57,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
@@ -75,7 +74,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = null, account: Account, accountViewModel: AccountViewModel, navController: NavController) {
+fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = null, account: Account, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val postViewModel: NewPostViewModel = viewModel()
 
     val context = LocalContext.current
@@ -292,7 +291,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                             true,
                                             MaterialTheme.colors.background,
                                             accountViewModel,
-                                            navController
+                                            nav
                                         )
                                     } else if (noProtocolUrlValidator.matcher(myUrlPreview).matches()) {
                                         UrlPreview("https://$myUrlPreview", myUrlPreview)

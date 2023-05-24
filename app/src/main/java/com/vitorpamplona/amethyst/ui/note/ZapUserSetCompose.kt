@@ -25,7 +25,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
@@ -37,7 +36,7 @@ import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ZapUserSetCompose(zapSetCard: ZapUserSetCard, isInnerNote: Boolean = false, routeForLastRead: String, accountViewModel: AccountViewModel, navController: NavController) {
+fun ZapUserSetCompose(zapSetCard: ZapUserSetCard, isInnerNote: Boolean = false, routeForLastRead: String, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
@@ -61,7 +60,7 @@ fun ZapUserSetCompose(zapSetCard: ZapUserSetCard, isInnerNote: Boolean = false, 
         modifier = Modifier
             .background(backgroundColor)
             .clickable {
-                navController.navigate("User/${zapSetCard.user.pubkeyHex}")
+                nav("User/${zapSetCard.user.pubkeyHex}")
             }
     ) {
         Row(
@@ -95,14 +94,14 @@ fun ZapUserSetCompose(zapSetCard: ZapUserSetCard, isInnerNote: Boolean = false, 
                     zapSetCard.zapEvents.forEach {
                         NoteAuthorPicture(
                             baseNote = it.key,
-                            navController = navController,
+                            nav = nav,
                             userAccount = account.userProfile(),
                             size = 35.dp
                         )
                     }
                 }
 
-                UserCompose(baseUser = zapSetCard.user, accountViewModel = accountViewModel, navController = navController)
+                UserCompose(baseUser = zapSetCard.user, accountViewModel = accountViewModel, nav = nav)
             }
         }
     }

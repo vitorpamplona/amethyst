@@ -25,7 +25,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
 import com.vitorpamplona.amethyst.ui.dal.HomeConversationsFeedFilter
@@ -45,7 +44,7 @@ fun HomeScreen(
     homeFeedViewModel: NostrHomeFeedViewModel,
     repliesFeedViewModel: NostrHomeRepliesFeedViewModel,
     accountViewModel: AccountViewModel,
-    navController: NavController,
+    nav: (String) -> Unit,
     pagerState: PagerState,
     scrollToTop: Boolean = false,
     nip47: String? = null
@@ -120,7 +119,7 @@ fun HomeScreen(
                 FeedView(
                     viewModel = tabs[page].viewModel,
                     accountViewModel = accountViewModel,
-                    navController = navController,
+                    nav = nav,
                     routeForLastRead = tabs[page].routeForLastRead,
                     scrollStateKey = tabs[page].scrollStateKey,
                     scrollToTop = scrollToTop

@@ -23,7 +23,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import com.patrykandpatrick.vico.compose.axis.horizontal.bottomAxis
 import com.patrykandpatrick.vico.compose.axis.vertical.endAxis
 import com.patrykandpatrick.vico.compose.axis.vertical.startAxis
@@ -61,7 +60,7 @@ fun NotificationScreen(
     notifFeedViewModel: NotificationViewModel,
     userReactionsStatsModel: UserReactionsViewModel,
     accountViewModel: AccountViewModel,
-    navController: NavController,
+    nav: (String) -> Unit,
     scrollToTop: Boolean = false
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
@@ -74,8 +73,6 @@ fun NotificationScreen(
     LaunchedEffect(account.userProfile().pubkeyHex, account.defaultNotificationFollowList) {
         NostrAccountDataSource.resetFilters()
         NotificationFeedFilter.account = account
-        notifFeedViewModel.clear()
-        notifFeedViewModel.invalidateData()
     }
 
     val lifeCycleOwner = LocalLifecycleOwner.current
@@ -83,7 +80,7 @@ fun NotificationScreen(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 NotificationFeedFilter.account = account
-                notifFeedViewModel.invalidateData()
+                notifFeedViewModel.invalidateData(true)
             }
         }
 
@@ -97,11 +94,11 @@ fun NotificationScreen(
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            SummaryBar(userReactionsStatsModel, accountViewModel, navController)
+            SummaryBar(userReactionsStatsModel, accountViewModel, nav)
             CardFeedView(
                 viewModel = notifFeedViewModel,
                 accountViewModel = accountViewModel,
-                navController = navController,
+                nav = nav,
                 routeForLastRead = Route.Notification.base,
                 scrollStateKey = ScrollStateKeys.NOTIFICATION_SCREEN,
                 scrollToTop = scrollToTop
@@ -111,12 +108,12 @@ fun NotificationScreen(
 }
 
 @Composable
-fun SummaryBar(model: UserReactionsViewModel, accountViewModel: AccountViewModel, navController: NavController) {
+fun SummaryBar(model: UserReactionsViewModel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     var showChart by remember {
         mutableStateOf(false)
     }
 
-    UserReactionsRow(model, accountViewModel, navController) {
+    UserReactionsRow(model, accountViewModel, nav) {
         showChart = !showChart
     }
 

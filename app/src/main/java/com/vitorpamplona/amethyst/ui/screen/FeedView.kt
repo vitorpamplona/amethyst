@@ -29,7 +29,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -39,7 +38,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 fun FeedView(
     viewModel: FeedViewModel,
     accountViewModel: AccountViewModel,
-    navController: NavController,
+    nav: (String) -> Unit,
     routeForLastRead: String?,
     scrollStateKey: String? = null,
     scrollToTop: Boolean = false,
@@ -84,7 +83,7 @@ fun FeedView(
                             state,
                             routeForLastRead,
                             accountViewModel,
-                            navController,
+                            nav,
                             scrollStateKey,
                             scrollToTop
                         )
@@ -108,7 +107,7 @@ private fun FeedLoaded(
     state: FeedState.Loaded,
     routeForLastRead: String?,
     accountViewModel: AccountViewModel,
-    navController: NavController,
+    nav: (String) -> Unit,
     scrollStateKey: String?,
     scrollToTop: Boolean = false
 ) {
@@ -142,7 +141,7 @@ private fun FeedLoaded(
                 modifier = baseModifier,
                 isBoostedNote = false,
                 accountViewModel = accountViewModel,
-                navController = navController
+                nav = nav
             )
         }
     }

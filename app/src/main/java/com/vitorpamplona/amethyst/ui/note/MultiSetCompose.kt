@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -35,7 +36,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
@@ -51,13 +51,15 @@ import com.vitorpamplona.amethyst.ui.screen.MultiSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accountViewModel: AccountViewModel, navController: NavController) {
+fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val baseNote = remember { multiSetCard.note }
 
     val noteState by baseNote.live().metadata.observeAsState()
@@ -90,34 +92,38 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
         val primaryColor = MaterialTheme.colors.primary.copy(0.12f)
         val defaultBackgroundColor = MaterialTheme.colors.background
 
-        val backgroundColor = remember(isNew) {
-            if (isNew) {
-                primaryColor.compositeOver(defaultBackgroundColor)
-            } else {
-                defaultBackgroundColor
+        val backgroundColor by remember(isNew) {
+            derivedStateOf {
+                if (isNew) {
+                    primaryColor.compositeOver(defaultBackgroundColor)
+                } else {
+                    defaultBackgroundColor
+                }
             }
         }
 
-        val columnModifier = remember(isNew) {
-            Modifier
-                .background(backgroundColor)
-                .padding(
-                    start = 12.dp,
-                    end = 12.dp,
-                    top = 10.dp
-                )
-                .combinedClickable(
-                    onClick = {
-                        scope.launch {
-                            routeFor(
-                                baseNote,
-                                account.userProfile()
-                            )?.let { navController.navigate(it) }
-                        }
-                    },
-                    onLongClick = { popupExpanded = true }
-                )
-                .fillMaxWidth()
+        val columnModifier by remember(isNew, backgroundColor) {
+            derivedStateOf {
+                Modifier
+                    .background(backgroundColor)
+                    .padding(
+                        start = 12.dp,
+                        end = 12.dp,
+                        top = 10.dp
+                    )
+                    .combinedClickable(
+                        onClick = {
+                            scope.launch {
+                                routeFor(
+                                    baseNote,
+                                    account.userProfile()
+                                )?.let { nav(it) }
+                            }
+                        },
+                        onLongClick = { popupExpanded = true }
+                    )
+                    .fillMaxWidth()
+            }
         }
 
         val zapEvents = remember { multiSetCard.zapEvents }
@@ -126,15 +132,15 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
 
         Column(modifier = columnModifier) {
             if (zapEvents.isNotEmpty()) {
-                RenderZapGallery(zapEvents, navController, account, accountViewModel)
+                RenderZapGallery(zapEvents, backgroundColor, nav, account, accountViewModel)
             }
 
             if (boostEvents.isNotEmpty()) {
-                RenderBoostGallery(boostEvents, navController, account, accountViewModel)
+                RenderBoostGallery(boostEvents, backgroundColor, nav, account, accountViewModel)
             }
 
             if (likeEvents.isNotEmpty()) {
-                RenderLikeGallery(likeEvents, navController, account, accountViewModel)
+                RenderLikeGallery(likeEvents, backgroundColor, nav, account, accountViewModel)
             }
 
             Row(Modifier.fillMaxWidth()) {
@@ -147,7 +153,7 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
                     isBoostedNote = true,
                     parentBackgroundColor = backgroundColor,
                     accountViewModel = accountViewModel,
-                    navController = navController
+                    nav = nav
                 )
 
                 NoteDropDownMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
@@ -158,8 +164,9 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
 
 @Composable
 private fun RenderLikeGallery(
-    likeEvents: List<Note>,
-    navController: NavController,
+    likeEvents: ImmutableList<Note>,
+    backgroundColor: Color,
+    nav: (String) -> Unit,
     account: Account,
     accountViewModel: AccountViewModel
 ) {
@@ -183,14 +190,15 @@ private fun RenderLikeGallery(
             )
         }
 
-        AuthorGallery(likeEvents, navController, account, accountViewModel)
+        AuthorGallery(likeEvents, backgroundColor, nav, account, accountViewModel)
     }
 }
 
 @Composable
 private fun RenderZapGallery(
-    zapEvents: Map<Note, Note>,
-    navController: NavController,
+    zapEvents: ImmutableMap<Note, Note>,
+    backgroundColor: Color,
+    nav: (String) -> Unit,
     account: Account,
     accountViewModel: AccountViewModel
 ) {
@@ -214,18 +222,23 @@ private fun RenderZapGallery(
             )
         }
 
-        AuthorGalleryZaps(zapEvents, navController, account, accountViewModel)
+        AuthorGalleryZaps(zapEvents, backgroundColor, nav, account, accountViewModel)
     }
 }
 
 @Composable
 private fun RenderBoostGallery(
-    boostEvents: List<Note>,
-    navController: NavController,
+    boostEvents: ImmutableList<Note>,
+    backgroundColor: Color,
+    nav: (String) -> Unit,
     account: Account,
     accountViewModel: AccountViewModel
 ) {
-    Row(Modifier.fillMaxWidth()) {
+    Row(
+        modifier = remember {
+            Modifier.fillMaxWidth()
+        }
+    ) {
         Box(
             modifier = remember {
                 Modifier
@@ -245,14 +258,15 @@ private fun RenderBoostGallery(
             )
         }
 
-        AuthorGallery(boostEvents, navController, account, accountViewModel)
+        AuthorGallery(boostEvents, backgroundColor, nav, account, accountViewModel)
     }
 }
 
 @Composable
 fun AuthorGalleryZaps(
-    authorNotes: Map<Note, Note>,
-    navController: NavController,
+    authorNotes: ImmutableMap<Note, Note>,
+    backgroundColor: Color,
+    nav: (String) -> Unit,
     account: Account,
     accountViewModel: AccountViewModel
 ) {
@@ -261,7 +275,7 @@ fun AuthorGalleryZaps(
     Column(modifier = Modifier.padding(start = 10.dp)) {
         FlowRow() {
             authorNotes.forEach {
-                AuthorPictureAndComment(it.key, it.value, navController, accountState, accountViewModel)
+                AuthorPictureAndComment(it.key, it.value, backgroundColor, nav, accountState, accountViewModel)
             }
         }
     }
@@ -271,7 +285,8 @@ fun AuthorGalleryZaps(
 private fun AuthorPictureAndComment(
     zapRequest: Note,
     zapEvent: Note?,
-    navController: NavController,
+    backgroundColor: Color,
+    nav: (String) -> Unit,
     accountUser: State<UserState?>,
     accountViewModel: AccountViewModel
 ) {
@@ -287,12 +302,26 @@ private fun AuthorPictureAndComment(
                 val amount = (zapEvent?.event as? LnZapEvent)?.amount
                 if (decryptedContent != null) {
                     val newAuthor = LocalCache.getOrCreateUser(decryptedContent.pubKey)
-                    content = Triple(newAuthor, decryptedContent.content, amount)
+                    content = Triple(newAuthor, decryptedContent.content.ifBlank { null }, amount)
                 } else {
                     if (!zapRequest.event?.content().isNullOrBlank() || amount != null) {
-                        content = Triple(author, zapRequest.event?.content(), amount)
+                        content = Triple(author, zapRequest.event?.content()?.ifBlank { null }, amount)
                     }
                 }
+            }
+        }
+    }
+
+    val modifier = remember(content.second) {
+        if (!content.second.isNullOrBlank()) {
+            Modifier
+                .fillMaxWidth()
+                .clickable {
+                    nav("User/${author.pubkeyHex}")
+                }
+        } else {
+            Modifier.clickable {
+                nav("User/${author.pubkeyHex}")
             }
         }
     }
@@ -301,9 +330,11 @@ private fun AuthorPictureAndComment(
         author = content.first,
         comment = content.second,
         amount = showAmountAxis(content.third),
-        navController = navController,
+        backgroundColor = backgroundColor,
+        nav = nav,
         accountUser = accountUser,
-        accountViewModel = accountViewModel
+        accountViewModel = accountViewModel,
+        modifier = modifier
     )
 }
 
@@ -312,24 +343,12 @@ private fun AuthorPictureAndComment(
     author: User,
     comment: String?,
     amount: String?,
-    navController: NavController,
+    backgroundColor: Color,
+    nav: (String) -> Unit,
     accountUser: State<UserState?>,
-    accountViewModel: AccountViewModel
+    accountViewModel: AccountViewModel,
+    modifier: Modifier
 ) {
-    val modifier = remember(comment) {
-        if (!comment.isNullOrBlank()) {
-            Modifier
-                .fillMaxWidth()
-                .clickable {
-                    navController.navigate("User/${author.pubkeyHex}")
-                }
-        } else {
-            Modifier.clickable {
-                navController.navigate("User/${author.pubkeyHex}")
-            }
-        }
-    }
-
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically
@@ -358,16 +377,16 @@ private fun AuthorPictureAndComment(
             }
         }
 
-        if (!comment.isNullOrBlank()) {
+        comment?.let {
             Spacer(modifier = Modifier.width(5.dp))
             TranslatableRichTextViewer(
-                content = comment,
+                content = it,
                 canPreview = true,
                 tags = null,
                 modifier = Modifier.weight(1f),
-                backgroundColor = MaterialTheme.colors.background,
+                backgroundColor = backgroundColor,
                 accountViewModel = accountViewModel,
-                navController = navController
+                nav = nav
             )
         }
     }
@@ -375,27 +394,26 @@ private fun AuthorPictureAndComment(
 
 @Composable
 fun AuthorGallery(
-    authorNotes: Collection<Note>,
-    navController: NavController,
+    authorNotes: ImmutableList<Note>,
+    backgroundColor: Color,
+    nav: (String) -> Unit,
     account: Account,
     accountViewModel: AccountViewModel
 ) {
     val accountState = account.userProfile().live().follows.observeAsState()
-    val listToRender = remember {
-        Pair(
-            authorNotes.take(50).mapNotNull { it.author },
-            authorNotes.size
-        )
-    }
 
     Column(modifier = Modifier.padding(start = 10.dp)) {
         FlowRow() {
-            listToRender.first.forEach { author ->
-                AuthorPictureAndComment(author, null, null, navController, accountState, accountViewModel)
-            }
+            authorNotes.forEach { note ->
+                note.author?.let { user ->
+                    val modifier = remember {
+                        Modifier.clickable {
+                            nav("User/${user.pubkeyHex}")
+                        }
+                    }
 
-            if (listToRender.second > 50) {
-                Text(" and ${listToRender.second - 50} others")
+                    AuthorPictureAndComment(user, null, null, backgroundColor, nav, accountState, accountViewModel, modifier)
+                }
             }
         }
     }

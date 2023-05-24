@@ -51,7 +51,6 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -73,7 +72,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
-fun JoinUserOrChannelView(onClose: () -> Unit, account: Account, navController: NavController) {
+fun JoinUserOrChannelView(onClose: () -> Unit, account: Account, nav: (String) -> Unit) {
     val searchBarViewModel: SearchBarViewModel = viewModel()
     searchBarViewModel.account = account
 
@@ -116,7 +115,7 @@ fun JoinUserOrChannelView(onClose: () -> Unit, account: Account, navController: 
 
                 Spacer(modifier = Modifier.height(15.dp))
 
-                RenderSeach(searchBarViewModel, account, navController)
+                RenderSeach(searchBarViewModel, account, nav)
             }
         }
     }
@@ -127,7 +126,7 @@ fun JoinUserOrChannelView(onClose: () -> Unit, account: Account, navController: 
 private fun RenderSeach(
     searchBarViewModel: SearchBarViewModel,
     account: Account,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
@@ -275,7 +274,7 @@ private fun RenderSeach(
                     UserComposeForChat(
                         item,
                         account = account,
-                        navController = navController
+                        nav = nav
                     )
                 }
 
@@ -295,7 +294,7 @@ private fun RenderSeach(
                         channelLastTime = null,
                         channelLastContent = item.info.about,
                         false,
-                        onClick = { navController.navigate("Channel/${item.idHex}") }
+                        onClick = { nav("Channel/${item.idHex}") }
                     )
                 }
             }
@@ -307,12 +306,12 @@ private fun RenderSeach(
 fun UserComposeForChat(
     baseUser: User,
     account: Account,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     Column(
         modifier =
         Modifier.clickable(
-            onClick = { navController.navigate("Room/${baseUser.pubkeyHex}") }
+            onClick = { nav("Room/${baseUser.pubkeyHex}") }
         )
     ) {
         Row(
@@ -324,7 +323,7 @@ fun UserComposeForChat(
                 ),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            UserPicture(baseUser, navController, account.userProfile(), 55.dp)
+            UserPicture(baseUser, nav, account.userProfile(), 55.dp)
 
             Column(modifier = Modifier.padding(start = 10.dp).weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {

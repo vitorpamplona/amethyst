@@ -19,7 +19,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.dal.BookmarkPrivateFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.BookmarkPublicFeedFilter
@@ -30,7 +29,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun BookmarkListScreen(accountViewModel: AccountViewModel, navController: NavController) {
+fun BookmarkListScreen(accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account
 
@@ -74,8 +73,8 @@ fun BookmarkListScreen(accountViewModel: AccountViewModel, navController: NavCon
                 }
                 HorizontalPager(pageCount = 2, state = pagerState) { page ->
                     when (page) {
-                        0 -> FeedView(privateFeedViewModel, accountViewModel, navController, null)
-                        1 -> FeedView(publicFeedViewModel, accountViewModel, navController, null)
+                        0 -> FeedView(privateFeedViewModel, accountViewModel, nav, null)
+                        1 -> FeedView(publicFeedViewModel, accountViewModel, nav, null)
                     }
                 }
             }

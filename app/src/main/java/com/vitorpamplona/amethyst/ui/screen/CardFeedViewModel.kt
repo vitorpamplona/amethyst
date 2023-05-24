@@ -20,6 +20,9 @@ import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -59,17 +62,28 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
             if (newCards.isNotEmpty()) {
                 lastNotes = notes.toSet()
                 lastAccount = (localFilter as? NotificationFeedFilter)?.account
-                val singleList = (oldNotesState.feed.value + newCards)
+
+                val updatedCards = (oldNotesState.feed.value + newCards)
                     .distinctBy { it.id() }
                     .sortedWith(compareBy({ it.createdAt() }, { it.id() }))
                     .reversed()
                     .take(1000)
-                updateFeed(singleList)
+                    .toImmutableList()
+
+                if (!equalImmutableLists(oldNotesState.feed.value, updatedCards)) {
+                    updateFeed(updatedCards)
+                }
             }
         } else {
-            val cards = convertToCard(notes)
             lastNotes = notes.toSet()
             lastAccount = (localFilter as? NotificationFeedFilter)?.account
+
+            val cards = convertToCard(notes)
+                .sortedWith(compareBy({ it.createdAt() }, { it.id() }))
+                .reversed()
+                .take(1000)
+                .toImmutableList()
+
             updateFeed(cards)
         }
     }
@@ -138,9 +152,9 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
             singleList.chunked(50).map { chunk ->
                 MultiSetCard(
                     baseNote,
-                    boostsInCard.filter { it in chunk },
-                    reactionsInCard.filter { it in chunk },
-                    zapsInCard.filter { it.value in chunk }
+                    boostsInCard.filter { it in chunk }.toImmutableList(),
+                    reactionsInCard.filter { it in chunk }.toImmutableList(),
+                    zapsInCard.filter { it.value in chunk }.toImmutableMap()
                 )
             }
         }.flatten()
@@ -148,7 +162,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
         val userZaps = zapsPerUser.map {
             ZapUserSetCard(
                 it.key,
-                it.value
+                it.value.toImmutableMap()
             )
         }
 
@@ -165,7 +179,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
         return (multiCards + textNoteCards + userZaps).sortedWith(compareBy({ it.createdAt() }, { it.id() })).reversed()
     }
 
-    private fun updateFeed(notes: List<Card>) {
+    private fun updateFeed(notes: ImmutableList<Card>) {
         val scope = CoroutineScope(Job() + Dispatchers.Main)
         scope.launch {
             val currentState = _feedContent.value
@@ -173,7 +187,6 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
             if (notes.isEmpty()) {
                 _feedContent.update { CardFeedState.Empty }
             } else if (currentState is CardFeedState.Loaded) {
-                // updates the current list
                 currentState.feed.value = notes
             } else {
                 _feedContent.update { CardFeedState.Loaded(mutableStateOf(notes)) }
@@ -207,8 +220,11 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
                     .sortedWith(compareBy({ it.createdAt() }, { it.id() }))
                     .reversed()
                     .take(1000)
+                    .toImmutableList()
 
-                updateFeed(updatedCards)
+                if (!equalImmutableLists(oldNotesState.feed.value, updatedCards)) {
+                    updateFeed(updatedCards)
+                }
             }
         } else {
             // Refresh Everything
@@ -227,8 +243,8 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
     }
     private val bundlerInsert = BundledInsert<Set<Note>>(250, Dispatchers.IO)
 
-    fun invalidateData() {
-        bundler.invalidate()
+    fun invalidateData(ignoreIfDoing: Boolean = false) {
+        bundler.invalidate(ignoreIfDoing)
     }
 
     @OptIn(ExperimentalTime::class)
@@ -269,4 +285,14 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
         collectorJob?.cancel()
         super.onCleared()
     }
+}
+
+fun <T> equalImmutableLists(list1: ImmutableList<T>, list2: ImmutableList<T>): Boolean {
+    if (list1.size != list2.size) return false
+    for (i in 0 until list1.size) {
+        if (list1[i] !== list2[i]) {
+            return false
+        }
+    }
+    return true
 }

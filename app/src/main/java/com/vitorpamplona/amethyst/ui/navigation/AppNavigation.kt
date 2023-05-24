@@ -82,6 +82,14 @@ fun AppNavigation(
         }
     }
 
+    val nav = remember {
+        { route: String ->
+            if (getRouteWithArguments(navController) != route) {
+                navController.navigate(route)
+            }
+        }
+    }
+
     NavHost(navController, startDestination = Route.Home.route) {
         Route.Video.let { route ->
             composable(route.route, route.arguments, content = {
@@ -90,7 +98,7 @@ fun AppNavigation(
                 VideoScreen(
                     videoFeedView = videoFeedViewModel,
                     accountViewModel = accountViewModel,
-                    navController = navController,
+                    nav = nav,
                     scrollToTop = scrollToTop
                 )
 
@@ -108,7 +116,7 @@ fun AppNavigation(
                 SearchScreen(
                     searchFeedViewModel = searchFeedViewModel,
                     accountViewModel = accountViewModel,
-                    navController = navController,
+                    nav = nav,
                     scrollToTop = scrollToTop
                 )
 
@@ -128,7 +136,7 @@ fun AppNavigation(
                     homeFeedViewModel = homeFeedViewModel,
                     repliesFeedViewModel = repliesFeedViewModel,
                     accountViewModel = accountViewModel,
-                    navController = navController,
+                    nav = nav,
                     pagerState = homePagerState,
                     scrollToTop = scrollToTop,
                     nip47 = nip47
@@ -152,7 +160,7 @@ fun AppNavigation(
                     notifFeedViewModel = notifFeedViewModel,
                     userReactionsStatsModel = userReactionsStatsModel,
                     accountViewModel = accountViewModel,
-                    navController = navController,
+                    nav = nav,
                     scrollToTop = scrollToTop
                 )
 
@@ -163,16 +171,16 @@ fun AppNavigation(
             })
         }
 
-        composable(Route.Message.route, content = { ChatroomListScreen(accountViewModel, navController) })
-        composable(Route.BlockedUsers.route, content = { HiddenUsersScreen(accountViewModel, navController) })
-        composable(Route.Bookmarks.route, content = { BookmarkListScreen(accountViewModel, navController) })
+        composable(Route.Message.route, content = { ChatroomListScreen(accountViewModel, nav) })
+        composable(Route.BlockedUsers.route, content = { HiddenUsersScreen(accountViewModel, nav) })
+        composable(Route.Bookmarks.route, content = { BookmarkListScreen(accountViewModel, nav) })
 
         Route.Profile.let { route ->
             composable(route.route, route.arguments, content = {
                 ProfileScreen(
                     userId = it.arguments?.getString("id"),
                     accountViewModel = accountViewModel,
-                    navController = navController
+                    nav = nav
                 )
             })
         }
@@ -182,7 +190,7 @@ fun AppNavigation(
                 ThreadScreen(
                     noteId = it.arguments?.getString("id"),
                     accountViewModel = accountViewModel,
-                    navController = navController
+                    nav = nav
                 )
             })
         }
@@ -192,7 +200,7 @@ fun AppNavigation(
                 HashtagScreen(
                     tag = it.arguments?.getString("id"),
                     accountViewModel = accountViewModel,
-                    navController = navController
+                    nav = nav
                 )
             })
         }
@@ -202,7 +210,7 @@ fun AppNavigation(
                 ChatroomScreen(
                     userId = it.arguments?.getString("id"),
                     accountViewModel = accountViewModel,
-                    navController = navController
+                    nav = nav
                 )
             })
         }
@@ -212,7 +220,7 @@ fun AppNavigation(
                 ChannelScreen(
                     channelId = it.arguments?.getString("id"),
                     accountViewModel = accountViewModel,
-                    navController = navController
+                    nav = nav
                 )
             })
         }
@@ -230,7 +238,7 @@ fun AppNavigation(
 
     actionableNextPage?.let {
         LaunchedEffect(it) {
-            navController.navigate(it)
+            nav(it)
         }
         actionableNextPage = null
     }

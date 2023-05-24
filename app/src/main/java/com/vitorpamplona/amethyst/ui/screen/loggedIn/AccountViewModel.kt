@@ -3,9 +3,11 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.runtime.Immutable
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.R
@@ -23,6 +25,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
 
+@Immutable
 class AccountViewModel(private val account: Account) : ViewModel() {
     val accountLiveData: LiveData<AccountState> = account.live.map { it }
     val accountLanguagesLiveData: LiveData<AccountState> = account.liveLanguages.map { it }
@@ -227,5 +230,11 @@ class AccountViewModel(private val account: Account) : ViewModel() {
 
     fun dontShowBlockAlertDialog() {
         account.setHideBlockAlertDialog()
+    }
+
+    class Factory(val account: Account) : ViewModelProvider.Factory {
+        override fun <AccountViewModel : ViewModel> create(modelClass: Class<AccountViewModel>): AccountViewModel {
+            return AccountViewModel(account) as AccountViewModel
+        }
     }
 }

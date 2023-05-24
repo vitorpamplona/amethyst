@@ -2,6 +2,8 @@ package com.vitorpamplona.amethyst.model
 
 import android.content.res.Resources
 import android.util.Log
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.FileHeader
@@ -43,6 +45,7 @@ val GLOBAL_FOLLOWS = " Global "
 val KIND3_FOLLOWS = " All Follows "
 
 @OptIn(DelicateCoroutinesApi::class)
+@Stable
 class Account(
     val loggedIn: Persona,
     var followingChannels: Set<String> = DefaultChannels,
@@ -1166,4 +1169,5 @@ class AccountLiveData(private val account: Account) : LiveData<AccountState>(Acc
     }
 }
 
+@Immutable
 class AccountState(val account: Account)

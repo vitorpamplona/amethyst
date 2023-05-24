@@ -14,7 +14,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.*
@@ -23,7 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 @Composable
-fun ReplyInformation(replyTo: List<Note>?, mentions: List<String>, account: Account, navController: NavController) {
+fun ReplyInformation(replyTo: List<Note>?, mentions: List<String>, account: Account, nav: (String) -> Unit) {
     var dupMentions by remember { mutableStateOf<List<User>?>(null) }
 
     LaunchedEffect(Unit) {
@@ -34,7 +33,7 @@ fun ReplyInformation(replyTo: List<Note>?, mentions: List<String>, account: Acco
 
     if (dupMentions != null) {
         ReplyInformation(replyTo, dupMentions, account) {
-            navController.navigate("User/${it.pubkeyHex}")
+            nav("User/${it.pubkeyHex}")
         }
     }
 }
@@ -116,7 +115,7 @@ fun ReplyInformation(replyTo: List<Note>?, dupMentions: List<User>?, account: Ac
 }
 
 @Composable
-fun ReplyInformationChannel(replyTo: List<Note>?, mentions: List<String>, channel: Channel, account: Account, navController: NavController) {
+fun ReplyInformationChannel(replyTo: List<Note>?, mentions: List<String>, channel: Channel, account: Account, nav: (String) -> Unit) {
     var sortedMentions by remember { mutableStateOf<List<User>?>(null) }
 
     LaunchedEffect(Unit) {
@@ -134,26 +133,26 @@ fun ReplyInformationChannel(replyTo: List<Note>?, mentions: List<String>, channe
             sortedMentions,
             channel,
             onUserTagClick = {
-                navController.navigate("User/${it.pubkeyHex}")
+                nav("User/${it.pubkeyHex}")
             },
             onChannelTagClick = {
-                navController.navigate("Channel/${it.idHex}")
+                nav("Channel/${it.idHex}")
             }
         )
     }
 }
 
 @Composable
-fun ReplyInformationChannel(replyTo: List<Note>?, mentions: List<User>?, channel: Channel, navController: NavController) {
+fun ReplyInformationChannel(replyTo: List<Note>?, mentions: List<User>?, channel: Channel, nav: (String) -> Unit) {
     ReplyInformationChannel(
         replyTo,
         mentions,
         channel,
         onUserTagClick = {
-            navController.navigate("User/${it.pubkeyHex}")
+            nav("User/${it.pubkeyHex}")
         },
         onChannelTagClick = {
-            navController.navigate("Channel/${it.idHex}")
+            nav("Channel/${it.idHex}")
         }
     )
 }

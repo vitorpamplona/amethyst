@@ -23,7 +23,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
@@ -37,7 +36,7 @@ import kotlinx.coroutines.launch
 import java.math.BigDecimal
 
 @Composable
-fun ZapNoteCompose(baseNote: Pair<Note, Note>, accountViewModel: AccountViewModel, navController: NavController) {
+fun ZapNoteCompose(baseNote: Pair<Note, Note>, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
@@ -60,7 +59,7 @@ fun ZapNoteCompose(baseNote: Pair<Note, Note>, accountViewModel: AccountViewMode
         Column(
             modifier =
             Modifier.clickable(
-                onClick = { navController.navigate("User/${baseAuthor.pubkeyHex}") }
+                onClick = { nav("User/${baseAuthor.pubkeyHex}") }
             ),
             verticalArrangement = Arrangement.Center
         ) {
@@ -73,7 +72,7 @@ fun ZapNoteCompose(baseNote: Pair<Note, Note>, accountViewModel: AccountViewMode
                     ),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                UserPicture(baseAuthor, navController, account.userProfile(), 55.dp)
+                UserPicture(baseAuthor, nav, account.userProfile(), 55.dp)
 
                 Column(modifier = Modifier.padding(start = 10.dp).weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {

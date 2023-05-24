@@ -77,7 +77,6 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.graphics.get
-import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import com.google.accompanist.flowlayout.FlowRow
@@ -153,7 +152,7 @@ fun NoteCompose(
     addMarginTop: Boolean = true,
     parentBackgroundColor: Color? = null,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = remember(accountState) { accountState?.account } ?: return
@@ -212,11 +211,11 @@ fun NoteCompose(
                 account.userProfile(),
                 modifier,
                 isBoostedNote,
-                navController,
+                nav,
                 onClick = { showHiddenNote = true }
             )
         } else if ((noteEvent is ChannelCreateEvent || noteEvent is ChannelMetadataEvent) && baseChannel != null) {
-            ChannelHeader(baseChannel = baseChannel, account = account, navController = navController)
+            ChannelHeader(baseChannel = baseChannel, account = account, nav = nav)
         } else if (noteEvent is BadgeDefinitionEvent) {
             BadgeDisplay(baseNote = note)
         } else if (noteEvent is FileHeaderEvent) {
@@ -267,11 +266,7 @@ fun NoteCompose(
                         onClick = {
                             scope.launch {
                                 routeFor(note, loggedIn)?.let {
-                                    if (note.idHex != navController.currentBackStackEntry?.arguments?.getString("id")) {
-                                        navController.navigate(it)
-                                    } else {
-                                        Log.d("Amethyst-Navigation", "Note already exists in the backstack!")
-                                    }
+                                    nav(it)
                                 }
                             }
                         },
@@ -292,7 +287,7 @@ fun NoteCompose(
                     }
                 ) {
                     if (!isBoostedNote && !isQuotedNote) {
-                        DrawAuthorImages(baseNote, loggedIn, navController)
+                        DrawAuthorImages(baseNote, loggedIn, nav)
                     }
 
                     Column(
@@ -306,14 +301,14 @@ fun NoteCompose(
                             showAuthorPicture = isQuotedNote,
                             account = account,
                             accountViewModel = accountViewModel,
-                            navController = navController
+                            nav = nav
                         )
 
                         if (noteEvent !is RepostEvent && !makeItShort && !isQuotedNote) {
                             SecondUserInfoRow(
                                 note,
                                 account,
-                                navController
+                                nav
                             )
                         }
 
@@ -326,17 +321,17 @@ fun NoteCompose(
                                 backgroundColor,
                                 account,
                                 accountViewModel,
-                                navController
+                                nav
                             )
                         }
 
                         when (noteEvent) {
                             is ReactionEvent -> {
-                                RenderReaction(note, backgroundColor, accountViewModel, navController)
+                                RenderReaction(note, backgroundColor, accountViewModel, nav)
                             }
 
                             is RepostEvent -> {
-                                RenderRepost(note, backgroundColor, accountViewModel, navController)
+                                RenderRepost(note, backgroundColor, accountViewModel, nav)
                             }
 
                             is ReportEvent -> {
@@ -344,31 +339,31 @@ fun NoteCompose(
                             }
 
                             is LongTextNoteEvent -> {
-                                RenderLongFormContent(note, loggedIn, accountViewModel, navController)
+                                RenderLongFormContent(note, loggedIn, accountViewModel, nav)
                             }
 
                             is BadgeAwardEvent -> {
-                                RenderBadgeAward(note, backgroundColor, accountViewModel, navController)
+                                RenderBadgeAward(note, backgroundColor, accountViewModel, nav)
                             }
 
                             is PeopleListEvent -> {
-                                RenderPeopleList(noteState, backgroundColor, accountViewModel, navController)
+                                RenderPeopleList(noteState, backgroundColor, accountViewModel, nav)
                             }
 
                             is AudioTrackEvent -> {
-                                RenderAudioTrack(note, loggedIn, accountViewModel, navController)
+                                RenderAudioTrack(note, loggedIn, accountViewModel, nav)
                             }
 
                             is PinListEvent -> {
-                                RenderPinListEvent(noteState, backgroundColor, accountViewModel, navController)
+                                RenderPinListEvent(noteState, backgroundColor, accountViewModel, nav)
                             }
 
                             is PrivateDmEvent -> {
-                                RenderPrivateMessage(note, makeItShort, isAcceptableAndCanPreview.second, backgroundColor, accountViewModel, navController)
+                                RenderPrivateMessage(note, makeItShort, isAcceptableAndCanPreview.second, backgroundColor, accountViewModel, nav)
                             }
 
                             is HighlightEvent -> {
-                                RenderHighlight(note, makeItShort, isAcceptableAndCanPreview.second, backgroundColor, accountViewModel, navController)
+                                RenderHighlight(note, makeItShort, isAcceptableAndCanPreview.second, backgroundColor, accountViewModel, nav)
                             }
 
                             is PollNoteEvent -> {
@@ -378,7 +373,7 @@ fun NoteCompose(
                                     isAcceptableAndCanPreview.second,
                                     backgroundColor,
                                     accountViewModel,
-                                    navController
+                                    nav
                                 )
                             }
 
@@ -389,7 +384,7 @@ fun NoteCompose(
                                     isAcceptableAndCanPreview.second,
                                     backgroundColor,
                                     accountViewModel,
-                                    navController
+                                    nav
                                 )
                             }
                         }
@@ -438,7 +433,7 @@ private fun RenderTextEvent(
     canPreview: Boolean,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     val tags = remember(note.event?.id()) { note.event?.tags() }
     val hashtags = remember(note.event?.id()) { note.event?.hashtags() ?: emptyList() }
@@ -462,15 +457,15 @@ private fun RenderTextEvent(
                 tags = tags,
                 backgroundColor = backgroundColor,
                 accountViewModel = accountViewModel,
-                navController = navController
+                nav = nav
             )
 
-            DisplayUncitedHashtags(hashtags, eventContent, navController)
+            DisplayUncitedHashtags(hashtags, eventContent, nav)
         }
     }
 
     if (!makeItShort) {
-        ReactionsRow(note, accountViewModel, navController)
+        ReactionsRow(note, accountViewModel, nav)
     }
 
     Divider(
@@ -486,7 +481,7 @@ private fun RenderPoll(
     canPreview: Boolean,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     val noteEvent = note.event as? PollNoteEvent ?: return
     val eventContent = noteEvent.content()
@@ -506,22 +501,22 @@ private fun RenderPoll(
             noteEvent.tags(),
             backgroundColor,
             accountViewModel,
-            navController
+            nav
         )
 
-        DisplayUncitedHashtags(noteEvent.hashtags(), eventContent, navController)
+        DisplayUncitedHashtags(noteEvent.hashtags(), eventContent, nav)
 
         PollNote(
             note,
             canPreview = canPreview && !makeItShort,
             backgroundColor,
             accountViewModel,
-            navController
+            nav
         )
     }
 
     if (!makeItShort) {
-        ReactionsRow(note, accountViewModel, navController)
+        ReactionsRow(note, accountViewModel, nav)
     }
 
     Divider(
@@ -537,7 +532,7 @@ private fun RenderHighlight(
     canPreview: Boolean,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     val noteEvent = note.event as? HighlightEvent ?: return
 
@@ -549,11 +544,11 @@ private fun RenderHighlight(
         canPreview,
         backgroundColor,
         accountViewModel,
-        navController
+        nav
     )
 
     if (!makeItShort) {
-        ReactionsRow(note, accountViewModel, navController)
+        ReactionsRow(note, accountViewModel, nav)
     }
 
     Divider(
@@ -569,7 +564,7 @@ private fun RenderPrivateMessage(
     canPreview: Boolean,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     val noteEvent = note.event as? PrivateDmEvent ?: return
     val withMe = remember { noteEvent.with(accountViewModel.userProfile().pubkeyHex) }
@@ -593,10 +588,10 @@ private fun RenderPrivateMessage(
                     tags = noteEvent.tags(),
                     backgroundColor = backgroundColor,
                     accountViewModel = accountViewModel,
-                    navController = navController
+                    nav = nav
                 )
 
-                DisplayUncitedHashtags(noteEvent.hashtags(), eventContent, navController)
+                DisplayUncitedHashtags(noteEvent.hashtags(), eventContent, nav)
             }
         }
     } else {
@@ -613,12 +608,12 @@ private fun RenderPrivateMessage(
             noteEvent.tags(),
             backgroundColor,
             accountViewModel,
-            navController
+            nav
         )
     }
 
     if (!makeItShort) {
-        ReactionsRow(note, accountViewModel, navController)
+        ReactionsRow(note, accountViewModel, nav)
     }
 
     Divider(
@@ -632,12 +627,12 @@ fun RenderPeopleList(
     noteState: NoteState?,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
-    DisplayPeopleList(noteState, backgroundColor, accountViewModel, navController)
+    DisplayPeopleList(noteState, backgroundColor, accountViewModel, nav)
 
     noteState?.note?.let {
-        ReactionsRow(it, accountViewModel, navController)
+        ReactionsRow(it, accountViewModel, nav)
     }
 
     Divider(
@@ -651,7 +646,7 @@ fun DisplayPeopleList(
     noteState: NoteState?,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     val note = remember(noteState) { noteState?.note } ?: return
     val noteEvent = note.event as? PeopleListEvent ?: return
@@ -696,7 +691,7 @@ fun DisplayPeopleList(
                         user,
                         overallModifier = Modifier,
                         accountViewModel = accountViewModel,
-                        navController = navController
+                        nav = nav
                     )
                 }
             }
@@ -740,7 +735,7 @@ private fun RenderBadgeAward(
     note: Note,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     if (note.replyTo.isNullOrEmpty()) return
 
@@ -765,7 +760,7 @@ private fun RenderBadgeAward(
                 modifier = Modifier
                     .size(size = 35.dp)
                     .clickable {
-                        navController.navigate("User/${user.pubkeyHex}")
+                        nav("User/${user.pubkeyHex}")
                     },
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -791,11 +786,11 @@ private fun RenderBadgeAward(
             unPackReply = false,
             parentBackgroundColor = backgroundColor,
             accountViewModel = accountViewModel,
-            navController = navController
+            nav = nav
         )
     }
 
-    ReactionsRow(note, accountViewModel, navController)
+    ReactionsRow(note, accountViewModel, nav)
 
     Divider(
         modifier = Modifier.padding(top = 10.dp),
@@ -808,7 +803,7 @@ private fun RenderReaction(
     note: Note,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     note.replyTo?.lastOrNull()?.let {
         NoteCompose(
@@ -818,7 +813,7 @@ private fun RenderReaction(
             unPackReply = false,
             parentBackgroundColor = backgroundColor,
             accountViewModel = accountViewModel,
-            navController = navController
+            nav = nav
         )
     }
 
@@ -836,7 +831,7 @@ private fun RenderRepost(
     note: Note,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     val boostedNote = remember {
         note.replyTo?.lastOrNull()
@@ -850,7 +845,7 @@ private fun RenderRepost(
             unPackReply = false,
             parentBackgroundColor = backgroundColor,
             accountViewModel = accountViewModel,
-            navController = navController
+            nav = nav
         )
     }
 }
@@ -860,13 +855,13 @@ private fun RenderPinListEvent(
     noteState: NoteState?,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     val noteEvent = noteState?.note?.event as? PinListEvent ?: return
 
-    PinListHeader(noteState, backgroundColor, accountViewModel, navController)
+    PinListHeader(noteState, backgroundColor, accountViewModel, nav)
 
-    ReactionsRow(noteState?.note, accountViewModel, navController)
+    ReactionsRow(noteState?.note, accountViewModel, nav)
 
     Divider(
         modifier = Modifier.padding(top = 10.dp),
@@ -879,7 +874,7 @@ fun PinListHeader(
     noteState: NoteState?,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     val note = remember(noteState) { noteState?.note } ?: return
     val noteEvent = note.event as? PinListEvent ?: return
@@ -926,7 +921,7 @@ fun PinListHeader(
                         tags = emptyList(),
                         backgroundColor = backgroundColor,
                         accountViewModel = accountViewModel,
-                        navController = navController
+                        nav = nav
                     )
                 }
             }
@@ -970,13 +965,13 @@ private fun RenderAudioTrack(
     note: Note,
     loggedIn: User,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     val noteEvent = note.event as? AudioTrackEvent ?: return
 
-    AudioTrackHeader(noteEvent, note, loggedIn, navController)
+    AudioTrackHeader(noteEvent, note, loggedIn, nav)
 
-    ReactionsRow(note, accountViewModel, navController)
+    ReactionsRow(note, accountViewModel, nav)
 
     Divider(
         modifier = Modifier.padding(top = 10.dp),
@@ -989,13 +984,13 @@ private fun RenderLongFormContent(
     note: Note,
     loggedIn: User,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     val noteEvent = note.event as? LongTextNoteEvent ?: return
 
     LongFormHeader(noteEvent, note, loggedIn)
 
-    ReactionsRow(note, accountViewModel, navController)
+    ReactionsRow(note, accountViewModel, nav)
 
     Divider(
         modifier = Modifier.padding(top = 10.dp),
@@ -1042,7 +1037,7 @@ private fun ReplyRow(
     backgroundColor: Color,
     account: Account,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     val noteEvent = note.event
 
@@ -1068,16 +1063,16 @@ private fun ReplyRow(
                 parentBackgroundColor = MaterialTheme.colors.onSurface.copy(alpha = 0.05f)
                     .compositeOver(backgroundColor),
                 accountViewModel = accountViewModel,
-                navController = navController
+                nav = nav
             )
         } else {
-            ReplyInformation(note.replyTo, noteEvent.mentions(), account, navController)
+            ReplyInformation(note.replyTo, noteEvent.mentions(), account, nav)
         }
 
         Spacer(modifier = Modifier.height(5.dp))
     } else if (noteEvent is ChannelMessageEvent && (note.replyTo != null || noteEvent.hasAnyTaggedUser())) {
         note.channel()?.let {
-            ReplyInformationChannel(note.replyTo, noteEvent.mentions(), it, account, navController)
+            ReplyInformationChannel(note.replyTo, noteEvent.mentions(), it, account, nav)
         }
 
         Spacer(modifier = Modifier.height(5.dp))
@@ -1088,7 +1083,7 @@ private fun ReplyRow(
 private fun SecondUserInfoRow(
     note: Note,
     account: Account,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     val noteEvent = remember { note.event } ?: return
     val noteAuthor = remember { note.author } ?: return
@@ -1098,7 +1093,7 @@ private fun SecondUserInfoRow(
 
         val baseReward = remember { noteEvent.getReward() }
         if (baseReward != null) {
-            DisplayReward(baseReward, note, account, navController)
+            DisplayReward(baseReward, note, account, nav)
         }
 
         val pow = remember { noteEvent.getPoWRank() }
@@ -1114,7 +1109,7 @@ private fun FirstUserInfoRow(
     showAuthorPicture: Boolean,
     account: Account,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     var moreActionsExpanded by remember { mutableStateOf(false) }
     val eventNote = remember { baseNote.event } ?: return
@@ -1126,7 +1121,7 @@ private fun FirstUserInfoRow(
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         if (showAuthorPicture) {
-            NoteAuthorPicture(baseNote, navController, loggedIn, 25.dp)
+            NoteAuthorPicture(baseNote, nav, loggedIn, 25.dp)
             Spacer(padding)
             NoteUsernameDisplay(baseNote, Modifier.weight(1f))
         } else {
@@ -1140,7 +1135,7 @@ private fun FirstUserInfoRow(
                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
             )
         } else {
-            DisplayFollowingHashtagsInPost(eventNote, account, navController)
+            DisplayFollowingHashtagsInPost(eventNote, account, nav)
         }
 
         TimeAgo(time)
@@ -1188,17 +1183,17 @@ fun TimeAgo(time: Long) {
 }
 
 @Composable
-private fun DrawAuthorImages(baseNote: Note, loggedIn: User, navController: NavController) {
+private fun DrawAuthorImages(baseNote: Note, loggedIn: User, nav: (String) -> Unit) {
     val baseChannel = remember { baseNote.channel() }
     val modifier = remember { Modifier.width(55.dp) }
 
     Column(modifier) {
         // Draws the boosted picture outside the boosted card.
         Box(modifier = modifier, contentAlignment = Alignment.BottomEnd) {
-            NoteAuthorPicture(baseNote, navController, loggedIn, 55.dp)
+            NoteAuthorPicture(baseNote, nav, loggedIn, 55.dp)
 
             if (baseNote.event is RepostEvent) {
-                RepostNoteAuthorPicture(baseNote, navController, loggedIn)
+                RepostNoteAuthorPicture(baseNote, nav, loggedIn)
             }
 
             if (baseNote.event is ChannelMessageEvent && baseChannel != null) {
@@ -1262,7 +1257,7 @@ private fun ChannelNotePicture(baseChannel: Channel) {
 @Composable
 private fun RepostNoteAuthorPicture(
     baseNote: Note,
-    navController: NavController,
+    nav: (String) -> Unit,
     loggedIn: User
 ) {
     val baseRepost = remember { baseNote.replyTo?.lastOrNull() }
@@ -1277,7 +1272,7 @@ private fun RepostNoteAuthorPicture(
         Box(modifier) {
             NoteAuthorPicture(
                 it,
-                navController,
+                nav,
                 loggedIn,
                 35.dp,
                 pictureModifier = Modifier.border(
@@ -1299,7 +1294,7 @@ fun DisplayHighlight(
     canPreview: Boolean,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     val quote =
         remember {
@@ -1316,7 +1311,7 @@ fun DisplayHighlight(
         emptyList(),
         backgroundColor,
         accountViewModel,
-        navController
+        nav
     )
 
     var userBase by remember { mutableStateOf<User?>(null) }
@@ -1343,7 +1338,7 @@ fun DisplayHighlight(
                         suffix = " ",
                         tags = userTags,
                         route = route,
-                        navController = navController
+                        nav = nav
                     )
                 }
             }
@@ -1371,7 +1366,7 @@ fun DisplayHighlight(
 fun DisplayFollowingHashtagsInPost(
     noteEvent: EventInterface,
     account: Account,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     var firstTag by remember { mutableStateOf<String?>(null) }
 
@@ -1386,7 +1381,7 @@ fun DisplayFollowingHashtagsInPost(
             firstTag?.let {
                 ClickableText(
                     text = AnnotatedString(" #$firstTag"),
-                    onClick = { navController.navigate("Hashtag/$firstTag") },
+                    onClick = { nav("Hashtag/$firstTag") },
                     style = LocalTextStyle.current.copy(
                         color = MaterialTheme.colors.primary.copy(
                             alpha = 0.52f
@@ -1402,7 +1397,7 @@ fun DisplayFollowingHashtagsInPost(
 fun DisplayUncitedHashtags(
     hashtags: List<String>,
     eventContent: String,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     if (hashtags.isNotEmpty()) {
         FlowRow(
@@ -1412,7 +1407,7 @@ fun DisplayUncitedHashtags(
                 if (!eventContent.contains(hashtag, true)) {
                     ClickableText(
                         text = AnnotatedString("#$hashtag "),
-                        onClick = { navController.navigate("Hashtag/$hashtag") },
+                        onClick = { nav("Hashtag/$hashtag") },
                         style = LocalTextStyle.current.copy(
                             color = MaterialTheme.colors.primary.copy(
                                 alpha = 0.52f
@@ -1444,7 +1439,7 @@ fun DisplayReward(
     baseReward: BigDecimal,
     baseNote: Note,
     account: Account,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     var popupExpanded by remember { mutableStateOf(false) }
 
@@ -1455,7 +1450,7 @@ fun DisplayReward(
         ) {
             ClickableText(
                 text = AnnotatedString("#bounty"),
-                onClick = { navController.navigate("Hashtag/bounty") },
+                onClick = { nav("Hashtag/bounty") },
                 style = LocalTextStyle.current.copy(
                     color = MaterialTheme.colors.primary.copy(
                         alpha = 0.52f
@@ -1676,7 +1671,7 @@ fun FileStorageHeaderDisplay(baseNote: Note) {
 }
 
 @Composable
-fun AudioTrackHeader(noteEvent: AudioTrackEvent, note: Note, loggedIn: User, navController: NavController) {
+fun AudioTrackHeader(noteEvent: AudioTrackEvent, note: Note, loggedIn: User, nav: (String) -> Unit) {
     val media = remember { noteEvent.media() }
     val cover = remember { noteEvent.cover() }
     val subject = remember { noteEvent.subject() }
@@ -1713,7 +1708,7 @@ fun AudioTrackHeader(noteEvent: AudioTrackEvent, note: Note, loggedIn: User, nav
                     modifier = Modifier
                         .padding(top = 5.dp, start = 10.dp, end = 10.dp)
                         .clickable {
-                            navController.navigate("User/${it.second.pubkeyHex}")
+                            nav("User/${it.second.pubkeyHex}")
                         }
                 ) {
                     UserPicture(it.second, loggedIn, 25.dp)
@@ -1962,17 +1957,13 @@ private fun ShowMoreRelaysButton(onClick: () -> Unit) {
 @Composable
 fun NoteAuthorPicture(
     baseNote: Note,
-    navController: NavController,
+    nav: (String) -> Unit,
     userAccount: User,
     size: Dp,
     pictureModifier: Modifier = Modifier
 ) {
     NoteAuthorPicture(baseNote, userAccount, size, pictureModifier) {
-        if (it.pubkeyHex != navController.currentBackStackEntry?.arguments?.getString("id")) {
-            navController.navigate("User/${it.pubkeyHex}")
-        } else {
-            Log.d("Amethyst-Navigation", "Profile destination already exists in the backstack!")
-        }
+        nav("User/${it.pubkeyHex}")
     }
 }
 
@@ -2019,17 +2010,13 @@ fun NoteAuthorPicture(
 @Composable
 fun UserPicture(
     user: User,
-    navController: NavController,
+    nav: (String) -> Unit,
     userAccount: User,
     size: Dp,
     pictureModifier: Modifier = Modifier
 ) {
     UserPicture(user, userAccount, size, pictureModifier) {
-        if (it.pubkeyHex != navController.currentBackStackEntry?.arguments?.getString("id")) {
-            navController.navigate("User/${it.pubkeyHex}")
-        } else {
-            Log.d("Amethyst-Navigation", "Profile destination already exists in the backstack!")
-        }
+        nav("User/${it.pubkeyHex}")
     }
 }
 

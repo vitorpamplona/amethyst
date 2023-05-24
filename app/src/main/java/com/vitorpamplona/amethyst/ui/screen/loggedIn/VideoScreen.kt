@@ -59,7 +59,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowRow
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -99,7 +98,7 @@ import kotlinx.coroutines.launch
 fun VideoScreen(
     videoFeedView: NostrVideoFeedViewModel,
     accountViewModel: AccountViewModel,
-    navController: NavController,
+    nav: (String) -> Unit,
     scrollToTop: Boolean = false
 ) {
     val lifeCycleOwner = LocalLifecycleOwner.current
@@ -142,7 +141,7 @@ fun VideoScreen(
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            FeedView(videoFeedView, accountViewModel, navController, ScrollStateKeys.VIDEO_SCREEN, scrollToTop)
+            FeedView(videoFeedView, accountViewModel, nav, ScrollStateKeys.VIDEO_SCREEN, scrollToTop)
         }
     }
 }
@@ -151,7 +150,7 @@ fun VideoScreen(
 fun FeedView(
     videoFeedView: NostrVideoFeedViewModel,
     accountViewModel: AccountViewModel,
-    navController: NavController,
+    nav: (String) -> Unit,
     scrollStateKey: String? = null,
     scrollToTop: Boolean = false
 ) {
@@ -176,7 +175,7 @@ fun FeedView(
                         SlidingCarousel(
                             state.feed,
                             accountViewModel,
-                            navController,
+                            nav,
                             scrollStateKey,
                             scrollToTop
                         )
@@ -196,7 +195,7 @@ fun FeedView(
 fun SlidingCarousel(
     feed: MutableState<List<Note>>,
     accountViewModel: AccountViewModel,
-    navController: NavController,
+    nav: (String) -> Unit,
     scrollStateKey: String? = null,
     scrollToTop: Boolean = false
 ) {
@@ -222,7 +221,7 @@ fun SlidingCarousel(
         }
     ) { index ->
         feed.value.getOrNull(index)?.let { note ->
-            RenderVideoOrPictureNote(note, accountViewModel, navController)
+            RenderVideoOrPictureNote(note, accountViewModel, nav)
         }
     }
 }
@@ -231,7 +230,7 @@ fun SlidingCarousel(
 private fun RenderVideoOrPictureNote(
     note: Note,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     val noteEvent = note.event
 
@@ -255,7 +254,7 @@ private fun RenderVideoOrPictureNote(
         Column(Modifier.weight(1f)) {
             Row(Modifier.padding(10.dp), verticalAlignment = Alignment.Bottom) {
                 Column(Modifier.size(55.dp), verticalArrangement = Arrangement.Center) {
-                    NoteAuthorPicture(note, navController, loggedIn, 55.dp)
+                    NoteAuthorPicture(note, nav, loggedIn, 55.dp)
                 }
 
                 Column(
@@ -299,7 +298,7 @@ private fun RenderVideoOrPictureNote(
             verticalArrangement = Arrangement.Center
         ) {
             Row(horizontalArrangement = Arrangement.Center) {
-                ReactionsColumn(note, accountViewModel, navController)
+                ReactionsColumn(note, accountViewModel, nav)
             }
         }
     }
@@ -342,7 +341,7 @@ private fun RelayBadges(baseNote: Note) {
 }
 
 @Composable
-fun ReactionsColumn(baseNote: Note, accountViewModel: AccountViewModel, navController: NavController) {
+fun ReactionsColumn(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
@@ -355,11 +354,11 @@ fun ReactionsColumn(baseNote: Note, accountViewModel: AccountViewModel, navContr
     }
 
     if (wantsToReplyTo != null) {
-        NewPostView({ wantsToReplyTo = null }, wantsToReplyTo, null, account, accountViewModel, navController)
+        NewPostView({ wantsToReplyTo = null }, wantsToReplyTo, null, account, accountViewModel, nav)
     }
 
     if (wantsToQuote != null) {
-        NewPostView({ wantsToQuote = null }, null, wantsToQuote, account, accountViewModel, navController)
+        NewPostView({ wantsToQuote = null }, null, wantsToQuote, account, accountViewModel, nav)
     }
 
     Spacer(modifier = Modifier.height(8.dp))
@@ -380,7 +379,7 @@ fun ReactionsColumn(baseNote: Note, accountViewModel: AccountViewModel, navContr
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun NewImageButton(accountViewModel: AccountViewModel, navController: NavController) {
+fun NewImageButton(accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     var wantsToPost by remember {
         mutableStateOf(false)
     }
@@ -397,15 +396,7 @@ fun NewImageButton(accountViewModel: AccountViewModel, navController: NavControl
             // awaits an refresh on the list
             delay(250)
             val route = Route.Video.route.replace("{scrollToTop}", "true")
-            navController.navigate(route) {
-                navController.graph.startDestinationRoute?.let { start ->
-                    popUpTo(start) { inclusive = false }
-                    restoreState = true
-                }
-
-                launchSingleTop = true
-                restoreState = true
-            }
+            nav(route)
         }
     }
 
@@ -445,7 +436,7 @@ fun NewImageButton(accountViewModel: AccountViewModel, navController: NavControl
             onClose = { pickedURI = null },
             postViewModel = postViewModel,
             accountViewModel = accountViewModel,
-            navController = navController
+            nav = nav
         )
     }
 

@@ -39,7 +39,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
 import com.vitorpamplona.amethyst.ui.dal.ChatroomListKnownFeedFilter
@@ -52,7 +51,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ChatroomListScreen(accountViewModel: AccountViewModel, navController: NavController) {
+fun ChatroomListScreen(accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val pagerState = rememberPagerState()
     val coroutineScope = rememberCoroutineScope()
 
@@ -151,7 +150,7 @@ fun ChatroomListScreen(accountViewModel: AccountViewModel, navController: NavCon
                     ChatroomListFeedView(
                         viewModel = tabs[page].viewModel,
                         accountViewModel = accountViewModel,
-                        navController = navController,
+                        nav = nav,
                         markAsRead = tabs[page].markAsRead
                     )
                 }

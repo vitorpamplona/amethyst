@@ -24,7 +24,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
@@ -36,7 +35,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 fun ChatroomListFeedView(
     viewModel: FeedViewModel,
     accountViewModel: AccountViewModel,
-    navController: NavController,
+    nav: (String) -> Unit,
     markAsRead: MutableState<Boolean>
 ) {
     val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
@@ -68,7 +67,7 @@ fun ChatroomListFeedView(
                         if (refreshing) {
                             refreshing = false
                         }
-                        FeedLoaded(state, accountViewModel, navController, markAsRead)
+                        FeedLoaded(state, accountViewModel, nav, markAsRead)
                     }
 
                     FeedState.Loading -> {
@@ -86,7 +85,7 @@ fun ChatroomListFeedView(
 private fun FeedLoaded(
     state: FeedState.Loaded,
     accountViewModel: AccountViewModel,
-    navController: NavController,
+    nav: (String) -> Unit,
     markAsRead: MutableState<Boolean>
 ) {
     val listState = rememberLazyListState()
@@ -139,7 +138,7 @@ private fun FeedLoaded(
             ChatroomCompose(
                 item,
                 accountViewModel = accountViewModel,
-                navController = navController
+                nav = nav
             )
         }
     }

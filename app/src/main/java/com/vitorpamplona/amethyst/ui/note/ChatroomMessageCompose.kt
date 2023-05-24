@@ -50,7 +50,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
@@ -81,7 +80,7 @@ fun ChatroomMessageCompose(
     innerQuote: Boolean = false,
     parentBackgroundColor: Color? = null,
     accountViewModel: AccountViewModel,
-    navController: NavController,
+    nav: (String) -> Unit,
     onWantsToReply: (Note) -> Unit
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
@@ -137,7 +136,7 @@ fun ChatroomMessageCompose(
                 account.userProfile(),
                 Modifier,
                 innerQuote,
-                navController,
+                nav,
                 onClick = { showHiddenNote = true }
             )
         } else {
@@ -210,7 +209,7 @@ fun ChatroomMessageCompose(
                                 .combinedClickable(
                                     onClick = {
                                         if (noteEvent is ChannelCreateEvent) {
-                                            navController.navigate("Channel/${note.idHex}")
+                                            nav("Channel/${note.idHex}")
                                         }
                                     },
                                     onLongClick = { popupExpanded = true }
@@ -229,7 +228,7 @@ fun ChatroomMessageCompose(
                                     DrawAuthorInfo(
                                         baseNote,
                                         alignment,
-                                        navController
+                                        nav
                                     )
                                 } else {
                                     Spacer(modifier = Modifier.height(5.dp))
@@ -245,7 +244,7 @@ fun ChatroomMessageCompose(
                                                 innerQuote = true,
                                                 parentBackgroundColor = backgroundBubbleColor,
                                                 accountViewModel = accountViewModel,
-                                                navController = navController,
+                                                nav = nav,
                                                 onWantsToReply = onWantsToReply
                                             )
                                         }
@@ -269,7 +268,7 @@ fun ChatroomMessageCompose(
                                                 isAcceptableAndCanPreview.second,
                                                 backgroundBubbleColor,
                                                 accountViewModel,
-                                                navController
+                                                nav
                                             )
                                         }
                                     }
@@ -363,7 +362,7 @@ private fun RenderRegularTextNote(
     canPreview: Boolean,
     backgroundBubbleColor: Color,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     val tags = remember { note.event?.tags() }
     val eventContent = remember { accountViewModel.decrypt(note) }
@@ -371,23 +370,23 @@ private fun RenderRegularTextNote(
 
     if (eventContent != null) {
         TranslatableRichTextViewer(
-            eventContent,
-            canPreview,
-            modifier,
-            tags,
-            backgroundBubbleColor,
-            accountViewModel,
-            navController
+            content = eventContent,
+            canPreview = canPreview,
+            modifier = modifier,
+            tags = tags,
+            backgroundColor = backgroundBubbleColor,
+            accountViewModel = accountViewModel,
+            nav = nav
         )
     } else {
         TranslatableRichTextViewer(
-            stringResource(R.string.could_not_decrypt_the_message),
-            true,
-            modifier,
-            tags,
-            backgroundBubbleColor,
-            accountViewModel,
-            navController
+            content = stringResource(id = R.string.could_not_decrypt_the_message),
+            canPreview = true,
+            modifier = modifier,
+            tags = tags,
+            backgroundColor = backgroundBubbleColor,
+            accountViewModel = accountViewModel,
+            nav = nav
         )
     }
 }
@@ -444,7 +443,7 @@ private fun RenderCreateChannelNote(note: Note) {
 private fun DrawAuthorInfo(
     baseNote: Note,
     alignment: Arrangement.Horizontal,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     val userState by baseNote.author!!.live().metadata.observeAsState()
 
@@ -468,7 +467,7 @@ private fun DrawAuthorInfo(
                 .height(25.dp)
                 .clip(shape = CircleShape)
                 .clickable(onClick = {
-                    navController.navigate(route)
+                    nav(route)
                 })
         )
 
@@ -479,7 +478,7 @@ private fun DrawAuthorInfo(
             fontWeight = FontWeight.Bold,
             overrideColor = MaterialTheme.colors.onBackground,
             route = route,
-            navController = navController
+            nav = nav
         )
     }
 }

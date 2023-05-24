@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.model
 
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
@@ -420,4 +421,5 @@ class UserLiveData(val user: User) : LiveData<UserState>(UserState(user)) {
     }
 }
 
+@Immutable
 class UserState(val user: User)

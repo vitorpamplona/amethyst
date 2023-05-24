@@ -26,7 +26,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.navigation.NavController
 import com.patrykandpatrick.vico.core.chart.composed.ComposedChartEntryModel
 import com.patrykandpatrick.vico.core.entry.ChartEntryModel
 import com.patrykandpatrick.vico.core.entry.ChartEntryModelProducer
@@ -54,7 +53,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 @Composable
-fun UserReactionsRow(model: UserReactionsViewModel, accountViewModel: AccountViewModel, navController: NavController, onClick: () -> Unit) {
+fun UserReactionsRow(model: UserReactionsViewModel, accountViewModel: AccountViewModel, nav: (String) -> Unit, onClick: () -> Unit) {
     Row(
         verticalAlignment = CenterVertically,
         modifier = Modifier

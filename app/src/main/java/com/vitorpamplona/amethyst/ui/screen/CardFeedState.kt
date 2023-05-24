@@ -4,7 +4,10 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableMap
 
+@Immutable
 abstract class Card() {
     abstract fun createdAt(): Long
     abstract fun id(): String
@@ -47,7 +50,7 @@ class ZapSetCard(val note: Note, val zapEvents: Map<Note, Note>) : Card() {
 }
 
 @Immutable
-class ZapUserSetCard(val user: User, val zapEvents: Map<Note, Note>) : Card() {
+class ZapUserSetCard(val user: User, val zapEvents: ImmutableMap<Note, Note>) : Card() {
     val createdAt = zapEvents.maxOf { it.value.createdAt() ?: 0 }
     override fun createdAt(): Long {
         return createdAt
@@ -56,7 +59,7 @@ class ZapUserSetCard(val user: User, val zapEvents: Map<Note, Note>) : Card() {
 }
 
 @Immutable
-class MultiSetCard(val note: Note, val boostEvents: List<Note>, val likeEvents: List<Note>, val zapEvents: Map<Note, Note>) : Card() {
+class MultiSetCard(val note: Note, val boostEvents: ImmutableList<Note>, val likeEvents: ImmutableList<Note>, val zapEvents: ImmutableMap<Note, Note>) : Card() {
     val createdAt = maxOf(
         zapEvents.maxOfOrNull { it.value.createdAt() ?: 0 } ?: 0,
         likeEvents.maxOfOrNull { it.createdAt() ?: 0 } ?: 0,
@@ -91,7 +94,7 @@ class MessageSetCard(val note: Note) : Card() {
 
 sealed class CardFeedState {
     object Loading : CardFeedState()
-    class Loaded(val feed: MutableState<List<Card>>) : CardFeedState()
+    class Loaded(val feed: MutableState<ImmutableList<Card>>) : CardFeedState()
     object Empty : CardFeedState()
     class FeedError(val errorMessage: String) : CardFeedState()
 }

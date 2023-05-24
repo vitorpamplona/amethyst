@@ -37,7 +37,6 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -52,16 +51,16 @@ import kotlinx.coroutines.withContext
 @Composable
 fun ClickableRoute(
     nip19: Nip19.Return,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     if (nip19.type == Nip19.Type.USER) {
-        DisplayUser(nip19, navController)
+        DisplayUser(nip19, nav)
     } else if (nip19.type == Nip19.Type.ADDRESS) {
-        DisplayAddress(nip19, navController)
+        DisplayAddress(nip19, nav)
     } else if (nip19.type == Nip19.Type.NOTE) {
-        DisplayNote(nip19, navController)
+        DisplayNote(nip19, nav)
     } else if (nip19.type == Nip19.Type.EVENT) {
-        DisplayEvent(nip19, navController)
+        DisplayEvent(nip19, nav)
     } else {
         Text(
             "@${nip19.hex}${nip19.additionalChars} "
@@ -72,7 +71,7 @@ fun ClickableRoute(
 @Composable
 private fun DisplayEvent(
     nip19: Nip19.Return,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     var noteBase by remember { mutableStateOf<Note?>(null) }
 
@@ -92,28 +91,28 @@ private fun DisplayEvent(
                 clickablePart = "@${note.idDisplayNote()}",
                 suffix = "${nip19.additionalChars} ",
                 route = "Channel/${nip19.hex}",
-                navController = navController
+                nav = nav
             )
         } else if (note.event is PrivateDmEvent) {
             CreateClickableText(
                 clickablePart = "@${note.idDisplayNote()}",
                 suffix = "${nip19.additionalChars} ",
                 route = "Room/${note.author?.pubkeyHex}",
-                navController = navController
+                nav = nav
             )
         } else if (channel != null) {
             CreateClickableText(
                 clickablePart = channel.toBestDisplayName(),
                 suffix = "${nip19.additionalChars} ",
                 route = "Channel/${channel.idHex}",
-                navController = navController
+                nav = nav
             )
         } else {
             CreateClickableText(
                 clickablePart = "@${note.idDisplayNote()}",
                 suffix = "${nip19.additionalChars} ",
                 route = "Event/${nip19.hex}",
-                navController = navController
+                nav = nav
             )
         }
     }
@@ -128,7 +127,7 @@ private fun DisplayEvent(
 @Composable
 private fun DisplayNote(
     nip19: Nip19.Return,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     var noteBase by remember { mutableStateOf<Note?>(null) }
 
@@ -148,28 +147,28 @@ private fun DisplayNote(
                 clickablePart = "@${note.idDisplayNote()}",
                 suffix = "${nip19.additionalChars} ",
                 route = "Channel/${nip19.hex}",
-                navController = navController
+                nav = nav
             )
         } else if (note.event is PrivateDmEvent) {
             CreateClickableText(
                 clickablePart = "@${note.idDisplayNote()}",
                 suffix = "${nip19.additionalChars} ",
                 route = "Room/${note.author?.pubkeyHex}",
-                navController = navController
+                nav = nav
             )
         } else if (channel != null) {
             CreateClickableText(
                 clickablePart = channel.toBestDisplayName(),
                 suffix = "${nip19.additionalChars} ",
                 route = "Channel/${note.channel()?.idHex}",
-                navController = navController
+                nav = nav
             )
         } else {
             CreateClickableText(
                 clickablePart = "@${note.idDisplayNote()}",
                 suffix = "${nip19.additionalChars} ",
                 route = "Note/${nip19.hex}",
-                navController = navController
+                nav = nav
             )
         }
     }
@@ -184,7 +183,7 @@ private fun DisplayNote(
 @Composable
 private fun DisplayAddress(
     nip19: Nip19.Return,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     var noteBase by remember { mutableStateOf<Note?>(null) }
 
@@ -202,7 +201,7 @@ private fun DisplayAddress(
             clickablePart = "@${note.idDisplayNote()}",
             suffix = "${nip19.additionalChars} ",
             route = "Note/${nip19.hex}",
-            navController = navController
+            nav = nav
         )
     }
 
@@ -216,7 +215,7 @@ private fun DisplayAddress(
 @Composable
 private fun DisplayUser(
     nip19: Nip19.Return,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     var userBase by remember { mutableStateOf<User?>(null) }
 
@@ -238,7 +237,7 @@ private fun DisplayUser(
                 suffix = "${nip19.additionalChars} ",
                 tags = userTags,
                 route = route,
-                navController = navController
+                nav = nav
             )
         }
     }
@@ -257,7 +256,7 @@ fun CreateClickableText(
     overrideColor: Color? = null,
     fontWeight: FontWeight = FontWeight.Normal,
     route: String,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     ClickableText(
         text = buildAnnotatedString {
@@ -272,7 +271,7 @@ fun CreateClickableText(
                 append(suffix)
             }
         },
-        onClick = { navController.navigate(route) }
+        onClick = { nav(route) }
     )
 }
 
@@ -378,21 +377,21 @@ fun CreateClickableTextWithEmoji(
     overrideColor: Color? = null,
     fontWeight: FontWeight = FontWeight.Normal,
     route: String,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     val emojis = remember(tags) {
         tags?.filter { it.size > 2 && it[0] == "emoji" }?.associate { ":${it[1]}:" to it[2] } ?: emptyMap()
     }
 
     if (emojis.isEmpty()) {
-        CreateClickableText(clickablePart, suffix, overrideColor, fontWeight, route, navController)
+        CreateClickableText(clickablePart, suffix, overrideColor, fontWeight, route, nav)
     } else {
         val myList = remember {
             assembleAnnotatedList(clickablePart, emojis)
         }
 
         ClickableInLineIconRenderer(myList, LocalTextStyle.current.copy(color = overrideColor ?: MaterialTheme.colors.primary, fontWeight = fontWeight).toSpanStyle()) {
-            navController.navigate(route)
+            nav(route)
         }
 
         val myList2 = remember {

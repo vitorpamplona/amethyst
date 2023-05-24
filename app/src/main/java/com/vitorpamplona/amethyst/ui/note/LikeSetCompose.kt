@@ -25,7 +25,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
@@ -37,7 +36,7 @@ import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun LikeSetCompose(likeSetCard: LikeSetCard, isInnerNote: Boolean = false, routeForLastRead: String, accountViewModel: AccountViewModel, navController: NavController) {
+fun LikeSetCompose(likeSetCard: LikeSetCard, isInnerNote: Boolean = false, routeForLastRead: String, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val noteState by likeSetCard.note.live().metadata.observeAsState()
     val note = noteState?.note
 
@@ -76,7 +75,7 @@ fun LikeSetCompose(likeSetCard: LikeSetCard, isInnerNote: Boolean = false, route
                             routeFor(
                                 note,
                                 account.userProfile()
-                            )?.let { navController.navigate(it) }
+                            )?.let { nav(it) }
                         }
                     },
                     onLongClick = { popupExpanded = true }
@@ -113,7 +112,7 @@ fun LikeSetCompose(likeSetCard: LikeSetCard, isInnerNote: Boolean = false, route
                         likeSetCard.likeEvents.forEach {
                             NoteAuthorPicture(
                                 baseNote = it,
-                                navController = navController,
+                                nav = nav,
                                 userAccount = account.userProfile(),
                                 size = 35.dp
                             )
@@ -127,7 +126,7 @@ fun LikeSetCompose(likeSetCard: LikeSetCard, isInnerNote: Boolean = false, route
                         isBoostedNote = true,
                         parentBackgroundColor = backgroundColor,
                         accountViewModel = accountViewModel,
-                        navController = navController
+                        nav = nav
                     )
 
                     NoteDropDownMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)

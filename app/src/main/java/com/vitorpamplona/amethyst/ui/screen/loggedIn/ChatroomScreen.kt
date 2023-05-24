@@ -44,7 +44,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -61,7 +60,7 @@ import com.vitorpamplona.amethyst.ui.screen.ChatroomFeedView
 import com.vitorpamplona.amethyst.ui.screen.NostrChatRoomFeedViewModel
 
 @Composable
-fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navController: NavController) {
+fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account
     val context = LocalContext.current
@@ -106,7 +105,7 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
 
         Column(Modifier.fillMaxHeight()) {
             NostrChatroomDataSource.withUser?.let {
-                ChatroomHeader(it, account.userProfile(), navController = navController)
+                ChatroomHeader(it, account.userProfile(), nav = nav)
             }
 
             Column(
@@ -115,7 +114,7 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
                     .padding(vertical = 0.dp)
                     .weight(1f, true)
             ) {
-                ChatroomFeedView(feedViewModel, accountViewModel, navController, "Room/$userId") {
+                ChatroomFeedView(feedViewModel, accountViewModel, nav, "Room/$userId") {
                     replyTo.value = it
                 }
             }
@@ -131,7 +130,7 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
                             null,
                             innerQuote = true,
                             accountViewModel = accountViewModel,
-                            navController = navController,
+                            nav = nav,
                             onWantsToReply = {
                                 replyTo.value = it
                             }
@@ -208,10 +207,10 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, navContr
 }
 
 @Composable
-fun ChatroomHeader(baseUser: User, accountUser: User, navController: NavController) {
+fun ChatroomHeader(baseUser: User, accountUser: User, nav: (String) -> Unit) {
     Column(
         modifier = Modifier.clickable(
-            onClick = { navController.navigate("User/${baseUser.pubkeyHex}") }
+            onClick = { nav("User/${baseUser.pubkeyHex}") }
         )
     ) {
         Column(modifier = Modifier.padding(12.dp)) {

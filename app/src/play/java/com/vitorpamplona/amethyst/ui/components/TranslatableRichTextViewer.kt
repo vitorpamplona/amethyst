@@ -30,7 +30,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.core.os.ConfigurationCompat
-import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.service.lang.ResultOrError
@@ -47,7 +46,7 @@ fun TranslatableRichTextViewer(
     tags: List<List<String>>?,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     var translatedTextState by remember {
         mutableStateOf(ResultOrError(content, null, null, null))
@@ -93,7 +92,7 @@ fun TranslatableRichTextViewer(
             tags,
             backgroundColor,
             accountViewModel,
-            navController
+            nav
         )
 
         val target = translatedTextState.targetLang
