@@ -23,7 +23,7 @@ object UserProfileNewThreadFeedFilter : FeedFilter<Note>() {
         return user?.notes
             ?.plus(longFormNotes)
             ?.filter { account?.isAcceptable(it) == true && it.isNewThread() }
-            ?.sortedBy { it.createdAt() }
+            ?.sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
             ?.reversed() ?: emptyList()
     }
 }

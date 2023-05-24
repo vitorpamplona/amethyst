@@ -131,6 +131,8 @@ fun SearchScreen(
 }
 
 class SearchBarViewModel : ViewModel() {
+    var account: Account? = null
+
     var searchValue by mutableStateOf("")
     val searchResults = mutableStateOf<List<User>>(emptyList())
     val searchResultsNotes = mutableStateOf<List<Note>>(emptyList())
@@ -156,8 +158,8 @@ class SearchBarViewModel : ViewModel() {
         }
 
         hashtagResults.value = findHashtags(searchValue)
-        searchResults.value = LocalCache.findUsersStartingWith(searchValue)
-        searchResultsNotes.value = LocalCache.findNotesStartingWith(searchValue).sortedBy { it.createdAt() }.reversed()
+        searchResults.value = LocalCache.findUsersStartingWith(searchValue).sortedWith(compareBy({ account?.isFollowing(it) }, { it.toBestDisplayName() })).reversed()
+        searchResultsNotes.value = LocalCache.findNotesStartingWith(searchValue).sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
         searchResultsChannels.value = LocalCache.findChannelsStartingWith(searchValue)
     }
 
@@ -185,25 +187,24 @@ class SearchBarViewModel : ViewModel() {
 @Composable
 private fun SearchBar(accountViewModel: AccountViewModel, navController: NavController) {
     val searchBarViewModel: SearchBarViewModel = viewModel()
+    searchBarViewModel.account = accountViewModel.accountLiveData.value?.account
 
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
 
     val onlineSearch = NostrSearchEventOrUserDataSource
 
-    val dbState = LocalCache.live.observeAsState()
-    val db = dbState.value ?: return
-
     // Create a channel for processing search queries.
     val searchTextChanges = remember {
         CoroutineChannel<String>(CoroutineChannel.CONFLATED)
     }
 
-    LaunchedEffect(db) {
-        withContext(Dispatchers.IO) {
-            if (searchBarViewModel.isSearching()) {
-                println("Search Active")
-                searchBarViewModel.invalidateData()
+    LaunchedEffect(Unit) {
+        scope.launch(Dispatchers.IO) {
+            LocalCache.live.newEventBundles.collect {
+                if (searchBarViewModel.isSearching()) {
+                    searchBarViewModel.invalidateData()
+                }
             }
         }
     }
@@ -337,7 +338,7 @@ private fun SearchBar(accountViewModel: AccountViewModel, navController: NavCont
     }
 }
 
-val hashtagSearch = Pattern.compile("(?:\\s|\\A)#([A-Za-z0-9_\\-]+)")
+val hashtagSearch = Pattern.compile("(?:\\s|\\A)#([^\\s!@#\$%^&*()=+./,\\[{\\]};:'\"?><]+)")
 
 fun findHashtags(content: String): List<String> {
     val matcher = hashtagSearch.matcher(content)

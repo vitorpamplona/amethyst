@@ -5,6 +5,7 @@ import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.hexToByteArray
+import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import fr.acinq.secp256k1.Hex
 import kotlinx.coroutines.CoroutineScope
@@ -39,21 +40,22 @@ class AccountStateViewModel() : ViewModel() {
         }
     }
 
-    fun startUI(key: String) {
+    fun startUI(key: String, useProxy: Boolean, proxyPort: Int) {
         val pattern = Pattern.compile(".+@.+\\.[a-z]+")
         val parsed = Nip19.uriToRoute(key)
         val pubKeyParsed = parsed?.hex?.hexToByteArray()
+        val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", proxyPort)
 
         val account =
             if (key.startsWith("nsec")) {
-                Account(Persona(privKey = key.bechToBytes()))
+                Account(Persona(privKey = key.bechToBytes()), proxy = proxy, proxyPort = proxyPort)
             } else if (pubKeyParsed != null) {
-                Account(Persona(pubKey = pubKeyParsed))
+                Account(Persona(pubKey = pubKeyParsed), proxy = proxy, proxyPort = proxyPort)
             } else if (pattern.matcher(key).matches()) {
                 // Evaluate NIP-5
-                Account(Persona())
+                Account(Persona(), proxy = proxy, proxyPort = proxyPort)
             } else {
-                Account(Persona(Hex.decode(key)))
+                Account(Persona(Hex.decode(key)), proxy = proxy, proxyPort = proxyPort)
             }
 
         LocalPreferences.updatePrefsForLogin(account)
@@ -66,8 +68,9 @@ class AccountStateViewModel() : ViewModel() {
         tryLoginExistingAccount()
     }
 
-    fun newKey() {
-        val account = Account(Persona())
+    fun newKey(useProxy: Boolean, proxyPort: Int) {
+        val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", proxyPort)
+        val account = Account(Persona(), proxy = proxy, proxyPort = proxyPort)
         // saves to local preferences
         LocalPreferences.updatePrefsForLogin(account)
         startUI(account)

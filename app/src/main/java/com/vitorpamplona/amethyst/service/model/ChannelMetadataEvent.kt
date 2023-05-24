@@ -1,11 +1,13 @@
 package com.vitorpamplona.amethyst.service.model
 
 import android.util.Log
+import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
 import java.util.Date
 
+@Immutable
 class ChannelMetadataEvent(
     id: HexKey,
     pubKey: HexKey,

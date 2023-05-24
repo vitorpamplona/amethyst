@@ -1,9 +1,11 @@
 package com.vitorpamplona.amethyst.ui.navigation
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,7 +16,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.AlertDialog
 import androidx.compose.material.Divider
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.Icon
@@ -24,7 +29,9 @@ import androidx.compose.material.ModalBottomSheetState
 import androidx.compose.material.ScaffoldState
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
+import androidx.compose.material.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -45,13 +52,18 @@ import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
+import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountBackupDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterialApi::class)
@@ -84,7 +96,7 @@ fun DrawerContent(
                 modifier = Modifier.padding(top = 20.dp)
             )
             ListContent(
-                account.userProfile(),
+                account.userProfile().pubkeyHex,
                 navController,
                 scaffoldState,
                 sheetState,
@@ -100,20 +112,34 @@ fun DrawerContent(
 }
 
 @Composable
-fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffoldState: ScaffoldState, navController: NavController) {
+fun ProfileContent(
+    baseAccountUser: User,
+    modifier: Modifier = Modifier,
+    scaffoldState: ScaffoldState,
+    navController: NavController
+) {
     val coroutineScope = rememberCoroutineScope()
 
     val accountUserState by baseAccountUser.live().metadata.observeAsState()
-    val accountUser = accountUserState?.user ?: return
+    val accountUser = remember(accountUserState) { accountUserState?.user } ?: return
+
+    val profilePubHex = remember(accountUserState) { accountUserState?.user?.pubkeyHex } ?: return
+
+    val profileBanner = remember(accountUserState) { accountUserState?.user?.info?.banner?.ifBlank { null } }
+    val profilePicture = remember(accountUserState) { accountUserState?.user?.profilePicture()?.ifBlank { null }?.let { ResizeImage(it, 100.dp) } }
+    val bestUserName = remember(accountUserState) { accountUserState?.user?.bestUsername() }
+    val bestDisplayName = remember(accountUserState) { accountUserState?.user?.bestDisplayName() }
+    val tags = remember(accountUserState) { accountUserState?.user?.info?.latestMetadata?.tags }
+    val route = remember(accountUserState) { "User/${accountUserState?.user?.pubkeyHex}" }
 
     val accountUserFollowsState by baseAccountUser.live().follows.observeAsState()
-    val accountUserFollows = accountUserFollowsState?.user ?: return
+    val followingCount = remember(accountUserFollowsState) { accountUserFollowsState?.user?.cachedFollowCount()?.toString() ?: "--" }
+    val followerCount = remember(accountUserFollowsState) { accountUserFollowsState?.user?.cachedFollowerCount()?.toString() ?: "--" }
 
     Box {
-        val banner = accountUser.info?.banner
-        if (!banner.isNullOrBlank()) {
+        if (profileBanner != null) {
             AsyncImage(
-                model = banner,
+                model = profileBanner,
                 contentDescription = stringResource(id = R.string.profile_image),
                 contentScale = ContentScale.FillWidth,
                 modifier = Modifier
@@ -132,34 +158,34 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
         }
 
         Column(modifier = modifier) {
-            RobohashAsyncImageProxy(
-                robot = accountUser.pubkeyHex,
-                model = ResizeImage(accountUser.profilePicture(), 100.dp),
-                contentDescription = stringResource(id = R.string.profile_image),
-                modifier = Modifier
-                    .width(100.dp)
-                    .height(100.dp)
-                    .clip(shape = CircleShape)
-                    .border(3.dp, MaterialTheme.colors.background, CircleShape)
-                    .background(MaterialTheme.colors.background)
-                    .clickable(onClick = {
-                        accountUser.let {
-                            navController.navigate("User/${it.pubkeyHex}")
-                        }
-                        coroutineScope.launch {
-                            scaffoldState.drawerState.close()
-                        }
-                    })
-            )
-            if (accountUser.bestDisplayName() != null) {
-                Text(
-                    accountUser.bestDisplayName() ?: "",
+            profilePicture?.let {
+                RobohashAsyncImageProxy(
+                    robot = profilePubHex,
+                    model = profilePicture,
+                    contentDescription = stringResource(id = R.string.profile_image),
+                    modifier = Modifier
+                        .width(100.dp)
+                        .height(100.dp)
+                        .clip(shape = CircleShape)
+                        .border(3.dp, MaterialTheme.colors.background, CircleShape)
+                        .background(MaterialTheme.colors.background)
+                        .clickable(onClick = {
+                            navController.navigate(route)
+                            coroutineScope.launch {
+                                scaffoldState.drawerState.close()
+                            }
+                        })
+                )
+            }
+
+            if (bestDisplayName != null) {
+                CreateTextWithEmoji(
+                    text = bestDisplayName,
+                    tags = tags,
                     modifier = Modifier
                         .padding(top = 7.dp)
                         .clickable(onClick = {
-                            accountUser.let {
-                                navController.navigate("User/${it.pubkeyHex}")
-                            }
+                            navController.navigate(route)
                             coroutineScope.launch {
                                 scaffoldState.drawerState.close()
                             }
@@ -168,40 +194,45 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
                     fontSize = 18.sp
                 )
             }
-            if (accountUser.bestUsername() != null) {
-                Text(
-                    " @${accountUser.bestUsername()}",
+            if (bestUserName != null) {
+                CreateTextWithEmoji(
+                    text = " @$bestUserName",
+                    tags = accountUser.info?.latestMetadata?.tags,
                     color = Color.LightGray,
                     modifier = Modifier
                         .padding(top = 15.dp)
-                        .clickable(onClick = {
-                            accountUser.let {
-                                navController.navigate("User/${it.pubkeyHex}")
+                        .clickable(
+                            onClick = {
+                                navController.navigate(route)
+                                coroutineScope.launch {
+                                    scaffoldState.drawerState.close()
+                                }
                             }
-                            coroutineScope.launch {
-                                scaffoldState.drawerState.close()
-                            }
-                        })
+                        )
                 )
             }
             Row(
                 modifier = Modifier
                     .padding(top = 15.dp)
                     .clickable(onClick = {
-                        accountUser.let {
-                            navController.navigate("User/${it.pubkeyHex}")
-                        }
+                        navController.navigate(route)
                         coroutineScope.launch {
                             scaffoldState.drawerState.close()
                         }
                     })
             ) {
                 Row() {
-                    Text("${accountUserFollows.cachedFollowCount() ?: "--"}", fontWeight = FontWeight.Bold)
+                    Text(
+                        text = followingCount,
+                        fontWeight = FontWeight.Bold
+                    )
                     Text(stringResource(R.string.following))
                 }
                 Row(modifier = Modifier.padding(start = 10.dp)) {
-                    Text("${accountUserFollows.cachedFollowerCount() ?: "--"}", fontWeight = FontWeight.Bold)
+                    Text(
+                        text = followerCount,
+                        fontWeight = FontWeight.Bold
+                    )
                     Text(stringResource(R.string.followers))
                 }
             }
@@ -212,7 +243,7 @@ fun ProfileContent(baseAccountUser: User, modifier: Modifier = Modifier, scaffol
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun ListContent(
-    accountUser: User?,
+    accountUserPubKey: String?,
     navController: NavHostController,
     scaffoldState: ScaffoldState,
     sheetState: ModalBottomSheetState,
@@ -221,16 +252,20 @@ fun ListContent(
 ) {
     val coroutineScope = rememberCoroutineScope()
     var backupDialogOpen by remember { mutableStateOf(false) }
+    var checked by remember { mutableStateOf(account.proxy != null) }
+    var disconnectTorDialog by remember { mutableStateOf(false) }
+    var conectOrbotDialogOpen by remember { mutableStateOf(false) }
+    var proxyPort = remember { mutableStateOf(account.proxyPort.toString()) }
 
-    Column(modifier = modifier.fillMaxHeight()) {
-        if (accountUser != null) {
+    Column(modifier = modifier.fillMaxHeight().verticalScroll(rememberScrollState())) {
+        if (accountUserPubKey != null) {
             NavigationRow(
                 title = stringResource(R.string.profile),
                 icon = Route.Profile.icon,
                 tint = MaterialTheme.colors.primary,
                 navController = navController,
                 scaffoldState = scaffoldState,
-                route = "User/${accountUser.pubkeyHex}"
+                route = "User/$accountUserPubKey"
             )
 
             NavigationRow(
@@ -256,7 +291,36 @@ fun ListContent(
             title = stringResource(R.string.backup_keys),
             icon = R.drawable.ic_key,
             tint = MaterialTheme.colors.onBackground,
-            onClick = { backupDialogOpen = true }
+            onClick = {
+                coroutineScope.launch {
+                    scaffoldState.drawerState.close()
+                }
+                backupDialogOpen = true
+            }
+        )
+
+        val textTorProxy = if (checked) stringResource(R.string.disconnect_from_your_orbot_setup) else stringResource(R.string.connect_via_tor_short)
+
+        IconRow(
+            title = textTorProxy,
+            icon = R.drawable.ic_tor,
+            tint = MaterialTheme.colors.onBackground,
+            onLongClick = {
+                coroutineScope.launch {
+                    scaffoldState.drawerState.close()
+                }
+                conectOrbotDialogOpen = true
+            },
+            onClick = {
+                if (checked) {
+                    disconnectTorDialog = true
+                } else {
+                    coroutineScope.launch {
+                        scaffoldState.drawerState.close()
+                    }
+                    conectOrbotDialogOpen = true
+                }
+            }
         )
 
         Spacer(modifier = Modifier.weight(1f))
@@ -272,6 +336,65 @@ fun ListContent(
     if (backupDialogOpen) {
         AccountBackupDialog(account, onClose = { backupDialogOpen = false })
     }
+
+    if (conectOrbotDialogOpen) {
+        ConnectOrbotDialog(
+            onClose = { conectOrbotDialogOpen = false },
+            onPost = {
+                conectOrbotDialogOpen = false
+                disconnectTorDialog = false
+                checked = true
+                enableTor(account, true, proxyPort)
+            },
+            proxyPort
+        )
+    }
+
+    if (disconnectTorDialog) {
+        AlertDialog(
+            title = {
+                Text(text = stringResource(R.string.do_you_really_want_to_disable_tor_title))
+            },
+            text = {
+                Text(text = stringResource(R.string.do_you_really_want_to_disable_tor_text))
+            },
+            onDismissRequest = {
+                disconnectTorDialog = false
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        disconnectTorDialog = false
+                        checked = false
+                        enableTor(account, false, proxyPort)
+                    }
+                ) {
+                    Text(text = stringResource(R.string.yes))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        disconnectTorDialog = false
+                    }
+                ) {
+                    Text(text = stringResource(R.string.no))
+                }
+            }
+        )
+    }
+}
+
+private fun enableTor(
+    account: Account,
+    checked: Boolean,
+    portNumber: MutableState<String>
+) {
+    account.proxyPort = portNumber.value.toInt()
+    account.proxy = HttpClient.initProxy(checked, "127.0.0.1", account.proxyPort)
+    LocalPreferences.saveToEncryptedStorage(account)
+    ServiceManager.pause()
+    ServiceManager.start()
 }
 
 @Composable
@@ -284,23 +407,24 @@ fun NavigationRow(
     route: String
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val currentRoute = currentRoute(navController)
     IconRow(title, icon, tint, onClick = {
-        if (currentRoute != route) {
-            navController.navigate(route)
-        }
+        navController.navigate(route)
         coroutineScope.launch {
             scaffoldState.drawerState.close()
         }
     })
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun IconRow(title: String, icon: Int, tint: Color, onClick: () -> Unit) {
+fun IconRow(title: String, icon: Int, tint: Color, onClick: () -> Unit, onLongClick: (() -> Unit)? = null) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
     ) {
         Row(
             modifier = Modifier

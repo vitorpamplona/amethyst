@@ -1,14 +1,18 @@
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.service.model.LnZapPaymentResponseEvent
+import com.vitorpamplona.amethyst.service.model.RelayAuthEvent
+import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
+import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 
 class NostrLnZapPaymentResponseDataSource(
-    private var fromServiceHex: String,
-    private var toUserHex: String,
-    private var replyingToHex: String
+    private val fromServiceHex: String,
+    private val toUserHex: String,
+    private val replyingToHex: String,
+    private val authSigningKey: ByteArray
 ) : NostrDataSource("LnZapPaymentResponseFeed") {
 
     val feedTypes = setOf(FeedType.WALLET_CONNECT)
@@ -35,5 +39,15 @@ class NostrLnZapPaymentResponseDataSource(
         val wc = createWalletConnectServiceWatcher()
 
         channel.typedFilters = listOfNotNull(wc).ifEmpty { null }
+    }
+
+    override fun auth(relay: Relay, challenge: String) {
+        super.auth(relay, challenge)
+
+        val event = RelayAuthEvent.create(relay.url, challenge, authSigningKey)
+        Client.send(
+            event,
+            relay.url
+        )
     }
 }

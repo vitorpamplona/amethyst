@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -23,8 +24,8 @@ import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -40,6 +41,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import coil.Coil
@@ -71,43 +74,45 @@ import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.RelayPoolViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SpinnerSelectionDialog
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
-fun AppTopBar(navController: NavHostController, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
+fun AppTopBar(followLists: FollowListViewModel, navController: NavHostController, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
     when (currentRoute(navController)?.substringBefore("?")) {
         // Route.Profile.route -> TopBarWithBackButton(navController)
-        Route.Home.base -> HomeTopBar(scaffoldState, accountViewModel)
-        Route.Video.base -> StoriesTopBar(scaffoldState, accountViewModel)
-        Route.Notification.base -> NotificationTopBar(scaffoldState, accountViewModel)
+        Route.Home.base -> HomeTopBar(followLists, scaffoldState, accountViewModel)
+        Route.Video.base -> StoriesTopBar(followLists, scaffoldState, accountViewModel)
+        Route.Notification.base -> NotificationTopBar(followLists, scaffoldState, accountViewModel)
         else -> MainTopBar(scaffoldState, accountViewModel)
     }
 }
 
 @Composable
-fun StoriesTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
+fun StoriesTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
     GenericTopBar(scaffoldState, accountViewModel) { account ->
-        FollowList(account.defaultStoriesFollowList, account.userProfile(), true) { listName ->
+        FollowList(followLists, account.defaultStoriesFollowList, account.userProfile(), true) { listName ->
             account.changeDefaultStoriesFollowList(listName)
         }
     }
 }
 
 @Composable
-fun HomeTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
+fun HomeTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
     GenericTopBar(scaffoldState, accountViewModel) { account ->
-        FollowList(account.defaultHomeFollowList, account.userProfile(), false) { listName ->
+        FollowList(followLists, account.defaultHomeFollowList, account.userProfile(), false) { listName ->
             account.changeDefaultHomeFollowList(listName)
         }
     }
 }
 
 @Composable
-fun NotificationTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
+fun NotificationTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
     GenericTopBar(scaffoldState, accountViewModel) { account ->
-        FollowList(account.defaultNotificationFollowList, account.userProfile(), true) { listName ->
+        FollowList(followLists, account.defaultNotificationFollowList, account.userProfile(), true) { listName ->
             account.changeDefaultNotificationFollowList(listName)
         }
     }
@@ -237,30 +242,19 @@ private fun LoggedInUserPictureDrawer(
 }
 
 @Composable
-fun FollowList(listName: String, loggedIn: User, withGlobal: Boolean, onChange: (String) -> Unit) {
-    // Notification
-    val dbState = LocalCache.live.observeAsState()
-    val db = dbState.value ?: return
-
+fun FollowList(followListsModel: FollowListViewModel, listName: String, loggedIn: User, withGlobal: Boolean, onChange: (String) -> Unit) {
     val kind3Follow = Pair(KIND3_FOLLOWS, stringResource(id = R.string.follow_list_kind3follows))
     val globalFollow = Pair(GLOBAL_FOLLOWS, stringResource(id = R.string.follow_list_global))
 
     val defaultOptions = if (withGlobal) listOf(kind3Follow, globalFollow) else listOf(kind3Follow)
 
-    var followLists by remember { mutableStateOf(defaultOptions) }
-    val followNames = remember { derivedStateOf { followLists.map { it.second } } }
+    val followLists = remember(followListsModel.followLists) {
+        (defaultOptions + followListsModel.followLists)
+    }
 
-    LaunchedEffect(key1 = db) {
-        withContext(Dispatchers.IO) {
-            followLists = defaultOptions + LocalCache.addressables.mapNotNull {
-                val event = (it.value.event as? PeopleListEvent)
-                // Has to have an list
-                if (event != null && event.pubKey == loggedIn.pubkeyHex && (event.tags.size > 1 || event.content.length > 50)) {
-                    Pair(event.dTag(), event.dTag())
-                } else {
-                    null
-                }
-            }.sortedBy { it.second }
+    val followNames = remember(followLists) {
+        derivedStateOf {
+            followLists.map { it.second }
         }
     }
 
@@ -271,6 +265,62 @@ fun FollowList(listName: String, loggedIn: User, withGlobal: Boolean, onChange: 
             onChange(followLists.getOrNull(it)?.first ?: KIND3_FOLLOWS)
         }
     )
+}
+
+class FollowListViewModel : ViewModel() {
+    var followLists by mutableStateOf<List<Pair<String, String>>>(emptyList())
+    var account: Account? = null
+
+    fun load(account: Account?) {
+        this.account = account
+        refresh()
+    }
+
+    fun refresh() {
+        val scope = CoroutineScope(Job() + Dispatchers.Default)
+        scope.launch {
+            refreshFollows()
+        }
+    }
+
+    private suspend fun refreshFollows() {
+        val myAccount = account ?: return
+
+        val newFollowLists = LocalCache.addressables.mapNotNull {
+            val event = (it.value.event as? PeopleListEvent)
+            // Has to have an list
+            if (event != null && event.pubKey == myAccount.userProfile().pubkeyHex && (event.tags.size > 1 || event.content.length > 50)) {
+                Pair(event.dTag(), event.dTag())
+            } else {
+                null
+            }
+        }.sortedBy { it.second }
+
+        withContext(Dispatchers.Main) {
+            if (followLists != newFollowLists) {
+                followLists = newFollowLists
+            }
+        }
+    }
+
+    var collectorJob: Job? = null
+
+    init {
+        collectorJob = viewModelScope.launch(Dispatchers.IO) {
+            LocalCache.live.newEventBundles.collect { newNotes ->
+                newNotes.forEach {
+                    if (it.event is PeopleListEvent) {
+                        refresh()
+                    }
+                }
+            }
+        }
+    }
+
+    override fun onCleared() {
+        collectorJob?.cancel()
+        super.onCleared()
+    }
 }
 
 @Composable
@@ -289,7 +339,16 @@ fun SimpleTextSpinner(
         modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
-        Text(placeholder)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Spacer(modifier = Modifier.size(20.dp))
+            Text(placeholder)
+            Icon(
+                imageVector = Icons.Default.ExpandMore,
+                null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+            )
+        }
         Box(
             modifier = Modifier
                 .matchParentSize()

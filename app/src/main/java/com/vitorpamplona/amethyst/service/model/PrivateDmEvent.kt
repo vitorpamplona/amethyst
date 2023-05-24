@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.service.model
 
 import android.util.Log
+import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
 import fr.acinq.secp256k1.Hex
@@ -8,6 +9,7 @@ import nostr.postr.Utils
 import nostr.postr.toHex
 import java.util.Date
 
+@Immutable
 class PrivateDmEvent(
     id: HexKey,
     pubKey: HexKey,
@@ -21,7 +23,7 @@ class PrivateDmEvent(
      * nip-04 EncryptedDmEvent but may omit the recipient, too. This value can be queried and used
      * for initial messages.
      */
-    fun recipientPubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }
+    private fun recipientPubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }
 
     fun recipientPubKeyBytes() = recipientPubKey()?.runCatching { Hex.decode(this[1]) }?.getOrNull()
 

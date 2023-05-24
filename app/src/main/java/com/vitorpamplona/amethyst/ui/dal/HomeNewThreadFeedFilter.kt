@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.ui.dal
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
 import com.vitorpamplona.amethyst.service.model.HighlightEvent
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.PollNoteEvent
@@ -30,7 +31,7 @@ object HomeNewThreadFeedFilter : AdditiveFeedFilter<Note>() {
         return collection
             .asSequence()
             .filter { it ->
-                (it.event is TextNoteEvent || it.event is RepostEvent || it.event is LongTextNoteEvent || it.event is PollNoteEvent || it.event is HighlightEvent) &&
+                (it.event is TextNoteEvent || it.event is RepostEvent || it.event is LongTextNoteEvent || it.event is PollNoteEvent || it.event is HighlightEvent || it.event is AudioTrackEvent) &&
                     (it.author?.pubkeyHex in followingKeySet || (it.event?.isTaggedHashes(followingTagSet) ?: false)) &&
                     // && account.isAcceptable(it)  // This filter follows only. No need to check if acceptable
                     it.author?.let { !account.isHidden(it.pubkeyHex) } ?: true &&
@@ -40,6 +41,6 @@ object HomeNewThreadFeedFilter : AdditiveFeedFilter<Note>() {
     }
 
     override fun sort(collection: Set<Note>): List<Note> {
-        return collection.sortedBy { it.createdAt() }.reversed()
+        return collection.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
     }
 }

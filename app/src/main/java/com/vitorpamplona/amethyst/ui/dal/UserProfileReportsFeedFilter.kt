@@ -14,7 +14,7 @@ object UserProfileReportsFeedFilter : FeedFilter<Note>() {
         return user?.reports
             ?.values
             ?.flatten()
-            ?.sortedBy { it.createdAt() }
+            ?.sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
             ?.reversed() ?: emptyList()
     }
 }

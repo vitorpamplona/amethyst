@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.service.model
 
 import android.util.Log
+import androidx.compose.runtime.Immutable
 import com.google.gson.Gson
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.HexKey
@@ -8,6 +9,7 @@ import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
 import java.util.Date
 
+@Immutable
 data class ContactMetaData(
     val name: String,
     val picture: String,

@@ -66,18 +66,20 @@ fun FeedView(
                 when (state) {
                     is FeedState.Empty -> {
                         FeedEmpty {
-                            refreshing = true
+                            refresh()
                         }
                     }
 
                     is FeedState.FeedError -> {
                         FeedError(state.errorMessage) {
-                            refreshing = true
+                            refresh()
                         }
                     }
 
                     is FeedState.Loaded -> {
-                        refreshing = false
+                        if (refreshing) {
+                            refreshing = false
+                        }
                         FeedLoaded(
                             state,
                             routeForLastRead,
@@ -122,6 +124,10 @@ private fun FeedLoaded(
         }
     }
 
+    val baseModifier = remember {
+        Modifier
+    }
+
     LazyColumn(
         contentPadding = PaddingValues(
             top = 10.dp,
@@ -132,8 +138,9 @@ private fun FeedLoaded(
         itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
             NoteCompose(
                 item,
-                isBoostedNote = false,
                 routeForLastRead = routeForLastRead,
+                modifier = baseModifier,
+                isBoostedNote = false,
                 accountViewModel = accountViewModel,
                 navController = navController
             )

@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.ui.screen
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -36,7 +37,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
     val feedContent = _feedContent.asStateFlow()
 
     private var lastAccount: Account? = null
-    private var lastNotes: List<Note>? = null
+    private var lastNotes: Set<Note>? = null
 
     fun refresh() {
         val scope = CoroutineScope(Job() + Dispatchers.Default)
@@ -47,7 +48,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
 
     @Synchronized
     private fun refreshSuspended() {
-        val notes = localFilter.loadTop()
+        val notes = localFilter.feed()
 
         val thisAccount = (localFilter as? NotificationFeedFilter)?.account
         val lastNotesCopy = if (thisAccount == lastAccount) lastNotes else null
@@ -56,13 +57,18 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
         if (lastNotesCopy != null && oldNotesState is CardFeedState.Loaded) {
             val newCards = convertToCard(notes.minus(lastNotesCopy))
             if (newCards.isNotEmpty()) {
-                lastNotes = notes
+                lastNotes = notes.toSet()
                 lastAccount = (localFilter as? NotificationFeedFilter)?.account
-                updateFeed((oldNotesState.feed.value + newCards).distinctBy { it.id() }.sortedBy { it.createdAt() }.reversed())
+                val singleList = (oldNotesState.feed.value + newCards)
+                    .distinctBy { it.id() }
+                    .sortedWith(compareBy({ it.createdAt() }, { it.id() }))
+                    .reversed()
+                    .take(1000)
+                updateFeed(singleList)
             }
         } else {
             val cards = convertToCard(notes)
-            lastNotes = notes
+            lastNotes = notes.toSet()
             lastAccount = (localFilter as? NotificationFeedFilter)?.account
             updateFeed(cards)
         }
@@ -128,7 +134,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
             val reactionsInCard = reactionsPerEvent[baseNote] ?: emptyList()
             val zapsInCard = zapsPerEvent[baseNote] ?: emptyMap()
 
-            val singleList = (boostsInCard + zapsInCard.values + reactionsInCard).sortedBy { it.createdAt() }.reversed()
+            val singleList = (boostsInCard + zapsInCard.values + reactionsInCard).sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
             singleList.chunked(50).map { chunk ->
                 MultiSetCard(
                     baseNote,
@@ -156,7 +162,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
             }
         }
 
-        return (multiCards + textNoteCards + userZaps).sortedBy { it.createdAt() }.reversed()
+        return (multiCards + textNoteCards + userZaps).sortedWith(compareBy({ it.createdAt() }, { it.id() })).reversed()
     }
 
     private fun updateFeed(notes: List<Card>) {
@@ -183,13 +189,26 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
 
         if (lastNotesCopy != null && localFilter is AdditiveFeedFilter && oldNotesState is CardFeedState.Loaded) {
             val filteredNewList = localFilter.applyFilter(newItems)
+
+            if (filteredNewList.isEmpty()) return
+
             val actuallyNew = filteredNewList.minus(lastNotesCopy)
 
+            if (actuallyNew.isEmpty()) return
+
             val newCards = convertToCard(actuallyNew)
+
             if (newCards.isNotEmpty()) {
-                lastNotes = lastNotesCopy + newItems
+                lastNotes = lastNotesCopy + actuallyNew
                 lastAccount = (localFilter as? NotificationFeedFilter)?.account
-                updateFeed((oldNotesState.feed.value + newCards).distinctBy { it.id() }.sortedBy { it.createdAt() }.reversed())
+
+                val updatedCards = (oldNotesState.feed.value + newCards)
+                    .distinctBy { it.id() }
+                    .sortedWith(compareBy({ it.createdAt() }, { it.id() }))
+                    .reversed()
+                    .take(1000)
+
+                updateFeed(updatedCards)
             }
         } else {
             // Refresh Everything
@@ -215,24 +234,29 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
     @OptIn(ExperimentalTime::class)
     fun invalidateInsertData(newItems: Set<Note>) {
         bundlerInsert.invalidateList(newItems) {
+            val newObjects = it.flatten().toSet()
             val (value, elapsed) = measureTimedValue {
-                refreshFromOldState(it.flatten().toSet())
+                if (newObjects.isNotEmpty()) {
+                    refreshFromOldState(newObjects)
+                }
             }
-            Log.d("Time", "${this.javaClass.simpleName} Card additive update $elapsed")
+            Log.d("Time", "${this.javaClass.simpleName} Card additive update $elapsed. ${newObjects.size}")
         }
     }
 
-    private val cacheListener: (Set<Note>) -> Unit = { newNotes ->
-        if (localFilter is AdditiveFeedFilter && _feedContent.value is CardFeedState.Loaded) {
-            invalidateInsertData(newNotes)
-        } else {
-            // Refresh Everything
-            invalidateData()
-        }
-    }
+    var collectorJob: Job? = null
 
     init {
-        LocalCache.live.observeForever(cacheListener)
+        collectorJob = viewModelScope.launch(Dispatchers.IO) {
+            LocalCache.live.newEventBundles.collect { newNotes ->
+                if (localFilter is AdditiveFeedFilter && _feedContent.value is CardFeedState.Loaded) {
+                    invalidateInsertData(newNotes)
+                } else {
+                    // Refresh Everything
+                    invalidateData()
+                }
+            }
+        }
     }
 
     fun clear() {
@@ -242,7 +266,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
 
     override fun onCleared() {
         clear()
-        LocalCache.live.removeObserver(cacheListener)
+        collectorJob?.cancel()
         super.onCleared()
     }
 }

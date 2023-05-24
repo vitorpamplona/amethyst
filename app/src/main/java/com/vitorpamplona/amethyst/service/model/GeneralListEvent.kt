@@ -1,11 +1,13 @@
 package com.vitorpamplona.amethyst.service.model
 
 import android.util.Log
+import androidx.compose.runtime.Immutable
 import com.google.gson.reflect.TypeToken
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.hexToByteArray
 import nostr.postr.Utils
 
+@Immutable
 abstract class GeneralListEvent(
     id: HexKey,
     pubKey: HexKey,
@@ -14,21 +16,23 @@ abstract class GeneralListEvent(
     tags: List<List<String>>,
     content: String,
     sig: HexKey
-) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
-    fun dTag() = tags.filter { it.firstOrNull() == "d" }.mapNotNull { it.getOrNull(1) }.firstOrNull() ?: ""
-    fun address() = ATag(kind, pubKey, dTag(), null)
+) : Event(id, pubKey, createdAt, kind, tags, content, sig), AddressableEvent {
+    override fun dTag() = tags.filter { it.firstOrNull() == "d" }.mapNotNull { it.getOrNull(1) }.firstOrNull() ?: ""
+    override fun address() = ATag(kind, pubKey, dTag(), null)
 
     fun category() = dTag()
     fun bookmarkedPosts() = taggedEvents()
     fun bookmarkedPeople() = taggedUsers()
 
     fun plainContent(privKey: ByteArray): String? {
+        if (content.isBlank()) return null
+
         return try {
             val sharedSecret = Utils.getSharedSecret(privKey, pubKey.hexToByteArray())
 
             return Utils.decrypt(content, sharedSecret)
         } catch (e: Exception) {
-            Log.w("GeneralList", "Error decrypting the message ${e.message}")
+            Log.w("GeneralList", "Error decrypting the message ${e.message} for ${dTag()}")
             null
         }
     }

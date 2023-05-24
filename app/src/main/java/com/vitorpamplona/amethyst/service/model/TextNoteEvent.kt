@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.service.model
 
+import androidx.compose.runtime.Immutable
 import com.linkedin.urls.detection.UrlDetector
 import com.linkedin.urls.detection.UrlDetectorOptions
 import com.vitorpamplona.amethyst.model.HexKey
@@ -8,6 +9,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.findHashtags
 import nostr.postr.Utils
 import java.util.Date
 
+@Immutable
 class TextNoteEvent(
     id: HexKey,
     pubKey: HexKey,
@@ -43,6 +45,7 @@ class TextNoteEvent(
             }
             findHashtags(msg).forEach {
                 tags.add(listOf("t", it))
+                tags.add(listOf("t", it.lowercase()))
             }
             extraTags?.forEach {
                 tags.add(listOf("t", it))

@@ -1,13 +1,16 @@
 package com.vitorpamplona.amethyst.service.model
 
+import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
 import java.util.Date
 
+@Immutable
 data class ReportedKey(val key: String, val reportType: ReportEvent.ReportType)
 
 // NIP 56 event.
+@Immutable
 class ReportEvent(
     id: HexKey,
     pubKey: HexKey,
@@ -63,7 +66,7 @@ class ReportEvent(
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             var tags: List<List<String>> = listOf(reportPostTag, reportAuthorTag)
 
-            if (reportedPost is LongTextNoteEvent) {
+            if (reportedPost is AddressableEvent) {
                 tags = tags + listOf(listOf("a", reportedPost.address().toTag()))
             }
 

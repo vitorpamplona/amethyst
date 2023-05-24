@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.decodePublicKey
 import com.vitorpamplona.amethyst.model.toHexKey
+import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
@@ -149,7 +150,10 @@ fun AccountSwitchBottomSheet(
                                 val npubShortHex = acc.npub.toShortenHex()
 
                                 user.bestDisplayName()?.let {
-                                    Text(it)
+                                    CreateTextWithEmoji(
+                                        text = it,
+                                        tags = user.info?.latestMetadata?.tags
+                                    )
                                 }
 
                                 Text(npubShortHex)

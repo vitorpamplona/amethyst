@@ -1,0 +1,408 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="app_name_release" translatable="false">Amethyst</string>
+    <string name="app_name_debug" translatable="false">Amethyst Debug</string>
+    <string name="point_to_the_qr_code">Point to the QR Code</string>
+    <string name="show_qr">Visa QR</string>
+    <string name="profile_image">Profilbild</string>
+    <string name="scan_qr">Scanna QR</string>
+    <string name=”show_anyway">Visa ändå</string>
+    <string name="post_was_flagged_as_inappropriate_by">Inlägget flaggades som olämpligt av</string>
+    <string name=”post_not_found">Inlägg hittades inte</string>
+    <string name=”channel_image">Kanal bild</string>
+    <string name="referenced_event_not_found">Refererad händelse hittades inte</string>
+    <string name="could_not_decrypt_the_message">Kunde inte dekryptera meddelandet</string>
+    <string name=”group_picture">Grupp bild</string>
+    <string name="explicit_content">Explicit Innehåll</string>
+    <string name="spam">Spam</string>
+    <string name="impersonation">Imitation</string>
+    <string name="illegal_behavior">Olagligt beteende</string>
+    <string name="unknown">Okänd</string>
+    <string name=”relay_icon">Relä ikon</string>
+    <string name="unknown_author">Okänd användare</string>
+    <string name=”copy_text">Kopiera Text</string>
+    <string name=”copy_user_pubkey">Kopiera användarens ID</string>
+    <string name=”copy_note_id">Kopiera anteckningens ID</string>
+    <string name=”broadcast">Sänd ut</string>
+    <string name="request_deletion">Begär radering</string>
+    <string name=”block_hide_user"><![CDATA[Blockera och göm användare]]></string>
+    <string name="report_spam_scam">Rapportera Spam / Scam</string>
+    <string name="report_impersonation">Rapportera identitetsstöld</string>
+    <string name="report_explicit_content">Rapportera explicit innehåll</string>
+    <string name="report_illegal_behaviour">Rapportera olagligt beteende</string>
+    <string name="login_with_a_private_key_to_be_able_to_reply">Logga in med en privat nyckel för att kunna svara</string>
+    <string name="login_with_a_private_key_to_be_able_to_boost_posts">Logga in med en privat nyckel för att kunna boosta inlägg</string>
+    <string name="login_with_a_private_key_to_like_posts">Logga in med en privat nyckel för att gilla inlägg</string>
+    <string name="no_zap_amount_setup_long_press_to_change">Ingen konfiguration av Zap-belopp. Tryck länge för att ändra</string>
+    <string name="login_with_a_private_key_to_be_able_to_send_zaps">Logga in med en privat nyckel för att kunna skicka Zaps</string>
+    <string name="zaps">Zaps</string>
+    <string name="view_count">Antal visningar</string>
+    <string name="boost">Boost</string>
+    <string name="boosted">boosted</string>
+    <string name="quote">Citera</string>
+    <string name="new_amount_in_sats">Nytt belopp i Sats</string>
+    <string name=”add">Lägg till</string>
+    <string name=”replying_to">"Svarar till "</string>
+    <string name="and">" och "</string>
+    <string name="in_channel">"i kanalen "</string>
+    <string name="profile_banner">Profil Banner</string>
+    <string name="following">" Följer"</string>
+    <string name="followers">" Följare"</string>
+    <string name="profile">Profil</string>
+    <string name="security_filters">Säkerhets Filter</string>
+    <string name=”log_out">Logga ut</string>
+    <string name=”show_more">Visa mer</string>
+    <string name="lightning_invoice">Lightning Faktura</string>
+    <string name="pay">Betala</string>
+    <string name="lightning_tips">Lightning Dricks</string>
+    <string name="note_to_receiver">Notering till mottagaren</string>
+    <string name=”thank_you_so_much">Tack så mycket!</string>
+    <string name="amount_in_sats">Summa i Sats</string>
+    <string name="send_sats">Skicka Sats</string>
+    <string name="error_parsing_preview_for">"Fel vid analys av förhandsvisning för %1$s : %2$s"</string>
+    <string name="preview_card_image_for">"Förhandsgranska kortbild för %1$s"</string>
+    <string name=”new_channel">Ny kanal</string>
+    <string name=”channel_name">Kanal Namn</string>
+    <string name="my_awesome_group">Min fantastiska grupp</string>
+    <string name="picture_url">Bild Url</string>
+    <string name="description">Beskrivning</string>
+    <string name=”about_us">"Om oss.. "</string>
+    <string name=”what_s_on_your_mind">Vad tänker du på?</string>
+    <string name="post">Dela</string>
+    <string name="save">Spara</string>
+    <string name="create">Skapa</string>
+    <string name="cancel">Avbryt</string>
+    <string name="failed_to_upload_the_image">Det gick inte att ladda upp bilden</string>
+    <string name="relay_address">Relä Adress</string>
+    <string name="posts">Inlägg</string>
+    <string name="bytes">Bytes</string>
+    <string name="errors">Errors</string>
+    <string name=”home_feed">Hem Flöde</string>
+    <string name=”private_message_feed">Privata Meddelande Flöde</string>
+    <string name="public_chat_feed">Publik Chat Flöde</string>
+    <string name="global_feed">Globalt Flöde</string>
+    <string name="search_feed">Sök i Flödet</string>
+    <string name=”add_a_relay">Lägg till Relä</string>
+    <string name="display_name">Visningsnamn</string>
+    <string name=”my_display_name">Mitt visningsnamn</string>
+    <string name="username">Användarnamn</string>
+    <string name=”my_username">Mitt användarnamn</string>
+    <string name=”about_me">Om mig</string>
+    <string name="avatar_url">Avatar URL</string>
+    <string name="banner_url">Banner URL</string>
+    <string name="website_url">Websida URL</string>
+    <string name="ln_address">LN Adress</string>
+    <string name="ln_url_outdated">LN URL (Utdaterad)</string>
+    <string name=”image_saved_to_the_gallery">Bild sparad till galleriet</string>
+    <string name=”failed_to_save_the_image">Misslyckades att spara bilden</string>
+    <string name=”upload_image">Ladda upp bilden</string>
+    <string name=”uploading">Laddar upp…</string>
+    <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Användaren har inte en Lightningadressinställning för att ta emot sats</string>
+    <string name=”reply_here">"svara här.. "</string>
+    <string name="copies_the_note_id_to_the_clipboard_for_sharing">Kopierar antecknings-ID till urklipp för delning</string>
+    <string name="copy_channel_id_note_to_the_clipboard">Kopiera kanal-ID (anteckningen) till Urklipp</string>
+    <string name="edits_the_channel_metadata">Redigerar kanalmetadata</string>
+    <string name=”join">Gå med</string>
+    <string name="known">Känd</string>
+    <string name="new_requests">Nya förfrågningar</string>
+    <string name="blocked_users">Blockerade användare</string>
+    <string name="new_threads">Nya trådar</string>
+    <string name="conversations">konversationer</string>
+    <string name="notes">Anteckningar</string>
+    <string name="replies">Svar</string>
+    <string name="follows">"Följer"</string>
+    <string name="reports">"Rapporter"</string>
+    <string name="more_options">Fler alternativ</string>
+    <string name="relays">" Reläer"</string>
+    <string name="website">Websida</string>
+    <string name="lightning_address">Lightning Adress</string>
+    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Kopierar Nsec ID (ditt lösenord) till urklipp för säkerhetskopiering</string>
+    <string name="copy_private_key_to_the_clipboard">Kopiera hemlig nyckel till urklipp</string>
+    <string name="copies_the_public_key_to_the_clipboard_for_sharing">Kopierar den publika nyckeln till urklipp för delning</string>
+    <string name="copy_public_key_npub_to_the_clipboard">Kopiera Public Key (NPub) till Urklipp</string>
+    <string name=”send_a_direct_message">Skicka ett direkt meddelande</string>
+    <string name="edits_the_user_s_metadata">Redigerar användarens metadata</string>
+    <string name="follow">Följ</string>
+    <string name=”follow_back">Följ tillbaka</string>
+    <string name=”unblock”>Sluta blockera</string>
+    <string name="copy_user_id">Kopiera Användarens ID</string>
+    <string name=”unblock_user”>Sluta blockera Användare</string>
+    <string name="npub_hex_username">"npub, hex, användarnamn "</string>
+    <string name="clear">Rensa</string>
+    <string name="app_logo">App Logo</string>
+    <string name="nsec_npub_hex_private_key">nsec / npub / hex privat nyckel</string>
+    <string name=”show_password">Visa lösenord</string>
+    <string name=”hide_password">Göm lösenord</string>
+    <string name="invalid_key">Ogiltig nyckel</string>
+    <string name=”i_accept_the">"Jag accepterar  "</string>
+    <string name="terms_of_use">villkor</string>
+    <string name="acceptance_of_terms_is_required">Godkännande av villkor krävs</string>
+    <string name="key_is_required">Nyckel krävs</string>
+    <string name=”login">Inloggning</string>
+    <string name="generate_a_new_key">Skapa en ny nyckel</string>
+    <string name=”loading_feed">Ladda flöde</string>
+    <string name="error_loading_replies">"Det gick inte att läsa in svar: "</string>
+    <string name=”try_again">Försök igen</string>
+    <string name=”feed_is_empty">Flöde är tomt.</string>
+    <string name="refresh">Uppdatera</string>
+    <string name="created">Skapad</string>
+    <string name="with_description_of">med beskrivning av</string>
+    <string name=”and_picture">och bild</string>
+    <string name="changed_chat_name_to">ändra chat namn till</string>
+    <string name="description_to">beskrivning till</string>
+    <string name="and_picture_to">och bild till</string>
+    <string name="leave">Lämna</string>
+    <string name=”unfollow">Sluta följa</string>
+    <string name=”channel_created">Kanal skapad</string>
+    <string name="channel_information_changed_to">"Kanalinformation ändrad till"</string>
+    <string name="public_chat">Publik Chat</string>
+    <string name="posts_received">mottagna inlägg</string>
+    <string name=”remove">Ta bort</string>
+    <string name="sats" translatable="false">sats</string>
+    <string name="translations_auto">Auto</string>
+    <string name=”translations_translated_from">översatt från</string>
+    <string name="translations_to">till</string>
+    <string name=”translations_show_in_lang_first">Visa i %1$s first</string>
+    <string name=”translations_always_translate_to_lang">Översätt alltid till %1$s</string>
+    <string name=”translations_never_translate_from_lang">Översätt aldrig från %1$s</string>
+    <string name="nip_05" translatable="false">NIP-05</string>
+    <string name="lnurl" translatable="false">LNURL...</string>
+    <string name="never">aldrig</string>
+    <string name="now">nu</string>
+    <string name="h">h</string>
+    <string name="m">m</string>
+    <string name="d">d</string>
+    <string name="nudity">Naket</string>
+    <string name="profanity_hateful_speech">Svordomar / Hatiskt tal</string>
+    <string name="report_hateful_speech">Anmäl hattal</string>
+    <string name="report_nudity_porn">Rapportera nakenhet/porr</string>
+    <string name="others">andras</string>
+    <string name="mark_all_known_as_read">Markera alla kända som lästa</string>
+    <string name="mark_all_new_as_read">Markera alla nya som lästa</string>
+    <string name="mark_all_as_read">Markera allt som läst</string>
+    <string name="backup_keys">Backup-nycklar</string>
+    <string name="account_backup_tips_md" tools:ignore="Typos">
+        ## Nyckelsäkerhetskopiering och säkerhetstips
+        \n\nDitt konto är skyddat av en hemlig nyckel. Nyckeln är en lång slumpmässig sträng som börjar med **nsec1**. Alla som har tillgång till din hemliga nyckel kan publicera innehåll med din identitet.
+        \n\n- Lägg **inte** in din hemliga nyckel på någon webbplats eller programvara som du inte litar på.
+        \n- Amethyst-utvecklare kommer **aldrig** att be dig om din hemliga nyckel.
+        \n- **Behåll en säker säkerhetskopia av din hemliga nyckel för kontoåterställning. Vi rekommenderar att du använder en lösenordshanterare.    </string>
+    <string name="secret_key_copied_to_clipboard">Hemlig nyckel (nsec) kopierad till urklipp</string>
+    <string name="copy_my_secret_key">Kopiera min hemliga nyckel</string>
+    <string name="biometric_authentication_failed">Autentisering misslyckades</string>
+    <string name="biometric_error">Error</string>
+    <string name=”badge_created_by">"Skapad av %1$s"</string>
+    <string name=”badge_award_image_for”>"Tilldelad Badge för %1$s"</string>
+    <string name=”new_badge_award_notif">Du har blivit tilldelad en ny Badge </string>
+    <string name="award_granted_to">Badge utmärkelse tilldelas</string>
+    <string name="copied_note_text_to_clipboard">Kopierade anteckningstext till urklipp</string>
+    <string name="copied_user_id_to_clipboard" tools:ignore="Typos">Kopierade författarens @npub till urklipp</string>
+    <string name="copied_note_id_to_clipboard" tools:ignore="Typos">Kopierade antecknings-ID (@note1) till urklipp</string>
+    <string name="select_text_dialog_top">Välj Text</string>
+    <string name="github" translatable="false">Github Gist med bevis</string>
+    <string name="telegram" translatable="false">Telegram</string>
+    <string name="mastodon" translatable="false">Mastodon antecknings ID med bevis</string>
+    <string name="twitter" translatable="false">Twitter Status med bevis</string>
+    <string name="github_proof_url_template" translatable="false">https://gist.github.com/&lt;user&gt;/&lt;gist&gt;</string>
+    <string name="telegram_proof_url_template" translatable="false">https://t.me/&lt;proof post&gt;</string>
+    <string name="mastodon_proof_url_template" translatable="false">https://&lt;server&gt;/&lt;user&gt;/&lt;proof post&gt;</string>
+    <string name="twitter_proof_url_template" translatable="false">https://twitter.com/&lt;user&gt;/status/&lt;proof post&gt;</string>
+    <string name="private_conversation_notification">"&lt;Kan inte dekryptera privat meddelande&gt;\n\nDu citerades i en privat/krypterad konversation mellan %1$s och %2$s."</string>
+    <string name=”account_switch_add_account_dialog_title">Lägg till nytt konto</string>
+    <string name="drawer_accounts">Konton</string>
+    <string name=”account_switch_select_account">Välj konto</string>
+    <string name=”account_switch_add_account_btn">Lägg till nytt konto</string>
+    <string name=”account_switch_active_account">Aktivt konto</string>
+    <string name=”account_switch_has_private_key">Har privat nyckel</string>
+    <string name=”account_switch_pubkey_only">Läs bara, ingen privat nyckel</string>
+    <string name="back">Back</string>
+    <string name="quick_action_select">Välj</string>
+    <string name="quick_action_share_browser_link">Dela webbläsarlänk</string>
+    <string name="quick_action_share">Dela</string>
+    <string name="quick_action_copy_user_id">Användar ID</string>
+    <string name="quick_action_copy_note_id">Antecknings ID</string>
+    <string name="quick_action_copy_text">Kopiera Text</string>
+    <string name="quick_action_delete">Radera</string>
+    <string name=”quick_action_unfollow">Sluta följa</string>
+    <string name="quick_action_follow">Följ</string>
+    <string name="quick_action_request_deletion_alert_title">Begär radering</string>
+    <string name="quick_action_request_deletion_alert_body">Amethyst kommer att begära att din anteckning tas bort från de reläer du för närvarande är ansluten till. Det finns ingen garanti för att din anteckning kommer att raderas permanent från dessa reläer eller från andra reläer där den kan lagras.</string>
+    <string name="quick_action_block_dialog_btn">Blockera</string>
+    <string name="quick_action_delete_dialog_btn">Radera</string>
+    <string name="quick_action_block">Blockera</string>
+    <string name="quick_action_report">Rapportera</string>
+    <string name="quick_action_delete_button">Radera</string>
+    <string name=”quick_action_dont_show_again_button”>Visa inte igen</string>
+    <string name="report_dialog_spam">Spam eller scams</string>
+    <string name="report_dialog_profanity">Svordomar eller hatiskt beteende</string>
+    <string name="report_dialog_impersonation">Skadlig identitetsstöld</string>
+    <string name="report_dialog_nudity">Nakenhet eller grafiskt innehåll</string>
+    <string name="report_dialog_illegal">Olagligt beteende</string>
+    <string name="report_dialog_blocking_a_user">Blockering av en användare kommer att dölja deras innehåll i din app. Dina anteckningar är fortfarande offentliga, inklusive för personer du blockerar. Blockerade användare listas på skärmen Säkerhetsfilter.</string>
+    <string name="report_dialog_block_hide_user_btn"><![CDATA[Blockera & Göm användare]]></string>
+    <string name="report_dialog_report_btn">Rapportera missbruk</string>
+    <string name="report_dialog_reminder_public">Alla rapporter som publiceras kommer att vara offentliga.</string>
+    <string name="report_dialog_additional_reason_placeholder">Ge eventuellt ytterligare sammanhang om din rapport...</string>
+    <string name="report_dialog_additional_reason_label">Ytterligare sammanhang</string>
+    <string name="report_dialog_select_reason_label">Anledning</string>
+    <string name=”report_dialog_select_reason_placeholder">Välj anledning…</string>
+    <string name=”report_dialog_post_report_btn">Skicka rapport</string>
+    <string name=”report_dialog_title">Blockera och rapportera</string>
+    <string name="block_only">Blockera</string>
+
+    <string name="bookmarks">Bokmärken</string>
+    <string name=”private_bookmarks">Privata Bokmärken</string>
+    <string name="public_bookmarks">Publika Bokmärken</string>
+    <string name="add_to_private_bookmarks">Lägg till i Privata Bokmärken</string>
+    <string name=”add_to_public_bookmarks">Lägg till i Publika Bokmärken</string>
+    <string name="remove_from_private_bookmarks">Ta bort från Privata Bokmärken</string>
+    <string name="remove_from_public_bookmarks">Ta bort från Publika Bokmärken</string>
+
+    <string name="wallet_connect_service">Wallet Connect Service</string>
+    <string name="wallet_connect_service_explainer">Tillåter en Nostr Secret att betala zaps utan att lämna appen. Håll hemligheten säker och använd ett privat relä om möjligt</string>
+    <string name="wallet_connect_service_pubkey">Wallet Connect Pubkey</string>
+    <string name="wallet_connect_service_relay">Wallet Connect Relay</string>
+    <string name="wallet_connect_service_secret">Wallet Connect Secret</string>
+    <string name="wallet_connect_service_show_secret">Visa secret key</string>
+    <string name="wallet_connect_service_secret_placeholder">nsec / hex privat nyckel</string>
+
+    <string name="pledge_amount_in_sats">Pantbelopp i Sats</string>
+    <string name="post_poll">Dela Poll</string>
+    <string name="poll_heading_required">Obligatoriska fält:</string>
+    <string name="poll_zap_recipients">Zap mottagare</string>
+    <string name="poll_primary_description">Beskrivning av primär omröstning…</string>
+    <string name="poll_option_index">Alternativ %s</string>
+    <string name="poll_option_description">Beskrivning av omröstningsalternativ</string>
+    <string name="poll_heading_optional">Valfria fält:</string>
+    <string name=”poll_zap_value_min">Minsta Zap</string>
+    <string name=”poll_zap_value_max”>Maximal Zap</string>
+    <string name="poll_consensus_threshold">Konsensus</string>
+    <string name="poll_consensus_threshold_percent">(0–100)%</string>
+    <string name=”poll_closing_time">Avsluta efter</string>
+    <string name="poll_closing_time_days">dagar</string>
+    <string name="poll_is_closed">Omröstningen är stängd för nya röster</string>
+    <string name="poll_zap_amount">Zap belopp</string>
+    <string name="one_vote_per_user_on_atomic_votes">Endast en röst per användare tillåts i denna typ av omröstning</string>
+
+    <string name=”looking_for_event">"Letar efter Event %1$s"</string>
+
+    <string name="custom_zaps_add_a_message">Lägg till ett offentligt meddelande</string>
+    <string name="custom_zaps_add_a_message_private">Lägg till ett privat meddelande</string>
+    <string name="custom_zaps_add_a_message_nonzap">Lägg till ett fakturameddelande</string>
+
+    <string name="custom_zaps_add_a_message_example">Tack för allt ditt arbete!</string>
+
+    <string name="lightning_create_and_add_invoice">Skapa och lägg till</string>
+    <string name="poll_author_no_vote">Omröstningsskapare kan inte rösta i sina egna omröstningar.</string>
+    <string name="poll_hashtag" translatable="false">#zappoll</string>
+
+    <string name="hash_verification_passed">Bilden är densamma sedan inlägget</string>
+    <string name="hash_verification_failed">Bilden har ändrats. Användaren kanske inte har sett förändringen</string>
+
+    <string name=”content_description_add_image">Lägg till Bild</string>
+    <string name=”content_description_add_video">Lägg till Video</string>
+    <string name=”content_description_add_document">Lägg till Dokument</string>
+
+    <string name=”add_content">Lägg till Meddelande</string>
+    <string name="content_description">Beskrivning av innehållet</string>
+    <string name="content_description_example">En blå båt på en vit sandstrand vid solnedgången</string>
+
+    <string name="zap_type">Zap Typ</string>
+    <string name="zap_type_explainer">Zap Typ för alla alternativ</string>
+
+    <string name="zap_type_public">Publik</string>
+    <string name="zap_type_public_explainer">Alla kan se transaktionen och meddelandet</string>
+
+    <string name="zap_type_private">Privat</string>
+    <string name="zap_type_private_explainer">Avsändare och mottagare kan se varandra och läsa meddelandet</string>
+
+    <string name="zap_type_anonymous">Anonym</string>
+    <string name="zap_type_anonymous_explainer">Mottagaren och allmänheten vet inte vem som skickade betalningen</string>
+
+    <string name=”zap_type_nonzap">Ingen Zap</string>
+    <string name="zap_type_nonzap_explainer">Inga spår i Nostr, bara i Lightning</string>
+
+
+    <string name="file_server">Fil Server</string>
+    <string name="zap_forward_lnAddress">LnAdress or @Användare</string>
+
+    <string name="upload_server_imgur">imgur.com - betrodd</string>
+    <string name="upload_server_imgur_explainer">Imgur kan ändra filen</string>
+
+    <string name="upload_server_nostrimg">nostrimg.com - betrodd</string>
+    <string name=”upload_server_nostrimg_explainer">NostrImg kan ändra filen</string>
+
+    <string name="upload_server_nostrbuild">nostr.build - betrodd</string>
+    <string name="upload_server_nostrbuild_explainer">Nostr.build kan ändra filen</string>
+
+    <string name="upload_server_nostrfilesdev">nostrfiles.dev - betrodd</string>
+    <string name="upload_server_nostrfilesdev_explainer">Nostrfiles.dev kan ändra filen</string>
+
+
+    <string name="upload_server_imgur_nip94">Verifierbar Imgur (NIP-94)</string>
+    <string name="upload_server_imgur_nip94_explainer">Kontrollerar om Imgur modifierat filen. Nytt NIP: andra klienter kanske inte ser det</string>
+
+    <string name="upload_server_nostrimg_nip94">Verifierbar NostrImg (NIP-94)</string>
+    <string name="upload_server_nostrimg_nip94_explainer">Kontrollerar om NostrImg modifierat filen. Nytt NIP: andra klienter kanske inte ser det</string>
+
+    <string name="upload_server_nostrbuild_nip94">Verifierbar Nostr.build (NIP-94)</string>
+    <string name="upload_server_nostrbuild_nip94_explainer">Kontrollerar om Nostr.build modifierat filen. Nytt NIP: andra klienter kanske inte ser det</string>
+
+    <string name="upload_server_nostrfilesdev_nip94">Verifierbar Nostrfiles.dev (NIP-94)</string>
+    <string name="upload_server_nostrfilesdev_nip94_explainer">Kontrollerar om Nostrfiles.dev modifierat filen. Nytt NIP: andra klienter kanske inte ser det</string>
+
+
+    <string name=”upload_server_relays_nip95">Dina Reläer (NIP-95)</string>
+    <string name="upload_server_relays_nip95_explainer">Filer är värd för dina reläer. Nytt NIP: kontrollera om de stöder</string>
+
+    <string name="connect_via_tor_short">Tor/Orbot Inställningar</string>
+    <string name="connect_via_tor">Anslut via dina Orbot-inställiningar</string>
+
+    <string name="do_you_really_want_to_disable_tor_title">Koppla från Orbot/Tor?</string>
+    <string name="do_you_really_want_to_disable_tor_text">Dina data kommer omedelbart att överföras till det vanliga nätverket</string>
+    <string name="yes">Ja</string>
+    <string name="no">Nej</string>
+
+
+    <string name="follow_list_selection">Följ lista</string>
+    <string name="follow_list_kind3follows">Alla följare</string>
+    <string name="follow_list_global">Global</string>
+    <string name="connect_through_your_orbot_setup_markdown">
+        ## Anslut genom Tor med Orbot
+        \n\n1. Installera [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
+        \n2. Starta Orbot
+        \n3. Kontrollera Socks-porten i Orbot. Standarden använder 9050
+        \n4. Ändra vid behov porten i Orbot
+        \n5. Konfigurera Socks-porten på den här skärmen
+        \n6. Tryck på knappen Aktivera för att använda Orbot som proxy</string>
+    <string name="orbot_socks_port">Orbot Socks Port</string>
+    <string name="invalid_port_number">Ogiltigt portnummer</string>
+    <string name="use_orbot">Använd Orbot</string>
+    <string name=”disconnect_from_your_orbot_setup">Koppla ifrån Tor/Orbot</string>
+
+    <string name="app_notification_channel_id" translatable="false">Standardkanal-ID</string>
+    <string name="app_notification_private_message" translatable=”false">Ny notifikation har kommit</string>
+
+    <string name="app_notification_dms_channel_id" translatable="false">PrivataMeddelandID</string>
+    <string name="app_notification_dms_channel_name">Privata Meddelade</string>
+    <string name="app_notification_dms_channel_description">Meddelar dig när ett privat meddelande kommer</string>
+
+    <string name="app_notification_zaps_channel_id" translatable="false">ZapsID</string>
+    <string name="app_notification_zaps_channel_name">Zaps Mottaget</string>
+    <string name="app_notification_zaps_channel_description">Meddela dig när någon zappar dig</string>
+    <string name="app_notification_zaps_channel_message">%1$s sats</string>
+    <string name="app_notification_zaps_channel_message_from">Från %1$s</string>
+    <string name="app_notification_zaps_channel_message_for">till %1$s</string>
+
+    <string name="reply_notify">Meddela: </string>
+
+    <string name="channel_list_join_conversation">Gå med i konversation</string>
+    <string name="channel_list_user_or_group_id">Användare eller grupp ID</string>
+    <string name="channel_list_user_or_group_id_demo">npub, nevent or hex</string>
+    <string name="channel_list_create_channel">Skapa</string>
+    <string name=”channel_list_join_channel">Gå med</string>
+</resources>
+
+
+
+
+

@@ -6,6 +6,7 @@ import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.BuildConfig
+import com.vitorpamplona.amethyst.service.HttpClient
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okio.BufferedSink
@@ -39,9 +40,9 @@ object ImageUploader {
             "Can't open the image input stream"
         }
         val myServer = when (server) {
-            ServersAvailable.IMGUR, ServersAvailable.IMGUR_NIP_94 -> {
-                ImgurServer()
-            }
+            // ServersAvailable.IMGUR, ServersAvailable.IMGUR_NIP_94 -> {
+            //    ImgurServer()
+            // }
             ServersAvailable.NOSTRIMG, ServersAvailable.NOSTRIMG_NIP_94 -> {
                 NostrImgServer()
             }
@@ -52,7 +53,7 @@ object ImageUploader {
                 NostrFilesDevServer()
             }
             else -> {
-                ImgurServer()
+                NostrBuildServer()
             }
         }
 
@@ -70,7 +71,7 @@ object ImageUploader {
         val fileName = randomChars()
         val extension = contentType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
 
-        val client = OkHttpClient.Builder().build()
+        val client = HttpClient.getHttpClient()
         val requestBody: RequestBody
         val requestBuilder = Request.Builder()
 

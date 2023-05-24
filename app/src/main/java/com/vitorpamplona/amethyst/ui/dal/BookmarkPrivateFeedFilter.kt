@@ -19,7 +19,7 @@ object BookmarkPrivateFeedFilter : FeedFilter<Note>() {
             ?.map { LocalCache.getOrCreateAddressableNote(it) } ?: emptyList()
 
         return notes.plus(addresses).toSet()
-            .sortedBy { it.createdAt() }
+            .sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
             .reversed()
     }
 }

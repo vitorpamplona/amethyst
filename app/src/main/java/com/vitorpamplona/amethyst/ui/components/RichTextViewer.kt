@@ -19,10 +19,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,7 +43,9 @@ import com.vitorpamplona.amethyst.service.lnurl.LnWithdrawalUtil
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.uriToRoute
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.net.MalformedURLException
 import java.net.URISyntaxException
@@ -80,7 +82,8 @@ fun isMarkdown(content: String): Boolean {
         content.startsWith("# ") ||
         content.contains("##") ||
         content.contains("__") ||
-        content.contains("```")
+        content.contains("```") ||
+        content.contains("](")
 }
 
 @Composable
@@ -97,7 +100,7 @@ fun RichTextViewer(
 
     Column(modifier = modifier) {
         if (isMarkdown) {
-            RenderContentAsMarkdown(content, backgroundColor)
+            RenderContentAsMarkdown(content, backgroundColor, tags, navController)
         } else {
             RenderRegular(content, tags, canPreview, backgroundColor, accountViewModel, navController)
         }
@@ -106,9 +109,10 @@ fun RichTextViewer(
 
 class RichTextViewerState(
     val content: String,
-    val urlSet: LinkedHashSet<String>,
+    val urlSet: Set<String>,
     val imagesForPager: Map<String, ZoomableUrlContent>,
-    val imageList: List<ZoomableUrlContent>
+    val imageList: List<ZoomableUrlContent>,
+    val customEmoji: Map<String, String>
 )
 
 @Composable
@@ -121,11 +125,13 @@ private fun RenderRegular(
     navController: NavController
 ) {
     var processedState by remember {
-        mutableStateOf<RichTextViewerState?>(null)
+        mutableStateOf<RichTextViewerState?>(RichTextViewerState(content, emptySet(), emptyMap(), emptyList(), emptyMap()))
     }
 
+    val scope = rememberCoroutineScope()
+
     LaunchedEffect(key1 = content) {
-        withContext(Dispatchers.IO) {
+        scope.launch(Dispatchers.IO) {
             val urls = UrlDetector(content, UrlDetectorOptions.Default).detect()
             val urlSet = urls.mapTo(LinkedHashSet(urls.size)) { it.originalUrl }
             val imagesForPager = urlSet.mapNotNull { fullUrl ->
@@ -140,7 +146,11 @@ private fun RenderRegular(
             }.associateBy { it.url }
             val imageList = imagesForPager.values.toList()
 
-            processedState = RichTextViewerState(content, urlSet, imagesForPager, imageList)
+            val emojiMap = tags?.filter { it.size > 2 && it[0] == "emoji" }?.associate { ":${it[1]}:" to it[2] } ?: emptyMap()
+
+            if (urlSet.isNotEmpty() || emojiMap.isNotEmpty()) {
+                processedState = RichTextViewerState(content, urlSet, imagesForPager, imageList, emojiMap)
+            }
         }
     }
 
@@ -162,6 +172,8 @@ private fun RenderRegular(
                             ZoomableContentView(img, state.imageList)
                         } else if (state.urlSet.contains(word)) {
                             UrlPreview(word, "$word ")
+                        } else if (state.customEmoji.any { word.contains(it.key) }) {
+                            RenderCustomEmoji(word, state.customEmoji)
                         } else if (word.startsWith("lnbc", true)) {
                             MayBeInvoicePreview(word)
                         } else if (word.startsWith("lnurl", true)) {
@@ -230,6 +242,8 @@ private fun RenderRegular(
                                     style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
                                 )
                             }
+                        } else if (state.customEmoji.any { word.contains(it.key) }) {
+                            RenderCustomEmoji(word, state.customEmoji)
                         } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
                             ClickableEmail(word)
                         } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
@@ -289,7 +303,15 @@ private fun RenderRegular(
 }
 
 @Composable
-private fun RenderContentAsMarkdown(content: String, backgroundColor: Color) {
+fun RenderCustomEmoji(word: String, customEmoji: Map<String, String>) {
+    CreateTextWithEmoji(
+        text = "$word ",
+        emojis = customEmoji
+    )
+}
+
+@Composable
+private fun RenderContentAsMarkdown(content: String, backgroundColor: Color, tags: List<List<String>>?, navController: NavController) {
     val myMarkDownStyle = richTextDefaults.copy(
         codeBlockStyle = richTextDefaults.codeBlockStyle?.copy(
             textStyle = TextStyle(
@@ -313,7 +335,6 @@ private fun RenderContentAsMarkdown(content: String, backgroundColor: Color) {
         ),
         stringStyle = richTextDefaults.stringStyle?.copy(
             linkStyle = SpanStyle(
-                textDecoration = TextDecoration.Underline,
                 color = MaterialTheme.colors.primary
             ),
             codeStyle = SpanStyle(
@@ -331,14 +352,14 @@ private fun RenderContentAsMarkdown(content: String, backgroundColor: Color) {
 
     LaunchedEffect(key1 = content) {
         withContext(Dispatchers.IO) {
-            nip19References = returnNIP19References(content)
-            markdownWithSpecialContent = returnMarkdownWithSpecialContent(content)
+            nip19References = returnNIP19References(content, tags)
+            markdownWithSpecialContent = returnMarkdownWithSpecialContent(content, tags)
         }
     }
 
     LaunchedEffect(key1 = refresh) {
         withContext(Dispatchers.IO) {
-            val newMarkdownWithSpecialContent = returnMarkdownWithSpecialContent(content)
+            val newMarkdownWithSpecialContent = returnMarkdownWithSpecialContent(content, tags)
             if (markdownWithSpecialContent != newMarkdownWithSpecialContent) {
                 markdownWithSpecialContent = newMarkdownWithSpecialContent
             }
@@ -368,16 +389,22 @@ private fun RenderContentAsMarkdown(content: String, backgroundColor: Color) {
         baseNote?.let {
             val noteState by it.live().metadata.observeAsState()
             if (noteState?.note?.event != null) {
-                refresh++
+                LaunchedEffect(key1 = noteState) {
+                    refresh++
+                }
             }
         }
         baseUser?.let {
             val userState by it.live().metadata.observeAsState()
             if (userState?.user?.info != null) {
-                refresh++
+                LaunchedEffect(key1 = userState) {
+                    refresh++
+                }
             }
         }
     }
+
+    val uri = LocalUriHandler.current
 
     markdownWithSpecialContent?.let {
         MaterialRichText(
@@ -386,26 +413,70 @@ private fun RenderContentAsMarkdown(content: String, backgroundColor: Color) {
             Markdown(
                 content = it,
                 markdownParseOptions = MarkdownParseOptions.Default
-            )
+            ) { link ->
+                val route = uriToRoute(link)
+                if (route != null) {
+                    navController.navigate(route)
+                } else {
+                    runCatching { uri.openUri(link) }
+                }
+            }
         }
     }
 }
 
-private fun getDisplayNameFromNip19(nip19: Nip19.Return): String? {
-    if (nip19.type == Nip19.Type.USER) {
-        return LocalCache.users[nip19.hex]?.bestDisplayName()
-    } else if (nip19.type == Nip19.Type.NOTE) {
-        return LocalCache.notes[nip19.hex]?.idDisplayNote()
-    } else if (nip19.type == Nip19.Type.ADDRESS) {
-        return LocalCache.addressables[nip19.hex]?.idDisplayNote()
-    } else if (nip19.type == Nip19.Type.EVENT) {
-        return LocalCache.notes[nip19.hex]?.idDisplayNote() ?: LocalCache.addressables[nip19.hex]?.idDisplayNote()
-    } else {
-        return null
+private fun getDisplayNameAndNIP19FromTag(tag: String, tags: List<List<String>>): Pair<String, String>? {
+    val matcher = tagIndex.matcher(tag)
+    val (index, suffix) = try {
+        matcher.find()
+        Pair(matcher.group(1)?.toInt(), matcher.group(2) ?: "")
+    } catch (e: Exception) {
+        Log.w("Tag Parser", "Couldn't link tag $tag", e)
+        Pair(null, null)
     }
+
+    if (index != null && index >= 0 && index < tags.size) {
+        val tag = tags[index]
+
+        if (tag.size > 1) {
+            if (tag[0] == "p") {
+                LocalCache.checkGetOrCreateUser(tag[1])?.let {
+                    return Pair(it.toBestDisplayName(), it.pubkeyNpub())
+                }
+            } else if (tag[0] == "e" || tag[0] == "a") {
+                LocalCache.checkGetOrCreateNote(tag[1])?.let {
+                    return Pair(it.idDisplayNote(), it.toNEvent())
+                }
+            }
+        }
+    }
+
+    return null
 }
 
-private fun returnNIP19References(content: String): List<Nip19.Return> {
+private fun getDisplayNameFromNip19(nip19: Nip19.Return): Pair<String, String>? {
+    if (nip19.type == Nip19.Type.USER) {
+        LocalCache.users[nip19.hex]?.let {
+            return Pair(it.toBestDisplayName(), it.pubkeyNpub())
+        }
+    } else if (nip19.type == Nip19.Type.NOTE) {
+        LocalCache.notes[nip19.hex]?.let {
+            return Pair(it.idDisplayNote(), it.toNEvent())
+        }
+    } else if (nip19.type == Nip19.Type.ADDRESS) {
+        LocalCache.addressables[nip19.hex]?.let {
+            return Pair(it.idDisplayNote(), it.toNEvent())
+        }
+    } else if (nip19.type == Nip19.Type.EVENT) {
+        LocalCache.notes[nip19.hex]?.let {
+            return Pair(it.idDisplayNote(), it.toNEvent())
+        }
+    }
+
+    return null
+}
+
+private fun returnNIP19References(content: String, tags: List<List<String>>?): List<Nip19.Return> {
     val listOfReferences = mutableListOf<Nip19.Return>()
     content.split('\n').forEach { paragraph ->
         paragraph.split(' ').forEach { word: String ->
@@ -417,10 +488,21 @@ private fun returnNIP19References(content: String): List<Nip19.Return> {
             }
         }
     }
+
+    tags?.forEach {
+        if (it[0] == "p" && it.size > 1) {
+            listOfReferences.add(Nip19.Return(Nip19.Type.USER, it[1], null, null, null, ""))
+        } else if (it[0] == "e" && it.size > 1) {
+            listOfReferences.add(Nip19.Return(Nip19.Type.NOTE, it[1], null, null, null, ""))
+        } else if (it[0] == "a" && it.size > 1) {
+            listOfReferences.add(Nip19.Return(Nip19.Type.ADDRESS, it[1], null, null, null, ""))
+        }
+    }
+
     return listOfReferences
 }
 
-private fun returnMarkdownWithSpecialContent(content: String): String {
+private fun returnMarkdownWithSpecialContent(content: String, tags: List<List<String>>?): String {
     var returnContent = ""
     content.split('\n').forEach { paragraph ->
         paragraph.split(' ').forEach { word: String ->
@@ -433,14 +515,42 @@ private fun returnMarkdownWithSpecialContent(content: String): String {
             } else if (isBechLink(word)) {
                 val parsedNip19 = Nip19.uriToRoute(word)
                 returnContent += if (parsedNip19 !== null) {
-                    val displayName = getDisplayNameFromNip19(parsedNip19)
-                    if (displayName != null) {
-                        "[@$displayName](nostr://$word) "
+                    val pair = getDisplayNameFromNip19(parsedNip19)
+                    if (pair != null) {
+                        val (displayName, nip19) = pair
+                        "[$displayName](nostr:$nip19) "
                     } else {
                         "$word "
                     }
                 } else {
                     "$word "
+                }
+            } else if (word.startsWith("#")) {
+                if (tagIndex.matcher(word).matches() && tags != null) {
+                    val pair = getDisplayNameAndNIP19FromTag(word, tags)
+                    if (pair != null) {
+                        returnContent += "[${pair.first}](nostr:${pair.second}) "
+                    } else {
+                        returnContent += "$word "
+                    }
+                } else if (hashTagsPattern.matcher(word).matches()) {
+                    val hashtagMatcher = hashTagsPattern.matcher(word)
+
+                    val (myTag, mySuffix) = try {
+                        hashtagMatcher.find()
+                        Pair(hashtagMatcher.group(1), hashtagMatcher.group(2))
+                    } catch (e: Exception) {
+                        Log.e("Hashtag Parser", "Couldn't link hashtag $word", e)
+                        Pair(null, null)
+                    }
+
+                    if (myTag != null) {
+                        returnContent += "[#$myTag](nostr:Hashtag?id=$myTag)$mySuffix "
+                    } else {
+                        returnContent += "$word "
+                    }
+                } else {
+                    returnContent += "$word "
                 }
             } else {
                 returnContent += "$word "
@@ -595,8 +705,10 @@ fun TagLink(word: String, tags: List<List<String>>, canPreview: Boolean, backgro
     var baseUserPair by remember { mutableStateOf<Pair<User, String?>?>(null) }
     var baseNotePair by remember { mutableStateOf<Pair<Note, String?>?>(null) }
 
+    val scope = rememberCoroutineScope()
+
     LaunchedEffect(key1 = word) {
-        withContext(Dispatchers.IO) {
+        scope.launch(Dispatchers.IO) {
             val matcher = tagIndex.matcher(word)
             val (index, suffix) = try {
                 matcher.find()
@@ -625,8 +737,24 @@ fun TagLink(word: String, tags: List<List<String>>, canPreview: Boolean, backgro
     }
 
     baseUserPair?.let {
-        ClickableUserTag(it.first, navController)
-        Text(text = "${it.second} ")
+        val innerUserState by it.first.live().metadata.observeAsState()
+        val displayName = remember(innerUserState) {
+            innerUserState?.user?.toBestDisplayName() ?: ""
+        }
+        val route = remember(innerUserState) {
+            "User/${it.first.pubkeyHex}"
+        }
+        val userTags = remember(innerUserState) {
+            innerUserState?.user?.info?.latestMetadata?.tags
+        }
+
+        CreateClickableTextWithEmoji(
+            clickablePart = displayName,
+            suffix = "${it.second} ",
+            tags = userTags,
+            route = route,
+            navController = navController
+        )
     }
 
     baseNotePair?.let {

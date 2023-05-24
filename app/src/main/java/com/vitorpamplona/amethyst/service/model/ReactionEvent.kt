@@ -1,10 +1,12 @@
 package com.vitorpamplona.amethyst.service.model
 
+import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
 import java.util.Date
 
+@Immutable
 class ReactionEvent(
     id: HexKey,
     pubKey: HexKey,
@@ -32,7 +34,7 @@ class ReactionEvent(
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
 
             var tags = listOf(listOf("e", originalNote.id()), listOf("p", originalNote.pubKey()))
-            if (originalNote is LongTextNoteEvent) {
+            if (originalNote is AddressableEvent) {
                 tags = tags + listOf(listOf("a", originalNote.address().toTag()))
             }
 

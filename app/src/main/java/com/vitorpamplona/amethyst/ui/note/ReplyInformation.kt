@@ -18,6 +18,7 @@ import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.*
+import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -59,8 +60,9 @@ fun ReplyInformation(replyTo: List<Note>?, dupMentions: List<User>?, account: Ac
                     val innerUser = innerUserState?.user
 
                     innerUser?.let { myUser ->
-                        ClickableText(
-                            AnnotatedString("$prefix@${myUser.toBestDisplayName()}"),
+                        CreateClickableTextWithEmoji(
+                            clickablePart = "$prefix@${myUser.toBestDisplayName()}",
+                            tags = myUser.info?.latestMetadata?.tags,
                             style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(alpha = 0.52f), fontSize = 13.sp),
                             onClick = { onUserTagClick(myUser) }
                         )
@@ -196,8 +198,9 @@ fun ReplyInformationChannel(
                     val innerUser = innerUserState?.user
 
                     innerUser?.let { myUser ->
-                        ClickableText(
-                            AnnotatedString("$prefix@${myUser.toBestDisplayName()}"),
+                        CreateClickableTextWithEmoji(
+                            clickablePart = "$prefix@${myUser.toBestDisplayName()}",
+                            tags = myUser.info?.latestMetadata?.tags,
                             style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(alpha = 0.52f), fontSize = 13.sp),
                             onClick = { onUserTagClick(myUser) }
                         )

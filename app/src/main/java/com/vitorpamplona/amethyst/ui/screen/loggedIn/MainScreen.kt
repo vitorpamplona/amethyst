@@ -20,11 +20,14 @@ import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
-import com.vitorpamplona.amethyst.buttons.NewChannelButton
+import com.vitorpamplona.amethyst.ui.buttons.ChannelFabColumn
 import com.vitorpamplona.amethyst.ui.buttons.NewNoteButton
 import com.vitorpamplona.amethyst.ui.navigation.*
 import com.vitorpamplona.amethyst.ui.navigation.AccountSwitchBottomSheet
@@ -50,6 +53,12 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
         skipHalfExpanded = true
     )
 
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val account = remember(accountState) { accountState?.account }
+
+    val followLists: FollowListViewModel = viewModel()
+    followLists.load(account)
+
     ModalBottomSheetLayout(
         sheetState = sheetState,
         sheetContent = {
@@ -64,7 +73,7 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
                 AppBottomBar(navController, accountViewModel)
             },
             topBar = {
-                AppTopBar(navController, scaffoldState, accountViewModel)
+                AppTopBar(followLists, navController, scaffoldState, accountViewModel)
             },
             drawerContent = {
                 DrawerContent(navController, scaffoldState, sheetState, accountViewModel)
@@ -101,7 +110,7 @@ fun FloatingButtons(navController: NavHostController, accountViewModel: AccountV
                     NewNoteButton(state.account, accountViewModel, navController)
                 }
                 if (currentRoute(navController) == Route.Message.base) {
-                    NewChannelButton(state.account)
+                    ChannelFabColumn(state.account, navController)
                 }
                 if (currentRoute(navController)?.substringBefore("?") == Route.Video.base) {
                     NewImageButton(accountViewModel, navController)

@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.widget.Toast
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -253,7 +254,11 @@ fun ChannelHeader(baseChannel: Channel, account: Account, navController: NavCont
 
     val context = LocalContext.current.applicationContext
 
-    Column() {
+    Column(
+        Modifier.clickable {
+            navController.navigate("Channel/${baseChannel.idHex}")
+        }
+    ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RobohashAsyncImageProxy(
@@ -344,7 +349,7 @@ private fun NoteCopyButton(
             expanded = popupExpanded,
             onDismissRequest = { popupExpanded = false }
         ) {
-            DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(note.idNote())); popupExpanded = false }) {
+            DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString("nostr:" + note.idNote())); popupExpanded = false }) {
                 Text(stringResource(R.string.copy_channel_id_note_to_the_clipboard))
             }
         }
@@ -386,7 +391,6 @@ private fun JoinButton(account: Account, channel: Channel, navController: NavCon
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
             account.joinChannel(channel.idHex)
-            navController.navigate(Route.Message.route)
         },
         shape = RoundedCornerShape(20.dp),
         colors = ButtonDefaults

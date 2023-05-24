@@ -19,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -34,38 +35,55 @@ import com.vitorpamplona.amethyst.model.UserMetadata
 import com.vitorpamplona.amethyst.service.Nip05Verifier
 import com.vitorpamplona.amethyst.ui.theme.Nip05
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 import java.util.Date
 
 @Composable
 fun nip05VerificationAsAState(user: UserMetadata, pubkeyHex: String): State<Boolean?> {
-    var nip05Verified = remember { mutableStateOf<Boolean?>(null) }
+    val nip05Verified = remember(user) {
+        // starts with null if must verify or already filled in if verified in the last hour
+        val default = if ((user.nip05LastVerificationTime ?: 0) > (Date().time / 1000 - 60 * 60)) { // 1hour
+            user.nip05Verified
+        } else {
+            null
+        }
+
+        mutableStateOf(default)
+    }
+
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(key1 = user) {
-        withContext(Dispatchers.IO) {
-            user.nip05?.ifBlank { null }?.let { nip05 ->
-                val now = Date().time / 1000
-                if ((user.nip05LastVerificationTime ?: 0) > (now - 60 * 60)) { // 1hour
-                    nip05Verified.value = user.nip05Verified
-                } else {
+        if (nip05Verified.value == null) {
+            scope.launch(Dispatchers.IO) {
+                user.nip05?.ifBlank { null }?.let { nip05 ->
                     Nip05Verifier().verifyNip05(
                         nip05,
                         onSuccess = {
                             // Marks user as verified
                             if (it == pubkeyHex) {
                                 user.nip05Verified = true
-                                user.nip05LastVerificationTime = now
-                                nip05Verified.value = true
+                                user.nip05LastVerificationTime = Date().time / 1000
+
+                                if (nip05Verified.value != true) {
+                                    nip05Verified.value = true
+                                }
                             } else {
                                 user.nip05Verified = false
                                 user.nip05LastVerificationTime = 0
-                                nip05Verified.value = false
+
+                                if (nip05Verified.value != false) {
+                                    nip05Verified.value = false
+                                }
                             }
                         },
                         onError = {
                             user.nip05LastVerificationTime = 0
                             user.nip05Verified = false
-                            nip05Verified.value = false
+
+                            if (nip05Verified.value != false) {
+                                nip05Verified.value = false
+                            }
                         }
                     )
                 }
@@ -90,16 +108,14 @@ fun ObserveDisplayNip05Status(baseNote: Note, columnModifier: Modifier = Modifie
 @Composable
 fun ObserveDisplayNip05Status(baseUser: User, columnModifier: Modifier = Modifier) {
     val userState by baseUser.live().metadata.observeAsState()
-    val user = userState?.user ?: return
+    val user = remember(userState) { userState?.user } ?: return
+    val parts = remember(userState) { userState?.user?.nip05()?.split("@") } ?: return
 
-    user.nip05()?.let { nip05 ->
-        val parts = nip05.split("@")
-        if (parts.size == 2) {
-            val nip05Verified by nip05VerificationAsAState(user.info!!, user.pubkeyHex)
+    if (parts.size == 2) {
+        val nip05Verified by nip05VerificationAsAState(user.info!!, user.pubkeyHex)
 
-            Column(modifier = columnModifier) {
-                DisplayNIP05(parts[0], parts[1], nip05Verified)
-            }
+        Column(modifier = columnModifier) {
+            DisplayNIP05(parts[0], parts[1], nip05Verified)
         }
     }
 }

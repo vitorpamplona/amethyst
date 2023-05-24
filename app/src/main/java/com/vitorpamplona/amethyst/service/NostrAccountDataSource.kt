@@ -95,7 +95,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                 BadgeAwardEvent.kind
             ),
             tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
-            limit = 400,
+            limit = 4000,
             since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultNotificationFollowList)?.relayList
         )
     )

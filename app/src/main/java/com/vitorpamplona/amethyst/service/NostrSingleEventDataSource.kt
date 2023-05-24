@@ -29,7 +29,7 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
                             ReactionEvent.kind, RepostEvent.kind, ReportEvent.kind,
                             LnZapEvent.kind, LnZapRequestEvent.kind,
                             BadgeAwardEvent.kind, BadgeDefinitionEvent.kind, BadgeProfilesEvent.kind,
-                            PollNoteEvent.kind
+                            PollNoteEvent.kind, AudioTrackEvent.kind, PinListEvent.kind
                         ),
                         tags = mapOf("a" to listOf(aTag.toTag())),
                         since = it.lastReactionsDownloadTime
@@ -80,7 +80,9 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
                         LnZapEvent.kind,
                         LnZapRequestEvent.kind,
                         PollNoteEvent.kind,
-                        HighlightEvent.kind
+                        HighlightEvent.kind,
+                        AudioTrackEvent.kind,
+                        PinListEvent.kind
                     ),
                     tags = mapOf("e" to listOf(it.idHex)),
                     since = it.lastReactionsDownloadTime
@@ -119,7 +121,7 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
                         BadgeDefinitionEvent.kind, BadgeAwardEvent.kind, BadgeProfilesEvent.kind,
                         PrivateDmEvent.kind,
                         FileHeaderEvent.kind, FileStorageEvent.kind, FileStorageHeaderEvent.kind,
-                        HighlightEvent.kind
+                        HighlightEvent.kind, AudioTrackEvent.kind, PinListEvent.kind
                     ),
                     ids = interestedEvents.toList()
                 )
@@ -152,22 +154,30 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
     }
 
     fun add(eventId: Note) {
-        eventsToWatch = eventsToWatch.plus(eventId)
-        invalidateFilters()
+        if (!eventsToWatch.contains(eventId)) {
+            eventsToWatch = eventsToWatch.plus(eventId)
+            invalidateFilters()
+        }
     }
 
     fun remove(eventId: Note) {
-        eventsToWatch = eventsToWatch.minus(eventId)
-        invalidateFilters()
+        if (eventsToWatch.contains(eventId)) {
+            eventsToWatch = eventsToWatch.minus(eventId)
+            invalidateFilters()
+        }
     }
 
     fun addAddress(aTag: Note) {
-        addressesToWatch = addressesToWatch.plus(aTag)
-        invalidateFilters()
+        if (!addressesToWatch.contains(aTag)) {
+            addressesToWatch = addressesToWatch.plus(aTag)
+            invalidateFilters()
+        }
     }
 
     fun removeAddress(aTag: Note) {
-        addressesToWatch = addressesToWatch.minus(aTag)
-        invalidateFilters()
+        if (addressesToWatch.contains(aTag)) {
+            addressesToWatch = addressesToWatch.minus(aTag)
+            invalidateFilters()
+        }
     }
 }

@@ -1,5 +1,9 @@
 package com.vitorpamplona.amethyst.ui.note
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -8,19 +12,30 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.*
 
-class PollNoteViewModel {
+data class PollOption(
+    val option: Int,
+    val descriptor: String,
+    val zappedValue: BigDecimal,
+    val tally: BigDecimal,
+    val consensusThreadhold: Boolean,
+    val zappedByLoggedIn: Boolean
+)
+
+class PollNoteViewModel : ViewModel() {
     var account: Account? = null
     private var pollNote: Note? = null
 
     var pollEvent: PollNoteEvent? = null
-    private var pollOptions: Map<Int, String>? = null
+    var pollOptions: Map<Int, String>? = null
     var valueMaximum: Int? = null
     var valueMinimum: Int? = null
     private var closedAt: Int? = null
     var consensusThreshold: BigDecimal? = null
 
     var totalZapped: BigDecimal = BigDecimal.ZERO
-    var wasZappedByAuthor: Boolean = false
+    var wasZappedByLoggedInAccount: Boolean = false
+
+    var tallies by mutableStateOf<List<PollOption>>(emptyList())
 
     fun load(acc: Account, note: Note?) {
         account = acc
@@ -32,15 +47,35 @@ class PollNoteViewModel {
         consensusThreshold = pollEvent?.getTagInt(CONSENSUS_THRESHOLD)?.toFloat()?.div(100)?.toBigDecimal()
         closedAt = pollEvent?.getTagInt(CLOSED_AT)
 
+        refreshTallies()
+    }
+
+    fun refreshTallies() {
         totalZapped = totalZapped()
-        wasZappedByAuthor = note?.let { account?.calculateIfNoteWasZappedByAccount(it) } ?: false
+        wasZappedByLoggedInAccount = pollNote?.let { account?.calculateIfNoteWasZappedByAccount(it) } ?: false
+
+        tallies = pollOptions?.keys?.map {
+            val zappedInOption = zappedPollOptionAmount(it)
+
+            val myTally = if (totalZapped.compareTo(BigDecimal.ZERO) > 0) {
+                zappedInOption.divide(totalZapped, 2, RoundingMode.HALF_UP)
+            } else {
+                BigDecimal.ZERO
+            }
+
+            val zappedByLoggedIn = account?.userProfile()?.let { it1 -> isPollOptionZappedBy(it, it1) } ?: false
+
+            val consensus = consensusThreshold != null && myTally >= consensusThreshold!!
+
+            PollOption(it, pollOptions?.get(it) ?: "", zappedInOption, myTally, consensus, zappedByLoggedIn)
+        } ?: emptyList()
     }
 
     fun canZap(): Boolean {
         val account = account ?: return false
         val user = account.userProfile() ?: return false
         val note = pollNote ?: return false
-        return user != note.author && !wasZappedByAuthor
+        return user != note.author && !wasZappedByLoggedInAccount
     }
 
     fun isVoteAmountAtomic() = valueMaximum != null && valueMinimum != null && valueMinimum == valueMaximum
@@ -88,14 +123,6 @@ class PollNoteViewModel {
         return false
     }
 
-    fun optionVoteTally(op: Int): BigDecimal {
-        return if (totalZapped.compareTo(BigDecimal.ZERO) > 0) {
-            zappedPollOptionAmount(op).divide(totalZapped, 2, RoundingMode.HALF_UP)
-        } else {
-            BigDecimal.ZERO
-        }
-    }
-
     fun isPollOptionZappedBy(option: Int, user: User): Boolean {
         return pollNote!!.zaps
             .any {
@@ -105,7 +132,7 @@ class PollNoteViewModel {
             }
     }
 
-    fun zappedPollOptionAmount(option: Int): BigDecimal {
+    private fun zappedPollOptionAmount(option: Int): BigDecimal {
         return pollNote?.zaps?.values?.sumOf {
             val event = it?.event as? LnZapEvent
             if (event?.zappedPollOption() == option) {
@@ -116,7 +143,7 @@ class PollNoteViewModel {
         } ?: BigDecimal(0)
     }
 
-    fun totalZapped(): BigDecimal {
+    private fun totalZapped(): BigDecimal {
         return pollNote?.zaps?.values?.sumOf {
             val zapEvent = (it?.event as? LnZapEvent)
 

@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.ui.actions
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import android.util.Size
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
@@ -24,8 +25,10 @@ import androidx.compose.material.icons.filled.CurrencyBitcoin
 import androidx.compose.material.icons.outlined.ArrowForwardIos
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -47,6 +50,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -58,9 +62,9 @@ import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.model.TextNoteEvent
+import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.ui.components.*
-import com.vitorpamplona.amethyst.ui.note.ReplyInformation
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.UserLine
@@ -81,6 +85,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
     val keyboardController = LocalSoftwareKeyboardController.current
 
     val scroolState = rememberScrollState()
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         postViewModel.load(account, baseReplyTo, quote)
@@ -89,6 +94,12 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
 
         postViewModel.imageUploadingError.collect { error ->
             Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            NostrSearchEventOrUserDataSource.clear()
         }
     }
 
@@ -145,10 +156,8 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                 .fillMaxWidth()
                                 .verticalScroll(scroolState)
                         ) {
-                            if (postViewModel.replyTos != null && baseReplyTo?.event is TextNoteEvent) {
-                                ReplyInformation(postViewModel.replyTos, postViewModel.mentions, account, "✖ ") {
-                                    postViewModel.removeFromReplyList(it)
-                                }
+                            Notifying(postViewModel.mentions) {
+                                postViewModel.removeFromReplyList(it)
                             }
 
                             OutlinedTextField(
@@ -219,6 +228,11 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                         },
                                         onCancel = {
                                             postViewModel.contentToAddUrl = null
+                                        },
+                                        onError = {
+                                            scope.launch {
+                                                postViewModel.imageUploadingError.emit(it)
+                                            }
                                         }
                                     )
                                 }
@@ -338,6 +352,48 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                         ForwardZapTo(postViewModel) {
                             postViewModel.wantsForwardZapTo = !postViewModel.wantsForwardZapTo
                         }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun Notifying(baseMentions: List<User>?, onClick: (User) -> Unit) {
+    val mentions = baseMentions?.toSet()
+
+    FlowRow(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 10.dp)) {
+        if (!mentions.isNullOrEmpty()) {
+            Text(
+                stringResource(R.string.reply_notify),
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+            )
+
+            mentions.forEachIndexed { idx, user ->
+                val innerUserState by user.live().metadata.observeAsState()
+                val innerUser = innerUserState?.user
+
+                innerUser?.let { myUser ->
+                    Spacer(modifier = Modifier.width(5.dp))
+
+                    Button(
+                        shape = RoundedCornerShape(20.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            backgroundColor = MaterialTheme.colors.primary.copy(alpha = 0.32f)
+                        ),
+                        onClick = {
+                            onClick(myUser)
+                        }
+                    ) {
+                        CreateTextWithEmoji(
+                            text = "✖ ${myUser.toBestDisplayName()}",
+                            tags = myUser.info?.latestMetadata?.tags,
+                            color = Color.White,
+                            textAlign = TextAlign.Center
+                        )
                     }
                 }
             }
@@ -585,11 +641,12 @@ fun SearchButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifier 
 }
 
 enum class ServersAvailable {
-    IMGUR,
+    // IMGUR,
     NOSTR_BUILD,
     NOSTRIMG,
     NOSTRFILES_DEV,
-    IMGUR_NIP_94,
+
+    // IMGUR_NIP_94,
     NOSTRIMG_NIP_94,
     NOSTR_BUILD_NIP_94,
     NOSTRFILES_DEV_NIP_94,
@@ -601,7 +658,8 @@ fun ImageVideoDescription(
     uri: Uri,
     defaultServer: ServersAvailable,
     onAdd: (String, ServersAvailable) -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
+    onError: (String) -> Unit
 ) {
     val resolver = LocalContext.current.contentResolver
     val mediaType = resolver.getType(uri) ?: ""
@@ -611,11 +669,11 @@ fun ImageVideoDescription(
     val isVideo = mediaType.startsWith("video")
 
     val fileServers = listOf(
-        Triple(ServersAvailable.IMGUR, stringResource(id = R.string.upload_server_imgur), stringResource(id = R.string.upload_server_imgur_explainer)),
+        // Triple(ServersAvailable.IMGUR, stringResource(id = R.string.upload_server_imgur), stringResource(id = R.string.upload_server_imgur_explainer)),
         Triple(ServersAvailable.NOSTRIMG, stringResource(id = R.string.upload_server_nostrimg), stringResource(id = R.string.upload_server_nostrimg_explainer)),
         Triple(ServersAvailable.NOSTR_BUILD, stringResource(id = R.string.upload_server_nostrbuild), stringResource(id = R.string.upload_server_nostrbuild_explainer)),
         Triple(ServersAvailable.NOSTRFILES_DEV, stringResource(id = R.string.upload_server_nostrfilesdev), stringResource(id = R.string.upload_server_nostrfilesdev_explainer)),
-        Triple(ServersAvailable.IMGUR_NIP_94, stringResource(id = R.string.upload_server_imgur_nip94), stringResource(id = R.string.upload_server_imgur_nip94_explainer)),
+        // Triple(ServersAvailable.IMGUR_NIP_94, stringResource(id = R.string.upload_server_imgur_nip94), stringResource(id = R.string.upload_server_imgur_nip94_explainer)),
         Triple(ServersAvailable.NOSTRIMG_NIP_94, stringResource(id = R.string.upload_server_nostrimg_nip94), stringResource(id = R.string.upload_server_nostrimg_nip94_explainer)),
         Triple(ServersAvailable.NOSTR_BUILD_NIP_94, stringResource(id = R.string.upload_server_nostrbuild_nip94), stringResource(id = R.string.upload_server_nostrbuild_nip94_explainer)),
         Triple(ServersAvailable.NOSTRFILES_DEV_NIP_94, stringResource(id = R.string.upload_server_nostrfilesdev_nip94), stringResource(id = R.string.upload_server_nostrfilesdev_nip94_explainer)),
@@ -709,7 +767,12 @@ fun ImageVideoDescription(
 
                     LaunchedEffect(key1 = uri) {
                         scope.launch(Dispatchers.IO) {
-                            bitmap = resolver.loadThumbnail(uri, Size(1200, 1000), null)
+                            try {
+                                bitmap = resolver.loadThumbnail(uri, Size(1200, 1000), null)
+                            } catch (e: Exception) {
+                                onError("Unable to load file")
+                                Log.e("NewPostView", "Couldn't create thumbnail for $uri")
+                            }
                         }
                     }
 

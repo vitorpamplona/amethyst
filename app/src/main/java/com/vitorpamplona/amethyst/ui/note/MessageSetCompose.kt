@@ -6,6 +6,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -34,18 +35,18 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun MessageSetCompose(messageSetCard: MessageSetCard, isInnerNote: Boolean = false, routeForLastRead: String, accountViewModel: AccountViewModel, navController: NavController) {
+fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, accountViewModel: AccountViewModel, navController: NavController) {
     val noteState by messageSetCard.note.live().metadata.observeAsState()
-    val note = noteState?.note
+    val note = remember(noteState) { noteState?.note }
 
     var popupExpanded by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
 
     if (note == null) {
-        BlankNote(Modifier, isInnerNote)
+        BlankNote(Modifier)
     } else {
-        var isNew by remember { mutableStateOf<Boolean>(false) }
+        var isNew by remember { mutableStateOf(false) }
 
         LaunchedEffect(key1 = messageSetCard.createdAt()) {
             scope.launch(Dispatchers.IO) {
@@ -66,44 +67,40 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, isInnerNote: Boolean = fal
             MaterialTheme.colors.background
         }
 
-        Column(
-            modifier = Modifier.background(backgroundColor).combinedClickable(
-                onClick = {
-                    scope.launch {
-                        routeFor(
-                            note,
-                            accountViewModel.userProfile()
-                        )?.let { navController.navigate(it) }
-                    }
-                },
-                onLongClick = { popupExpanded = true }
-            )
-        ) {
-            Row(
-                modifier = Modifier
-                    .padding(
-                        start = if (!isInnerNote) 12.dp else 0.dp,
-                        end = if (!isInnerNote) 12.dp else 0.dp,
-                        top = 10.dp
+        val columnModifier = remember(isNew) {
+            Modifier
+                .background(backgroundColor)
+                .padding(
+                    start = 12.dp,
+                    end = 12.dp,
+                    top = 10.dp
+                )
+                .combinedClickable(
+                    onClick = {
+                        scope.launch {
+                            routeFor(
+                                note,
+                                accountViewModel.userProfile()
+                            )?.let { navController.navigate(it) }
+                        }
+                    },
+                    onLongClick = { popupExpanded = true }
+                )
+                .fillMaxWidth()
+        }
+
+        Column(columnModifier) {
+            Row(Modifier.fillMaxWidth()) {
+                Box(modifier = remember { Modifier.width(55.dp).padding(top = 5.dp, end = 5.dp) }) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_dm),
+                        null,
+                        modifier = remember { Modifier.size(16.dp).align(Alignment.TopEnd) },
+                        tint = MaterialTheme.colors.primary
                     )
-            ) {
-                // Draws the like picture outside the boosted card.
-                if (!isInnerNote) {
-                    Box(
-                        modifier = Modifier
-                            .width(55.dp)
-                            .padding(top = 5.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_dm),
-                            null,
-                            modifier = Modifier.size(16.dp).align(Alignment.TopEnd),
-                            tint = MaterialTheme.colors.primary
-                        )
-                    }
                 }
 
-                Column(modifier = Modifier.padding(start = if (!isInnerNote) 10.dp else 0.dp)) {
+                Column(modifier = remember { Modifier.padding(start = 10.dp) }) {
                     NoteCompose(
                         baseNote = messageSetCard.note,
                         routeForLastRead = null,

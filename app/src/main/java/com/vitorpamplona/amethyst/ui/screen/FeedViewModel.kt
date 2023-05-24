@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.BundledInsert
@@ -98,7 +99,9 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
         val oldNotesState = _feedContent.value
         if (localFilter is AdditiveFeedFilter && oldNotesState is FeedState.Loaded) {
             val newList = localFilter.updateListWith(oldNotesState.feed.value, newItems.toSet())
-            updateFeed(newList)
+            if (newList !== oldNotesState.feed.value) {
+                updateFeed(newList)
+            }
         } else {
             // Refresh Everything
             refreshSuspended()
@@ -122,21 +125,23 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
         }
     }
 
-    private val cacheListener: (Set<Note>) -> Unit = { newNotes ->
-        if (localFilter is AdditiveFeedFilter && _feedContent.value is FeedState.Loaded) {
-            invalidateInsertData(newNotes)
-        } else {
-            // Refresh Everything
-            invalidateData()
+    var collectorJob: Job? = null
+
+    init {
+        collectorJob = viewModelScope.launch(Dispatchers.IO) {
+            LocalCache.live.newEventBundles.collect { newNotes ->
+                if (localFilter is AdditiveFeedFilter && _feedContent.value is FeedState.Loaded) {
+                    invalidateInsertData(newNotes)
+                } else {
+                    // Refresh Everything
+                    invalidateData()
+                }
+            }
         }
     }
 
-    init {
-        LocalCache.live.observeForever(cacheListener)
-    }
-
     override fun onCleared() {
-        LocalCache.live.removeObserver(cacheListener)
+        collectorJob?.cancel()
         super.onCleared()
     }
 }

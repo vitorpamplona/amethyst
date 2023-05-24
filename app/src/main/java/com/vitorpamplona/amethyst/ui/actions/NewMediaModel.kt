@@ -38,9 +38,10 @@ open class NewMediaModel : ViewModel() {
         this.mediaType = contentType
         this.selectedServer = defaultServer()
 
-        if (selectedServer == ServersAvailable.IMGUR) {
-            selectedServer = ServersAvailable.IMGUR_NIP_94
-        } else if (selectedServer == ServersAvailable.NOSTRIMG) {
+        // if (selectedServer == ServersAvailable.IMGUR) {
+        //    selectedServer = ServersAvailable.IMGUR_NIP_94
+        // } else
+        if (selectedServer == ServersAvailable.NOSTRIMG) {
             selectedServer = ServersAvailable.NOSTRIMG_NIP_94
         } else if (selectedServer == ServersAvailable.NOSTR_BUILD) {
             selectedServer = ServersAvailable.NOSTR_BUILD_NIP_94

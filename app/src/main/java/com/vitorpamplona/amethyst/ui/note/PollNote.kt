@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.Popup
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
@@ -37,7 +38,6 @@ import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.math.BigDecimal
 import java.util.*
 import kotlin.math.roundToInt
 
@@ -49,19 +49,45 @@ fun PollNote(
     accountViewModel: AccountViewModel,
     navController: NavController
 ) {
-    val zapsState by baseNote.live().zaps.observeAsState()
-    val zappedNote = zapsState?.note ?: return
-
     val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
+    val account = remember(accountState) { accountState?.account } ?: return
 
-    val pollViewModel = PollNoteViewModel()
-    pollViewModel.load(account, zappedNote)
+    val pollViewModel: PollNoteViewModel = viewModel()
 
-    pollViewModel.pollEvent?.pollOptions()?.forEach { poll_op ->
+    LaunchedEffect(key1 = baseNote) {
+        pollViewModel.load(account, baseNote)
+    }
+
+    PollNote(
+        baseNote = baseNote,
+        pollViewModel = pollViewModel,
+        canPreview = canPreview,
+        backgroundColor = backgroundColor,
+        accountViewModel = accountViewModel,
+        navController = navController
+    )
+}
+
+@Composable
+fun PollNote(
+    baseNote: Note,
+    pollViewModel: PollNoteViewModel,
+    canPreview: Boolean,
+    backgroundColor: Color,
+    accountViewModel: AccountViewModel,
+    navController: NavController
+) {
+    val zapsState by baseNote.live().zaps.observeAsState()
+
+    LaunchedEffect(key1 = zapsState) {
+        withContext(Dispatchers.IO) {
+            pollViewModel.refreshTallies()
+        }
+    }
+
+    pollViewModel.tallies.forEach { poll_op ->
         OptionNote(
-            poll_op.key,
-            poll_op.value,
+            poll_op,
             pollViewModel,
             baseNote,
             accountViewModel,
@@ -74,8 +100,7 @@ fun PollNote(
 
 @Composable
 private fun OptionNote(
-    optionNumber: Int,
-    optionText: String,
+    poolOption: PollOption,
     pollViewModel: PollNoteViewModel,
     baseNote: Note,
     accountViewModel: AccountViewModel,
@@ -88,32 +113,17 @@ private fun OptionNote(
         modifier = Modifier.padding(vertical = 3.dp)
     ) {
         if (!pollViewModel.canZap()) {
-            val defaultColor = MaterialTheme.colors.primary.copy(alpha = 0.32f)
-            var optionTally by remember { mutableStateOf(Pair(BigDecimal.ZERO, defaultColor)) }
-
-            LaunchedEffect(key1 = optionNumber, key2 = pollViewModel) {
-                withContext(Dispatchers.IO) {
-                    val myTally = pollViewModel.optionVoteTally(optionNumber)
-                    val color = if (
-                        pollViewModel.consensusThreshold != null &&
-                        myTally >= pollViewModel.consensusThreshold!!
-                    ) {
-                        Color.Green.copy(alpha = 0.32f)
-                    } else {
-                        defaultColor
-                    }
-
-                    if (myTally > optionTally.first || color != optionTally.second) {
-                        optionTally = Pair(myTally, color)
-                    }
-                }
+            val color = if (poolOption.consensusThreadhold) {
+                Color.Green.copy(alpha = 0.32f)
+            } else {
+                MaterialTheme.colors.primary.copy(alpha = 0.32f)
             }
 
             ZapVote(
                 baseNote,
+                poolOption,
                 accountViewModel,
                 pollViewModel,
-                optionNumber,
                 nonClickablePrepend = {
                     Box(
                         Modifier
@@ -121,14 +131,14 @@ private fun OptionNote(
                             .clip(shape = RoundedCornerShape(15.dp))
                             .border(
                                 2.dp,
-                                optionTally.second,
+                                color,
                                 RoundedCornerShape(15.dp)
                             )
                     ) {
                         LinearProgressIndicator(
                             modifier = Modifier.matchParentSize(),
-                            color = optionTally.second,
-                            progress = optionTally.first.toFloat()
+                            color = color,
+                            progress = poolOption.tally.toFloat()
                         )
 
                         Row(
@@ -141,7 +151,7 @@ private fun OptionNote(
                                     .width(40.dp)
                             ) {
                                 Text(
-                                    text = "${(optionTally.first.toFloat() * 100).roundToInt()}%",
+                                    text = "${(poolOption.tally.toFloat() * 100).roundToInt()}%",
                                     fontWeight = FontWeight.Bold
                                 )
                             }
@@ -152,7 +162,7 @@ private fun OptionNote(
                                     .padding(15.dp)
                             ) {
                                 TranslatableRichTextViewer(
-                                    optionText,
+                                    poolOption.descriptor,
                                     canPreview,
                                     Modifier,
                                     pollViewModel.pollEvent?.tags(),
@@ -170,9 +180,9 @@ private fun OptionNote(
         } else {
             ZapVote(
                 baseNote,
+                poolOption,
                 accountViewModel,
                 pollViewModel,
-                optionNumber,
                 nonClickablePrepend = {},
                 clickablePrepend = {
                     Box(
@@ -186,7 +196,7 @@ private fun OptionNote(
                             )
                     ) {
                         TranslatableRichTextViewer(
-                            optionText,
+                            poolOption.descriptor,
                             canPreview,
                             Modifier.padding(15.dp),
                             pollViewModel.pollEvent?.tags(),
@@ -205,9 +215,9 @@ private fun OptionNote(
 @OptIn(ExperimentalFoundationApi::class)
 fun ZapVote(
     baseNote: Note,
+    poolOption: PollOption,
     accountViewModel: AccountViewModel,
     pollViewModel: PollNoteViewModel,
-    pollOption: Int,
     modifier: Modifier = Modifier,
     nonClickablePrepend: @Composable () -> Unit,
     clickablePrepend: @Composable () -> Unit
@@ -264,7 +274,7 @@ fun ZapVote(
                             )
                             .show()
                     }
-                } else if (pollViewModel.isVoteAmountAtomic() && pollViewModel.isPollOptionZappedBy(pollOption, accountViewModel.userProfile())) {
+                } else if (pollViewModel.isVoteAmountAtomic() && poolOption.zappedByLoggedIn) {
                     // only allow one vote per option when min==max, i.e. atomic vote amount specified
                     scope.launch {
                         Toast
@@ -281,7 +291,7 @@ fun ZapVote(
                         accountViewModel.zap(
                             baseNote,
                             account.zapAmountChoices.first() * 1000,
-                            pollOption,
+                            poolOption.option,
                             "",
                             context,
                             onError = {
@@ -311,7 +321,7 @@ fun ZapVote(
                 baseNote,
                 accountViewModel,
                 pollViewModel,
-                pollOption,
+                poolOption.option,
                 onDismiss = {
                     wantsToZap = false
                     zappingProgress = 0f
@@ -335,17 +345,7 @@ fun ZapVote(
 
         clickablePrepend()
 
-        var optionWasZappedByLoggedInUser by remember { mutableStateOf(false) }
-
-        LaunchedEffect(key1 = zapsState) {
-            withContext(Dispatchers.IO) {
-                if (!optionWasZappedByLoggedInUser) {
-                    optionWasZappedByLoggedInUser = pollViewModel.isPollOptionZappedBy(pollOption, accountViewModel.userProfile())
-                }
-            }
-        }
-
-        if (optionWasZappedByLoggedInUser) {
+        if (poolOption.zappedByLoggedIn) {
             zappingProgress = 1f
             Icon(
                 imageVector = Icons.Default.Bolt,
@@ -372,20 +372,10 @@ fun ZapVote(
         }
     }
 
-    var wasZappedByLoggedInUser by remember { mutableStateOf(false) }
-
-    LaunchedEffect(key1 = zapsState) {
-        withContext(Dispatchers.IO) {
-            if (!wasZappedByLoggedInUser) {
-                wasZappedByLoggedInUser = accountViewModel.calculateIfNoteWasZappedByAccount(zappedNote)
-            }
-        }
-    }
-
     // only show tallies after a user has zapped note
-    if (baseNote.author == accountViewModel.userProfile() || wasZappedByLoggedInUser) {
+    if (baseNote.author == accountViewModel.userProfile() || pollViewModel.wasZappedByLoggedInAccount) {
         Text(
-            showAmount(pollViewModel.zappedPollOptionAmount(pollOption)),
+            showAmount(poolOption.zappedValue),
             fontSize = 14.sp,
             color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
             modifier = modifier

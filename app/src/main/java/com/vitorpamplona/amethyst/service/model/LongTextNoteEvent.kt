@@ -1,10 +1,12 @@
 package com.vitorpamplona.amethyst.service.model
 
+import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
 import java.util.Date
 
+@Immutable
 class LongTextNoteEvent(
     id: HexKey,
     pubKey: HexKey,
@@ -12,9 +14,9 @@ class LongTextNoteEvent(
     tags: List<List<String>>,
     content: String,
     sig: HexKey
-) : BaseTextNoteEvent(id, pubKey, createdAt, kind, tags, content, sig) {
-    fun dTag() = tags.filter { it.firstOrNull() == "d" }.mapNotNull { it.getOrNull(1) }.firstOrNull() ?: ""
-    fun address() = ATag(kind, pubKey, dTag(), null)
+) : BaseTextNoteEvent(id, pubKey, createdAt, kind, tags, content, sig), AddressableEvent {
+    override fun dTag() = tags.filter { it.firstOrNull() == "d" }.mapNotNull { it.getOrNull(1) }.firstOrNull() ?: ""
+    override fun address() = ATag(kind, pubKey, dTag(), null)
 
     fun topics() = tags.filter { it.firstOrNull() == "t" }.mapNotNull { it.getOrNull(1) }
     fun title() = tags.filter { it.firstOrNull() == "title" }.mapNotNull { it.getOrNull(1) }.firstOrNull()

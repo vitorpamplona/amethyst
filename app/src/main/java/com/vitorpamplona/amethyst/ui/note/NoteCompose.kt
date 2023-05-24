@@ -12,6 +12,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,6 +25,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
+import androidx.compose.material.Button
+import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Divider
 import androidx.compose.material.DropdownMenu
 import androidx.compose.material.DropdownMenuItem
@@ -37,6 +40,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.lightColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -48,8 +52,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
@@ -81,7 +87,9 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
 import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
 import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
@@ -92,20 +100,25 @@ import com.vitorpamplona.amethyst.service.model.FileHeaderEvent
 import com.vitorpamplona.amethyst.service.model.FileStorageHeaderEvent
 import com.vitorpamplona.amethyst.service.model.HighlightEvent
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
+import com.vitorpamplona.amethyst.service.model.Participant
+import com.vitorpamplona.amethyst.service.model.PeopleListEvent
+import com.vitorpamplona.amethyst.service.model.PinListEvent
 import com.vitorpamplona.amethyst.service.model.PollNoteEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
+import com.vitorpamplona.amethyst.service.model.ReportedKey
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
-import com.vitorpamplona.amethyst.ui.components.CreateClickableText
+import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.components.ZoomableContent
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.components.ZoomableLocalImage
@@ -125,10 +138,9 @@ import nostr.postr.toNpub
 import java.io.File
 import java.math.BigDecimal
 import java.net.URL
-import kotlin.time.ExperimentalTime
-import kotlin.time.measureTimedValue
+import java.util.Locale
 
-@OptIn(ExperimentalTime::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun NoteCompose(
     baseNote: Note,
@@ -143,243 +155,247 @@ fun NoteCompose(
     accountViewModel: AccountViewModel,
     navController: NavController
 ) {
-    val (value, elapsed) = measureTimedValue {
-        NoteComposeInner(
-            baseNote,
-            routeForLastRead,
-            modifier,
-            isBoostedNote,
-            isQuotedNote,
-            unPackReply,
-            makeItShort,
-            addMarginTop,
-            parentBackgroundColor,
-            accountViewModel,
-            navController
-        )
-    }
-
-    Log.d("Time", "Note Compose in $elapsed for ${baseNote.idHex} ${baseNote.event?.kind()} ${baseNote.event?.content()?.split("\n")?.get(0)?.take(100)}")
-}
-
-@OptIn(ExperimentalFoundationApi::class, ExperimentalTime::class)
-@Composable
-fun NoteComposeInner(
-    baseNote: Note,
-    routeForLastRead: String? = null,
-    modifier: Modifier = Modifier,
-    isBoostedNote: Boolean = false,
-    isQuotedNote: Boolean = false,
-    unPackReply: Boolean = true,
-    makeItShort: Boolean = false,
-    addMarginTop: Boolean = true,
-    parentBackgroundColor: Color? = null,
-    accountViewModel: AccountViewModel,
-    navController: NavController
-) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
-    val loggedIn = account.userProfile()
+    val account = remember(accountState) { accountState?.account } ?: return
+    val loggedIn = remember(accountState) { accountState?.account?.userProfile() } ?: return
 
     val noteState by baseNote.live().metadata.observeAsState()
-    val note = noteState?.note
+    val note = remember(noteState) { noteState?.note } ?: return
 
     val noteReportsState by baseNote.live().reports.observeAsState()
-    val noteForReports = noteReportsState?.note ?: return
+    val noteForReports = remember(noteReportsState) { noteReportsState?.note } ?: return
+
+    val noteEvent = remember(noteState) { note.event }
+    val baseChannel = remember(noteState) { note.channel() }
 
     var popupExpanded by remember { mutableStateOf(false) }
-    var showHiddenNote by remember { mutableStateOf(false) }
-
-    var isAcceptableAndCanPreview by remember { mutableStateOf(Pair(true, true)) }
-
-    LaunchedEffect(key1 = noteReportsState) {
-        withContext(Dispatchers.IO) {
-            val newCanPreview = note?.author === loggedIn ||
-                (note?.author?.let { loggedIn.isFollowingCached(it) } ?: true) ||
-                !noteForReports.hasAnyReports()
-
-            val newIsAcceptable = account.isAcceptable(noteForReports)
-
-            if (newIsAcceptable != isAcceptableAndCanPreview.first && newCanPreview != isAcceptableAndCanPreview.second) {
-                isAcceptableAndCanPreview = Pair(newIsAcceptable, newCanPreview)
-            }
-        }
-    }
-
-    val noteEvent = note?.event
-    val baseChannel = note?.channel()
 
     if (noteEvent == null) {
         BlankNote(
-            modifier.combinedClickable(
-                onClick = { },
-                onLongClick = { popupExpanded = true }
-            ),
+            remember {
+                modifier.combinedClickable(
+                    onClick = { },
+                    onLongClick = { popupExpanded = true }
+                )
+            },
             isBoostedNote
         )
-    } else if (!isAcceptableAndCanPreview.first && !showHiddenNote) {
-        if (!account.isHidden(noteForReports.author!!)) {
+
+        note.let {
+            NoteQuickActionMenu(it, popupExpanded, { popupExpanded = false }, accountViewModel)
+        }
+    } else if (account.isHidden(noteForReports.author!!)) {
+        // Does nothing
+    } else {
+        var showHiddenNote by remember { mutableStateOf(false) }
+        var isAcceptableAndCanPreview by remember { mutableStateOf(Pair(true, true)) }
+
+        LaunchedEffect(key1 = noteReportsState, key2 = accountState) {
+            withContext(Dispatchers.IO) {
+                account.userProfile().let { loggedIn ->
+                    val newCanPreview = note.author === loggedIn ||
+                        (note.author?.let { loggedIn.isFollowingCached(it) } ?: true) ||
+                        !(noteForReports.hasAnyReports())
+
+                    val newIsAcceptable = account.isAcceptable(noteForReports)
+
+                    if (newIsAcceptable != isAcceptableAndCanPreview.first && newCanPreview != isAcceptableAndCanPreview.second) {
+                        isAcceptableAndCanPreview = Pair(newIsAcceptable, newCanPreview)
+                    }
+                }
+            }
+        }
+
+        if (!isAcceptableAndCanPreview.first && !showHiddenNote) {
             HiddenNote(
                 account.getRelevantReports(noteForReports),
-                loggedIn,
+                account.userProfile(),
                 modifier,
                 isBoostedNote,
                 navController,
                 onClick = { showHiddenNote = true }
             )
-        }
-    } else if ((noteEvent is ChannelCreateEvent || noteEvent is ChannelMetadataEvent) && baseChannel != null) {
-        ChannelHeader(baseChannel = baseChannel, account = account, navController = navController)
-    } else if (noteEvent is BadgeDefinitionEvent) {
-        BadgeDisplay(baseNote = note)
-    } else if (noteEvent is FileHeaderEvent) {
-        FileHeaderDisplay(note)
-    } else if (noteEvent is FileStorageHeaderEvent) {
-        FileStorageHeaderDisplay(note)
-    } else {
-        var isNew by remember { mutableStateOf<Boolean>(false) }
-
-        val scope = rememberCoroutineScope()
-
-        LaunchedEffect(key1 = routeForLastRead) {
-            scope.launch(Dispatchers.IO) {
-                routeForLastRead?.let {
-                    val lastTime = NotificationCache.load(it)
-
-                    val createdAt = note.createdAt()
-                    if (createdAt != null) {
-                        NotificationCache.markAsRead(it, createdAt)
-
-                        val newIsNew = createdAt > lastTime
-                        if (newIsNew != isNew) {
-                            isNew = newIsNew
-                        }
-                    }
-                }
-            }
-        }
-
-        val backgroundColor = if (isNew) {
-            val newColor = MaterialTheme.colors.primary.copy(0.12f)
-            if (parentBackgroundColor != null) {
-                newColor.compositeOver(parentBackgroundColor)
-            } else {
-                newColor.compositeOver(MaterialTheme.colors.background)
-            }
+        } else if ((noteEvent is ChannelCreateEvent || noteEvent is ChannelMetadataEvent) && baseChannel != null) {
+            ChannelHeader(baseChannel = baseChannel, account = account, navController = navController)
+        } else if (noteEvent is BadgeDefinitionEvent) {
+            BadgeDisplay(baseNote = note)
+        } else if (noteEvent is FileHeaderEvent) {
+            FileHeaderDisplay(note)
+        } else if (noteEvent is FileStorageHeaderEvent) {
+            FileStorageHeaderDisplay(note)
         } else {
-            parentBackgroundColor ?: MaterialTheme.colors.background
-        }
+            var isNew by remember { mutableStateOf<Boolean>(false) }
 
-        Column(
-            modifier = modifier
-                .combinedClickable(
-                    onClick = {
-                        scope.launch {
-                            routeFor(note, loggedIn)?.let { navController.navigate(it) }
+            val scope = rememberCoroutineScope()
+
+            LaunchedEffect(key1 = routeForLastRead) {
+                scope.launch(Dispatchers.IO) {
+                    routeForLastRead?.let {
+                        val lastTime = NotificationCache.load(it)
+
+                        val createdAt = note.createdAt()
+                        if (createdAt != null) {
+                            NotificationCache.markAsRead(it, createdAt)
+
+                            val newIsNew = createdAt > lastTime
+                            if (newIsNew != isNew) {
+                                isNew = newIsNew
+                            }
                         }
-                    },
-                    onLongClick = { popupExpanded = true }
-                )
-                .background(backgroundColor)
-        ) {
-            Row(
-                modifier = Modifier
-                    .padding(
-                        start = if (!isBoostedNote) 12.dp else 0.dp,
-                        end = if (!isBoostedNote) 12.dp else 0.dp,
-                        top = if (addMarginTop && !isBoostedNote) 10.dp else 0.dp
-                    )
-            ) {
-                if (!isBoostedNote && !isQuotedNote) {
-                    DrawAuthorImages(baseNote, loggedIn, navController)
+                    }
                 }
+            }
 
-                Column(
-                    modifier = Modifier
-                        .padding(start = if (!isBoostedNote && !isQuotedNote) 10.dp else 0.dp)
-                ) {
-                    FirstUserInfoRow(
-                        baseNote = baseNote,
-                        showAuthorPicture = isQuotedNote,
-                        account = account,
-                        accountViewModel = accountViewModel,
-                        navController = navController
+            val primaryColor = MaterialTheme.colors.primary.copy(0.12f)
+            val defaultBackgroundColor = MaterialTheme.colors.background
+
+            val backgroundColor = remember(isNew, parentBackgroundColor) {
+                if (isNew) {
+                    if (parentBackgroundColor != null) {
+                        primaryColor.compositeOver(parentBackgroundColor)
+                    } else {
+                        primaryColor.compositeOver(defaultBackgroundColor)
+                    }
+                } else {
+                    parentBackgroundColor ?: defaultBackgroundColor
+                }
+            }
+
+            val columnModifier = remember(backgroundColor) {
+                modifier
+                    .combinedClickable(
+                        onClick = {
+                            scope.launch {
+                                routeFor(note, loggedIn)?.let {
+                                    if (note.idHex != navController.currentBackStackEntry?.arguments?.getString("id")) {
+                                        navController.navigate(it)
+                                    } else {
+                                        Log.d("Amethyst-Navigation", "Note already exists in the backstack!")
+                                    }
+                                }
+                            }
+                        },
+                        onLongClick = { popupExpanded = true }
                     )
+                    .background(backgroundColor)
+            }
 
-                    if (noteEvent !is RepostEvent && !makeItShort && !isQuotedNote) {
-                        SecondUserInfoRow(
-                            note,
-                            account,
-                            navController
-                        )
+            Column(modifier = columnModifier) {
+                Row(
+                    modifier = remember {
+                        Modifier
+                            .padding(
+                                start = if (!isBoostedNote) 12.dp else 0.dp,
+                                end = if (!isBoostedNote) 12.dp else 0.dp,
+                                top = if (addMarginTop && !isBoostedNote) 10.dp else 0.dp
+                            )
+                    }
+                ) {
+                    if (!isBoostedNote && !isQuotedNote) {
+                        DrawAuthorImages(baseNote, loggedIn, navController)
                     }
 
-                    Spacer(modifier = Modifier.height(2.dp))
-
-                    if (!makeItShort) {
-                        ReplyRow(
-                            note,
-                            unPackReply,
-                            backgroundColor,
-                            account,
-                            accountViewModel,
-                            navController
+                    Column(
+                        modifier = remember {
+                            Modifier
+                                .padding(start = if (!isBoostedNote && !isQuotedNote) 10.dp else 0.dp)
+                        }
+                    ) {
+                        FirstUserInfoRow(
+                            baseNote = baseNote,
+                            showAuthorPicture = isQuotedNote,
+                            account = account,
+                            accountViewModel = accountViewModel,
+                            navController = navController
                         )
-                    }
 
-                    when (noteEvent) {
-                        is ReactionEvent -> {
-                            RenderReaction(note, backgroundColor, accountViewModel, navController)
-                        }
-
-                        is RepostEvent -> {
-                            RenderRepost(note, backgroundColor, accountViewModel, navController)
-                        }
-
-                        is ReportEvent -> {
-                            RenderReport(note)
-                        }
-
-                        is LongTextNoteEvent -> {
-                            RenderLongFormContent(note, loggedIn, accountViewModel, navController)
-                        }
-
-                        is BadgeAwardEvent -> {
-                            RenderBadgeAward(note, backgroundColor, accountViewModel, navController)
-                        }
-
-                        is PrivateDmEvent -> {
-                            RenderPrivateMessage(note, makeItShort, isAcceptableAndCanPreview.second, backgroundColor, accountViewModel, navController)
-                        }
-
-                        is HighlightEvent -> {
-                            RenderHighlight(note, makeItShort, isAcceptableAndCanPreview.second, backgroundColor, accountViewModel, navController)
-                        }
-
-                        is PollNoteEvent -> {
-                            RenderPoll(
+                        if (noteEvent !is RepostEvent && !makeItShort && !isQuotedNote) {
+                            SecondUserInfoRow(
                                 note,
-                                makeItShort,
-                                isAcceptableAndCanPreview.second,
+                                account,
+                                navController
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(2.dp))
+
+                        if (!makeItShort) {
+                            ReplyRow(
+                                note,
+                                unPackReply,
                                 backgroundColor,
+                                account,
                                 accountViewModel,
                                 navController
                             )
                         }
 
-                        else -> {
-                            RenderTextEvent(
-                                note,
-                                makeItShort,
-                                isAcceptableAndCanPreview.second,
-                                backgroundColor,
-                                accountViewModel,
-                                navController
-                            )
-                        }
-                    }
+                        when (noteEvent) {
+                            is ReactionEvent -> {
+                                RenderReaction(note, backgroundColor, accountViewModel, navController)
+                            }
 
-                    NoteQuickActionMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
+                            is RepostEvent -> {
+                                RenderRepost(note, backgroundColor, accountViewModel, navController)
+                            }
+
+                            is ReportEvent -> {
+                                RenderReport(note)
+                            }
+
+                            is LongTextNoteEvent -> {
+                                RenderLongFormContent(note, loggedIn, accountViewModel, navController)
+                            }
+
+                            is BadgeAwardEvent -> {
+                                RenderBadgeAward(note, backgroundColor, accountViewModel, navController)
+                            }
+
+                            is PeopleListEvent -> {
+                                RenderPeopleList(noteState, backgroundColor, accountViewModel, navController)
+                            }
+
+                            is AudioTrackEvent -> {
+                                RenderAudioTrack(note, loggedIn, accountViewModel, navController)
+                            }
+
+                            is PinListEvent -> {
+                                RenderPinListEvent(noteState, backgroundColor, accountViewModel, navController)
+                            }
+
+                            is PrivateDmEvent -> {
+                                RenderPrivateMessage(note, makeItShort, isAcceptableAndCanPreview.second, backgroundColor, accountViewModel, navController)
+                            }
+
+                            is HighlightEvent -> {
+                                RenderHighlight(note, makeItShort, isAcceptableAndCanPreview.second, backgroundColor, accountViewModel, navController)
+                            }
+
+                            is PollNoteEvent -> {
+                                RenderPoll(
+                                    note,
+                                    makeItShort,
+                                    isAcceptableAndCanPreview.second,
+                                    backgroundColor,
+                                    accountViewModel,
+                                    navController
+                                )
+                            }
+
+                            else -> {
+                                RenderTextEvent(
+                                    note,
+                                    makeItShort,
+                                    isAcceptableAndCanPreview.second,
+                                    backgroundColor,
+                                    accountViewModel,
+                                    navController
+                                )
+                            }
+                        }
+
+                        NoteQuickActionMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
+                    }
                 }
             }
         }
@@ -424,13 +440,14 @@ private fun RenderTextEvent(
     accountViewModel: AccountViewModel,
     navController: NavController
 ) {
-    val noteEvent = note.event ?: return
-
-    val eventContent = remember { accountViewModel.decrypt(note) }
-    val modifier = remember { Modifier.fillMaxWidth() }
+    val tags = remember(note.event?.id()) { note.event?.tags() }
+    val hashtags = remember(note.event?.id()) { note.event?.hashtags() ?: emptyList() }
+    val eventContent = remember(note.event?.id()) { accountViewModel.decrypt(note) }
+    val modifier = remember(note.event?.id()) { Modifier.fillMaxWidth() }
+    val isAuthorTheLoggedUser = remember(note.event?.id()) { accountViewModel.isLoggedUser(note.author) }
 
     if (eventContent != null) {
-        if (makeItShort && accountViewModel.isLoggedUser(note.author)) {
+        if (makeItShort && isAuthorTheLoggedUser) {
             Text(
                 text = eventContent,
                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
@@ -442,13 +459,13 @@ private fun RenderTextEvent(
                 content = eventContent,
                 canPreview = canPreview && !makeItShort,
                 modifier = modifier,
-                tags = noteEvent.tags(),
+                tags = tags,
                 backgroundColor = backgroundColor,
                 accountViewModel = accountViewModel,
                 navController = navController
             )
 
-            DisplayUncitedHashtags(noteEvent.hashtags(), eventContent, navController)
+            DisplayUncitedHashtags(hashtags, eventContent, navController)
         }
     }
 
@@ -611,6 +628,114 @@ private fun RenderPrivateMessage(
 }
 
 @Composable
+fun RenderPeopleList(
+    noteState: NoteState?,
+    backgroundColor: Color,
+    accountViewModel: AccountViewModel,
+    navController: NavController
+) {
+    DisplayPeopleList(noteState, backgroundColor, accountViewModel, navController)
+
+    noteState?.note?.let {
+        ReactionsRow(it, accountViewModel, navController)
+    }
+
+    Divider(
+        modifier = Modifier.padding(top = 10.dp),
+        thickness = 0.25.dp
+    )
+}
+
+@Composable
+fun DisplayPeopleList(
+    noteState: NoteState?,
+    backgroundColor: Color,
+    accountViewModel: AccountViewModel,
+    navController: NavController
+) {
+    val note = remember(noteState) { noteState?.note } ?: return
+    val noteEvent = note.event as? PeopleListEvent ?: return
+
+    var members by remember { mutableStateOf<List<User>>(listOf()) }
+
+    val account = accountViewModel.userProfile()
+    var expanded by remember {
+        mutableStateOf(false)
+    }
+
+    val toMembersShow = if (expanded) {
+        members
+    } else {
+        members.take(3)
+    }
+
+    Text(
+        text = "#${noteEvent.dTag()}",
+        fontWeight = FontWeight.Bold,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(5.dp),
+        textAlign = TextAlign.Center
+    )
+
+    LaunchedEffect(key1 = noteState) {
+        withContext(Dispatchers.IO) {
+            members = noteEvent.bookmarkedPeople().mapNotNull { hex ->
+                LocalCache.checkGetOrCreateUser(hex)
+            }.sortedBy { account.isFollowing(it) }.reversed()
+        }
+    }
+
+    Box {
+        FlowRow(modifier = Modifier.padding(top = 5.dp)) {
+            toMembersShow.forEach { user ->
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    UserCompose(
+                        user,
+                        overallModifier = Modifier,
+                        accountViewModel = accountViewModel,
+                        navController = navController
+                    )
+                }
+            }
+        }
+
+        if (members.size > 3 && !expanded) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                backgroundColor.copy(alpha = 0f),
+                                backgroundColor
+                            )
+                        )
+                    )
+            ) {
+                Button(
+                    modifier = Modifier.padding(top = 10.dp),
+                    onClick = { expanded = !expanded },
+                    shape = RoundedCornerShape(20.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        backgroundColor = MaterialTheme.colors.primary.copy(alpha = 0.32f)
+                            .compositeOver(MaterialTheme.colors.background)
+                    ),
+                    contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
+                ) {
+                    Text(text = stringResource(R.string.show_more), color = Color.White)
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun RenderBadgeAward(
     note: Note,
     backgroundColor: Color,
@@ -637,9 +762,11 @@ private fun RenderBadgeAward(
     FlowRow(modifier = Modifier.padding(top = 5.dp)) {
         awardees.take(100).forEach { user ->
             Row(
-                modifier = Modifier.size(size = 35.dp).clickable {
-                    navController.navigate("User/${user.pubkeyHex}")
-                },
+                modifier = Modifier
+                    .size(size = 35.dp)
+                    .clickable {
+                        navController.navigate("User/${user.pubkeyHex}")
+                    },
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 UserPicture(
@@ -711,7 +838,11 @@ private fun RenderRepost(
     accountViewModel: AccountViewModel,
     navController: NavController
 ) {
-    note.replyTo?.lastOrNull()?.let {
+    val boostedNote = remember {
+        note.replyTo?.lastOrNull()
+    }
+
+    boostedNote?.let {
         NoteCompose(
             it,
             modifier = Modifier,
@@ -722,6 +853,135 @@ private fun RenderRepost(
             navController = navController
         )
     }
+}
+
+@Composable
+private fun RenderPinListEvent(
+    noteState: NoteState?,
+    backgroundColor: Color,
+    accountViewModel: AccountViewModel,
+    navController: NavController
+) {
+    val noteEvent = noteState?.note?.event as? PinListEvent ?: return
+
+    PinListHeader(noteState, backgroundColor, accountViewModel, navController)
+
+    ReactionsRow(noteState?.note, accountViewModel, navController)
+
+    Divider(
+        modifier = Modifier.padding(top = 10.dp),
+        thickness = 0.25.dp
+    )
+}
+
+@Composable
+fun PinListHeader(
+    noteState: NoteState?,
+    backgroundColor: Color,
+    accountViewModel: AccountViewModel,
+    navController: NavController
+) {
+    val note = remember(noteState) { noteState?.note } ?: return
+    val noteEvent = note.event as? PinListEvent ?: return
+
+    var pins by remember { mutableStateOf<List<String>>(noteEvent.pins()) }
+
+    var expanded by remember {
+        mutableStateOf(false)
+    }
+
+    val pinsToShow = if (expanded) {
+        pins
+    } else {
+        pins.take(3)
+    }
+
+    Text(
+        text = "#${noteEvent.dTag()}",
+        fontWeight = FontWeight.Bold,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(5.dp),
+        textAlign = TextAlign.Center
+    )
+
+    Box {
+        FlowRow(modifier = Modifier.padding(top = 5.dp)) {
+            pinsToShow.forEach { pin ->
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.PushPin,
+                        contentDescription = null,
+                        tint = MaterialTheme.colors.onBackground.copy(0.32f),
+                        modifier = Modifier.size(15.dp)
+                    )
+
+                    Spacer(modifier = Modifier.width(5.dp))
+
+                    TranslatableRichTextViewer(
+                        content = pin,
+                        canPreview = true,
+                        tags = emptyList(),
+                        backgroundColor = backgroundColor,
+                        accountViewModel = accountViewModel,
+                        navController = navController
+                    )
+                }
+            }
+        }
+
+        if (pins.size > 3 && !expanded) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                backgroundColor.copy(alpha = 0f),
+                                backgroundColor
+                            )
+                        )
+                    )
+            ) {
+                Button(
+                    modifier = Modifier.padding(top = 10.dp),
+                    onClick = { expanded = !expanded },
+                    shape = RoundedCornerShape(20.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        backgroundColor = MaterialTheme.colors.primary.copy(alpha = 0.32f)
+                            .compositeOver(MaterialTheme.colors.background)
+                    ),
+                    contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
+                ) {
+                    Text(text = stringResource(R.string.show_more), color = Color.White)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RenderAudioTrack(
+    note: Note,
+    loggedIn: User,
+    accountViewModel: AccountViewModel,
+    navController: NavController
+) {
+    val noteEvent = note.event as? AudioTrackEvent ?: return
+
+    AudioTrackHeader(noteEvent, note, loggedIn, navController)
+
+    ReactionsRow(note, accountViewModel, navController)
+
+    Divider(
+        modifier = Modifier.padding(top = 10.dp),
+        thickness = 0.25.dp
+    )
 }
 
 @Composable
@@ -745,9 +1005,16 @@ private fun RenderLongFormContent(
 
 @Composable
 private fun RenderReport(note: Note) {
-    val noteEvent = note.event as? ReportEvent ?: return
+    val base = remember {
+        val noteEvent = note.event as? ReportEvent
+        if (noteEvent == null) {
+            emptyList<ReportedKey>()
+        } else {
+            (noteEvent.reportedPost() + noteEvent.reportedAuthor())
+        }
+    }
 
-    val reportType = (noteEvent.reportedPost() + noteEvent.reportedAuthor()).map {
+    val reportType = base.map {
         when (it.reportType) {
             ReportEvent.ReportType.EXPLICIT -> stringResource(R.string.explicit_content)
             ReportEvent.ReportType.NUDITY -> stringResource(R.string.nudity)
@@ -780,7 +1047,9 @@ private fun ReplyRow(
     val noteEvent = note.event
 
     if (noteEvent is TextNoteEvent && (note.replyTo != null || noteEvent.hasAnyTaggedUser())) {
-        val replyingDirectlyTo = note.replyTo?.lastOrNull()
+        val replyingDirectlyTo = remember {
+            note.replyTo?.lastOrNull()
+        }
         if (replyingDirectlyTo != null && unPackReply) {
             NoteCompose(
                 baseNote = replyingDirectlyTo,
@@ -821,18 +1090,18 @@ private fun SecondUserInfoRow(
     account: Account,
     navController: NavController
 ) {
-    val noteEvent = note.event ?: return
-    val noteAuthor = note.author ?: return
+    val noteEvent = remember { note.event } ?: return
+    val noteAuthor = remember { note.author } ?: return
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         ObserveDisplayNip05Status(noteAuthor, Modifier.weight(1f))
 
-        val baseReward = noteEvent.getReward()
+        val baseReward = remember { noteEvent.getReward() }
         if (baseReward != null) {
             DisplayReward(baseReward, note, account, navController)
         }
 
-        val pow = noteEvent.getPoWRank()
+        val pow = remember { noteEvent.getPoWRank() }
         if (pow > 20) {
             DisplayPoW(pow)
         }
@@ -848,14 +1117,17 @@ private fun FirstUserInfoRow(
     navController: NavController
 ) {
     var moreActionsExpanded by remember { mutableStateOf(false) }
-    val eventNote = baseNote.event ?: return
-    val time = baseNote.createdAt() ?: return
-    val loggedIn = account.userProfile()
+    val eventNote = remember { baseNote.event } ?: return
+    val time = remember { baseNote.createdAt() } ?: return
+    val loggedIn = remember { account.userProfile() }
+    val padding = remember {
+        Modifier.padding(horizontal = 5.dp)
+    }
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         if (showAuthorPicture) {
             NoteAuthorPicture(baseNote, navController, loggedIn, 25.dp)
-            Spacer(Modifier.padding(horizontal = 5.dp))
+            Spacer(padding)
             NoteUsernameDisplay(baseNote, Modifier.weight(1f))
         } else {
             NoteUsernameDisplay(baseNote, Modifier.weight(1f))
@@ -897,12 +1169,14 @@ private fun FirstUserInfoRow(
 @Composable
 fun TimeAgo(time: Long) {
     val context = LocalContext.current
-
     var timeStr by remember { mutableStateOf("") }
 
     LaunchedEffect(key1 = time) {
         withContext(Dispatchers.IO) {
-            timeStr = timeAgo(time, context = context)
+            val newTimeStr = timeAgo(time, context = context)
+            if (newTimeStr != timeStr) {
+                timeStr = newTimeStr
+            }
         }
     }
 
@@ -916,10 +1190,11 @@ fun TimeAgo(time: Long) {
 @Composable
 private fun DrawAuthorImages(baseNote: Note, loggedIn: User, navController: NavController) {
     val baseChannel = remember { baseNote.channel() }
+    val modifier = remember { Modifier.width(55.dp) }
 
-    Column(Modifier.width(55.dp)) {
+    Column(modifier) {
         // Draws the boosted picture outside the boosted card.
-        Box(modifier = Modifier.width(55.dp), contentAlignment = Alignment.BottomEnd) {
+        Box(modifier = modifier, contentAlignment = Alignment.BottomEnd) {
             NoteAuthorPicture(baseNote, navController, loggedIn, 55.dp)
 
             if (baseNote.event is RepostEvent) {
@@ -932,7 +1207,10 @@ private fun DrawAuthorImages(baseNote: Note, loggedIn: User, navController: NavC
         }
 
         if (baseNote.event is RepostEvent) {
-            baseNote.replyTo?.lastOrNull()?.let {
+            val baseReply = remember {
+                baseNote.replyTo?.lastOrNull()
+            }
+            baseReply?.let {
                 RelayBadges(it)
             }
         } else {
@@ -946,20 +1224,30 @@ private fun ChannelNotePicture(baseChannel: Channel) {
     val channelState by baseChannel.live.observeAsState()
     val channel = channelState?.channel
 
+    val modifier = remember {
+        Modifier
+            .width(30.dp)
+            .height(30.dp)
+            .clip(shape = CircleShape)
+    }
+
+    val boxModifier = remember {
+        Modifier
+            .width(30.dp)
+            .height(30.dp)
+    }
+
     if (channel != null) {
-        Box(
-            Modifier
-                .width(30.dp)
-                .height(30.dp)
-        ) {
+        val model = remember(channelState) {
+            ResizeImage(channel.profilePicture(), 30.dp)
+        }
+
+        Box(boxModifier) {
             RobohashAsyncImageProxy(
                 robot = channel.idHex,
-                model = ResizeImage(channel.profilePicture(), 30.dp),
+                model = model,
                 contentDescription = stringResource(R.string.group_picture),
-                modifier = Modifier
-                    .width(30.dp)
-                    .height(30.dp)
-                    .clip(shape = CircleShape)
+                modifier = modifier
                     .background(MaterialTheme.colors.background)
                     .border(
                         2.dp,
@@ -977,12 +1265,16 @@ private fun RepostNoteAuthorPicture(
     navController: NavController,
     loggedIn: User
 ) {
-    baseNote.replyTo?.lastOrNull()?.let {
-        Box(
-            Modifier
-                .width(30.dp)
-                .height(30.dp)
-        ) {
+    val baseRepost = remember { baseNote.replyTo?.lastOrNull() }
+
+    val modifier = remember {
+        Modifier
+            .width(30.dp)
+            .height(30.dp)
+    }
+
+    baseRepost?.let {
+        Box(modifier) {
             NoteAuthorPicture(
                 it,
                 navController,
@@ -1041,25 +1333,30 @@ fun DisplayHighlight(
         authorHex?.let { authorHex ->
             userBase?.let { userBase ->
                 val userState by userBase.live().metadata.observeAsState()
-                val user = userState?.user
+                val route = remember { "User/${userBase.pubkeyHex}" }
+                val userDisplayName = remember(userState) { userState?.user?.toBestDisplayName() }
+                val userTags = remember(userState) { userState?.user?.info?.latestMetadata?.tags }
 
-                if (user != null) {
-                    CreateClickableText(
-                        user.toBestDisplayName(),
-                        "",
-                        "User/${user.pubkeyHex}",
-                        navController
+                if (userDisplayName != null) {
+                    CreateClickableTextWithEmoji(
+                        clickablePart = userDisplayName,
+                        suffix = " ",
+                        tags = userTags,
+                        route = route,
+                        navController = navController
                     )
                 }
             }
         }
 
         url?.let { url ->
-            val validatedUrl = try {
-                URL(url)
-            } catch (e: Exception) {
-                Log.w("Note Compose", "Invalid URI: $url")
-                null
+            val validatedUrl = remember {
+                try {
+                    URL(url)
+                } catch (e: Exception) {
+                    Log.w("Note Compose", "Invalid URI: $url")
+                    null
+                }
             }
 
             validatedUrl?.host?.let { host ->
@@ -1334,45 +1631,124 @@ fun FileStorageHeaderDisplay(baseNote: Note) {
         }
     }
 
-    val noteState = fileNote?.live()?.metadata?.observeAsState()
-    val note = noteState?.value?.note
+    fileNote?.let { fileNote2 ->
+        val noteState by fileNote2.live().metadata.observeAsState()
+        val note = remember(noteState) { noteState?.note }
 
-    var content by remember { mutableStateOf<ZoomableContent?>(null) }
+        var content by remember { mutableStateOf<ZoomableContent?>(null) }
 
-    LaunchedEffect(key1 = eventHeader.id, key2 = noteState, key3 = note?.event) {
-        withContext(Dispatchers.IO) {
-            val uri = "nostr:" + baseNote.toNEvent()
-            val localDir = note?.idHex?.let { File(File(appContext.externalCacheDir, "NIP95"), it) }
-            val blurHash = eventHeader.blurhash()
-            val dimensions = eventHeader.dimensions()
-            val description = eventHeader.content
-            val mimeType = eventHeader.mimeType()
+        LaunchedEffect(key1 = eventHeader.id, key2 = noteState, key3 = note?.event) {
+            withContext(Dispatchers.IO) {
+                val uri = "nostr:" + baseNote.toNEvent()
+                val localDir = note?.idHex?.let { File(File(appContext.externalCacheDir, "NIP95"), it) }
+                val blurHash = eventHeader.blurhash()
+                val dimensions = eventHeader.dimensions()
+                val description = eventHeader.content
+                val mimeType = eventHeader.mimeType()
 
-            content = if (mimeType?.startsWith("image") == true) {
-                ZoomableLocalImage(
-                    localFile = localDir,
-                    mimeType = mimeType,
-                    description = description,
-                    blurhash = blurHash,
-                    dim = dimensions,
-                    isVerified = true,
-                    uri = uri
-                )
-            } else {
-                ZoomableLocalVideo(
-                    localFile = localDir,
-                    mimeType = mimeType,
-                    description = description,
-                    dim = dimensions,
-                    isVerified = true,
-                    uri = uri
-                )
+                content = if (mimeType?.startsWith("image") == true) {
+                    ZoomableLocalImage(
+                        localFile = localDir,
+                        mimeType = mimeType,
+                        description = description,
+                        blurhash = blurHash,
+                        dim = dimensions,
+                        isVerified = true,
+                        uri = uri
+                    )
+                } else {
+                    ZoomableLocalVideo(
+                        localFile = localDir,
+                        mimeType = mimeType,
+                        description = description,
+                        dim = dimensions,
+                        isVerified = true,
+                        uri = uri
+                    )
+                }
             }
+        }
+
+        content?.let {
+            ZoomableContentView(content = it, listOf(it))
+        }
+    }
+}
+
+@Composable
+fun AudioTrackHeader(noteEvent: AudioTrackEvent, note: Note, loggedIn: User, navController: NavController) {
+    val media = remember { noteEvent.media() }
+    val cover = remember { noteEvent.cover() }
+    val subject = remember { noteEvent.subject() }
+    val content = remember { noteEvent.content() }
+    val participants = remember { noteEvent.participants() }
+
+    var participantUsers by remember { mutableStateOf<List<Pair<Participant, User>>>(emptyList()) }
+
+    LaunchedEffect(key1 = participants) {
+        withContext(Dispatchers.IO) {
+            participantUsers = participants.mapNotNull { part -> LocalCache.checkGetOrCreateUser(part.key)?.let { Pair(part, it) } }
         }
     }
 
-    content?.let {
-        ZoomableContentView(content = it, listOf(it))
+    Row(modifier = Modifier.padding(top = 5.dp)) {
+        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Row() {
+                subject?.let {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)) {
+                        Text(
+                            text = it,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 3,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
+
+            participantUsers.forEach {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .padding(top = 5.dp, start = 10.dp, end = 10.dp)
+                        .clickable {
+                            navController.navigate("User/${it.second.pubkeyHex}")
+                        }
+                ) {
+                    UserPicture(it.second, loggedIn, 25.dp)
+                    Spacer(Modifier.width(5.dp))
+                    UsernameDisplay(it.second, Modifier.weight(1f))
+                    Spacer(Modifier.width(5.dp))
+                    it.first.role?.let {
+                        Text(
+                            text = it.capitalize(Locale.ROOT),
+                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
+
+            media?.let { media ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(10.dp)
+                ) {
+                    cover?.let { cover ->
+                        VideoView(
+                            videoUri = media,
+                            description = noteEvent.subject(),
+                            thumbUri = cover
+                        )
+                    }
+                        ?: VideoView(
+                            videoUri = media,
+                            noteEvent.subject()
+                        )
+                }
+            }
+        }
     }
 }
 
@@ -1468,7 +1844,7 @@ private fun LongFormHeader(noteEvent: LongTextNoteEvent, note: Note, loggedIn: U
 @Composable
 private fun RelayBadges(baseNote: Note) {
     val noteRelaysState by baseNote.live().relays.observeAsState()
-    val noteRelays = noteRelaysState?.note ?: return
+    val noteRelays = remember(noteRelaysState) { noteRelaysState?.note } ?: return
 
     var expanded by remember { mutableStateOf(false) }
     var showShowMore by remember { mutableStateOf(false) }
@@ -1524,44 +1900,59 @@ private fun VerticalRelayPanelWithFlow(
 private fun RelayIconCompose(url: String) {
     val uri = LocalUriHandler.current
 
-    Box(
+    val model = remember(url) { "https://$url/favicon.ico" }
+
+    val boxModifier = remember {
         Modifier
             .padding(1.dp)
             .size(15.dp)
-    ) {
+    }
+    val iconModifier = remember(url) {
+        Modifier
+            .width(13.dp)
+            .height(13.dp)
+            .clip(shape = CircleShape)
+            .clickable(onClick = { uri.openUri("https://$url") })
+    }
+    val colorFilter = remember {
+        ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0.5f) })
+    }
+
+    Box(boxModifier) {
         RobohashFallbackAsyncImage(
-            robot = "https://$url/favicon.ico",
+            robot = model,
             robotSize = 15.dp,
-            model = "https://$url/favicon.ico",
+            model = model,
             contentDescription = stringResource(R.string.relay_icon),
-            colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }),
-            modifier = Modifier
-                .width(13.dp)
-                .height(13.dp)
-                .clip(shape = CircleShape)
-                .background(MaterialTheme.colors.background)
-                .clickable(onClick = { uri.openUri("https://$url") })
+            colorFilter = colorFilter,
+            modifier = iconModifier.background(MaterialTheme.colors.background)
         )
     }
 }
 
 @Composable
 private fun ShowMoreRelaysButton(onClick: () -> Unit) {
-    Row(
+    val boxModifier = remember {
         Modifier
             .fillMaxWidth()
-            .height(25.dp),
+            .height(25.dp)
+    }
+    val iconButtonModifier = remember { Modifier.size(24.dp) }
+    val iconModifier = remember { Modifier.size(15.dp) }
+
+    Row(
+        boxModifier,
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.Top
     ) {
         IconButton(
-            modifier = Modifier.then(Modifier.size(24.dp)),
+            modifier = iconButtonModifier,
             onClick = onClick
         ) {
             Icon(
                 imageVector = Icons.Default.ExpandMore,
                 null,
-                modifier = Modifier.size(15.dp),
+                modifier = iconModifier,
                 tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
             )
         }
@@ -1577,7 +1968,11 @@ fun NoteAuthorPicture(
     pictureModifier: Modifier = Modifier
 ) {
     NoteAuthorPicture(baseNote, userAccount, size, pictureModifier) {
-        navController.navigate("User/${it.pubkeyHex}")
+        if (it.pubkeyHex != navController.currentBackStackEntry?.arguments?.getString("id")) {
+            navController.navigate("User/${it.pubkeyHex}")
+        } else {
+            Log.d("Amethyst-Navigation", "Profile destination already exists in the backstack!")
+        }
     }
 }
 
@@ -1590,25 +1985,30 @@ fun NoteAuthorPicture(
     onClick: ((User) -> Unit)? = null
 ) {
     val noteState by baseNote.live().metadata.observeAsState()
-    val note = noteState?.note ?: return
+    val author = remember(noteState) {
+        noteState?.note?.author
+    }
 
-    val author = note.author
-
-    Box(
+    val boxModifier = remember {
         Modifier
             .width(size)
             .height(size)
-    ) {
+    }
+
+    val nullModifier = remember {
+        modifier
+            .width(size)
+            .height(size)
+            .clip(shape = CircleShape)
+    }
+
+    Box(boxModifier) {
         if (author == null) {
             RobohashAsyncImage(
                 robot = "authornotfound",
                 robotSize = size,
                 contentDescription = stringResource(R.string.unknown_author),
-                modifier = modifier
-                    .width(size)
-                    .height(size)
-                    .clip(shape = CircleShape)
-                    .background(MaterialTheme.colors.background)
+                modifier = nullModifier.background(MaterialTheme.colors.background)
             )
         } else {
             UserPicture(author, baseUserAccount, size, modifier, onClick)
@@ -1625,7 +2025,11 @@ fun UserPicture(
     pictureModifier: Modifier = Modifier
 ) {
     UserPicture(user, userAccount, size, pictureModifier) {
-        navController.navigate("User/${it.pubkeyHex}")
+        if (it.pubkeyHex != navController.currentBackStackEntry?.arguments?.getString("id")) {
+            navController.navigate("User/${it.pubkeyHex}")
+        } else {
+            Log.d("Amethyst-Navigation", "Profile destination already exists in the backstack!")
+        }
     }
 }
 
@@ -1640,31 +2044,38 @@ fun UserPicture(
     onLongClick: ((User) -> Unit)? = null
 ) {
     val userState by baseUser.live().metadata.observeAsState()
-    val user = userState?.user ?: return
-
     val accountState by baseUserAccount.live().follows.observeAsState()
-    val accountUser = accountState?.user ?: return
 
-    val showFollowingMark = accountUser.isFollowingCached(user) || user == accountUser
+    val userPubkey = remember {
+        baseUser.pubkeyHex
+    }
 
-    Row(
-        modifier = Modifier
-            .run {
-                if (onClick != null && onLongClick != null) {
-                    this.combinedClickable(
-                        onClick = { onClick(user) },
-                        onLongClick = { onLongClick(user) }
-                    )
-                } else if (onClick != null) {
-                    this.clickable(onClick = { onClick(user) })
-                } else {
-                    this
-                }
-            }
-    ) {
+    val userProfile = remember(userState) {
+        userState?.user?.profilePicture()
+    }
+
+    val showFollowingMark = remember(accountState) {
+        accountState?.user?.isFollowingCached(baseUser) == true || baseUser === accountState?.user
+    }
+
+    // BaseUser is the same reference as accountState.user
+    val myModifier = remember {
+        if (onClick != null && onLongClick != null) {
+            Modifier.combinedClickable(
+                onClick = { onClick(baseUser) },
+                onLongClick = { onLongClick(baseUser) }
+            )
+        } else if (onClick != null) {
+            Modifier.clickable(onClick = { onClick(baseUser) })
+        } else {
+            Modifier
+        }
+    }
+
+    Row(modifier = myModifier) {
         UserPicture(
-            userHex = user.pubkeyHex,
-            userPicture = user.profilePicture(),
+            userHex = userPubkey,
+            userPicture = userProfile,
             showFollowingMark = showFollowingMark,
             size = size,
             modifier = modifier
@@ -1680,43 +2091,59 @@ fun UserPicture(
     size: Dp,
     modifier: Modifier = Modifier
 ) {
-    Box(
+    val myBoxModifier = remember {
         Modifier
             .width(size)
             .height(size)
-    ) {
+    }
+
+    val myImageModifier = remember {
+        modifier
+            .width(size)
+            .height(size)
+            .clip(shape = CircleShape)
+    }
+
+    val myResizeImage = remember(userPicture) {
+        ResizeImage(userPicture, size)
+    }
+
+    Box(myBoxModifier) {
         RobohashAsyncImageProxy(
             robot = userHex,
-            model = ResizeImage(userPicture, size),
+            model = myResizeImage,
             contentDescription = stringResource(id = R.string.profile_image),
-            modifier = modifier
-                .width(size)
-                .height(size)
-                .clip(shape = CircleShape)
-                .background(MaterialTheme.colors.background)
+            modifier = myImageModifier.background(MaterialTheme.colors.background)
         )
 
         if (showFollowingMark) {
-            Box(
+            val myIconBoxModifier = remember {
                 Modifier
                     .width(size.div(3.5f))
                     .height(size.div(3.5f))
-                    .align(Alignment.TopEnd),
-                contentAlignment = Alignment.Center
-            ) {
-                // Background for the transparent checkmark
+                    .align(Alignment.TopEnd)
+            }
+
+            val myIconBackgroundModifier = remember {
+                Modifier
+                    .clip(CircleShape)
+                    .fillMaxSize(0.6f)
+                    .align(Alignment.Center)
+            }
+
+            val myIconModifier = remember {
+                Modifier.width(size.div(3.5f)).height(size.div(3.5f))
+            }
+
+            Box(myIconBoxModifier, contentAlignment = Alignment.Center) {
                 Box(
-                    Modifier
-                        .clip(CircleShape)
-                        .fillMaxSize(0.6f)
-                        .align(Alignment.Center)
-                        .background(MaterialTheme.colors.background)
+                    myIconBackgroundModifier.background(MaterialTheme.colors.background)
                 )
 
                 Icon(
                     painter = painterResource(R.drawable.ic_verified),
                     stringResource(id = R.string.following),
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = myIconModifier,
                     tint = Following
                 )
             }
@@ -1738,13 +2165,15 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
     val actContext = LocalContext.current
     var reportDialogShowing by remember { mutableStateOf(false) }
 
+    val bookmarkState by accountViewModel.userProfile().live().bookmarks.observeAsState()
+
     var state by remember {
         mutableStateOf<DropDownParams>(
             DropDownParams(false, false, false, false)
         )
     }
 
-    LaunchedEffect(key1 = note) {
+    LaunchedEffect(key1 = note, key2 = bookmarkState) {
         withContext(Dispatchers.IO) {
             state = DropDownParams(
                 accountViewModel.isFollowing(note.author),

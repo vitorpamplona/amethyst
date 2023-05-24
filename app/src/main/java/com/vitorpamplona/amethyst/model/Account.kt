@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
 import nostr.postr.Persona
 import nostr.postr.Utils
 import java.math.BigDecimal
+import java.net.Proxy
 import java.util.Locale
 
 val DefaultChannels = setOf(
@@ -52,14 +53,16 @@ class Account(
     var translateTo: String = Locale.getDefault().language,
     var zapAmountChoices: List<Long> = listOf(500L, 1000L, 5000L),
     var defaultZapType: LnZapEvent.ZapType = LnZapEvent.ZapType.PRIVATE,
-    var defaultFileServer: ServersAvailable = ServersAvailable.IMGUR,
+    var defaultFileServer: ServersAvailable = ServersAvailable.NOSTR_BUILD,
     var defaultHomeFollowList: String = KIND3_FOLLOWS,
     var defaultStoriesFollowList: String = GLOBAL_FOLLOWS,
     var defaultNotificationFollowList: String = GLOBAL_FOLLOWS,
     var zapPaymentRequest: Nip47URI? = null,
     var hideDeleteRequestDialog: Boolean = false,
     var hideBlockAlertDialog: Boolean = false,
-    var backupContactList: ContactListEvent? = null
+    var backupContactList: ContactListEvent? = null,
+    var proxy: Proxy?,
+    var proxyPort: Int
 ) {
     var transientHiddenUsers: Set<String> = setOf()
 
@@ -214,7 +217,12 @@ class Account(
         zapPaymentRequest?.let { nip47 ->
             val event = LnZapPaymentRequestEvent.create(bolt11, nip47.pubKeyHex, nip47.secret?.hexToByteArray() ?: loggedIn.privKey!!)
 
-            val wcListener = NostrLnZapPaymentResponseDataSource(nip47.pubKeyHex, event.pubKey, event.id)
+            val wcListener = NostrLnZapPaymentResponseDataSource(
+                fromServiceHex = nip47.pubKeyHex,
+                toUserHex = event.pubKey,
+                replyingToHex = event.id,
+                authSigningKey = nip47.secret?.hexToByteArray() ?: loggedIn.privKey!!
+            )
             wcListener.start()
 
             LocalCache.consume(event, zappedNote) {
@@ -590,18 +598,33 @@ class Account(
 
         val bookmarks = userProfile().latestBookmarkList
 
-        val event = BookmarkListEvent.create(
-            "bookmark",
-            bookmarks?.taggedEvents() ?: emptyList(),
-            bookmarks?.taggedUsers() ?: emptyList(),
-            bookmarks?.taggedAddresses() ?: emptyList(),
+        val event = if (note is AddressableNote) {
+            BookmarkListEvent.create(
+                "bookmark",
+                bookmarks?.taggedEvents() ?: emptyList(),
+                bookmarks?.taggedUsers() ?: emptyList(),
+                bookmarks?.taggedAddresses() ?: emptyList(),
 
-            bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!)?.plus(note.idHex) ?: listOf(note.idHex),
-            bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
-            bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!)?.plus(note.address) ?: listOf(note.address),
 
-            loggedIn.privKey!!
-        )
+                loggedIn.privKey!!
+            )
+        } else {
+            BookmarkListEvent.create(
+                "bookmark",
+                bookmarks?.taggedEvents() ?: emptyList(),
+                bookmarks?.taggedUsers() ?: emptyList(),
+                bookmarks?.taggedAddresses() ?: emptyList(),
+
+                bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!)?.plus(note.idHex) ?: listOf(note.idHex),
+                bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
+
+                loggedIn.privKey!!
+            )
+        }
 
         Client.send(event)
         LocalCache.consume(event)
@@ -612,18 +635,33 @@ class Account(
 
         val bookmarks = userProfile().latestBookmarkList
 
-        val event = BookmarkListEvent.create(
-            "bookmark",
-            bookmarks?.taggedEvents()?.plus(note.idHex) ?: listOf(note.idHex),
-            bookmarks?.taggedUsers() ?: emptyList(),
-            bookmarks?.taggedAddresses() ?: emptyList(),
+        val event = if (note is AddressableNote) {
+            BookmarkListEvent.create(
+                "bookmark",
+                bookmarks?.taggedEvents() ?: emptyList(),
+                bookmarks?.taggedUsers() ?: emptyList(),
+                bookmarks?.taggedAddresses()?.plus(note.address) ?: listOf(note.address),
 
-            bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!) ?: emptyList(),
-            bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
-            bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
 
-            loggedIn.privKey!!
-        )
+                loggedIn.privKey!!
+            )
+        } else {
+            BookmarkListEvent.create(
+                "bookmark",
+                bookmarks?.taggedEvents()?.plus(note.idHex) ?: listOf(note.idHex),
+                bookmarks?.taggedUsers() ?: emptyList(),
+                bookmarks?.taggedAddresses() ?: emptyList(),
+
+                bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
+
+                loggedIn.privKey!!
+            )
+        }
 
         Client.send(event)
         LocalCache.consume(event)
@@ -634,18 +672,33 @@ class Account(
 
         val bookmarks = userProfile().latestBookmarkList
 
-        val event = BookmarkListEvent.create(
-            "bookmark",
-            bookmarks?.taggedEvents() ?: emptyList(),
-            bookmarks?.taggedUsers() ?: emptyList(),
-            bookmarks?.taggedAddresses() ?: emptyList(),
+        val event = if (note is AddressableNote) {
+            BookmarkListEvent.create(
+                "bookmark",
+                bookmarks?.taggedEvents() ?: emptyList(),
+                bookmarks?.taggedUsers() ?: emptyList(),
+                bookmarks?.taggedAddresses() ?: emptyList(),
 
-            bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!)?.minus(note.idHex) ?: listOf(),
-            bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
-            bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!)?.minus(note.address) ?: listOf(),
 
-            loggedIn.privKey!!
-        )
+                loggedIn.privKey!!
+            )
+        } else {
+            BookmarkListEvent.create(
+                "bookmark",
+                bookmarks?.taggedEvents() ?: emptyList(),
+                bookmarks?.taggedUsers() ?: emptyList(),
+                bookmarks?.taggedAddresses() ?: emptyList(),
+
+                bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!)?.minus(note.idHex) ?: listOf(),
+                bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
+
+                loggedIn.privKey!!
+            )
+        }
 
         Client.send(event)
         LocalCache.consume(event)
@@ -662,18 +715,33 @@ class Account(
 
         val bookmarks = userProfile().latestBookmarkList
 
-        val event = BookmarkListEvent.create(
-            "bookmark",
-            bookmarks?.taggedEvents()?.minus(note.idHex),
-            bookmarks?.taggedUsers() ?: emptyList(),
-            bookmarks?.taggedAddresses() ?: emptyList(),
+        val event = if (note is AddressableNote) {
+            BookmarkListEvent.create(
+                "bookmark",
+                bookmarks?.taggedEvents() ?: emptyList(),
+                bookmarks?.taggedUsers() ?: emptyList(),
+                bookmarks?.taggedAddresses()?.minus(note.address),
 
-            bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!) ?: emptyList(),
-            bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
-            bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
 
-            loggedIn.privKey!!
-        )
+                loggedIn.privKey!!
+            )
+        } else {
+            BookmarkListEvent.create(
+                "bookmark",
+                bookmarks?.taggedEvents()?.minus(note.idHex),
+                bookmarks?.taggedUsers() ?: emptyList(),
+                bookmarks?.taggedAddresses() ?: emptyList(),
+
+                bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
+
+                loggedIn.privKey!!
+            )
+        }
 
         Client.send(event)
         LocalCache.consume(event)
@@ -874,23 +942,28 @@ class Account(
                     null
                 }
 
-                if (altPrivateKeyToUse != null && altPubkeyToUse != null) {
-                    val altPubKeyFromPrivate = Utils.pubkeyCreate(altPrivateKeyToUse).toHexKey()
+                try {
+                    if (altPrivateKeyToUse != null && altPubkeyToUse != null) {
+                        val altPubKeyFromPrivate = Utils.pubkeyCreate(altPrivateKeyToUse).toHexKey()
 
-                    if (altPubKeyFromPrivate == event.pubKey) {
-                        val result = event.getPrivateZapEvent(altPrivateKeyToUse, altPubkeyToUse)
+                        if (altPubKeyFromPrivate == event.pubKey) {
+                            val result = event.getPrivateZapEvent(altPrivateKeyToUse, altPubkeyToUse)
 
-                        if (result == null) {
-                            Log.w(
-                                "Private ZAP Decrypt",
-                                "Fail to decrypt Zap from ${note.author?.toBestDisplayName()} ${note.idNote()}"
-                            )
+                            if (result == null) {
+                                Log.w(
+                                    "Private ZAP Decrypt",
+                                    "Fail to decrypt Zap from ${note.author?.toBestDisplayName()} ${note.idNote()}"
+                                )
+                            }
+                            result
+                        } else {
+                            null
                         }
-                        result
                     } else {
                         null
                     }
-                } else {
+                } catch (e: Exception) {
+                    Log.e("Account", "Failed to create pubkey for ZapRequest ${event.id}", e)
                     null
                 }
             }
@@ -936,7 +1009,7 @@ class Account(
     fun activeRelays(): Array<Relay>? {
         var usersRelayList = userProfile().latestContactList?.relays()?.map {
             val localFeedTypes = localRelays.firstOrNull() { localRelay -> localRelay.url == it.key }?.feedTypes ?: FeedType.values().toSet()
-            Relay(it.key, it.value.read, it.value.write, localFeedTypes)
+            Relay(it.key, it.value.read, it.value.write, localFeedTypes, proxy)
         } ?: return null
 
         // Ugly, but forces nostr.band as the only search-supporting relay today.
@@ -946,7 +1019,8 @@ class Account(
                 Constants.forcedRelayForSearch.url,
                 Constants.forcedRelayForSearch.read,
                 Constants.forcedRelayForSearch.write,
-                Constants.forcedRelayForSearch.feedTypes
+                Constants.forcedRelayForSearch.feedTypes,
+                proxy
             )
         }
 
@@ -955,7 +1029,7 @@ class Account(
 
     fun convertLocalRelays(): Array<Relay> {
         return localRelays.map {
-            Relay(it.url, it.read, it.write, it.feedTypes)
+            Relay(it.url, it.read, it.write, it.feedTypes, proxy)
         }.toTypedArray()
     }
 
@@ -1037,14 +1111,7 @@ class Account(
         saveable.invalidateData()
     }
 
-    init {
-        backupContactList?.let {
-            println("Loading saved contacts ${it.toJson()}")
-            if (userProfile().latestContactList == null) {
-                LocalCache.consume(it)
-            }
-        }
-
+    fun registerObservers() {
         // Observes relays to restart connections
         userProfile().live().relays.observeForever {
             GlobalScope.launch(Dispatchers.IO) {
@@ -1068,6 +1135,15 @@ class Account(
                         }
                     }
                 }
+            }
+        }
+    }
+
+    init {
+        backupContactList?.let {
+            println("Loading saved contacts ${it.toJson()}")
+            if (userProfile().latestContactList == null) {
+                LocalCache.consume(it)
             }
         }
     }

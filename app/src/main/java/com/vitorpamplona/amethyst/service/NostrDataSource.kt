@@ -3,28 +3,7 @@ package com.vitorpamplona.amethyst.service
 import android.util.Log
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.model.*
-import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
-import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
-import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
-import com.vitorpamplona.amethyst.service.model.BookmarkListEvent
-import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.service.model.ChannelHideMessageEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMuteUserEvent
-import com.vitorpamplona.amethyst.service.model.ContactListEvent
-import com.vitorpamplona.amethyst.service.model.DeletionEvent
 import com.vitorpamplona.amethyst.service.model.Event
-import com.vitorpamplona.amethyst.service.model.LnZapEvent
-import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
-import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
-import com.vitorpamplona.amethyst.service.model.MetadataEvent
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
-import com.vitorpamplona.amethyst.service.model.ReactionEvent
-import com.vitorpamplona.amethyst.service.model.RecommendRelayEvent
-import com.vitorpamplona.amethyst.service.model.ReportEvent
-import com.vitorpamplona.amethyst.service.model.RepostEvent
-import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.Subscription
@@ -52,8 +31,6 @@ abstract class NostrDataSource(val debugName: String) {
     private val clientListener = object : Client.Listener() {
         override fun onEvent(event: Event, subscriptionId: String, relay: Relay) {
             if (subscriptionId in subscriptions.keys) {
-                if (!event.hasValidSignature()) return
-
                 val key = "$debugName $subscriptionId ${event.kind}"
                 val keyValue = eventCounter.get(key)
                 if (keyValue != null) {
@@ -62,51 +39,7 @@ abstract class NostrDataSource(val debugName: String) {
                     eventCounter = eventCounter + Pair(key, Counter(1))
                 }
 
-                try {
-                    when (event) {
-                        is BadgeAwardEvent -> LocalCache.consume(event)
-                        is BadgeDefinitionEvent -> LocalCache.consume(event)
-                        is BadgeProfilesEvent -> LocalCache.consume(event)
-                        is BookmarkListEvent -> LocalCache.consume(event)
-                        is ChannelCreateEvent -> LocalCache.consume(event)
-                        is ChannelHideMessageEvent -> LocalCache.consume(event)
-                        is ChannelMessageEvent -> LocalCache.consume(event, relay)
-                        is ChannelMetadataEvent -> LocalCache.consume(event)
-                        is ChannelMuteUserEvent -> LocalCache.consume(event)
-                        is ContactListEvent -> LocalCache.consume(event)
-                        is DeletionEvent -> LocalCache.consume(event)
-
-                        is FileHeaderEvent -> LocalCache.consume(event, relay)
-                        is FileStorageEvent -> LocalCache.consume(event, relay)
-                        is FileStorageHeaderEvent -> LocalCache.consume(event, relay)
-                        is HighlightEvent -> LocalCache.consume(event, relay)
-                        is LnZapEvent -> {
-                            event.zapRequest?.let { onEvent(it, subscriptionId, relay) }
-                            LocalCache.consume(event)
-                        }
-                        is LnZapRequestEvent -> LocalCache.consume(event)
-                        is LnZapPaymentRequestEvent -> LocalCache.consume(event)
-                        is LnZapPaymentResponseEvent -> LocalCache.consume(event)
-                        is LongTextNoteEvent -> LocalCache.consume(event, relay)
-                        is MetadataEvent -> LocalCache.consume(event)
-                        is PrivateDmEvent -> LocalCache.consume(event, relay)
-                        is PeopleListEvent -> LocalCache.consume(event)
-                        is ReactionEvent -> LocalCache.consume(event)
-                        is RecommendRelayEvent -> LocalCache.consume(event)
-                        is ReportEvent -> LocalCache.consume(event, relay)
-                        is RepostEvent -> {
-                            event.containedPost()?.let { onEvent(it, subscriptionId, relay) }
-                            LocalCache.consume(event)
-                        }
-                        is TextNoteEvent -> LocalCache.consume(event, relay)
-                        is PollNoteEvent -> LocalCache.consume(event, relay)
-                        else -> {
-                            Log.w("Event Not Supported", event.toJson())
-                        }
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
+                LocalCache.consume(event, relay)
             }
         }
 
@@ -170,7 +103,7 @@ abstract class NostrDataSource(val debugName: String) {
     }
 
     // Refreshes observers in batches.
-    private val bundler = BundledUpdate(250, Dispatchers.IO) {
+    private val bundler = BundledUpdate(300, Dispatchers.IO) {
         // println("DataSource: ${this.javaClass.simpleName} InvalidateFilters")
 
         // adds the time to perform the refresh into this delay

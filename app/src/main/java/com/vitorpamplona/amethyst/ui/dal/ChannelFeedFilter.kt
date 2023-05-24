@@ -21,7 +21,7 @@ object ChannelFeedFilter : AdditiveFeedFilter<Note>() {
         return channel.notes
             .values
             .filter { account.isAcceptable(it) }
-            .sortedBy { it.createdAt() }
+            .sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
             .reversed()
     }
 
@@ -35,6 +35,6 @@ object ChannelFeedFilter : AdditiveFeedFilter<Note>() {
     }
 
     override fun sort(collection: Set<Note>): List<Note> {
-        return collection.sortedBy { it.createdAt() }.reversed()
+        return collection.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
     }
 }

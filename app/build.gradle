@@ -2,6 +2,7 @@ plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
     id 'org.jlleitschuh.gradle.ktlint' version "11.3.1"
+    id 'com.google.gms.google-services'
 }
 
 android {
@@ -12,8 +13,8 @@ android {
         applicationId "com.vitorpamplona.amethyst"
         minSdk 26
         targetSdk 33
-        versionCode 151
-        versionName "0.44.0"
+        versionCode 174
+        versionName "0.50.6"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -85,8 +86,8 @@ android {
 }
 
 dependencies {
-    implementation 'androidx.core:core-ktx:1.10.0'
-    implementation 'androidx.activity:activity-compose:1.7.0'
+    implementation 'androidx.core:core-ktx:1.10.1'
+    implementation 'androidx.activity:activity-compose:1.7.1'
     implementation "androidx.compose.ui:ui:$compose_ui_version"
     implementation "androidx.compose.ui:ui-tooling-preview:$compose_ui_version"
 
@@ -114,7 +115,7 @@ dependencies {
     implementation "androidx.biometric:biometric-ktx:1.2.0-alpha05"
 
     // Bitcoin secp256k1 bindings to Android
-    implementation 'fr.acinq.secp256k1:secp256k1-kmp-jni-android:0.9.0'
+    implementation 'fr.acinq.secp256k1:secp256k1-kmp-jni-android:0.10.0'
 
     // Nostr Base Protocol
     implementation('com.github.vitorpamplona.NostrPostr:nostrpostrlib:master-SNAPSHOT') {
@@ -127,7 +128,7 @@ dependencies {
     implementation 'com.squareup.okhttp3:okhttp:5.0.0-alpha.11'
 
     // Json Serialization TODO: We might need to converge between gson and Jackson (we are usin both)
-    implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.15.0'
+    implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.15.1'
     implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
 
     // link preview
@@ -137,7 +138,7 @@ dependencies {
     implementation 'androidx.security:security-crypto-ktx:1.1.0-alpha06'
 
     // view videos
-    implementation 'com.google.android.exoplayer:exoplayer:2.18.6'
+    implementation 'com.google.android.exoplayer:exoplayer:2.18.7'
 
     // Load images from the web.
     implementation "io.coil-kt:coil-compose:$coil_version"
@@ -172,8 +173,18 @@ dependencies {
     // Google services model the translate text
     playImplementation 'com.google.mlkit:translate:17.0.1'
 
+    // PushNotifications
+    playImplementation platform('com.google.firebase:firebase-bom:32.0.0')
+    playImplementation 'com.google.firebase:firebase-messaging-ktx'
+
+    // Charts
+    implementation "com.patrykandpatrick.vico:core:${vico_version}"
+    implementation "com.patrykandpatrick.vico:compose:${vico_version}"
+    implementation "com.patrykandpatrick.vico:views:${vico_version}"
+    implementation "com.patrykandpatrick.vico:compose-m2:${vico_version}"
+
     // Automatic memory leak detection
-    debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.10'
+    debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.11'
 
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'io.mockk:mockk:1.13.5'

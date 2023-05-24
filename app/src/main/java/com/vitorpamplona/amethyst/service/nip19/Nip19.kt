@@ -20,7 +20,7 @@ object Nip19 {
         val hex: String,
         val relay: String? = null,
         val author: String? = null,
-        val kind: Long? = null,
+        val kind: Int? = null,
         val additionalChars: String = ""
     )
 
@@ -109,7 +109,7 @@ object Nip19 {
 
         val kind = tlv.get(Tlv.Type.KIND.id)
             ?.get(0)
-            ?.let { Tlv.toInt32(it) }?.toLong()
+            ?.let { Tlv.toInt32(it) }
 
         return Return(Type.EVENT, hex, relay, author, kind)
     }
@@ -140,7 +140,7 @@ object Nip19 {
 
         val kind = tlv.get(Tlv.Type.KIND.id)
             ?.get(0)
-            ?.let { Tlv.toInt32(it) }?.toLong()
+            ?.let { Tlv.toInt32(it) }
 
         return Return(Type.ADDRESS, "$kind:$author:$d", relay, author, kind)
     }

@@ -1,8 +1,10 @@
 package com.vitorpamplona.amethyst.service.model
 
+import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import java.math.BigDecimal
 
+@Immutable
 interface EventInterface {
     fun id(): HexKey
 

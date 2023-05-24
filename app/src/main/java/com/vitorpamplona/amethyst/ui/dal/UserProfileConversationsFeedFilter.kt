@@ -16,7 +16,7 @@ object UserProfileConversationsFeedFilter : FeedFilter<Note>() {
     override fun feed(): List<Note> {
         return user?.notes
             ?.filter { account?.isAcceptable(it) == true && !it.isNewThread() }
-            ?.sortedBy { it.createdAt() }
+            ?.sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
             ?.reversed() ?: emptyList()
     }
 }

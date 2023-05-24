@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -18,7 +19,6 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
@@ -64,6 +64,7 @@ import com.vitorpamplona.amethyst.service.model.PayInvoiceErrorResponse
 import com.vitorpamplona.amethyst.service.model.PayInvoiceSuccessResponse
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
+import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.DisplayNip05ProfileStatus
 import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
@@ -95,6 +96,7 @@ import com.vitorpamplona.amethyst.ui.screen.RelayFeedView
 import com.vitorpamplona.amethyst.ui.screen.RelayFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.UserFeedView
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -125,7 +127,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
 @Composable
 fun ProfileScreen(user: User, accountViewModel: AccountViewModel, navController: NavController) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
+    val account = remember(accountState) { accountState?.account } ?: return
 
     UserProfileNewThreadFeedFilter.loadUserProfile(account, user)
     UserProfileConversationsFeedFilter.loadUserProfile(account, user)
@@ -138,6 +140,10 @@ fun ProfileScreen(user: User, accountViewModel: AccountViewModel, navController:
     NostrUserProfileDataSource.loadUserProfile(user)
 
     val lifeCycleOwner = LocalLifecycleOwner.current
+
+    LaunchedEffect(Unit) {
+        NostrUserProfileDataSource.start()
+    }
 
     DisposableEffect(accountViewModel) {
         val observer = LifecycleEventObserver { _, event ->
@@ -214,64 +220,14 @@ fun ProfileScreen(user: User, accountViewModel: AccountViewModel, navController:
                         }
                     ) {
                         val tabs = listOf<@Composable() (() -> Unit)?>(
-                            {
-                                Text(text = stringResource(R.string.notes))
-                            },
-                            {
-                                Text(text = stringResource(R.string.replies))
-                            },
-                            {
-                                val userState by baseUser.live().follows.observeAsState()
-                                val userFollows = userState?.user?.transientFollowCount() ?: "--"
-
-                                Text(text = "$userFollows ${stringResource(R.string.follows)}")
-                            },
-                            {
-                                val userState by baseUser.live().follows.observeAsState()
-                                val userFollowers = userState?.user?.transientFollowerCount() ?: "--"
-
-                                Text(text = "$userFollowers ${stringResource(id = R.string.followers)}")
-                            },
-                            {
-                                val userState by baseUser.live().zaps.observeAsState()
-                                val userZaps = userState?.user
-
-                                var zapAmount by remember { mutableStateOf<BigDecimal?>(null) }
-
-                                LaunchedEffect(key1 = userState) {
-                                    withContext(Dispatchers.IO) {
-                                        val tempAmount = userZaps?.zappedAmount()
-                                        withContext(Dispatchers.Main) {
-                                            zapAmount = tempAmount
-                                        }
-                                    }
-                                }
-
-                                Text(text = "${showAmount(zapAmount)} ${stringResource(id = R.string.zaps)}")
-                            },
-                            {
-                                val userState by baseUser.live().bookmarks.observeAsState()
-                                val bookmarkList = userState?.user?.latestBookmarkList
-                                val userBookmarks =
-                                    (bookmarkList?.taggedEvents()?.count() ?: 0) + (bookmarkList?.taggedAddresses()?.count() ?: 0)
-
-                                Text(text = "$userBookmarks ${stringResource(R.string.bookmarks)}")
-                            },
-                            {
-                                val userState by baseUser.live().reports.observeAsState()
-                                val userReports = userState?.user?.reports?.values?.flatten()?.count()
-
-                                Text(text = "$userReports ${stringResource(R.string.reports)}")
-                            },
-                            {
-                                val userState by baseUser.live().relays.observeAsState()
-                                val userRelaysBeingUsed = userState?.user?.relaysBeingUsed?.size ?: "--"
-
-                                val userStateRelayInfo by baseUser.live().relayInfo.observeAsState()
-                                val userRelays = userStateRelayInfo?.user?.latestContactList?.relays()?.size ?: "--"
-
-                                Text(text = "$userRelaysBeingUsed / $userRelays ${stringResource(R.string.relays)}")
-                            }
+                            { Text(text = stringResource(R.string.notes)) },
+                            { Text(text = stringResource(R.string.replies)) },
+                            { FollowTabHeader(baseUser) },
+                            { FollowersTabHeader(baseUser) },
+                            { ZapTabHeader(baseUser) },
+                            { BookmarkTabHeader(baseUser) },
+                            { ReportsTabHeader(baseUser) },
+                            { RelaysTabHeader(baseUser) }
                         )
 
                         tabs.forEachIndexed { index, function ->
@@ -307,6 +263,72 @@ fun ProfileScreen(user: User, accountViewModel: AccountViewModel, navController:
 }
 
 @Composable
+private fun RelaysTabHeader(baseUser: User) {
+    val userState by baseUser.live().relays.observeAsState()
+    val userRelaysBeingUsed = remember(userState) { userState?.user?.relaysBeingUsed?.size ?: "--" }
+
+    val userStateRelayInfo by baseUser.live().relayInfo.observeAsState()
+    val userRelays = remember(userStateRelayInfo) { userStateRelayInfo?.user?.latestContactList?.relays()?.size ?: "--" }
+
+    Text(text = "$userRelaysBeingUsed / $userRelays ${stringResource(R.string.relays)}")
+}
+
+@Composable
+private fun ReportsTabHeader(baseUser: User) {
+    val userState by baseUser.live().reports.observeAsState()
+    val userReports = remember(userState) { userState?.user?.reports?.values?.flatten()?.count() }
+
+    Text(text = "$userReports ${stringResource(R.string.reports)}")
+}
+
+@Composable
+private fun BookmarkTabHeader(baseUser: User) {
+    val userState by baseUser.live().bookmarks.observeAsState()
+    val userBookmarks = remember(userState) {
+        val bookmarkList = userState?.user?.latestBookmarkList
+        (bookmarkList?.taggedEvents()?.count() ?: 0) + (
+            bookmarkList?.taggedAddresses()?.count()
+                ?: 0
+            )
+    }
+
+    Text(text = "$userBookmarks ${stringResource(R.string.bookmarks)}")
+}
+
+@Composable
+private fun ZapTabHeader(baseUser: User) {
+    val userState by baseUser.live().zaps.observeAsState()
+    var zapAmount by remember { mutableStateOf<BigDecimal?>(null) }
+
+    LaunchedEffect(key1 = userState) {
+        withContext(Dispatchers.IO) {
+            val tempAmount = baseUser.zappedAmount()
+            withContext(Dispatchers.Main) {
+                zapAmount = tempAmount
+            }
+        }
+    }
+
+    Text(text = "${showAmount(zapAmount)} ${stringResource(id = R.string.zaps)}")
+}
+
+@Composable
+private fun FollowersTabHeader(baseUser: User) {
+    val userState by baseUser.live().follows.observeAsState()
+    val userFollowers = remember(userState) { userState?.user?.transientFollowerCount() ?: "--" }
+
+    Text(text = "$userFollowers ${stringResource(id = R.string.followers)}")
+}
+
+@Composable
+private fun FollowTabHeader(baseUser: User) {
+    val userState by baseUser.live().follows.observeAsState()
+    val userFollows = remember(userState) { userState?.user?.transientFollowCount() ?: "--" }
+
+    Text(text = "$userFollows ${stringResource(R.string.follows)}")
+}
+
+@Composable
 private fun ProfileHeader(
     baseUser: User,
     navController: NavController,
@@ -315,9 +337,6 @@ private fun ProfileHeader(
 ) {
     var popupExpanded by remember { mutableStateOf(false) }
     var zoomImageDialogOpen by remember { mutableStateOf(false) }
-
-    val accountUserState by account.userProfile().live().follows.observeAsState()
-    val accountUser = accountUserState?.user ?: return
 
     val coroutineScope = rememberCoroutineScope()
     val clipboardManager = LocalClipboardManager.current
@@ -398,23 +417,7 @@ private fun ProfileHeader(
                     // No need for this button anymore
                     // NPubCopyButton(baseUser)
 
-                    if (accountUser == baseUser) {
-                        EditButton(account)
-                    }
-
-                    if (account.isHidden(baseUser)) {
-                        ShowUserButton {
-                            account.showUser(baseUser.pubkeyHex)
-                        }
-                    } else if (accountUser.isFollowingCached(baseUser)) {
-                        UnfollowButton { coroutineScope.launch(Dispatchers.IO) { account.unfollow(baseUser) } }
-                    } else {
-                        if (baseUser.isFollowingCached(accountUser)) {
-                            FollowButton({ coroutineScope.launch(Dispatchers.IO) { account.follow(baseUser) } }, R.string.follow_back)
-                        } else {
-                            FollowButton({ coroutineScope.launch(Dispatchers.IO) { account.follow(baseUser) } }, R.string.follow)
-                        }
-                    }
+                    ProfileActions(baseUser, account, coroutineScope)
                 }
             }
 
@@ -430,37 +433,74 @@ private fun ProfileHeader(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ProfileActions(
+    baseUser: User,
+    account: Account,
+    coroutineScope: CoroutineScope
+) {
+    val accountUserState by account.userProfile().live().follows.observeAsState()
+    val accountUser = remember(accountUserState) { accountUserState?.user } ?: return
+
+    if (accountUser == baseUser) {
+        EditButton(account)
+    }
+
+    if (account.isHidden(baseUser)) {
+        ShowUserButton {
+            account.showUser(baseUser.pubkeyHex)
+        }
+    } else if (accountUser.isFollowingCached(baseUser)) {
+        UnfollowButton { coroutineScope.launch(Dispatchers.IO) { account.unfollow(baseUser) } }
+    } else {
+        if (baseUser.isFollowingCached(accountUser)) {
+            FollowButton(
+                { coroutineScope.launch(Dispatchers.IO) { account.follow(baseUser) } },
+                R.string.follow_back
+            )
+        } else {
+            FollowButton(
+                { coroutineScope.launch(Dispatchers.IO) { account.follow(baseUser) } },
+                R.string.follow
+            )
+        }
+    }
+}
+
 @Composable
 private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewModel: AccountViewModel, navController: NavController) {
     val userState by baseUser.live().metadata.observeAsState()
-    val user = userState?.user ?: return
-
-    val userBadgeState by baseUser.live().badges.observeAsState()
-    val userBadge = userBadgeState?.user ?: return
+    val user = remember(userState) { userState?.user } ?: return
+    val tags = remember(userState) { userState?.user?.info?.latestMetadata?.tags }
 
     val uri = LocalUriHandler.current
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    Row(verticalAlignment = Alignment.Bottom) {
-        user.bestDisplayName()?.let {
-            Text(
-                it,
-                modifier = Modifier.padding(top = 7.dp),
+    (user.bestDisplayName() ?: user.bestUsername())?.let {
+        Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 7.dp)) {
+            CreateTextWithEmoji(
+                text = it,
+                tags = tags,
                 fontWeight = FontWeight.Bold,
                 fontSize = 25.sp
             )
         }
     }
-    Row(verticalAlignment = Alignment.CenterVertically) {
+
+    if (user.bestDisplayName() != null) {
         user.bestUsername()?.let {
-            Text(
-                "@$it",
-                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(top = 1.dp, bottom = 1.dp)
-            )
+            ) {
+                CreateTextWithEmoji(
+                    text = "@$it",
+                    tags = tags,
+                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                )
+            }
         }
     }
 
@@ -513,23 +553,7 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewMode
         }
     }
 
-    userBadge.acceptedBadges?.let { note ->
-        (note.event as? BadgeProfilesEvent)?.let { event ->
-            FlowRow(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 5.dp)) {
-                event.badgeAwardEvents().forEach { badgeAwardEvent ->
-                    val baseNote = LocalCache.notes[badgeAwardEvent]
-                    if (baseNote != null) {
-                        val badgeAwardState by baseNote.live().metadata.observeAsState()
-                        val baseBadgeDefinition = badgeAwardState?.note?.replyTo?.firstOrNull()
-
-                        if (baseBadgeDefinition != null) {
-                            BadgeThumb(baseBadgeDefinition, navController, 35.dp)
-                        }
-                    }
-                }
-            }
-        }
-    }
+    DisplayBadges(baseUser, navController)
 
     DisplayNip05ProfileStatus(user)
 
@@ -552,9 +576,58 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewMode
         }
     }
 
-    var zapExpanded by remember { mutableStateOf(false) }
+    val lud16 = remember(userState) { user.info?.lud16?.trim() ?: user.info?.lud06?.trim() }
+    val pubkeyHex = remember { baseUser.pubkeyHex }
+    DisplayLNAddress(lud16, pubkeyHex, account, scope, context)
 
-    val lud16 = user.info?.lud16?.trim() ?: user.info?.lud06?.trim()
+    val identities = user.info?.latestMetadata?.identityClaims()
+    if (!identities.isNullOrEmpty()) {
+        identities.forEach { identity: IdentityClaim ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    tint = Color.Unspecified,
+                    painter = painterResource(id = identity.toIcon()),
+                    contentDescription = stringResource(identity.toDescriptor()),
+                    modifier = Modifier.size(16.dp)
+                )
+
+                ClickableText(
+                    text = AnnotatedString(identity.identity),
+                    onClick = { runCatching { uri.openUri(identity.toProofUrl()) } },
+                    style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary),
+                    modifier = Modifier
+                        .padding(top = 1.dp, bottom = 1.dp, start = 5.dp)
+                        .weight(1f)
+                )
+            }
+        }
+    }
+
+    user.info?.about?.let {
+        Row(
+            modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)
+        ) {
+            TranslatableRichTextViewer(
+                content = it,
+                canPreview = false,
+                tags = null,
+                backgroundColor = MaterialTheme.colors.background,
+                accountViewModel = accountViewModel,
+                navController = navController
+            )
+        }
+    }
+}
+
+@Composable
+private fun DisplayLNAddress(
+    lud16: String?,
+    userHex: String,
+    account: Account,
+    scope: CoroutineScope,
+    context: Context
+) {
+    var zapExpanded by remember { mutableStateOf(false) }
 
     if (!lud16.isNullOrEmpty()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -576,10 +649,13 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewMode
         }
 
         if (zapExpanded) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 5.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(vertical = 5.dp)
+            ) {
                 InvoiceRequest(
                     lud16,
-                    baseUser.pubkeyHex,
+                    userHex,
                     account,
                     onSuccess = {
                         // pay directly
@@ -619,42 +695,32 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewMode
             }
         }
     }
+}
 
-    val identities = user.info?.latestMetadata?.identityClaims()
-    if (!identities.isNullOrEmpty()) {
-        identities.forEach { identity: IdentityClaim ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    tint = Color.Unspecified,
-                    painter = painterResource(id = identity.toIcon()),
-                    contentDescription = stringResource(identity.toDescriptor()),
-                    modifier = Modifier.size(16.dp)
-                )
+@Composable
+@OptIn(ExperimentalLayoutApi::class)
+private fun DisplayBadges(
+    baseUser: User,
+    navController: NavController
+) {
+    val userBadgeState by baseUser.live().badges.observeAsState()
+    val userBadge = remember(userBadgeState) { userBadgeState?.user } ?: return
 
-                ClickableText(
-                    text = AnnotatedString(identity.identity),
-                    onClick = { runCatching { uri.openUri(identity.toProofUrl()) } },
-                    style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary),
-                    modifier = Modifier
-                        .padding(top = 1.dp, bottom = 1.dp, start = 5.dp)
-                        .weight(1f)
-                )
+    userBadge.acceptedBadges?.let { note ->
+        (note.event as? BadgeProfilesEvent)?.let { event ->
+            FlowRow(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 5.dp)) {
+                event.badgeAwardEvents().forEach { badgeAwardEvent ->
+                    val baseNote = LocalCache.notes[badgeAwardEvent]
+                    if (baseNote != null) {
+                        val badgeAwardState by baseNote.live().metadata.observeAsState()
+                        val baseBadgeDefinition = badgeAwardState?.note?.replyTo?.firstOrNull()
+
+                        if (baseBadgeDefinition != null) {
+                            BadgeThumb(baseBadgeDefinition, navController, 35.dp)
+                        }
+                    }
+                }
             }
-        }
-    }
-
-    user.info?.about?.let {
-        Row(
-            modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)
-        ) {
-            TranslatableRichTextViewer(
-                content = it,
-                canPreview = false,
-                tags = null,
-                backgroundColor = MaterialTheme.colors.background,
-                accountViewModel = accountViewModel,
-                navController = navController
-            )
         }
     }
 }
@@ -727,9 +793,8 @@ fun BadgeThumb(
 @Composable
 private fun DrawBanner(baseUser: User) {
     val userState by baseUser.live().metadata.observeAsState()
-    val user = userState?.user ?: return
+    val banner = remember(userState) { userState?.user?.info?.banner }
 
-    val banner = user.info?.banner
     val clipboardManager = LocalClipboardManager.current
     var zoomImageDialogOpen by remember { mutableStateOf(false) }
 
@@ -767,61 +832,51 @@ private fun DrawBanner(baseUser: User) {
 
 @Composable
 fun TabNotesNewThreads(accountViewModel: AccountViewModel, navController: NavController) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    if (accountState != null) {
-        val feedViewModel: NostrUserProfileNewThreadsFeedViewModel = viewModel()
+    val feedViewModel: NostrUserProfileNewThreadsFeedViewModel = viewModel()
 
-        LaunchedEffect(Unit) {
-            feedViewModel.invalidateData()
-        }
+    LaunchedEffect(Unit) {
+        feedViewModel.invalidateData()
+    }
 
-        Column(Modifier.fillMaxHeight()) {
-            Column(
-                modifier = Modifier.padding(vertical = 0.dp)
-            ) {
-                FeedView(feedViewModel, accountViewModel, navController, null, enablePullRefresh = false)
-            }
+    Column(Modifier.fillMaxHeight()) {
+        Column(
+            modifier = Modifier.padding(vertical = 0.dp)
+        ) {
+            FeedView(feedViewModel, accountViewModel, navController, null, enablePullRefresh = false)
         }
     }
 }
 
 @Composable
 fun TabNotesConversations(accountViewModel: AccountViewModel, navController: NavController) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    if (accountState != null) {
-        val feedViewModel: NostrUserProfileConversationsFeedViewModel = viewModel()
+    val feedViewModel: NostrUserProfileConversationsFeedViewModel = viewModel()
 
-        LaunchedEffect(Unit) {
-            feedViewModel.invalidateData()
-        }
+    LaunchedEffect(Unit) {
+        feedViewModel.invalidateData()
+    }
 
-        Column(Modifier.fillMaxHeight()) {
-            Column(
-                modifier = Modifier.padding(vertical = 0.dp)
-            ) {
-                FeedView(feedViewModel, accountViewModel, navController, null, enablePullRefresh = false)
-            }
+    Column(Modifier.fillMaxHeight()) {
+        Column(
+            modifier = Modifier.padding(vertical = 0.dp)
+        ) {
+            FeedView(feedViewModel, accountViewModel, navController, null, enablePullRefresh = false)
         }
     }
 }
 
 @Composable
 fun TabBookmarks(baseUser: User, accountViewModel: AccountViewModel, navController: NavController) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val userState by baseUser.live().bookmarks.observeAsState()
-    if (accountState != null) {
-        val feedViewModel: NostrUserProfileBookmarksFeedViewModel = viewModel()
+    val feedViewModel: NostrUserProfileBookmarksFeedViewModel = viewModel()
 
-        LaunchedEffect(userState) {
-            feedViewModel.invalidateData()
-        }
+    LaunchedEffect(Unit) {
+        feedViewModel.invalidateData()
+    }
 
-        Column(Modifier.fillMaxHeight()) {
-            Column(
-                modifier = Modifier.padding(vertical = 0.dp)
-            ) {
-                FeedView(feedViewModel, accountViewModel, navController, null, enablePullRefresh = false)
-            }
+    Column(Modifier.fillMaxHeight()) {
+        Column(
+            modifier = Modifier.padding(vertical = 0.dp)
+        ) {
+            FeedView(feedViewModel, accountViewModel, navController, null, enablePullRefresh = false)
         }
     }
 }
@@ -933,41 +988,6 @@ fun TabRelays(user: User, accountViewModel: AccountViewModel) {
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
             RelayFeedView(feedViewModel, accountViewModel, enablePullRefresh = false)
-        }
-    }
-}
-
-@Composable
-private fun NPubCopyButton(
-    user: User
-) {
-    val clipboardManager = LocalClipboardManager.current
-    var popupExpanded by remember { mutableStateOf(false) }
-
-    Button(
-        modifier = Modifier
-            .padding(horizontal = 3.dp)
-            .width(50.dp),
-        onClick = { popupExpanded = true },
-        shape = RoundedCornerShape(20.dp),
-        colors = ButtonDefaults
-            .buttonColors(
-                backgroundColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-            )
-    ) {
-        Icon(
-            tint = Color.White,
-            imageVector = Icons.Default.Share,
-            contentDescription = stringResource(R.string.copies_the_public_key_to_the_clipboard_for_sharing)
-        )
-
-        DropdownMenu(
-            expanded = popupExpanded,
-            onDismissRequest = { popupExpanded = false }
-        ) {
-            DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(user.pubkeyNpub())); popupExpanded = false }) {
-                Text(stringResource(R.string.copy_public_key_npub_to_the_clipboard))
-            }
         }
     }
 }

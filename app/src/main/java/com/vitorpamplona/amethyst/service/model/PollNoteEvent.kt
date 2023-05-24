@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.service.model
 
+import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
@@ -11,6 +12,7 @@ const val VALUE_MINIMUM = "value_minimum"
 const val CONSENSUS_THRESHOLD = "consensus_threshold"
 const val CLOSED_AT = "closed_at"
 
+@Immutable
 class PollNoteEvent(
     id: HexKey,
     pubKey: HexKey,

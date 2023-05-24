@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.service.model
 
+import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.*
 import nostr.postr.Bech32
 import nostr.postr.Utils
@@ -11,6 +12,7 @@ import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
+@Immutable
 class LnZapRequestEvent(
     id: HexKey,
     pubKey: HexKey,
@@ -71,7 +73,7 @@ class LnZapRequestEvent(
                 listOf("p", originalNote.pubKey()),
                 listOf("relays") + relays
             )
-            if (originalNote is LongTextNoteEvent) {
+            if (originalNote is AddressableEvent) {
                 tags = tags + listOf(listOf("a", originalNote.address().toTag()))
             }
             if (pollOption != null && pollOption >= 0) {

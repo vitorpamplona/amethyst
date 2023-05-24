@@ -14,6 +14,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.*
 import com.vitorpamplona.amethyst.service.FileHeader
+import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.ui.components.isValidURL
@@ -188,6 +189,8 @@ open class NewPostViewModel : ViewModel() {
         userSuggestions = emptyList()
         userSuggestionAnchor = null
         userSuggestionsMainMessage = null
+
+        NostrSearchEventOrUserDataSource.clear()
     }
 
     open fun findUrlInMessage(): String? {
@@ -198,8 +201,8 @@ open class NewPostViewModel : ViewModel() {
         }
     }
 
-    open fun removeFromReplyList(it: User) {
-        mentions = mentions?.minus(it)
+    open fun removeFromReplyList(userToRemove: User) {
+        mentions = mentions?.filter { it != userToRemove }
     }
 
     open fun updateMessage(it: TextFieldValue) {
@@ -211,8 +214,10 @@ open class NewPostViewModel : ViewModel() {
             userSuggestionAnchor = it.selection
             userSuggestionsMainMessage = true
             if (lastWord.startsWith("@") && lastWord.length > 2) {
-                userSuggestions = LocalCache.findUsersStartingWith(lastWord.removePrefix("@"))
+                NostrSearchEventOrUserDataSource.search(lastWord.removePrefix("@"))
+                userSuggestions = LocalCache.findUsersStartingWith(lastWord.removePrefix("@")).sortedWith(compareBy({ account?.isFollowing(it) }, { it.toBestDisplayName() })).reversed()
             } else {
+                NostrSearchEventOrUserDataSource.clear()
                 userSuggestions = emptyList()
             }
         }
@@ -225,8 +230,10 @@ open class NewPostViewModel : ViewModel() {
             userSuggestionAnchor = it.selection
             userSuggestionsMainMessage = false
             if (lastWord.startsWith("@") && lastWord.length > 2) {
-                userSuggestions = LocalCache.findUsersStartingWith(lastWord.removePrefix("@"))
+                NostrSearchEventOrUserDataSource.search(lastWord.removePrefix("@"))
+                userSuggestions = LocalCache.findUsersStartingWith(lastWord.removePrefix("@")).sortedWith(compareBy({ account?.isFollowing(it) }, { it.toBestDisplayName() })).reversed()
             } else {
+                NostrSearchEventOrUserDataSource.clear()
                 userSuggestions = emptyList()
             }
         }

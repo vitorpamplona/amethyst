@@ -111,7 +111,7 @@ fun NewMediaView(uri: Uri, onClose: () -> Unit, postViewModel: NewMediaModel, ac
 
 fun isNIP94Server(selectedServer: ServersAvailable?): Boolean {
     return selectedServer == ServersAvailable.NOSTRIMG_NIP_94 ||
-        selectedServer == ServersAvailable.IMGUR_NIP_94 ||
+        // selectedServer == ServersAvailable.IMGUR_NIP_94 ||
         selectedServer == ServersAvailable.NOSTR_BUILD_NIP_94 ||
         selectedServer == ServersAvailable.NOSTRFILES_DEV_NIP_94
 }
@@ -121,7 +121,7 @@ fun ImageVideoPost(postViewModel: NewMediaModel, acc: Account) {
     val scope = rememberCoroutineScope()
 
     val fileServers = listOf(
-        Triple(ServersAvailable.IMGUR_NIP_94, stringResource(id = R.string.upload_server_imgur_nip94), stringResource(id = R.string.upload_server_imgur_nip94_explainer)),
+        // Triple(ServersAvailable.IMGUR_NIP_94, stringResource(id = R.string.upload_server_imgur_nip94), stringResource(id = R.string.upload_server_imgur_nip94_explainer)),
         Triple(ServersAvailable.NOSTRIMG_NIP_94, stringResource(id = R.string.upload_server_nostrimg_nip94), stringResource(id = R.string.upload_server_nostrimg_nip94_explainer)),
         Triple(ServersAvailable.NOSTR_BUILD_NIP_94, stringResource(id = R.string.upload_server_nostrbuild_nip94), stringResource(id = R.string.upload_server_nostrbuild_nip94_explainer)),
         Triple(ServersAvailable.NOSTRFILES_DEV_NIP_94, stringResource(id = R.string.upload_server_nostrfilesdev_nip94), stringResource(id = R.string.upload_server_nostrfilesdev_nip94_explainer)),

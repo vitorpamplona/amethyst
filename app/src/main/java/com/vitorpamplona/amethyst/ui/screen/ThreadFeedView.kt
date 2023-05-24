@@ -53,9 +53,12 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
 import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.HighlightEvent
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
+import com.vitorpamplona.amethyst.service.model.PeopleListEvent
+import com.vitorpamplona.amethyst.service.model.PinListEvent
 import com.vitorpamplona.amethyst.service.model.PollNoteEvent
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
@@ -349,7 +352,13 @@ fun NoteMaster(
                     )
             ) {
                 Column() {
-                    if (noteEvent is HighlightEvent) {
+                    if (noteEvent is PeopleListEvent) {
+                        DisplayPeopleList(noteState, MaterialTheme.colors.background, accountViewModel, navController)
+                    } else if (noteEvent is AudioTrackEvent) {
+                        AudioTrackHeader(noteEvent, note, account.userProfile(), navController)
+                    } else if (noteEvent is PinListEvent) {
+                        PinListHeader(noteState, MaterialTheme.colors.background, accountViewModel, navController)
+                    } else if (noteEvent is HighlightEvent) {
                         DisplayHighlight(
                             noteEvent.quote(),
                             noteEvent.author(),

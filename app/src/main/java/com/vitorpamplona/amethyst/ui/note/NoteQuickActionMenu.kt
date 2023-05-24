@@ -62,6 +62,9 @@ import androidx.core.graphics.ColorUtils
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
+import com.vitorpamplona.amethyst.service.model.FileHeaderEvent
+import com.vitorpamplona.amethyst.service.model.PeopleListEvent
 import com.vitorpamplona.amethyst.ui.components.SelectTextDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
@@ -81,11 +84,19 @@ val externalLinkForNote = { note: Note ->
     if (note is AddressableNote) {
         if (note.event?.getReward() != null) {
             "https://nostrbounties.com/b/${note.address().toNAddr()}"
+        } else if (note.event is PeopleListEvent) {
+            "https://listr.lol/a/${note.address()?.toNAddr()}"
+        } else if (note.event is AudioTrackEvent) {
+            "https://zapstr.live/?track=${note.address()?.toNAddr()}"
         } else {
-            "https://habla.news/a/${note.address().toNAddr()}"
+            "https://habla.news/a/${note.address()?.toNAddr()}"
         }
     } else {
-        "https://snort.social/e/${note.toNEvent()}"
+        if (note.event is FileHeaderEvent) {
+            "https://filestr.vercel.app/e/${note.toNEvent()}"
+        } else {
+            "https://snort.social/e/${note.toNEvent()}"
+        }
     }
 }
 
@@ -128,7 +139,7 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
 
     if (popupExpanded) {
         val isOwnNote = accountViewModel.isLoggedUser(note.author)
-        val isFollowingUser = !isOwnNote && accountViewModel.isFollowing(note.author!!)
+        val isFollowingUser = !isOwnNote && accountViewModel.isFollowing(note.author)
 
         Popup(onDismissRequest = onDismiss) {
             Card(
@@ -206,10 +217,11 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
 
                         VerticalDivider(primaryLight)
                         NoteQuickActionItem(
-                            icon = ImageVector.vectorResource(id = R.drawable.text_select_move_forward_character),
-                            label = stringResource(R.string.quick_action_select)
+                            icon = ImageVector.vectorResource(id = R.drawable.relays),
+                            label = stringResource(R.string.broadcast)
                         ) {
-                            showSelectTextDialog = true
+                            accountViewModel.broadcast(note)
+                            // showSelectTextDialog = true
                             onDismiss()
                         }
                         VerticalDivider(primaryLight)
@@ -354,9 +366,7 @@ private fun QuickActionAlertDialog(
         },
         buttons = {
             Row(
-                modifier = Modifier
-                    .padding(all = 8.dp)
-                    .fillMaxWidth(),
+                modifier = Modifier.padding(all = 8.dp).fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 TextButton(onClick = onClickDontShowAgain) {

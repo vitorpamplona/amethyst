@@ -1,5 +1,7 @@
 package com.vitorpamplona.amethyst.service.model
 
+import android.util.Log
+import androidx.compose.runtime.Immutable
 import com.google.gson.*
 import com.google.gson.annotations.SerializedName
 import com.vitorpamplona.amethyst.model.HexKey
@@ -13,6 +15,7 @@ import java.math.BigDecimal
 import java.security.MessageDigest
 import java.util.*
 
+@Immutable
 open class Event(
     val id: HexKey,
     @SerializedName("pubkey") val pubKey: HexKey,
@@ -110,11 +113,12 @@ open class Event(
     }
 
     override fun hasValidSignature(): Boolean {
-        if (!id.contentEquals(generateId())) {
-            return false
+        return try {
+            id.contentEquals(generateId()) && secp256k1.verifySchnorr(Hex.decode(sig), Hex.decode(id), Hex.decode(pubKey))
+        } catch (e: Exception) {
+            Log.e("Event", "Fail checking if event $id has a valid signature", e)
+            false
         }
-
-        return secp256k1.verifySchnorr(Hex.decode(sig), Hex.decode(id), Hex.decode(pubKey))
     }
 
     private fun generateId(): String {
@@ -218,6 +222,7 @@ open class Event(
         fun fromJson(json: JsonElement, lenient: Boolean = false): Event = gson.fromJson(json, Event::class.java).getRefinedEvent(lenient)
 
         fun Event.getRefinedEvent(lenient: Boolean = false): Event = when (kind) {
+            AudioTrackEvent.kind -> AudioTrackEvent(id, pubKey, createdAt, tags, content, sig)
             BadgeAwardEvent.kind -> BadgeAwardEvent(id, pubKey, createdAt, tags, content, sig)
             BadgeDefinitionEvent.kind -> BadgeDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
             BadgeProfilesEvent.kind -> BadgeProfilesEvent(id, pubKey, createdAt, tags, content, sig)
@@ -241,6 +246,7 @@ open class Event(
             LongTextNoteEvent.kind -> LongTextNoteEvent(id, pubKey, createdAt, tags, content, sig)
             MetadataEvent.kind -> MetadataEvent(id, pubKey, createdAt, tags, content, sig)
             PeopleListEvent.kind -> PeopleListEvent(id, pubKey, createdAt, tags, content, sig)
+            PinListEvent.kind -> PinListEvent(id, pubKey, createdAt, tags, content, sig)
             PollNoteEvent.kind -> PollNoteEvent(id, pubKey, createdAt, tags, content, sig)
             PrivateDmEvent.kind -> PrivateDmEvent(id, pubKey, createdAt, tags, content, sig)
             ReactionEvent.kind -> ReactionEvent(id, pubKey, createdAt, tags, content, sig)
@@ -279,4 +285,10 @@ open class Event(
             return Event(id.toHexKey(), pubKey, createdAt, kind, tags, content, sig)
         }
     }
+}
+
+@Immutable
+interface AddressableEvent {
+    fun dTag(): String
+    fun address(): ATag
 }

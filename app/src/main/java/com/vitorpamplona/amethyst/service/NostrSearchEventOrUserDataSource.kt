@@ -1,13 +1,13 @@
 package com.vitorpamplona.amethyst.service
 
-import com.vitorpamplona.amethyst.model.decodePublicKey
+import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.model.*
+import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
-import nostr.postr.bechToBytes
-import nostr.postr.toHex
+import fr.acinq.secp256k1.Hex
 
 object NostrSearchEventOrUserDataSource : NostrDataSource("SingleEventFeed") {
     private var searchString: String? = null
@@ -19,15 +19,8 @@ object NostrSearchEventOrUserDataSource : NostrDataSource("SingleEventFeed") {
         }
 
         val hexToWatch = try {
-            if (mySearchString.startsWith("npub") || mySearchString.startsWith("nsec")) {
-                decodePublicKey(mySearchString).toHex()
-            } else if (mySearchString.startsWith("note")) {
-                mySearchString.bechToBytes().toHex()
-            } else {
-                mySearchString
-            }
+            Nip19.uriToRoute(mySearchString)?.hex ?: Hex.decode(mySearchString).toHexKey()
         } catch (e: Exception) {
-            // Usually when people add an incomplete npub or note.
             null
         }
 
