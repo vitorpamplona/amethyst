@@ -10,10 +10,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
-import com.baha.url.preview.IUrlPreviewCallback
-import com.baha.url.preview.UrlInfoItem
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
+import com.vitorpamplona.amethyst.service.previews.IUrlPreviewCallback
+import com.vitorpamplona.amethyst.service.previews.UrlInfoItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 

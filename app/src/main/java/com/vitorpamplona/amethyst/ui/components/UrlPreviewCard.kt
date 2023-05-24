@@ -20,8 +20,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.baha.url.preview.UrlInfoItem
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.service.previews.UrlInfoItem
 import java.net.URL
 
 @Composable
