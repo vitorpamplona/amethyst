@@ -20,6 +20,7 @@ import coil.decode.SvgDecoder
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.VideoCache
+import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
@@ -60,6 +61,7 @@ class MainActivity : FragmentActivity() {
                 }
                 add(SvgDecoder.Factory())
             } // .logger(DebugLogger())
+                .okHttpClient { HttpClient.getHttpClient() }
                 .respectCacheHeaders(false)
                 .build()
         }
