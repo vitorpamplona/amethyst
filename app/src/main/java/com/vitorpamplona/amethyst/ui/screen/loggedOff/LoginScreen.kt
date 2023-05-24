@@ -290,26 +290,48 @@ fun LoginPage(
         }
 
         // The last child is glued to the bottom.
-        ClickableText(
-            text = AnnotatedString(stringResource(R.string.generate_a_new_key)),
-            modifier = Modifier
-                .padding(20.dp)
-                .fillMaxWidth(),
-            onClick = {
-                if (acceptedTerms.value) {
-                    accountViewModel.newKey(useProxy.value, proxyPort.value.toInt())
-                } else {
-                    termsAcceptanceIsRequired =
-                        context.getString(R.string.acceptance_of_terms_is_required)
-                }
-            },
-            style = TextStyle(
-                fontSize = 14.sp,
-                textDecoration = TextDecoration.Underline,
-                color = MaterialTheme.colors.primary,
-                textAlign = TextAlign.Center
+        Column {
+            ClickableText(
+                text = AnnotatedString(stringResource(R.string.login_with_delegated_keys)),
+                modifier = Modifier
+                    .padding(20.dp)
+                    .fillMaxWidth(),
+                onClick = {
+                    if (acceptedTerms.value) {
+                        accountViewModel.newKey(useProxy.value, proxyPort.value.toInt())
+                    } else {
+                        termsAcceptanceIsRequired =
+                            context.getString(R.string.acceptance_of_terms_is_required)
+                    }
+                },
+                style = TextStyle(
+                    fontSize = 14.sp,
+                    textDecoration = TextDecoration.Underline,
+                    color = MaterialTheme.colors.primary,
+                    textAlign = TextAlign.Center
+                )
             )
-        )
+            ClickableText(
+                text = AnnotatedString(stringResource(R.string.generate_a_new_key)),
+                modifier = Modifier
+                    .padding(20.dp)
+                    .fillMaxWidth(),
+                onClick = {
+                    if (acceptedTerms.value) {
+                        accountViewModel.newKey(useProxy.value, proxyPort.value.toInt())
+                    } else {
+                        termsAcceptanceIsRequired =
+                            context.getString(R.string.acceptance_of_terms_is_required)
+                    }
+                },
+                style = TextStyle(
+                    fontSize = 14.sp,
+                    textDecoration = TextDecoration.Underline,
+                    color = MaterialTheme.colors.primary,
+                    textAlign = TextAlign.Center
+                )
+            )
+        }
     }
 }
 
