@@ -2026,7 +2026,7 @@ fun UserPicture(
     baseUser: User,
     baseUserAccount: User,
     size: Dp,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = remember { Modifier },
     onClick: ((User) -> Unit)? = null,
     onLongClick: ((User) -> Unit)? = null
 ) {
