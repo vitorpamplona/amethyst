@@ -119,7 +119,9 @@ private fun FeedLoaded(
 
     if (scrollToTop) {
         LaunchedEffect(Unit) {
-            listState.scrollToItem(index = 0)
+            if (listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0) {
+                listState.scrollToItem(index = 0)
+            }
         }
     }
 
