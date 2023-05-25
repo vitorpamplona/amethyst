@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.SearchScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ThreadScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.VideoScreen
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -103,8 +104,14 @@ fun AppNavigation(
                 )
 
                 // Avoids running scroll to top when back button is pressed
+                // Changes this on a thread to avoid changing before it finishes the composition
                 if (scrollToTop) {
-                    it.arguments?.remove("scrollToTop")
+                    LaunchedEffect(key1 = Unit) {
+                        scope.launch {
+                            delay(1000)
+                            it.arguments?.remove("scrollToTop")
+                        }
+                    }
                 }
             })
         }
@@ -121,8 +128,14 @@ fun AppNavigation(
                 )
 
                 // Avoids running scroll to top when back button is pressed
+                // Changes this on a thread to avoid changing before it finishes the composition
                 if (scrollToTop) {
-                    it.arguments?.remove("scrollToTop")
+                    LaunchedEffect(key1 = Unit) {
+                        scope.launch {
+                            delay(1000)
+                            it.arguments?.remove("scrollToTop")
+                        }
+                    }
                 }
             })
         }
@@ -144,10 +157,20 @@ fun AppNavigation(
 
                 // Avoids running scroll to top when back button is pressed
                 if (scrollToTop) {
-                    it.arguments?.remove("scrollToTop")
+                    LaunchedEffect(key1 = Unit) {
+                        scope.launch {
+                            delay(1000)
+                            it.arguments?.remove("scrollToTop")
+                        }
+                    }
                 }
                 if (nip47 != null) {
-                    it.arguments?.remove("nip47")
+                    LaunchedEffect(key1 = Unit) {
+                        scope.launch {
+                            delay(1000)
+                            it.arguments?.remove("nip47")
+                        }
+                    }
                 }
             })
         }
@@ -165,8 +188,14 @@ fun AppNavigation(
                 )
 
                 // Avoids running scroll to top when back button is pressed
+                // Changes this on a thread to avoid changing before it finishes the composition
                 if (scrollToTop) {
-                    it.arguments?.remove("scrollToTop")
+                    LaunchedEffect(key1 = Unit) {
+                        scope.launch {
+                            delay(1000)
+                            it.arguments?.remove("scrollToTop")
+                        }
+                    }
                 }
             })
         }
