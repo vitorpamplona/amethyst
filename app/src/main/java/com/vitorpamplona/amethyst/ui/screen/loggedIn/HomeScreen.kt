@@ -59,6 +59,7 @@ fun HomeScreen(
     LaunchedEffect(accountViewModel, account.defaultHomeFollowList) {
         HomeNewThreadFeedFilter.account = account
         HomeConversationsFeedFilter.account = account
+        NostrHomeDataSource.invalidateFilters()
     }
 
     if (wantsToAddNip47 != null) {
@@ -71,6 +72,7 @@ fun HomeScreen(
             if (event == Lifecycle.Event.ON_RESUME) {
                 HomeNewThreadFeedFilter.account = account
                 HomeConversationsFeedFilter.account = account
+                NostrHomeDataSource.invalidateFilters()
             }
         }
 
@@ -84,7 +86,7 @@ fun HomeScreen(
         val scope = rememberCoroutineScope()
         LaunchedEffect(key1 = Unit) {
             scope.launch(Dispatchers.IO) {
-                NostrHomeDataSource.resetFilters()
+                NostrHomeDataSource.invalidateFilters()
                 homeFeedViewModel.invalidateData(true)
                 repliesFeedViewModel.invalidateData(true)
             }

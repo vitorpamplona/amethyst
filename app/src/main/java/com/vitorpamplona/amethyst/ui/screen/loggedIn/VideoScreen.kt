@@ -123,6 +123,7 @@ fun VideoScreen(
     LaunchedEffect(accountViewModel, accountState.value?.account?.defaultStoriesFollowList) {
         VideoFeedFilter.account = account
         NostrVideoDataSource.account = account
+        NostrVideoDataSource.resetFilters()
     }
 
     DisposableEffect(accountViewModel) {

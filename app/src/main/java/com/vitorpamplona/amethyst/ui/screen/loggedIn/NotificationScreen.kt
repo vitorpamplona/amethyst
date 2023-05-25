@@ -70,8 +70,8 @@ fun NotificationScreen(
         notifFeedViewModel.clear()
     }
 
-    LaunchedEffect(account.userProfile().pubkeyHex, account.defaultNotificationFollowList) {
-        NostrAccountDataSource.resetFilters()
+    LaunchedEffect(accountViewModel, account.defaultNotificationFollowList) {
+        NostrAccountDataSource.invalidateFilters()
         NotificationFeedFilter.account = account
     }
 
@@ -79,8 +79,8 @@ fun NotificationScreen(
     DisposableEffect(accountViewModel) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
+                NostrAccountDataSource.invalidateFilters()
                 NotificationFeedFilter.account = account
-                notifFeedViewModel.invalidateData(true)
             }
         }
 
