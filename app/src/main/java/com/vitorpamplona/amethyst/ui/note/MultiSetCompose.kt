@@ -19,7 +19,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -39,11 +38,9 @@ import androidx.compose.ui.unit.sp
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
@@ -55,7 +52,6 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.math.BigDecimal
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -66,7 +62,7 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
     val note = remember(noteState) { noteState?.note } ?: return
 
     val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = remember(accountState) { accountState?.account } ?: return
+    val loggedIn = remember(accountState) { accountState?.account?.userProfile() } ?: return
 
     var popupExpanded by remember { mutableStateOf(false) }
 
@@ -92,55 +88,48 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
         val primaryColor = MaterialTheme.colors.primary.copy(0.12f)
         val defaultBackgroundColor = MaterialTheme.colors.background
 
-        val backgroundColor by remember(isNew) {
-            derivedStateOf {
-                if (isNew) {
-                    primaryColor.compositeOver(defaultBackgroundColor)
-                } else {
-                    defaultBackgroundColor
-                }
-            }
+        val backgroundColor = if (isNew) {
+            primaryColor.compositeOver(defaultBackgroundColor)
+        } else {
+            defaultBackgroundColor
         }
 
-        val columnModifier by remember(isNew, backgroundColor) {
-            derivedStateOf {
-                Modifier
-                    .background(backgroundColor)
-                    .padding(
-                        start = 12.dp,
-                        end = 12.dp,
-                        top = 10.dp
-                    )
-                    .combinedClickable(
-                        onClick = {
-                            scope.launch {
-                                routeFor(
-                                    baseNote,
-                                    account.userProfile()
-                                )?.let { nav(it) }
-                            }
-                        },
-                        onLongClick = { popupExpanded = true }
-                    )
-                    .fillMaxWidth()
-            }
-        }
+        val columnModifier = Modifier
+            .background(backgroundColor)
+            .padding(
+                start = 12.dp,
+                end = 12.dp,
+                top = 10.dp
+            )
+            .combinedClickable(
+                onClick = {
+                    scope.launch {
+                        routeFor(baseNote, loggedIn)?.let { nav(it) }
+                    }
+                },
+                onLongClick = { popupExpanded = true }
+            )
+            .fillMaxWidth()
 
-        val zapEvents = remember { multiSetCard.zapEvents }
-        val boostEvents = remember { multiSetCard.boostEvents }
-        val likeEvents = remember { multiSetCard.likeEvents }
+        val zapEvents by remember { derivedStateOf { multiSetCard.zapEvents } }
+        val boostEvents by remember { derivedStateOf { multiSetCard.boostEvents } }
+        val likeEvents by remember { derivedStateOf { multiSetCard.likeEvents } }
+
+        val hasZapEvents by remember { derivedStateOf { multiSetCard.zapEvents.isNotEmpty() } }
+        val hasBoostEvents by remember { derivedStateOf { multiSetCard.boostEvents.isNotEmpty() } }
+        val hasLikeEvents by remember { derivedStateOf { multiSetCard.likeEvents.isNotEmpty() } }
 
         Column(modifier = columnModifier) {
-            if (zapEvents.isNotEmpty()) {
-                RenderZapGallery(zapEvents, backgroundColor, nav, account, accountViewModel)
+            if (hasZapEvents) {
+                RenderZapGallery(zapEvents, backgroundColor, nav, accountViewModel)
             }
 
-            if (boostEvents.isNotEmpty()) {
-                RenderBoostGallery(boostEvents, backgroundColor, nav, account, accountViewModel)
+            if (hasBoostEvents) {
+                RenderBoostGallery(boostEvents, backgroundColor, nav, accountViewModel)
             }
 
-            if (likeEvents.isNotEmpty()) {
-                RenderLikeGallery(likeEvents, backgroundColor, nav, account, accountViewModel)
+            if (hasLikeEvents) {
+                RenderLikeGallery(likeEvents, backgroundColor, nav, accountViewModel)
             }
 
             Row(Modifier.fillMaxWidth()) {
@@ -167,7 +156,6 @@ private fun RenderLikeGallery(
     likeEvents: ImmutableList<Note>,
     backgroundColor: Color,
     nav: (String) -> Unit,
-    account: Account,
     accountViewModel: AccountViewModel
 ) {
     Row(Modifier.fillMaxWidth()) {
@@ -190,7 +178,7 @@ private fun RenderLikeGallery(
             )
         }
 
-        AuthorGallery(likeEvents, backgroundColor, nav, account, accountViewModel)
+        AuthorGallery(likeEvents, backgroundColor, nav, accountViewModel)
     }
 }
 
@@ -199,7 +187,6 @@ private fun RenderZapGallery(
     zapEvents: ImmutableMap<Note, Note>,
     backgroundColor: Color,
     nav: (String) -> Unit,
-    account: Account,
     accountViewModel: AccountViewModel
 ) {
     Row(Modifier.fillMaxWidth()) {
@@ -222,7 +209,7 @@ private fun RenderZapGallery(
             )
         }
 
-        AuthorGalleryZaps(zapEvents, backgroundColor, nav, account, accountViewModel)
+        AuthorGalleryZaps(zapEvents, backgroundColor, nav, accountViewModel)
     }
 }
 
@@ -231,7 +218,6 @@ private fun RenderBoostGallery(
     boostEvents: ImmutableList<Note>,
     backgroundColor: Color,
     nav: (String) -> Unit,
-    account: Account,
     accountViewModel: AccountViewModel
 ) {
     Row(
@@ -258,7 +244,7 @@ private fun RenderBoostGallery(
             )
         }
 
-        AuthorGallery(boostEvents, backgroundColor, nav, account, accountViewModel)
+        AuthorGallery(boostEvents, backgroundColor, nav, accountViewModel)
     }
 }
 
@@ -267,15 +253,14 @@ fun AuthorGalleryZaps(
     authorNotes: ImmutableMap<Note, Note>,
     backgroundColor: Color,
     nav: (String) -> Unit,
-    account: Account,
     accountViewModel: AccountViewModel
 ) {
-    val accountState = account.userProfile().live().follows.observeAsState()
-
     Column(modifier = Modifier.padding(start = 10.dp)) {
         FlowRow() {
             authorNotes.forEach {
-                AuthorPictureAndComment(it.key, it.value, backgroundColor, nav, accountState, accountViewModel)
+                Box() {
+                    AuthorPictureAndComment(it.key, it.value, backgroundColor, nav, accountViewModel)
+                }
             }
         }
     }
@@ -287,55 +272,45 @@ private fun AuthorPictureAndComment(
     zapEvent: Note?,
     backgroundColor: Color,
     nav: (String) -> Unit,
-    accountUser: State<UserState?>,
     accountViewModel: AccountViewModel
 ) {
-    val author = zapRequest.author ?: return
-
-    var content by remember { mutableStateOf<Triple<User, String?, BigDecimal?>>(Triple(author, null, null)) }
+    var content by remember { mutableStateOf<Triple<User?, String?, String?>>(Triple(zapRequest.author, null, null)) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(key1 = zapRequest.idHex, key2 = zapEvent?.idHex) {
-        scope.launch(Dispatchers.IO) {
+        scope.launch(Dispatchers.Default) {
             (zapRequest.event as? LnZapRequestEvent)?.let {
                 val decryptedContent = accountViewModel.decryptZap(zapRequest)
                 val amount = (zapEvent?.event as? LnZapEvent)?.amount
                 if (decryptedContent != null) {
                     val newAuthor = LocalCache.getOrCreateUser(decryptedContent.pubKey)
-                    content = Triple(newAuthor, decryptedContent.content.ifBlank { null }, amount)
+                    content = Triple(newAuthor, decryptedContent.content.ifBlank { null }, showAmountAxis(amount))
                 } else {
                     if (!zapRequest.event?.content().isNullOrBlank() || amount != null) {
-                        content = Triple(author, zapRequest.event?.content()?.ifBlank { null }, amount)
+                        content = Triple(zapRequest.author, zapRequest.event?.content()?.ifBlank { null }, showAmountAxis(amount))
                     }
                 }
             }
         }
     }
 
-    val modifier = remember(content.second) {
-        if (!content.second.isNullOrBlank()) {
-            Modifier
-                .fillMaxWidth()
-                .clickable {
-                    nav("User/${author.pubkeyHex}")
-                }
-        } else {
-            Modifier.clickable {
-                nav("User/${author.pubkeyHex}")
+    content.first?.let {
+        val route by remember {
+            derivedStateOf {
+                "User/${it.pubkeyHex}"
             }
         }
-    }
 
-    AuthorPictureAndComment(
-        author = content.first,
-        comment = content.second,
-        amount = showAmountAxis(content.third),
-        backgroundColor = backgroundColor,
-        nav = nav,
-        accountUser = accountUser,
-        accountViewModel = accountViewModel,
-        modifier = modifier
-    )
+        AuthorPictureAndComment(
+            author = it,
+            comment = content.second,
+            amount = content.third,
+            route = route,
+            backgroundColor = backgroundColor,
+            nav = nav,
+            accountViewModel = accountViewModel
+        )
+    }
 }
 
 @Composable
@@ -343,12 +318,27 @@ private fun AuthorPictureAndComment(
     author: User,
     comment: String?,
     amount: String?,
+    route: String,
     backgroundColor: Color,
     nav: (String) -> Unit,
-    accountUser: State<UserState?>,
-    accountViewModel: AccountViewModel,
-    modifier: Modifier
+    accountViewModel: AccountViewModel
 ) {
+    val authorPictureModifier = remember { Modifier }
+
+    val modifier = remember(comment) {
+        if (comment != null) {
+            Modifier
+                .fillMaxWidth()
+                .clickable {
+                    nav(route)
+                }
+        } else {
+            Modifier.clickable {
+                nav(route)
+            }
+        }
+    }
+
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically
@@ -356,8 +346,9 @@ private fun AuthorPictureAndComment(
         Box(modifier = remember { Modifier.size(35.dp) }, contentAlignment = Alignment.BottomCenter) {
             FastNoteAuthorPicture(
                 author = author,
-                userAccount = accountUser,
-                size = 35.dp
+                size = 35.dp,
+                accountViewModel = accountViewModel,
+                pictureModifier = authorPictureModifier
             )
 
             amount?.let {
@@ -397,22 +388,13 @@ fun AuthorGallery(
     authorNotes: ImmutableList<Note>,
     backgroundColor: Color,
     nav: (String) -> Unit,
-    account: Account,
     accountViewModel: AccountViewModel
 ) {
-    val accountState = account.userProfile().live().follows.observeAsState()
-
     Column(modifier = Modifier.padding(start = 10.dp)) {
         FlowRow() {
             authorNotes.forEach { note ->
-                note.author?.let { user ->
-                    val modifier = remember {
-                        Modifier.clickable {
-                            nav("User/${user.pubkeyHex}")
-                        }
-                    }
-
-                    AuthorPictureAndComment(user, null, null, backgroundColor, nav, accountState, accountViewModel, modifier)
+                Box(Modifier.size(35.dp)) {
+                    NotePictureAndComment(note, backgroundColor, nav, accountViewModel)
                 }
             }
         }
@@ -420,11 +402,33 @@ fun AuthorGallery(
 }
 
 @Composable
+private fun NotePictureAndComment(
+    baseNote: Note,
+    backgroundColor: Color,
+    nav: (String) -> Unit,
+    accountViewModel: AccountViewModel
+) {
+    val author by remember(baseNote) {
+        derivedStateOf {
+            baseNote.author
+        }
+    }
+
+    val route by remember(baseNote) {
+        derivedStateOf {
+            "User/${baseNote.author?.pubkeyHex}"
+        }
+    }
+
+    author?.let { AuthorPictureAndComment(it, null, null, route, backgroundColor, nav, accountViewModel) }
+}
+
+@Composable
 fun FastNoteAuthorPicture(
     author: User,
-    userAccount: State<UserState?>,
     size: Dp,
-    pictureModifier: Modifier = Modifier
+    pictureModifier: Modifier = Modifier,
+    accountViewModel: AccountViewModel
 ) {
     val userState by author.live().metadata.observeAsState()
     val profilePicture = remember(userState) {
@@ -435,8 +439,15 @@ fun FastNoteAuthorPicture(
         author.pubkeyHex
     }
 
-    val showFollowingMark = remember(userAccount.value) {
-        userAccount.value?.user?.isFollowingCached(author) == true || (author === userAccount.value?.user)
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val loggedInLiveFollows = remember(accountState) { accountState?.account?.userProfile()?.live()?.follows } ?: return
+
+    val accountFollowsState by loggedInLiveFollows.observeAsState()
+
+    val showFollowingMark by remember(accountFollowsState) {
+        derivedStateOf {
+            accountFollowsState?.user?.isFollowingCached(author) == true || (author === accountFollowsState?.user)
+        }
     }
 
     UserPicture(

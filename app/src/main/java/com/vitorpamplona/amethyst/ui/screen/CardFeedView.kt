@@ -5,7 +5,12 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.ExperimentalMaterialApi
@@ -48,9 +53,14 @@ fun CardFeedView(
     val refresh = { refreshing = true; viewModel.invalidateData(); refreshing = false }
     val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = refresh)
 
-    Box(Modifier.pullRefresh(pullRefreshState)) {
-        Column() {
-            Crossfade(targetState = feedState, animationSpec = tween(durationMillis = 100)) { state ->
+    Box(Modifier.fillMaxSize().pullRefresh(pullRefreshState)) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Crossfade(
+                modifier = Modifier.fillMaxSize(),
+                targetState = feedState,
+                animationSpec = tween(durationMillis = 100)
+            ) { state ->
+
                 when (state) {
                     is CardFeedState.Empty -> {
                         FeedEmpty {
@@ -110,68 +120,91 @@ private fun FeedLoaded(
         }
     }
 
+    LazyNotificationList(listState, state, routeForLastRead, accountViewModel, nav)
+}
+
+@Composable
+private fun LazyNotificationList(
+    listState: LazyListState,
+    state: CardFeedState.Loaded,
+    routeForLastRead: String,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
     LazyColumn(
-        contentPadding = PaddingValues(
-            top = 10.dp,
-            bottom = 10.dp
-        ),
+        modifier = remember { Modifier.fillMaxSize() },
+        contentPadding = remember {
+            PaddingValues(
+                top = 10.dp,
+                bottom = 10.dp
+            )
+        },
         state = listState
     ) {
         itemsIndexed(state.feed.value, key = { _, item -> item.id() }) { _, item ->
-            when (item) {
-                is NoteCard -> NoteCompose(
-                    item.note,
-                    isBoostedNote = false,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                    routeForLastRead = routeForLastRead
-                )
-                is ZapSetCard -> ZapSetCompose(
-                    item,
-                    isInnerNote = false,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                    routeForLastRead = routeForLastRead
-                )
-                is ZapUserSetCard -> ZapUserSetCompose(
-                    item,
-                    isInnerNote = false,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                    routeForLastRead = routeForLastRead
-                )
-                is LikeSetCard -> LikeSetCompose(
-                    item,
-                    isInnerNote = false,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                    routeForLastRead = routeForLastRead
-                )
-                is BoostSetCard -> BoostSetCompose(
-                    item,
-                    isInnerNote = false,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                    routeForLastRead = routeForLastRead
-                )
-                is MultiSetCard -> MultiSetCompose(
-                    item,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                    routeForLastRead = routeForLastRead
-                )
-                is BadgeCard -> BadgeCompose(
-                    item,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                    routeForLastRead = routeForLastRead
-                )
-                is MessageSetCard -> MessageSetCompose(
-                    messageSetCard = item,
-                    routeForLastRead = routeForLastRead,
-                    accountViewModel = accountViewModel,
-                    nav = nav
-                )
+            Row(Modifier.fillMaxWidth().defaultMinSize(minHeight = 100.dp)) {
+                when (item) {
+                    is NoteCard -> NoteCompose(
+                        item.note,
+                        isBoostedNote = false,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                        routeForLastRead = routeForLastRead
+                    )
+
+                    is ZapSetCard -> ZapSetCompose(
+                        item,
+                        isInnerNote = false,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                        routeForLastRead = routeForLastRead
+                    )
+
+                    is ZapUserSetCard -> ZapUserSetCompose(
+                        item,
+                        isInnerNote = false,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                        routeForLastRead = routeForLastRead
+                    )
+
+                    is LikeSetCard -> LikeSetCompose(
+                        item,
+                        isInnerNote = false,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                        routeForLastRead = routeForLastRead
+                    )
+
+                    is BoostSetCard -> BoostSetCompose(
+                        item,
+                        isInnerNote = false,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                        routeForLastRead = routeForLastRead
+                    )
+
+                    is MultiSetCard -> MultiSetCompose(
+                        item,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                        routeForLastRead = routeForLastRead
+                    )
+
+                    is BadgeCard -> BadgeCompose(
+                        item,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                        routeForLastRead = routeForLastRead
+                    )
+
+                    is MessageSetCard -> MessageSetCompose(
+                        messageSetCard = item,
+                        routeForLastRead = routeForLastRead,
+                        accountViewModel = accountViewModel,
+                        nav = nav
+                    )
+                }
             }
         }
     }

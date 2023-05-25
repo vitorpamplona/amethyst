@@ -13,6 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -51,6 +52,8 @@ import com.vitorpamplona.amethyst.ui.screen.CardFeedView
 import com.vitorpamplona.amethyst.ui.screen.NotificationViewModel
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.math.RoundingMode
 import kotlin.math.roundToInt
@@ -64,10 +67,16 @@ fun NotificationScreen(
     scrollToTop: Boolean = false
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
+    val account = remember(accountState) { accountState?.account } ?: return
 
     if (scrollToTop) {
-        notifFeedViewModel.clear()
+        val scope = rememberCoroutineScope()
+        LaunchedEffect(key1 = Unit) {
+            scope.launch(Dispatchers.IO) {
+                notifFeedViewModel.clear()
+                notifFeedViewModel.invalidateData(true)
+            }
+        }
     }
 
     LaunchedEffect(accountViewModel, account.defaultNotificationFollowList) {
@@ -94,7 +103,9 @@ fun NotificationScreen(
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            SummaryBar(userReactionsStatsModel, accountViewModel, nav)
+            SummaryBar(
+                model = userReactionsStatsModel
+            )
             CardFeedView(
                 viewModel = notifFeedViewModel,
                 accountViewModel = accountViewModel,
@@ -108,12 +119,12 @@ fun NotificationScreen(
 }
 
 @Composable
-fun SummaryBar(model: UserReactionsViewModel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun SummaryBar(model: UserReactionsViewModel) {
     var showChart by remember {
         mutableStateOf(false)
     }
 
-    UserReactionsRow(model, accountViewModel, nav) {
+    UserReactionsRow(model) {
         showChart = !showChart
     }
 
@@ -153,8 +164,8 @@ fun SummaryBar(model: UserReactionsViewModel, accountViewModel: AccountViewModel
             targetVerticalAxisPosition = AxisPosition.Vertical.End
         )
 
-    model.chartModel?.let {
-        if (showChart) {
+    if (showChart) {
+        model.chartModel?.let {
             Row(
                 modifier = Modifier
                     .padding(vertical = 10.dp, horizontal = 20.dp)
