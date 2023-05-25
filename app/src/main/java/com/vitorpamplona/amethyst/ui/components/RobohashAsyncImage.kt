@@ -34,7 +34,9 @@ fun RobohashAsyncImage(
 ) {
     val context = LocalContext.current
     val size = with(LocalDensity.current) {
-        robotSize.roundToPx()
+        remember {
+            robotSize.roundToPx()
+        }
     }
 
     val imageRequest = remember(robotSize, robot) {
