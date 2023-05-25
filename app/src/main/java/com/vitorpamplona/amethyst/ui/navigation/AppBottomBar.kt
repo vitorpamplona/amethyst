@@ -123,7 +123,6 @@ private fun RowScope.HasNewItemsIcon(
     LaunchedEffect(key1 = notifState, key2 = accountState) {
         scope.launch(Dispatchers.IO) {
             val newHasNewItems = route.hasNewItems(account, notif, emptySet())
-            println("Notification Change ${route.route} $hasNewItems -> $newHasNewItems")
             if (newHasNewItems != hasNewItems) {
                 hasNewItems = newHasNewItems
             }
@@ -134,7 +133,6 @@ private fun RowScope.HasNewItemsIcon(
         scope.launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect {
                 val newHasNewItems = route.hasNewItems(account, notif, it)
-                println("Notification From Base ${route.route} $hasNewItems -> $newHasNewItems")
                 if (newHasNewItems != hasNewItems) {
                     hasNewItems = newHasNewItems
                 }
