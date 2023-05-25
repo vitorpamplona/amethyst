@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -58,9 +59,6 @@ fun HomeScreen(
     LaunchedEffect(accountViewModel, account.defaultHomeFollowList) {
         HomeNewThreadFeedFilter.account = account
         HomeConversationsFeedFilter.account = account
-        NostrHomeDataSource.resetFilters()
-        homeFeedViewModel.invalidateData()
-        repliesFeedViewModel.invalidateData()
     }
 
     if (wantsToAddNip47 != null) {
@@ -73,15 +71,23 @@ fun HomeScreen(
             if (event == Lifecycle.Event.ON_RESUME) {
                 HomeNewThreadFeedFilter.account = account
                 HomeConversationsFeedFilter.account = account
-                NostrHomeDataSource.resetFilters()
-                homeFeedViewModel.invalidateData()
-                repliesFeedViewModel.invalidateData()
             }
         }
 
         lifeCycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifeCycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    if (scrollToTop) {
+        val scope = rememberCoroutineScope()
+        LaunchedEffect(key1 = Unit) {
+            scope.launch(Dispatchers.IO) {
+                NostrHomeDataSource.resetFilters()
+                homeFeedViewModel.invalidateData(true)
+                repliesFeedViewModel.invalidateData(true)
+            }
         }
     }
 

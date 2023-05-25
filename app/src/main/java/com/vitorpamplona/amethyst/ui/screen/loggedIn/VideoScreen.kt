@@ -91,6 +91,7 @@ import com.vitorpamplona.amethyst.ui.screen.LoadingFeed
 import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.screen.rememberForeverPagerState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -109,11 +110,19 @@ fun VideoScreen(
     NostrVideoDataSource.account = account
     VideoFeedFilter.account = account
 
+    if (scrollToTop) {
+        val scope = rememberCoroutineScope()
+        LaunchedEffect(key1 = Unit) {
+            scope.launch(Dispatchers.IO) {
+                NostrVideoDataSource.resetFilters()
+                videoFeedView.invalidateData()
+            }
+        }
+    }
+
     LaunchedEffect(accountViewModel, accountState.value?.account?.defaultStoriesFollowList) {
         VideoFeedFilter.account = account
         NostrVideoDataSource.account = account
-        NostrVideoDataSource.resetFilters()
-        videoFeedView.invalidateData()
     }
 
     DisposableEffect(accountViewModel) {
@@ -123,7 +132,6 @@ fun VideoScreen(
                 VideoFeedFilter.account = account
                 NostrVideoDataSource.account = account
                 NostrVideoDataSource.start()
-                videoFeedView.invalidateData()
             }
             if (event == Lifecycle.Event.ON_PAUSE) {
                 println("Video Stop")
