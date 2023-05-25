@@ -235,7 +235,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
     }
 
     @OptIn(ExperimentalTime::class)
-    private val bundler = BundledUpdate(250, Dispatchers.IO) {
+    private val bundler = BundledUpdate(1000, Dispatchers.IO) {
         // adds the time to perform the refresh into this delay
         // holding off new updates in case of heavy refresh routines.
         val (value, elapsed) = measureTimedValue {
@@ -243,7 +243,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
         }
         Log.d("Time", "${this.javaClass.simpleName} Card update $elapsed")
     }
-    private val bundlerInsert = BundledInsert<Set<Note>>(250, Dispatchers.IO)
+    private val bundlerInsert = BundledInsert<Set<Note>>(1000, Dispatchers.IO)
 
     fun invalidateData(ignoreIfDoing: Boolean = false) {
         bundler.invalidate(ignoreIfDoing)
