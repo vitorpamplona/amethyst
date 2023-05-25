@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
@@ -41,7 +42,6 @@ import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import kotlinx.coroutines.Dispatchers
@@ -54,7 +54,10 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 @Composable
-fun UserReactionsRow(model: UserReactionsViewModel, accountViewModel: AccountViewModel, nav: (String) -> Unit, onClick: () -> Unit) {
+fun UserReactionsRow(
+    model: UserReactionsViewModel,
+    onClick: () -> Unit
+) {
     Row(
         verticalAlignment = CenterVertically,
         modifier = Modifier
@@ -102,12 +105,11 @@ class UserReactionsViewModel : ViewModel() {
     var zaps by mutableStateOf<Map<String, BigDecimal>>(emptyMap())
     var replies by mutableStateOf<Map<String, Int>>(emptyMap())
 
-    var takenIntoAccount = setOf<HexKey>()
-
-    val sdf = DateTimeFormatter.ofPattern("yyyy-MM-dd") // SimpleDateFormat()
-
     var chartModel by mutableStateOf<ComposedChartEntryModel<ChartEntryModel>?>(null)
     var axisLabels by mutableStateOf<List<String>>(emptyList())
+
+    private var takenIntoAccount = setOf<HexKey>()
+    private val sdf = DateTimeFormatter.ofPattern("yyyy-MM-dd") // SimpleDateFormat()
 
     fun load(baseUser: User) {
         user = baseUser
@@ -277,6 +279,8 @@ class UserReactionsViewModel : ViewModel() {
 fun UserReplyReaction(
     replyCount: Int?
 ) {
+    val showCounts = remember { showCount(replyCount) }
+
     Icon(
         painter = painterResource(R.drawable.ic_comment),
         null,
@@ -287,7 +291,7 @@ fun UserReplyReaction(
     Spacer(modifier = Modifier.width(10.dp))
 
     Text(
-        showCount(replyCount),
+        showCounts,
         fontWeight = FontWeight.Bold,
         fontSize = 18.sp
     )
@@ -297,6 +301,8 @@ fun UserReplyReaction(
 fun UserBoostReaction(
     boostCount: Int?
 ) {
+    val showCounts = remember { showCount(boostCount) }
+
     Icon(
         painter = painterResource(R.drawable.ic_retweeted),
         null,
@@ -307,7 +313,7 @@ fun UserBoostReaction(
     Spacer(modifier = Modifier.width(10.dp))
 
     Text(
-        showCount(boostCount),
+        showCounts,
         fontWeight = FontWeight.Bold,
         fontSize = 18.sp
     )
@@ -317,6 +323,8 @@ fun UserBoostReaction(
 fun UserLikeReaction(
     likeCount: Int?
 ) {
+    val showCounts = remember { showCount(likeCount) }
+
     Icon(
         painter = painterResource(R.drawable.ic_liked),
         null,
@@ -327,7 +335,7 @@ fun UserLikeReaction(
     Spacer(modifier = Modifier.width(10.dp))
 
     Text(
-        showCount(likeCount),
+        showCounts,
         fontWeight = FontWeight.Bold,
         fontSize = 18.sp
     )
@@ -337,6 +345,8 @@ fun UserLikeReaction(
 fun UserZapReaction(
     amount: BigDecimal?
 ) {
+    val showAmounts = remember { showAmountAxis(amount) }
+
     Icon(
         imageVector = Icons.Default.Bolt,
         contentDescription = stringResource(R.string.zaps),
@@ -347,7 +357,7 @@ fun UserZapReaction(
     Spacer(modifier = Modifier.width(8.dp))
 
     Text(
-        showAmountAxis(amount),
+        showAmounts,
         fontWeight = FontWeight.Bold,
         fontSize = 18.sp
     )
