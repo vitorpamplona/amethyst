@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -92,6 +93,7 @@ fun UserReactionsRow(model: UserReactionsViewModel, accountViewModel: AccountVie
     }
 }
 
+@Stable
 class UserReactionsViewModel : ViewModel() {
     var user: User? = null
 

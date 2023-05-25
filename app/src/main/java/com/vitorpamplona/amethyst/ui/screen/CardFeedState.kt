@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import kotlinx.collections.immutable.ImmutableList
@@ -92,9 +93,17 @@ class MessageSetCard(val note: Note) : Card() {
     override fun id() = note.idHex
 }
 
+@Immutable
 sealed class CardFeedState {
+    @Immutable
     object Loading : CardFeedState()
+
+    @Stable
     class Loaded(val feed: MutableState<ImmutableList<Card>>) : CardFeedState()
+
+    @Immutable
     object Empty : CardFeedState()
+
+    @Immutable
     class FeedError(val errorMessage: String) : CardFeedState()
 }
