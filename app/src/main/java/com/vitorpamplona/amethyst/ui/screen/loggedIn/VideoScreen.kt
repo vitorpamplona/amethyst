@@ -7,7 +7,6 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,12 +46,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -73,7 +68,6 @@ import com.vitorpamplona.amethyst.ui.actions.NewMediaModel
 import com.vitorpamplona.amethyst.ui.actions.NewMediaView
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
-import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.dal.VideoFeedFilter
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.FileHeaderDisplay
@@ -82,6 +76,7 @@ import com.vitorpamplona.amethyst.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteDropDownMenu
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.RenderRelay
 import com.vitorpamplona.amethyst.ui.note.ViewCountReaction
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.screen.FeedEmpty
@@ -317,35 +312,13 @@ private fun RenderVideoOrPictureNote(
 @Composable
 private fun RelayBadges(baseNote: Note) {
     val noteRelaysState by baseNote.live().relays.observeAsState()
-    val noteRelays = noteRelaysState?.note?.relays ?: emptySet()
-
-    var expanded by remember { mutableStateOf(false) }
-
-    val relaysToDisplay = noteRelays
-
-    val uri = LocalUriHandler.current
+    val noteRelays = remember(noteRelaysState) {
+        noteRelaysState?.note?.relays ?: emptySet()
+    }
 
     FlowRow() {
-        relaysToDisplay.forEach {
-            val url = it.removePrefix("wss://").removePrefix("ws://")
-            Box(
-                Modifier
-                    .size(15.dp)
-                    .padding(1.dp)
-            ) {
-                RobohashFallbackAsyncImage(
-                    robot = "https://$url/favicon.ico",
-                    robotSize = 15.dp,
-                    model = "https://$url/favicon.ico",
-                    contentDescription = stringResource(id = R.string.relay_icon),
-                    colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }),
-                    modifier = Modifier
-                        .fillMaxSize(1f)
-                        .clip(shape = CircleShape)
-                        .background(MaterialTheme.colors.background)
-                        .clickable(onClick = { uri.openUri("https://$url") })
-                )
-            }
+        noteRelays.forEach { dirtyUrl ->
+            RenderRelay(dirtyUrl)
         }
     }
 }

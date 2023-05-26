@@ -37,8 +37,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.onSizeChanged
@@ -66,6 +64,7 @@ import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -538,7 +537,7 @@ private fun RelayBadges(baseNote: Note) {
 }
 
 @Composable
-private fun RenderRelay(dirtyUrl: String) {
+fun RenderRelay(dirtyUrl: String) {
     val uri = LocalUriHandler.current
     val website = remember {
         val cleanUrl = dirtyUrl.removePrefix("wss://").removePrefix("ws://")
@@ -556,10 +555,6 @@ private fun RenderRelay(dirtyUrl: String) {
             .clickable(onClick = { uri.openUri(website) })
     }
 
-    val colorFilter = remember {
-        ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0.5f) })
-    }
-
     val iconModifier = remember {
         Modifier
             .size(15.dp)
@@ -574,7 +569,7 @@ private fun RenderRelay(dirtyUrl: String) {
             robotSize = 15.dp,
             model = iconUrl,
             contentDescription = stringResource(id = R.string.relay_icon),
-            colorFilter = colorFilter,
+            colorFilter = RelayIconFilter,
             modifier = iconModifier.background(MaterialTheme.colors.background)
         )
     }

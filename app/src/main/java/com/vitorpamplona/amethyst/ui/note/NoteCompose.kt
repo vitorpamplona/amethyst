@@ -57,8 +57,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
@@ -131,6 +129,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Following
+import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -1936,9 +1935,6 @@ private fun RelayIconCompose(url: String) {
             .clip(shape = CircleShape)
             .clickable(onClick = { uri.openUri("https://$url") })
     }
-    val colorFilter = remember {
-        ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0.5f) })
-    }
 
     Box(boxModifier) {
         RobohashFallbackAsyncImage(
@@ -1946,7 +1942,7 @@ private fun RelayIconCompose(url: String) {
             robotSize = 15.dp,
             model = model,
             contentDescription = stringResource(R.string.relay_icon),
-            colorFilter = colorFilter,
+            colorFilter = RelayIconFilter,
             modifier = iconModifier.background(MaterialTheme.colors.background)
         )
     }
