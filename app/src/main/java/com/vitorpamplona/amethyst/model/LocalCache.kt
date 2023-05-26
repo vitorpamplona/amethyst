@@ -972,6 +972,8 @@ object LocalCache {
     fun consume(event: Event, relay: Relay?) {
         if (!event.hasValidSignature()) return
 
+        Amethyst.instance.database.eventDao().insertEventWithTags(event)
+
         try {
             when (event) {
                 is AudioTrackEvent -> consume(event)

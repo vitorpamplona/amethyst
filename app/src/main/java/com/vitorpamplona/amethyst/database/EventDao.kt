@@ -1,0 +1,79 @@
+package com.vitorpamplona.amethyst.database
+
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Transaction
+import com.vitorpamplona.amethyst.service.model.Event
+
+@Dao
+interface EventDao {
+    @Query("SELECT * FROM EventEntity WHERE id = :id")
+    @Transaction
+    fun getById(id: String): EventWithTags
+
+    @Query("SELECT * FROM EventEntity ORDER BY createdAt DESC")
+    @Transaction
+    fun getAll(): List<EventWithTags>
+
+    @Query("SELECT * FROM EventEntity WHERE pubkey = :pubkey ORDER BY createdAt DESC")
+    @Transaction
+    fun getByAuthor(pubkey: String): List<EventWithTags>
+
+    @Query("SELECT COUNT(*) FROM EventEntity WHERE pubkey = :pubkey")
+    fun getRowCountByAuthor(pubkey: String): Int
+
+    @Query("SELECT * FROM EventEntity WHERE pubkey = :pubkey AND kind = :kind ORDER BY createdAt DESC")
+    @Transaction
+    fun getByAuthorAndKind(pubkey: String, kind: Int): List<EventWithTags>
+
+    @Query("SELECT EventEntity.pk, EventEntity.id, EventEntity.pubkey, EventEntity.createdAt, EventEntity.kind, EventEntity.content, EventEntity.sig FROM EventEntity INNER JOIN TagEntity ON EventEntity.pk = TagEntity.pkEvent WHERE TagEntity.col0 = :col0 AND TagEntity.col1 = :col1 ORDER BY createdAt DESC")
+    @Transaction
+    fun getByTag(col0: String, col1: String): List<EventWithTags>
+
+    @Query("SELECT COUNT(DISTINCT(EventEntity.id)) FROM EventEntity INNER JOIN TagEntity ON EventEntity.pk = TagEntity.pkEvent WHERE TagEntity.col0 = :col0 AND TagEntity.col1 = :col1 ORDER BY createdAt DESC")
+    fun getRowCountByTag(col0: String, col1: String): Int
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    fun insertEvent(event: EventEntity): Long?
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    fun insertTag(vararg tags: TagEntity): List<Long>?
+
+    @Delete
+    fun delete(event: EventEntity)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    @Transaction
+    fun insertEventWithTags(event: Event) {
+        val dbEvent = EventEntity(
+            id = event.id,
+            pubkey = event.pubKey,
+            createdAt = event.createdAt,
+            kind = event.kind,
+            content = event.content,
+            sig = event.sig
+        )
+
+        insertEvent(dbEvent)?.let { eventPK ->
+            if (eventPK >= 0) {
+                val dbTags = event.tags.mapIndexed { index, tag ->
+                    TagEntity(
+                        pkEvent = eventPK,
+                        position = index,
+                        col0 = tag.getOrNull(0),
+                        col1 = tag.getOrNull(1),
+                        col2 = tag.getOrNull(2),
+                        col3 = tag.getOrNull(3),
+                        col4 = tag.getOrNull(4),
+                        col5 = tag.getOrNull(5)
+                    )
+                }
+
+                insertTag(*dbTags.toTypedArray())
+            }
+        }
+    }
+}

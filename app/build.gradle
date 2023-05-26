@@ -3,6 +3,7 @@ plugins {
     id 'org.jetbrains.kotlin.android'
     id 'org.jlleitschuh.gradle.ktlint' version "11.3.1"
     id 'com.google.gms.google-services'
+    id 'kotlin-kapt'
 }
 
 android {
@@ -189,6 +190,14 @@ dependencies {
 
     // Automatic memory leak detection
     debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.11'
+
+    // Local Database
+    implementation "androidx.room:room-runtime:$room_version"
+    annotationProcessor "androidx.room:room-compiler:$room_version"
+    // To use Kotlin annotation processing tool (kapt)
+    kapt "androidx.room:room-compiler:$room_version"
+    // optional - Kotlin Extensions and Coroutines support for Room
+    implementation "androidx.room:room-ktx:$room_version"
 
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'io.mockk:mockk:1.13.5'
