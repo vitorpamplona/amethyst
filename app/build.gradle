@@ -24,6 +24,7 @@ android {
 
     buildTypes {
         release {
+            // TODO: Make sure all of JSON parsers work when activating these.
             //minifyEnabled true
             //proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             resValue "string", "app_name", "@string/app_name_release"
@@ -71,7 +72,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion "1.4.3"
+        kotlinCompilerExtensionVersion "1.4.7"
     }
 
     packagingOptions {
