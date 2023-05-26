@@ -69,19 +69,10 @@ fun NotificationScreen(
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = remember(accountState) { accountState?.account } ?: return
 
-    if (scrollToTop) {
-        val scope = rememberCoroutineScope()
-        LaunchedEffect(key1 = Unit) {
-            scope.launch(Dispatchers.IO) {
-                notifFeedViewModel.clear()
-                notifFeedViewModel.invalidateData(true)
-            }
-        }
-    }
-
     LaunchedEffect(accountViewModel, account.defaultNotificationFollowList) {
         NostrAccountDataSource.invalidateFilters()
         NotificationFeedFilter.account = account
+        notifFeedViewModel.invalidateData(true)
     }
 
     val lifeCycleOwner = LocalLifecycleOwner.current
@@ -96,6 +87,16 @@ fun NotificationScreen(
         lifeCycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifeCycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    if (scrollToTop) {
+        val scope = rememberCoroutineScope()
+        LaunchedEffect(key1 = Unit) {
+            scope.launch(Dispatchers.IO) {
+                notifFeedViewModel.clear()
+                notifFeedViewModel.invalidateData(true)
+            }
         }
     }
 

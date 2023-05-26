@@ -60,6 +60,8 @@ fun HomeScreen(
         HomeNewThreadFeedFilter.account = account
         HomeConversationsFeedFilter.account = account
         NostrHomeDataSource.invalidateFilters()
+        homeFeedViewModel.invalidateData(true)
+        repliesFeedViewModel.invalidateData(true)
     }
 
     if (wantsToAddNip47 != null) {

@@ -110,20 +110,11 @@ fun VideoScreen(
     NostrVideoDataSource.account = account
     VideoFeedFilter.account = account
 
-    if (scrollToTop) {
-        val scope = rememberCoroutineScope()
-        LaunchedEffect(key1 = Unit) {
-            scope.launch(Dispatchers.IO) {
-                NostrVideoDataSource.resetFilters()
-                videoFeedView.invalidateData()
-            }
-        }
-    }
-
     LaunchedEffect(accountViewModel, accountState.value?.account?.defaultStoriesFollowList) {
         VideoFeedFilter.account = account
         NostrVideoDataSource.account = account
         NostrVideoDataSource.resetFilters()
+        videoFeedView.invalidateData()
     }
 
     DisposableEffect(accountViewModel) {
@@ -143,6 +134,16 @@ fun VideoScreen(
         lifeCycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifeCycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    if (scrollToTop) {
+        val scope = rememberCoroutineScope()
+        LaunchedEffect(key1 = Unit) {
+            scope.launch(Dispatchers.IO) {
+                NostrVideoDataSource.resetFilters()
+                videoFeedView.invalidateData()
+            }
         }
     }
 
