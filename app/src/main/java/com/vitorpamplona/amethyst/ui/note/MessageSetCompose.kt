@@ -35,8 +35,13 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val noteState by messageSetCard.note.live().metadata.observeAsState()
+    val baseNote = remember { messageSetCard.note }
+
+    val noteState by baseNote.live().metadata.observeAsState()
     val note = remember(noteState) { noteState?.note }
+
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val loggedIn = remember(accountState) { accountState?.account?.userProfile() } ?: return
 
     var popupExpanded by remember { mutableStateOf(false) }
 
@@ -78,8 +83,8 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, 
                     onClick = {
                         scope.launch {
                             routeFor(
-                                note,
-                                accountViewModel.userProfile()
+                                baseNote,
+                                loggedIn
                             )?.let { nav(it) }
                         }
                     },
@@ -90,18 +95,11 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, 
 
         Column(columnModifier) {
             Row(Modifier.fillMaxWidth()) {
-                Box(modifier = remember { Modifier.width(55.dp).padding(top = 5.dp, end = 5.dp) }) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_dm),
-                        null,
-                        modifier = remember { Modifier.size(16.dp).align(Alignment.TopEnd) },
-                        tint = MaterialTheme.colors.primary
-                    )
-                }
+                MessageIcon()
 
                 Column(modifier = remember { Modifier.padding(start = 10.dp) }) {
                     NoteCompose(
-                        baseNote = messageSetCard.note,
+                        baseNote = baseNote,
                         routeForLastRead = null,
                         isBoostedNote = true,
                         addMarginTop = false,
@@ -114,5 +112,27 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, 
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun MessageIcon() {
+    Box(
+        modifier = remember {
+            Modifier
+                .width(55.dp)
+                .padding(top = 5.dp, end = 5.dp)
+        }
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_dm),
+            null,
+            modifier = remember {
+                Modifier
+                    .size(16.dp)
+                    .align(Alignment.TopEnd)
+            },
+            tint = MaterialTheme.colors.primary
+        )
     }
 }
