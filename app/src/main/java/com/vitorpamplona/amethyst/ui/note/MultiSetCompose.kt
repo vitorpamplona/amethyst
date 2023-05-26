@@ -8,10 +8,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
@@ -28,6 +30,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.res.painterResource
@@ -237,7 +240,7 @@ private fun RenderBoostGallery(
                 null,
                 modifier = remember {
                     Modifier
-                        .size(18.dp)
+                        .size(19.dp)
                         .align(Alignment.TopEnd)
                 },
                 tint = Color.Unspecified
@@ -352,18 +355,21 @@ private fun AuthorPictureAndComment(
             )
 
             amount?.let {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colors.background.copy(0.52f)),
-                    contentAlignment = Alignment.BottomCenter
-                ) {
-                    Text(
-                        text = it,
-                        fontWeight = FontWeight.Bold,
-                        color = BitcoinOrange,
-                        fontSize = 12.sp
-                    )
+                Box(modifier = Modifier.fillMaxSize().clip(shape = CircleShape), contentAlignment = Alignment.BottomCenter) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colors.background.copy(0.62f)),
+                        contentAlignment = Alignment.BottomCenter
+                    ) {
+                        Text(
+                            text = it,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colors.secondaryVariant,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(bottom = 1.dp)
+                        )
+                    }
                 }
             }
         }

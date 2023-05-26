@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.ui.theme.RoyalBlue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -285,7 +286,7 @@ fun UserReplyReaction(
         painter = painterResource(R.drawable.ic_comment),
         null,
         modifier = Modifier.size(20.dp),
-        tint = Color.Cyan
+        tint = RoyalBlue
     )
 
     Spacer(modifier = Modifier.width(10.dp))

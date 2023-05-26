@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.ui.screen.CardFeedView
 import com.vitorpamplona.amethyst.ui.screen.NotificationViewModel
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.ui.theme.RoyalBlue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
@@ -131,7 +132,7 @@ fun SummaryBar(model: UserReactionsViewModel) {
 
     val lineChartCount =
         lineChart(
-            lines = listOf(Color.Cyan, Color.Green, Color.Red).map { lineChartColor ->
+            lines = listOf(RoyalBlue, Color.Green, Color.Red).map { lineChartColor ->
                 LineChart.LineSpec(
                     lineColor = lineChartColor.toArgb(),
                     lineBackgroundShader = DynamicShaders.fromBrush(

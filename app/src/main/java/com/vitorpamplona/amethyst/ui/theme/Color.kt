@@ -7,6 +7,7 @@ val Purple500 = Color(0xFF6200EE)
 val Purple700 = Color(0xFF3700B3)
 val Teal200 = Color(0xFF03DAC5)
 val BitcoinOrange = Color(0xFFF7931A)
+val RoyalBlue = Color(0xFF4169E1)
 
 val Following = Color(0xFF03DAC5)
 val Nip05 = Color(0xFF01BAFF)
