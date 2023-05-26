@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
@@ -369,15 +370,21 @@ private fun RenderRegularTextNote(
     val modifier = remember { Modifier.padding(top = 5.dp) }
 
     if (eventContent != null) {
-        TranslatableRichTextViewer(
-            content = eventContent,
-            canPreview = canPreview,
-            modifier = modifier,
-            tags = tags,
-            backgroundColor = backgroundBubbleColor,
-            accountViewModel = accountViewModel,
-            nav = nav
-        )
+        val hasSensitiveContent = remember(note.event) { note.event?.isSensitive() ?: false }
+        SensitivityWarning(
+            hasSensitiveContent = hasSensitiveContent,
+            accountViewModel = accountViewModel
+        ) {
+            TranslatableRichTextViewer(
+                content = eventContent,
+                canPreview = canPreview,
+                modifier = modifier,
+                tags = tags,
+                backgroundColor = backgroundBubbleColor,
+                accountViewModel = accountViewModel,
+                nav = nav
+            )
+        }
     } else {
         TranslatableRichTextViewer(
             content = stringResource(id = R.string.could_not_decrypt_the_message),

@@ -65,7 +65,8 @@ class Account(
     var hideBlockAlertDialog: Boolean = false,
     var backupContactList: ContactListEvent? = null,
     var proxy: Proxy?,
-    var proxyPort: Int
+    var proxyPort: Int,
+    var showSensitiveContent: Boolean? = null
 ) {
     var transientHiddenUsers: Set<String> = setOf()
 
@@ -480,7 +481,14 @@ class Account(
         return LocalCache.notes[signedEvent.id]
     }
 
-    fun sendPost(message: String, replyTo: List<Note>?, mentions: List<User>?, tags: List<String>? = null, zapReceiver: String? = null) {
+    fun sendPost(
+        message: String,
+        replyTo: List<Note>?,
+        mentions: List<User>?,
+        tags: List<String>? = null,
+        zapReceiver: String? = null,
+        wantsToMarkAsSensitive: Boolean
+    ) {
         if (!isWriteable()) return
 
         val repliesToHex = replyTo?.filter { it.address() == null }?.map { it.idHex }
@@ -494,6 +502,7 @@ class Account(
             addresses = addresses,
             extraTags = tags,
             zapReceiver = zapReceiver,
+            markAsSensitive = wantsToMarkAsSensitive,
             privateKey = loggedIn.privKey!!
         )
 
@@ -510,7 +519,8 @@ class Account(
         valueMinimum: Int?,
         consensusThreshold: Int?,
         closedAt: Int?,
-        zapReceiver: String? = null
+        zapReceiver: String? = null,
+        wantsToMarkAsSensitive: Boolean
     ) {
         if (!isWriteable()) return
 
@@ -529,14 +539,15 @@ class Account(
             valueMinimum = valueMinimum,
             consensusThreshold = consensusThreshold,
             closedAt = closedAt,
-            zapReceiver = zapReceiver
+            zapReceiver = zapReceiver,
+            markAsSensitive = wantsToMarkAsSensitive
         )
         // println("Sending new PollNoteEvent: %s".format(signedEvent.toJson()))
         Client.send(signedEvent)
         LocalCache.consume(signedEvent)
     }
 
-    fun sendChannelMessage(message: String, toChannel: String, replyTo: List<Note>?, mentions: List<User>?, zapReceiver: String? = null) {
+    fun sendChannelMessage(message: String, toChannel: String, replyTo: List<Note>?, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean) {
         if (!isWriteable()) return
 
         // val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
@@ -549,13 +560,14 @@ class Account(
             replyTos = repliesToHex,
             mentions = mentionsHex,
             zapReceiver = zapReceiver,
+            markAsSensitive = wantsToMarkAsSensitive,
             privateKey = loggedIn.privKey!!
         )
         Client.send(signedEvent)
         LocalCache.consume(signedEvent, null)
     }
 
-    fun sendPrivateMessage(message: String, toUser: String, replyingTo: Note? = null, mentions: List<User>?, zapReceiver: String? = null) {
+    fun sendPrivateMessage(message: String, toUser: String, replyingTo: Note? = null, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean) {
         if (!isWriteable()) return
         val user = LocalCache.users[toUser] ?: return
 
@@ -569,6 +581,7 @@ class Account(
             replyTos = repliesToHex,
             mentions = mentionsHex,
             zapReceiver = zapReceiver,
+            markAsSensitive = wantsToMarkAsSensitive,
             privateKey = loggedIn.privKey!!,
             advertiseNip18 = false
         )
@@ -1112,6 +1125,12 @@ class Account(
     fun setHideBlockAlertDialog() {
         hideBlockAlertDialog = true
         saveable.invalidateData()
+    }
+
+    fun updateShowSensitiveContent(show: Boolean?) {
+        showSensitiveContent = show
+        saveable.invalidateData()
+        live.invalidateData()
     }
 
     fun registerObservers() {

@@ -218,7 +218,7 @@ fun ChannelScreen(
                             onPost = {
                                 val tagger = NewMessageTagger(channel, listOfNotNull(replyTo.value?.author), listOfNotNull(replyTo.value), channelScreenModel.message.text)
                                 tagger.run()
-                                account.sendChannelMessage(tagger.message, channel.idHex, tagger.replyTos, tagger.mentions)
+                                account.sendChannelMessage(tagger.message, channel.idHex, tagger.replyTos, tagger.mentions, wantsToMarkAsSensitive = false)
                                 channelScreenModel.message = TextFieldValue("")
                                 replyTo.value = null
                                 feedViewModel.invalidateData() // Don't wait a full second before updating

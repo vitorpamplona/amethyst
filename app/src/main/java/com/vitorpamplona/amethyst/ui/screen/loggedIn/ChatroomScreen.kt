@@ -178,7 +178,7 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, nav: (St
                     trailingIcon = {
                         PostButton(
                             onPost = {
-                                account.sendPrivateMessage(chatRoomScreenModel.message.text, userId, replyTo.value, null)
+                                account.sendPrivateMessage(chatRoomScreenModel.message.text, userId, replyTo.value, null, wantsToMarkAsSensitive = false)
                                 chatRoomScreenModel.message = TextFieldValue("")
                                 replyTo.value = null
                                 feedViewModel.invalidateData() // Don't wait a full second before updating

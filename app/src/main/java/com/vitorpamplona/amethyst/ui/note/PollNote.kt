@@ -51,7 +51,9 @@ fun PollNote(
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = remember(accountState) { accountState?.account } ?: return
 
-    val pollViewModel: PollNoteViewModel = viewModel()
+    val pollViewModel: PollNoteViewModel = viewModel(
+        key = baseNote.idHex
+    )
 
     LaunchedEffect(key1 = baseNote) {
         pollViewModel.load(account, baseNote)

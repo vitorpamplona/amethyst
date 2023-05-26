@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.service.model.PeopleListEvent
 import com.vitorpamplona.amethyst.service.model.PinListEvent
 import com.vitorpamplona.amethyst.service.model.PollNoteEvent
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
+import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.note.*
 import com.vitorpamplona.amethyst.ui.note.BadgeDisplay
@@ -376,15 +377,22 @@ fun NoteMaster(
                             !noteForReports.hasAnyReports()
 
                         if (eventContent != null) {
-                            TranslatableRichTextViewer(
-                                eventContent,
-                                canPreview,
-                                Modifier.fillMaxWidth(),
-                                note.event?.tags(),
-                                MaterialTheme.colors.background,
-                                accountViewModel,
-                                nav
-                            )
+                            val hasSensitiveContent = remember(note.event) { note.event?.isSensitive() ?: false }
+
+                            SensitivityWarning(
+                                hasSensitiveContent = hasSensitiveContent,
+                                accountViewModel = accountViewModel
+                            ) {
+                                TranslatableRichTextViewer(
+                                    eventContent,
+                                    canPreview,
+                                    Modifier.fillMaxWidth(),
+                                    note.event?.tags(),
+                                    MaterialTheme.colors.background,
+                                    accountViewModel,
+                                    nav
+                                )
+                            }
 
                             DisplayUncitedHashtags(noteEvent.hashtags(), eventContent, nav)
 

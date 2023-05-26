@@ -232,6 +232,18 @@ class AccountViewModel(private val account: Account) : ViewModel() {
         account.setHideBlockAlertDialog()
     }
 
+    fun hideSensitiveContent() {
+        account.updateShowSensitiveContent(false)
+    }
+
+    fun disableContentWarnings() {
+        account.updateShowSensitiveContent(true)
+    }
+
+    fun seeContentWarnings() {
+        account.updateShowSensitiveContent(null)
+    }
+
     class Factory(val account: Account) : ViewModelProvider.Factory {
         override fun <AccountViewModel : ViewModel> create(modelClass: Class<AccountViewModel>): AccountViewModel {
             return AccountViewModel(account) as AccountViewModel

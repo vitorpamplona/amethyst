@@ -67,6 +67,9 @@ open class NewPostViewModel : ViewModel() {
     var forwardZapTo by mutableStateOf<User?>(null)
     var forwardZapToEditting by mutableStateOf(TextFieldValue(""))
 
+    // NSFW, Sensitive
+    var wantsToMarkAsSensitive by mutableStateOf(false)
+
     open fun load(account: Account, replyingTo: Note?, quote: Note?) {
         originalNote = replyingTo
         replyingTo?.let { replyNote ->
@@ -97,6 +100,7 @@ open class NewPostViewModel : ViewModel() {
         contentToAddUrl = null
 
         wantsForwardZapTo = false
+        wantsToMarkAsSensitive = false
         forwardZapTo = null
         forwardZapToEditting = TextFieldValue("")
 
@@ -118,13 +122,13 @@ open class NewPostViewModel : ViewModel() {
         }
 
         if (wantsPoll) {
-            account?.sendPoll(tagger.message, tagger.replyTos, tagger.mentions, pollOptions, valueMaximum, valueMinimum, consensusThreshold, closedAt, zapReceiver)
+            account?.sendPoll(tagger.message, tagger.replyTos, tagger.mentions, pollOptions, valueMaximum, valueMinimum, consensusThreshold, closedAt, zapReceiver, wantsToMarkAsSensitive)
         } else if (originalNote?.channel() != null) {
-            account?.sendChannelMessage(tagger.message, tagger.channel!!.idHex, tagger.replyTos, tagger.mentions, zapReceiver)
+            account?.sendChannelMessage(tagger.message, tagger.channel!!.idHex, tagger.replyTos, tagger.mentions, zapReceiver, wantsToMarkAsSensitive)
         } else if (originalNote?.event is PrivateDmEvent) {
-            account?.sendPrivateMessage(tagger.message, originalNote!!.author!!.pubkeyHex, originalNote!!, tagger.mentions, zapReceiver)
+            account?.sendPrivateMessage(tagger.message, originalNote!!.author!!.pubkeyHex, originalNote!!, tagger.mentions, zapReceiver, wantsToMarkAsSensitive)
         } else {
-            account?.sendPost(tagger.message, tagger.replyTos, tagger.mentions, null, zapReceiver)
+            account?.sendPost(tagger.message, tagger.replyTos, tagger.mentions, null, zapReceiver, wantsToMarkAsSensitive)
         }
 
         cancel()
@@ -183,6 +187,7 @@ open class NewPostViewModel : ViewModel() {
         wantsInvoice = false
 
         wantsForwardZapTo = false
+        wantsToMarkAsSensitive = false
         forwardZapTo = null
         forwardZapToEditting = TextFieldValue("")
 

@@ -116,6 +116,7 @@ import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.components.ZoomableContent
@@ -166,6 +167,7 @@ fun NoteCompose(
 
     val noteEvent = remember(noteState) { note.event }
     val baseChannel = remember(noteState) { note.channel() }
+    val isSensitive = remember(noteState) { note.event?.isSensitive() ?: false }
 
     var popupExpanded by remember { mutableStateOf(false) }
 
@@ -183,7 +185,7 @@ fun NoteCompose(
         note.let {
             NoteQuickActionMenu(it, popupExpanded, { popupExpanded = false }, accountViewModel)
         }
-    } else if (account.isHidden(noteForReports.author!!)) {
+    } else if (account.isHidden(noteForReports.author!!) || (isSensitive && account.showSensitiveContent == false)) {
         // Does nothing
     } else {
         var showHiddenNote by remember { mutableStateOf(false) }
@@ -435,13 +437,10 @@ private fun RenderTextEvent(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val tags = remember(note.event?.id()) { note.event?.tags() }
-    val hashtags = remember(note.event?.id()) { note.event?.hashtags() ?: emptyList() }
-    val eventContent = remember(note.event?.id()) { accountViewModel.decrypt(note) }
-    val modifier = remember(note.event?.id()) { Modifier.fillMaxWidth() }
-    val isAuthorTheLoggedUser = remember(note.event?.id()) { accountViewModel.isLoggedUser(note.author) }
+    val eventContent = remember(note.event) { accountViewModel.decrypt(note) }
 
     if (eventContent != null) {
+        val isAuthorTheLoggedUser = remember(note.event) { accountViewModel.isLoggedUser(note.author) }
         if (makeItShort && isAuthorTheLoggedUser) {
             Text(
                 text = eventContent,
@@ -450,16 +449,27 @@ private fun RenderTextEvent(
                 overflow = TextOverflow.Ellipsis
             )
         } else {
-            TranslatableRichTextViewer(
-                content = eventContent,
-                canPreview = canPreview && !makeItShort,
-                modifier = modifier,
-                tags = tags,
-                backgroundColor = backgroundColor,
-                accountViewModel = accountViewModel,
-                nav = nav
-            )
+            val hasSensitiveContent = remember(note.event) { note.event?.isSensitive() ?: false }
 
+            SensitivityWarning(
+                hasSensitiveContent = hasSensitiveContent,
+                accountViewModel = accountViewModel
+            ) {
+                val modifier = remember(note.event) { Modifier.fillMaxWidth() }
+                val tags = remember(note.event) { note.event?.tags() }
+
+                TranslatableRichTextViewer(
+                    content = eventContent,
+                    canPreview = canPreview && !makeItShort,
+                    modifier = modifier,
+                    tags = tags,
+                    backgroundColor = backgroundColor,
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
+            }
+
+            val hashtags = remember(note.event) { note.event?.hashtags() ?: emptyList() }
             DisplayUncitedHashtags(hashtags, eventContent, nav)
         }
     }
@@ -494,25 +504,31 @@ private fun RenderPoll(
             overflow = TextOverflow.Ellipsis
         )
     } else {
-        TranslatableRichTextViewer(
-            eventContent,
-            canPreview = canPreview && !makeItShort,
-            Modifier.fillMaxWidth(),
-            noteEvent.tags(),
-            backgroundColor,
-            accountViewModel,
-            nav
-        )
+        val hasSensitiveContent = remember(note.event) { note.event?.isSensitive() ?: false }
+        SensitivityWarning(
+            hasSensitiveContent = hasSensitiveContent,
+            accountViewModel = accountViewModel
+        ) {
+            TranslatableRichTextViewer(
+                eventContent,
+                canPreview = canPreview && !makeItShort,
+                Modifier.fillMaxWidth(),
+                noteEvent.tags(),
+                backgroundColor,
+                accountViewModel,
+                nav
+            )
+
+            PollNote(
+                note,
+                canPreview = canPreview && !makeItShort,
+                backgroundColor,
+                accountViewModel,
+                nav
+            )
+        }
 
         DisplayUncitedHashtags(noteEvent.hashtags(), eventContent, nav)
-
-        PollNote(
-            note,
-            canPreview = canPreview && !makeItShort,
-            backgroundColor,
-            accountViewModel,
-            nav
-        )
     }
 
     if (!makeItShort) {
@@ -586,15 +602,21 @@ private fun RenderPrivateMessage(
                     overflow = TextOverflow.Ellipsis
                 )
             } else {
-                TranslatableRichTextViewer(
-                    content = eventContent,
-                    canPreview = canPreview && !makeItShort,
-                    modifier = modifier,
-                    tags = tags,
-                    backgroundColor = backgroundColor,
-                    accountViewModel = accountViewModel,
-                    nav = nav
-                )
+                val hasSensitiveContent = remember(note.event) { note.event?.isSensitive() ?: false }
+                SensitivityWarning(
+                    hasSensitiveContent = hasSensitiveContent,
+                    accountViewModel = accountViewModel
+                ) {
+                    TranslatableRichTextViewer(
+                        content = eventContent,
+                        canPreview = canPreview && !makeItShort,
+                        modifier = modifier,
+                        tags = tags,
+                        backgroundColor = backgroundColor,
+                        accountViewModel = accountViewModel,
+                        nav = nav
+                    )
+                }
 
                 DisplayUncitedHashtags(hashtags, eventContent, nav)
             }
@@ -2124,7 +2146,9 @@ fun UserPicture(
             }
 
             val myIconModifier = remember {
-                Modifier.width(size.div(3.5f)).height(size.div(3.5f))
+                Modifier
+                    .width(size.div(3.5f))
+                    .height(size.div(3.5f))
             }
 
             Box(myIconBoxModifier, contentAlignment = Alignment.Center) {
@@ -2147,7 +2171,9 @@ data class DropDownParams(
     val isFollowingAuthor: Boolean,
     val isPrivateBookmarkNote: Boolean,
     val isPublicBookmarkNote: Boolean,
-    val isLoggedUser: Boolean
+    val isLoggedUser: Boolean,
+    val isSensitive: Boolean,
+    val showSensitiveContent: Boolean?
 )
 
 @Composable
@@ -2158,20 +2184,23 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
     var reportDialogShowing by remember { mutableStateOf(false) }
 
     val bookmarkState by accountViewModel.userProfile().live().bookmarks.observeAsState()
+    val accountState by accountViewModel.accountLiveData.observeAsState()
 
     var state by remember {
         mutableStateOf<DropDownParams>(
-            DropDownParams(false, false, false, false)
+            DropDownParams(false, false, false, false, false, null)
         )
     }
 
-    LaunchedEffect(key1 = note, key2 = bookmarkState) {
+    LaunchedEffect(key1 = note, key2 = bookmarkState, key3 = accountState) {
         withContext(Dispatchers.IO) {
             state = DropDownParams(
-                accountViewModel.isFollowing(note.author),
-                accountViewModel.isInPrivateBookmarks(note),
-                accountViewModel.isInPublicBookmarks(note),
-                accountViewModel.isLoggedUser(note.author)
+                isFollowingAuthor = accountViewModel.isFollowing(note.author),
+                isPrivateBookmarkNote = accountViewModel.isInPrivateBookmarks(note),
+                isPublicBookmarkNote = accountViewModel.isInPublicBookmarks(note),
+                isLoggedUser = accountViewModel.isLoggedUser(note.author),
+                isSensitive = note.event?.isSensitive() ?: false,
+                showSensitiveContent = accountState?.account?.showSensitiveContent
             )
         }
     }
@@ -2249,6 +2278,24 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
                 Text("Block / Report")
             }
         }
+        // if (state.isSensitive) {
+        Divider()
+        if (state.showSensitiveContent == null || state.showSensitiveContent == true) {
+            DropdownMenuItem(onClick = { accountViewModel.hideSensitiveContent(); onDismiss() }) {
+                Text(stringResource(R.string.content_warning_hide_all_sensitive_content))
+            }
+        }
+        if (state.showSensitiveContent == null || state.showSensitiveContent == false) {
+            DropdownMenuItem(onClick = { accountViewModel.disableContentWarnings(); onDismiss() }) {
+                Text(stringResource(R.string.content_warning_show_all_sensitive_content))
+            }
+        }
+        if (state.showSensitiveContent != null) {
+            DropdownMenuItem(onClick = { accountViewModel.seeContentWarnings(); onDismiss() }) {
+                Text(stringResource(R.string.content_warning_see_warnings))
+            }
+        }
+        // }
     }
 
     if (reportDialogShowing) {

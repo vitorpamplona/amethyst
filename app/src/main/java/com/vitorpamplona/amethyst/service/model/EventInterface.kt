@@ -37,4 +37,5 @@ interface EventInterface {
     fun getPoWRank(): Int
 
     fun zapAddress(): String?
+    fun isSensitive(): Boolean
 }
