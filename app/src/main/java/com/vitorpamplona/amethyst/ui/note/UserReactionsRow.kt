@@ -280,7 +280,7 @@ class UserReactionsViewModel : ViewModel() {
 fun UserReplyReaction(
     replyCount: Int?
 ) {
-    val showCounts = remember { showCount(replyCount) }
+    val showCounts = remember(replyCount) { showCount(replyCount) }
 
     Icon(
         painter = painterResource(R.drawable.ic_comment),
@@ -302,7 +302,7 @@ fun UserReplyReaction(
 fun UserBoostReaction(
     boostCount: Int?
 ) {
-    val showCounts = remember { showCount(boostCount) }
+    val showCounts = remember(boostCount) { showCount(boostCount) }
 
     Icon(
         painter = painterResource(R.drawable.ic_retweeted),
@@ -324,7 +324,7 @@ fun UserBoostReaction(
 fun UserLikeReaction(
     likeCount: Int?
 ) {
-    val showCounts = remember { showCount(likeCount) }
+    val showCounts = remember(likeCount) { showCount(likeCount) }
 
     Icon(
         painter = painterResource(R.drawable.ic_liked),
@@ -346,7 +346,7 @@ fun UserLikeReaction(
 fun UserZapReaction(
     amount: BigDecimal?
 ) {
-    val showAmounts = remember { showAmountAxis(amount) }
+    val showAmounts = remember(amount) { showAmountAxis(amount) }
 
     Icon(
         imageVector = Icons.Default.Bolt,

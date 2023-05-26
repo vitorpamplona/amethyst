@@ -95,7 +95,7 @@ fun RichTextViewer(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val isMarkdown = remember { isMarkdown(content) }
+    val isMarkdown = remember(content) { isMarkdown(content) }
 
     Column(modifier = modifier) {
         if (isMarkdown) {
@@ -124,7 +124,7 @@ private fun RenderRegular(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    var state by remember {
+    var state by remember(content) {
         mutableStateOf(RichTextViewerState(content, emptySet(), emptyMap(), emptyList(), emptyMap()))
     }
 
@@ -344,9 +344,9 @@ private fun RenderContentAsMarkdown(content: String, backgroundColor: Color, tag
         )
     )
 
-    var markdownWithSpecialContent by remember { mutableStateOf<String?>(null) }
-    var nip19References by remember { mutableStateOf<List<Nip19.Return>>(emptyList()) }
-    var refresh by remember { mutableStateOf(0) }
+    var markdownWithSpecialContent by remember(content) { mutableStateOf<String?>(null) }
+    var nip19References by remember(content) { mutableStateOf<List<Nip19.Return>>(emptyList()) }
+    var refresh by remember(content) { mutableStateOf(0) }
 
     LaunchedEffect(key1 = content) {
         withContext(Dispatchers.IO) {
@@ -365,8 +365,8 @@ private fun RenderContentAsMarkdown(content: String, backgroundColor: Color, tag
     }
 
     nip19References.forEach {
-        var baseUser by remember { mutableStateOf<User?>(null) }
-        var baseNote by remember { mutableStateOf<Note?>(null) }
+        var baseUser by remember(it) { mutableStateOf<User?>(null) }
+        var baseNote by remember(it) { mutableStateOf<Note?>(null) }
 
         LaunchedEffect(key1 = it.hex) {
             withContext(Dispatchers.IO) {

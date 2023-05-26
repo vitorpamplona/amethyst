@@ -73,7 +73,7 @@ private fun DisplayEvent(
     nip19: Nip19.Return,
     nav: (String) -> Unit
 ) {
-    var noteBase by remember { mutableStateOf<Note?>(null) }
+    var noteBase by remember(nip19) { mutableStateOf<Note?>(null) }
 
     LaunchedEffect(key1 = nip19.hex) {
         withContext(Dispatchers.IO) {
@@ -129,7 +129,7 @@ private fun DisplayNote(
     nip19: Nip19.Return,
     nav: (String) -> Unit
 ) {
-    var noteBase by remember { mutableStateOf<Note?>(null) }
+    var noteBase by remember(nip19) { mutableStateOf<Note?>(null) }
 
     LaunchedEffect(key1 = nip19.hex) {
         withContext(Dispatchers.IO) {
@@ -185,7 +185,7 @@ private fun DisplayAddress(
     nip19: Nip19.Return,
     nav: (String) -> Unit
 ) {
-    var noteBase by remember { mutableStateOf<Note?>(null) }
+    var noteBase by remember(nip19) { mutableStateOf<Note?>(null) }
 
     LaunchedEffect(key1 = nip19.hex) {
         withContext(Dispatchers.IO) {
@@ -217,7 +217,7 @@ private fun DisplayUser(
     nip19: Nip19.Return,
     nav: (String) -> Unit
 ) {
-    var userBase by remember { mutableStateOf<User?>(null) }
+    var userBase by remember(nip19) { mutableStateOf<User?>(null) }
 
     LaunchedEffect(key1 = nip19.hex) {
         withContext(Dispatchers.IO) {
@@ -227,7 +227,7 @@ private fun DisplayUser(
 
     userBase?.let {
         val userState by it.live().metadata.observeAsState()
-        val route = remember { "User/${it.pubkeyHex}" }
+        val route = remember(userState) { "User/${it.pubkeyHex}" }
         val userDisplayName = remember(userState) { userState?.user?.toBestDisplayName() }
         val userTags = remember(userState) { userState?.user?.info?.latestMetadata?.tags }
 

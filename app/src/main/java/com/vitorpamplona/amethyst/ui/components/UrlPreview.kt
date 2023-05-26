@@ -21,7 +21,7 @@ import kotlinx.coroutines.launch
 fun UrlPreview(url: String, urlText: String) {
     val context = LocalContext.current
 
-    var urlPreviewState by remember {
+    var urlPreviewState by remember(url) {
         val default = UrlCachedPreviewer.cache[url]?.let {
             if (it.allFetchComplete() && it.url == url) {
                 UrlPreviewState.Loaded(it)

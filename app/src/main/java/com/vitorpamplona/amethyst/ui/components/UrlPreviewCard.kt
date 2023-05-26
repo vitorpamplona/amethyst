@@ -42,10 +42,10 @@ fun UrlPreviewCard(
             )
     ) {
         Column {
-            val validatedUrl = remember { URL(previewInfo.url) }
+            val validatedUrl = remember(url) { URL(previewInfo.url) }
 
             // correctly treating relative images
-            val imageUrl = remember {
+            val imageUrl = remember(url) {
                 if (previewInfo.image.startsWith("/")) {
                     URL(validatedUrl, previewInfo.image).toString()
                 } else {
