@@ -39,7 +39,7 @@ class PrivateDmEvent(
 
     fun with(pubkeyHex: String): Boolean {
         return pubkeyHex == pubKey ||
-            tags.firstOrNull { it.size > 1 && it[0] == "p" }?.getOrNull(1) == pubkeyHex
+            tags.any { it.size > 1 && it[0] == "p" && it[1] == pubkeyHex }
     }
 
     fun plainContent(privKey: ByteArray, pubKey: ByteArray): String? {
