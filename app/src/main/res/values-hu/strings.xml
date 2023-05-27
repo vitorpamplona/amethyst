@@ -385,4 +385,10 @@
     <string name="channel_list_join_channel">Csatlakozás</string>
 
     <string name="today">Ma</string>
+
+    <string name="content_warning">Tartalomra vonatkozó figyelmeztetés</string>
+    <string name="content_warning_explanation">Ez a bejegyzés érzékeny tartalmat tartalmaz, amelyet egyesek sértőnek vagy zavarónak találhatnak</string>
+    <string name="content_warning_hide_all_sensitive_content">Az érzékeny tartalmat mindig rejtse el</string>
+    <string name="content_warning_show_all_sensitive_content">Az érzékeny tartalmat mindig jelenítse meg</string>
+    <string name="content_warning_see_warnings">A tartalomra vonatkozó figyelmeztetéseket mindig jelenítse meg</string>
 </resources>
