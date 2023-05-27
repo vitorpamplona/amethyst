@@ -540,11 +540,11 @@ private fun RelayBadges(baseNote: Note) {
 fun RenderRelay(dirtyUrl: String) {
     val uri = LocalUriHandler.current
     val website = remember(dirtyUrl) {
-        val cleanUrl = dirtyUrl.removePrefix("wss://").removePrefix("ws://").removeSuffix("/")
+        val cleanUrl = dirtyUrl.trim().removePrefix("wss://").removePrefix("ws://").removeSuffix("/")
         "https://$cleanUrl"
     }
     val iconUrl = remember(dirtyUrl) {
-        val cleanUrl = dirtyUrl.removePrefix("wss://").removePrefix("ws://").removeSuffix("/")
+        val cleanUrl = dirtyUrl.trim().removePrefix("wss://").removePrefix("ws://").removeSuffix("/")
         "https://$cleanUrl/favicon.ico"
     }
 
