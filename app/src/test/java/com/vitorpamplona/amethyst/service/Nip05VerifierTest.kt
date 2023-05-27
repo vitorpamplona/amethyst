@@ -93,7 +93,7 @@ class Nip05VerifierTest {
     }
 
     @Test
-    fun `test assmble url with invalid value returns null`() {
+    fun `execute assemble url with invalid value returns null`() {
         // given
         val nip05address = "this@that@that.com"
 
@@ -105,7 +105,7 @@ class Nip05VerifierTest {
     }
 
     @Test
-    fun `test assmble url with valid value returns user url`() {
+    fun `execute assemble url with valid value returns nip05 url`() {
         // given
         val userName = "TheUser"
         val domain = "domain.com"
