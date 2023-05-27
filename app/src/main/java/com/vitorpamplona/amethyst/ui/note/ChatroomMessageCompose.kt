@@ -539,25 +539,25 @@ private fun RelayBadges(baseNote: Note) {
 @Composable
 fun RenderRelay(dirtyUrl: String) {
     val uri = LocalUriHandler.current
-    val website = remember {
-        val cleanUrl = dirtyUrl.removePrefix("wss://").removePrefix("ws://")
+    val website = remember(dirtyUrl) {
+        val cleanUrl = dirtyUrl.removePrefix("wss://").removePrefix("ws://").removeSuffix("/")
         "https://$cleanUrl"
     }
-    val iconUrl = remember {
-        val cleanUrl = dirtyUrl.removePrefix("wss://").removePrefix("ws://")
+    val iconUrl = remember(dirtyUrl) {
+        val cleanUrl = dirtyUrl.removePrefix("wss://").removePrefix("ws://").removeSuffix("/")
         "https://$cleanUrl/favicon.ico"
     }
 
-    val clickableModifier = remember {
+    val clickableModifier = remember(dirtyUrl) {
         Modifier
-            .size(15.dp)
             .padding(1.dp)
+            .size(15.dp)
             .clickable(onClick = { uri.openUri(website) })
     }
 
-    val iconModifier = remember {
+    val iconModifier = remember(dirtyUrl) {
         Modifier
-            .size(15.dp)
+            .size(13.dp)
             .clip(shape = CircleShape)
     }
 
@@ -566,7 +566,7 @@ fun RenderRelay(dirtyUrl: String) {
     ) {
         RobohashFallbackAsyncImage(
             robot = iconUrl,
-            robotSize = 15.dp,
+            robotSize = 13.dp,
             model = iconUrl,
             contentDescription = stringResource(id = R.string.relay_icon),
             colorFilter = RelayIconFilter,

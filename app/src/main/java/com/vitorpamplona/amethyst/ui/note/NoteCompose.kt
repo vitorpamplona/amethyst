@@ -62,7 +62,6 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
@@ -113,7 +112,6 @@ import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
-import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.VideoView
@@ -129,7 +127,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Following
-import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -1911,40 +1908,8 @@ private fun VerticalRelayPanelWithFlow(
     // FlowRow Seems to be a lot faster than LazyVerticalGrid
     FlowRow() {
         relays.forEach { url ->
-            RelayIconCompose(url)
+            RenderRelay(url)
         }
-    }
-}
-
-@Composable
-@Stable
-private fun RelayIconCompose(url: String) {
-    val uri = LocalUriHandler.current
-
-    val model = remember(url) { "https://$url/favicon.ico" }
-
-    val boxModifier = remember {
-        Modifier
-            .padding(1.dp)
-            .size(15.dp)
-    }
-    val iconModifier = remember(url) {
-        Modifier
-            .width(13.dp)
-            .height(13.dp)
-            .clip(shape = CircleShape)
-            .clickable(onClick = { uri.openUri("https://$url") })
-    }
-
-    Box(boxModifier) {
-        RobohashFallbackAsyncImage(
-            robot = model,
-            robotSize = 15.dp,
-            model = model,
-            contentDescription = stringResource(R.string.relay_icon),
-            colorFilter = RelayIconFilter,
-            modifier = iconModifier.background(MaterialTheme.colors.background)
-        )
     }
 }
 
