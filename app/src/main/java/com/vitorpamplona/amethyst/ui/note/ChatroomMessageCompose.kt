@@ -117,7 +117,7 @@ fun ChatroomMessageCompose(
         LaunchedEffect(key1 = noteReportsState, key2 = accountState) {
             withContext(Dispatchers.IO) {
                 account.userProfile().let { loggedIn ->
-                    val newCanPreview = note.author === loggedIn ||
+                    val newCanPreview = note.author?.pubkeyHex == loggedIn.pubkeyHex ||
                         (note.author?.let { loggedIn.isFollowingCached(it) } ?: true) ||
                         !(noteForReports.hasAnyReports())
 

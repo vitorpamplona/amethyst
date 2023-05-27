@@ -232,7 +232,7 @@ open class Note(val idHex: String) {
     fun isZappedBy(user: User, account: Account): Boolean {
         // Zaps who the requester was the user
         return zaps.any {
-            it.key.author === user || account.decryptZapContentAuthor(it.key)?.pubKey == user.pubkeyHex
+            it.key.author?.pubkeyHex == user.pubkeyHex || account.decryptZapContentAuthor(it.key)?.pubKey == user.pubkeyHex
         } || zapPayments.any {
             val zapResponseEvent = it.value?.event as? LnZapPaymentResponseEvent
             val response = if (zapResponseEvent != null) {
@@ -245,11 +245,11 @@ open class Note(val idHex: String) {
     }
 
     fun isReactedBy(user: User): Boolean {
-        return reactions.any { it.author === user }
+        return reactions.any { it.author?.pubkeyHex == user.pubkeyHex }
     }
 
     fun isBoostedBy(user: User): Boolean {
-        return boosts.any { it.author === user }
+        return boosts.any { it.author?.pubkeyHex == user.pubkeyHex }
     }
 
     fun reportsBy(user: User): Set<Note> {

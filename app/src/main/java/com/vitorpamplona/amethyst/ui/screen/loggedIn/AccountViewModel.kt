@@ -210,7 +210,7 @@ class AccountViewModel(private val account: Account) : ViewModel() {
     }
 
     fun isLoggedUser(user: User?): Boolean {
-        return account.userProfile() === user
+        return account.userProfile().pubkeyHex == user?.pubkeyHex
     }
 
     fun isFollowing(user: User?): Boolean {

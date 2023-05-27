@@ -190,7 +190,7 @@ fun NoteCompose(
         LaunchedEffect(key1 = noteReportsState, key2 = accountState) {
             withContext(Dispatchers.IO) {
                 account.userProfile().let { loggedIn ->
-                    val newCanPreview = note.author === loggedIn ||
+                    val newCanPreview = note.author?.pubkeyHex == loggedIn.pubkeyHex ||
                         (note.author?.let { loggedIn.isFollowingCached(it) } ?: true) ||
                         !(noteForReports.hasAnyReports())
 
@@ -2030,7 +2030,7 @@ fun UserPicture(
     }
 
     val showFollowingMark = remember(accountState) {
-        accountState?.user?.isFollowingCached(baseUser) == true || baseUser === accountState?.user
+        accountState?.user?.isFollowingCached(baseUser) == true || baseUser.pubkeyHex == accountState?.user?.pubkeyHex
     }
 
     // BaseUser is the same reference as accountState.user

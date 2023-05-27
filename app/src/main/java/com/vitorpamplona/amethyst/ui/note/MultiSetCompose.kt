@@ -452,7 +452,7 @@ fun FastNoteAuthorPicture(
 
     val showFollowingMark by remember(accountFollowsState) {
         derivedStateOf {
-            accountFollowsState?.user?.isFollowingCached(author) == true || (author === accountFollowsState?.user)
+            accountFollowsState?.user?.isFollowingCached(author) == true || (author.pubkeyHex == accountFollowsState?.user?.pubkeyHex)
         }
     }
 
