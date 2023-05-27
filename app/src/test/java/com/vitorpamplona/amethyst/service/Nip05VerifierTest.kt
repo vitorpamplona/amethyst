@@ -6,6 +6,7 @@ import io.mockk.impl.annotations.SpyK
 import io.mockk.unmockkAll
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
@@ -89,5 +90,32 @@ class Nip05VerifierTest {
     @After
     fun tearDown() {
         unmockkAll()
+    }
+
+    @Test
+    fun `test assmble url with invalid value returns null`() {
+        // given
+        val nip05address = "this@that@that.com"
+
+        // when
+        val actualValue = nip05Verifier.assembleUrl(nip05address)
+
+        // then
+        assertNull(actualValue)
+    }
+
+    @Test
+    fun `test assmble url with valid value returns user url`() {
+        // given
+        val userName = "TheUser"
+        val domain = "domain.com"
+        val nip05address = "$userName@$domain"
+        val expectedValue = "https://$domain/.well-known/nostr.json?name=$userName"
+
+        // when
+        val actualValue = nip05Verifier.assembleUrl(nip05address)
+
+        // then
+        assertEquals(expectedValue, actualValue)
     }
 }
