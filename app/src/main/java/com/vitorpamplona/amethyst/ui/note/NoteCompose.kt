@@ -162,7 +162,7 @@ fun NoteCompose(
     val noteForReports = remember(noteReportsState) { noteReportsState?.note } ?: return
 
     val noteEvent = remember(noteState) { note.event }
-    val baseChannel = remember(noteState) { note.channel() }
+    val channelHex = remember(noteState) { note.channelHex() }
     val isSensitive = remember(noteState) { note.event?.isSensitive() ?: false }
 
     var popupExpanded by remember { mutableStateOf(false) }
@@ -212,8 +212,8 @@ fun NoteCompose(
                 nav,
                 onClick = { showHiddenNote = true }
             )
-        } else if ((noteEvent is ChannelCreateEvent || noteEvent is ChannelMetadataEvent) && baseChannel != null) {
-            ChannelHeader(baseChannel = baseChannel, account = account, nav = nav)
+        } else if ((noteEvent is ChannelCreateEvent || noteEvent is ChannelMetadataEvent) && channelHex != null) {
+            ChannelHeader(channelHex = channelHex, account = account, nav = nav)
         } else if (noteEvent is BadgeDefinitionEvent) {
             BadgeDisplay(baseNote = note)
         } else if (noteEvent is FileHeaderEvent) {
@@ -581,13 +581,14 @@ private fun RenderPrivateMessage(
     val noteEvent = note.event as? PrivateDmEvent ?: return
 
     val withMe = remember { noteEvent.with(accountViewModel.userProfile().pubkeyHex) }
-    val tags = remember(note.event?.id()) { note.event?.tags() }
-    val hashtags = remember(note.event?.id()) { note.event?.hashtags() ?: emptyList() }
-    val modifier = remember(note.event?.id()) { Modifier.fillMaxWidth() }
-    val isAuthorTheLoggedUser = remember(note.event?.id()) { accountViewModel.isLoggedUser(note.author) }
 
     if (withMe) {
         val eventContent = remember { accountViewModel.decrypt(note) }
+
+        val hashtags = remember(note.event?.id()) { note.event?.hashtags() ?: emptyList() }
+        val modifier = remember(note.event?.id()) { Modifier.fillMaxWidth() }
+        val isAuthorTheLoggedUser = remember(note.event?.id()) { accountViewModel.isLoggedUser(note.author) }
+        val tags = remember(note.event?.id()) { note.event?.tags() }
 
         if (eventContent != null) {
             if (makeItShort && isAuthorTheLoggedUser) {
@@ -628,7 +629,7 @@ private fun RenderPrivateMessage(
             ),
             canPreview = !makeItShort,
             Modifier.fillMaxWidth(),
-            noteEvent.tags(),
+            emptyList(),
             backgroundColor,
             accountViewModel,
             nav
