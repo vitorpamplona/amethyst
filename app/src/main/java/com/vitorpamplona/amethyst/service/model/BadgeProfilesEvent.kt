@@ -1,7 +1,9 @@
 package com.vitorpamplona.amethyst.service.model
 
+import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 
+@Immutable
 class BadgeProfilesEvent(
     id: HexKey,
     pubKey: HexKey,

@@ -48,8 +48,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
-import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
@@ -69,7 +67,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun DrawerContent(
-    navController: NavHostController,
+    nav: (String) -> Unit,
     scaffoldState: ScaffoldState,
     sheetState: ModalBottomSheetState,
     accountViewModel: AccountViewModel
@@ -89,15 +87,15 @@ fun DrawerContent(
                     .padding(horizontal = 25.dp)
                     .padding(top = 100.dp),
                 scaffoldState,
-                navController
+                nav
             )
             Divider(
                 thickness = 0.25.dp,
                 modifier = Modifier.padding(top = 20.dp)
             )
             ListContent(
-                account.userProfile(),
-                navController,
+                account.userProfile().pubkeyHex,
+                nav,
                 scaffoldState,
                 sheetState,
                 modifier = Modifier
@@ -106,7 +104,7 @@ fun DrawerContent(
                 account
             )
 
-            BottomContent(account.userProfile(), scaffoldState, navController)
+            BottomContent(account.userProfile(), scaffoldState, nav)
         }
     }
 }
@@ -116,21 +114,30 @@ fun ProfileContent(
     baseAccountUser: User,
     modifier: Modifier = Modifier,
     scaffoldState: ScaffoldState,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
 
     val accountUserState by baseAccountUser.live().metadata.observeAsState()
-    val accountUser = accountUserState?.user ?: return
+    val accountUser = remember(accountUserState) { accountUserState?.user } ?: return
+
+    val profilePubHex = remember(accountUserState) { accountUserState?.user?.pubkeyHex } ?: return
+
+    val profileBanner = remember(accountUserState) { accountUserState?.user?.info?.banner?.ifBlank { null } }
+    val profilePicture = remember(accountUserState) { accountUserState?.user?.profilePicture()?.ifBlank { null }?.let { ResizeImage(it, 100.dp) } }
+    val bestUserName = remember(accountUserState) { accountUserState?.user?.bestUsername() }
+    val bestDisplayName = remember(accountUserState) { accountUserState?.user?.bestDisplayName() }
+    val tags = remember(accountUserState) { accountUserState?.user?.info?.latestMetadata?.tags }
+    val route = remember(accountUserState) { "User/${accountUserState?.user?.pubkeyHex}" }
 
     val accountUserFollowsState by baseAccountUser.live().follows.observeAsState()
-    val accountUserFollows = accountUserFollowsState?.user ?: return
+    val followingCount = remember(accountUserFollowsState) { accountUserFollowsState?.user?.cachedFollowCount()?.toString() ?: "--" }
+    val followerCount = remember(accountUserFollowsState) { accountUserFollowsState?.user?.cachedFollowerCount()?.toString() ?: "--" }
 
     Box {
-        val banner = accountUser.info?.banner
-        if (!banner.isNullOrBlank()) {
+        if (profileBanner != null) {
             AsyncImage(
-                model = banner,
+                model = profileBanner,
                 contentDescription = stringResource(id = R.string.profile_image),
                 contentScale = ContentScale.FillWidth,
                 modifier = Modifier
@@ -149,35 +156,34 @@ fun ProfileContent(
         }
 
         Column(modifier = modifier) {
-            RobohashAsyncImageProxy(
-                robot = accountUser.pubkeyHex,
-                model = ResizeImage(accountUser.profilePicture(), 100.dp),
-                contentDescription = stringResource(id = R.string.profile_image),
-                modifier = Modifier
-                    .width(100.dp)
-                    .height(100.dp)
-                    .clip(shape = CircleShape)
-                    .border(3.dp, MaterialTheme.colors.background, CircleShape)
-                    .background(MaterialTheme.colors.background)
-                    .clickable(onClick = {
-                        accountUser.let {
-                            navController.navigate("User/${it.pubkeyHex}")
-                        }
-                        coroutineScope.launch {
-                            scaffoldState.drawerState.close()
-                        }
-                    })
-            )
-            if (accountUser.bestDisplayName() != null) {
+            profilePicture?.let {
+                RobohashAsyncImageProxy(
+                    robot = profilePubHex,
+                    model = profilePicture,
+                    contentDescription = stringResource(id = R.string.profile_image),
+                    modifier = Modifier
+                        .width(100.dp)
+                        .height(100.dp)
+                        .clip(shape = CircleShape)
+                        .border(3.dp, MaterialTheme.colors.background, CircleShape)
+                        .background(MaterialTheme.colors.background)
+                        .clickable(onClick = {
+                            nav(route)
+                            coroutineScope.launch {
+                                scaffoldState.drawerState.close()
+                            }
+                        })
+                )
+            }
+
+            if (bestDisplayName != null) {
                 CreateTextWithEmoji(
-                    text = accountUser.bestDisplayName() ?: "",
-                    tags = accountUser.info?.latestMetadata?.tags,
+                    text = bestDisplayName,
+                    tags = tags,
                     modifier = Modifier
                         .padding(top = 7.dp)
                         .clickable(onClick = {
-                            accountUser.let {
-                                navController.navigate("User/${it.pubkeyHex}")
-                            }
+                            nav(route)
                             coroutineScope.launch {
                                 scaffoldState.drawerState.close()
                             }
@@ -186,18 +192,16 @@ fun ProfileContent(
                     fontSize = 18.sp
                 )
             }
-            if (accountUser.bestUsername() != null) {
+            if (bestUserName != null) {
                 CreateTextWithEmoji(
-                    text = " @${accountUser.bestUsername()}",
+                    text = " @$bestUserName",
                     tags = accountUser.info?.latestMetadata?.tags,
                     color = Color.LightGray,
                     modifier = Modifier
                         .padding(top = 15.dp)
                         .clickable(
                             onClick = {
-                                accountUser.let {
-                                    navController.navigate("User/${it.pubkeyHex}")
-                                }
+                                nav(route)
                                 coroutineScope.launch {
                                     scaffoldState.drawerState.close()
                                 }
@@ -209,9 +213,7 @@ fun ProfileContent(
                 modifier = Modifier
                     .padding(top = 15.dp)
                     .clickable(onClick = {
-                        accountUser.let {
-                            navController.navigate("User/${it.pubkeyHex}")
-                        }
+                        nav(route)
                         coroutineScope.launch {
                             scaffoldState.drawerState.close()
                         }
@@ -219,14 +221,14 @@ fun ProfileContent(
             ) {
                 Row() {
                     Text(
-                        "${accountUserFollows.cachedFollowCount() ?: "--"}",
+                        text = followingCount,
                         fontWeight = FontWeight.Bold
                     )
                     Text(stringResource(R.string.following))
                 }
                 Row(modifier = Modifier.padding(start = 10.dp)) {
                     Text(
-                        "${accountUserFollows.cachedFollowerCount() ?: "--"}",
+                        text = followerCount,
                         fontWeight = FontWeight.Bold
                     )
                     Text(stringResource(R.string.followers))
@@ -239,8 +241,8 @@ fun ProfileContent(
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun ListContent(
-    accountUser: User?,
-    navController: NavHostController,
+    accountUserPubKey: String?,
+    nav: (String) -> Unit,
     scaffoldState: ScaffoldState,
     sheetState: ModalBottomSheetState,
     modifier: Modifier,
@@ -254,21 +256,21 @@ fun ListContent(
     var proxyPort = remember { mutableStateOf(account.proxyPort.toString()) }
 
     Column(modifier = modifier.fillMaxHeight().verticalScroll(rememberScrollState())) {
-        if (accountUser != null) {
+        if (accountUserPubKey != null) {
             NavigationRow(
                 title = stringResource(R.string.profile),
                 icon = Route.Profile.icon,
                 tint = MaterialTheme.colors.primary,
-                navController = navController,
+                nav = nav,
                 scaffoldState = scaffoldState,
-                route = "User/${accountUser.pubkeyHex}"
+                route = "User/$accountUserPubKey"
             )
 
             NavigationRow(
                 title = stringResource(R.string.bookmarks),
                 icon = Route.Bookmarks.icon,
                 tint = MaterialTheme.colors.onBackground,
-                navController = navController,
+                nav = nav,
                 scaffoldState = scaffoldState,
                 route = Route.Bookmarks.route
             )
@@ -278,7 +280,7 @@ fun ListContent(
             title = stringResource(R.string.security_filters),
             icon = Route.BlockedUsers.icon,
             tint = MaterialTheme.colors.onBackground,
-            navController = navController,
+            nav = nav,
             scaffoldState = scaffoldState,
             route = Route.BlockedUsers.route
         )
@@ -398,16 +400,13 @@ fun NavigationRow(
     title: String,
     icon: Int,
     tint: Color,
-    navController: NavHostController,
+    nav: (String) -> Unit,
     scaffoldState: ScaffoldState,
     route: String
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val currentRoute = currentRoute(navController)
     IconRow(title, icon, tint, onClick = {
-        if (currentRoute != route) {
-            navController.navigate(route)
-        }
+        nav(route)
         coroutineScope.launch {
             scaffoldState.drawerState.close()
         }
@@ -447,7 +446,7 @@ fun IconRow(title: String, icon: Int, tint: Color, onClick: () -> Unit, onLongCl
 }
 
 @Composable
-fun BottomContent(user: User, scaffoldState: ScaffoldState, navController: NavController) {
+fun BottomContent(user: User, scaffoldState: ScaffoldState, nav: (String) -> Unit) {
     val coroutineScope = rememberCoroutineScope()
 
     // store the dialog open or close state
@@ -514,7 +513,7 @@ fun BottomContent(user: User, scaffoldState: ScaffoldState, navController: NavCo
                 coroutineScope.launch {
                     scaffoldState.drawerState.close()
                 }
-                navController.navigate(it)
+                nav(it)
             },
             onClose = { dialogOpen = false }
         )

@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.service.model
 
+import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.*
 import nostr.postr.Bech32
 import nostr.postr.Utils
@@ -11,6 +12,7 @@ import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
+@Immutable
 class LnZapRequestEvent(
     id: HexKey,
     pubKey: HexKey,

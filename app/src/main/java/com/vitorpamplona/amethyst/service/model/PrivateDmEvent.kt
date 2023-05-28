@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.service.model
 
 import android.util.Log
+import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
 import fr.acinq.secp256k1.Hex
@@ -8,6 +9,7 @@ import nostr.postr.Utils
 import nostr.postr.toHex
 import java.util.Date
 
+@Immutable
 class PrivateDmEvent(
     id: HexKey,
     pubKey: HexKey,
@@ -37,7 +39,7 @@ class PrivateDmEvent(
 
     fun with(pubkeyHex: String): Boolean {
         return pubkeyHex == pubKey ||
-            tags.firstOrNull { it.size > 1 && it[0] == "p" }?.getOrNull(1) == pubkeyHex
+            tags.any { it.size > 1 && it[0] == "p" && it[1] == pubkeyHex }
     }
 
     fun plainContent(privKey: ByteArray, pubKey: ByteArray): String? {
@@ -71,7 +73,8 @@ class PrivateDmEvent(
             privateKey: ByteArray,
             createdAt: Long = Date().time / 1000,
             publishedRecipientPubKey: ByteArray? = null,
-            advertiseNip18: Boolean = true
+            advertiseNip18: Boolean = true,
+            markAsSensitive: Boolean
         ): PrivateDmEvent {
             val content = Utils.encrypt(
                 if (advertiseNip18) { nip18Advertisement } else { "" } + msg,
@@ -91,6 +94,9 @@ class PrivateDmEvent(
             }
             zapReceiver?.let {
                 tags.add(listOf("zap", it))
+            }
+            if (markAsSensitive) {
+                tags.add(listOf("content-warning", ""))
             }
             val id = generateId(pubKey, createdAt, kind, tags, content)
             val sig = Utils.sign(id, privateKey)

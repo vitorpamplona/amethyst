@@ -20,6 +20,7 @@ import coil.decode.SvgDecoder
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.VideoCache
+import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
@@ -46,35 +47,7 @@ class MainActivity : FragmentActivity() {
 
         val uri = intent?.data?.toString()
 
-        val startingPage = if (uri.equals("nostr:Notifications", true)) {
-            Route.Notification.route.replace("{scrollToTop}", "true")
-        } else {
-            val nip19 = Nip19.uriToRoute(uri)
-            when (nip19?.type) {
-                Nip19.Type.USER -> "User/${nip19.hex}"
-                Nip19.Type.NOTE -> "Note/${nip19.hex}"
-                Nip19.Type.EVENT -> {
-                    if (nip19.kind == PrivateDmEvent.kind) {
-                        "Room/${nip19.author}"
-                    } else if (nip19.kind == ChannelMessageEvent.kind || nip19.kind == ChannelCreateEvent.kind || nip19.kind == ChannelMetadataEvent.kind) {
-                        "Channel/${nip19.hex}"
-                    } else {
-                        "Event/${nip19.hex}"
-                    }
-                }
-
-                Nip19.Type.ADDRESS -> "Note/${nip19.hex}"
-                else -> null
-            }
-        } ?: try {
-            uri?.let {
-                Nip47.parse(it)
-                val encodedUri = URLEncoder.encode(it, StandardCharsets.UTF_8.toString())
-                Route.Home.base + "?nip47=" + encodedUri
-            }
-        } catch (e: Exception) {
-            null
-        }
+        val startingPage = uriToRoute(uri)
 
         // Initializes video cache.
         VideoCache.init(this.applicationContext)
@@ -88,6 +61,7 @@ class MainActivity : FragmentActivity() {
                 }
                 add(SvgDecoder.Factory())
             } // .logger(DebugLogger())
+                .okHttpClient { HttpClient.getHttpClient() }
                 .respectCacheHeaders(false)
                 .build()
         }
@@ -147,6 +121,42 @@ class GetMediaActivityResultContract : ActivityResultContracts.GetContent() {
         return super.createIntent(context, input).apply {
             // Force only images and videos to be selectable
             putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/*", "video/*"))
+        }
+    }
+}
+
+fun uriToRoute(uri: String?): String? {
+    return if (uri.equals("nostr:Notifications", true)) {
+        Route.Notification.route.replace("{scrollToTop}", "true")
+    } else {
+        if (uri?.startsWith("nostr:Hashtag?id=") == true) {
+            Route.Hashtag.route.replace("{id}", uri.removePrefix("nostr:Hashtag?id="))
+        } else {
+            val nip19 = Nip19.uriToRoute(uri)
+            when (nip19?.type) {
+                Nip19.Type.USER -> "User/${nip19.hex}"
+                Nip19.Type.NOTE -> "Note/${nip19.hex}"
+                Nip19.Type.EVENT -> {
+                    if (nip19.kind == PrivateDmEvent.kind) {
+                        "Room/${nip19.author}"
+                    } else if (nip19.kind == ChannelMessageEvent.kind || nip19.kind == ChannelCreateEvent.kind || nip19.kind == ChannelMetadataEvent.kind) {
+                        "Channel/${nip19.hex}"
+                    } else {
+                        "Event/${nip19.hex}"
+                    }
+                }
+
+                Nip19.Type.ADDRESS -> "Note/${nip19.hex}"
+                else -> null
+            }
+        } ?: try {
+            uri?.let {
+                Nip47.parse(it)
+                val encodedUri = URLEncoder.encode(it, StandardCharsets.UTF_8.toString())
+                Route.Home.base + "?nip47=" + encodedUri
+            }
+        } catch (e: Exception) {
+            null
         }
     }
 }

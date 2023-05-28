@@ -5,6 +5,7 @@ import android.view.ViewTreeObserver
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -33,9 +34,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -82,11 +85,7 @@ fun keyboardAsState(): State<Keyboard> {
 
 @Composable
 fun AppBottomBar(navController: NavHostController, accountViewModel: AccountViewModel) {
-    val currentRoute = currentRoute(navController)
-    val currentRouteBase = currentRoute?.substringBefore("?")
-    val coroutineScope = rememberCoroutineScope()
     val isKeyboardOpen by keyboardAsState()
-
     if (isKeyboardOpen == Keyboard.Closed) {
         Column() {
             Divider(
@@ -98,37 +97,7 @@ fun AppBottomBar(navController: NavHostController, accountViewModel: AccountView
                 backgroundColor = MaterialTheme.colors.background
             ) {
                 bottomNavigationItems.forEach { item ->
-                    val selected = currentRouteBase == item.base
-
-                    BottomNavigationItem(
-                        icon = { NotifiableIcon(item, selected, accountViewModel) },
-                        selected = selected,
-                        onClick = {
-                            coroutineScope.launch {
-                                if (currentRouteBase != item.base) {
-                                    navController.navigate(item.base) {
-                                        navController.graph.startDestinationRoute?.let { start ->
-                                            popUpTo(start)
-                                            restoreState = true
-                                        }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                } else {
-                                    val route = currentRoute.replace("{scrollToTop}", "true")
-                                    navController.navigate(route) {
-                                        navController.graph.startDestinationRoute?.let { start ->
-                                            popUpTo(start) { inclusive = item.route == Route.Home.route }
-                                            restoreState = true
-                                        }
-
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                }
-                            }
-                        }
-                    )
+                    HasNewItemsIcon(item, accountViewModel, navController)
                 }
             }
         }
@@ -136,38 +105,117 @@ fun AppBottomBar(navController: NavHostController, accountViewModel: AccountView
 }
 
 @Composable
-private fun NotifiableIcon(route: Route, selected: Boolean, accountViewModel: AccountViewModel) {
+private fun RowScope.HasNewItemsIcon(
+    route: Route,
+    accountViewModel: AccountViewModel,
+    navController: NavHostController
+) {
     val scope = rememberCoroutineScope()
 
-    Box(Modifier.size(if ("Home" == route.base) 25.dp else 23.dp)) {
-        Icon(
-            painter = painterResource(id = route.icon),
-            contentDescription = null,
-            modifier = Modifier.size(if ("Home" == route.base) 24.dp else 20.dp),
-            tint = if (selected) MaterialTheme.colors.primary else Color.Unspecified
-        )
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val account = remember(accountState) { accountState?.account } ?: return
 
-        val accountState by accountViewModel.accountLiveData.observeAsState()
-        val account = accountState?.account ?: return
+    val notifState by NotificationCache.live.observeAsState()
+    val notif = remember(notifState) { notifState?.cache } ?: return
 
-        val notifState = NotificationCache.live.observeAsState()
-        val notif = notifState.value ?: return
+    var hasNewItems by remember { mutableStateOf<Boolean>(false) }
 
-        var hasNewItems by remember { mutableStateOf<Boolean>(false) }
-
-        LaunchedEffect(key1 = notif) {
-            scope.launch(Dispatchers.IO) {
-                hasNewItems = route.hasNewItems(account, notif.cache, emptySet())
+    LaunchedEffect(key1 = notifState, key2 = accountState) {
+        scope.launch(Dispatchers.IO) {
+            val newHasNewItems = route.hasNewItems(account, notif, emptySet())
+            if (newHasNewItems != hasNewItems) {
+                hasNewItems = newHasNewItems
             }
         }
+    }
 
-        LaunchedEffect(Unit) {
-            scope.launch(Dispatchers.IO) {
-                LocalCache.live.newEventBundles.collect {
-                    hasNewItems = route.hasNewItems(account, notif.cache, it)
+    LaunchedEffect(accountState) {
+        scope.launch(Dispatchers.IO) {
+            LocalCache.live.newEventBundles.collect {
+                val newHasNewItems = route.hasNewItems(account, notif, it)
+                if (newHasNewItems != hasNewItems) {
+                    hasNewItems = newHasNewItems
                 }
             }
         }
+    }
+
+    BottomIcon(
+        icon = route.icon,
+        size = if ("Home" == route.base) 25.dp else 23.dp,
+        iconSize = if ("Home" == route.base) 24.dp else 20.dp,
+        base = route.base,
+        hasNewItems = hasNewItems,
+        navController
+    ) { selected ->
+        scope.launch {
+            if (!selected) {
+                navController.navigate(route.base) {
+                    navController.graph.startDestinationRoute?.let { start ->
+                        popUpTo(start)
+                        restoreState = true
+                    }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            } else {
+                val newRoute = route.route.replace("{scrollToTop}", "true")
+                navController.navigate(newRoute) {
+                    navController.graph.startDestinationRoute?.let { start ->
+                        popUpTo(start) { inclusive = route.route == Route.Home.route }
+                        restoreState = true
+                    }
+
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RowScope.BottomIcon(
+    icon: Int,
+    size: Dp,
+    iconSize: Dp,
+    base: String,
+    hasNewItems: Boolean,
+    navController: NavHostController,
+    onClick: (Boolean) -> Unit
+) {
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+
+    navBackStackEntry?.let {
+        val selected = remember(it) {
+            it.destination.route?.substringBefore("?") == base
+        }
+
+        BottomNavigationItem(
+            icon = {
+                NotifiableIcon(
+                    icon,
+                    size,
+                    iconSize,
+                    selected,
+                    hasNewItems
+                )
+            },
+            selected = selected,
+            onClick = { onClick(selected) }
+        )
+    }
+}
+
+@Composable
+private fun NotifiableIcon(icon: Int, size: Dp, iconSize: Dp, selected: Boolean, hasNewItems: Boolean) {
+    Box(Modifier.size(size)) {
+        Icon(
+            painter = painterResource(id = icon),
+            contentDescription = null,
+            modifier = Modifier.size(iconSize),
+            tint = if (selected) MaterialTheme.colors.primary else Color.Unspecified
+        )
 
         if (hasNewItems) {
             Box(

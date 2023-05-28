@@ -1,5 +1,7 @@
 package com.vitorpamplona.amethyst.model
 
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.model.BookmarkListEvent
@@ -20,6 +22,7 @@ import java.util.regex.Pattern
 
 val lnurlpPattern = Pattern.compile("(?i:http|https):\\/\\/((.+)\\/)*\\.well-known\\/lnurlp\\/(.*)")
 
+@Stable
 class User(val pubkeyHex: String) {
     var info: UserMetadata? = null
 
@@ -296,7 +299,7 @@ class User(val pubkeyHex: String) {
     fun hasSentMessagesTo(user: User?): Boolean {
         val messagesToUser = privateChatrooms[user] ?: return false
 
-        return messagesToUser.roomMessages.any { this === it.author }
+        return messagesToUser.roomMessages.any { this.pubkeyHex == it.author?.pubkeyHex }
     }
 
     fun hasReport(loggedIn: User, type: ReportEvent.ReportType): Boolean {
@@ -358,6 +361,7 @@ data class RelayInfo(
 
 data class Chatroom(var roomMessages: Set<Note>)
 
+@Stable
 class UserMetadata {
     var name: String? = null
     var username: String? = null
@@ -417,4 +421,5 @@ class UserLiveData(val user: User) : LiveData<UserState>(UserState(user)) {
     }
 }
 
+@Immutable
 class UserState(val user: User)

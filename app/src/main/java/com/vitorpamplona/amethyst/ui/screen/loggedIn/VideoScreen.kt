@@ -7,7 +7,6 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,19 +46,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowRow
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -74,7 +68,6 @@ import com.vitorpamplona.amethyst.ui.actions.NewMediaModel
 import com.vitorpamplona.amethyst.ui.actions.NewMediaView
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
-import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.dal.VideoFeedFilter
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.FileHeaderDisplay
@@ -83,6 +76,7 @@ import com.vitorpamplona.amethyst.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteDropDownMenu
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.RenderRelay
 import com.vitorpamplona.amethyst.ui.note.ViewCountReaction
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.screen.FeedEmpty
@@ -92,6 +86,7 @@ import com.vitorpamplona.amethyst.ui.screen.LoadingFeed
 import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.screen.rememberForeverPagerState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -99,7 +94,7 @@ import kotlinx.coroutines.launch
 fun VideoScreen(
     videoFeedView: NostrVideoFeedViewModel,
     accountViewModel: AccountViewModel,
-    navController: NavController,
+    nav: (String) -> Unit,
     scrollToTop: Boolean = false
 ) {
     val lifeCycleOwner = LocalLifecycleOwner.current
@@ -124,7 +119,6 @@ fun VideoScreen(
                 VideoFeedFilter.account = account
                 NostrVideoDataSource.account = account
                 NostrVideoDataSource.start()
-                videoFeedView.invalidateData()
             }
             if (event == Lifecycle.Event.ON_PAUSE) {
                 println("Video Stop")
@@ -138,11 +132,21 @@ fun VideoScreen(
         }
     }
 
+    if (scrollToTop) {
+        val scope = rememberCoroutineScope()
+        LaunchedEffect(key1 = Unit) {
+            scope.launch(Dispatchers.IO) {
+                NostrVideoDataSource.resetFilters()
+                videoFeedView.invalidateData()
+            }
+        }
+    }
+
     Column(Modifier.fillMaxHeight()) {
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            FeedView(videoFeedView, accountViewModel, navController, ScrollStateKeys.VIDEO_SCREEN, scrollToTop)
+            FeedView(videoFeedView, accountViewModel, nav, ScrollStateKeys.VIDEO_SCREEN, scrollToTop)
         }
     }
 }
@@ -151,7 +155,7 @@ fun VideoScreen(
 fun FeedView(
     videoFeedView: NostrVideoFeedViewModel,
     accountViewModel: AccountViewModel,
-    navController: NavController,
+    nav: (String) -> Unit,
     scrollStateKey: String? = null,
     scrollToTop: Boolean = false
 ) {
@@ -176,7 +180,7 @@ fun FeedView(
                         SlidingCarousel(
                             state.feed,
                             accountViewModel,
-                            navController,
+                            nav,
                             scrollStateKey,
                             scrollToTop
                         )
@@ -196,7 +200,7 @@ fun FeedView(
 fun SlidingCarousel(
     feed: MutableState<List<Note>>,
     accountViewModel: AccountViewModel,
-    navController: NavController,
+    nav: (String) -> Unit,
     scrollStateKey: String? = null,
     scrollToTop: Boolean = false
 ) {
@@ -222,7 +226,7 @@ fun SlidingCarousel(
         }
     ) { index ->
         feed.value.getOrNull(index)?.let { note ->
-            RenderVideoOrPictureNote(note, accountViewModel, navController)
+            RenderVideoOrPictureNote(note, accountViewModel, nav)
         }
     }
 }
@@ -231,7 +235,7 @@ fun SlidingCarousel(
 private fun RenderVideoOrPictureNote(
     note: Note,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     val noteEvent = note.event
 
@@ -255,7 +259,7 @@ private fun RenderVideoOrPictureNote(
         Column(Modifier.weight(1f)) {
             Row(Modifier.padding(10.dp), verticalAlignment = Alignment.Bottom) {
                 Column(Modifier.size(55.dp), verticalArrangement = Arrangement.Center) {
-                    NoteAuthorPicture(note, navController, loggedIn, 55.dp)
+                    NoteAuthorPicture(note, nav, loggedIn, 55.dp)
                 }
 
                 Column(
@@ -299,7 +303,7 @@ private fun RenderVideoOrPictureNote(
             verticalArrangement = Arrangement.Center
         ) {
             Row(horizontalArrangement = Arrangement.Center) {
-                ReactionsColumn(note, accountViewModel, navController)
+                ReactionsColumn(note, accountViewModel, nav)
             }
         }
     }
@@ -308,41 +312,19 @@ private fun RenderVideoOrPictureNote(
 @Composable
 private fun RelayBadges(baseNote: Note) {
     val noteRelaysState by baseNote.live().relays.observeAsState()
-    val noteRelays = noteRelaysState?.note?.relays ?: emptySet()
-
-    var expanded by remember { mutableStateOf(false) }
-
-    val relaysToDisplay = noteRelays
-
-    val uri = LocalUriHandler.current
+    val noteRelays = remember(noteRelaysState) {
+        noteRelaysState?.note?.relays ?: emptySet()
+    }
 
     FlowRow() {
-        relaysToDisplay.forEach {
-            val url = it.removePrefix("wss://").removePrefix("ws://")
-            Box(
-                Modifier
-                    .size(15.dp)
-                    .padding(1.dp)
-            ) {
-                RobohashFallbackAsyncImage(
-                    robot = "https://$url/favicon.ico",
-                    robotSize = 15.dp,
-                    model = "https://$url/favicon.ico",
-                    contentDescription = stringResource(id = R.string.relay_icon),
-                    colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }),
-                    modifier = Modifier
-                        .fillMaxSize(1f)
-                        .clip(shape = CircleShape)
-                        .background(MaterialTheme.colors.background)
-                        .clickable(onClick = { uri.openUri("https://$url") })
-                )
-            }
+        noteRelays.forEach { dirtyUrl ->
+            RenderRelay(dirtyUrl)
         }
     }
 }
 
 @Composable
-fun ReactionsColumn(baseNote: Note, accountViewModel: AccountViewModel, navController: NavController) {
+fun ReactionsColumn(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
@@ -355,11 +337,11 @@ fun ReactionsColumn(baseNote: Note, accountViewModel: AccountViewModel, navContr
     }
 
     if (wantsToReplyTo != null) {
-        NewPostView({ wantsToReplyTo = null }, wantsToReplyTo, null, account, accountViewModel, navController)
+        NewPostView({ wantsToReplyTo = null }, wantsToReplyTo, null, account, accountViewModel, nav)
     }
 
     if (wantsToQuote != null) {
-        NewPostView({ wantsToQuote = null }, null, wantsToQuote, account, accountViewModel, navController)
+        NewPostView({ wantsToQuote = null }, null, wantsToQuote, account, accountViewModel, nav)
     }
 
     Spacer(modifier = Modifier.height(8.dp))
@@ -380,7 +362,7 @@ fun ReactionsColumn(baseNote: Note, accountViewModel: AccountViewModel, navContr
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun NewImageButton(accountViewModel: AccountViewModel, navController: NavController) {
+fun NewImageButton(accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     var wantsToPost by remember {
         mutableStateOf(false)
     }
@@ -397,15 +379,7 @@ fun NewImageButton(accountViewModel: AccountViewModel, navController: NavControl
             // awaits an refresh on the list
             delay(250)
             val route = Route.Video.route.replace("{scrollToTop}", "true")
-            navController.navigate(route) {
-                navController.graph.startDestinationRoute?.let { start ->
-                    popUpTo(start) { inclusive = false }
-                    restoreState = true
-                }
-
-                launchSingleTop = true
-                restoreState = true
-            }
+            nav(route)
         }
     }
 
@@ -445,7 +419,7 @@ fun NewImageButton(accountViewModel: AccountViewModel, navController: NavControl
             onClose = { pickedURI = null },
             postViewModel = postViewModel,
             accountViewModel = accountViewModel,
-            navController = navController
+            nav = nav
         )
     }
 

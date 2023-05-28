@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -38,8 +37,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.onSizeChanged
@@ -51,7 +48,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
@@ -65,8 +61,10 @@ import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -82,7 +80,7 @@ fun ChatroomMessageCompose(
     innerQuote: Boolean = false,
     parentBackgroundColor: Color? = null,
     accountViewModel: AccountViewModel,
-    navController: NavController,
+    nav: (String) -> Unit,
     onWantsToReply: (Note) -> Unit
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
@@ -119,7 +117,7 @@ fun ChatroomMessageCompose(
         LaunchedEffect(key1 = noteReportsState, key2 = accountState) {
             withContext(Dispatchers.IO) {
                 account.userProfile().let { loggedIn ->
-                    val newCanPreview = note.author === loggedIn ||
+                    val newCanPreview = note.author?.pubkeyHex == loggedIn.pubkeyHex ||
                         (note.author?.let { loggedIn.isFollowingCached(it) } ?: true) ||
                         !(noteForReports.hasAnyReports())
 
@@ -138,7 +136,7 @@ fun ChatroomMessageCompose(
                 account.userProfile(),
                 Modifier,
                 innerQuote,
-                navController,
+                nav,
                 onClick = { showHiddenNote = true }
             )
         } else {
@@ -211,7 +209,7 @@ fun ChatroomMessageCompose(
                                 .combinedClickable(
                                     onClick = {
                                         if (noteEvent is ChannelCreateEvent) {
-                                            navController.navigate("Channel/${note.idHex}")
+                                            nav("Channel/${note.idHex}")
                                         }
                                     },
                                     onLongClick = { popupExpanded = true }
@@ -230,7 +228,7 @@ fun ChatroomMessageCompose(
                                     DrawAuthorInfo(
                                         baseNote,
                                         alignment,
-                                        navController
+                                        nav
                                     )
                                 } else {
                                     Spacer(modifier = Modifier.height(5.dp))
@@ -246,7 +244,7 @@ fun ChatroomMessageCompose(
                                                 innerQuote = true,
                                                 parentBackgroundColor = backgroundBubbleColor,
                                                 accountViewModel = accountViewModel,
-                                                navController = navController,
+                                                nav = nav,
                                                 onWantsToReply = onWantsToReply
                                             )
                                         }
@@ -270,7 +268,7 @@ fun ChatroomMessageCompose(
                                                 isAcceptableAndCanPreview.second,
                                                 backgroundBubbleColor,
                                                 accountViewModel,
-                                                navController
+                                                nav
                                             )
                                         }
                                     }
@@ -364,31 +362,37 @@ private fun RenderRegularTextNote(
     canPreview: Boolean,
     backgroundBubbleColor: Color,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     val tags = remember { note.event?.tags() }
     val eventContent = remember { accountViewModel.decrypt(note) }
     val modifier = remember { Modifier.padding(top = 5.dp) }
 
     if (eventContent != null) {
-        TranslatableRichTextViewer(
-            eventContent,
-            canPreview,
-            modifier,
-            tags,
-            backgroundBubbleColor,
-            accountViewModel,
-            navController
-        )
+        val hasSensitiveContent = remember(note.event) { note.event?.isSensitive() ?: false }
+        SensitivityWarning(
+            hasSensitiveContent = hasSensitiveContent,
+            accountViewModel = accountViewModel
+        ) {
+            TranslatableRichTextViewer(
+                content = eventContent,
+                canPreview = canPreview,
+                modifier = modifier,
+                tags = tags,
+                backgroundColor = backgroundBubbleColor,
+                accountViewModel = accountViewModel,
+                nav = nav
+            )
+        }
     } else {
         TranslatableRichTextViewer(
-            stringResource(R.string.could_not_decrypt_the_message),
-            true,
-            modifier,
-            tags,
-            backgroundBubbleColor,
-            accountViewModel,
-            navController
+            content = stringResource(id = R.string.could_not_decrypt_the_message),
+            canPreview = true,
+            modifier = modifier,
+            tags = tags,
+            backgroundColor = backgroundBubbleColor,
+            accountViewModel = accountViewModel,
+            nav = nav
         )
     }
 }
@@ -445,7 +449,7 @@ private fun RenderCreateChannelNote(note: Note) {
 private fun DrawAuthorInfo(
     baseNote: Note,
     alignment: Arrangement.Horizontal,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     val userState by baseNote.author!!.live().metadata.observeAsState()
 
@@ -469,7 +473,7 @@ private fun DrawAuthorInfo(
                 .height(25.dp)
                 .clip(shape = CircleShape)
                 .clickable(onClick = {
-                    navController.navigate(route)
+                    nav(route)
                 })
         )
 
@@ -480,7 +484,7 @@ private fun DrawAuthorInfo(
             fontWeight = FontWeight.Bold,
             overrideColor = MaterialTheme.colors.onBackground,
             route = route,
-            navController = navController
+            nav = nav
         )
     }
 }
@@ -505,7 +509,7 @@ private fun RelayBadges(baseNote: Note) {
 
     var expanded by remember { mutableStateOf(false) }
 
-    val relaysToDisplay by remember {
+    val relaysToDisplay by remember(noteRelaysState) {
         derivedStateOf {
             if (expanded) state.noteRelays else state.noteRelaysSimple
         }
@@ -533,31 +537,27 @@ private fun RelayBadges(baseNote: Note) {
 }
 
 @Composable
-private fun RenderRelay(dirtyUrl: String) {
+fun RenderRelay(dirtyUrl: String) {
     val uri = LocalUriHandler.current
-    val website = remember {
-        val cleanUrl = dirtyUrl.removePrefix("wss://").removePrefix("ws://")
+    val website = remember(dirtyUrl) {
+        val cleanUrl = dirtyUrl.trim().removePrefix("wss://").removePrefix("ws://").removeSuffix("/")
         "https://$cleanUrl"
     }
-    val iconUrl = remember {
-        val cleanUrl = dirtyUrl.removePrefix("wss://").removePrefix("ws://")
+    val iconUrl = remember(dirtyUrl) {
+        val cleanUrl = dirtyUrl.trim().removePrefix("wss://").removePrefix("ws://").removeSuffix("/")
         "https://$cleanUrl/favicon.ico"
     }
 
-    val clickableModifier = remember {
+    val clickableModifier = remember(dirtyUrl) {
         Modifier
-            .size(15.dp)
             .padding(1.dp)
+            .size(15.dp)
             .clickable(onClick = { uri.openUri(website) })
     }
 
-    val colorFilter = remember {
-        ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0.5f) })
-    }
-
-    val iconModifier = remember {
+    val iconModifier = remember(dirtyUrl) {
         Modifier
-            .fillMaxSize(1f)
+            .size(13.dp)
             .clip(shape = CircleShape)
     }
 
@@ -566,10 +566,10 @@ private fun RenderRelay(dirtyUrl: String) {
     ) {
         RobohashFallbackAsyncImage(
             robot = iconUrl,
-            robotSize = 15.dp,
+            robotSize = 13.dp,
             model = iconUrl,
             contentDescription = stringResource(id = R.string.relay_icon),
-            colorFilter = colorFilter,
+            colorFilter = RelayIconFilter,
             modifier = iconModifier.background(MaterialTheme.colors.background)
         )
     }

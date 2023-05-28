@@ -21,7 +21,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.ui.note.ZapNoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -30,7 +29,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 fun LnZapFeedView(
     viewModel: LnZapFeedViewModel,
     accountViewModel: AccountViewModel,
-    navController: NavController,
+    nav: (String) -> Unit,
     enablePullRefresh: Boolean = true
 ) {
     val feedState by viewModel.feedContent.collectAsState()
@@ -60,8 +59,11 @@ fun LnZapFeedView(
                         }
                     }
                     is LnZapFeedState.Loaded -> {
-                        refreshing = false
-                        LnZapFeedLoaded(state, accountViewModel, navController)
+                        if (refreshing) {
+                            refreshing = false
+                        }
+
+                        LnZapFeedLoaded(state, accountViewModel, nav)
                     }
                     is LnZapFeedState.Loading -> {
                         LoadingFeed()
@@ -80,7 +82,7 @@ fun LnZapFeedView(
 private fun LnZapFeedLoaded(
     state: LnZapFeedState.Loaded,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     val listState = rememberLazyListState()
 
@@ -92,7 +94,7 @@ private fun LnZapFeedLoaded(
         state = listState
     ) {
         itemsIndexed(state.feed.value, key = { _, item -> item.second.idHex }) { _, item ->
-            ZapNoteCompose(item, accountViewModel = accountViewModel, navController = navController)
+            ZapNoteCompose(item, accountViewModel = accountViewModel, nav = nav)
         }
     }
 }

@@ -1,7 +1,9 @@
 package com.vitorpamplona.amethyst.service.model
 
+import androidx.compose.runtime.Immutable
 import java.math.BigDecimal
 
+@Immutable
 interface LnZapEventInterface : EventInterface {
 
     fun zappedPost(): List<String>

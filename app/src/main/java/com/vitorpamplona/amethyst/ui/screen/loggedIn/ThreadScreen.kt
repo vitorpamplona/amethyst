@@ -14,14 +14,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.service.NostrThreadDataSource
 import com.vitorpamplona.amethyst.ui.dal.ThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.NostrThreadFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.ThreadFeedView
 
 @Composable
-fun ThreadScreen(noteId: String?, accountViewModel: AccountViewModel, navController: NavController) {
+fun ThreadScreen(noteId: String?, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val account by accountViewModel.accountLiveData.observeAsState()
 
     val lifeCycleOwner = LocalLifecycleOwner.current
@@ -63,7 +62,7 @@ fun ThreadScreen(noteId: String?, accountViewModel: AccountViewModel, navControl
             Column(
                 modifier = Modifier.padding(vertical = 0.dp)
             ) {
-                ThreadFeedView(noteId, feedViewModel, accountViewModel, navController)
+                ThreadFeedView(noteId, feedViewModel, accountViewModel, nav)
             }
         }
     }

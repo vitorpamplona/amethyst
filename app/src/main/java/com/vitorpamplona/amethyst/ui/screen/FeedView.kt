@@ -29,7 +29,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -39,7 +38,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 fun FeedView(
     viewModel: FeedViewModel,
     accountViewModel: AccountViewModel,
-    navController: NavController,
+    nav: (String) -> Unit,
     routeForLastRead: String?,
     scrollStateKey: String? = null,
     scrollToTop: Boolean = false,
@@ -77,12 +76,14 @@ fun FeedView(
                     }
 
                     is FeedState.Loaded -> {
-                        refreshing = false
+                        if (refreshing) {
+                            refreshing = false
+                        }
                         FeedLoaded(
                             state,
                             routeForLastRead,
                             accountViewModel,
-                            navController,
+                            nav,
                             scrollStateKey,
                             scrollToTop
                         )
@@ -106,7 +107,7 @@ private fun FeedLoaded(
     state: FeedState.Loaded,
     routeForLastRead: String?,
     accountViewModel: AccountViewModel,
-    navController: NavController,
+    nav: (String) -> Unit,
     scrollStateKey: String?,
     scrollToTop: Boolean = false
 ) {
@@ -118,8 +119,14 @@ private fun FeedLoaded(
 
     if (scrollToTop) {
         LaunchedEffect(Unit) {
-            listState.scrollToItem(index = 0)
+            if (listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0) {
+                listState.scrollToItem(index = 0)
+            }
         }
+    }
+
+    val baseModifier = remember {
+        Modifier
     }
 
     LazyColumn(
@@ -132,10 +139,11 @@ private fun FeedLoaded(
         itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
             NoteCompose(
                 item,
-                isBoostedNote = false,
                 routeForLastRead = routeForLastRead,
+                modifier = baseModifier,
+                isBoostedNote = false,
                 accountViewModel = accountViewModel,
-                navController = navController
+                nav = nav
             )
         }
     }

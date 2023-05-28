@@ -40,9 +40,9 @@ object ImageUploader {
             "Can't open the image input stream"
         }
         val myServer = when (server) {
-            ServersAvailable.IMGUR, ServersAvailable.IMGUR_NIP_94 -> {
-                ImgurServer()
-            }
+            // ServersAvailable.IMGUR, ServersAvailable.IMGUR_NIP_94 -> {
+            //    ImgurServer()
+            // }
             ServersAvailable.NOSTRIMG, ServersAvailable.NOSTRIMG_NIP_94 -> {
                 NostrImgServer()
             }
@@ -53,7 +53,7 @@ object ImageUploader {
                 NostrFilesDevServer()
             }
             else -> {
-                ImgurServer()
+                NostrBuildServer()
             }
         }
 

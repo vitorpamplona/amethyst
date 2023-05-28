@@ -1,11 +1,13 @@
 package com.vitorpamplona.amethyst.service.model
 
+import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.relays.Client
 import nostr.postr.Utils
 import java.util.Date
 
+@Immutable
 class RepostEvent(
     id: HexKey,
     pubKey: HexKey,

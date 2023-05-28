@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.service.model
 
+import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
@@ -11,6 +12,7 @@ const val VALUE_MINIMUM = "value_minimum"
 const val CONSENSUS_THRESHOLD = "consensus_threshold"
 const val CLOSED_AT = "closed_at"
 
+@Immutable
 class PollNoteEvent(
     id: HexKey,
     pubKey: HexKey,
@@ -49,7 +51,8 @@ class PollNoteEvent(
             valueMinimum: Int?,
             consensusThreshold: Int?,
             closedAt: Int?,
-            zapReceiver: String?
+            zapReceiver: String?,
+            markAsSensitive: Boolean
         ): PollNoteEvent {
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf<List<String>>()
@@ -72,6 +75,9 @@ class PollNoteEvent(
 
             if (zapReceiver != null) {
                 tags.add(listOf("zap", zapReceiver))
+            }
+            if (markAsSensitive) {
+                tags.add(listOf("content-warning", ""))
             }
 
             val id = generateId(pubKey, createdAt, kind, tags, msg)

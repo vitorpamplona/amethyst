@@ -28,7 +28,6 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
@@ -39,7 +38,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Composable
-fun NewMediaView(uri: Uri, onClose: () -> Unit, postViewModel: NewMediaModel, accountViewModel: AccountViewModel, navController: NavController) {
+fun NewMediaView(uri: Uri, onClose: () -> Unit, postViewModel: NewMediaModel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val account = accountViewModel.accountLiveData.value?.account ?: return
     val resolver = LocalContext.current.contentResolver
     val context = LocalContext.current
@@ -111,7 +110,7 @@ fun NewMediaView(uri: Uri, onClose: () -> Unit, postViewModel: NewMediaModel, ac
 
 fun isNIP94Server(selectedServer: ServersAvailable?): Boolean {
     return selectedServer == ServersAvailable.NOSTRIMG_NIP_94 ||
-        selectedServer == ServersAvailable.IMGUR_NIP_94 ||
+        // selectedServer == ServersAvailable.IMGUR_NIP_94 ||
         selectedServer == ServersAvailable.NOSTR_BUILD_NIP_94 ||
         selectedServer == ServersAvailable.NOSTRFILES_DEV_NIP_94
 }
@@ -121,7 +120,7 @@ fun ImageVideoPost(postViewModel: NewMediaModel, acc: Account) {
     val scope = rememberCoroutineScope()
 
     val fileServers = listOf(
-        Triple(ServersAvailable.IMGUR_NIP_94, stringResource(id = R.string.upload_server_imgur_nip94), stringResource(id = R.string.upload_server_imgur_nip94_explainer)),
+        // Triple(ServersAvailable.IMGUR_NIP_94, stringResource(id = R.string.upload_server_imgur_nip94), stringResource(id = R.string.upload_server_imgur_nip94_explainer)),
         Triple(ServersAvailable.NOSTRIMG_NIP_94, stringResource(id = R.string.upload_server_nostrimg_nip94), stringResource(id = R.string.upload_server_nostrimg_nip94_explainer)),
         Triple(ServersAvailable.NOSTR_BUILD_NIP_94, stringResource(id = R.string.upload_server_nostrbuild_nip94), stringResource(id = R.string.upload_server_nostrbuild_nip94_explainer)),
         Triple(ServersAvailable.NOSTRFILES_DEV_NIP_94, stringResource(id = R.string.upload_server_nostrfilesdev_nip94), stringResource(id = R.string.upload_server_nostrfilesdev_nip94_explainer)),

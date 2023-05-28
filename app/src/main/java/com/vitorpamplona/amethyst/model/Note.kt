@@ -1,5 +1,7 @@
 package com.vitorpamplona.amethyst.model
 
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.lnurl.LnInvoiceUtil
@@ -20,6 +22,7 @@ import java.util.regex.Pattern
 
 val tagSearch = Pattern.compile("(?:\\s|\\A)\\#\\[([0-9]+)\\]")
 
+@Stable
 class AddressableNote(val address: ATag) : Note(address.toTag()) {
     override fun idNote() = address.toNAddr()
     override fun toNEvent() = address.toNAddr()
@@ -28,6 +31,7 @@ class AddressableNote(val address: ATag) : Note(address.toTag()) {
     override fun createdAt() = (event as? LongTextNoteEvent)?.publishedAt() ?: event?.createdAt()
 }
 
+@Stable
 open class Note(val idHex: String) {
     // These fields are only available after the Text Note event is received.
     // They are immutable after that.
@@ -228,7 +232,7 @@ open class Note(val idHex: String) {
     fun isZappedBy(user: User, account: Account): Boolean {
         // Zaps who the requester was the user
         return zaps.any {
-            it.key.author === user || account.decryptZapContentAuthor(it.key)?.pubKey == user.pubkeyHex
+            it.key.author?.pubkeyHex == user.pubkeyHex || account.decryptZapContentAuthor(it.key)?.pubKey == user.pubkeyHex
         } || zapPayments.any {
             val zapResponseEvent = it.value?.event as? LnZapPaymentResponseEvent
             val response = if (zapResponseEvent != null) {
@@ -241,11 +245,11 @@ open class Note(val idHex: String) {
     }
 
     fun isReactedBy(user: User): Boolean {
-        return reactions.any { it.author === user }
+        return reactions.any { it.author?.pubkeyHex == user.pubkeyHex }
     }
 
     fun isBoostedBy(user: User): Boolean {
-        return boosts.any { it.author === user }
+        return boosts.any { it.author?.pubkeyHex == user.pubkeyHex }
     }
 
     fun reportsBy(user: User): Set<Note> {
@@ -439,4 +443,5 @@ class NoteLiveData(val note: Note) : LiveData<NoteState>(NoteState(note)) {
     }
 }
 
+@Immutable
 class NoteState(val note: Note)

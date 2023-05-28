@@ -83,7 +83,7 @@ import kotlinx.coroutines.withContext
 @Composable
 fun AppTopBar(followLists: FollowListViewModel, navController: NavHostController, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
     when (currentRoute(navController)?.substringBefore("?")) {
-        // Route.Profile.route -> TopBarWithBackButton(navController)
+        // Route.Profile.route -> TopBarWithBackButton(nav)
         Route.Home.base -> HomeTopBar(followLists, scaffoldState, accountViewModel)
         Route.Video.base -> StoriesTopBar(followLists, scaffoldState, accountViewModel)
         Route.Notification.base -> NotificationTopBar(followLists, scaffoldState, accountViewModel)

@@ -1,11 +1,13 @@
 package com.vitorpamplona.amethyst.service.model
 
 import android.util.Log
+import androidx.compose.runtime.Immutable
 import com.google.gson.reflect.TypeToken
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.hexToByteArray
 import nostr.postr.Utils
 
+@Immutable
 abstract class GeneralListEvent(
     id: HexKey,
     pubKey: HexKey,

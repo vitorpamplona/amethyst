@@ -2,6 +2,8 @@ package com.vitorpamplona.amethyst.model
 
 import android.content.res.Resources
 import android.util.Log
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.FileHeader
@@ -43,6 +45,7 @@ val GLOBAL_FOLLOWS = " Global "
 val KIND3_FOLLOWS = " All Follows "
 
 @OptIn(DelicateCoroutinesApi::class)
+@Stable
 class Account(
     val loggedIn: Persona,
     var followingChannels: Set<String> = DefaultChannels,
@@ -53,7 +56,7 @@ class Account(
     var translateTo: String = Locale.getDefault().language,
     var zapAmountChoices: List<Long> = listOf(500L, 1000L, 5000L),
     var defaultZapType: LnZapEvent.ZapType = LnZapEvent.ZapType.PRIVATE,
-    var defaultFileServer: ServersAvailable = ServersAvailable.IMGUR,
+    var defaultFileServer: ServersAvailable = ServersAvailable.NOSTR_BUILD,
     var defaultHomeFollowList: String = KIND3_FOLLOWS,
     var defaultStoriesFollowList: String = GLOBAL_FOLLOWS,
     var defaultNotificationFollowList: String = GLOBAL_FOLLOWS,
@@ -62,7 +65,8 @@ class Account(
     var hideBlockAlertDialog: Boolean = false,
     var backupContactList: ContactListEvent? = null,
     var proxy: Proxy?,
-    var proxyPort: Int
+    var proxyPort: Int,
+    var showSensitiveContent: Boolean? = null
 ) {
     var transientHiddenUsers: Set<String> = setOf()
 
@@ -217,7 +221,12 @@ class Account(
         zapPaymentRequest?.let { nip47 ->
             val event = LnZapPaymentRequestEvent.create(bolt11, nip47.pubKeyHex, nip47.secret?.hexToByteArray() ?: loggedIn.privKey!!)
 
-            val wcListener = NostrLnZapPaymentResponseDataSource(nip47.pubKeyHex, event.pubKey, event.id)
+            val wcListener = NostrLnZapPaymentResponseDataSource(
+                fromServiceHex = nip47.pubKeyHex,
+                toUserHex = event.pubKey,
+                replyingToHex = event.id,
+                authSigningKey = nip47.secret?.hexToByteArray() ?: loggedIn.privKey!!
+            )
             wcListener.start()
 
             LocalCache.consume(event, zappedNote) {
@@ -472,7 +481,14 @@ class Account(
         return LocalCache.notes[signedEvent.id]
     }
 
-    fun sendPost(message: String, replyTo: List<Note>?, mentions: List<User>?, tags: List<String>? = null, zapReceiver: String? = null) {
+    fun sendPost(
+        message: String,
+        replyTo: List<Note>?,
+        mentions: List<User>?,
+        tags: List<String>? = null,
+        zapReceiver: String? = null,
+        wantsToMarkAsSensitive: Boolean
+    ) {
         if (!isWriteable()) return
 
         val repliesToHex = replyTo?.filter { it.address() == null }?.map { it.idHex }
@@ -486,6 +502,7 @@ class Account(
             addresses = addresses,
             extraTags = tags,
             zapReceiver = zapReceiver,
+            markAsSensitive = wantsToMarkAsSensitive,
             privateKey = loggedIn.privKey!!
         )
 
@@ -502,7 +519,8 @@ class Account(
         valueMinimum: Int?,
         consensusThreshold: Int?,
         closedAt: Int?,
-        zapReceiver: String? = null
+        zapReceiver: String? = null,
+        wantsToMarkAsSensitive: Boolean
     ) {
         if (!isWriteable()) return
 
@@ -521,14 +539,15 @@ class Account(
             valueMinimum = valueMinimum,
             consensusThreshold = consensusThreshold,
             closedAt = closedAt,
-            zapReceiver = zapReceiver
+            zapReceiver = zapReceiver,
+            markAsSensitive = wantsToMarkAsSensitive
         )
         // println("Sending new PollNoteEvent: %s".format(signedEvent.toJson()))
         Client.send(signedEvent)
         LocalCache.consume(signedEvent)
     }
 
-    fun sendChannelMessage(message: String, toChannel: String, replyTo: List<Note>?, mentions: List<User>?, zapReceiver: String? = null) {
+    fun sendChannelMessage(message: String, toChannel: String, replyTo: List<Note>?, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean) {
         if (!isWriteable()) return
 
         // val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
@@ -541,13 +560,14 @@ class Account(
             replyTos = repliesToHex,
             mentions = mentionsHex,
             zapReceiver = zapReceiver,
+            markAsSensitive = wantsToMarkAsSensitive,
             privateKey = loggedIn.privKey!!
         )
         Client.send(signedEvent)
         LocalCache.consume(signedEvent, null)
     }
 
-    fun sendPrivateMessage(message: String, toUser: String, replyingTo: Note? = null, mentions: List<User>?, zapReceiver: String? = null) {
+    fun sendPrivateMessage(message: String, toUser: String, replyingTo: Note? = null, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean) {
         if (!isWriteable()) return
         val user = LocalCache.users[toUser] ?: return
 
@@ -561,6 +581,7 @@ class Account(
             replyTos = repliesToHex,
             mentions = mentionsHex,
             zapReceiver = zapReceiver,
+            markAsSensitive = wantsToMarkAsSensitive,
             privateKey = loggedIn.privKey!!,
             advertiseNip18 = false
         )
@@ -1106,6 +1127,12 @@ class Account(
         saveable.invalidateData()
     }
 
+    fun updateShowSensitiveContent(show: Boolean?) {
+        showSensitiveContent = show
+        saveable.invalidateData()
+        live.invalidateData()
+    }
+
     fun registerObservers() {
         // Observes relays to restart connections
         userProfile().live().relays.observeForever {
@@ -1161,4 +1188,5 @@ class AccountLiveData(private val account: Account) : LiveData<AccountState>(Acc
     }
 }
 
+@Immutable
 class AccountState(val account: Account)

@@ -1,8 +1,10 @@
 package com.vitorpamplona.amethyst.ui.navigation
 
+import android.os.Bundle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.navigation.NamedNavArgument
+import androidx.navigation.NavDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -184,4 +186,49 @@ object MessagesLatestItem {
 
         return (note.createdAt() ?: 0) > lastTime
     }
+}
+
+fun getRouteWithArguments(navController: NavHostController): String? {
+    val currentEntry = navController.currentBackStackEntry ?: return null
+    return getRouteWithArguments(currentEntry.destination, currentEntry.arguments)
+}
+
+private fun getRouteWithArguments(
+    destination: NavDestination,
+    arguments: Bundle?
+): String? {
+    var route = destination.route ?: return null
+    arguments?.let { bundle ->
+        destination.arguments.keys.forEach { key ->
+            val value = destination.arguments[key]?.type?.get(bundle, key)?.toString()
+            if (value == null) {
+                val keyStart = route.indexOf("{$key}")
+                // if it is a parameter, removes the complete segment `var={key}` and adjust connectors `#`, `&` or `&`
+                if (keyStart > 0 && route[keyStart - 1] == '=') {
+                    val end = keyStart + "{$key}".length
+                    var start = keyStart
+                    for (i in keyStart downTo 0) {
+                        if (route[i] == '#' || route[i] == '?' || route[i] == '&') {
+                            start = i + 1
+                            break
+                        }
+                    }
+                    if (end < route.length && route[end] == '&') {
+                        route = route.removeRange(start, end + 1)
+                    } else if (end < route.length && route[end] == '#') {
+                        route = route.removeRange(start - 1, end)
+                    } else if (end == route.length) {
+                        route = route.removeRange(start - 1, end)
+                    } else {
+                        route = route.removeRange(start, end)
+                    }
+                } else {
+                    route = route.replaceFirst("{$key}", "")
+                }
+            } else {
+                route = route.replaceFirst("{$key}", value)
+            }
+        }
+    }
+    return route
 }

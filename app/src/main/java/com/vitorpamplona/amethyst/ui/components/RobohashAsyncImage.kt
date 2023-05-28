@@ -34,7 +34,9 @@ fun RobohashAsyncImage(
 ) {
     val context = LocalContext.current
     val size = with(LocalDensity.current) {
-        robotSize.roundToPx()
+        remember {
+            robotSize.roundToPx()
+        }
     }
 
     val imageRequest = remember(robotSize, robot) {
@@ -132,6 +134,7 @@ fun RobohashAsyncImageProxy(
     filterQuality: FilterQuality = DrawScope.DefaultFilterQuality
 ) {
     val proxy = remember(model) { model.proxyUrl() }
+
     if (proxy == null) {
         RobohashAsyncImage(
             robot = robot,

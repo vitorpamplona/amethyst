@@ -49,7 +49,6 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
@@ -103,7 +102,7 @@ import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 
 @Composable
-fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navController: NavController) {
+fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     if (userId == null) return
 
     var userBase by remember { mutableStateOf<User?>(null) }
@@ -118,14 +117,14 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, navContro
         ProfileScreen(
             user = it,
             accountViewModel = accountViewModel,
-            navController = navController
+            nav = nav
         )
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ProfileScreen(user: User, accountViewModel: AccountViewModel, navController: NavController) {
+fun ProfileScreen(user: User, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = remember(accountState) { accountState?.account } ?: return
 
@@ -210,7 +209,7 @@ fun ProfileScreen(user: User, accountViewModel: AccountViewModel, navController:
                     .fillMaxHeight()
             ) {
                 Column(modifier = Modifier.padding()) {
-                    ProfileHeader(baseUser, navController, account, accountViewModel)
+                    ProfileHeader(baseUser, nav, account, accountViewModel)
                     ScrollableTabRow(
                         backgroundColor = MaterialTheme.colors.background,
                         selectedTabIndex = pagerState.currentPage,
@@ -246,13 +245,13 @@ fun ProfileScreen(user: User, accountViewModel: AccountViewModel, navController:
                         }
                     ) { page ->
                         when (page) {
-                            0 -> TabNotesNewThreads(accountViewModel, navController)
-                            1 -> TabNotesConversations(accountViewModel, navController)
-                            2 -> TabFollows(baseUser, accountViewModel, navController)
-                            3 -> TabFollowers(baseUser, accountViewModel, navController)
-                            4 -> TabReceivedZaps(baseUser, accountViewModel, navController)
-                            5 -> TabBookmarks(baseUser, accountViewModel, navController)
-                            6 -> TabReports(baseUser, accountViewModel, navController)
+                            0 -> TabNotesNewThreads(accountViewModel, nav)
+                            1 -> TabNotesConversations(accountViewModel, nav)
+                            2 -> TabFollows(baseUser, accountViewModel, nav)
+                            3 -> TabFollowers(baseUser, accountViewModel, nav)
+                            4 -> TabReceivedZaps(baseUser, accountViewModel, nav)
+                            5 -> TabBookmarks(baseUser, accountViewModel, nav)
+                            6 -> TabReports(baseUser, accountViewModel, nav)
                             7 -> TabRelays(baseUser, accountViewModel)
                         }
                     }
@@ -331,7 +330,7 @@ private fun FollowTabHeader(baseUser: User) {
 @Composable
 private fun ProfileHeader(
     baseUser: User,
-    navController: NavController,
+    nav: (String) -> Unit,
     account: Account,
     accountViewModel: AccountViewModel
 ) {
@@ -412,7 +411,7 @@ private fun ProfileHeader(
                         .height(35.dp)
                         .padding(bottom = 3.dp)
                 ) {
-                    MessageButton(baseUser, navController)
+                    MessageButton(baseUser, nav)
 
                     // No need for this button anymore
                     // NPubCopyButton(baseUser)
@@ -421,7 +420,7 @@ private fun ProfileHeader(
                 }
             }
 
-            DrawAdditionalInfo(baseUser, account, accountViewModel, navController)
+            DrawAdditionalInfo(baseUser, account, accountViewModel, nav)
 
             Divider(modifier = Modifier.padding(top = 6.dp))
         }
@@ -468,7 +467,7 @@ private fun ProfileActions(
 }
 
 @Composable
-private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewModel: AccountViewModel, navController: NavController) {
+private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val userState by baseUser.live().metadata.observeAsState()
     val user = remember(userState) { userState?.user } ?: return
     val tags = remember(userState) { userState?.user?.info?.latestMetadata?.tags }
@@ -534,7 +533,7 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewMode
                 user,
                 onScan = {
                     dialogOpen = false
-                    navController.navigate(it)
+                    nav(it)
                 },
                 onClose = { dialogOpen = false }
             )
@@ -553,7 +552,7 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewMode
         }
     }
 
-    DisplayBadges(baseUser, navController)
+    DisplayBadges(baseUser, nav)
 
     DisplayNip05ProfileStatus(user)
 
@@ -613,7 +612,7 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewMode
                 tags = null,
                 backgroundColor = MaterialTheme.colors.background,
                 accountViewModel = accountViewModel,
-                navController = navController
+                nav = nav
             )
         }
     }
@@ -701,7 +700,7 @@ private fun DisplayLNAddress(
 @OptIn(ExperimentalLayoutApi::class)
 private fun DisplayBadges(
     baseUser: User,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     val userBadgeState by baseUser.live().badges.observeAsState()
     val userBadge = remember(userBadgeState) { userBadgeState?.user } ?: return
@@ -716,7 +715,7 @@ private fun DisplayBadges(
                         val baseBadgeDefinition = badgeAwardState?.note?.replyTo?.firstOrNull()
 
                         if (baseBadgeDefinition != null) {
-                            BadgeThumb(baseBadgeDefinition, navController, 35.dp)
+                            BadgeThumb(baseBadgeDefinition, nav, 35.dp)
                         }
                     }
                 }
@@ -728,12 +727,12 @@ private fun DisplayBadges(
 @Composable
 fun BadgeThumb(
     note: Note,
-    navController: NavController,
+    nav: (String) -> Unit,
     size: Dp,
     pictureModifier: Modifier = Modifier
 ) {
     BadgeThumb(note, size, pictureModifier) {
-        navController.navigate("Note/${it.idHex}")
+        nav("Note/${it.idHex}")
     }
 }
 
@@ -831,7 +830,7 @@ private fun DrawBanner(baseUser: User) {
 }
 
 @Composable
-fun TabNotesNewThreads(accountViewModel: AccountViewModel, navController: NavController) {
+fun TabNotesNewThreads(accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val feedViewModel: NostrUserProfileNewThreadsFeedViewModel = viewModel()
 
     LaunchedEffect(Unit) {
@@ -842,13 +841,13 @@ fun TabNotesNewThreads(accountViewModel: AccountViewModel, navController: NavCon
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            FeedView(feedViewModel, accountViewModel, navController, null, enablePullRefresh = false)
+            FeedView(feedViewModel, accountViewModel, nav, null, enablePullRefresh = false)
         }
     }
 }
 
 @Composable
-fun TabNotesConversations(accountViewModel: AccountViewModel, navController: NavController) {
+fun TabNotesConversations(accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val feedViewModel: NostrUserProfileConversationsFeedViewModel = viewModel()
 
     LaunchedEffect(Unit) {
@@ -859,13 +858,13 @@ fun TabNotesConversations(accountViewModel: AccountViewModel, navController: Nav
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            FeedView(feedViewModel, accountViewModel, navController, null, enablePullRefresh = false)
+            FeedView(feedViewModel, accountViewModel, nav, null, enablePullRefresh = false)
         }
     }
 }
 
 @Composable
-fun TabBookmarks(baseUser: User, accountViewModel: AccountViewModel, navController: NavController) {
+fun TabBookmarks(baseUser: User, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val feedViewModel: NostrUserProfileBookmarksFeedViewModel = viewModel()
 
     LaunchedEffect(Unit) {
@@ -876,13 +875,13 @@ fun TabBookmarks(baseUser: User, accountViewModel: AccountViewModel, navControll
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            FeedView(feedViewModel, accountViewModel, navController, null, enablePullRefresh = false)
+            FeedView(feedViewModel, accountViewModel, nav, null, enablePullRefresh = false)
         }
     }
 }
 
 @Composable
-fun TabFollows(baseUser: User, accountViewModel: AccountViewModel, navController: NavController) {
+fun TabFollows(baseUser: User, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val feedViewModel: NostrUserProfileFollowsUserFeedViewModel = viewModel()
 
     val userState by baseUser.live().follows.observeAsState()
@@ -895,13 +894,13 @@ fun TabFollows(baseUser: User, accountViewModel: AccountViewModel, navController
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            UserFeedView(feedViewModel, accountViewModel, navController, enablePullRefresh = false)
+            UserFeedView(feedViewModel, accountViewModel, nav, enablePullRefresh = false)
         }
     }
 }
 
 @Composable
-fun TabFollowers(baseUser: User, accountViewModel: AccountViewModel, navController: NavController) {
+fun TabFollowers(baseUser: User, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val feedViewModel: NostrUserProfileFollowersUserFeedViewModel = viewModel()
 
     val userState by baseUser.live().follows.observeAsState()
@@ -914,13 +913,13 @@ fun TabFollowers(baseUser: User, accountViewModel: AccountViewModel, navControll
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            UserFeedView(feedViewModel, accountViewModel, navController, enablePullRefresh = false)
+            UserFeedView(feedViewModel, accountViewModel, nav, enablePullRefresh = false)
         }
     }
 }
 
 @Composable
-fun TabReceivedZaps(baseUser: User, accountViewModel: AccountViewModel, navController: NavController) {
+fun TabReceivedZaps(baseUser: User, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val feedViewModel: NostrUserProfileZapsFeedViewModel = viewModel()
 
     val userState by baseUser.live().zaps.observeAsState()
@@ -933,13 +932,13 @@ fun TabReceivedZaps(baseUser: User, accountViewModel: AccountViewModel, navContr
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            LnZapFeedView(feedViewModel, accountViewModel, navController, enablePullRefresh = false)
+            LnZapFeedView(feedViewModel, accountViewModel, nav, enablePullRefresh = false)
         }
     }
 }
 
 @Composable
-fun TabReports(baseUser: User, accountViewModel: AccountViewModel, navController: NavController) {
+fun TabReports(baseUser: User, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val feedViewModel: NostrUserProfileReportFeedViewModel = viewModel()
 
     val userState by baseUser.live().reports.observeAsState()
@@ -952,7 +951,7 @@ fun TabReports(baseUser: User, accountViewModel: AccountViewModel, navController
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            FeedView(feedViewModel, accountViewModel, navController, null, enablePullRefresh = false)
+            FeedView(feedViewModel, accountViewModel, nav, null, enablePullRefresh = false)
         }
     }
 }
@@ -993,12 +992,12 @@ fun TabRelays(user: User, accountViewModel: AccountViewModel) {
 }
 
 @Composable
-private fun MessageButton(user: User, navController: NavController) {
+private fun MessageButton(user: User, nav: (String) -> Unit) {
     Button(
         modifier = Modifier
             .padding(horizontal = 3.dp)
             .width(50.dp),
-        onClick = { navController.navigate("Room/${user.pubkeyHex}") },
+        onClick = { nav("Room/${user.pubkeyHex}") },
         shape = RoundedCornerShape(20.dp),
         colors = ButtonDefaults
             .buttonColors(

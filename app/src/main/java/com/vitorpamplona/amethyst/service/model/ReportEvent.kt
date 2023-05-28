@@ -1,13 +1,16 @@
 package com.vitorpamplona.amethyst.service.model
 
+import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
 import java.util.Date
 
+@Immutable
 data class ReportedKey(val key: String, val reportType: ReportEvent.ReportType)
 
 // NIP 56 event.
+@Immutable
 class ReportEvent(
     id: HexKey,
     pubKey: HexKey,

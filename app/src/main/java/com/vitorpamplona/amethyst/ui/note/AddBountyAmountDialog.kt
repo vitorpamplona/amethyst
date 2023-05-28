@@ -55,10 +55,11 @@ class AddBountyAmountViewModel : ViewModel() {
 
         if (newValue != null) {
             account?.sendPost(
-                newValue.toString(),
-                listOfNotNull(bounty),
-                listOfNotNull(bounty?.author),
-                listOf("bounty-added-reward")
+                message = newValue.toString(),
+                replyTo = listOfNotNull(bounty),
+                mentions = listOfNotNull(bounty?.author),
+                tags = listOf("bounty-added-reward"),
+                wantsToMarkAsSensitive = false
             )
 
             nextAmount = TextFieldValue("")

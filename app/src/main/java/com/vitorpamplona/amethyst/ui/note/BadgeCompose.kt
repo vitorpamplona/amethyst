@@ -32,7 +32,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.screen.BadgeCard
@@ -42,7 +41,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun BadgeCompose(likeSetCard: BadgeCard, isInnerNote: Boolean = false, routeForLastRead: String, accountViewModel: AccountViewModel, navController: NavController) {
+fun BadgeCompose(likeSetCard: BadgeCard, isInnerNote: Boolean = false, routeForLastRead: String, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val noteState by likeSetCard.note.live().metadata.observeAsState()
     val note = noteState?.note
 
@@ -79,7 +78,7 @@ fun BadgeCompose(likeSetCard: BadgeCard, isInnerNote: Boolean = false, routeForL
                             routeFor(
                                 note,
                                 accountViewModel.userProfile()
-                            )?.let { navController.navigate(it) }
+                            )?.let { nav(it) }
                         }
                     },
                     onLongClick = { popupExpanded = true }
@@ -149,7 +148,7 @@ fun BadgeCompose(likeSetCard: BadgeCard, isInnerNote: Boolean = false, routeForL
                             isBoostedNote = true,
                             parentBackgroundColor = backgroundColor,
                             accountViewModel = accountViewModel,
-                            navController = navController
+                            nav = nav
                         )
                     }
 

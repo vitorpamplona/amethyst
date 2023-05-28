@@ -28,6 +28,7 @@ import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -50,7 +51,6 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
-import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
@@ -63,10 +63,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.math.RoundingMode
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 @Composable
-fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel, navController: NavController) {
+fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = remember(accountState) { accountState?.account } ?: return
 
@@ -81,11 +82,11 @@ fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel, navControll
     }
 
     if (wantsToReplyTo != null) {
-        NewPostView({ wantsToReplyTo = null }, wantsToReplyTo, null, account, accountViewModel, navController)
+        NewPostView({ wantsToReplyTo = null }, wantsToReplyTo, null, account, accountViewModel, nav)
     }
 
     if (wantsToQuote != null) {
-        NewPostView({ wantsToQuote = null }, null, wantsToQuote, account, accountViewModel, navController)
+        NewPostView({ wantsToQuote = null }, null, wantsToQuote, account, accountViewModel, nav)
     }
 
     Spacer(modifier = Modifier.height(8.dp))
@@ -125,6 +126,14 @@ fun ReplyReaction(
     val repliesState by baseNote.live().replies.observeAsState()
     val replies = remember(repliesState) { repliesState?.note?.replies } ?: emptySet()
 
+    val isWriteable = remember { accountViewModel.isWriteable() }
+
+    val replyCount by remember(repliesState) {
+        derivedStateOf {
+            showCount(replies.size)
+        }
+    }
+
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -139,7 +148,7 @@ fun ReplyReaction(
     IconButton(
         modifier = iconButtonModifier,
         onClick = {
-            if (accountViewModel.isWriteable()) {
+            if (isWriteable) {
                 onPress()
             } else {
                 scope.launch {
@@ -162,7 +171,7 @@ fun ReplyReaction(
 
     if (showCounter) {
         Text(
-            " ${showCount(replies.size)}",
+            " $replyCount",
             fontSize = 14.sp,
             color = grayTint
         )
@@ -180,11 +189,25 @@ fun BoostReaction(
     val boostsState by baseNote.live().boosts.observeAsState()
     val boostedNote = remember(boostsState) { boostsState?.note } ?: return
 
-    val hasBoosted = remember(boostsState) { accountViewModel.hasBoosted(baseNote) }
-    val wasBoostedByLoggedIn = remember(boostsState) { boostedNote.isBoostedBy(accountViewModel.userProfile()) }
+    val hasBoosted by remember(boostsState) {
+        derivedStateOf {
+            accountViewModel.hasBoosted(baseNote)
+        }
+    }
+
+    val wasBoostedByLoggedIn by remember(boostsState) {
+        derivedStateOf {
+            boostedNote.isBoostedBy(accountViewModel.userProfile())
+        }
+    }
+
     val isWriteable = remember { accountViewModel.isWriteable() }
 
-    val boostCount = remember(boostsState) { showCount(boostedNote.boosts.size) }
+    val boostCount by remember(boostsState) {
+        derivedStateOf {
+            showCount(boostedNote.boosts.size)
+        }
+    }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -259,11 +282,25 @@ fun LikeReaction(
     val reactionsState by baseNote.live().reactions.observeAsState()
     val reactedNote = remember(reactionsState) { reactionsState?.note } ?: return
 
-    val hasReacted = remember(reactionsState) { accountViewModel.hasReactedTo(baseNote) }
-    val wasReactedByLoggedIn = remember(reactionsState) { reactedNote.isReactedBy(accountViewModel.userProfile()) }
+    val hasReacted by remember(reactionsState) {
+        derivedStateOf {
+            accountViewModel.hasReactedTo(baseNote)
+        }
+    }
+
+    val wasReactedByLoggedIn by remember(reactionsState) {
+        derivedStateOf {
+            reactedNote.isReactedBy(accountViewModel.userProfile())
+        }
+    }
+
     val isWriteable = remember { accountViewModel.isWriteable() }
 
-    val reactionCount = remember(reactionsState) { showCount(reactedNote.reactions.size) }
+    val reactionCount by remember(reactionsState) {
+        derivedStateOf {
+            showCount(reactedNote.reactions.size)
+        }
+    }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -331,15 +368,15 @@ fun ZapReaction(
     animationSize: Dp = 14.dp
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
+    val account = remember(accountState) { accountState?.account } ?: return
 
     val zapsState by baseNote.live().zaps.observeAsState()
-    val zappedNote = zapsState?.note ?: return
-    val zapMessage = ""
+    val zappedNote = remember(zapsState) { zapsState?.note } ?: return
 
     var wantsToZap by remember { mutableStateOf(false) }
     var wantsToChangeZapAmount by remember { mutableStateOf(false) }
     var wantsToSetCustomZap by remember { mutableStateOf(false) }
+
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -351,10 +388,23 @@ fun ZapReaction(
     LaunchedEffect(key1 = zapsState) {
         scope.launch(Dispatchers.IO) {
             if (!wasZappedByLoggedInUser) {
-                wasZappedByLoggedInUser = accountViewModel.calculateIfNoteWasZappedByAccount(zappedNote)
+                val newWasZapped = accountViewModel.calculateIfNoteWasZappedByAccount(zappedNote)
+
+                if (wasZappedByLoggedInUser != newWasZapped) {
+                    wasZappedByLoggedInUser = newWasZapped
+                }
             }
 
-            zapAmountTxt = showAmount(account.calculateZappedAmount(zappedNote))
+            val newZapAmount = showAmount(account.calculateZappedAmount(zappedNote))
+            if (newZapAmount != zapAmountTxt) {
+                zapAmountTxt = newZapAmount
+            }
+
+            if (wasZappedByLoggedInUser) {
+                if (abs(zappingProgress - 1) < 0.001) {
+                    zappingProgress = 1f
+                }
+            }
         }
     }
 
@@ -393,7 +443,7 @@ fun ZapReaction(
                                 baseNote,
                                 account.zapAmountChoices.first() * 1000,
                                 null,
-                                zapMessage,
+                                "",
                                 context,
                                 onError = {
                                     scope.launch {
@@ -457,7 +507,6 @@ fun ZapReaction(
         }
 
         if (wasZappedByLoggedInUser) {
-            zappingProgress = 1f
             Icon(
                 imageVector = Icons.Default.Bolt,
                 contentDescription = stringResource(R.string.zaps),

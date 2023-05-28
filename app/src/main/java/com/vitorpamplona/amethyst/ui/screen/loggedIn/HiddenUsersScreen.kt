@@ -18,7 +18,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.dal.HiddenAccountsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.NostrHiddenAccountsFeedViewModel
@@ -27,7 +26,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun HiddenUsersScreen(accountViewModel: AccountViewModel, navController: NavController) {
+fun HiddenUsersScreen(accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account
 
@@ -55,7 +54,7 @@ fun HiddenUsersScreen(accountViewModel: AccountViewModel, navController: NavCont
                 }
                 HorizontalPager(pageCount = 1, state = pagerState) { page ->
                     when (page) {
-                        0 -> UserFeedView(feedViewModel, accountViewModel, navController)
+                        0 -> UserFeedView(feedViewModel, accountViewModel, nav)
                     }
                 }
             }

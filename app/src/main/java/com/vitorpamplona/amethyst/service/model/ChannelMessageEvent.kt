@@ -1,10 +1,12 @@
 package com.vitorpamplona.amethyst.service.model
 
+import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
 import java.util.Date
 
+@Immutable
 class ChannelMessageEvent(
     id: HexKey,
     pubKey: HexKey,
@@ -20,7 +22,16 @@ class ChannelMessageEvent(
     companion object {
         const val kind = 42
 
-        fun create(message: String, channel: String, replyTos: List<String>? = null, mentions: List<String>? = null, zapReceiver: String?, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ChannelMessageEvent {
+        fun create(
+            message: String,
+            channel: String,
+            replyTos: List<String>? = null,
+            mentions: List<String>? = null,
+            zapReceiver: String?,
+            privateKey: ByteArray,
+            createdAt: Long = Date().time / 1000,
+            markAsSensitive: Boolean
+        ): ChannelMessageEvent {
             val content = message
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf(
@@ -34,6 +45,9 @@ class ChannelMessageEvent(
             }
             zapReceiver?.let {
                 tags.add(listOf("zap", it))
+            }
+            if (markAsSensitive) {
+                tags.add(listOf("content-warning", ""))
             }
 
             val id = generateId(pubKey, createdAt, kind, tags, content)

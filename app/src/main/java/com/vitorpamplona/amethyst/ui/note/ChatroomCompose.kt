@@ -39,7 +39,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -57,7 +56,7 @@ import kotlinx.coroutines.launch
 fun ChatroomCompose(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     val noteState by baseNote.live().metadata.observeAsState()
     val note = noteState?.note
@@ -128,7 +127,7 @@ fun ChatroomCompose(
                 channelLastTime = note.createdAt(),
                 channelLastContent = "${author?.toBestDisplayName()}: " + description,
                 hasNewMessages = hasNewMessages,
-                onClick = { navController.navigate("Channel/${chan.idHex}") }
+                onClick = { nav("Channel/${chan.idHex}") }
             )
         }
     } else {
@@ -172,7 +171,7 @@ fun ChatroomCompose(
                 channelLastTime = note.createdAt(),
                 channelLastContent = accountViewModel.decrypt(note),
                 hasNewMessages = hasNewMessages,
-                onClick = { navController.navigate("Room/${user.pubkeyHex}") }
+                onClick = { nav("Room/${user.pubkeyHex}") }
             )
         }
     }

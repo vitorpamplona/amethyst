@@ -1,11 +1,13 @@
 package com.vitorpamplona.amethyst.service.model
 
 import android.util.Log
+import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.tagSearch
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.service.nip19.Nip19.nip19regex
 
+@Immutable
 open class BaseTextNoteEvent(
     id: HexKey,
     pubKey: HexKey,
@@ -19,6 +21,7 @@ open class BaseTextNoteEvent(
     open fun replyTos() = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
 
     private var citedUsersCache: Set<HexKey>? = null
+    private var citedNotesCache: Set<HexKey>? = null
 
     fun citedUsers(): Set<HexKey> {
         citedUsersCache?.let { return it }
@@ -61,8 +64,10 @@ open class BaseTextNoteEvent(
         return returningList
     }
 
-    fun findCitations(): Set<String> {
-        var citations = mutableSetOf<String>()
+    fun findCitations(): Set<HexKey> {
+        citedNotesCache?.let { return it }
+
+        val citations = mutableSetOf<HexKey>()
         // Removes citations from replies:
         val matcher = tagSearch.matcher(content)
         while (matcher.find()) {
@@ -102,6 +107,7 @@ open class BaseTextNoteEvent(
             }
         }
 
+        citedNotesCache = citations
         return citations
     }
 

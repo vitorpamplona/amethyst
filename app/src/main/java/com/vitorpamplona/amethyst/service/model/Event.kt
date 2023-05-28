@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.service.model
 
 import android.util.Log
+import androidx.compose.runtime.Immutable
 import com.google.gson.*
 import com.google.gson.annotations.SerializedName
 import com.vitorpamplona.amethyst.model.HexKey
@@ -14,6 +15,7 @@ import java.math.BigDecimal
 import java.security.MessageDigest
 import java.util.*
 
+@Immutable
 open class Event(
     val id: HexKey,
     @SerializedName("pubkey") val pubKey: HexKey,
@@ -45,6 +47,12 @@ open class Event(
     fun taggedEvents() = tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }
 
     fun taggedUrls() = tags.filter { it.size > 1 && it[0] == "r" }.map { it[1] }
+
+    override fun isSensitive() = tags.any {
+        (it.size > 0 && it[0].equals("content-warning", true)) ||
+            (it.size > 1 && it[0] == "t" && it[1].equals("nsfw", true)) ||
+            (it.size > 1 && it[0] == "t" && it[1].equals("nude", true))
+    }
 
     override fun zapAddress() = tags.firstOrNull { it.size > 1 && it[0] == "zap" }?.get(1)
 
@@ -285,6 +293,7 @@ open class Event(
     }
 }
 
+@Immutable
 interface AddressableEvent {
     fun dTag(): String
     fun address(): ATag

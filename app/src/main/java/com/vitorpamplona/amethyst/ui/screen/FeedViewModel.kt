@@ -115,8 +115,8 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
     }
     private val bundlerInsert = BundledInsert<Set<Note>>(250, Dispatchers.IO)
 
-    fun invalidateData() {
-        bundler.invalidate()
+    fun invalidateData(ignoreIfDoing: Boolean = false) {
+        bundler.invalidate(ignoreIfDoing)
     }
 
     fun invalidateInsertData(newItems: Set<Note>) {

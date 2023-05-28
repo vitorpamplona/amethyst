@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.service.model
 
 import android.util.Log
+import androidx.compose.runtime.Immutable
 import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
@@ -10,6 +11,7 @@ import com.vitorpamplona.amethyst.model.HexKey
 import nostr.postr.Utils
 import java.lang.reflect.Type
 
+@Immutable
 class LnZapPaymentResponseEvent(
     id: HexKey,
     pubKey: HexKey,
