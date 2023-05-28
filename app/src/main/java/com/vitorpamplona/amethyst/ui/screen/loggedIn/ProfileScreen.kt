@@ -439,20 +439,39 @@ private fun ProfileActions(
     coroutineScope: CoroutineScope
 ) {
     val accountUserState by account.userProfile().live().follows.observeAsState()
+    val accountLocalUserState by account.live.observeAsState()
     val accountUser = remember(accountUserState) { accountUserState?.user } ?: return
+
+    val isHidden by remember(accountUserState, accountLocalUserState) {
+        derivedStateOf {
+            account.isHidden(baseUser)
+        }
+    }
+
+    val isLoggedInFollowingUser by remember(accountUserState, accountLocalUserState) {
+        derivedStateOf {
+            accountUser.isFollowingCached(baseUser)
+        }
+    }
+
+    val isUserFollowingLoggedIn by remember(accountUserState, accountLocalUserState) {
+        derivedStateOf {
+            baseUser.isFollowingCached(accountUser)
+        }
+    }
 
     if (accountUser == baseUser) {
         EditButton(account)
     }
 
-    if (account.isHidden(baseUser)) {
+    if (isHidden) {
         ShowUserButton {
             account.showUser(baseUser.pubkeyHex)
         }
-    } else if (accountUser.isFollowingCached(baseUser)) {
+    } else if (isLoggedInFollowingUser) {
         UnfollowButton { coroutineScope.launch(Dispatchers.IO) { account.unfollow(baseUser) } }
     } else {
-        if (baseUser.isFollowingCached(accountUser)) {
+        if (isUserFollowingLoggedIn) {
             FollowButton(
                 { coroutineScope.launch(Dispatchers.IO) { account.follow(baseUser) } },
                 R.string.follow_back
