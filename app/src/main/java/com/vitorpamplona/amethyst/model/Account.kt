@@ -1154,6 +1154,7 @@ class Account(
                         val userToBlock = LocalCache.getOrCreateUser(it.pubkeyHex)
                         if (userToBlock != userProfile() && userToBlock.pubkeyHex !in followingKeySet()) {
                             transientHiddenUsers = transientHiddenUsers + it.pubkeyHex
+                            live.invalidateData()
                         }
                     }
                 }
