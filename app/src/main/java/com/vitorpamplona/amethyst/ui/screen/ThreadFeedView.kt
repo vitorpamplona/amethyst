@@ -353,11 +353,11 @@ fun NoteMaster(
             ) {
                 Column() {
                     if (noteEvent is PeopleListEvent) {
-                        DisplayPeopleList(noteState, MaterialTheme.colors.background, accountViewModel, nav)
+                        DisplayPeopleList(baseNote, MaterialTheme.colors.background, accountViewModel, nav)
                     } else if (noteEvent is AudioTrackEvent) {
                         AudioTrackHeader(noteEvent, note, account.userProfile(), nav)
                     } else if (noteEvent is PinListEvent) {
-                        PinListHeader(noteState, MaterialTheme.colors.background, accountViewModel, nav)
+                        PinListHeader(baseNote, MaterialTheme.colors.background, accountViewModel, nav)
                     } else if (noteEvent is HighlightEvent) {
                         DisplayHighlight(
                             noteEvent.quote(),
