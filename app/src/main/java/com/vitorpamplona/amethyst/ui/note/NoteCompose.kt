@@ -150,7 +150,6 @@ fun NoteCompose(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    println("AARender NoteCompose")
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = remember(accountState) { accountState?.account } ?: return
 
@@ -242,7 +241,6 @@ fun NormalNote(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    println("AARender NormalNote")
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = remember(accountState) { accountState?.account } ?: return
     val loggedIn = remember(accountState) { accountState?.account?.userProfile() } ?: return
