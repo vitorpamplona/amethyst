@@ -75,6 +75,9 @@ class Nip05Verifier() {
         fetchNip05Json(
             nip05,
             onSuccess = {
+                // NIP05 usernames are case insensitive, but JSON properties are not
+                // converts the json to lowercase and then tries to access the username via a
+                // lowercase version of the username.
                 val nip05url = try {
                     mapper.readTree(it.lowercase())
                 } catch (t: Throwable) {
