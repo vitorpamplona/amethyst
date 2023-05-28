@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import android.widget.Toast
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -20,6 +21,7 @@ import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.ProgressIndicatorDefaults
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
@@ -56,6 +58,7 @@ import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -68,9 +71,6 @@ import kotlin.math.roundToInt
 
 @Composable
 fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = remember(accountState) { accountState?.account } ?: return
-
     val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
 
     var wantsToReplyTo by remember {
@@ -82,17 +82,17 @@ fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel, nav: (Strin
     }
 
     if (wantsToReplyTo != null) {
-        NewPostView({ wantsToReplyTo = null }, wantsToReplyTo, null, account, accountViewModel, nav)
+        NewPostView({ wantsToReplyTo = null }, wantsToReplyTo, null, accountViewModel, nav)
     }
 
     if (wantsToQuote != null) {
-        NewPostView({ wantsToQuote = null }, null, wantsToQuote, account, accountViewModel, nav)
+        NewPostView({ wantsToQuote = null }, null, wantsToQuote, accountViewModel, nav)
     }
 
     Spacer(modifier = Modifier.height(8.dp))
 
     Row(verticalAlignment = CenterVertically) {
-        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
+        Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
             ReplyReaction(baseNote, grayTint, accountViewModel) {
                 wantsToReplyTo = baseNote
             }
@@ -123,17 +123,6 @@ fun ReplyReaction(
     iconSize: Dp = 20.dp,
     onPress: () -> Unit
 ) {
-    val repliesState by baseNote.live().replies.observeAsState()
-    val replies = remember(repliesState) { repliesState?.note?.replies } ?: emptySet()
-
-    val isWriteable = remember { accountViewModel.isWriteable() }
-
-    val replyCount by remember(repliesState) {
-        derivedStateOf {
-            showCount(replies.size)
-        }
-    }
-
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -148,7 +137,7 @@ fun ReplyReaction(
     IconButton(
         modifier = iconButtonModifier,
         onClick = {
-            if (isWriteable) {
+            if (accountViewModel.isWriteable()) {
                 onPress()
             } else {
                 scope.launch {
@@ -170,12 +159,24 @@ fun ReplyReaction(
     }
 
     if (showCounter) {
-        Text(
-            " $replyCount",
-            fontSize = 14.sp,
-            color = grayTint
-        )
+        ReplyCounter(baseNote, grayTint)
     }
+}
+
+@Composable
+fun ReplyCounter(baseNote: Note, textColor: Color) {
+    val repliesState by baseNote.live().replies.observeAsState()
+    val replyCount by remember(repliesState) {
+        derivedStateOf {
+            " " + showCount(repliesState?.note?.replies?.size)
+        }
+    }
+
+    Text(
+        text = replyCount,
+        fontSize = 14.sp,
+        color = textColor
+    )
 }
 
 @Composable
@@ -186,29 +187,6 @@ fun BoostReaction(
     iconSize: Dp = 20.dp,
     onQuotePress: () -> Unit
 ) {
-    val boostsState by baseNote.live().boosts.observeAsState()
-    val boostedNote = remember(boostsState) { boostsState?.note } ?: return
-
-    val hasBoosted by remember(boostsState) {
-        derivedStateOf {
-            accountViewModel.hasBoosted(baseNote)
-        }
-    }
-
-    val wasBoostedByLoggedIn by remember(boostsState) {
-        derivedStateOf {
-            boostedNote.isBoostedBy(accountViewModel.userProfile())
-        }
-    }
-
-    val isWriteable = remember { accountViewModel.isWriteable() }
-
-    val boostCount by remember(boostsState) {
-        derivedStateOf {
-            showCount(boostedNote.boosts.size)
-        }
-    }
-
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -218,15 +196,11 @@ fun BoostReaction(
         Modifier.size(iconSize)
     }
 
-    val iconModifier = remember {
-        Modifier.size(iconSize)
-    }
-
     IconButton(
         modifier = iconButtonModifier,
         onClick = {
-            if (isWriteable) {
-                if (hasBoosted) {
+            if (accountViewModel.isWriteable()) {
+                if (accountViewModel.hasBoosted(baseNote)) {
                     accountViewModel.deleteBoostsTo(baseNote)
                 } else {
                     wantsToBoost = true
@@ -256,16 +230,45 @@ fun BoostReaction(
             )
         }
 
-        Icon(
-            painter = painterResource(R.drawable.ic_retweeted),
-            null,
-            modifier = iconModifier,
-            tint = if (wasBoostedByLoggedIn) Color.Unspecified else grayTint
-        )
+        BoostIcon(baseNote, iconSize, grayTint, accountViewModel.userProfile())
+    }
+
+    BoostText(baseNote, grayTint)
+}
+
+@Composable
+fun BoostIcon(baseNote: Note, iconSize: Dp = 20.dp, grayTint: Color, loggedIn: User) {
+    val boostsState by baseNote.live().boosts.observeAsState()
+
+    val iconTint by remember(boostsState) {
+        derivedStateOf {
+            if (boostsState?.note?.isBoostedBy(loggedIn) == true) Color.Unspecified else grayTint
+        }
+    }
+
+    val iconModifier = remember {
+        Modifier.size(iconSize)
+    }
+
+    Icon(
+        painter = painterResource(R.drawable.ic_retweeted),
+        null,
+        modifier = iconModifier,
+        tint = iconTint
+    )
+}
+
+@Composable
+fun BoostText(baseNote: Note, grayTint: Color) {
+    val boostsState by baseNote.live().boosts.observeAsState()
+    val boostCount by remember(boostsState) {
+        derivedStateOf {
+            " " + showCount(boostsState?.note?.boosts?.size)
+        }
     }
 
     Text(
-        " $boostCount",
+        boostCount,
         fontSize = 14.sp,
         color = grayTint
     )
@@ -279,29 +282,6 @@ fun LikeReaction(
     iconSize: Dp = 20.dp,
     heartSize: Dp = 16.dp
 ) {
-    val reactionsState by baseNote.live().reactions.observeAsState()
-    val reactedNote = remember(reactionsState) { reactionsState?.note } ?: return
-
-    val hasReacted by remember(reactionsState) {
-        derivedStateOf {
-            accountViewModel.hasReactedTo(baseNote)
-        }
-    }
-
-    val wasReactedByLoggedIn by remember(reactionsState) {
-        derivedStateOf {
-            reactedNote.isReactedBy(accountViewModel.userProfile())
-        }
-    }
-
-    val isWriteable = remember { accountViewModel.isWriteable() }
-
-    val reactionCount by remember(reactionsState) {
-        derivedStateOf {
-            showCount(reactedNote.reactions.size)
-        }
-    }
-
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -309,15 +289,11 @@ fun LikeReaction(
         Modifier.size(iconSize)
     }
 
-    val iconModifier = remember {
-        Modifier.size(heartSize)
-    }
-
     IconButton(
         modifier = iconButtonModifier,
         onClick = {
-            if (isWriteable) {
-                if (hasReacted) {
+            if (accountViewModel.isWriteable()) {
+                if (accountViewModel.hasReactedTo(baseNote)) {
                     accountViewModel.deleteReactionTo(baseNote)
                 } else {
                     accountViewModel.reactTo(baseNote)
@@ -333,25 +309,55 @@ fun LikeReaction(
             }
         }
     ) {
-        if (wasReactedByLoggedIn) {
-            Icon(
-                painter = painterResource(R.drawable.ic_liked),
-                null,
-                modifier = iconModifier,
-                tint = Color.Unspecified
-            )
-        } else {
-            Icon(
-                painter = painterResource(R.drawable.ic_like),
-                null,
-                modifier = iconModifier,
-                tint = grayTint
-            )
+        LikeIcon(baseNote, heartSize, grayTint, accountViewModel.userProfile())
+    }
+
+    LikeText(baseNote, grayTint)
+}
+
+@Composable
+fun LikeIcon(baseNote: Note, iconSize: Dp = 20.dp, grayTint: Color, loggedIn: User) {
+    val reactionsState by baseNote.live().reactions.observeAsState()
+
+    val wasReactedByLoggedIn by remember(reactionsState) {
+        derivedStateOf {
+            reactionsState?.note?.isReactedBy(loggedIn) == true
+        }
+    }
+
+    val iconModifier = remember {
+        Modifier.size(iconSize)
+    }
+
+    if (wasReactedByLoggedIn) {
+        Icon(
+            painter = painterResource(R.drawable.ic_liked),
+            null,
+            modifier = iconModifier,
+            tint = Color.Unspecified
+        )
+    } else {
+        Icon(
+            painter = painterResource(R.drawable.ic_like),
+            null,
+            modifier = iconModifier,
+            tint = grayTint
+        )
+    }
+}
+
+@Composable
+fun LikeText(baseNote: Note, grayTint: Color) {
+    val reactionsState by baseNote.live().reactions.observeAsState()
+
+    val reactionsCount by remember(reactionsState) {
+        derivedStateOf {
+            " " + showCount(reactionsState?.note?.reactions?.size)
         }
     }
 
     Text(
-        " $reactionCount",
+        reactionsCount,
         fontSize = 14.sp,
         color = grayTint
     )
@@ -363,15 +369,11 @@ fun ZapReaction(
     baseNote: Note,
     grayTint: Color,
     accountViewModel: AccountViewModel,
-    textModifier: Modifier = Modifier,
     iconSize: Dp = 20.dp,
     animationSize: Dp = 14.dp
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = remember(accountState) { accountState?.account } ?: return
-
-    val zapsState by baseNote.live().zaps.observeAsState()
-    val zappedNote = remember(zapsState) { zapsState?.note } ?: return
 
     var wantsToZap by remember { mutableStateOf(false) }
     var wantsToChangeZapAmount by remember { mutableStateOf(false) }
@@ -381,32 +383,6 @@ fun ZapReaction(
     val scope = rememberCoroutineScope()
 
     var zappingProgress by remember { mutableStateOf(0f) }
-
-    var wasZappedByLoggedInUser by remember { mutableStateOf(false) }
-    var zapAmountTxt by remember { mutableStateOf<String>("") }
-
-    LaunchedEffect(key1 = zapsState) {
-        scope.launch(Dispatchers.IO) {
-            if (!wasZappedByLoggedInUser) {
-                val newWasZapped = accountViewModel.calculateIfNoteWasZappedByAccount(zappedNote)
-
-                if (wasZappedByLoggedInUser != newWasZapped) {
-                    wasZappedByLoggedInUser = newWasZapped
-                }
-            }
-
-            val newZapAmount = showAmount(account.calculateZappedAmount(zappedNote))
-            if (newZapAmount != zapAmountTxt) {
-                zapAmountTxt = newZapAmount
-            }
-
-            if (wasZappedByLoggedInUser) {
-                if (abs(zappingProgress - 1) < 0.001) {
-                    zappingProgress = 1f
-                }
-            }
-        }
-    }
 
     Row(
         verticalAlignment = CenterVertically,
@@ -498,6 +474,7 @@ fun ZapReaction(
                 }
             )
         }
+
         if (wantsToChangeZapAmount) {
             UpdateZapAmountDialog({ wantsToChangeZapAmount = false }, account = account)
         }
@@ -506,28 +483,93 @@ fun ZapReaction(
             ZapCustomDialog({ wantsToSetCustomZap = false }, account = account, accountViewModel, baseNote)
         }
 
-        if (wasZappedByLoggedInUser) {
-            Icon(
-                imageVector = Icons.Default.Bolt,
-                contentDescription = stringResource(R.string.zaps),
-                modifier = Modifier.size(iconSize),
-                tint = BitcoinOrange
+        if (zappingProgress > 0.00001 && zappingProgress < 0.99999) {
+            Spacer(Modifier.width(3.dp))
+
+            val animatedProgress = animateFloatAsState(
+                targetValue = zappingProgress,
+                animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec
+            ).value
+
+            CircularProgressIndicator(
+                progress = animatedProgress,
+                modifier = Modifier.size(animationSize),
+                strokeWidth = 2.dp
             )
         } else {
-            if (zappingProgress < 0.1 || zappingProgress > 0.99) {
-                Icon(
-                    imageVector = Icons.Outlined.Bolt,
-                    contentDescription = stringResource(id = R.string.zaps),
-                    modifier = Modifier.size(iconSize),
-                    tint = grayTint
-                )
-            } else {
-                Spacer(Modifier.width(3.dp))
-                CircularProgressIndicator(
-                    progress = zappingProgress,
-                    modifier = Modifier.size(animationSize),
-                    strokeWidth = 2.dp
-                )
+            ZapIcon(
+                baseNote,
+                iconSize,
+                grayTint,
+                accountViewModel
+            )
+        }
+    }
+
+    ZapAmountText(baseNote, grayTint, accountViewModel)
+}
+
+@Composable
+private fun ZapIcon(
+    baseNote: Note,
+    iconSize: Dp,
+    grayTint: Color,
+    accountViewModel: AccountViewModel
+) {
+    var wasZappedByLoggedInUser by remember { mutableStateOf(false) }
+    val zapsState by baseNote.live().zaps.observeAsState()
+
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(key1 = zapsState) {
+        scope.launch(Dispatchers.IO) {
+            zapsState?.note?.let {
+                if (!wasZappedByLoggedInUser) {
+                    val newWasZapped = accountViewModel.calculateIfNoteWasZappedByAccount(it)
+
+                    if (wasZappedByLoggedInUser != newWasZapped) {
+                        wasZappedByLoggedInUser = newWasZapped
+                    }
+                }
+            }
+        }
+    }
+
+    if (wasZappedByLoggedInUser) {
+        Icon(
+            imageVector = Icons.Default.Bolt,
+            contentDescription = stringResource(R.string.zaps),
+            modifier = remember { Modifier.size(iconSize) },
+            tint = BitcoinOrange
+        )
+    } else {
+        Icon(
+            imageVector = Icons.Outlined.Bolt,
+            contentDescription = stringResource(id = R.string.zaps),
+            modifier = remember { Modifier.size(iconSize) },
+            tint = grayTint
+        )
+    }
+}
+
+@Composable
+private fun ZapAmountText(
+    baseNote: Note,
+    grayTint: Color,
+    accountViewModel: AccountViewModel
+) {
+    val zapsState by baseNote.live().zaps.observeAsState()
+    val zappedNote = remember(zapsState) { zapsState?.note } ?: return
+
+    val scope = rememberCoroutineScope()
+
+    var zapAmountTxt by remember { mutableStateOf("") }
+
+    LaunchedEffect(key1 = zapsState) {
+        scope.launch(Dispatchers.IO) {
+            val newZapAmount = showAmount(accountViewModel.calculateZapAmount(zappedNote))
+            if (newZapAmount != zapAmountTxt) {
+                zapAmountTxt = newZapAmount
             }
         }
     }
@@ -535,8 +577,7 @@ fun ZapReaction(
     Text(
         zapAmountTxt,
         fontSize = 14.sp,
-        color = grayTint,
-        modifier = textModifier
+        color = grayTint
     )
 }
 

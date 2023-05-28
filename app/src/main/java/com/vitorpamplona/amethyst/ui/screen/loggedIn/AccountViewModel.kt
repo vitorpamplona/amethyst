@@ -23,6 +23,7 @@ import com.vitorpamplona.amethyst.service.model.ReportEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.math.BigDecimal
 import java.util.Locale
 
 @Immutable
@@ -66,6 +67,10 @@ class AccountViewModel(private val account: Account) : ViewModel() {
         return account.calculateIfNoteWasZappedByAccount(zappedNote)
     }
 
+    fun calculateZapAmount(zappedNote: Note): BigDecimal {
+        return account.calculateZappedAmount(zappedNote)
+    }
+
     fun zap(note: Note, amount: Long, pollOption: Int?, message: String, context: Context, onError: (String) -> Unit, onProgress: (percent: Float) -> Unit, zapType: LnZapEvent.ZapType) {
         val lud16 = note.event?.zapAddress() ?: note.author?.info?.lud16?.trim() ?: note.author?.info?.lud06?.trim()
 
@@ -105,7 +110,7 @@ class AccountViewModel(private val account: Account) : ViewModel() {
                                         ?: "Error parsing error message"
                                 )
                             } else {
-                                onProgress(0.99f)
+                                onProgress(1f)
                             }
                         }
                     )

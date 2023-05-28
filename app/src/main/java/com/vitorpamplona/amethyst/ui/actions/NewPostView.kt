@@ -63,7 +63,6 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
@@ -78,7 +77,10 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = null, account: Account, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = null, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val account = remember(accountState) { accountState?.account } ?: return
+
     val postViewModel: NewPostViewModel = viewModel()
 
     val context = LocalContext.current
