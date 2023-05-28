@@ -19,14 +19,14 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.*
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 
 @Composable
 fun ReplyInformation(replyTo: List<Note>?, mentions: List<String>, account: Account, nav: (String) -> Unit) {
     var dupMentions by remember { mutableStateOf<List<User>?>(null) }
 
     LaunchedEffect(Unit) {
-        withContext(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             dupMentions = mentions.mapNotNull { LocalCache.checkGetOrCreateUser(it) }
         }
     }
@@ -119,7 +119,7 @@ fun ReplyInformationChannel(replyTo: List<Note>?, mentions: List<String>, channe
     var sortedMentions by remember { mutableStateOf<List<User>?>(null) }
 
     LaunchedEffect(Unit) {
-        withContext(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             sortedMentions = mentions
                 .mapNotNull { LocalCache.checkGetOrCreateUser(it) }
                 .toSet()
