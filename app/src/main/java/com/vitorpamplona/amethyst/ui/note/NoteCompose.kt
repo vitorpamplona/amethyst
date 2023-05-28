@@ -107,6 +107,7 @@ import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
+import com.vitorpamplona.amethyst.ui.components.LoadThumbAndThenVideoView
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
@@ -1788,7 +1789,7 @@ fun AudioTrackHeader(noteEvent: AudioTrackEvent, note: Note, loggedIn: User, nav
                     modifier = Modifier.padding(10.dp)
                 ) {
                     cover?.let { cover ->
-                        VideoView(
+                        LoadThumbAndThenVideoView(
                             videoUri = media,
                             description = noteEvent.subject(),
                             thumbUri = cover

@@ -28,7 +28,7 @@ import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
 import com.vitorpamplona.amethyst.service.relays.Client
-import com.vitorpamplona.amethyst.ui.components.muted
+import com.vitorpamplona.amethyst.ui.components.DefaultMutedSetting
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.Nip47
 import com.vitorpamplona.amethyst.ui.screen.AccountScreen
@@ -88,7 +88,7 @@ class MainActivity : FragmentActivity() {
     override fun onResume() {
         super.onResume()
         // starts muted every time
-        muted.value = true
+        DefaultMutedSetting.value = true
 
         // Only starts after login
         GlobalScope.launch(Dispatchers.IO) {
