@@ -86,6 +86,7 @@ import com.vitorpamplona.amethyst.ui.screen.LoadingFeed
 import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.screen.rememberForeverPagerState
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -198,7 +199,7 @@ fun FeedView(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SlidingCarousel(
-    feed: MutableState<List<Note>>,
+    feed: MutableState<ImmutableList<Note>>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     scrollStateKey: String? = null,
