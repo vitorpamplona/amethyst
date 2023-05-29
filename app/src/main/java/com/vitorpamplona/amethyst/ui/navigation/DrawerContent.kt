@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.navigation
 
+import android.content.Context
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -43,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -335,6 +337,8 @@ fun ListContent(
         AccountBackupDialog(account, onClose = { backupDialogOpen = false })
     }
 
+    val context = LocalContext.current
+
     if (conectOrbotDialogOpen) {
         ConnectOrbotDialog(
             onClose = { conectOrbotDialogOpen = false },
@@ -342,7 +346,7 @@ fun ListContent(
                 conectOrbotDialogOpen = false
                 disconnectTorDialog = false
                 checked = true
-                enableTor(account, true, proxyPort)
+                enableTor(account, true, proxyPort, context = context)
             },
             proxyPort
         )
@@ -364,7 +368,7 @@ fun ListContent(
                     onClick = {
                         disconnectTorDialog = false
                         checked = false
-                        enableTor(account, false, proxyPort)
+                        enableTor(account, false, proxyPort, context)
                     }
                 ) {
                     Text(text = stringResource(R.string.yes))
@@ -386,13 +390,14 @@ fun ListContent(
 private fun enableTor(
     account: Account,
     checked: Boolean,
-    portNumber: MutableState<String>
+    portNumber: MutableState<String>,
+    context: Context
 ) {
     account.proxyPort = portNumber.value.toInt()
     account.proxy = HttpClient.initProxy(checked, "127.0.0.1", account.proxyPort)
     LocalPreferences.saveToEncryptedStorage(account)
     ServiceManager.pause()
-    ServiceManager.start()
+    ServiceManager.start(context)
 }
 
 @Composable

@@ -140,6 +140,8 @@ dependencies {
 
     // view videos
     implementation 'com.google.android.exoplayer:exoplayer:2.18.7'
+    // important for proxy / tor
+    implementation 'com.google.android.exoplayer:extension-okhttp:2.18.7'
 
     // Load images from the web.
     implementation "io.coil-kt:coil-compose:$coil_version"
