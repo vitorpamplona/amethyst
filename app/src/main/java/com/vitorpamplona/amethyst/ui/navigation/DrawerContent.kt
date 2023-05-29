@@ -472,7 +472,7 @@ fun BottomContent(user: User, scaffoldState: ScaffoldState, nav: (String) -> Uni
         ) {
             Text(
                 modifier = Modifier.padding(start = 16.dp),
-                text = "v" + BuildConfig.VERSION_NAME,
+                text = "v" + BuildConfig.VERSION_NAME + "-" + BuildConfig.FLAVOR.uppercase(),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold
             )
