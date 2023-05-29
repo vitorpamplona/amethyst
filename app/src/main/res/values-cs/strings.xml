@@ -1,0 +1,390 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="point_to_the_qr_code">Nasměrujte na QR kód</string>
+    <string name="show_qr">Zobrazit QR kód</string>
+    <string name="profile_image">Profilový obrázek</string>
+    <string name="scan_qr">Skenovat QR kód</string>
+    <string name="show_anyway">Zobrazit přesto</string>
+    <string name="post_was_flagged_as_inappropriate_by">Příspěvek byl označen jako nevhodný uživatelem</string>
+    <string name="post_not_found">Příspěvek nenalezen</string>
+    <string name="channel_image">Obrázek kanálu</string>
+    <string name="referenced_event_not_found">Odkazovaná událost nebyla nalezena</string>
+    <string name="could_not_decrypt_the_message">Nepodařilo se dešifrovat zprávu</string>
+    <string name="group_picture">Obrázek skupiny</string>
+    <string name="explicit_content">Explicitní obsah</string>
+    <string name="spam">Spam</string>
+    <string name="impersonation">Zneužívání identity</string>
+    <string name="illegal_behavior">Nezákonné jednání</string>
+    <string name="unknown">Neznámý</string>
+    <string name="relay_icon">Ikona předávání</string>
+    <string name="unknown_author">Neznámý autor</string>
+    <string name="copy_text">Kopírovat text</string>
+    <string name="copy_user_pubkey">Kopírovat ID autora</string>
+    <string name="copy_note_id">Kopírovat ID poznámky</string>
+    <string name="broadcast">Vysílání</string>
+    <string name="request_deletion">Požadovat smazání</string>
+    <string name="block_hide_user"><![CDATA[Blokovat a skrýt uživatele]]></string>
+    <string name="report_spam_scam">Nahlásit spam / podvod</string>
+    <string name="report_impersonation">Nahlásit zneužívání identity</string>
+    <string name="report_explicit_content">Nahlásit explicitní obsah</string>
+    <string name="report_illegal_behaviour">Nahlásit nezákonné jednání</string>
+    <string name="login_with_a_private_key_to_be_able_to_reply">Pro odpověď se přihlaste s privátním klíčem</string>
+    <string name="login_with_a_private_key_to_be_able_to_boost_posts">Pro zvýšení příspěvků se přihlaste s privátním klíčem</string>
+    <string name="login_with_a_private_key_to_like_posts">Přihlásit se pomocí soukromého klíče pro označení příspěvků jako líbivé</string>
+    <string name="no_zap_amount_setup_long_press_to_change">Není nastaveno množství Zap. Dlouhým stisknutím změňte</string>
+    <string name="login_with_a_private_key_to_be_able_to_send_zaps">Přihlaste se pomocí soukromého klíče, abyste mohli odesílat Zapy</string>
+    <string name="zaps">Zapy</string>
+    <string name="view_count">Počet zobrazení</string>
+    <string name="boost">Boost</string>
+    <string name="boosted">boostováno</string>
+    <string name="quote">Citovat</string>
+    <string name="new_amount_in_sats">Nová částka v sats</string>
+    <string name="add">Přidat</string>
+    <string name="replying_to">"odpovídá na "</string>
+    <string name="and">"a "</string>
+    <string name="in_channel">"v kanálu "</string>
+    <string name="profile_banner">Banner profilu</string>
+    <string name="following">"Sleduje"</string>
+    <string name="followers">"Sledující"</string>
+    <string name="profile">Profil</string>
+    <string name="security_filters">Bezpečnostní filtry</string>
+    <string name="log_out">Odhlásit</string>
+    <string name="show_more">Zobrazit více</string>
+    <string name="lightning_invoice">Blesková faktura</string>
+    <string name="pay">Zaplatit</string>
+    <string name="lightning_tips">Bleskové tipy</string>
+    <string name="note_to_receiver">Poznámka pro příjemce</string>
+    <string name="thank_you_so_much">Děkuji moc!</string>
+    <string name="amount_in_sats">Částka v sats</string>
+    <string name="send_sats">Poslat sats</string>
+    <string name="error_parsing_preview_for">"Chyba při zpracování náhledu pro %1$s : %2$s"</string>
+    <string name="preview_card_image_for">"Náhled obrázku karty pro %1$s"</string>
+    <string name="new_channel">Nový kanál</string>
+    <string name="channel_name">Název kanálu</string>
+    <string name="my_awesome_group">Má skvělá skupina</string>
+    <string name="picture_url">URL obrázku</string>
+    <string name="description">Popis</string>
+    <string name="about_us">"O nás.. "</string>
+    <string name="what_s_on_your_mind">Co vás napadá?</string>
+    <string name="post">Příspěvek</string>
+    <string name="save">Uložit</string>
+    <string name="create">Vytvořit</string>
+    <string name="cancel">Zrušit</string>
+    <string name="failed_to_upload_the_image">Selhalo nahrávání obrázku</string>
+    <string name="relay_address">Adresa relé</string>
+    <string name="posts">Příspěvky</string>
+    <string name="bytes">Byty</string>
+    <string name="errors">Chyby</string>
+    <string name="home_feed">Domovský kanál</string>
+    <string name="private_message_feed">Kanál soukromých zpráv</string>
+    <string name="public_chat_feed">Kanál veřejného chatu</string>
+    <string name="global_feed"> Globální kanál</string>
+    <string name="search_feed">Kanál vyhledávání</string>
+    <string name="add_a_relay">Přidat přeposílání</string>
+    <string name="display_name">Zobrazované jméno</string>
+    <string name="my_display_name">Moje zobrazované jméno</string>
+    <string name="username">Uživatelské jméno</string>
+    <string name="my_username">Moje uživatelské jméno</string>
+    <string name="about_me">O mně</string>
+    <string name="avatar_url">URL avatara</string>
+    <string name="banner_url">URL banneru</string>
+    <string name="website_url">URL webové stránky</string>
+    <string name="ln_address">LN adresa</string>
+    <string name="ln_url_outdated">LN URL (zastaralé)</string>
+    <string name="image_saved_to_the_gallery">Obrázek uložen do galerie</string>
+    <string name="failed_to_save_the_image">Chyba při ukládání obrázku</string>
+    <string name="upload_image">Nahrát obrázek</string>
+    <string name="uploading">Nahrávání…</string>
+    <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Uživatel nemá nastavenou LN adresu pro přijímání sats</string>
+    <string name="reply_here">"Odpověď zde.. "</string>
+    <string name="copies_the_note_id_to_the_clipboard_for_sharing">Zkopíruje ID poznámky do schránky pro sdílení</string>
+    <string name="copy_channel_id_note_to_the_clipboard">Zkopírovat ID kanálu (poznámka) do schránky</string>
+    <string name="edits_the_channel_metadata">Upravit metadata kanálu</string>
+    <string name="join">Připojit se</string>
+    <string name="known">Známé</string>
+    <string name="new_requests">Nové žádosti</string>
+    <string name="blocked_users">Blokovaní uživatelé</string>
+    <string name="new_threads">Nové vlákna</string>
+    <string name="conversations">Konverzace</string>
+    <string name="notes">Poznámky</string>
+    <string name="replies">Odpovědi</string>
+    <string name="follows">"Sleduje"</string>
+    <string name="reports">"Zprávy"</string>
+    <string name="more_options">Více možností</string>
+    <string name="relays">" Přeposílání"</string>
+    <string name="website">Webová stránka</string>
+    <string name="lightning_address">Lightning adresa</string>
+    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Zkopíruje Nsec ID (vaše heslo) do schránky pro zálohování</string>
+    <string name="copy_private_key_to_the_clipboard">Zkopírovat tajný klíč do schránky</string>
+    <string name="copies_the_public_key_to_the_clipboard_for_sharing">Zkopíruje veřejný klíč do schránky pro sdílení</string>
+    <string name="copy_public_key_npub_to_the_clipboard">Zkopírovat veřejný klíč (NPub) do schránky</string>
+    <string name="send_a_direct_message">Poslat přímou zprávu</string>
+    <string name="edits_the_user_s_metadata">Upravit uživatelova metadata</string>
+    <string name="follow">Sledovat</string>
+    <string name="follow_back">Následovat zpět</string>
+    <string name="unblock">Odblokovat</string>
+    <string name="copy_user_id">Zkopírovat ID uživatele</string>
+    <string name="unblock_user">Odblokovat uživatele</string>
+    <string name="npub_hex_username">"npub, hex, uživatelské jméno"</string>
+    <string name="clear">Vymazat</string>
+    <string name="app_logo">Logo aplikace</string>
+    <string name="nsec_npub_hex_private_key">nsec / npub / hex privátní klíč</string>
+    <string name="show_password">Zobrazit heslo</string>
+    <string name="hide_password">Skrýt heslo</string>
+    <string name="invalid_key">Neplatný klíč</string>
+    <string name="i_accept_the">"Souhlasím s "</string>
+    <string name="terms_of_use">podmínkami použití</string>
+    <string name="acceptance_of_terms_is_required">Je vyžadováno přijetí podmínek</string>
+    <string name="key_is_required">Klíč je povinný</string>
+    <string name="login">Přihlásit se</string>
+    <string name="generate_a_new_key">Vygenerovat nový klíč</string>
+    <string name="loading_feed">Načítání zdroje</string>
+    <string name="error_loading_replies">"Chyba při načítání odpovědí: "</string>
+    <string name="try_again">Zkusit znovu</string>
+    <string name="feed_is_empty">Zdroj je prázdný.</string>
+    <string name="refresh">Obnovit</string>
+    <string name="created">vytvořeno</string>
+    <string name="with_description_of">s popisem</string>
+    <string name="and_picture">a obrázkem</string>
+    <string name="changed_chat_name_to">změnil název chatu na</string>
+    <string name="description_to">popis na</string>
+    <string name="and_picture_to">a obrázek na</string>
+    <string name="leave">Opustit</string>
+    <string name="unfollow">Přestat sledovat</string>
+    <string name="channel_created">Kanál vytvořen</string>
+    <string name="channel_information_changed_to">"Informace kanálu změněna na"</string>
+    <string name="public_chat">Veřejný chat</string>
+    <string name="posts_received">příspěvků přijato</string>
+    <string name="remove">Odebrat</string>
+    <string name="translations_auto">Automaticky</string>
+    <string name="translations_translated_from">přeloženo z</string>
+    <string name="translations_to">do</string>
+    <string name="translations_show_in_lang_first">Zobrazit nejprve v %1$s</string>
+    <string name="translations_always_translate_to_lang">Vždy překládat do %1$s</string>
+    <string name="translations_never_translate_from_lang">Nikdy nepřekládat z %1$s</string>
+    <string name="never">nikdy</string>
+    <string name="now">nyní</string>
+    <string name="h">h</string>
+    <string name="m">m</string>
+    <string name="d">d</string>
+    <string name="nudity">Nahota</string>
+    <string name="profanity_hateful_speech">Neslušnost / Nenávistná řeč</string>
+    <string name="report_hateful_speech">Nahlásit nenávistnou řeč</string>
+    <string name="report_nudity_porn">Nahlásit nahotu / pornografii</string>
+    <string name="others">jiné</string>
+    <string name="mark_all_known_as_read">Označit všechny známé jako přečtené</string>
+    <string name="mark_all_new_as_read">Označit všechny nové jako přečtené</string>
+    <string name="mark_all_as_read">Označit všechny jako přečtené</string>
+    <string name="backup_keys">Zálohovat klíče</string>
+    <string name="account_backup_tips_md" tools:ignore="Typos">
+        ## Tipy na zálohování a bezpečnost účtu
+        \n\nVáš účet je zabezpečen tajným klíčem. Klíč je dlouhý náhodný řetězec začínající **nsec1**. Každý, kdo má přístup k vašemu tajnému klíči, může publikovat obsah pod vaší identitou.
+        \n\n- **Nepoužívejte** svůj tajný klíč na webových stránkách nebo v softwaru, kterému nedůvěřujete.
+        \n- Vývojáři aplikace Amethyst vás **nikdy** nebudou žádat o váš tajný klíč.
+        \n- **Uchovávejte** si bezpečnou zálohu svého tajného klíče pro obnovení účtu. Doporučujeme používat správce hesel.
+    </string>
+    <string name="secret_key_copied_to_clipboard">Tajný klíč (nsec) zkopírován do schránky</string>
+    <string name="copy_my_secret_key">Zkopírovat můj tajný klíč</string>
+    <string name="biometric_authentication_failed">Autentizace se nezdařila</string>
+    <string name="biometric_error">Chyba</string>
+    <string name="badge_created_by">Vytvořeno uživatelem %1$s</string>
+    <string name="badge_award_image_for">Obrázek ocenění od %1$s</string>
+    <string name="new_badge_award_notif">Obdrželi jste nové ocenění</string>
+    <string name="award_granted_to">Ocenění uděleno uživateli</string>
+    <string name="copied_note_text_to_clipboard">Text poznámky zkopírován do schránky</string>
+    <string name="copied_user_id_to_clipboard" tools:ignore="Typos">Uživatelovo ID (@npub) zkopírováno do schránky</string>
+    <string name="copied_note_id_to_clipboard" tools:ignore="Typos">ID poznámky (@note1) zkopírováno do schránky</string>
+    <string name="select_text_dialog_top">Vybrat text</string>
+    <string name="private_conversation_notification">"&lt;Nelze dešifrovat soukromou zprávu&gt;\n\nByl jste zmíněn v soukromé/zašifrované konverzaci mezi %1$s a %2$s."</string>
+    <string name="account_switch_add_account_dialog_title">Přidat nový účet</string>
+    <string name="drawer_accounts">Účty</string>
+    <string name="account_switch_select_account">Vybrat účet</string>
+    <string name="account_switch_add_account_btn">Přidat nový účet</string>
+    <string name="account_switch_active_account">Aktivní účet</string>
+    <string name="account_switch_has_private_key">Má soukromý klíč</string>
+    <string name="account_switch_pubkey_only">Pouze veřejný klíč, žádný soukromý klíč</string>
+    <string name="back">Zpět</string>
+    <string name="quick_action_select">Vybrat</string>
+    <string name="quick_action_share_browser_link">Sdílet odkaz prohlížeče</string>
+    <string name="quick_action_share">Sdílet</string>
+    <string name="quick_action_copy_user_id">ID autora</string>
+    <string name="quick_action_copy_note_id">ID poznámky</string>
+    <string name="quick_action_copy_text">Kopírovat text</string>
+    <string name="quick_action_delete">Smazat</string>
+    <string name="quick_action_unfollow">Přestat sledovat</string>
+    <string name="quick_action_follow">Sledovat</string>
+    <string name="quick_action_request_deletion_alert_title">Požadavek na smazání</string>
+    <string name="quick_action_request_deletion_alert_body">Amethyst požádá o smazání vaší poznámky ze spojek, ke kterým jste v současnosti připojeni. Není zaručeno, že vaše poznámka bude trvale smazána z těchto spojek nebo z dalších spojek, kde může být uložena.</string>
+    <string name="quick_action_block_dialog_btn">Blokovat</string>
+    <string name="quick_action_delete_dialog_btn">Smazat</string>
+    <string name="quick_action_block">Blokovat</string>
+    <string name="quick_action_report">Nahlásit</string>
+    <string name="quick_action_delete_button">Smazat</string>
+    <string name="quick_action_dont_show_again_button">Nepředvádět znovu</string>
+    <string name="report_dialog_spam">Spam nebo podvody</string>
+    <string name="report_dialog_profanity">Sprostota nebo nenávistné chování</string>
+    <string name="report_dialog_impersonation">Zákeřná zneužití</string>
+    <string name="report_dialog_nudity">Nahota nebo grafický obsah</string>
+    <string name="report_dialog_illegal">Nelegální chování</string>
+    <string name="report_dialog_blocking_a_user">Blokování uživatele skryje jejich obsah ve vaší aplikaci. Vaše poznámky jsou stále veřejně viditelné, včetně osob, které blokujete. Blokovaní uživatelé jsou uvedeni na obrazovce s bezpečnostními filtry.</string>
+    <string name="report_dialog_block_hide_user_btn"><![CDATA[Blokovat a skrýt uživatele]]></string>
+    <string name="report_dialog_report_btn">Nahlásit zneužití</string>
+    <string name="report_dialog_reminder_public">Všechny zveřejněné zprávy budou veřejně viditelné.</string>
+    <string name="report_dialog_additional_reason_placeholder">Volitelně poskytněte další kontext k vaší zprávě…</string>
+    <string name="report_dialog_additional_reason_label">Další kontext</string>
+    <string name="report_dialog_select_reason_label">Důvod</string>
+    <string name="report_dialog_select_reason_placeholder">Vyberte důvod…</string>
+    <string name="report_dialog_post_report_btn">Odeslat zprávu</string>
+    <string name="report_dialog_title">Blokovat a nahlásit</string>
+    <string name="block_only">Blokovat</string>
+    <string name="bookmarks">Záložky</string>
+    <string name="private_bookmarks">Soukromé záložky</string>
+    <string name="public_bookmarks">Veřejné záložky</string>
+    <string name="add_to_private_bookmarks">Přidat do soukromých záložek</string>
+    <string name="add_to_public_bookmarks">Přidat do veřejných záložek</string>
+    <string name="remove_from_private_bookmarks">Odebrat ze soukromých záložek</string>
+    <string name="remove_from_public_bookmarks">Odebrat z veřejných záložek</string>
+
+    <string name="wallet_connect_service">Služba Wallet Connect</string>
+    <string name="wallet_connect_service_explainer">Autorizuje Nostr Secret k provedení platby zapsům, aniž byste opustili aplikaci. Uchovávejte tajemství v bezpečí a pokud je to možné, používejte soukromý přepojovač.</string>
+    <string name="wallet_connect_service_pubkey">Veřejný klíč Wallet Connect</string>
+    <string name="wallet_connect_service_relay">Relé Wallet Connect</string>
+    <string name="wallet_connect_service_secret">Tajemství Wallet Connect</string>
+    <string name="wallet_connect_service_show_secret">Zobrazit tajný klíč</string>
+    <string name="wallet_connect_service_secret_placeholder">nsec / hex soukromý klíč</string>
+
+    <string name="pledge_amount_in_sats">Částka záruky v sats</string>
+    <string name="post_poll">Zveřejnit hlasování</string>
+    <string name="poll_heading_required">Povinná pole:</string>
+    <string name="poll_zap_recipients">Příjemci zapsů</string>
+    <string name="poll_primary_description">Hlavní popis hlasování…</string>
+    <string name="poll_option_index">Možnost %s</string>
+    <string name="poll_option_description">Popis možnosti hlasování</string>
+    <string name="poll_heading_optional">Volitelná pole:</string>
+    <string name="poll_zap_value_min">Minimální zaps</string>
+    <string name="poll_zap_value_max">Maximální zaps</string>
+    <string name="poll_consensus_threshold">Konsensus</string>
+    <string name="poll_consensus_threshold_percent">(0–100)%</string>
+    <string name="poll_closing_time">Uzavřít po</string>
+    <string name="poll_closing_time_days">dnech</string>
+    <string name="poll_is_closed">Hlasování je uzavřeno pro nové hlasy</string>
+    <string name="poll_zap_amount">Částka zapsu</string>
+    <string name="one_vote_per_user_on_atomic_votes">U tohoto typu hlasování je povolen pouze jeden hlas na uživatele</string>
+
+    <string name="looking_for_event">"Hledá se událost %1$s"</string>
+
+    <string name="custom_zaps_add_a_message">Přidat veřejnou zprávu</string>
+    <string name="custom_zaps_add_a_message_private">Přidat soukromou zprávu</string>
+    <string name="custom_zaps_add_a_message_nonzap">Přidat fakturu</string>
+
+    <string name="custom_zaps_add_a_message_example">Děkuji za veškerou práci!</string>
+
+    <string name="lightning_create_and_add_invoice">Vytvořit a přidat</string>
+    <string name="poll_author_no_vote">Autoři hlasování nemohou hlasovat ve vlastních hlasováních.</string>
+
+    <string name="hash_verification_passed">Obrázek je stejný jako v původním příspěvku</string>
+    <string name="hash_verification_failed">Obrázek se změnil. Autor možná změnu nezaznamenal</string>
+
+    <string name="content_description_add_image">Přidat obrázek</string>
+    <string name="content_description_add_video">Přidat video</string>
+    <string name="content_description_add_document">Přidat dokument</string>
+
+    <string name="add_content">Přidat do zprávy</string>
+    <string name="content_description">Popis obsahu</string>
+    <string name="content_description_example">Modrá loď na bílé písčité pláži při západu slunce</string>
+
+    <string name="zap_type">Typ zapsu</string>
+    <string name="zap_type_explainer">Typ zapsu pro všechny možnosti</string>
+
+    <string name="zap_type_public">Veřejný</string>
+    <string name="zap_type_public_explainer">Všichni mohou vidět transakci a zprávu</string>
+
+    <string name="zap_type_private">Soukromý</string>
+    <string name="zap_type_private_explainer">Odesílatel a příjemce si mohou navzájem vidět a číst zprávu</string>
+
+    <string name="zap_type_anonymous">Anonymní</string>
+    <string name="zap_type_anonymous_explainer">Příjemce a veřejnost neví, kdo platbu poslal</string>
+
+    <string name="zap_type_nonzap">Non-Zap</string>
+    <string name="zap_type_nonzap_explainer">Žádná stopa v Nostr, pouze v Lightning</string>
+
+    <string name="file_server">Souborový server</string>
+    <string name="zap_forward_lnAddress">LnAddress nebo @Uživatel</string>
+
+    <string name="upload_server_imgur">imgur.com – důvěryhodný</string>
+    <string name="upload_server_imgur_explainer">Imgur může upravit soubor</string>
+
+    <string name="upload_server_nostrimg">nostrimg.com – důvěryhodný</string>
+    <string name="upload_server_nostrimg_explainer">NostrImg může upravit soubor</string>
+
+    <string name="upload_server_nostrbuild">nostr.build – důvěryhodný</string>
+    <string name="upload_server_nostrbuild_explainer">Nostr.build může upravit soubor</string>
+
+    <string name="upload_server_nostrfilesdev">nostrfiles.dev – důvěryhodný</string>
+    <string name="upload_server_nostrfilesdev_explainer">Nostrfiles.dev může upravit soubor</string>
+
+    <string name="upload_server_imgur_nip94">Ověřitelný Imgur (NIP-94)</string>
+    <string name="upload_server_imgur_nip94_explainer">Ověří, zda Imgur upravil soubor. Nový NIP: jiní klienti ho možná neuvidí</string>
+
+    <string name="upload_server_nostrimg_nip94">Ověřitelný NostrImg (NIP-94)</string>
+    <string name="upload_server_nostrimg_nip94_explainer">Ověří, zda NostrImg upravil soubor. Nový NIP: jiní klienti ho možná neuvidí</string>
+
+    <string name="upload_server_nostrbuild_nip94">Ověřitelný Nostr.build (NIP-94)</string>
+    <string name="upload_server_nostrbuild_nip94_explainer">Ověří, zda Nostr.build upravil soubor. Nový NIP: jiní klienti ho možná neuvidí</string>
+
+    <string name="upload_server_nostrfilesdev_nip94">Ověřitelný Nostrfiles.dev (NIP-94)</string>
+    <string name="upload_server_nostrfilesdev_nip94_explainer">Ověří, zda Nostrfiles.dev upravil soubor. Nový NIP: jiní klienti ho možná neuvidí</string>
+
+    <string name="upload_server_relays_nip95">Vaše relé (NIP-95)</string>
+    <string name="upload_server_relays_nip95_explainer">Soubory jsou hostovány vašimi relé. Nový NIP: zkontrolujte, zda je podporují</string>
+
+    <string name="connect_via_tor_short">Nastavení Tor/Orbot</string>
+    <string name="connect_via_tor">Připojit se přes váš Orbot</string>
+
+    <string name="do_you_really_want_to_disable_tor_title">Odpojit se od Orbotu/Toru?</string>
+    <string name="do_you_really_want_to_disable_tor_text">Vaše data budou okamžitě přenesena do běžné sítě</string>
+    <string name="yes">Ano</string>
+    <string name="no">Ne</string>
+
+    <string name="follow_list_selection">Seznam sledovaných</string>
+    <string name="follow_list_kind3follows">Všechna sledování</string>
+    <string name="follow_list_global">Globální</string>
+    <string name="connect_through_your_orbot_setup_markdown">
+        ## Připojte se přes Tor s Orbotem
+        \n\n1. Nainstalujte [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
+        \n2. Spusťte Orbot
+        \n3. V Orbotu zkontrolujte port pro Socks. Výchozí hodnota je 9050
+        \n4. Pokud je to nutné, změňte port v Orbotu
+        \n5. Nastavte port Socks v této obrazovce
+        \n6. Stiskněte tlačítko Aktivovat Tor
+    </string>
+    <string name="orbot_socks_port">Orbot Socks Port</string>
+    <string name="invalid_port_number">Neplatné číslo portu</string>
+    <string name="use_orbot">Použít Orbot</string>
+    <string name="disconnect_from_your_orbot_setup">Odpojit Tor/Orbot</string>
+
+    <string name="app_notification_dms_channel_name">Soukromé zprávy</string>
+    <string name="app_notification_dms_channel_description">Upozorní vás, když dorazí soukromá zpráva</string>
+
+    <string name="app_notification_zaps_channel_name">Přijaté zapsy</string>
+    <string name="app_notification_zaps_channel_description">Upozorní vás, když vás někdo zapsne</string>
+    <string name="app_notification_zaps_channel_message">%1$s sats</string>
+    <string name="app_notification_zaps_channel_message_from">Od %1$s</string>
+    <string name="app_notification_zaps_channel_message_for">pro %1$s</string>
+
+    <string name="reply_notify">Upozornit: </string>
+
+    <string name="channel_list_join_conversation">Připojit se ke konverzaci</string>
+    <string name="channel_list_user_or_group_id">ID uživatele nebo skupiny</string>
+    <string name="channel_list_user_or_group_id_demo">npub, nevent nebo hex</string>
+    <string name="channel_list_create_channel">Vytvořit</string>
+    <string name="channel_list_join_channel">Připojit se</string>
+
+    <string name="today">Dnes</string>
+
+    <string name="content_warning">Upozornění na obsah</string>
+    <string name="content_warning_explanation">Tento příspěvek obsahuje citlivý obsah, který může být pro některé lidi urážlivý nebo rušivý</string>
+    <string name="content_warning_hide_all_sensitive_content">Vždy skrýt citlivý obsah</string>
+    <string name="content_warning_show_all_sensitive_content">Vždy zobrazit citlivý obsah</string>
+    <string name="content_warning_see_warnings">Vždy zobrazovat upozornění na obsah</string>
+</resources>
