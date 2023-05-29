@@ -85,7 +85,7 @@ object ChatroomListKnownFeedFilter : AdditiveFeedFilter<Note>() {
                 }
             }
 
-            myNewList
+            sort(myNewList.toSet()).take(1000)
         }
 
         Log.d("Time", "${this.javaClass.simpleName} Modified Additive Feed in $elapsed with ${feed.size} objects")
