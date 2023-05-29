@@ -442,20 +442,7 @@ fun routeFor(note: Note, loggedIn: User): String? {
             return "Channel/${it.idHex}"
         }
     } else if (noteEvent is PrivateDmEvent) {
-        val replyAuthorBase =
-            (note.event as? PrivateDmEvent)
-                ?.verifiedRecipientPubKey()
-                ?.let { LocalCache.getOrCreateUser(it) }
-
-        var userToComposeOn = note.author!!
-
-        if (replyAuthorBase != null) {
-            if (note.author == loggedIn) {
-                userToComposeOn = replyAuthorBase
-            }
-        }
-
-        return "Room/${userToComposeOn.pubkeyHex}"
+        return "Room/${noteEvent.talkingWith(loggedIn.pubkeyHex)}"
     } else {
         return "Note/${note.idHex}"
     }

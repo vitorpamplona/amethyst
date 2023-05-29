@@ -189,7 +189,9 @@ object MessagesLatestItem : LatestItem() {
 
         val newestItem = updateNewestItem(newNotes, account, ChatroomListKnownFeedFilter)
 
-        val lastTime = cache.load("Room/${newestItem?.author?.pubkeyHex}")
+        val roomUserHex = (newestItem?.event as? PrivateDmEvent)?.talkingWith(account.userProfile().pubkeyHex)
+
+        val lastTime = cache.load("Room/$roomUserHex")
 
         return (newestItem?.createdAt() ?: 0) > lastTime
     }
