@@ -307,7 +307,7 @@ fun NoteMaster(
             if (noteEvent is BadgeDefinitionEvent) {
                 BadgeDisplay(baseNote = note)
             } else if (noteEvent is LongTextNoteEvent) {
-                Row(modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp)) {
+                Row(modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 12.dp)) {
                     Column {
                         noteEvent.image()?.let {
                             AsyncImage(
@@ -337,7 +337,8 @@ fun NoteMaster(
                                 text = it,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(top = 10.dp)
+                                    .padding(top = 10.dp),
+                                color = Color.Gray
                             )
                         }
                     }
