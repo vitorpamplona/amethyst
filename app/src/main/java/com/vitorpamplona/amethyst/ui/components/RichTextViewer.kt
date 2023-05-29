@@ -365,40 +365,8 @@ private fun RenderContentAsMarkdown(content: String, backgroundColor: Color, tag
     }
 
     nip19References.forEach {
-        var baseUser by remember(it) { mutableStateOf<User?>(null) }
-        var baseNote by remember(it) { mutableStateOf<Note?>(null) }
-
-        LaunchedEffect(key1 = it.hex) {
-            withContext(Dispatchers.IO) {
-                if (it.type == Nip19.Type.NOTE || it.type == Nip19.Type.EVENT || it.type == Nip19.Type.ADDRESS) {
-                    LocalCache.checkGetOrCreateNote(it.hex)?.let { note ->
-                        baseNote = note
-                    }
-                }
-
-                if (it.type == Nip19.Type.USER) {
-                    LocalCache.checkGetOrCreateUser(it.hex)?.let { user ->
-                        baseUser = user
-                    }
-                }
-            }
-        }
-
-        baseNote?.let {
-            val noteState by it.live().metadata.observeAsState()
-            if (noteState?.note?.event != null) {
-                LaunchedEffect(key1 = noteState) {
-                    refresh++
-                }
-            }
-        }
-        baseUser?.let {
-            val userState by it.live().metadata.observeAsState()
-            if (userState?.user?.info != null) {
-                LaunchedEffect(key1 = userState) {
-                    refresh++
-                }
-            }
+        ObserveNIP19(it) {
+            refresh++
         }
     }
 
@@ -418,6 +386,49 @@ private fun RenderContentAsMarkdown(content: String, backgroundColor: Color, tag
                 } else {
                     runCatching { uri.openUri(link) }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ObserveNIP19(
+    it: Nip19.Return,
+    onRefresh: () -> Unit
+) {
+    var baseUser by remember(it) { mutableStateOf<User?>(null) }
+    var baseNote by remember(it) { mutableStateOf<Note?>(null) }
+
+    LaunchedEffect(key1 = it.hex) {
+        withContext(Dispatchers.IO) {
+            if (it.type == Nip19.Type.NOTE || it.type == Nip19.Type.EVENT || it.type == Nip19.Type.ADDRESS) {
+                LocalCache.checkGetOrCreateNote(it.hex)?.let { note ->
+                    baseNote = note
+                }
+            }
+
+            if (it.type == Nip19.Type.USER) {
+                LocalCache.checkGetOrCreateUser(it.hex)?.let { user ->
+                    baseUser = user
+                }
+            }
+        }
+    }
+
+    baseNote?.let { note ->
+        val noteState by note.live().metadata.observeAsState()
+        if (noteState?.note?.event != null) {
+            LaunchedEffect(key1 = noteState) {
+                onRefresh()
+            }
+        }
+    }
+
+    baseUser?.let { user ->
+        val userState by user.live().metadata.observeAsState()
+        if (userState?.user?.info != null) {
+            LaunchedEffect(key1 = userState) {
+                onRefresh()
             }
         }
     }
