@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterialApi::class)
@@ -151,7 +152,7 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
                                                     MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                                                     if (item.idHex == noteId) MaterialTheme.colors.primary.copy(alpha = 0.52f) else MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                                                 ),
-                                                parentBackgroundColor = if (item.idHex == noteId) MaterialTheme.colors.primary.copy(0.12f).compositeOver(MaterialTheme.colors.background) else null,
+                                                parentBackgroundColor = if (item.idHex == noteId) MaterialTheme.colors.newItemBackgroundColor.compositeOver(MaterialTheme.colors.background) else null,
                                                 isBoostedNote = false,
                                                 unPackReply = false,
                                                 accountViewModel = accountViewModel,

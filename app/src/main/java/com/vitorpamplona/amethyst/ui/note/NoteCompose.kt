@@ -127,6 +127,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Following
+import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -282,7 +283,7 @@ fun NormalNote(
             }
         }
 
-        val primaryColor = MaterialTheme.colors.primary.copy(0.12f)
+        val primaryColor = MaterialTheme.colors.newItemBackgroundColor
         val defaultBackgroundColor = MaterialTheme.colors.background
 
         val backgroundColor = remember(isNew, parentBackgroundColor) {

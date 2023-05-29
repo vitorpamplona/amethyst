@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.ui.screen.MultiSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.coroutines.Dispatchers
@@ -88,7 +89,7 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
             }
         }
 
-        val primaryColor = MaterialTheme.colors.primary.copy(0.12f)
+        val primaryColor = MaterialTheme.colors.newItemBackgroundColor
         val defaultBackgroundColor = MaterialTheme.colors.background
 
         val backgroundColor = if (isNew) {

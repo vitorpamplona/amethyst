@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.theme
 
 import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material.Colors
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.darkColors
 import androidx.compose.material.lightColors
@@ -33,6 +34,10 @@ private val LightColorPalette = lightColors(
     onSurface = Color.Black,
     */
 )
+
+val Colors.newItemBackgroundColor: Color
+    @Composable
+    get() = if (isLight) primary.copy(0.05f) else primary.copy(0.12f)
 
 @Composable
 fun AmethystTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
