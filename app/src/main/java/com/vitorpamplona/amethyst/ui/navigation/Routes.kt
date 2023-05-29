@@ -170,7 +170,7 @@ object NotificationLatestItem : LatestItem() {
     }
 }
 
-object MessagesLatestItem {
+object MessagesLatestItem : LatestItem() {
     fun hasNewItems(
         account: Account,
         cache: NotificationCache,
@@ -178,13 +178,11 @@ object MessagesLatestItem {
     ): Boolean {
         ChatroomListKnownFeedFilter.account = account
 
-        val note = ChatroomListKnownFeedFilter.loadTop().firstOrNull {
-            it.createdAt() != null && it.channel() == null && it.author != account.userProfile()
-        } ?: return false
+        val newestItem = updateNewestItem(newNotes, account, ChatroomListKnownFeedFilter)
 
-        val lastTime = cache.load("Room/${note.author?.pubkeyHex}")
+        val lastTime = cache.load("Room/${newestItem?.author?.pubkeyHex}")
 
-        return (note.createdAt() ?: 0) > lastTime
+        return (newestItem?.createdAt() ?: 0) > lastTime
     }
 }
 

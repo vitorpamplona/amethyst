@@ -23,7 +23,7 @@ abstract class AdditiveFeedFilter<T> : FeedFilter<T>() {
     abstract fun sort(collection: Set<T>): List<T>
 
     @OptIn(ExperimentalTime::class)
-    fun updateListWith(oldList: List<T>, newItems: Set<T>): List<T> {
+    open fun updateListWith(oldList: List<T>, newItems: Set<T>): List<T> {
         val (feed, elapsed) = measureTimedValue {
             val newItemsToBeAdded = applyFilter(newItems)
             if (newItemsToBeAdded.isNotEmpty()) {
