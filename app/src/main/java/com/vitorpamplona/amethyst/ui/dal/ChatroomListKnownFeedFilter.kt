@@ -43,7 +43,6 @@ object ChatroomListKnownFeedFilter : AdditiveFeedFilter<Note>() {
             .reversed()
     }
 
-
     @OptIn(ExperimentalTime::class)
     override fun updateListWith(oldList: List<Note>, newItems: Set<Note>): List<Note> {
         val (feed, elapsed) = measureTimedValue {
@@ -139,7 +138,7 @@ object ChatroomListKnownFeedFilter : AdditiveFeedFilter<Note>() {
             val roomUserHex = if (newAuthor == me.pubkeyHex) newRecipient else newAuthor
             val roomUser = roomUserHex?.let { LocalCache.users[it] }
 
-            if (roomUserHex != null && (newAuthor == me.pubkeyHex || roomUserHex in followingKeySet || me.hasSentMessagesTo(roomUser)) && !account.isHidden(roomUserHex) ) {
+            if (roomUserHex != null && (newAuthor == me.pubkeyHex || roomUserHex in followingKeySet || me.hasSentMessagesTo(roomUser)) && !account.isHidden(roomUserHex)) {
                 val lastNote = newRelevantPrivateMessages.get(roomUserHex)
                 if (lastNote != null) {
                     if ((newNote.createdAt() ?: 0) > (lastNote.createdAt() ?: 0)) {
