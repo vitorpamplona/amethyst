@@ -138,7 +138,7 @@ fun VideoView(videoUri: Uri, description: String? = null, thumb: Drawable? = nul
         ExoPlayer.Builder(context).build().apply {
             repeatMode = Player.REPEAT_MODE_ALL
             videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
-            volume = 0f
+            volume = if (mutedInstance.value) 0f else 1f
             if (videoUri.scheme?.startsWith("file") == true) {
                 setMediaItem(media)
             } else {
