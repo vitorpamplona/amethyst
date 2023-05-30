@@ -13,7 +13,6 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
-import com.vitorpamplona.amethyst.VideoCache
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
@@ -41,9 +40,6 @@ class MainActivity : FragmentActivity() {
         val uri = intent?.data?.toString()
 
         val startingPage = uriToRoute(uri)
-
-        // Initializes video cache.
-        VideoCache.init(this.applicationContext)
 
         LocalPreferences.migrateSingleUserPrefs()
 

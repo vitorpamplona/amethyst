@@ -50,6 +50,9 @@ object ServiceManager {
                 .build()
         }
 
+        // Initializes video cache.
+        VideoCache.init(context.applicationContext)
+
         if (myAccount != null) {
             Client.connect(myAccount.activeRelays() ?: myAccount.convertLocalRelays())
 

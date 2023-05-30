@@ -35,6 +35,13 @@ object VideoCache {
                     OkHttpDataSource.Factory(HttpClient.getHttpClient())
                 )
                 .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+        } else {
+            cacheDataSourceFactory = CacheDataSource.Factory()
+                .setCache(simpleCache)
+                .setUpstreamDataSourceFactory(
+                    OkHttpDataSource.Factory(HttpClient.getHttpClient())
+                )
+                .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
         }
     }
 
