@@ -29,6 +29,10 @@ class PrivateDmEvent(
 
     fun verifiedRecipientPubKey() = recipientPubKey()?.runCatching { Hex.decode(this[1]).toHexKey() }?.getOrNull() // makes sure its a valid one
 
+    fun talkingWith(oneSideHex: String): HexKey {
+        return if (pubKey == oneSideHex) verifiedRecipientPubKey() ?: pubKey else pubKey
+    }
+
     /**
      * To be fully compatible with nip-04, we read e-tags that are in violation to nip-18.
      *
@@ -39,7 +43,7 @@ class PrivateDmEvent(
 
     fun with(pubkeyHex: String): Boolean {
         return pubkeyHex == pubKey ||
-            tags.firstOrNull { it.size > 1 && it[0] == "p" }?.getOrNull(1) == pubkeyHex
+            tags.any { it.size > 1 && it[0] == "p" && it[1] == pubkeyHex }
     }
 
     fun plainContent(privKey: ByteArray, pubKey: ByteArray): String? {
@@ -73,7 +77,8 @@ class PrivateDmEvent(
             privateKey: ByteArray,
             createdAt: Long = Date().time / 1000,
             publishedRecipientPubKey: ByteArray? = null,
-            advertiseNip18: Boolean = true
+            advertiseNip18: Boolean = true,
+            markAsSensitive: Boolean
         ): PrivateDmEvent {
             val content = Utils.encrypt(
                 if (advertiseNip18) { nip18Advertisement } else { "" } + msg,
@@ -93,6 +98,9 @@ class PrivateDmEvent(
             }
             zapReceiver?.let {
                 tags.add(listOf("zap", it))
+            }
+            if (markAsSensitive) {
+                tags.add(listOf("content-warning", ""))
             }
             val id = generateId(pubKey, createdAt, kind, tags, content)
             val sig = Utils.sign(id, privateKey)

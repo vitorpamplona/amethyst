@@ -13,6 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -23,7 +24,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import com.patrykandpatrick.vico.compose.axis.horizontal.bottomAxis
 import com.patrykandpatrick.vico.compose.axis.vertical.endAxis
 import com.patrykandpatrick.vico.compose.axis.vertical.startAxis
@@ -52,6 +52,9 @@ import com.vitorpamplona.amethyst.ui.screen.CardFeedView
 import com.vitorpamplona.amethyst.ui.screen.NotificationViewModel
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.ui.theme.RoyalBlue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.math.RoundingMode
 import kotlin.math.roundToInt
@@ -61,29 +64,24 @@ fun NotificationScreen(
     notifFeedViewModel: NotificationViewModel,
     userReactionsStatsModel: UserReactionsViewModel,
     accountViewModel: AccountViewModel,
-    navController: NavController,
+    nav: (String) -> Unit,
     scrollToTop: Boolean = false
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
+    val account = remember(accountState) { accountState?.account } ?: return
 
-    if (scrollToTop) {
-        notifFeedViewModel.clear()
-    }
-
-    LaunchedEffect(account.userProfile().pubkeyHex, account.defaultNotificationFollowList) {
-        NostrAccountDataSource.resetFilters()
+    LaunchedEffect(accountViewModel, account.defaultNotificationFollowList) {
+        NostrAccountDataSource.invalidateFilters()
         NotificationFeedFilter.account = account
-        notifFeedViewModel.clear()
-        notifFeedViewModel.invalidateData()
+        notifFeedViewModel.invalidateData(true)
     }
 
     val lifeCycleOwner = LocalLifecycleOwner.current
     DisposableEffect(accountViewModel) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
+                NostrAccountDataSource.invalidateFilters()
                 NotificationFeedFilter.account = account
-                notifFeedViewModel.invalidateData()
             }
         }
 
@@ -93,15 +91,27 @@ fun NotificationScreen(
         }
     }
 
+    if (scrollToTop) {
+        val scope = rememberCoroutineScope()
+        LaunchedEffect(key1 = Unit) {
+            scope.launch(Dispatchers.IO) {
+                notifFeedViewModel.clear()
+                notifFeedViewModel.invalidateData(true)
+            }
+        }
+    }
+
     Column(Modifier.fillMaxHeight()) {
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            SummaryBar(userReactionsStatsModel, accountViewModel, navController)
+            SummaryBar(
+                model = userReactionsStatsModel
+            )
             CardFeedView(
                 viewModel = notifFeedViewModel,
                 accountViewModel = accountViewModel,
-                navController = navController,
+                nav = nav,
                 routeForLastRead = Route.Notification.base,
                 scrollStateKey = ScrollStateKeys.NOTIFICATION_SCREEN,
                 scrollToTop = scrollToTop
@@ -111,18 +121,18 @@ fun NotificationScreen(
 }
 
 @Composable
-fun SummaryBar(model: UserReactionsViewModel, accountViewModel: AccountViewModel, navController: NavController) {
+fun SummaryBar(model: UserReactionsViewModel) {
     var showChart by remember {
         mutableStateOf(false)
     }
 
-    UserReactionsRow(model, accountViewModel, navController) {
+    UserReactionsRow(model) {
         showChart = !showChart
     }
 
     val lineChartCount =
         lineChart(
-            lines = listOf(Color.Cyan, Color.Green, Color.Red).map { lineChartColor ->
+            lines = listOf(RoyalBlue, Color.Green, Color.Red).map { lineChartColor ->
                 LineChart.LineSpec(
                     lineColor = lineChartColor.toArgb(),
                     lineBackgroundShader = DynamicShaders.fromBrush(
@@ -156,8 +166,8 @@ fun SummaryBar(model: UserReactionsViewModel, accountViewModel: AccountViewModel
             targetVerticalAxisPosition = AxisPosition.Vertical.End
         )
 
-    model.chartModel?.let {
-        if (showChart) {
+    if (showChart) {
+        model.chartModel?.let {
             Row(
                 modifier = Modifier
                     .padding(vertical = 10.dp, horizontal = 20.dp)

@@ -7,4 +7,5 @@ object HiddenAccountsFeedFilter : FeedFilter<User>() {
     lateinit var account: Account
 
     override fun feed() = account.hiddenUsers()
+        .sortedWith(compareBy({ it.toBestDisplayName() }, { it.pubkeyHex }))
 }

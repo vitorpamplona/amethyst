@@ -25,19 +25,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.ui.screen.MessageSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, accountViewModel: AccountViewModel, navController: NavController) {
-    val noteState by messageSetCard.note.live().metadata.observeAsState()
+fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    val baseNote = remember { messageSetCard.note }
+
+    val noteState by baseNote.live().metadata.observeAsState()
     val note = remember(noteState) { noteState?.note }
+
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val loggedIn = remember(accountState) { accountState?.account?.userProfile() } ?: return
 
     var popupExpanded by remember { mutableStateOf(false) }
 
@@ -62,7 +68,7 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, 
         }
 
         val backgroundColor = if (isNew) {
-            MaterialTheme.colors.primary.copy(0.12f).compositeOver(MaterialTheme.colors.background)
+            MaterialTheme.colors.newItemBackgroundColor.compositeOver(MaterialTheme.colors.background)
         } else {
             MaterialTheme.colors.background
         }
@@ -79,9 +85,9 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, 
                     onClick = {
                         scope.launch {
                             routeFor(
-                                note,
-                                accountViewModel.userProfile()
-                            )?.let { navController.navigate(it) }
+                                baseNote,
+                                loggedIn
+                            )?.let { nav(it) }
                         }
                     },
                     onLongClick = { popupExpanded = true }
@@ -91,29 +97,46 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, 
 
         Column(columnModifier) {
             Row(Modifier.fillMaxWidth()) {
-                Box(modifier = remember { Modifier.width(55.dp).padding(top = 5.dp, end = 5.dp) }) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_dm),
-                        null,
-                        modifier = remember { Modifier.size(16.dp).align(Alignment.TopEnd) },
-                        tint = MaterialTheme.colors.primary
-                    )
-                }
+                MessageIcon()
 
                 Column(modifier = remember { Modifier.padding(start = 10.dp) }) {
+                    val routeForLastRead = "Room/${(baseNote.event as? PrivateDmEvent)?.talkingWith(loggedIn.pubkeyHex)}"
+
                     NoteCompose(
-                        baseNote = messageSetCard.note,
-                        routeForLastRead = null,
+                        baseNote = baseNote,
+                        routeForLastRead = routeForLastRead,
                         isBoostedNote = true,
                         addMarginTop = false,
                         parentBackgroundColor = backgroundColor,
                         accountViewModel = accountViewModel,
-                        navController = navController
+                        nav = nav
                     )
 
                     NoteDropDownMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun MessageIcon() {
+    Box(
+        modifier = remember {
+            Modifier
+                .width(55.dp)
+                .padding(top = 5.dp, end = 5.dp)
+        }
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_dm),
+            null,
+            modifier = remember {
+                Modifier
+                    .size(16.dp)
+                    .align(Alignment.TopEnd)
+            },
+            tint = MaterialTheme.colors.primary
+        )
     }
 }

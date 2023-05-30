@@ -3,7 +3,6 @@ package com.vitorpamplona.amethyst.ui.components
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
@@ -14,7 +13,7 @@ fun TranslatableRichTextViewer(
     tags: List<List<String>>?,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) = ExpandableRichTextViewer(
     content,
     canPreview,
@@ -22,5 +21,5 @@ fun TranslatableRichTextViewer(
     tags,
     backgroundColor,
     accountViewModel,
-    navController
+    nav
 )

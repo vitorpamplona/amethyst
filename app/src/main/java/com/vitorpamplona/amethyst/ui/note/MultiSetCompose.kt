@@ -8,10 +8,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
@@ -19,7 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -28,6 +30,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.res.painterResource
@@ -35,15 +38,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
@@ -51,20 +51,22 @@ import com.vitorpamplona.amethyst.ui.screen.MultiSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.math.BigDecimal
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accountViewModel: AccountViewModel, navController: NavController) {
+fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val baseNote = remember { multiSetCard.note }
 
     val noteState by baseNote.live().metadata.observeAsState()
     val note = remember(noteState) { noteState?.note } ?: return
 
     val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = remember(accountState) { accountState?.account } ?: return
+    val loggedIn = remember(accountState) { accountState?.account?.userProfile() } ?: return
 
     var popupExpanded by remember { mutableStateOf(false) }
 
@@ -87,54 +89,51 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
             }
         }
 
-        val primaryColor = MaterialTheme.colors.primary.copy(0.12f)
+        val primaryColor = MaterialTheme.colors.newItemBackgroundColor
         val defaultBackgroundColor = MaterialTheme.colors.background
 
-        val backgroundColor = remember(isNew) {
-            if (isNew) {
-                primaryColor.compositeOver(defaultBackgroundColor)
-            } else {
-                defaultBackgroundColor
-            }
+        val backgroundColor = if (isNew) {
+            primaryColor.compositeOver(defaultBackgroundColor)
+        } else {
+            defaultBackgroundColor
         }
 
-        val columnModifier = remember(isNew) {
-            Modifier
-                .background(backgroundColor)
-                .padding(
-                    start = 12.dp,
-                    end = 12.dp,
-                    top = 10.dp
-                )
-                .combinedClickable(
-                    onClick = {
-                        scope.launch {
-                            routeFor(
-                                baseNote,
-                                account.userProfile()
-                            )?.let { navController.navigate(it) }
-                        }
-                    },
-                    onLongClick = { popupExpanded = true }
-                )
-                .fillMaxWidth()
-        }
+        val columnModifier = Modifier
+            .background(backgroundColor)
+            .padding(
+                start = 12.dp,
+                end = 12.dp,
+                top = 10.dp
+            )
+            .combinedClickable(
+                onClick = {
+                    scope.launch {
+                        routeFor(baseNote, loggedIn)?.let { nav(it) }
+                    }
+                },
+                onLongClick = { popupExpanded = true }
+            )
+            .fillMaxWidth()
 
-        val zapEvents = remember { multiSetCard.zapEvents }
-        val boostEvents = remember { multiSetCard.boostEvents }
-        val likeEvents = remember { multiSetCard.likeEvents }
+        val zapEvents by remember { derivedStateOf { multiSetCard.zapEvents } }
+        val boostEvents by remember { derivedStateOf { multiSetCard.boostEvents } }
+        val likeEvents by remember { derivedStateOf { multiSetCard.likeEvents } }
+
+        val hasZapEvents by remember { derivedStateOf { multiSetCard.zapEvents.isNotEmpty() } }
+        val hasBoostEvents by remember { derivedStateOf { multiSetCard.boostEvents.isNotEmpty() } }
+        val hasLikeEvents by remember { derivedStateOf { multiSetCard.likeEvents.isNotEmpty() } }
 
         Column(modifier = columnModifier) {
-            if (zapEvents.isNotEmpty()) {
-                RenderZapGallery(zapEvents, navController, account, accountViewModel)
+            if (hasZapEvents) {
+                RenderZapGallery(zapEvents, backgroundColor, nav, accountViewModel)
             }
 
-            if (boostEvents.isNotEmpty()) {
-                RenderBoostGallery(boostEvents, navController, account, accountViewModel)
+            if (hasBoostEvents) {
+                RenderBoostGallery(boostEvents, backgroundColor, nav, accountViewModel)
             }
 
-            if (likeEvents.isNotEmpty()) {
-                RenderLikeGallery(likeEvents, navController, account, accountViewModel)
+            if (hasLikeEvents) {
+                RenderLikeGallery(likeEvents, backgroundColor, nav, accountViewModel)
             }
 
             Row(Modifier.fillMaxWidth()) {
@@ -147,7 +146,7 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
                     isBoostedNote = true,
                     parentBackgroundColor = backgroundColor,
                     accountViewModel = accountViewModel,
-                    navController = navController
+                    nav = nav
                 )
 
                 NoteDropDownMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
@@ -158,9 +157,9 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
 
 @Composable
 private fun RenderLikeGallery(
-    likeEvents: List<Note>,
-    navController: NavController,
-    account: Account,
+    likeEvents: ImmutableList<Note>,
+    backgroundColor: Color,
+    nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
     Row(Modifier.fillMaxWidth()) {
@@ -183,15 +182,15 @@ private fun RenderLikeGallery(
             )
         }
 
-        AuthorGallery(likeEvents, navController, account, accountViewModel)
+        AuthorGallery(likeEvents, backgroundColor, nav, accountViewModel)
     }
 }
 
 @Composable
 private fun RenderZapGallery(
-    zapEvents: Map<Note, Note>,
-    navController: NavController,
-    account: Account,
+    zapEvents: ImmutableMap<Note, Note>,
+    backgroundColor: Color,
+    nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
     Row(Modifier.fillMaxWidth()) {
@@ -214,18 +213,22 @@ private fun RenderZapGallery(
             )
         }
 
-        AuthorGalleryZaps(zapEvents, navController, account, accountViewModel)
+        AuthorGalleryZaps(zapEvents, backgroundColor, nav, accountViewModel)
     }
 }
 
 @Composable
 private fun RenderBoostGallery(
-    boostEvents: List<Note>,
-    navController: NavController,
-    account: Account,
+    boostEvents: ImmutableList<Note>,
+    backgroundColor: Color,
+    nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
-    Row(Modifier.fillMaxWidth()) {
+    Row(
+        modifier = remember {
+            Modifier.fillMaxWidth()
+        }
+    ) {
         Box(
             modifier = remember {
                 Modifier
@@ -238,30 +241,30 @@ private fun RenderBoostGallery(
                 null,
                 modifier = remember {
                     Modifier
-                        .size(18.dp)
+                        .size(19.dp)
                         .align(Alignment.TopEnd)
                 },
                 tint = Color.Unspecified
             )
         }
 
-        AuthorGallery(boostEvents, navController, account, accountViewModel)
+        AuthorGallery(boostEvents, backgroundColor, nav, accountViewModel)
     }
 }
 
 @Composable
 fun AuthorGalleryZaps(
-    authorNotes: Map<Note, Note>,
-    navController: NavController,
-    account: Account,
+    authorNotes: ImmutableMap<Note, Note>,
+    backgroundColor: Color,
+    nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
-    val accountState = account.userProfile().live().follows.observeAsState()
-
     Column(modifier = Modifier.padding(start = 10.dp)) {
         FlowRow() {
             authorNotes.forEach {
-                AuthorPictureAndComment(it.key, it.value, navController, accountState, accountViewModel)
+                Box() {
+                    AuthorPictureAndComment(it.key, it.value, backgroundColor, nav, accountViewModel)
+                }
             }
         }
     }
@@ -271,40 +274,47 @@ fun AuthorGalleryZaps(
 private fun AuthorPictureAndComment(
     zapRequest: Note,
     zapEvent: Note?,
-    navController: NavController,
-    accountUser: State<UserState?>,
+    backgroundColor: Color,
+    nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
-    val author = zapRequest.author ?: return
-
-    var content by remember { mutableStateOf<Triple<User, String?, BigDecimal?>>(Triple(author, null, null)) }
+    var content by remember { mutableStateOf<Triple<User?, String?, String?>>(Triple(zapRequest.author, null, null)) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(key1 = zapRequest.idHex, key2 = zapEvent?.idHex) {
-        scope.launch(Dispatchers.IO) {
+        scope.launch(Dispatchers.Default) {
             (zapRequest.event as? LnZapRequestEvent)?.let {
                 val decryptedContent = accountViewModel.decryptZap(zapRequest)
                 val amount = (zapEvent?.event as? LnZapEvent)?.amount
                 if (decryptedContent != null) {
                     val newAuthor = LocalCache.getOrCreateUser(decryptedContent.pubKey)
-                    content = Triple(newAuthor, decryptedContent.content, amount)
+                    content = Triple(newAuthor, decryptedContent.content.ifBlank { null }, showAmountAxis(amount))
                 } else {
                     if (!zapRequest.event?.content().isNullOrBlank() || amount != null) {
-                        content = Triple(author, zapRequest.event?.content(), amount)
+                        content = Triple(zapRequest.author, zapRequest.event?.content()?.ifBlank { null }, showAmountAxis(amount))
                     }
                 }
             }
         }
     }
 
-    AuthorPictureAndComment(
-        author = content.first,
-        comment = content.second,
-        amount = showAmountAxis(content.third),
-        navController = navController,
-        accountUser = accountUser,
-        accountViewModel = accountViewModel
-    )
+    content.first?.let {
+        val route by remember {
+            derivedStateOf {
+                "User/${it.pubkeyHex}"
+            }
+        }
+
+        AuthorPictureAndComment(
+            author = it,
+            comment = content.second,
+            amount = content.third,
+            route = route,
+            backgroundColor = backgroundColor,
+            nav = nav,
+            accountViewModel = accountViewModel
+        )
+    }
 }
 
 @Composable
@@ -312,20 +322,23 @@ private fun AuthorPictureAndComment(
     author: User,
     comment: String?,
     amount: String?,
-    navController: NavController,
-    accountUser: State<UserState?>,
+    route: String,
+    backgroundColor: Color,
+    nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
+    val authorPictureModifier = remember { Modifier }
+
     val modifier = remember(comment) {
-        if (!comment.isNullOrBlank()) {
+        if (comment != null) {
             Modifier
                 .fillMaxWidth()
                 .clickable {
-                    navController.navigate("User/${author.pubkeyHex}")
+                    nav(route)
                 }
         } else {
             Modifier.clickable {
-                navController.navigate("User/${author.pubkeyHex}")
+                nav(route)
             }
         }
     }
@@ -337,37 +350,41 @@ private fun AuthorPictureAndComment(
         Box(modifier = remember { Modifier.size(35.dp) }, contentAlignment = Alignment.BottomCenter) {
             FastNoteAuthorPicture(
                 author = author,
-                userAccount = accountUser,
-                size = 35.dp
+                size = 35.dp,
+                accountViewModel = accountViewModel,
+                pictureModifier = authorPictureModifier
             )
 
             amount?.let {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colors.background.copy(0.52f)),
-                    contentAlignment = Alignment.BottomCenter
-                ) {
-                    Text(
-                        text = it,
-                        fontWeight = FontWeight.Bold,
-                        color = BitcoinOrange,
-                        fontSize = 12.sp
-                    )
+                Box(modifier = Modifier.fillMaxSize().clip(shape = CircleShape), contentAlignment = Alignment.BottomCenter) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colors.background.copy(0.62f)),
+                        contentAlignment = Alignment.BottomCenter
+                    ) {
+                        Text(
+                            text = it,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colors.secondaryVariant,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(bottom = 1.dp)
+                        )
+                    }
                 }
             }
         }
 
-        if (!comment.isNullOrBlank()) {
+        comment?.let {
             Spacer(modifier = Modifier.width(5.dp))
             TranslatableRichTextViewer(
-                content = comment,
+                content = it,
                 canPreview = true,
                 tags = null,
                 modifier = Modifier.weight(1f),
-                backgroundColor = MaterialTheme.colors.background,
+                backgroundColor = backgroundColor,
                 accountViewModel = accountViewModel,
-                navController = navController
+                nav = nav
             )
         }
     }
@@ -375,38 +392,50 @@ private fun AuthorPictureAndComment(
 
 @Composable
 fun AuthorGallery(
-    authorNotes: Collection<Note>,
-    navController: NavController,
-    account: Account,
+    authorNotes: ImmutableList<Note>,
+    backgroundColor: Color,
+    nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
-    val accountState = account.userProfile().live().follows.observeAsState()
-    val listToRender = remember {
-        Pair(
-            authorNotes.take(50).mapNotNull { it.author },
-            authorNotes.size
-        )
-    }
-
     Column(modifier = Modifier.padding(start = 10.dp)) {
         FlowRow() {
-            listToRender.first.forEach { author ->
-                AuthorPictureAndComment(author, null, null, navController, accountState, accountViewModel)
-            }
-
-            if (listToRender.second > 50) {
-                Text(" and ${listToRender.second - 50} others")
+            authorNotes.forEach { note ->
+                Box(Modifier.size(35.dp)) {
+                    NotePictureAndComment(note, backgroundColor, nav, accountViewModel)
+                }
             }
         }
     }
 }
 
 @Composable
+private fun NotePictureAndComment(
+    baseNote: Note,
+    backgroundColor: Color,
+    nav: (String) -> Unit,
+    accountViewModel: AccountViewModel
+) {
+    val author by remember(baseNote) {
+        derivedStateOf {
+            baseNote.author
+        }
+    }
+
+    val route by remember(baseNote) {
+        derivedStateOf {
+            "User/${baseNote.author?.pubkeyHex}"
+        }
+    }
+
+    author?.let { AuthorPictureAndComment(it, null, null, route, backgroundColor, nav, accountViewModel) }
+}
+
+@Composable
 fun FastNoteAuthorPicture(
     author: User,
-    userAccount: State<UserState?>,
     size: Dp,
-    pictureModifier: Modifier = Modifier
+    pictureModifier: Modifier = Modifier,
+    accountViewModel: AccountViewModel
 ) {
     val userState by author.live().metadata.observeAsState()
     val profilePicture = remember(userState) {
@@ -417,8 +446,15 @@ fun FastNoteAuthorPicture(
         author.pubkeyHex
     }
 
-    val showFollowingMark = remember(userAccount.value) {
-        userAccount.value?.user?.isFollowingCached(author) == true || (author === userAccount.value?.user)
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val loggedInLiveFollows = remember(accountState) { accountState?.account?.userProfile()?.live()?.follows } ?: return
+
+    val accountFollowsState by loggedInLiveFollows.observeAsState()
+
+    val showFollowingMark by remember(accountFollowsState) {
+        derivedStateOf {
+            accountFollowsState?.user?.isFollowingCached(author) == true || (author.pubkeyHex == accountFollowsState?.user?.pubkeyHex)
+        }
     }
 
     UserPicture(

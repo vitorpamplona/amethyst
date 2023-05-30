@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.MainScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.LoginPage
@@ -21,10 +22,20 @@ fun AccountScreen(accountStateViewModel: AccountStateViewModel, startingPage: St
                     LoginPage(accountStateViewModel, isFirstLogin = true)
                 }
                 is AccountState.LoggedIn -> {
-                    MainScreen(AccountViewModel(state.account), accountStateViewModel, startingPage)
+                    val accountViewModel: AccountViewModel = viewModel(
+                        key = state.account.userProfile().pubkeyHex,
+                        factory = AccountViewModel.Factory(state.account)
+                    )
+
+                    MainScreen(accountViewModel, accountStateViewModel, startingPage)
                 }
                 is AccountState.LoggedInViewOnly -> {
-                    MainScreen(AccountViewModel(state.account), accountStateViewModel, startingPage)
+                    val accountViewModel: AccountViewModel = viewModel(
+                        key = state.account.userProfile().pubkeyHex,
+                        factory = AccountViewModel.Factory(state.account)
+                    )
+
+                    MainScreen(accountViewModel, accountStateViewModel, startingPage)
                 }
             }
         }

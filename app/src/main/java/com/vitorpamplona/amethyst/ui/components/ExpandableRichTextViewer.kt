@@ -25,7 +25,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -39,7 +38,7 @@ fun ExpandableRichTextViewer(
     tags: List<List<String>>?,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     var showFullText by remember { mutableStateOf(false) }
 
@@ -69,7 +68,7 @@ fun ExpandableRichTextViewer(
             tags,
             backgroundColor,
             accountViewModel,
-            navController
+            nav
         )
 
         if (content.length > whereToCut && !showFullText) {

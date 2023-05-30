@@ -15,14 +15,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.actions.JoinUserOrChannelView
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
 
 @Composable
-fun ChannelFabColumn(account: Account, navController: NavController) {
+fun ChannelFabColumn(account: Account, nav: (String) -> Unit) {
     var isOpen by remember {
         mutableStateOf(false)
     }
@@ -40,7 +39,7 @@ fun ChannelFabColumn(account: Account, navController: NavController) {
     }
 
     if (wantsToJoinChannelOrUser) {
-        JoinUserOrChannelView({ wantsToJoinChannelOrUser = false }, account = account, navController = navController)
+        JoinUserOrChannelView({ wantsToJoinChannelOrUser = false }, account = account, nav = nav)
     }
 
     Column() {

@@ -1,8 +1,10 @@
 package com.vitorpamplona.amethyst.ui.navigation
 
+import android.os.Bundle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.navigation.NamedNavArgument
+import androidx.navigation.NavDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -11,6 +13,7 @@ import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ChatroomListKnownFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeNewThreadFeedFilter
@@ -125,16 +128,24 @@ open class LatestItem {
         if (newestItem == null) {
             newestItemPerAccount = newestItemPerAccount + Pair(
                 account.userProfile().pubkeyHex,
-                filter.feed().firstOrNull { it.createdAt() != null }
+                filterMore(filter.feed()).firstOrNull { it.createdAt() != null }
             )
         } else {
             newestItemPerAccount = newestItemPerAccount + Pair(
                 account.userProfile().pubkeyHex,
-                filter.sort(filter.applyFilter(newNotes) + newestItem).first()
+                filter.sort(filterMore(filter.applyFilter(newNotes)) + newestItem).first()
             )
         }
 
         return newestItemPerAccount[account.userProfile().pubkeyHex]
+    }
+
+    open fun filterMore(newItems: Set<Note>): Set<Note> {
+        return newItems
+    }
+
+    open fun filterMore(newItems: List<Note>): List<Note> {
+        return newItems
     }
 }
 
@@ -168,7 +179,7 @@ object NotificationLatestItem : LatestItem() {
     }
 }
 
-object MessagesLatestItem {
+object MessagesLatestItem : LatestItem() {
     fun hasNewItems(
         account: Account,
         cache: NotificationCache,
@@ -176,12 +187,65 @@ object MessagesLatestItem {
     ): Boolean {
         ChatroomListKnownFeedFilter.account = account
 
-        val note = ChatroomListKnownFeedFilter.loadTop().firstOrNull {
-            it.createdAt() != null && it.channel() == null && it.author != account.userProfile()
-        } ?: return false
+        val newestItem = updateNewestItem(newNotes, account, ChatroomListKnownFeedFilter)
 
-        val lastTime = cache.load("Room/${note.author?.pubkeyHex}")
+        val roomUserHex = (newestItem?.event as? PrivateDmEvent)?.talkingWith(account.userProfile().pubkeyHex)
 
-        return (note.createdAt() ?: 0) > lastTime
+        val lastTime = cache.load("Room/$roomUserHex")
+
+        return (newestItem?.createdAt() ?: 0) > lastTime
     }
+
+    override fun filterMore(newItems: Set<Note>): Set<Note> {
+        return newItems.filter { it.event is PrivateDmEvent }.toSet()
+    }
+
+    override fun filterMore(newItems: List<Note>): List<Note> {
+        return newItems.filter { it.event is PrivateDmEvent }
+    }
+}
+
+fun getRouteWithArguments(navController: NavHostController): String? {
+    val currentEntry = navController.currentBackStackEntry ?: return null
+    return getRouteWithArguments(currentEntry.destination, currentEntry.arguments)
+}
+
+private fun getRouteWithArguments(
+    destination: NavDestination,
+    arguments: Bundle?
+): String? {
+    var route = destination.route ?: return null
+    arguments?.let { bundle ->
+        destination.arguments.keys.forEach { key ->
+            val value = destination.arguments[key]?.type?.get(bundle, key)?.toString()
+            if (value == null) {
+                val keyStart = route.indexOf("{$key}")
+                // if it is a parameter, removes the complete segment `var={key}` and adjust connectors `#`, `&` or `&`
+                if (keyStart > 0 && route[keyStart - 1] == '=') {
+                    val end = keyStart + "{$key}".length
+                    var start = keyStart
+                    for (i in keyStart downTo 0) {
+                        if (route[i] == '#' || route[i] == '?' || route[i] == '&') {
+                            start = i + 1
+                            break
+                        }
+                    }
+                    if (end < route.length && route[end] == '&') {
+                        route = route.removeRange(start, end + 1)
+                    } else if (end < route.length && route[end] == '#') {
+                        route = route.removeRange(start - 1, end)
+                    } else if (end == route.length) {
+                        route = route.removeRange(start - 1, end)
+                    } else {
+                        route = route.removeRange(start, end)
+                    }
+                } else {
+                    route = route.replaceFirst("{$key}", "")
+                }
+            } else {
+                route = route.replaceFirst("{$key}", value)
+            }
+        }
+    }
+    return route
 }

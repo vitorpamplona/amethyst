@@ -17,7 +17,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
@@ -55,7 +54,7 @@ fun BlankNote(modifier: Modifier = Modifier, isQuote: Boolean = false, idHex: St
 }
 
 @Composable
-fun HiddenNote(reports: Set<Note>, loggedIn: User, modifier: Modifier = Modifier, isQuote: Boolean = false, navController: NavController, onClick: () -> Unit) {
+fun HiddenNote(reports: Set<Note>, loggedIn: User, modifier: Modifier = Modifier, isQuote: Boolean = false, nav: (String) -> Unit, onClick: () -> Unit) {
     Column(modifier = modifier) {
         Row(modifier = Modifier.padding(horizontal = if (!isQuote) 12.dp else 6.dp)) {
             Column(modifier = Modifier.padding(start = if (!isQuote) 10.dp else 5.dp)) {
@@ -75,7 +74,7 @@ fun HiddenNote(reports: Set<Note>, loggedIn: User, modifier: Modifier = Modifier
                             reports.forEach {
                                 NoteAuthorPicture(
                                     baseNote = it,
-                                    navController = navController,
+                                    nav = nav,
                                     userAccount = loggedIn,
                                     size = 35.dp
                                 )

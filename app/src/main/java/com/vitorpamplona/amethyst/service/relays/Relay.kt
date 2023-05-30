@@ -30,6 +30,7 @@ class Relay(
 ) {
     val seconds = if (proxy != null) 20L else 10L
     val duration = Duration.ofSeconds(seconds)
+
     private val httpClient = OkHttpClient.Builder()
         .proxy(proxy)
         .readTimeout(duration)

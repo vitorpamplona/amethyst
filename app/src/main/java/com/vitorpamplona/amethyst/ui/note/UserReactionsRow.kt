@@ -13,8 +13,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
@@ -26,7 +28,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.navigation.NavController
 import com.patrykandpatrick.vico.core.chart.composed.ComposedChartEntryModel
 import com.patrykandpatrick.vico.core.entry.ChartEntryModel
 import com.patrykandpatrick.vico.core.entry.ChartEntryModelProducer
@@ -41,9 +42,9 @@ import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.ui.theme.RoyalBlue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -54,7 +55,10 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 @Composable
-fun UserReactionsRow(model: UserReactionsViewModel, accountViewModel: AccountViewModel, navController: NavController, onClick: () -> Unit) {
+fun UserReactionsRow(
+    model: UserReactionsViewModel,
+    onClick: () -> Unit
+) {
     Row(
         verticalAlignment = CenterVertically,
         modifier = Modifier
@@ -93,6 +97,7 @@ fun UserReactionsRow(model: UserReactionsViewModel, accountViewModel: AccountVie
     }
 }
 
+@Stable
 class UserReactionsViewModel : ViewModel() {
     var user: User? = null
 
@@ -101,12 +106,11 @@ class UserReactionsViewModel : ViewModel() {
     var zaps by mutableStateOf<Map<String, BigDecimal>>(emptyMap())
     var replies by mutableStateOf<Map<String, Int>>(emptyMap())
 
-    var takenIntoAccount = setOf<HexKey>()
-
-    val sdf = DateTimeFormatter.ofPattern("yyyy-MM-dd") // SimpleDateFormat()
-
     var chartModel by mutableStateOf<ComposedChartEntryModel<ChartEntryModel>?>(null)
     var axisLabels by mutableStateOf<List<String>>(emptyList())
+
+    private var takenIntoAccount = setOf<HexKey>()
+    private val sdf = DateTimeFormatter.ofPattern("yyyy-MM-dd") // SimpleDateFormat()
 
     fun load(baseUser: User) {
         user = baseUser
@@ -276,17 +280,19 @@ class UserReactionsViewModel : ViewModel() {
 fun UserReplyReaction(
     replyCount: Int?
 ) {
+    val showCounts = remember(replyCount) { showCount(replyCount) }
+
     Icon(
         painter = painterResource(R.drawable.ic_comment),
         null,
         modifier = Modifier.size(20.dp),
-        tint = Color.Cyan
+        tint = RoyalBlue
     )
 
     Spacer(modifier = Modifier.width(10.dp))
 
     Text(
-        showCount(replyCount),
+        showCounts,
         fontWeight = FontWeight.Bold,
         fontSize = 18.sp
     )
@@ -296,6 +302,8 @@ fun UserReplyReaction(
 fun UserBoostReaction(
     boostCount: Int?
 ) {
+    val showCounts = remember(boostCount) { showCount(boostCount) }
+
     Icon(
         painter = painterResource(R.drawable.ic_retweeted),
         null,
@@ -306,7 +314,7 @@ fun UserBoostReaction(
     Spacer(modifier = Modifier.width(10.dp))
 
     Text(
-        showCount(boostCount),
+        showCounts,
         fontWeight = FontWeight.Bold,
         fontSize = 18.sp
     )
@@ -316,6 +324,8 @@ fun UserBoostReaction(
 fun UserLikeReaction(
     likeCount: Int?
 ) {
+    val showCounts = remember(likeCount) { showCount(likeCount) }
+
     Icon(
         painter = painterResource(R.drawable.ic_liked),
         null,
@@ -326,7 +336,7 @@ fun UserLikeReaction(
     Spacer(modifier = Modifier.width(10.dp))
 
     Text(
-        showCount(likeCount),
+        showCounts,
         fontWeight = FontWeight.Bold,
         fontSize = 18.sp
     )
@@ -336,6 +346,8 @@ fun UserLikeReaction(
 fun UserZapReaction(
     amount: BigDecimal?
 ) {
+    val showAmounts = remember(amount) { showAmountAxis(amount) }
+
     Icon(
         imageVector = Icons.Default.Bolt,
         contentDescription = stringResource(R.string.zaps),
@@ -346,7 +358,7 @@ fun UserZapReaction(
     Spacer(modifier = Modifier.width(8.dp))
 
     Text(
-        showAmountAxis(amount),
+        showAmounts,
         fontWeight = FontWeight.Bold,
         fontSize = 18.sp
     )

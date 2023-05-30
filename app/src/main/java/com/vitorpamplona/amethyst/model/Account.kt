@@ -2,6 +2,8 @@ package com.vitorpamplona.amethyst.model
 
 import android.content.res.Resources
 import android.util.Log
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.FileHeader
@@ -43,6 +45,7 @@ val GLOBAL_FOLLOWS = " Global "
 val KIND3_FOLLOWS = " All Follows "
 
 @OptIn(DelicateCoroutinesApi::class)
+@Stable
 class Account(
     val loggedIn: Persona,
     var followingChannels: Set<String> = DefaultChannels,
@@ -62,7 +65,8 @@ class Account(
     var hideBlockAlertDialog: Boolean = false,
     var backupContactList: ContactListEvent? = null,
     var proxy: Proxy?,
-    var proxyPort: Int
+    var proxyPort: Int,
+    var showSensitiveContent: Boolean? = null
 ) {
     var transientHiddenUsers: Set<String> = setOf()
 
@@ -477,7 +481,14 @@ class Account(
         return LocalCache.notes[signedEvent.id]
     }
 
-    fun sendPost(message: String, replyTo: List<Note>?, mentions: List<User>?, tags: List<String>? = null, zapReceiver: String? = null) {
+    fun sendPost(
+        message: String,
+        replyTo: List<Note>?,
+        mentions: List<User>?,
+        tags: List<String>? = null,
+        zapReceiver: String? = null,
+        wantsToMarkAsSensitive: Boolean
+    ) {
         if (!isWriteable()) return
 
         val repliesToHex = replyTo?.filter { it.address() == null }?.map { it.idHex }
@@ -491,6 +502,7 @@ class Account(
             addresses = addresses,
             extraTags = tags,
             zapReceiver = zapReceiver,
+            markAsSensitive = wantsToMarkAsSensitive,
             privateKey = loggedIn.privKey!!
         )
 
@@ -507,7 +519,8 @@ class Account(
         valueMinimum: Int?,
         consensusThreshold: Int?,
         closedAt: Int?,
-        zapReceiver: String? = null
+        zapReceiver: String? = null,
+        wantsToMarkAsSensitive: Boolean
     ) {
         if (!isWriteable()) return
 
@@ -526,14 +539,15 @@ class Account(
             valueMinimum = valueMinimum,
             consensusThreshold = consensusThreshold,
             closedAt = closedAt,
-            zapReceiver = zapReceiver
+            zapReceiver = zapReceiver,
+            markAsSensitive = wantsToMarkAsSensitive
         )
         // println("Sending new PollNoteEvent: %s".format(signedEvent.toJson()))
         Client.send(signedEvent)
         LocalCache.consume(signedEvent)
     }
 
-    fun sendChannelMessage(message: String, toChannel: String, replyTo: List<Note>?, mentions: List<User>?, zapReceiver: String? = null) {
+    fun sendChannelMessage(message: String, toChannel: String, replyTo: List<Note>?, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean) {
         if (!isWriteable()) return
 
         // val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
@@ -546,13 +560,14 @@ class Account(
             replyTos = repliesToHex,
             mentions = mentionsHex,
             zapReceiver = zapReceiver,
+            markAsSensitive = wantsToMarkAsSensitive,
             privateKey = loggedIn.privKey!!
         )
         Client.send(signedEvent)
         LocalCache.consume(signedEvent, null)
     }
 
-    fun sendPrivateMessage(message: String, toUser: String, replyingTo: Note? = null, mentions: List<User>?, zapReceiver: String? = null) {
+    fun sendPrivateMessage(message: String, toUser: String, replyingTo: Note? = null, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean) {
         if (!isWriteable()) return
         val user = LocalCache.users[toUser] ?: return
 
@@ -566,6 +581,7 @@ class Account(
             replyTos = repliesToHex,
             mentions = mentionsHex,
             zapReceiver = zapReceiver,
+            markAsSensitive = wantsToMarkAsSensitive,
             privateKey = loggedIn.privKey!!,
             advertiseNip18 = false
         )
@@ -893,15 +909,7 @@ class Account(
     fun decryptContent(note: Note): String? {
         val event = note.event
         return if (event is PrivateDmEvent && loggedIn.privKey != null) {
-            var pubkeyToUse = event.pubKey
-
-            val recepientPK = event.verifiedRecipientPubKey()
-
-            if (note.author == userProfile() && recepientPK != null) {
-                pubkeyToUse = recepientPK
-            }
-
-            event.plainContent(loggedIn.privKey!!, pubkeyToUse.hexToByteArray())
+            event.plainContent(loggedIn.privKey!!, event.talkingWith(userProfile().pubkeyHex).hexToByteArray())
         } else if (event is LnZapRequestEvent && loggedIn.privKey != null) {
             decryptZapContentAuthor(note)?.content()
         } else {
@@ -1111,6 +1119,12 @@ class Account(
         saveable.invalidateData()
     }
 
+    fun updateShowSensitiveContent(show: Boolean?) {
+        showSensitiveContent = show
+        saveable.invalidateData()
+        live.invalidateData()
+    }
+
     fun registerObservers() {
         // Observes relays to restart connections
         userProfile().live().relays.observeForever {
@@ -1132,6 +1146,7 @@ class Account(
                         val userToBlock = LocalCache.getOrCreateUser(it.pubkeyHex)
                         if (userToBlock != userProfile() && userToBlock.pubkeyHex !in followingKeySet()) {
                             transientHiddenUsers = transientHiddenUsers + it.pubkeyHex
+                            live.invalidateData()
                         }
                     }
                 }
@@ -1166,4 +1181,5 @@ class AccountLiveData(private val account: Account) : LiveData<AccountState>(Acc
     }
 }
 
+@Immutable
 class AccountState(val account: Account)

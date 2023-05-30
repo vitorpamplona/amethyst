@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.model
 
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
@@ -298,7 +299,7 @@ class User(val pubkeyHex: String) {
     fun hasSentMessagesTo(user: User?): Boolean {
         val messagesToUser = privateChatrooms[user] ?: return false
 
-        return messagesToUser.roomMessages.any { this === it.author }
+        return messagesToUser.roomMessages.any { this.pubkeyHex == it.author?.pubkeyHex }
     }
 
     fun hasReport(loggedIn: User, type: ReportEvent.ReportType): Boolean {
@@ -420,4 +421,5 @@ class UserLiveData(val user: User) : LiveData<UserState>(UserState(user)) {
     }
 }
 
+@Immutable
 class UserState(val user: User)

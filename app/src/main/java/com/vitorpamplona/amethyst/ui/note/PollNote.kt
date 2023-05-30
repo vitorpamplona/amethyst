@@ -29,7 +29,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.Popup
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
@@ -47,12 +46,14 @@ fun PollNote(
     canPreview: Boolean,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = remember(accountState) { accountState?.account } ?: return
 
-    val pollViewModel: PollNoteViewModel = viewModel()
+    val pollViewModel: PollNoteViewModel = viewModel(
+        key = baseNote.idHex
+    )
 
     LaunchedEffect(key1 = baseNote) {
         pollViewModel.load(account, baseNote)
@@ -64,7 +65,7 @@ fun PollNote(
         canPreview = canPreview,
         backgroundColor = backgroundColor,
         accountViewModel = accountViewModel,
-        navController = navController
+        nav = nav
     )
 }
 
@@ -75,7 +76,7 @@ fun PollNote(
     canPreview: Boolean,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     val zapsState by baseNote.live().zaps.observeAsState()
 
@@ -93,7 +94,7 @@ fun PollNote(
             accountViewModel,
             canPreview,
             backgroundColor,
-            navController
+            nav
         )
     }
 }
@@ -106,7 +107,7 @@ private fun OptionNote(
     accountViewModel: AccountViewModel,
     canPreview: Boolean,
     backgroundColor: Color,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -168,7 +169,7 @@ private fun OptionNote(
                                     pollViewModel.pollEvent?.tags(),
                                     backgroundColor,
                                     accountViewModel,
-                                    navController
+                                    nav
                                 )
                             }
                         }
@@ -202,7 +203,7 @@ private fun OptionNote(
                             pollViewModel.pollEvent?.tags(),
                             backgroundColor,
                             accountViewModel,
-                            navController
+                            nav
                         )
                     }
                 }

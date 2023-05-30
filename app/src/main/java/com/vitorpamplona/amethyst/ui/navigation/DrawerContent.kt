@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.navigation
 
+import android.content.Context
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -43,13 +44,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
-import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
@@ -69,7 +69,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun DrawerContent(
-    navController: NavHostController,
+    nav: (String) -> Unit,
     scaffoldState: ScaffoldState,
     sheetState: ModalBottomSheetState,
     accountViewModel: AccountViewModel
@@ -89,7 +89,7 @@ fun DrawerContent(
                     .padding(horizontal = 25.dp)
                     .padding(top = 100.dp),
                 scaffoldState,
-                navController
+                nav
             )
             Divider(
                 thickness = 0.25.dp,
@@ -97,7 +97,7 @@ fun DrawerContent(
             )
             ListContent(
                 account.userProfile().pubkeyHex,
-                navController,
+                nav,
                 scaffoldState,
                 sheetState,
                 modifier = Modifier
@@ -106,7 +106,7 @@ fun DrawerContent(
                 account
             )
 
-            BottomContent(account.userProfile(), scaffoldState, navController)
+            BottomContent(account.userProfile(), scaffoldState, nav)
         }
     }
 }
@@ -116,7 +116,7 @@ fun ProfileContent(
     baseAccountUser: User,
     modifier: Modifier = Modifier,
     scaffoldState: ScaffoldState,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
 
@@ -170,7 +170,7 @@ fun ProfileContent(
                         .border(3.dp, MaterialTheme.colors.background, CircleShape)
                         .background(MaterialTheme.colors.background)
                         .clickable(onClick = {
-                            navController.navigate(route)
+                            nav(route)
                             coroutineScope.launch {
                                 scaffoldState.drawerState.close()
                             }
@@ -185,7 +185,7 @@ fun ProfileContent(
                     modifier = Modifier
                         .padding(top = 7.dp)
                         .clickable(onClick = {
-                            navController.navigate(route)
+                            nav(route)
                             coroutineScope.launch {
                                 scaffoldState.drawerState.close()
                             }
@@ -203,7 +203,7 @@ fun ProfileContent(
                         .padding(top = 15.dp)
                         .clickable(
                             onClick = {
-                                navController.navigate(route)
+                                nav(route)
                                 coroutineScope.launch {
                                     scaffoldState.drawerState.close()
                                 }
@@ -215,7 +215,7 @@ fun ProfileContent(
                 modifier = Modifier
                     .padding(top = 15.dp)
                     .clickable(onClick = {
-                        navController.navigate(route)
+                        nav(route)
                         coroutineScope.launch {
                             scaffoldState.drawerState.close()
                         }
@@ -244,7 +244,7 @@ fun ProfileContent(
 @Composable
 fun ListContent(
     accountUserPubKey: String?,
-    navController: NavHostController,
+    nav: (String) -> Unit,
     scaffoldState: ScaffoldState,
     sheetState: ModalBottomSheetState,
     modifier: Modifier,
@@ -263,7 +263,7 @@ fun ListContent(
                 title = stringResource(R.string.profile),
                 icon = Route.Profile.icon,
                 tint = MaterialTheme.colors.primary,
-                navController = navController,
+                nav = nav,
                 scaffoldState = scaffoldState,
                 route = "User/$accountUserPubKey"
             )
@@ -272,7 +272,7 @@ fun ListContent(
                 title = stringResource(R.string.bookmarks),
                 icon = Route.Bookmarks.icon,
                 tint = MaterialTheme.colors.onBackground,
-                navController = navController,
+                nav = nav,
                 scaffoldState = scaffoldState,
                 route = Route.Bookmarks.route
             )
@@ -282,7 +282,7 @@ fun ListContent(
             title = stringResource(R.string.security_filters),
             icon = Route.BlockedUsers.icon,
             tint = MaterialTheme.colors.onBackground,
-            navController = navController,
+            nav = nav,
             scaffoldState = scaffoldState,
             route = Route.BlockedUsers.route
         )
@@ -337,6 +337,8 @@ fun ListContent(
         AccountBackupDialog(account, onClose = { backupDialogOpen = false })
     }
 
+    val context = LocalContext.current
+
     if (conectOrbotDialogOpen) {
         ConnectOrbotDialog(
             onClose = { conectOrbotDialogOpen = false },
@@ -344,7 +346,7 @@ fun ListContent(
                 conectOrbotDialogOpen = false
                 disconnectTorDialog = false
                 checked = true
-                enableTor(account, true, proxyPort)
+                enableTor(account, true, proxyPort, context = context)
             },
             proxyPort
         )
@@ -366,7 +368,7 @@ fun ListContent(
                     onClick = {
                         disconnectTorDialog = false
                         checked = false
-                        enableTor(account, false, proxyPort)
+                        enableTor(account, false, proxyPort, context)
                     }
                 ) {
                     Text(text = stringResource(R.string.yes))
@@ -388,13 +390,14 @@ fun ListContent(
 private fun enableTor(
     account: Account,
     checked: Boolean,
-    portNumber: MutableState<String>
+    portNumber: MutableState<String>,
+    context: Context
 ) {
     account.proxyPort = portNumber.value.toInt()
     account.proxy = HttpClient.initProxy(checked, "127.0.0.1", account.proxyPort)
     LocalPreferences.saveToEncryptedStorage(account)
     ServiceManager.pause()
-    ServiceManager.start()
+    ServiceManager.start(context)
 }
 
 @Composable
@@ -402,13 +405,13 @@ fun NavigationRow(
     title: String,
     icon: Int,
     tint: Color,
-    navController: NavHostController,
+    nav: (String) -> Unit,
     scaffoldState: ScaffoldState,
     route: String
 ) {
     val coroutineScope = rememberCoroutineScope()
     IconRow(title, icon, tint, onClick = {
-        navController.navigate(route)
+        nav(route)
         coroutineScope.launch {
             scaffoldState.drawerState.close()
         }
@@ -448,7 +451,7 @@ fun IconRow(title: String, icon: Int, tint: Color, onClick: () -> Unit, onLongCl
 }
 
 @Composable
-fun BottomContent(user: User, scaffoldState: ScaffoldState, navController: NavController) {
+fun BottomContent(user: User, scaffoldState: ScaffoldState, nav: (String) -> Unit) {
     val coroutineScope = rememberCoroutineScope()
 
     // store the dialog open or close state
@@ -469,7 +472,7 @@ fun BottomContent(user: User, scaffoldState: ScaffoldState, navController: NavCo
         ) {
             Text(
                 modifier = Modifier.padding(start = 16.dp),
-                text = "v" + BuildConfig.VERSION_NAME,
+                text = "v" + BuildConfig.VERSION_NAME + "-" + BuildConfig.FLAVOR.uppercase(),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -515,7 +518,7 @@ fun BottomContent(user: User, scaffoldState: ScaffoldState, navController: NavCo
                 coroutineScope.launch {
                     scaffoldState.drawerState.close()
                 }
-                navController.navigate(it)
+                nav(it)
             },
             onClose = { dialogOpen = false }
         )

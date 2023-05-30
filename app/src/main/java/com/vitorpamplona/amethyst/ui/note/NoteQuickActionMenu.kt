@@ -116,10 +116,10 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
     val cardShape = RoundedCornerShape(5.dp)
     val clipboardManager = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
-    var showSelectTextDialog by remember { mutableStateOf(false) }
-    var showDeleteAlertDialog by remember { mutableStateOf(false) }
-    var showBlockAlertDialog by remember { mutableStateOf(false) }
-    var showReportDialog by remember { mutableStateOf(false) }
+    var showSelectTextDialog by remember(note) { mutableStateOf(false) }
+    var showDeleteAlertDialog by remember(note) { mutableStateOf(false) }
+    var showBlockAlertDialog by remember(note) { mutableStateOf(false) }
+    var showReportDialog by remember(note) { mutableStateOf(false) }
 
     val backgroundColor = if (MaterialTheme.colors.isLight) {
         MaterialTheme.colors.primary

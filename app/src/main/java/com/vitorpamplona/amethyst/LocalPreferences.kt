@@ -58,6 +58,7 @@ private object PrefKeys {
     const val HIDE_BLOCK_ALERT_DIALOG = "hide_block_alert_dialog"
     const val USE_PROXY = "use_proxy"
     const val PROXY_PORT = "proxy_port"
+    const val SHOW_SENSITIVE_CONTENT = "show_sensitive_content"
     val LAST_READ: (String) -> String = { route -> "last_read_route_$route" }
 }
 
@@ -214,6 +215,12 @@ object LocalPreferences {
             putBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, account.hideBlockAlertDialog)
             putBoolean(PrefKeys.USE_PROXY, account.proxy != null)
             putInt(PrefKeys.PROXY_PORT, account.proxyPort)
+
+            if (account.showSensitiveContent == null) {
+                remove(PrefKeys.SHOW_SENSITIVE_CONTENT)
+            } else {
+                putBoolean(PrefKeys.SHOW_SENSITIVE_CONTENT, account.showSensitiveContent!!)
+            }
         }.apply()
     }
 
@@ -292,6 +299,12 @@ object LocalPreferences {
             val proxyPort = getInt(PrefKeys.PROXY_PORT, 9050)
             val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", proxyPort)
 
+            val showSensitiveContent = if (contains(PrefKeys.SHOW_SENSITIVE_CONTENT)) {
+                getBoolean(PrefKeys.SHOW_SENSITIVE_CONTENT, false)
+            } else {
+                null
+            }
+
             val a = Account(
                 Persona(privKey = privKey?.hexToByteArray(), pubKey = pubKey.hexToByteArray()),
                 followingChannels,
@@ -311,7 +324,8 @@ object LocalPreferences {
                 hideBlockAlertDialog,
                 latestContactList,
                 proxy,
-                proxyPort
+                proxyPort,
+                showSensitiveContent
             )
 
             return a

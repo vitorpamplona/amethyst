@@ -8,6 +8,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 object NotificationCache {
+    // TODO: This must be account-based
     val lastReadByRoute = mutableMapOf<String, Long>()
 
     fun markAsRead(route: String, timestampInSecs: Long) {

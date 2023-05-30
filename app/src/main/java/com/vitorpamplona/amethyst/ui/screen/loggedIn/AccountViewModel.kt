@@ -3,9 +3,11 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.runtime.Immutable
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.R
@@ -21,8 +23,10 @@ import com.vitorpamplona.amethyst.service.model.ReportEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.math.BigDecimal
 import java.util.Locale
 
+@Immutable
 class AccountViewModel(private val account: Account) : ViewModel() {
     val accountLiveData: LiveData<AccountState> = account.live.map { it }
     val accountLanguagesLiveData: LiveData<AccountState> = account.liveLanguages.map { it }
@@ -61,6 +65,10 @@ class AccountViewModel(private val account: Account) : ViewModel() {
 
     fun calculateIfNoteWasZappedByAccount(zappedNote: Note): Boolean {
         return account.calculateIfNoteWasZappedByAccount(zappedNote)
+    }
+
+    fun calculateZapAmount(zappedNote: Note): BigDecimal {
+        return account.calculateZappedAmount(zappedNote)
     }
 
     fun zap(note: Note, amount: Long, pollOption: Int?, message: String, context: Context, onError: (String) -> Unit, onProgress: (percent: Float) -> Unit, zapType: LnZapEvent.ZapType) {
@@ -102,7 +110,7 @@ class AccountViewModel(private val account: Account) : ViewModel() {
                                         ?: "Error parsing error message"
                                 )
                             } else {
-                                onProgress(0.99f)
+                                onProgress(1f)
                             }
                         }
                     )
@@ -207,7 +215,7 @@ class AccountViewModel(private val account: Account) : ViewModel() {
     }
 
     fun isLoggedUser(user: User?): Boolean {
-        return account.userProfile() === user
+        return account.userProfile().pubkeyHex == user?.pubkeyHex
     }
 
     fun isFollowing(user: User?): Boolean {
@@ -227,5 +235,23 @@ class AccountViewModel(private val account: Account) : ViewModel() {
 
     fun dontShowBlockAlertDialog() {
         account.setHideBlockAlertDialog()
+    }
+
+    fun hideSensitiveContent() {
+        account.updateShowSensitiveContent(false)
+    }
+
+    fun disableContentWarnings() {
+        account.updateShowSensitiveContent(true)
+    }
+
+    fun seeContentWarnings() {
+        account.updateShowSensitiveContent(null)
+    }
+
+    class Factory(val account: Account) : ViewModelProvider.Factory {
+        override fun <AccountViewModel : ViewModel> create(modelClass: Class<AccountViewModel>): AccountViewModel {
+            return AccountViewModel(account) as AccountViewModel
+        }
     }
 }

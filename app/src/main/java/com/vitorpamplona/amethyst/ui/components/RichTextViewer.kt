@@ -26,7 +26,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowRow
 import com.halilibo.richtext.markdown.Markdown
 import com.halilibo.richtext.markdown.MarkdownParseOptions
@@ -94,19 +93,20 @@ fun RichTextViewer(
     tags: List<List<String>>?,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
-    val isMarkdown = remember { isMarkdown(content) }
+    val isMarkdown = remember(content) { isMarkdown(content) }
 
     Column(modifier = modifier) {
         if (isMarkdown) {
-            RenderContentAsMarkdown(content, backgroundColor, tags, navController)
+            RenderContentAsMarkdown(content, backgroundColor, tags, nav)
         } else {
-            RenderRegular(content, tags, canPreview, backgroundColor, accountViewModel, navController)
+            RenderRegular(content, tags, canPreview, backgroundColor, accountViewModel, nav)
         }
     }
 }
 
+@Stable
 class RichTextViewerState(
     val content: String,
     val urlSet: Set<String>,
@@ -122,10 +122,10 @@ private fun RenderRegular(
     canPreview: Boolean,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
-    var processedState by remember {
-        mutableStateOf<RichTextViewerState?>(RichTextViewerState(content, emptySet(), emptyMap(), emptyList(), emptyMap()))
+    var state by remember(content) {
+        mutableStateOf(RichTextViewerState(content, emptySet(), emptyMap(), emptyList(), emptyMap()))
     }
 
     val scope = rememberCoroutineScope()
@@ -149,80 +149,73 @@ private fun RenderRegular(
             val emojiMap = tags?.filter { it.size > 2 && it[0] == "emoji" }?.associate { ":${it[1]}:" to it[2] } ?: emptyMap()
 
             if (urlSet.isNotEmpty() || emojiMap.isNotEmpty()) {
-                processedState = RichTextViewerState(content, urlSet, imagesForPager, imageList, emojiMap)
+                state = RichTextViewerState(content, urlSet, imagesForPager, imageList, emojiMap)
             }
         }
     }
 
     // FlowRow doesn't work well with paragraphs. So we need to split them
-    processedState?.let { state ->
-        content.split('\n').forEach { paragraph ->
-            FlowRow() {
-                val s = if (isArabic(paragraph)) {
-                    paragraph.trim().split(' ')
-                        .reversed()
-                } else {
-                    paragraph.trim().split(' ')
-                }
-                s.forEach { word: String ->
-                    if (canPreview) {
-                        // Explicit URL
-                        val img = state.imagesForPager[word]
-                        if (img != null) {
-                            ZoomableContentView(img, state.imageList)
-                        } else if (state.urlSet.contains(word)) {
-                            UrlPreview(word, "$word ")
-                        } else if (state.customEmoji.any { word.contains(it.key) }) {
-                            RenderCustomEmoji(word, state.customEmoji)
-                        } else if (word.startsWith("lnbc", true)) {
-                            MayBeInvoicePreview(word)
-                        } else if (word.startsWith("lnurl", true)) {
-                            MayBeWithdrawal(word)
-                        } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
-                            ClickableEmail(word)
-                        } else if (word.length > 6 && Patterns.PHONE.matcher(word).matches()) {
-                            ClickablePhone(word)
-                        } else if (isBechLink(word)) {
-                            BechLink(
+    content.split('\n').forEach { paragraph ->
+        FlowRow() {
+            val s = if (isArabic(paragraph)) {
+                paragraph.trim().split(' ')
+                    .reversed()
+            } else {
+                paragraph.trim().split(' ')
+            }
+            s.forEach { word: String ->
+                if (canPreview) {
+                    // Explicit URL
+                    val img = state.imagesForPager[word]
+                    if (img != null) {
+                        ZoomableContentView(img, state.imageList)
+                    } else if (state.urlSet.contains(word)) {
+                        UrlPreview(word, "$word ")
+                    } else if (state.customEmoji.any { word.contains(it.key) }) {
+                        RenderCustomEmoji(word, state.customEmoji)
+                    } else if (word.startsWith("lnbc", true)) {
+                        MayBeInvoicePreview(word)
+                    } else if (word.startsWith("lnurl", true)) {
+                        MayBeWithdrawal(word)
+                    } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
+                        ClickableEmail(word)
+                    } else if (word.length > 6 && Patterns.PHONE.matcher(word).matches()) {
+                        ClickablePhone(word)
+                    } else if (isBechLink(word)) {
+                        BechLink(
+                            word,
+                            canPreview,
+                            backgroundColor,
+                            accountViewModel,
+                            nav
+                        )
+                    } else if (word.startsWith("#")) {
+                        if (tagIndex.matcher(word).matches() && tags != null) {
+                            TagLink(
                                 word,
+                                tags,
                                 canPreview,
                                 backgroundColor,
                                 accountViewModel,
-                                navController
+                                nav
                             )
-                        } else if (word.startsWith("#")) {
-                            if (tagIndex.matcher(word).matches() && tags != null) {
-                                TagLink(
-                                    word,
-                                    tags,
-                                    canPreview,
-                                    backgroundColor,
-                                    accountViewModel,
-                                    navController
-                                )
-                            } else if (hashTagsPattern.matcher(word).matches()) {
-                                HashTag(word, navController)
-                            } else {
-                                Text(
-                                    text = "$word ",
-                                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-                                )
-                            }
-                        } else if (noProtocolUrlValidator.matcher(word).matches()) {
-                            val matcher = noProtocolUrlValidator.matcher(word)
-                            matcher.find()
-                            val url = matcher.group(1) // url
-                            val additionalChars = matcher.group(4) ?: "" // additional chars
+                        } else if (hashTagsPattern.matcher(word).matches()) {
+                            HashTag(word, nav)
+                        } else {
+                            Text(
+                                text = "$word ",
+                                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+                            )
+                        }
+                    } else if (noProtocolUrlValidator.matcher(word).matches()) {
+                        val matcher = noProtocolUrlValidator.matcher(word)
+                        matcher.find()
+                        val url = matcher.group(1) // url
+                        val additionalChars = matcher.group(4) ?: "" // additional chars
 
-                            if (url != null) {
-                                ClickableUrl(url, "https://$url")
-                                Text("$additionalChars ")
-                            } else {
-                                Text(
-                                    text = "$word ",
-                                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-                                )
-                            }
+                        if (url != null) {
+                            ClickableUrl(url, "https://$url")
+                            Text("$additionalChars ")
                         } else {
                             Text(
                                 text = "$word ",
@@ -230,71 +223,76 @@ private fun RenderRegular(
                             )
                         }
                     } else {
-                        if (state.urlSet.contains(word)) {
-                            ClickableUrl("$word ", word)
-                        } else if (word.startsWith("lnurl", true)) {
-                            val lnWithdrawal = LnWithdrawalUtil.findWithdrawal(word)
-                            if (lnWithdrawal != null) {
-                                ClickableWithdrawal(withdrawalString = lnWithdrawal)
-                            } else {
-                                Text(
-                                    text = "$word ",
-                                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-                                )
-                            }
-                        } else if (state.customEmoji.any { word.contains(it.key) }) {
-                            RenderCustomEmoji(word, state.customEmoji)
-                        } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
-                            ClickableEmail(word)
-                        } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
-                            ClickablePhone(word)
-                        } else if (isBechLink(word)) {
-                            BechLink(
-                                word,
-                                canPreview,
-                                backgroundColor,
-                                accountViewModel,
-                                navController
-                            )
-                        } else if (word.startsWith("#")) {
-                            if (tagIndex.matcher(word).matches() && tags != null) {
-                                TagLink(
-                                    word,
-                                    tags,
-                                    canPreview,
-                                    backgroundColor,
-                                    accountViewModel,
-                                    navController
-                                )
-                            } else if (hashTagsPattern.matcher(word).matches()) {
-                                HashTag(word, navController)
-                            } else {
-                                Text(
-                                    text = "$word ",
-                                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-                                )
-                            }
-                        } else if (noProtocolUrlValidator.matcher(word).matches()) {
-                            val matcher = noProtocolUrlValidator.matcher(word)
-                            matcher.find()
-                            val url = matcher.group(1) // url
-                            val additionalChars = matcher.group(4) ?: "" // additional chars
-
-                            if (url != null) {
-                                ClickableUrl(url, "https://$url")
-                                Text("$additionalChars ")
-                            } else {
-                                Text(
-                                    text = "$word ",
-                                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-                                )
-                            }
+                        Text(
+                            text = "$word ",
+                            style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+                        )
+                    }
+                } else {
+                    if (state.urlSet.contains(word)) {
+                        ClickableUrl("$word ", word)
+                    } else if (word.startsWith("lnurl", true)) {
+                        val lnWithdrawal = LnWithdrawalUtil.findWithdrawal(word)
+                        if (lnWithdrawal != null) {
+                            ClickableWithdrawal(withdrawalString = lnWithdrawal)
                         } else {
                             Text(
                                 text = "$word ",
                                 style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
                             )
                         }
+                    } else if (state.customEmoji.any { word.contains(it.key) }) {
+                        RenderCustomEmoji(word, state.customEmoji)
+                    } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
+                        ClickableEmail(word)
+                    } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
+                        ClickablePhone(word)
+                    } else if (isBechLink(word)) {
+                        BechLink(
+                            word,
+                            canPreview,
+                            backgroundColor,
+                            accountViewModel,
+                            nav
+                        )
+                    } else if (word.startsWith("#")) {
+                        if (tagIndex.matcher(word).matches() && tags != null) {
+                            TagLink(
+                                word,
+                                tags,
+                                canPreview,
+                                backgroundColor,
+                                accountViewModel,
+                                nav
+                            )
+                        } else if (hashTagsPattern.matcher(word).matches()) {
+                            HashTag(word, nav)
+                        } else {
+                            Text(
+                                text = "$word ",
+                                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+                            )
+                        }
+                    } else if (noProtocolUrlValidator.matcher(word).matches()) {
+                        val matcher = noProtocolUrlValidator.matcher(word)
+                        matcher.find()
+                        val url = matcher.group(1) // url
+                        val additionalChars = matcher.group(4) ?: "" // additional chars
+
+                        if (url != null) {
+                            ClickableUrl(url, "https://$url")
+                            Text("$additionalChars ")
+                        } else {
+                            Text(
+                                text = "$word ",
+                                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = "$word ",
+                            style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+                        )
                     }
                 }
             }
@@ -311,7 +309,7 @@ fun RenderCustomEmoji(word: String, customEmoji: Map<String, String>) {
 }
 
 @Composable
-private fun RenderContentAsMarkdown(content: String, backgroundColor: Color, tags: List<List<String>>?, navController: NavController) {
+private fun RenderContentAsMarkdown(content: String, backgroundColor: Color, tags: List<List<String>>?, nav: (String) -> Unit) {
     val myMarkDownStyle = richTextDefaults.copy(
         codeBlockStyle = richTextDefaults.codeBlockStyle?.copy(
             textStyle = TextStyle(
@@ -346,9 +344,9 @@ private fun RenderContentAsMarkdown(content: String, backgroundColor: Color, tag
         )
     )
 
-    var markdownWithSpecialContent by remember { mutableStateOf<String?>(null) }
-    var nip19References by remember { mutableStateOf<List<Nip19.Return>>(emptyList()) }
-    var refresh by remember { mutableStateOf(0) }
+    var markdownWithSpecialContent by remember(content) { mutableStateOf<String?>(null) }
+    var nip19References by remember(content) { mutableStateOf<List<Nip19.Return>>(emptyList()) }
+    var refresh by remember(content) { mutableStateOf(0) }
 
     LaunchedEffect(key1 = content) {
         withContext(Dispatchers.IO) {
@@ -367,40 +365,8 @@ private fun RenderContentAsMarkdown(content: String, backgroundColor: Color, tag
     }
 
     nip19References.forEach {
-        var baseUser by remember { mutableStateOf<User?>(null) }
-        var baseNote by remember { mutableStateOf<Note?>(null) }
-
-        LaunchedEffect(key1 = it.hex) {
-            withContext(Dispatchers.IO) {
-                if (it.type == Nip19.Type.NOTE || it.type == Nip19.Type.EVENT || it.type == Nip19.Type.ADDRESS) {
-                    LocalCache.checkGetOrCreateNote(it.hex)?.let { note ->
-                        baseNote = note
-                    }
-                }
-
-                if (it.type == Nip19.Type.USER) {
-                    LocalCache.checkGetOrCreateUser(it.hex)?.let { user ->
-                        baseUser = user
-                    }
-                }
-            }
-        }
-
-        baseNote?.let {
-            val noteState by it.live().metadata.observeAsState()
-            if (noteState?.note?.event != null) {
-                LaunchedEffect(key1 = noteState) {
-                    refresh++
-                }
-            }
-        }
-        baseUser?.let {
-            val userState by it.live().metadata.observeAsState()
-            if (userState?.user?.info != null) {
-                LaunchedEffect(key1 = userState) {
-                    refresh++
-                }
-            }
+        ObserveNIP19(it) {
+            refresh++
         }
     }
 
@@ -416,10 +382,76 @@ private fun RenderContentAsMarkdown(content: String, backgroundColor: Color, tag
             ) { link ->
                 val route = uriToRoute(link)
                 if (route != null) {
-                    navController.navigate(route)
+                    nav(route)
                 } else {
                     runCatching { uri.openUri(link) }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun ObserveNIP19(
+    it: Nip19.Return,
+    onRefresh: () -> Unit
+) {
+    if (it.type == Nip19.Type.NOTE || it.type == Nip19.Type.EVENT || it.type == Nip19.Type.ADDRESS) {
+        ObserveNIP19Event(it, onRefresh)
+    } else if (it.type == Nip19.Type.USER) {
+        ObserveNIP19User(it, onRefresh)
+    }
+}
+
+@Composable
+private fun ObserveNIP19Event(
+    it: Nip19.Return,
+    onRefresh: () -> Unit
+) {
+    var baseNote by remember(it) { mutableStateOf<Note?>(null) }
+
+    LaunchedEffect(key1 = it.hex) {
+        withContext(Dispatchers.IO) {
+            if (it.type == Nip19.Type.NOTE || it.type == Nip19.Type.EVENT || it.type == Nip19.Type.ADDRESS) {
+                LocalCache.checkGetOrCreateNote(it.hex)?.let { note ->
+                    baseNote = note
+                }
+            }
+        }
+    }
+
+    baseNote?.let { note ->
+        val noteState by note.live().metadata.observeAsState()
+        if (noteState?.note?.event != null) {
+            LaunchedEffect(key1 = noteState) {
+                onRefresh()
+            }
+        }
+    }
+}
+
+@Composable
+private fun ObserveNIP19User(
+    it: Nip19.Return,
+    onRefresh: () -> Unit
+) {
+    var baseUser by remember(it) { mutableStateOf<User?>(null) }
+
+    LaunchedEffect(key1 = it.hex) {
+        withContext(Dispatchers.IO) {
+            if (it.type == Nip19.Type.USER) {
+                LocalCache.checkGetOrCreateUser(it.hex)?.let { user ->
+                    baseUser = user
+                }
+            }
+        }
+    }
+
+    baseUser?.let { user ->
+        val userState by user.live().metadata.observeAsState()
+        if (userState?.user?.info != null) {
+            LaunchedEffect(key1 = userState) {
+                onRefresh()
             }
         }
     }
@@ -572,12 +604,14 @@ fun isBechLink(word: String): Boolean {
 }
 
 @Composable
-fun BechLink(word: String, canPreview: Boolean, backgroundColor: Color, accountViewModel: AccountViewModel, navController: NavController) {
+fun BechLink(word: String, canPreview: Boolean, backgroundColor: Color, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     var nip19Route by remember { mutableStateOf<Nip19.Return?>(null) }
     var baseNotePair by remember { mutableStateOf<Pair<Note, String?>?>(null) }
 
+    val scope = rememberCoroutineScope()
+
     LaunchedEffect(key1 = word) {
-        withContext(Dispatchers.IO) {
+        scope.launch(Dispatchers.IO) {
             Nip19.uriToRoute(word)?.let {
                 if (it.type == Nip19.Type.NOTE || it.type == Nip19.Type.EVENT || it.type == Nip19.Type.ADDRESS) {
                     LocalCache.checkGetOrCreateNote(it.hex)?.let { note ->
@@ -606,7 +640,7 @@ fun BechLink(word: String, canPreview: Boolean, backgroundColor: Color, accountV
                     ),
                 parentBackgroundColor = backgroundColor,
                 isQuotedNote = true,
-                navController = navController
+                nav = nav
             )
             if (!it.second.isNullOrEmpty()) {
                 Text(
@@ -614,21 +648,23 @@ fun BechLink(word: String, canPreview: Boolean, backgroundColor: Color, accountV
                 )
             }
         } ?: nip19Route?.let {
-            ClickableRoute(it, navController)
+            ClickableRoute(it, nav)
         } ?: Text(text = "$word ")
     } else {
         nip19Route?.let {
-            ClickableRoute(it, navController)
+            ClickableRoute(it, nav)
         } ?: Text(text = "$word ")
     }
 }
 
 @Composable
-fun HashTag(word: String, navController: NavController) {
+fun HashTag(word: String, nav: (String) -> Unit) {
     var tagSuffixPair by remember { mutableStateOf<Pair<String, String?>?>(null) }
 
+    val scope = rememberCoroutineScope()
+
     LaunchedEffect(key1 = word) {
-        withContext(Dispatchers.IO) {
+        scope.launch(Dispatchers.IO) {
             val hashtagMatcher = hashTagsPattern.matcher(word)
 
             val (myTag, mySuffix) = try {
@@ -646,7 +682,7 @@ fun HashTag(word: String, navController: NavController) {
     }
 
     tagSuffixPair?.let { tagPair ->
-        val hashtagIcon = checkForHashtagWithIcon(tagPair.first)
+        val hashtagIcon = remember(tagPair.first) { checkForHashtagWithIcon(tagPair.first) }
         ClickableText(
             text = buildAnnotatedString {
                 withStyle(
@@ -655,7 +691,7 @@ fun HashTag(word: String, navController: NavController) {
                     append("#${tagPair.first}")
                 }
             },
-            onClick = { navController.navigate("Hashtag/${tagPair.first}") }
+            onClick = { nav("Hashtag/${tagPair.first}") }
         )
 
         if (hashtagIcon != null) {
@@ -701,7 +737,7 @@ fun HashTag(word: String, navController: NavController) {
 }
 
 @Composable
-fun TagLink(word: String, tags: List<List<String>>, canPreview: Boolean, backgroundColor: Color, accountViewModel: AccountViewModel, navController: NavController) {
+fun TagLink(word: String, tags: List<List<String>>, canPreview: Boolean, backgroundColor: Color, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     var baseUserPair by remember { mutableStateOf<Pair<User, String?>?>(null) }
     var baseNotePair by remember { mutableStateOf<Pair<Note, String?>?>(null) }
 
@@ -753,7 +789,7 @@ fun TagLink(word: String, tags: List<List<String>>, canPreview: Boolean, backgro
             suffix = "${it.second} ",
             tags = userTags,
             route = route,
-            navController = navController
+            nav = nav
         )
     }
 
@@ -773,13 +809,13 @@ fun TagLink(word: String, tags: List<List<String>>, canPreview: Boolean, backgro
                     ),
                 parentBackgroundColor = backgroundColor,
                 isQuotedNote = true,
-                navController = navController
+                nav = nav
             )
             it.second?.ifBlank { null }?.let {
                 Text(text = "$it ")
             }
         } else {
-            ClickableNoteTag(it.first, navController)
+            ClickableNoteTag(it.first, nav)
             Text(text = "${it.second} ")
         }
     }

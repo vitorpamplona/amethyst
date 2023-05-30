@@ -1,8 +1,8 @@
 package com.vitorpamplona.amethyst.model
 
-import com.baha.url.preview.BahaUrlPreview
-import com.baha.url.preview.IUrlPreviewCallback
-import com.baha.url.preview.UrlInfoItem
+import com.vitorpamplona.amethyst.service.previews.BahaUrlPreview
+import com.vitorpamplona.amethyst.service.previews.IUrlPreviewCallback
+import com.vitorpamplona.amethyst.service.previews.UrlInfoItem
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

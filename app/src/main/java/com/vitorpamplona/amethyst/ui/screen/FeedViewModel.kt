@@ -25,6 +25,8 @@ import com.vitorpamplona.amethyst.ui.dal.UserProfileConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.VideoFeedFilter
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -55,8 +57,8 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
     private val _feedContent = MutableStateFlow<FeedState>(FeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
 
-    fun newListFromDataSource(): List<Note> {
-        return localFilter.loadTop()
+    fun newListFromDataSource(): ImmutableList<Note> {
+        return localFilter.loadTop().toImmutableList()
     }
 
     private fun refresh() {
@@ -71,8 +73,7 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
 
         val oldNotesState = _feedContent.value
         if (oldNotesState is FeedState.Loaded) {
-            // Using size as a proxy for has changed.
-            if (notes != oldNotesState.feed.value) {
+            if (!equalImmutableLists(notes, oldNotesState.feed.value)) {
                 updateFeed(notes)
             }
         } else {
@@ -80,7 +81,7 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
         }
     }
 
-    private fun updateFeed(notes: List<Note>) {
+    private fun updateFeed(notes: ImmutableList<Note>) {
         val scope = CoroutineScope(Job() + Dispatchers.Main)
         scope.launch {
             val currentState = _feedContent.value
@@ -97,10 +98,20 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
 
     fun refreshFromOldState(newItems: Set<Note>) {
         val oldNotesState = _feedContent.value
-        if (localFilter is AdditiveFeedFilter && oldNotesState is FeedState.Loaded) {
-            val newList = localFilter.updateListWith(oldNotesState.feed.value, newItems.toSet())
-            if (newList !== oldNotesState.feed.value) {
-                updateFeed(newList)
+        if (localFilter is AdditiveFeedFilter) {
+            if (oldNotesState is FeedState.Loaded) {
+                val newList = localFilter.updateListWith(oldNotesState.feed.value, newItems.toSet()).toImmutableList()
+                if (!equalImmutableLists(newList, oldNotesState.feed.value)) {
+                    updateFeed(newList)
+                }
+            } else if (oldNotesState is FeedState.Empty) {
+                val newList = localFilter.updateListWith(emptyList(), newItems.toSet()).toImmutableList()
+                if (newList.isNotEmpty()) {
+                    updateFeed(newList)
+                }
+            } else {
+                // Refresh Everything
+                refreshSuspended()
             }
         } else {
             // Refresh Everything
@@ -115,8 +126,8 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
     }
     private val bundlerInsert = BundledInsert<Set<Note>>(250, Dispatchers.IO)
 
-    fun invalidateData() {
-        bundler.invalidate()
+    fun invalidateData(ignoreIfDoing: Boolean = false) {
+        bundler.invalidate(ignoreIfDoing)
     }
 
     fun invalidateInsertData(newItems: Set<Note>) {
@@ -130,7 +141,9 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
     init {
         collectorJob = viewModelScope.launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect { newNotes ->
-                if (localFilter is AdditiveFeedFilter && _feedContent.value is FeedState.Loaded) {
+                if (localFilter is AdditiveFeedFilter &&
+                    (_feedContent.value is FeedState.Loaded || _feedContent.value is FeedState.Empty)
+                ) {
                     invalidateInsertData(newNotes)
                 } else {
                     // Refresh Everything

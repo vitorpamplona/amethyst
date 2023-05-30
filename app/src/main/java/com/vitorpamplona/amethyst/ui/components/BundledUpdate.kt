@@ -22,9 +22,11 @@ class BundledUpdate(
     private var onlyOneInBlock = AtomicBoolean()
     private var invalidatesAgain = false
 
-    fun invalidate() {
+    fun invalidate(ignoreIfDoing: Boolean = false) {
         if (onlyOneInBlock.getAndSet(true)) {
-            invalidatesAgain = true
+            if (!ignoreIfDoing) {
+                invalidatesAgain = true
+            }
             return
         }
 

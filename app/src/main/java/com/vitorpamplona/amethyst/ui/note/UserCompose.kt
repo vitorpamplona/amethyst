@@ -15,7 +15,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.FollowButton
@@ -34,7 +33,7 @@ fun UserCompose(
             top = 10.dp
         ),
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
@@ -47,14 +46,14 @@ fun UserCompose(
     Column(
         modifier =
         Modifier.clickable(
-            onClick = { navController.navigate("User/${baseUser.pubkeyHex}") }
+            onClick = { nav("User/${baseUser.pubkeyHex}") }
         )
     ) {
         Row(
             modifier = overallModifier,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            UserPicture(baseUser, navController, account.userProfile(), 55.dp)
+            UserPicture(baseUser, nav, account.userProfile(), 55.dp)
 
             Column(modifier = Modifier.padding(start = 10.dp).weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {

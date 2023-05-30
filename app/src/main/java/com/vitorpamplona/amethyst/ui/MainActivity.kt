@@ -2,7 +2,6 @@ package com.vitorpamplona.amethyst.ui
 
 import android.content.Context
 import android.content.Intent
-import android.os.Build.VERSION.SDK_INT
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -12,15 +11,8 @@ import androidx.compose.material.Surface
 import androidx.compose.ui.Modifier
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.Coil
-import coil.ImageLoader
-import coil.decode.GifDecoder
-import coil.decode.ImageDecoderDecoder
-import coil.decode.SvgDecoder
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
-import com.vitorpamplona.amethyst.VideoCache
-import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
@@ -28,7 +20,7 @@ import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
 import com.vitorpamplona.amethyst.service.relays.Client
-import com.vitorpamplona.amethyst.ui.components.muted
+import com.vitorpamplona.amethyst.ui.components.DefaultMutedSetting
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.Nip47
 import com.vitorpamplona.amethyst.ui.screen.AccountScreen
@@ -49,23 +41,6 @@ class MainActivity : FragmentActivity() {
 
         val startingPage = uriToRoute(uri)
 
-        // Initializes video cache.
-        VideoCache.init(this.applicationContext)
-
-        Coil.setImageLoader {
-            ImageLoader.Builder(this).components {
-                if (SDK_INT >= 28) {
-                    add(ImageDecoderDecoder.Factory())
-                } else {
-                    add(GifDecoder.Factory())
-                }
-                add(SvgDecoder.Factory())
-            } // .logger(DebugLogger())
-                .okHttpClient { HttpClient.getHttpClient() }
-                .respectCacheHeaders(false)
-                .build()
-        }
-
         LocalPreferences.migrateSingleUserPrefs()
 
         setContent {
@@ -73,7 +48,7 @@ class MainActivity : FragmentActivity() {
                 // A surface container using the 'background' color from the theme
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background) {
                     val accountStateViewModel: AccountStateViewModel = viewModel {
-                        AccountStateViewModel()
+                        AccountStateViewModel(this@MainActivity)
                     }
 
                     AccountScreen(accountStateViewModel, startingPage)
@@ -88,11 +63,11 @@ class MainActivity : FragmentActivity() {
     override fun onResume() {
         super.onResume()
         // starts muted every time
-        muted.value = true
+        DefaultMutedSetting.value = true
 
         // Only starts after login
         GlobalScope.launch(Dispatchers.IO) {
-            ServiceManager.start()
+            ServiceManager.start(this@MainActivity)
         }
 
         PushNotificationUtils().init(LocalPreferences.allSavedAccounts())

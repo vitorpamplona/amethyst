@@ -22,8 +22,12 @@ import androidx.compose.material.icons.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CurrencyBitcoin
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.ArrowForwardIos
 import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -57,10 +61,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
@@ -75,7 +77,10 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = null, account: Account, accountViewModel: AccountViewModel, navController: NavController) {
+fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = null, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val account = remember(accountState) { accountState?.account } ?: return
+
     val postViewModel: NewPostViewModel = viewModel()
 
     val context = LocalContext.current
@@ -84,7 +89,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    val scroolState = rememberScrollState()
+    val scrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
@@ -154,7 +159,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .verticalScroll(scroolState)
+                                .verticalScroll(scrollState)
                         ) {
                             Notifying(postViewModel.mentions) {
                                 postViewModel.removeFromReplyList(it)
@@ -292,7 +297,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                             true,
                                             MaterialTheme.colors.background,
                                             accountViewModel,
-                                            navController
+                                            nav
                                         )
                                     } else if (noProtocolUrlValidator.matcher(myUrlPreview).matches()) {
                                         UrlPreview("https://$myUrlPreview", myUrlPreview)
@@ -336,10 +341,11 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                         }
 
                         if (postViewModel.canUsePoll) {
-                            val hashtag = stringResource(R.string.poll_hashtag)
+                            // These should be hashtag recommendations the user selects in the future.
+                            // val hashtag = stringResource(R.string.poll_hashtag)
+                            // postViewModel.includePollHashtagInMessage(postViewModel.wantsPoll, hashtag)
                             AddPollButton(postViewModel.wantsPoll) {
                                 postViewModel.wantsPoll = !postViewModel.wantsPoll
-                                postViewModel.includePollHashtagInMessage(postViewModel.wantsPoll, hashtag)
                             }
                         }
 
@@ -347,6 +353,10 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                             AddLnInvoiceButton(postViewModel.wantsInvoice) {
                                 postViewModel.wantsInvoice = !postViewModel.wantsInvoice
                             }
+                        }
+
+                        MarkAsSensitive(postViewModel) {
+                            postViewModel.wantsToMarkAsSensitive = !postViewModel.wantsToMarkAsSensitive
                         }
 
                         ForwardZapTo(postViewModel) {
@@ -535,6 +545,60 @@ private fun ForwardZapTo(
             visualTransformation = UrlUserTagTransformation(MaterialTheme.colors.primary),
             textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
         )
+    }
+}
+
+@Composable
+private fun MarkAsSensitive(
+    postViewModel: NewPostViewModel,
+    onClick: () -> Unit
+) {
+    IconButton(
+        onClick = {
+            onClick()
+        }
+    ) {
+        Box(
+            Modifier
+                .height(20.dp)
+                .width(23.dp)
+        ) {
+            if (!postViewModel.wantsToMarkAsSensitive) {
+                Icon(
+                    imageVector = Icons.Default.Visibility,
+                    contentDescription = stringResource(R.string.content_warning),
+                    modifier = Modifier
+                        .size(18.dp)
+                        .align(Alignment.BottomStart),
+                    tint = MaterialTheme.colors.onBackground
+                )
+                Icon(
+                    imageVector = Icons.Rounded.Warning,
+                    contentDescription = stringResource(R.string.content_warning),
+                    modifier = Modifier
+                        .size(10.dp)
+                        .align(Alignment.TopEnd),
+                    tint = MaterialTheme.colors.onBackground
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.VisibilityOff,
+                    contentDescription = stringResource(id = R.string.content_warning),
+                    modifier = Modifier
+                        .size(18.dp)
+                        .align(Alignment.BottomStart),
+                    tint = Color.Red
+                )
+                Icon(
+                    imageVector = Icons.Rounded.Warning,
+                    contentDescription = stringResource(id = R.string.content_warning),
+                    modifier = Modifier
+                        .size(10.dp)
+                        .align(Alignment.TopEnd),
+                    tint = Color.Yellow
+                )
+            }
+        }
     }
 }
 

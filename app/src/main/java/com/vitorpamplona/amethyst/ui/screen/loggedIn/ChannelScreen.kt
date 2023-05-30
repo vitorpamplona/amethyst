@@ -40,6 +40,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,10 +61,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
@@ -78,12 +79,14 @@ import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.ui.screen.ChatroomFeedView
 import com.vitorpamplona.amethyst.ui.screen.NostrChannelFeedViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Composable
 fun ChannelScreen(
     channelId: String?,
     accountViewModel: AccountViewModel,
-    navController: NavController
+    nav: (String) -> Unit
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account
@@ -143,7 +146,7 @@ fun ChannelScreen(
             ChannelHeader(
                 channel,
                 account,
-                navController = navController
+                nav = nav
             )
 
             Column(
@@ -152,14 +155,19 @@ fun ChannelScreen(
                     .padding(vertical = 0.dp)
                     .weight(1f, true)
             ) {
-                ChatroomFeedView(feedViewModel, accountViewModel, navController, "Channel/$channelId") {
+                ChatroomFeedView(feedViewModel, accountViewModel, nav, "Channel/$channelId") {
                     replyTo.value = it
                 }
             }
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            Row(Modifier.padding(horizontal = 10.dp).animateContentSize(), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier
+                    .padding(horizontal = 10.dp)
+                    .animateContentSize(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 val replyingNote = replyTo.value
                 if (replyingNote != null) {
                     Column(Modifier.weight(1f)) {
@@ -168,7 +176,7 @@ fun ChannelScreen(
                             null,
                             innerQuote = true,
                             accountViewModel = accountViewModel,
-                            navController = navController,
+                            nav = nav,
                             onWantsToReply = {
                                 replyTo.value = it
                             }
@@ -183,7 +191,9 @@ fun ChannelScreen(
                             Icon(
                                 imageVector = Icons.Default.Cancel,
                                 null,
-                                modifier = Modifier.padding(end = 5.dp).size(30.dp),
+                                modifier = Modifier
+                                    .padding(end = 5.dp)
+                                    .size(30.dp),
                                 tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                             )
                         }
@@ -193,7 +203,9 @@ fun ChannelScreen(
 
             // LAST ROW
             Row(
-                modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp, top = 5.dp).fillMaxWidth(),
+                modifier = Modifier
+                    .padding(start = 10.dp, end = 10.dp, bottom = 10.dp, top = 5.dp)
+                    .fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -219,7 +231,7 @@ fun ChannelScreen(
                             onPost = {
                                 val tagger = NewMessageTagger(channel, listOfNotNull(replyTo.value?.author), listOfNotNull(replyTo.value), channelScreenModel.message.text)
                                 tagger.run()
-                                account.sendChannelMessage(tagger.message, channel.idHex, tagger.replyTos, tagger.mentions)
+                                account.sendChannelMessage(tagger.message, channel.idHex, tagger.replyTos, tagger.mentions, wantsToMarkAsSensitive = false)
                                 channelScreenModel.message = TextFieldValue("")
                                 replyTo.value = null
                                 feedViewModel.invalidateData() // Don't wait a full second before updating
@@ -248,15 +260,31 @@ fun ChannelScreen(
 }
 
 @Composable
-fun ChannelHeader(baseChannel: Channel, account: Account, navController: NavController) {
+fun ChannelHeader(channelHex: String, account: Account, nav: (String) -> Unit) {
+    var baseChannel by remember { mutableStateOf<Channel?>(null) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(key1 = channelHex) {
+        scope.launch(Dispatchers.IO) {
+            baseChannel = LocalCache.checkGetOrCreateChannel(channelHex)
+        }
+    }
+
+    baseChannel?.let {
+        ChannelHeader(it, account, nav)
+    }
+}
+
+@Composable
+fun ChannelHeader(baseChannel: Channel, account: Account, nav: (String) -> Unit) {
     val channelState by baseChannel.live.observeAsState()
-    val channel = channelState?.channel ?: return
+    val channel = remember(channelState) { channelState?.channel } ?: return
 
     val context = LocalContext.current.applicationContext
 
     Column(
         Modifier.clickable {
-            navController.navigate("Channel/${baseChannel.idHex}")
+            nav("Channel/${baseChannel.idHex}")
         }
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
@@ -306,9 +334,9 @@ fun ChannelHeader(baseChannel: Channel, account: Account, navController: NavCont
                     }
 
                     if (account.followingChannels.contains(channel.idHex)) {
-                        LeaveButton(account, channel, navController)
+                        LeaveButton(account, channel, nav)
                     } else {
-                        JoinButton(account, channel, navController)
+                        JoinButton(account, channel, nav)
                     }
                 }
             }
@@ -386,7 +414,7 @@ private fun EditButton(account: Account, channel: Channel) {
 }
 
 @Composable
-private fun JoinButton(account: Account, channel: Channel, navController: NavController) {
+private fun JoinButton(account: Account, channel: Channel, nav: (String) -> Unit) {
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
@@ -404,12 +432,12 @@ private fun JoinButton(account: Account, channel: Channel, navController: NavCon
 }
 
 @Composable
-private fun LeaveButton(account: Account, channel: Channel, navController: NavController) {
+private fun LeaveButton(account: Account, channel: Channel, nav: (String) -> Unit) {
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
             account.leaveChannel(channel.idHex)
-            navController.navigate(Route.Message.route)
+            nav(Route.Message.route)
         },
         shape = RoundedCornerShape(20.dp),
         colors = ButtonDefaults

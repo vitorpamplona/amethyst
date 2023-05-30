@@ -1,6 +1,6 @@
 package com.vitorpamplona.amethyst.ui.components
 
-import com.baha.url.preview.UrlInfoItem
+import com.vitorpamplona.amethyst.service.previews.UrlInfoItem
 
 sealed class UrlPreviewState {
     object Loading : UrlPreviewState()

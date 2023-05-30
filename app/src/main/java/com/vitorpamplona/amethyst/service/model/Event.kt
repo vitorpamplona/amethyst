@@ -48,6 +48,12 @@ open class Event(
 
     fun taggedUrls() = tags.filter { it.size > 1 && it[0] == "r" }.map { it[1] }
 
+    override fun isSensitive() = tags.any {
+        (it.size > 0 && it[0].equals("content-warning", true)) ||
+            (it.size > 1 && it[0] == "t" && it[1].equals("nsfw", true)) ||
+            (it.size > 1 && it[0] == "t" && it[1].equals("nude", true))
+    }
+
     override fun zapAddress() = tags.firstOrNull { it.size > 1 && it[0] == "zap" }?.get(1)
 
     fun taggedAddresses() = tags.filter { it.size > 1 && it[0] == "a" }.mapNotNull {

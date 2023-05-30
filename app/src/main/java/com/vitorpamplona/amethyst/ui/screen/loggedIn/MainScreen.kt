@@ -53,6 +53,14 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
         skipHalfExpanded = true
     )
 
+    val nav = remember {
+        { route: String ->
+            if (getRouteWithArguments(navController) != route) {
+                navController.navigate(route)
+            }
+        }
+    }
+
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = remember(accountState) { accountState?.account }
 
@@ -76,7 +84,7 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
                 AppTopBar(followLists, navController, scaffoldState, accountViewModel)
             },
             drawerContent = {
-                DrawerContent(navController, scaffoldState, sheetState, accountViewModel)
+                DrawerContent(nav, scaffoldState, sheetState, accountViewModel)
                 BackHandler(enabled = scaffoldState.drawerState.isOpen) {
                     scope.launch { scaffoldState.drawerState.close() }
                 }
@@ -97,6 +105,14 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
 fun FloatingButtons(navController: NavHostController, accountViewModel: AccountViewModel, accountStateViewModel: AccountStateViewModel) {
     val accountState by accountStateViewModel.accountContent.collectAsState()
 
+    val nav = remember {
+        { route: String ->
+            if (getRouteWithArguments(navController) != route) {
+                navController.navigate(route)
+            }
+        }
+    }
+
     Crossfade(targetState = accountState, animationSpec = tween(durationMillis = 100)) { state ->
         when (state) {
             is AccountState.LoggedInViewOnly -> {
@@ -107,13 +123,13 @@ fun FloatingButtons(navController: NavHostController, accountViewModel: AccountV
             }
             is AccountState.LoggedIn -> {
                 if (currentRoute(navController)?.substringBefore("?") == Route.Home.base) {
-                    NewNoteButton(state.account, accountViewModel, navController)
+                    NewNoteButton(accountViewModel, nav)
                 }
                 if (currentRoute(navController) == Route.Message.base) {
-                    ChannelFabColumn(state.account, navController)
+                    ChannelFabColumn(state.account, nav)
                 }
                 if (currentRoute(navController)?.substringBefore("?") == Route.Video.base) {
-                    NewImageButton(accountViewModel, navController)
+                    NewImageButton(accountViewModel, nav)
                 }
             }
         }

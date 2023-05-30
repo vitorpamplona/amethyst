@@ -29,6 +29,7 @@ class TextNoteEvent(
             addresses: List<ATag>?,
             extraTags: List<String>?,
             zapReceiver: String?,
+            markAsSensitive: Boolean,
             privateKey: ByteArray,
             createdAt: Long = Date().time / 1000
         ): TextNoteEvent {
@@ -55,6 +56,9 @@ class TextNoteEvent(
             }
             findURLs(msg).forEach {
                 tags.add(listOf("r", it))
+            }
+            if (markAsSensitive) {
+                tags.add(listOf("content-warning", ""))
             }
 
             val id = generateId(pubKey, createdAt, kind, tags, msg)

@@ -25,7 +25,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
 import com.vitorpamplona.amethyst.ui.dal.HomeConversationsFeedFilter
@@ -37,6 +36,7 @@ import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -45,7 +45,7 @@ fun HomeScreen(
     homeFeedViewModel: NostrHomeFeedViewModel,
     repliesFeedViewModel: NostrHomeRepliesFeedViewModel,
     accountViewModel: AccountViewModel,
-    navController: NavController,
+    nav: (String) -> Unit,
     pagerState: PagerState,
     scrollToTop: Boolean = false,
     nip47: String? = null
@@ -59,9 +59,9 @@ fun HomeScreen(
     LaunchedEffect(accountViewModel, account.defaultHomeFollowList) {
         HomeNewThreadFeedFilter.account = account
         HomeConversationsFeedFilter.account = account
-        NostrHomeDataSource.resetFilters()
-        homeFeedViewModel.invalidateData()
-        repliesFeedViewModel.invalidateData()
+        NostrHomeDataSource.invalidateFilters()
+        homeFeedViewModel.invalidateData(true)
+        repliesFeedViewModel.invalidateData(true)
     }
 
     if (wantsToAddNip47 != null) {
@@ -74,15 +74,24 @@ fun HomeScreen(
             if (event == Lifecycle.Event.ON_RESUME) {
                 HomeNewThreadFeedFilter.account = account
                 HomeConversationsFeedFilter.account = account
-                NostrHomeDataSource.resetFilters()
-                homeFeedViewModel.invalidateData()
-                repliesFeedViewModel.invalidateData()
+                NostrHomeDataSource.invalidateFilters()
             }
         }
 
         lifeCycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifeCycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    if (scrollToTop) {
+        val scope = rememberCoroutineScope()
+        LaunchedEffect(key1 = Unit) {
+            scope.launch(Dispatchers.IO) {
+                NostrHomeDataSource.invalidateFilters()
+                homeFeedViewModel.invalidateData(true)
+                repliesFeedViewModel.invalidateData(true)
+            }
         }
     }
 
@@ -120,7 +129,7 @@ fun HomeScreen(
                 FeedView(
                     viewModel = tabs[page].viewModel,
                     accountViewModel = accountViewModel,
-                    navController = navController,
+                    nav = nav,
                     routeForLastRead = tabs[page].routeForLastRead,
                     scrollStateKey = tabs[page].scrollStateKey,
                     scrollToTop = scrollToTop

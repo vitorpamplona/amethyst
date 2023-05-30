@@ -2,10 +2,11 @@ package com.vitorpamplona.amethyst
 
 import android.content.Context
 import com.google.android.exoplayer2.database.StandaloneDatabaseProvider
-import com.google.android.exoplayer2.upstream.DefaultHttpDataSource
+import com.google.android.exoplayer2.ext.okhttp.OkHttpDataSource
 import com.google.android.exoplayer2.upstream.cache.CacheDataSource
 import com.google.android.exoplayer2.upstream.cache.LeastRecentlyUsedCacheEvictor
 import com.google.android.exoplayer2.upstream.cache.SimpleCache
+import com.vitorpamplona.amethyst.service.HttpClient
 
 object VideoCache {
 
@@ -31,7 +32,14 @@ object VideoCache {
             cacheDataSourceFactory = CacheDataSource.Factory()
                 .setCache(simpleCache)
                 .setUpstreamDataSourceFactory(
-                    DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true)
+                    OkHttpDataSource.Factory(HttpClient.getHttpClient())
+                )
+                .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+        } else {
+            cacheDataSourceFactory = CacheDataSource.Factory()
+                .setCache(simpleCache)
+                .setUpstreamDataSourceFactory(
+                    OkHttpDataSource.Factory(HttpClient.getHttpClient())
                 )
                 .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
         }

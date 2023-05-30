@@ -1,12 +1,16 @@
 package com.vitorpamplona.amethyst.ui.screen
 
-import android.util.Log
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.ExperimentalMaterialApi
@@ -23,7 +27,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.ui.note.BadgeCompose
 import com.vitorpamplona.amethyst.ui.note.BoostSetCompose
 import com.vitorpamplona.amethyst.ui.note.LikeSetCompose
@@ -33,15 +36,13 @@ import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.ZapSetCompose
 import com.vitorpamplona.amethyst.ui.note.ZapUserSetCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import kotlin.time.ExperimentalTime
-import kotlin.time.measureTimedValue
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun CardFeedView(
     viewModel: CardFeedViewModel,
     accountViewModel: AccountViewModel,
-    navController: NavController,
+    nav: (String) -> Unit,
     routeForLastRead: String,
     scrollStateKey: String? = null,
     scrollToTop: Boolean = false
@@ -52,9 +53,14 @@ fun CardFeedView(
     val refresh = { refreshing = true; viewModel.invalidateData(); refreshing = false }
     val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = refresh)
 
-    Box(Modifier.pullRefresh(pullRefreshState)) {
-        Column() {
-            Crossfade(targetState = feedState, animationSpec = tween(durationMillis = 100)) { state ->
+    Box(Modifier.fillMaxSize().pullRefresh(pullRefreshState)) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Crossfade(
+                modifier = Modifier.fillMaxSize(),
+                targetState = feedState,
+                animationSpec = tween(durationMillis = 100)
+            ) { state ->
+
                 when (state) {
                     is CardFeedState.Empty -> {
                         FeedEmpty {
@@ -74,7 +80,7 @@ fun CardFeedView(
                         FeedLoaded(
                             state = state,
                             accountViewModel = accountViewModel,
-                            navController = navController,
+                            nav = nav,
                             routeForLastRead = routeForLastRead,
                             scrollStateKey = scrollStateKey,
                             scrollToTop = scrollToTop
@@ -91,12 +97,11 @@ fun CardFeedView(
     }
 }
 
-@OptIn(ExperimentalTime::class)
 @Composable
 private fun FeedLoaded(
     state: CardFeedState.Loaded,
     accountViewModel: AccountViewModel,
-    navController: NavController,
+    nav: (String) -> Unit,
     routeForLastRead: String,
     scrollStateKey: String?,
     scrollToTop: Boolean = false
@@ -109,76 +114,98 @@ private fun FeedLoaded(
 
     if (scrollToTop) {
         LaunchedEffect(Unit) {
-            listState.scrollToItem(index = 0)
+            if (listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0) {
+                listState.scrollToItem(index = 0)
+            }
         }
     }
 
+    LazyNotificationList(listState, state, routeForLastRead, accountViewModel, nav)
+}
+
+@Composable
+private fun LazyNotificationList(
+    listState: LazyListState,
+    state: CardFeedState.Loaded,
+    routeForLastRead: String,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
     LazyColumn(
-        contentPadding = PaddingValues(
-            top = 10.dp,
-            bottom = 10.dp
-        ),
+        modifier = remember { Modifier.fillMaxSize() },
+        contentPadding = remember {
+            PaddingValues(
+                top = 10.dp,
+                bottom = 10.dp
+            )
+        },
         state = listState
     ) {
         itemsIndexed(state.feed.value, key = { _, item -> item.id() }) { _, item ->
-            val (value, elapsed) = measureTimedValue {
+            Row(Modifier.fillMaxWidth().defaultMinSize(minHeight = 100.dp)) {
                 when (item) {
                     is NoteCard -> NoteCompose(
                         item.note,
                         isBoostedNote = false,
                         accountViewModel = accountViewModel,
-                        navController = navController,
+                        nav = nav,
                         routeForLastRead = routeForLastRead
                     )
+
                     is ZapSetCard -> ZapSetCompose(
                         item,
                         isInnerNote = false,
                         accountViewModel = accountViewModel,
-                        navController = navController,
+                        nav = nav,
                         routeForLastRead = routeForLastRead
                     )
+
                     is ZapUserSetCard -> ZapUserSetCompose(
                         item,
                         isInnerNote = false,
                         accountViewModel = accountViewModel,
-                        navController = navController,
+                        nav = nav,
                         routeForLastRead = routeForLastRead
                     )
+
                     is LikeSetCard -> LikeSetCompose(
                         item,
                         isInnerNote = false,
                         accountViewModel = accountViewModel,
-                        navController = navController,
+                        nav = nav,
                         routeForLastRead = routeForLastRead
                     )
+
                     is BoostSetCard -> BoostSetCompose(
                         item,
                         isInnerNote = false,
                         accountViewModel = accountViewModel,
-                        navController = navController,
+                        nav = nav,
                         routeForLastRead = routeForLastRead
                     )
+
                     is MultiSetCard -> MultiSetCompose(
                         item,
                         accountViewModel = accountViewModel,
-                        navController = navController,
+                        nav = nav,
                         routeForLastRead = routeForLastRead
                     )
+
                     is BadgeCard -> BadgeCompose(
                         item,
                         accountViewModel = accountViewModel,
-                        navController = navController,
+                        nav = nav,
                         routeForLastRead = routeForLastRead
                     )
+
                     is MessageSetCard -> MessageSetCompose(
                         messageSetCard = item,
                         routeForLastRead = routeForLastRead,
                         accountViewModel = accountViewModel,
-                        navController = navController
+                        nav = nav
                     )
                 }
             }
-            Log.d("Time", "${item.javaClass.simpleName} Feed in $elapsed ${item.id()}")
         }
     }
 }

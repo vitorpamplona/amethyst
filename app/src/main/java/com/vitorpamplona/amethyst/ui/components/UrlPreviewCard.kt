@@ -20,8 +20,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.baha.url.preview.UrlInfoItem
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.service.previews.UrlInfoItem
 import java.net.URL
 
 @Composable
@@ -42,10 +42,10 @@ fun UrlPreviewCard(
             )
     ) {
         Column {
-            val validatedUrl = remember { URL(previewInfo.url) }
+            val validatedUrl = remember(url) { URL(previewInfo.url) }
 
             // correctly treating relative images
-            val imageUrl = remember {
+            val imageUrl = remember(url) {
                 if (previewInfo.image.startsWith("/")) {
                     URL(validatedUrl, previewInfo.image).toString()
                 } else {
