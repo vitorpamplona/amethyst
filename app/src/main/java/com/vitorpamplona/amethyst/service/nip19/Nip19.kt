@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.service.nip19
 
 import android.util.Log
+import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Bech32
@@ -15,6 +16,7 @@ object Nip19 {
 
     val nip19regex = Pattern.compile("(nostr:)?@?(nsec1|npub1|nevent1|naddr1|note1|nprofile1|nrelay1)([qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)([\\S]*)", Pattern.CASE_INSENSITIVE)
 
+    @Immutable
     data class Return(
         val type: Type,
         val hex: String,

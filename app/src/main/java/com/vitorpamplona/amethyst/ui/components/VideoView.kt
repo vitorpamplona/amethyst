@@ -64,22 +64,26 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.File
 
-public var muted = mutableStateOf(true)
+public var DefaultMutedSetting = mutableStateOf(true)
 
 @Composable
 fun VideoView(localFile: File?, description: String? = null, onDialog: ((Boolean) -> Unit)? = null) {
     if (localFile != null) {
-        VideoView(localFile.toUri(), description, null, onDialog)
+        val video = remember(localFile) { localFile.toUri() }
+
+        VideoView(video, description, null, onDialog)
     }
 }
 
 @Composable
 fun VideoView(videoUri: String, description: String? = null, onDialog: ((Boolean) -> Unit)? = null) {
-    VideoView(Uri.parse(videoUri), description, null, onDialog)
+    val video = remember(videoUri) { Uri.parse(videoUri) }
+
+    VideoView(video, description, null, onDialog)
 }
 
 @Composable
-fun VideoView(videoUri: String, description: String? = null, thumbUri: String, onDialog: ((Boolean) -> Unit)? = null) {
+fun LoadThumbAndThenVideoView(videoUri: String, description: String? = null, thumbUri: String, onDialog: ((Boolean) -> Unit)? = null) {
     var loadingFinished by remember { mutableStateOf<Pair<Boolean, Drawable?>>(Pair(false, null)) }
 
     val context = LocalContext.current
@@ -104,7 +108,9 @@ fun VideoView(videoUri: String, description: String? = null, thumbUri: String, o
 
     if (loadingFinished.first) {
         if (loadingFinished.second != null) {
-            VideoView(Uri.parse(videoUri), description, loadingFinished.second, onDialog)
+            val video = remember(videoUri) { Uri.parse(videoUri) }
+
+            VideoView(video, description, loadingFinished.second, onDialog)
         } else {
             VideoView(videoUri, description, onDialog)
         }
@@ -116,7 +122,7 @@ fun VideoView(videoUri: Uri, description: String? = null, thumb: Drawable? = nul
     val context = LocalContext.current
     val lifecycleOwner = rememberUpdatedState(LocalLifecycleOwner.current)
 
-    println("loading audio with artwork $thumb")
+    val mutedInstance = remember { mutableStateOf(DefaultMutedSetting.value) }
 
     val exoPlayer = remember(videoUri) {
         val mediaBuilder = MediaItem.Builder().setUri(videoUri)
@@ -132,7 +138,7 @@ fun VideoView(videoUri: Uri, description: String? = null, thumb: Drawable? = nul
         ExoPlayer.Builder(context).build().apply {
             repeatMode = Player.REPEAT_MODE_ALL
             videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
-            volume = 0f
+            volume = if (mutedInstance.value) 0f else 1f
             if (videoUri.scheme?.startsWith("file") == true) {
                 setMediaItem(media)
             } else {
@@ -144,10 +150,6 @@ fun VideoView(videoUri: Uri, description: String? = null, thumb: Drawable? = nul
             }
             prepare()
         }
-    }
-
-    LaunchedEffect(key1 = muted.value) {
-        exoPlayer.volume = if (muted.value) 0f else 1f
     }
 
     DisposableEffect(
@@ -185,8 +187,11 @@ fun VideoView(videoUri: Uri, description: String? = null, thumb: Drawable? = nul
                 }
             )
 
-            MuteButton(muted, Modifier) {
-                muted.value = !muted.value
+            MuteButton(mutedInstance) {
+                mutedInstance.value = !mutedInstance.value
+                DefaultMutedSetting.value = mutedInstance.value
+
+                exoPlayer.volume = if (mutedInstance.value) 0f else 1f
             }
         }
     ) {
@@ -241,12 +246,14 @@ fun LayoutCoordinates.isCompletelyVisible(view: View): Boolean {
 }
 
 @Composable
-private fun MuteButton(muted: MutableState<Boolean>, modifier: Modifier, toggle: () -> Unit) {
+private fun MuteButton(muted: MutableState<Boolean>, toggle: () -> Unit) {
     Box(
-        modifier
-            .width(70.dp)
-            .height(70.dp)
-            .padding(10.dp)
+        remember {
+            Modifier
+                .width(70.dp)
+                .height(70.dp)
+                .padding(10.dp)
+        }
     ) {
         Box(
             Modifier
@@ -256,23 +263,18 @@ private fun MuteButton(muted: MutableState<Boolean>, modifier: Modifier, toggle:
                 .background(MaterialTheme.colors.background)
         )
 
-        if (muted.value) {
-            IconButton(
-                onClick = toggle,
-                modifier = Modifier.size(50.dp)
-            ) {
+        IconButton(
+            onClick = toggle,
+            modifier = Modifier.size(50.dp)
+        ) {
+            if (muted.value) {
                 Icon(
                     imageVector = Icons.Default.VolumeOff,
                     "Hash Verified",
                     tint = MaterialTheme.colors.onBackground,
                     modifier = Modifier.size(30.dp)
                 )
-            }
-        } else {
-            IconButton(
-                onClick = toggle,
-                modifier = Modifier.size(50.dp)
-            ) {
+            } else {
                 Icon(
                     imageVector = Icons.Default.VolumeUp,
                     "Hash Verified",

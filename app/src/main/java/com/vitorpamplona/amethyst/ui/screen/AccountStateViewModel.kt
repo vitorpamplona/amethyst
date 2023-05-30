@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
@@ -21,7 +22,7 @@ import nostr.postr.Persona
 import nostr.postr.bechToBytes
 import java.util.regex.Pattern
 
-class AccountStateViewModel() : ViewModel() {
+class AccountStateViewModel(val context: Context) : ViewModel() {
     private val _accountContent = MutableStateFlow<AccountState>(AccountState.LoggedOff)
     val accountContent = _accountContent.asStateFlow()
 
@@ -85,7 +86,7 @@ class AccountStateViewModel() : ViewModel() {
         }
         val scope = CoroutineScope(Job() + Dispatchers.IO)
         scope.launch {
-            ServiceManager.start(account)
+            ServiceManager.start(account, context)
         }
         GlobalScope.launch(Dispatchers.Main) {
             account.saveable.observeForever(saveListener)

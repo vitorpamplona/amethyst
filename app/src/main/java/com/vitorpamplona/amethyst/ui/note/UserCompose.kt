@@ -5,15 +5,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Divider
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -60,15 +57,7 @@ fun UserCompose(
                     UsernameDisplay(baseUser)
                 }
 
-                val baseUserState by baseUser.live().metadata.observeAsState()
-                val user = baseUserState?.user ?: return
-
-                Text(
-                    user.info?.about ?: "",
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                AboutDisplay(baseUser)
             }
 
             Column(modifier = Modifier.padding(start = 10.dp)) {

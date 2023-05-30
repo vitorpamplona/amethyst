@@ -2,9 +2,9 @@ package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
+import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.*
 
 object NotificationFeedFilter : AdditiveFeedFilter<Note>() {
@@ -36,7 +36,7 @@ object NotificationFeedFilter : AdditiveFeedFilter<Note>() {
                 (isGlobal || it.author?.pubkeyHex in followingKeySet) &&
                 it.event?.isTaggedUser(loggedInUserHex) ?: false &&
                 (it.author == null || !account.isHidden(it.author!!.pubkeyHex)) &&
-                tagsAnEventByUser(it, loggedInUser)
+                tagsAnEventByUser(it, loggedInUserHex)
         }.toSet()
     }
 
@@ -44,27 +44,27 @@ object NotificationFeedFilter : AdditiveFeedFilter<Note>() {
         return collection.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
     }
 
-    fun tagsAnEventByUser(note: Note, author: User): Boolean {
+    fun tagsAnEventByUser(note: Note, authorHex: HexKey): Boolean {
         val event = note.event
 
         if (event is BaseTextNoteEvent) {
             val isAuthoredPostCited = event.findCitations().any {
-                LocalCache.notes[it]?.author === author || LocalCache.addressables[it]?.author === author
+                LocalCache.notes[it]?.author?.pubkeyHex == authorHex || LocalCache.addressables[it]?.author?.pubkeyHex == authorHex
             }
 
             return isAuthoredPostCited ||
                 (
-                    event.citedUsers().contains(author.pubkeyHex) ||
-                        note.replyTo?.any { it.author === author } == true
+                    event.citedUsers().contains(authorHex) ||
+                        note.replyTo?.any { it.author?.pubkeyHex == authorHex } == true
                     )
         }
 
         if (event is ReactionEvent) {
-            return note.replyTo?.lastOrNull()?.author === author
+            return note.replyTo?.lastOrNull()?.author?.pubkeyHex == authorHex
         }
 
         if (event is RepostEvent) {
-            return note.replyTo?.lastOrNull()?.author === author
+            return note.replyTo?.lastOrNull()?.author?.pubkeyHex == authorHex
         }
 
         return true

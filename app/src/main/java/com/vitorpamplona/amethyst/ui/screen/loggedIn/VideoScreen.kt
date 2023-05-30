@@ -86,6 +86,7 @@ import com.vitorpamplona.amethyst.ui.screen.LoadingFeed
 import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.screen.rememberForeverPagerState
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -198,7 +199,7 @@ fun FeedView(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SlidingCarousel(
-    feed: MutableState<List<Note>>,
+    feed: MutableState<ImmutableList<Note>>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     scrollStateKey: String? = null,
@@ -325,9 +326,6 @@ private fun RelayBadges(baseNote: Note) {
 
 @Composable
 fun ReactionsColumn(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
-
     var wantsToReplyTo by remember {
         mutableStateOf<Note?>(null)
     }
@@ -337,11 +335,11 @@ fun ReactionsColumn(baseNote: Note, accountViewModel: AccountViewModel, nav: (St
     }
 
     if (wantsToReplyTo != null) {
-        NewPostView({ wantsToReplyTo = null }, wantsToReplyTo, null, account, accountViewModel, nav)
+        NewPostView({ wantsToReplyTo = null }, wantsToReplyTo, null, accountViewModel, nav)
     }
 
     if (wantsToQuote != null) {
-        NewPostView({ wantsToQuote = null }, null, wantsToQuote, account, accountViewModel, nav)
+        NewPostView({ wantsToQuote = null }, null, wantsToQuote, accountViewModel, nav)
     }
 
     Spacer(modifier = Modifier.height(8.dp))

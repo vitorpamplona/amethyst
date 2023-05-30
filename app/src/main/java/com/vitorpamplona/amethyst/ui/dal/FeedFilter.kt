@@ -11,7 +11,7 @@ abstract class FeedFilter<T> {
             feed()
         }
 
-        Log.d("Time", "${this.javaClass.simpleName} Feed in $elapsed with ${feed.size} objects")
+        Log.d("Time", "${this.javaClass.simpleName} Full Feed in $elapsed with ${feed.size} objects")
         return feed.take(1000)
     }
 
@@ -23,7 +23,7 @@ abstract class AdditiveFeedFilter<T> : FeedFilter<T>() {
     abstract fun sort(collection: Set<T>): List<T>
 
     @OptIn(ExperimentalTime::class)
-    fun updateListWith(oldList: List<T>, newItems: Set<T>): List<T> {
+    open fun updateListWith(oldList: List<T>, newItems: Set<T>): List<T> {
         val (feed, elapsed) = measureTimedValue {
             val newItemsToBeAdded = applyFilter(newItems)
             if (newItemsToBeAdded.isNotEmpty()) {
@@ -34,7 +34,7 @@ abstract class AdditiveFeedFilter<T> : FeedFilter<T>() {
             }
         }
 
-        Log.d("Time", "${this.javaClass.simpleName} Feed in $elapsed with ${feed.size} objects")
+        Log.d("Time", "${this.javaClass.simpleName} Additive Feed in $elapsed with ${feed.size} objects")
         return feed
     }
 }

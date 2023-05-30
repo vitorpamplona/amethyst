@@ -13,6 +13,7 @@ import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ChatroomListKnownFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeNewThreadFeedFilter
@@ -127,16 +128,24 @@ open class LatestItem {
         if (newestItem == null) {
             newestItemPerAccount = newestItemPerAccount + Pair(
                 account.userProfile().pubkeyHex,
-                filter.feed().firstOrNull { it.createdAt() != null }
+                filterMore(filter.feed()).firstOrNull { it.createdAt() != null }
             )
         } else {
             newestItemPerAccount = newestItemPerAccount + Pair(
                 account.userProfile().pubkeyHex,
-                filter.sort(filter.applyFilter(newNotes) + newestItem).first()
+                filter.sort(filterMore(filter.applyFilter(newNotes)) + newestItem).first()
             )
         }
 
         return newestItemPerAccount[account.userProfile().pubkeyHex]
+    }
+
+    open fun filterMore(newItems: Set<Note>): Set<Note> {
+        return newItems
+    }
+
+    open fun filterMore(newItems: List<Note>): List<Note> {
+        return newItems
     }
 }
 
@@ -170,7 +179,7 @@ object NotificationLatestItem : LatestItem() {
     }
 }
 
-object MessagesLatestItem {
+object MessagesLatestItem : LatestItem() {
     fun hasNewItems(
         account: Account,
         cache: NotificationCache,
@@ -178,13 +187,21 @@ object MessagesLatestItem {
     ): Boolean {
         ChatroomListKnownFeedFilter.account = account
 
-        val note = ChatroomListKnownFeedFilter.loadTop().firstOrNull {
-            it.createdAt() != null && it.channel() == null && it.author != account.userProfile()
-        } ?: return false
+        val newestItem = updateNewestItem(newNotes, account, ChatroomListKnownFeedFilter)
 
-        val lastTime = cache.load("Room/${note.author?.pubkeyHex}")
+        val roomUserHex = (newestItem?.event as? PrivateDmEvent)?.talkingWith(account.userProfile().pubkeyHex)
 
-        return (note.createdAt() ?: 0) > lastTime
+        val lastTime = cache.load("Room/$roomUserHex")
+
+        return (newestItem?.createdAt() ?: 0) > lastTime
+    }
+
+    override fun filterMore(newItems: Set<Note>): Set<Note> {
+        return newItems.filter { it.event is PrivateDmEvent }.toSet()
+    }
+
+    override fun filterMore(newItems: List<Note>): List<Note> {
+        return newItems.filter { it.event is PrivateDmEvent }
     }
 }
 

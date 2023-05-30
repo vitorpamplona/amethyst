@@ -1,5 +1,12 @@
 package com.vitorpamplona.amethyst
 
+import android.content.Context
+import android.os.Build
+import coil.Coil
+import coil.ImageLoader
+import coil.decode.GifDecoder
+import coil.decode.ImageDecoderDecoder
+import coil.decode.SvgDecoder
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.HttpClient
@@ -19,14 +26,33 @@ import com.vitorpamplona.amethyst.service.relays.Client
 object ServiceManager {
     private var account: Account? = null
 
-    fun start(account: Account) {
+    fun start(account: Account, context: Context) {
         this.account = account
-        start()
+        start(context)
     }
 
-    fun start() {
+    fun start(context: Context) {
         val myAccount = account
+
+        // Resets Proxy Use
         HttpClient.start(account)
+        Coil.setImageLoader {
+            ImageLoader.Builder(context).components {
+                if (Build.VERSION.SDK_INT >= 28) {
+                    add(ImageDecoderDecoder.Factory())
+                } else {
+                    add(GifDecoder.Factory())
+                }
+                add(SvgDecoder.Factory())
+            } // .logger(DebugLogger())
+                .okHttpClient { HttpClient.getHttpClient() }
+                .respectCacheHeaders(false)
+                .build()
+        }
+
+        // Initializes video cache.
+        VideoCache.init(context.applicationContext)
+
         if (myAccount != null) {
             Client.connect(myAccount.activeRelays() ?: myAccount.convertLocalRelays())
 

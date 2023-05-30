@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.screen.ZapSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -63,7 +64,7 @@ fun ZapSetCompose(zapSetCard: ZapSetCard, isInnerNote: Boolean = false, routeFor
         }
 
         var backgroundColor = if (isNew) {
-            MaterialTheme.colors.primary.copy(0.12f).compositeOver(MaterialTheme.colors.background)
+            MaterialTheme.colors.newItemBackgroundColor.compositeOver(MaterialTheme.colors.background)
         } else {
             MaterialTheme.colors.background
         }

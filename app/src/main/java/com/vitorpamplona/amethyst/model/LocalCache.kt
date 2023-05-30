@@ -505,15 +505,6 @@ object LocalCache {
             }
         }
 
-        if (event.content == "!" || // nostr_console hide.
-            event.content == "\u26A0\uFE0F" // Warning sign
-        ) {
-            // Counts the replies
-            repliesTo.forEach {
-                it.addReport(note)
-            }
-        }
-
         refreshObservers(note)
     }
 
@@ -541,9 +532,15 @@ object LocalCache {
             mentions.forEach {
                 it.addReport(note)
             }
-        }
-        repliesTo.forEach {
-            it.addReport(note)
+        } else {
+            repliesTo.forEach {
+                it.addReport(note)
+            }
+
+            mentions.forEach {
+                // doesn't add to reports, but triggers recounts
+                it.liveSet?.reports?.invalidateData()
+            }
         }
 
         refreshObservers(note)

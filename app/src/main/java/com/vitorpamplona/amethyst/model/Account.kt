@@ -909,15 +909,7 @@ class Account(
     fun decryptContent(note: Note): String? {
         val event = note.event
         return if (event is PrivateDmEvent && loggedIn.privKey != null) {
-            var pubkeyToUse = event.pubKey
-
-            val recepientPK = event.verifiedRecipientPubKey()
-
-            if (note.author == userProfile() && recepientPK != null) {
-                pubkeyToUse = recepientPK
-            }
-
-            event.plainContent(loggedIn.privKey!!, pubkeyToUse.hexToByteArray())
+            event.plainContent(loggedIn.privKey!!, event.talkingWith(userProfile().pubkeyHex).hexToByteArray())
         } else if (event is LnZapRequestEvent && loggedIn.privKey != null) {
             decryptZapContentAuthor(note)?.content()
         } else {
@@ -1154,6 +1146,7 @@ class Account(
                         val userToBlock = LocalCache.getOrCreateUser(it.pubkeyHex)
                         if (userToBlock != userProfile() && userToBlock.pubkeyHex !in followingKeySet()) {
                             transientHiddenUsers = transientHiddenUsers + it.pubkeyHex
+                            live.invalidateData()
                         }
                     }
                 }

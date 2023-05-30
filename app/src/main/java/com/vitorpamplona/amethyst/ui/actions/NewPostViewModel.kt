@@ -15,6 +15,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.*
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
+import com.vitorpamplona.amethyst.service.model.BaseTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.ui.components.isValidURL
@@ -73,7 +74,12 @@ open class NewPostViewModel : ViewModel() {
     open fun load(account: Account, replyingTo: Note?, quote: Note?) {
         originalNote = replyingTo
         replyingTo?.let { replyNote ->
-            this.replyTos = (replyNote.replyTo ?: emptyList()).plus(replyNote)
+            if (replyNote.event is BaseTextNoteEvent) {
+                this.replyTos = (replyNote.replyTo ?: emptyList()).plus(replyNote)
+            } else {
+                this.replyTos = listOf(replyNote)
+            }
+
             replyNote.author?.let { replyUser ->
                 val currentMentions = (replyNote.event as? TextNoteEvent)
                     ?.mentions()

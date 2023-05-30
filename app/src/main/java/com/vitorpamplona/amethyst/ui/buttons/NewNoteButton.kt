@@ -17,18 +17,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun NewNoteButton(account: Account, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun NewNoteButton(accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     var wantsToPost by remember {
         mutableStateOf(false)
     }
 
     if (wantsToPost) {
-        NewPostView({ wantsToPost = false }, account = account, accountViewModel = accountViewModel, nav = nav)
+        NewPostView({ wantsToPost = false }, accountViewModel = accountViewModel, nav = nav)
     }
 
     OutlinedButton(

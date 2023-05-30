@@ -123,7 +123,7 @@ fun FloatingButtons(navController: NavHostController, accountViewModel: AccountV
             }
             is AccountState.LoggedIn -> {
                 if (currentRoute(navController)?.substringBefore("?") == Route.Home.base) {
-                    NewNoteButton(state.account, accountViewModel, nav)
+                    NewNoteButton(accountViewModel, nav)
                 }
                 if (currentRoute(navController) == Route.Message.base) {
                     ChannelFabColumn(state.account, nav)

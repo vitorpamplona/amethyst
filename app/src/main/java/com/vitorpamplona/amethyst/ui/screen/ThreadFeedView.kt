@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterialApi::class)
@@ -151,7 +152,7 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
                                                     MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                                                     if (item.idHex == noteId) MaterialTheme.colors.primary.copy(alpha = 0.52f) else MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                                                 ),
-                                                parentBackgroundColor = if (item.idHex == noteId) MaterialTheme.colors.primary.copy(0.12f).compositeOver(MaterialTheme.colors.background) else null,
+                                                parentBackgroundColor = if (item.idHex == noteId) MaterialTheme.colors.newItemBackgroundColor.compositeOver(MaterialTheme.colors.background) else null,
                                                 isBoostedNote = false,
                                                 unPackReply = false,
                                                 accountViewModel = accountViewModel,
@@ -306,7 +307,7 @@ fun NoteMaster(
             if (noteEvent is BadgeDefinitionEvent) {
                 BadgeDisplay(baseNote = note)
             } else if (noteEvent is LongTextNoteEvent) {
-                Row(modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp)) {
+                Row(modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 12.dp)) {
                     Column {
                         noteEvent.image()?.let {
                             AsyncImage(
@@ -336,7 +337,8 @@ fun NoteMaster(
                                 text = it,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(top = 10.dp)
+                                    .padding(top = 10.dp),
+                                color = Color.Gray
                             )
                         }
                     }
@@ -353,11 +355,11 @@ fun NoteMaster(
             ) {
                 Column() {
                     if (noteEvent is PeopleListEvent) {
-                        DisplayPeopleList(noteState, MaterialTheme.colors.background, accountViewModel, nav)
+                        DisplayPeopleList(baseNote, MaterialTheme.colors.background, accountViewModel, nav)
                     } else if (noteEvent is AudioTrackEvent) {
                         AudioTrackHeader(noteEvent, note, account.userProfile(), nav)
                     } else if (noteEvent is PinListEvent) {
-                        PinListHeader(noteState, MaterialTheme.colors.background, accountViewModel, nav)
+                        PinListHeader(baseNote, MaterialTheme.colors.background, accountViewModel, nav)
                     } else if (noteEvent is HighlightEvent) {
                         DisplayHighlight(
                             noteEvent.quote(),

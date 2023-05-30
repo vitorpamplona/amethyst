@@ -232,7 +232,9 @@ fun ProfileScreen(user: User, accountViewModel: AccountViewModel, nav: (String) 
                         tabs.forEachIndexed { index, function ->
                             Tab(
                                 selected = pagerState.currentPage == index,
-                                onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
+                                onClick = {
+                                    coroutineScope.launch { pagerState.animateScrollToPage(index) }
+                                },
                                 text = function
                             )
                         }
@@ -275,7 +277,16 @@ private fun RelaysTabHeader(baseUser: User) {
 @Composable
 private fun ReportsTabHeader(baseUser: User) {
     val userState by baseUser.live().reports.observeAsState()
-    val userReports = remember(userState) { userState?.user?.reports?.values?.flatten()?.count() }
+    var userReports by remember { mutableStateOf(0) }
+
+    LaunchedEffect(key1 = userState) {
+        UserProfileReportsFeedFilter.user = baseUser
+        val newSize = UserProfileReportsFeedFilter.feed().size
+
+        if (newSize != userReports) {
+            userReports = newSize
+        }
+    }
 
     Text(text = "$userReports ${stringResource(R.string.reports)}")
 }
@@ -439,20 +450,39 @@ private fun ProfileActions(
     coroutineScope: CoroutineScope
 ) {
     val accountUserState by account.userProfile().live().follows.observeAsState()
+    val accountLocalUserState by account.live.observeAsState()
     val accountUser = remember(accountUserState) { accountUserState?.user } ?: return
+
+    val isHidden by remember(accountUserState, accountLocalUserState) {
+        derivedStateOf {
+            account.isHidden(baseUser)
+        }
+    }
+
+    val isLoggedInFollowingUser by remember(accountUserState, accountLocalUserState) {
+        derivedStateOf {
+            accountUser.isFollowingCached(baseUser)
+        }
+    }
+
+    val isUserFollowingLoggedIn by remember(accountUserState, accountLocalUserState) {
+        derivedStateOf {
+            baseUser.isFollowingCached(accountUser)
+        }
+    }
 
     if (accountUser == baseUser) {
         EditButton(account)
     }
 
-    if (account.isHidden(baseUser)) {
+    if (isHidden) {
         ShowUserButton {
             account.showUser(baseUser.pubkeyHex)
         }
-    } else if (accountUser.isFollowingCached(baseUser)) {
+    } else if (isLoggedInFollowingUser) {
         UnfollowButton { coroutineScope.launch(Dispatchers.IO) { account.unfollow(baseUser) } }
     } else {
-        if (baseUser.isFollowingCached(accountUser)) {
+        if (isUserFollowingLoggedIn) {
             FollowButton(
                 { coroutineScope.launch(Dispatchers.IO) { account.follow(baseUser) } },
                 R.string.follow_back

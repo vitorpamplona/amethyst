@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
@@ -14,6 +15,7 @@ import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import java.util.Base64
 
+@Immutable
 data class ResizeImage(val url: String?, val size: Dp) {
     fun proxyUrl(): String? {
         if (url == null) return null

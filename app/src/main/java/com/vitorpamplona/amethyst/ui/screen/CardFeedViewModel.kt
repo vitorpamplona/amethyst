@@ -290,6 +290,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
 }
 
 fun <T> equalImmutableLists(list1: ImmutableList<T>, list2: ImmutableList<T>): Boolean {
+    if (list1 === list2) return true
     if (list1.size != list2.size) return false
     for (i in 0 until list1.size) {
         if (list1[i] !== list2[i]) {

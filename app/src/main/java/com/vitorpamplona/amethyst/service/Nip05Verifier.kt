@@ -75,14 +75,17 @@ class Nip05Verifier() {
         fetchNip05Json(
             nip05,
             onSuccess = {
+                // NIP05 usernames are case insensitive, but JSON properties are not
+                // converts the json to lowercase and then tries to access the username via a
+                // lowercase version of the username.
                 val nip05url = try {
-                    mapper.readTree(it)
+                    mapper.readTree(it.lowercase())
                 } catch (t: Throwable) {
                     onError("Error Parsing JSON from Lightning Address. Check the user's lightning setup")
                     null
                 }
 
-                val user = nip05.split("@")[0]
+                val user = nip05.split("@")[0].lowercase()
 
                 val hexKey = nip05url?.get("names")?.get(user)?.asText()
 
