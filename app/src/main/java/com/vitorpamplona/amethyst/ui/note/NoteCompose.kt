@@ -2171,12 +2171,16 @@ fun UserPicture(
         baseUser.pubkeyHex
     }
 
-    val userProfile = remember(userState) {
-        userState?.user?.profilePicture()
+    val userProfile by remember(userState) {
+        derivedStateOf {
+            userState?.user?.profilePicture()
+        }
     }
 
-    val showFollowingMark = remember(accountState) {
-        accountState?.user?.isFollowingCached(baseUser) == true || baseUser.pubkeyHex == accountState?.user?.pubkeyHex
+    val showFollowingMark by remember(accountState) {
+        derivedStateOf {
+            accountState?.user?.isFollowingCached(baseUser) == true || baseUser.pubkeyHex == accountState?.user?.pubkeyHex
+        }
     }
 
     // BaseUser is the same reference as accountState.user

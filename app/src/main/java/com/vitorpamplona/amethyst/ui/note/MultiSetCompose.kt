@@ -438,8 +438,10 @@ fun FastNoteAuthorPicture(
     accountViewModel: AccountViewModel
 ) {
     val userState by author.live().metadata.observeAsState()
-    val profilePicture = remember(userState) {
-        userState?.user?.profilePicture()
+    val profilePicture by remember(userState) {
+        derivedStateOf {
+            userState?.user?.profilePicture()
+        }
     }
 
     val authorPubKey = remember {

@@ -265,27 +265,27 @@ private fun UrlImageView(
     content: ZoomableUrlImage,
     mainImageModifier: Modifier
 ) {
-    val scope = rememberCoroutineScope()
-    val context = LocalContext.current
+    BoxWithConstraints(contentAlignment = Alignment.Center) {
+        val scope = rememberCoroutineScope()
+        val context = LocalContext.current
 
-    // store the dialog open or close state
-    var imageState by remember {
-        mutableStateOf<AsyncImagePainter.State?>(null)
-    }
+        // store the dialog open or close state
+        var imageState by remember {
+            mutableStateOf<AsyncImagePainter.State?>(null)
+        }
 
-    var verifiedHash by remember {
-        mutableStateOf<Boolean?>(null)
-    }
+        var verifiedHash by remember {
+            mutableStateOf<Boolean?>(null)
+        }
 
-    LaunchedEffect(key1 = content.url, key2 = imageState) {
-        if (imageState is AsyncImagePainter.State.Success) {
-            scope.launch(Dispatchers.IO) {
-                verifiedHash = verifyHash(content, context)
+        LaunchedEffect(key1 = content.url, key2 = imageState) {
+            if (imageState is AsyncImagePainter.State.Success) {
+                scope.launch(Dispatchers.IO) {
+                    verifiedHash = verifyHash(content, context)
+                }
             }
         }
-    }
 
-    BoxWithConstraints(contentAlignment = Alignment.Center) {
         val myModifier = remember {
             mainImageModifier
                 .widthIn(max = maxWidth)

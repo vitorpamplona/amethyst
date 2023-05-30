@@ -10,6 +10,7 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -25,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.FollowButton
@@ -79,15 +81,7 @@ fun ZapNoteCompose(baseNote: Pair<Note, Note>, accountViewModel: AccountViewMode
                         UsernameDisplay(baseAuthor)
                     }
 
-                    val baseAuthorState by baseAuthor.live().metadata.observeAsState()
-                    val user = baseAuthorState?.user ?: return
-
-                    Text(
-                        user.info?.about ?: "",
-                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    AboutDisplay(baseAuthor)
                 }
 
                 var zapAmount by remember { mutableStateOf<BigDecimal?>(null) }
@@ -129,4 +123,21 @@ fun ZapNoteCompose(baseNote: Pair<Note, Note>, accountViewModel: AccountViewMode
             )
         }
     }
+}
+
+@Composable
+fun AboutDisplay(baseAuthor: User) {
+    val baseAuthorState by baseAuthor.live().metadata.observeAsState()
+    val userAboutMe by remember(baseAuthorState) {
+        derivedStateOf {
+            baseAuthorState?.user?.info?.about ?: ""
+        }
+    }
+
+    Text(
+        userAboutMe,
+        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
+    )
 }

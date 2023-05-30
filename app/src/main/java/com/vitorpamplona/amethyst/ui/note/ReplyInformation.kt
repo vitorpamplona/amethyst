@@ -55,57 +55,47 @@ fun ReplyInformation(replyTo: List<Note>?, dupMentions: List<User>?, account: Ac
                 )
 
                 repliesToDisplay.forEachIndexed { idx, user ->
-                    val innerUserState by user.live().metadata.observeAsState()
-                    val innerUser = innerUserState?.user
+                    ReplyInfoMention(user, prefix, onUserTagClick)
 
-                    innerUser?.let { myUser ->
-                        CreateClickableTextWithEmoji(
-                            clickablePart = "$prefix@${myUser.toBestDisplayName()}",
-                            tags = myUser.info?.latestMetadata?.tags,
-                            style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(alpha = 0.52f), fontSize = 13.sp),
-                            onClick = { onUserTagClick(myUser) }
-                        )
+                    if (expanded) {
+                        if (idx < repliesToDisplay.size - 2) {
+                            Text(
+                                ", ",
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                            )
+                        } else if (idx < repliesToDisplay.size - 1) {
+                            Text(
+                                "${stringResource(R.string.and)}",
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                            )
+                        }
+                    } else {
+                        if (idx < repliesToDisplay.size - 1) {
+                            Text(
+                                ", ",
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                            )
+                        } else if (idx < repliesToDisplay.size) {
+                            Text(
+                                "${stringResource(R.string.and)}",
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                            )
 
-                        if (expanded) {
-                            if (idx < repliesToDisplay.size - 2) {
-                                Text(
-                                    ", ",
-                                    fontSize = 13.sp,
-                                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                                )
-                            } else if (idx < repliesToDisplay.size - 1) {
-                                Text(
-                                    "${stringResource(R.string.and)}",
-                                    fontSize = 13.sp,
-                                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                                )
-                            }
-                        } else {
-                            if (idx < repliesToDisplay.size - 1) {
-                                Text(
-                                    ", ",
-                                    fontSize = 13.sp,
-                                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                                )
-                            } else if (idx < repliesToDisplay.size) {
-                                Text(
-                                    "${stringResource(R.string.and)}",
-                                    fontSize = 13.sp,
-                                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                                )
+                            ClickableText(
+                                AnnotatedString("${mentions.size - 2}"),
+                                style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(alpha = 0.52f), fontSize = 13.sp),
+                                onClick = { expanded = true }
+                            )
 
-                                ClickableText(
-                                    AnnotatedString("${mentions.size - 2}"),
-                                    style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(alpha = 0.52f), fontSize = 13.sp),
-                                    onClick = { expanded = true }
-                                )
-
-                                Text(
-                                    " ${stringResource(R.string.others)}",
-                                    fontSize = 13.sp,
-                                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                                )
-                            }
+                            Text(
+                                " ${stringResource(R.string.others)}",
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                            )
                         }
                     }
                 }
@@ -190,36 +180,46 @@ fun ReplyInformationChannel(
                     color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                 )
 
-                val mentionSet = mentions.toSet()
+                mentions.forEachIndexed { idx, user ->
+                    ReplyInfoMention(user, prefix, onUserTagClick)
 
-                mentionSet.forEachIndexed { idx, user ->
-                    val innerUserState by user.live().metadata.observeAsState()
-                    val innerUser = innerUserState?.user
-
-                    innerUser?.let { myUser ->
-                        CreateClickableTextWithEmoji(
-                            clickablePart = "$prefix@${myUser.toBestDisplayName()}",
-                            tags = myUser.info?.latestMetadata?.tags,
-                            style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(alpha = 0.52f), fontSize = 13.sp),
-                            onClick = { onUserTagClick(myUser) }
+                    if (idx < mentions.size - 2) {
+                        Text(
+                            ", ",
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                         )
-
-                        if (idx < mentionSet.size - 2) {
-                            Text(
-                                ", ",
-                                fontSize = 13.sp,
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                            )
-                        } else if (idx < mentionSet.size - 1) {
-                            Text(
-                                " ${stringResource(id = R.string.add)} ",
-                                fontSize = 13.sp,
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                            )
-                        }
+                    } else if (idx < mentions.size - 1) {
+                        Text(
+                            " ${stringResource(id = R.string.add)} ",
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                        )
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun ReplyInfoMention(
+    user: User,
+    prefix: String,
+    onUserTagClick: (User) -> Unit
+) {
+    val innerUserState by user.live().metadata.observeAsState()
+    val innerUser = remember(innerUserState) {
+        innerUserState?.user
+    } ?: return
+
+    CreateClickableTextWithEmoji(
+        clickablePart = "$prefix${innerUser.toBestDisplayName()}",
+        tags = innerUser.info?.latestMetadata?.tags,
+        style = LocalTextStyle.current.copy(
+            color = MaterialTheme.colors.primary.copy(alpha = 0.52f),
+            fontSize = 13.sp
+        ),
+        onClick = { onUserTagClick(innerUser) }
+    )
 }
