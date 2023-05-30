@@ -43,8 +43,10 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.lightColors
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -102,7 +104,6 @@ import com.vitorpamplona.amethyst.service.model.PollNoteEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
-import com.vitorpamplona.amethyst.service.model.ReportedKey
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
@@ -152,18 +153,10 @@ fun NoteCompose(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = remember(accountState) { accountState?.account } ?: return
-
     val noteState by baseNote.live().metadata.observeAsState()
-    val note = remember(noteState) { noteState?.note } ?: return
+    val noteEvent = remember(noteState) { noteState?.note?.event }
 
-    val noteReportsState by baseNote.live().reports.observeAsState()
-    val noteForReports = remember(noteReportsState) { noteReportsState?.note } ?: return
-
-    val isSensitive = remember(noteState) { note.event?.isSensitive() ?: false }
-
-    if (note.event == null) {
+    if (noteEvent == null) {
         var popupExpanded by remember { mutableStateOf(false) }
 
         BlankNote(
@@ -176,54 +169,149 @@ fun NoteCompose(
             isBoostedNote
         )
 
-        NoteQuickActionMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
-    } else if (account.isHidden(noteForReports.author!!) || (isSensitive && account.showSensitiveContent == false)) {
-        // Does nothing
+        NoteQuickActionMenu(baseNote, popupExpanded, { popupExpanded = false }, accountViewModel)
     } else {
-        var showReportedNote by remember { mutableStateOf(false) }
-        var isAcceptableAndCanPreview by remember { mutableStateOf(Pair(true, true)) }
+        CheckHiddenNoteCompose(
+            baseNote,
+            routeForLastRead,
+            modifier,
+            isBoostedNote,
+            isQuotedNote,
+            unPackReply,
+            makeItShort,
+            addMarginTop,
+            parentBackgroundColor,
+            accountViewModel,
+            nav
+        )
+    }
+}
 
-        LaunchedEffect(key1 = noteReportsState, key2 = accountState) {
-            withContext(Dispatchers.IO) {
-                account.userProfile().let { loggedIn ->
-                    val newCanPreview = note.author?.pubkeyHex == loggedIn.pubkeyHex ||
-                        (note.author?.let { loggedIn.isFollowingCached(it) } ?: true) ||
-                        !(noteForReports.hasAnyReports())
+@Composable
+fun CheckHiddenNoteCompose(
+    note: Note,
+    routeForLastRead: String? = null,
+    modifier: Modifier = Modifier,
+    isBoostedNote: Boolean = false,
+    isQuotedNote: Boolean = false,
+    unPackReply: Boolean = true,
+    makeItShort: Boolean = false,
+    addMarginTop: Boolean = true,
+    parentBackgroundColor: Color? = null,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val account = remember(accountState) { accountState?.account } ?: return
 
-                    val newIsAcceptable = account.isAcceptable(noteForReports)
+    val isHidden by remember(accountState) {
+        derivedStateOf {
+            val isSensitive = note.event?.isSensitive() ?: false
 
-                    if (newIsAcceptable != isAcceptableAndCanPreview.first && newCanPreview != isAcceptableAndCanPreview.second) {
-                        isAcceptableAndCanPreview = Pair(newIsAcceptable, newCanPreview)
-                    }
+            account.isHidden(note.author!!) || (isSensitive && account.showSensitiveContent == false)
+        }
+    }
+
+    if (!isHidden) {
+        LoadedNoteCompose(
+            note,
+            routeForLastRead,
+            modifier,
+            isBoostedNote,
+            isQuotedNote,
+            unPackReply,
+            makeItShort,
+            addMarginTop,
+            parentBackgroundColor,
+            accountViewModel,
+            nav
+        )
+    }
+}
+
+@Immutable
+data class NoteComposeReportState(
+    val isAcceptable: Boolean,
+    val canPreview: Boolean,
+    val relevantReports: Set<Note>
+)
+
+@Composable
+fun LoadedNoteCompose(
+    note: Note,
+    routeForLastRead: String? = null,
+    modifier: Modifier = Modifier,
+    isBoostedNote: Boolean = false,
+    isQuotedNote: Boolean = false,
+    unPackReply: Boolean = true,
+    makeItShort: Boolean = false,
+    addMarginTop: Boolean = true,
+    parentBackgroundColor: Color? = null,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val account = remember(accountState) { accountState?.account } ?: return
+
+    val noteReportsState by note.live().reports.observeAsState()
+    val noteForReports = remember(noteReportsState) { noteReportsState?.note } ?: return
+
+    var showReportedNote by remember { mutableStateOf(false) }
+    var state by remember { mutableStateOf(NoteComposeReportState(true, true, emptySet())) }
+
+    LaunchedEffect(key1 = noteReportsState, key2 = accountState) {
+        withContext(Dispatchers.IO) {
+            account.userProfile().let { loggedIn ->
+                val newCanPreview = note.author?.pubkeyHex == loggedIn.pubkeyHex ||
+                    (note.author?.let { loggedIn.isFollowingCached(it) } ?: true) ||
+                    !(noteForReports.hasAnyReports())
+
+                val newIsAcceptable = account.isAcceptable(noteForReports)
+                val newRelevantReports = account.getRelevantReports(noteForReports)
+
+                if (newIsAcceptable != state.isAcceptable || newCanPreview != state.canPreview) {
+                    state = NoteComposeReportState(newIsAcceptable, newCanPreview, newRelevantReports)
                 }
             }
         }
+    }
 
-        if (!isAcceptableAndCanPreview.first && !showReportedNote) {
-            HiddenNote(
-                account.getRelevantReports(noteForReports),
-                account.userProfile(),
-                modifier,
-                isBoostedNote,
-                nav,
-                onClick = { showReportedNote = true }
-            )
-        } else {
-            NormalNote(
-                baseNote,
-                routeForLastRead,
-                modifier,
-                isBoostedNote,
-                isQuotedNote,
-                unPackReply,
-                makeItShort,
-                addMarginTop,
-                isAcceptableAndCanPreview.second,
-                parentBackgroundColor,
-                accountViewModel,
-                nav
-            )
+    val showHiddenNote by remember(state, showReportedNote) {
+        derivedStateOf {
+            !state.isAcceptable && !showReportedNote
         }
+    }
+
+    if (showHiddenNote) {
+        HiddenNote(
+            state.relevantReports,
+            accountViewModel.userProfile(),
+            modifier,
+            isBoostedNote,
+            nav,
+            onClick = { showReportedNote = true }
+        )
+    } else {
+        val canPreview by remember(state, showReportedNote) {
+            derivedStateOf {
+                (!state.isAcceptable && showReportedNote) || state.canPreview
+            }
+        }
+
+        NormalNote(
+            note,
+            routeForLastRead,
+            modifier,
+            isBoostedNote,
+            isQuotedNote,
+            unPackReply,
+            makeItShort,
+            addMarginTop,
+            canPreview,
+            parentBackgroundColor,
+            accountViewModel,
+            nav
+        )
     }
 }
 
@@ -373,7 +461,7 @@ fun NormalNote(
                         }
 
                         is ReportEvent -> {
-                            RenderReport(baseNote)
+                            RenderReport(baseNote, backgroundColor, accountViewModel, nav)
                         }
 
                         is LongTextNoteEvent -> {
@@ -1045,14 +1133,16 @@ private fun RenderLongFormContent(
 }
 
 @Composable
-private fun RenderReport(note: Note) {
+private fun RenderReport(
+    note: Note,
+    backgroundColor: Color,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    val noteEvent = note.event as? ReportEvent ?: return
+
     val base = remember {
-        val noteEvent = note.event as? ReportEvent
-        if (noteEvent == null) {
-            emptyList<ReportedKey>()
-        } else {
-            (noteEvent.reportedPost() + noteEvent.reportedAuthor())
-        }
+        (noteEvent.reportedPost() + noteEvent.reportedAuthor())
     }
 
     val reportType = base.map {
@@ -1066,12 +1156,45 @@ private fun RenderReport(note: Note) {
         }
     }.toSet().joinToString(", ")
 
-    Text(
-        text = reportType
+    val content = remember {
+        reportType + (note.event?.content()?.ifBlank { null }?.let { ": $it" } ?: "")
+    }
+
+    TranslatableRichTextViewer(
+        content = content,
+        canPreview = true,
+        modifier = remember { Modifier },
+        tags = emptyList(),
+        backgroundColor = backgroundColor,
+        accountViewModel = accountViewModel,
+        nav = nav
     )
 
+    note.replyTo?.lastOrNull()?.let {
+        NoteCompose(
+            baseNote = it,
+            isQuotedNote = true,
+            modifier = Modifier
+                .padding(top = 5.dp)
+                .fillMaxWidth()
+                .clip(shape = RoundedCornerShape(15.dp))
+                .border(
+                    1.dp,
+                    MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
+                    RoundedCornerShape(15.dp)
+                ),
+            unPackReply = false,
+            makeItShort = true,
+            parentBackgroundColor = backgroundColor,
+            accountViewModel = accountViewModel,
+            nav = nav
+        )
+    }
+
+    ReactionsRow(note, accountViewModel, nav)
+
     Divider(
-        modifier = Modifier.padding(top = 40.dp),
+        modifier = Modifier.padding(top = 10.dp),
         thickness = 0.25.dp
     )
 }

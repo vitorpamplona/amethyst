@@ -232,7 +232,9 @@ fun ProfileScreen(user: User, accountViewModel: AccountViewModel, nav: (String) 
                         tabs.forEachIndexed { index, function ->
                             Tab(
                                 selected = pagerState.currentPage == index,
-                                onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
+                                onClick = {
+                                    coroutineScope.launch { pagerState.animateScrollToPage(index) }
+                                },
                                 text = function
                             )
                         }
@@ -275,7 +277,16 @@ private fun RelaysTabHeader(baseUser: User) {
 @Composable
 private fun ReportsTabHeader(baseUser: User) {
     val userState by baseUser.live().reports.observeAsState()
-    val userReports = remember(userState) { userState?.user?.reports?.values?.flatten()?.count() }
+    var userReports by remember { mutableStateOf(0) }
+
+    LaunchedEffect(key1 = userState) {
+        UserProfileReportsFeedFilter.user = baseUser
+        val newSize = UserProfileReportsFeedFilter.feed().size
+
+        if (newSize != userReports) {
+            userReports = newSize
+        }
+    }
 
     Text(text = "$userReports ${stringResource(R.string.reports)}")
 }
