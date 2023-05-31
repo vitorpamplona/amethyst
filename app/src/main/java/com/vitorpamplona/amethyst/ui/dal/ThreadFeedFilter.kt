@@ -1,6 +1,6 @@
 package com.vitorpamplona.amethyst.ui.dal
 
-import com.google.errorprone.annotations.Immutable
+import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ThreadAssembler
 
