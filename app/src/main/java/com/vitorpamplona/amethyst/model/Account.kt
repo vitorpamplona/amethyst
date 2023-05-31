@@ -1166,14 +1166,14 @@ class Account(
 
 class AccountLiveData(private val account: Account) : LiveData<AccountState>(AccountState(account)) {
     // Refreshes observers in batches.
-    private val bundler = BundledUpdate(300, Dispatchers.Default) {
-        if (hasActiveObservers()) {
-            refresh()
-        }
-    }
+    private val bundler = BundledUpdate(300, Dispatchers.Default)
 
     fun invalidateData() {
-        bundler.invalidate()
+        bundler.invalidate() {
+            if (hasActiveObservers()) {
+                refresh()
+            }
+        }
     }
 
     fun refresh() {

@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -35,11 +36,34 @@ import kotlin.time.ExperimentalTime
 import kotlin.time.measureTimedValue
 
 @Stable
-class NotificationViewModel : CardFeedViewModel(NotificationFeedFilter)
+class NotificationViewModel(val account: Account) : CardFeedViewModel(NotificationFeedFilter(account)) {
+    class Factory(val account: Account) : ViewModelProvider.Factory {
+        override fun <NotificationViewModel : ViewModel> create(modelClass: Class<NotificationViewModel>): NotificationViewModel {
+            return NotificationViewModel(account) as NotificationViewModel
+        }
+    }
+}
 
+@Stable
 open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
     private val _feedContent = MutableStateFlow<CardFeedState>(CardFeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
+
+    // Simple counter that changes when it needs to invalidate everything
+    private val _scrollToTop = MutableStateFlow<Int>(0)
+    val scrollToTop = _scrollToTop.asStateFlow()
+    var scrolltoTopPending = false
+
+    suspend fun sendToTop() {
+        if (scrolltoTopPending) return
+
+        scrolltoTopPending = true
+        _scrollToTop.emit(_scrollToTop.value + 1)
+    }
+
+    suspend fun sentToTop() {
+        scrolltoTopPending = false
+    }
 
     private var lastAccount: Account? = null
     private var lastNotes: Set<Note>? = null
@@ -150,7 +174,10 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
             val reactionsInCard = reactionsPerEvent[baseNote] ?: emptyList()
             val zapsInCard = zapsPerEvent[baseNote] ?: emptyMap()
 
-            val singleList = (boostsInCard + zapsInCard.values + reactionsInCard).sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
+            val singleList = (boostsInCard + zapsInCard.values + reactionsInCard)
+                .sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
+                .reversed()
+
             singleList.chunked(50).map { chunk ->
                 MultiSetCard(
                     baseNote,
@@ -234,19 +261,32 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
         }
     }
 
-    @OptIn(ExperimentalTime::class)
-    private val bundler = BundledUpdate(1000, Dispatchers.IO) {
-        // adds the time to perform the refresh into this delay
-        // holding off new updates in case of heavy refresh routines.
-        val (value, elapsed) = measureTimedValue {
-            refreshSuspended()
-        }
-        Log.d("Time", "${this.javaClass.simpleName} Card update $elapsed")
-    }
+    private val bundler = BundledUpdate(1000, Dispatchers.IO)
     private val bundlerInsert = BundledInsert<Set<Note>>(1000, Dispatchers.IO)
 
+    @OptIn(ExperimentalTime::class)
     fun invalidateData(ignoreIfDoing: Boolean = false) {
-        bundler.invalidate(ignoreIfDoing)
+        bundler.invalidate(ignoreIfDoing) {
+            // adds the time to perform the refresh into this delay
+            // holding off new updates in case of heavy refresh routines.
+            val (value, elapsed) = measureTimedValue {
+                refreshSuspended()
+            }
+            Log.d("Time", "${this.javaClass.simpleName} Card update $elapsed")
+        }
+    }
+
+    @OptIn(ExperimentalTime::class)
+    fun invalidateDataAndSendToTop(ignoreIfDoing: Boolean = false) {
+        bundler.invalidate(ignoreIfDoing) {
+            // adds the time to perform the refresh into this delay
+            // holding off new updates in case of heavy refresh routines.
+            val (value, elapsed) = measureTimedValue {
+                refreshSuspended()
+                sendToTop()
+            }
+            Log.d("Time", "${this.javaClass.simpleName} Card update $elapsed")
+        }
     }
 
     @OptIn(ExperimentalTime::class)

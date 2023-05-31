@@ -25,8 +25,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.NostrHashtagDataSource
 import com.vitorpamplona.amethyst.ui.dal.HashtagFeedFilter
-import com.vitorpamplona.amethyst.ui.screen.FeedView
 import com.vitorpamplona.amethyst.ui.screen.NostrHashtagFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.RefresheableView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -75,7 +75,7 @@ fun HashtagScreen(tag: String?, accountViewModel: AccountViewModel, nav: (String
                 modifier = Modifier.padding(vertical = 0.dp)
             ) {
                 HashtagHeader(tag, account)
-                FeedView(feedViewModel, accountViewModel, nav, null)
+                RefresheableView(feedViewModel, accountViewModel, nav, null)
             }
         }
     }

@@ -65,6 +65,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
@@ -74,15 +75,14 @@ import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.SaveButton
 import com.vitorpamplona.amethyst.ui.qrcode.SimpleQrCodeScanner
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.getFragmentActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope as rememberCoroutineScope
 
-class UpdateZapAmountViewModel : ViewModel() {
-    private var account: Account? = null
-
+class UpdateZapAmountViewModel(val account: Account) : ViewModel() {
     var nextAmount by mutableStateOf(TextFieldValue(""))
     var amountSet by mutableStateOf(listOf<Long>())
     var walletConnectRelay by mutableStateOf(TextFieldValue(""))
@@ -90,8 +90,7 @@ class UpdateZapAmountViewModel : ViewModel() {
     var walletConnectSecret by mutableStateOf(TextFieldValue(""))
     var selectedZapType by mutableStateOf(LnZapEvent.ZapType.PRIVATE)
 
-    fun load(account: Account) {
-        this.account = account
+    fun load() {
         this.amountSet = account.zapAmountChoices
         this.walletConnectPubkey = account.zapPaymentRequest?.pubKeyHex?.let { TextFieldValue(it) } ?: TextFieldValue("")
         this.walletConnectRelay = account.zapPaymentRequest?.relayUri?.let { TextFieldValue(it) } ?: TextFieldValue("")
@@ -185,14 +184,25 @@ class UpdateZapAmountViewModel : ViewModel() {
                 TextFieldValue(contact.secret ?: "")
         }
     }
+
+    class Factory(val account: Account) : ViewModelProvider.Factory {
+        override fun <UpdateZapAmountViewModel : ViewModel> create(modelClass: Class<UpdateZapAmountViewModel>): UpdateZapAmountViewModel {
+            return UpdateZapAmountViewModel(account) as UpdateZapAmountViewModel
+        }
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun UpdateZapAmountDialog(onClose: () -> Unit, account: Account, nip47uri: String? = null) {
+fun UpdateZapAmountDialog(onClose: () -> Unit, nip47uri: String? = null, accountViewModel: AccountViewModel) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val postViewModel: UpdateZapAmountViewModel = viewModel()
+
+    val postViewModel: UpdateZapAmountViewModel = viewModel(
+        key = accountViewModel.userProfile().pubkeyHex,
+        factory = UpdateZapAmountViewModel.Factory(accountViewModel.account)
+    )
+
     val uri = LocalUriHandler.current
 
     val zapTypes = listOf(
@@ -205,8 +215,8 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, account: Account, nip47uri: Strin
     val zapOptions = zapTypes.map { it.second }
     val zapOptionExplainers = zapTypes.map { it.third }
 
-    LaunchedEffect(account) {
-        postViewModel.load(account)
+    LaunchedEffect(accountViewModel) {
+        postViewModel.load()
         if (nip47uri != null) {
             try {
                 postViewModel.updateNIP47(nip47uri)
@@ -341,7 +351,7 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, account: Account, nip47uri: Strin
                         ) {
                             TextSpinner(
                                 label = stringResource(id = R.string.zap_type_explainer),
-                                placeholder = zapTypes.filter { it.first == account.defaultZapType }
+                                placeholder = zapTypes.filter { it.first == accountViewModel.defaultZapType() }
                                     .first().second,
                                 options = zapOptions,
                                 explainers = zapOptionExplainers,

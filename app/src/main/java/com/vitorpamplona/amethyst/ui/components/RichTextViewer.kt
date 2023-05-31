@@ -157,145 +157,159 @@ private fun RenderRegular(
     // FlowRow doesn't work well with paragraphs. So we need to split them
     content.split('\n').forEach { paragraph ->
         FlowRow() {
-            val s = if (isArabic(paragraph)) {
-                paragraph.trim().split(' ')
-                    .reversed()
-            } else {
-                paragraph.trim().split(' ')
-            }
-            s.forEach { word: String ->
-                if (canPreview) {
-                    // Explicit URL
-                    val img = state.imagesForPager[word]
-                    if (img != null) {
-                        ZoomableContentView(img, state.imageList)
-                    } else if (state.urlSet.contains(word)) {
-                        UrlPreview(word, "$word ")
-                    } else if (state.customEmoji.any { word.contains(it.key) }) {
-                        RenderCustomEmoji(word, state.customEmoji)
-                    } else if (word.startsWith("lnbc", true)) {
-                        MayBeInvoicePreview(word)
-                    } else if (word.startsWith("lnurl", true)) {
-                        MayBeWithdrawal(word)
-                    } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
-                        ClickableEmail(word)
-                    } else if (word.length > 6 && Patterns.PHONE.matcher(word).matches()) {
-                        ClickablePhone(word)
-                    } else if (isBechLink(word)) {
-                        BechLink(
-                            word,
-                            canPreview,
-                            backgroundColor,
-                            accountViewModel,
-                            nav
-                        )
-                    } else if (word.startsWith("#")) {
-                        if (tagIndex.matcher(word).matches() && tags != null) {
-                            TagLink(
-                                word,
-                                tags,
-                                canPreview,
-                                backgroundColor,
-                                accountViewModel,
-                                nav
-                            )
-                        } else if (hashTagsPattern.matcher(word).matches()) {
-                            HashTag(word, nav)
-                        } else {
-                            Text(
-                                text = "$word ",
-                                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-                            )
-                        }
-                    } else if (noProtocolUrlValidator.matcher(word).matches()) {
-                        val matcher = noProtocolUrlValidator.matcher(word)
-                        matcher.find()
-                        val url = matcher.group(1) // url
-                        val additionalChars = matcher.group(4) ?: "" // additional chars
-
-                        if (url != null) {
-                            ClickableUrl(url, "https://$url")
-                            Text("$additionalChars ")
-                        } else {
-                            Text(
-                                text = "$word ",
-                                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-                            )
-                        }
-                    } else {
-                        Text(
-                            text = "$word ",
-                            style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-                        )
-                    }
+            val s = remember(paragraph) {
+                if (isArabic(paragraph)) {
+                    paragraph.trim().split(' ').reversed()
                 } else {
-                    if (state.urlSet.contains(word)) {
-                        ClickableUrl("$word ", word)
-                    } else if (word.startsWith("lnurl", true)) {
-                        val lnWithdrawal = LnWithdrawalUtil.findWithdrawal(word)
-                        if (lnWithdrawal != null) {
-                            ClickableWithdrawal(withdrawalString = lnWithdrawal)
-                        } else {
-                            Text(
-                                text = "$word ",
-                                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-                            )
-                        }
-                    } else if (state.customEmoji.any { word.contains(it.key) }) {
-                        RenderCustomEmoji(word, state.customEmoji)
-                    } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
-                        ClickableEmail(word)
-                    } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
-                        ClickablePhone(word)
-                    } else if (isBechLink(word)) {
-                        BechLink(
-                            word,
-                            canPreview,
-                            backgroundColor,
-                            accountViewModel,
-                            nav
-                        )
-                    } else if (word.startsWith("#")) {
-                        if (tagIndex.matcher(word).matches() && tags != null) {
-                            TagLink(
-                                word,
-                                tags,
-                                canPreview,
-                                backgroundColor,
-                                accountViewModel,
-                                nav
-                            )
-                        } else if (hashTagsPattern.matcher(word).matches()) {
-                            HashTag(word, nav)
-                        } else {
-                            Text(
-                                text = "$word ",
-                                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-                            )
-                        }
-                    } else if (noProtocolUrlValidator.matcher(word).matches()) {
-                        val matcher = noProtocolUrlValidator.matcher(word)
-                        matcher.find()
-                        val url = matcher.group(1) // url
-                        val additionalChars = matcher.group(4) ?: "" // additional chars
-
-                        if (url != null) {
-                            ClickableUrl(url, "https://$url")
-                            Text("$additionalChars ")
-                        } else {
-                            Text(
-                                text = "$word ",
-                                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-                            )
-                        }
-                    } else {
-                        Text(
-                            text = "$word ",
-                            style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-                        )
-                    }
+                    paragraph.trim().split(' ')
                 }
             }
+            s.forEach { word: String ->
+                RenderWord(word, state, canPreview, backgroundColor, accountViewModel, nav, tags)
+            }
+        }
+    }
+}
+
+@Composable
+private fun RenderWord(
+    word: String,
+    state: RichTextViewerState,
+    canPreview: Boolean,
+    backgroundColor: Color,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+    tags: List<List<String>>?
+) {
+    if (canPreview) {
+        // Explicit URL
+        val img = state.imagesForPager[word]
+        if (img != null) {
+            ZoomableContentView(img, state.imageList)
+        } else if (state.urlSet.contains(word)) {
+            UrlPreview(word, "$word ")
+        } else if (state.customEmoji.any { word.contains(it.key) }) {
+            RenderCustomEmoji(word, state.customEmoji)
+        } else if (word.startsWith("lnbc", true)) {
+            MayBeInvoicePreview(word)
+        } else if (word.startsWith("lnurl", true)) {
+            MayBeWithdrawal(word)
+        } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
+            ClickableEmail(word)
+        } else if (word.length > 6 && Patterns.PHONE.matcher(word).matches()) {
+            ClickablePhone(word)
+        } else if (isBechLink(word)) {
+            BechLink(
+                word,
+                canPreview,
+                backgroundColor,
+                accountViewModel,
+                nav
+            )
+        } else if (word.startsWith("#")) {
+            if (tagIndex.matcher(word).matches() && tags != null) {
+                TagLink(
+                    word,
+                    tags,
+                    canPreview,
+                    backgroundColor,
+                    accountViewModel,
+                    nav
+                )
+            } else if (hashTagsPattern.matcher(word).matches()) {
+                HashTag(word, nav)
+            } else {
+                Text(
+                    text = "$word ",
+                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+                )
+            }
+        } else if (noProtocolUrlValidator.matcher(word).matches()) {
+            val matcher = noProtocolUrlValidator.matcher(word)
+            matcher.find()
+            val url = matcher.group(1) // url
+            val additionalChars = matcher.group(4) ?: "" // additional chars
+
+            if (url != null) {
+                ClickableUrl(url, "https://$url")
+                Text("$additionalChars ")
+            } else {
+                Text(
+                    text = "$word ",
+                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+                )
+            }
+        } else {
+            Text(
+                text = "$word ",
+                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+            )
+        }
+    } else {
+        if (state.urlSet.contains(word)) {
+            ClickableUrl("$word ", word)
+        } else if (word.startsWith("lnurl", true)) {
+            val lnWithdrawal = LnWithdrawalUtil.findWithdrawal(word)
+            if (lnWithdrawal != null) {
+                ClickableWithdrawal(withdrawalString = lnWithdrawal)
+            } else {
+                Text(
+                    text = "$word ",
+                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+                )
+            }
+        } else if (state.customEmoji.any { word.contains(it.key) }) {
+            RenderCustomEmoji(word, state.customEmoji)
+        } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
+            ClickableEmail(word)
+        } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
+            ClickablePhone(word)
+        } else if (isBechLink(word)) {
+            BechLink(
+                word,
+                canPreview,
+                backgroundColor,
+                accountViewModel,
+                nav
+            )
+        } else if (word.startsWith("#")) {
+            if (tagIndex.matcher(word).matches() && tags != null) {
+                TagLink(
+                    word,
+                    tags,
+                    canPreview,
+                    backgroundColor,
+                    accountViewModel,
+                    nav
+                )
+            } else if (hashTagsPattern.matcher(word).matches()) {
+                HashTag(word, nav)
+            } else {
+                Text(
+                    text = "$word ",
+                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+                )
+            }
+        } else if (noProtocolUrlValidator.matcher(word).matches()) {
+            val matcher = noProtocolUrlValidator.matcher(word)
+            matcher.find()
+            val url = matcher.group(1) // url
+            val additionalChars = matcher.group(4) ?: "" // additional chars
+
+            if (url != null) {
+                ClickableUrl(url, "https://$url")
+                Text("$additionalChars ")
+            } else {
+                Text(
+                    text = "$word ",
+                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+                )
+            }
+        } else {
+            Text(
+                text = "$word ",
+                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+            )
         }
     }
 }

@@ -6,9 +6,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.*
 
-object VideoFeedFilter : AdditiveFeedFilter<Note>() {
-    lateinit var account: Account
-
+class VideoFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
     override fun feed(): List<Note> {
         val notes = innerApplyFilter(LocalCache.notes.values)
 

@@ -13,7 +13,6 @@ import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -83,14 +82,14 @@ class RelayFeedViewModel : ViewModel() {
         currentUser = null
     }
 
-    private val bundler = BundledUpdate(250, Dispatchers.IO) {
-        // adds the time to perform the refresh into this delay
-        // holding off new updates in case of heavy refresh routines.
-        refreshSuspended()
-    }
+    private val bundler = BundledUpdate(250, Dispatchers.IO)
 
     fun invalidateData() {
-        bundler.invalidate()
+        bundler.invalidate() {
+            // adds the time to perform the refresh into this delay
+            // holding off new updates in case of heavy refresh routines.
+            refreshSuspended()
+        }
     }
 }
 
@@ -101,9 +100,6 @@ fun RelayFeedView(
     accountViewModel: AccountViewModel,
     enablePullRefresh: Boolean = true
 ) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
-
     val feedState by viewModel.feedContent.collectAsState()
 
     var wantsToAddRelay by remember {
@@ -111,7 +107,7 @@ fun RelayFeedView(
     }
 
     if (wantsToAddRelay.isNotEmpty()) {
-        NewRelayListView({ wantsToAddRelay = "" }, account, wantsToAddRelay)
+        NewRelayListView({ wantsToAddRelay = "" }, accountViewModel, wantsToAddRelay)
     }
 
     var refreshing by remember { mutableStateOf(false) }

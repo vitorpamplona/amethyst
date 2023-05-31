@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.components
 
+import android.content.Context
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.util.Log
@@ -124,7 +125,9 @@ fun VideoView(videoUri: Uri, description: String? = null, thumb: Drawable? = nul
 
     val mutedInstance = remember { mutableStateOf(DefaultMutedSetting.value) }
 
-    val exoPlayer = remember(videoUri) {
+    var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
+
+    LaunchedEffect(key1 = videoUri) {
         val mediaBuilder = MediaItem.Builder().setUri(videoUri)
 
         description?.let {
@@ -135,7 +138,7 @@ fun VideoView(videoUri: Uri, description: String? = null, thumb: Drawable? = nul
 
         val media = mediaBuilder.build()
 
-        ExoPlayer.Builder(context).build().apply {
+        exoPlayer = ExoPlayer.Builder(context).build().apply {
             repeatMode = Player.REPEAT_MODE_ALL
             videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
             volume = if (mutedInstance.value) 0f else 1f
@@ -152,53 +155,15 @@ fun VideoView(videoUri: Uri, description: String? = null, thumb: Drawable? = nul
         }
     }
 
-    DisposableEffect(
-        BoxWithConstraints() {
-            AndroidView(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .defaultMinSize(minHeight = 70.dp)
-                    .align(Alignment.Center)
-                    .onVisibilityChanges { visible ->
-                        if (visible && !exoPlayer.isPlaying) {
-                            exoPlayer.play()
-                        } else if (!visible && exoPlayer.isPlaying) {
-                            exoPlayer.pause()
-                        }
-                    },
-                factory = {
-                    StyledPlayerView(context).apply {
-                        player = exoPlayer
-                        layoutParams = FrameLayout.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.WRAP_CONTENT
-                        )
-                        controllerAutoShow = false
-                        thumb?.let { defaultArtwork = thumb }
-                        hideController()
-                        resizeMode = if (maxHeight.isFinite) AspectRatioFrameLayout.RESIZE_MODE_FIT else AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
-                        onDialog?.let { innerOnDialog ->
-                            setFullscreenButtonClickListener {
-                                exoPlayer.pause()
-                                innerOnDialog(it)
-                            }
-                        }
-                    }
-                }
-            )
+    exoPlayer?.let {
+        RenderVideoPlayer(it, context, thumb, onDialog, mutedInstance)
+    }
 
-            MuteButton(mutedInstance) {
-                mutedInstance.value = !mutedInstance.value
-                DefaultMutedSetting.value = mutedInstance.value
-
-                exoPlayer.volume = if (mutedInstance.value) 0f else 1f
-            }
-        }
-    ) {
+    DisposableEffect(Unit) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_PAUSE -> {
-                    exoPlayer.pause()
+                    exoPlayer?.pause()
                 }
                 else -> {}
             }
@@ -207,8 +172,60 @@ fun VideoView(videoUri: Uri, description: String? = null, thumb: Drawable? = nul
         lifecycle.addObserver(observer)
 
         onDispose {
-            exoPlayer.release()
+            exoPlayer?.release()
             lifecycle.removeObserver(observer)
+        }
+    }
+}
+
+@Composable
+private fun RenderVideoPlayer(
+    exoPlayer: ExoPlayer,
+    context: Context,
+    thumb: Drawable?,
+    onDialog: ((Boolean) -> Unit)?,
+    mutedInstance: MutableState<Boolean>
+) {
+    BoxWithConstraints() {
+        AndroidView(
+            modifier = Modifier
+                .fillMaxWidth()
+                .defaultMinSize(minHeight = 70.dp)
+                .align(Alignment.Center)
+                .onVisibilityChanges { visible ->
+                    if (visible && !exoPlayer.isPlaying) {
+                        exoPlayer.play()
+                    } else if (!visible && exoPlayer.isPlaying) {
+                        exoPlayer.pause()
+                    }
+                },
+            factory = {
+                StyledPlayerView(context).apply {
+                    player = exoPlayer
+                    layoutParams = FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    )
+                    controllerAutoShow = false
+                    thumb?.let { defaultArtwork = thumb }
+                    hideController()
+                    resizeMode =
+                        if (maxHeight.isFinite) AspectRatioFrameLayout.RESIZE_MODE_FIT else AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
+                    onDialog?.let { innerOnDialog ->
+                        setFullscreenButtonClickListener {
+                            exoPlayer.pause()
+                            innerOnDialog(it)
+                        }
+                    }
+                }
+            }
+        )
+
+        MuteButton(mutedInstance) {
+            mutedInstance.value = !mutedInstance.value
+            DefaultMutedSetting.value = mutedInstance.value
+
+            exoPlayer.volume = if (mutedInstance.value) 0f else 1f
         }
     }
 }

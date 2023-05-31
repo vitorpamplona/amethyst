@@ -49,18 +49,18 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.service.relays.FeedType
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import java.lang.Math.round
 
 @Composable
-fun NewRelayListView(onClose: () -> Unit, account: Account, relayToAdd: String = "") {
+fun NewRelayListView(onClose: () -> Unit, accountViewModel: AccountViewModel, relayToAdd: String = "") {
     val postViewModel: NewRelayListViewModel = viewModel()
     val feedState by postViewModel.relays.collectAsState()
 
     LaunchedEffect(Unit) {
-        postViewModel.load(account)
+        postViewModel.load(accountViewModel.account)
     }
 
     Dialog(

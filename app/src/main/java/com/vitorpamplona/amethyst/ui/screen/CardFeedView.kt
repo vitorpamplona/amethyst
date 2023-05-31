@@ -39,72 +39,42 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun CardFeedView(
+fun RefresheableCardView(
     viewModel: CardFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     routeForLastRead: String,
     scrollStateKey: String? = null,
-    scrollToTop: Boolean = false
+    enablePullRefresh: Boolean = true
 ) {
-    val feedState by viewModel.feedContent.collectAsState()
-
     var refreshing by remember { mutableStateOf(false) }
     val refresh = { refreshing = true; viewModel.invalidateData(); refreshing = false }
     val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = refresh)
 
-    Box(Modifier.fillMaxSize().pullRefresh(pullRefreshState)) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Crossfade(
-                modifier = Modifier.fillMaxSize(),
-                targetState = feedState,
-                animationSpec = tween(durationMillis = 100)
-            ) { state ->
+    val modifier = if (enablePullRefresh) {
+        Modifier.pullRefresh(pullRefreshState)
+    } else {
+        Modifier
+    }
 
-                when (state) {
-                    is CardFeedState.Empty -> {
-                        FeedEmpty {
-                            refreshing = true
-                        }
-                    }
-                    is CardFeedState.FeedError -> {
-                        FeedError(state.errorMessage) {
-                            refreshing = true
-                        }
-                    }
-                    is CardFeedState.Loaded -> {
-                        if (refreshing) {
-                            refreshing = false
-                        }
-
-                        FeedLoaded(
-                            state = state,
-                            accountViewModel = accountViewModel,
-                            nav = nav,
-                            routeForLastRead = routeForLastRead,
-                            scrollStateKey = scrollStateKey,
-                            scrollToTop = scrollToTop
-                        )
-                    }
-                    CardFeedState.Loading -> {
-                        LoadingFeed()
-                    }
-                }
-            }
+    Box(modifier) {
+        Column {
+            SaveableCardFeedState(viewModel, accountViewModel, nav, routeForLastRead, scrollStateKey)
         }
 
-        PullRefreshIndicator(refreshing, pullRefreshState, Modifier.align(Alignment.TopCenter))
+        if (enablePullRefresh) {
+            PullRefreshIndicator(refreshing, pullRefreshState, Modifier.align(Alignment.TopCenter))
+        }
     }
 }
 
 @Composable
-private fun FeedLoaded(
-    state: CardFeedState.Loaded,
+private fun SaveableCardFeedState(
+    viewModel: CardFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     routeForLastRead: String,
-    scrollStateKey: String?,
-    scrollToTop: Boolean = false
+    scrollStateKey: String? = null
 ) {
     val listState = if (scrollStateKey != null) {
         rememberForeverLazyListState(scrollStateKey)
@@ -112,24 +82,76 @@ private fun FeedLoaded(
         rememberLazyListState()
     }
 
-    if (scrollToTop) {
-        LaunchedEffect(Unit) {
-            if (listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0) {
-                listState.scrollToItem(index = 0)
-            }
-        }
-    }
+    WatchScrollToTop(viewModel, listState)
 
-    LazyNotificationList(listState, state, routeForLastRead, accountViewModel, nav)
+    RenderCardFeed(viewModel, accountViewModel, listState, nav, routeForLastRead)
 }
 
 @Composable
-private fun LazyNotificationList(
-    listState: LazyListState,
-    state: CardFeedState.Loaded,
-    routeForLastRead: String,
+private fun WatchScrollToTop(
+    viewModel: CardFeedViewModel,
+    listState: LazyListState
+) {
+    val scrollToTop by viewModel.scrollToTop.collectAsState()
+
+    LaunchedEffect(scrollToTop) {
+        if (scrollToTop > 0 && viewModel.scrolltoTopPending) {
+            listState.scrollToItem(index = 0)
+            viewModel.sentToTop()
+        }
+    }
+}
+
+@Composable
+fun RenderCardFeed(
+    viewModel: CardFeedViewModel,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
+    listState: LazyListState,
+    nav: (String) -> Unit,
+    routeForLastRead: String
+) {
+    val feedState by viewModel.feedContent.collectAsState()
+
+    Crossfade(
+        modifier = Modifier.fillMaxSize(),
+        targetState = feedState,
+        animationSpec = tween(durationMillis = 100)
+    ) { state ->
+
+        when (state) {
+            is CardFeedState.Empty -> {
+                FeedEmpty {
+                    viewModel.invalidateData()
+                }
+            }
+            is CardFeedState.FeedError -> {
+                FeedError(state.errorMessage) {
+                    viewModel.invalidateData()
+                }
+            }
+            is CardFeedState.Loaded -> {
+                FeedLoaded(
+                    state = state,
+                    listState = listState,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    routeForLastRead = routeForLastRead
+                )
+            }
+            CardFeedState.Loading -> {
+                LoadingFeed()
+            }
+        }
+    }
+}
+
+@Composable
+private fun FeedLoaded(
+    state: CardFeedState.Loaded,
+    listState: LazyListState,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+    routeForLastRead: String
 ) {
     LazyColumn(
         modifier = remember { Modifier.fillMaxSize() },

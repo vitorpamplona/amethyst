@@ -16,13 +16,12 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 class BundledUpdate(
     val delay: Long,
-    val dispatcher: CoroutineDispatcher = Dispatchers.Default,
-    val onUpdate: () -> Unit
+    val dispatcher: CoroutineDispatcher = Dispatchers.Default
 ) {
     private var onlyOneInBlock = AtomicBoolean()
     private var invalidatesAgain = false
 
-    fun invalidate(ignoreIfDoing: Boolean = false) {
+    fun invalidate(ignoreIfDoing: Boolean = false, onUpdate: suspend () -> Unit) {
         if (onlyOneInBlock.getAndSet(true)) {
             if (!ignoreIfDoing) {
                 invalidatesAgain = true

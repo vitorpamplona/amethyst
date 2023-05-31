@@ -151,21 +151,14 @@ private fun RowScope.HasNewItemsIcon(
         scope.launch {
             if (!selected) {
                 navController.navigate(route.base) {
-                    navController.graph.startDestinationRoute?.let { start ->
-                        popUpTo(start)
-                        restoreState = true
-                    }
+                    popUpTo(Route.Home.route)
                     launchSingleTop = true
                     restoreState = true
                 }
             } else {
                 val newRoute = route.route.replace("{scrollToTop}", "true")
                 navController.navigate(newRoute) {
-                    navController.graph.startDestinationRoute?.let { start ->
-                        popUpTo(start) { inclusive = route.route == Route.Home.route }
-                        restoreState = true
-                    }
-
+                    popUpTo(Route.Home.route)
                     launchSingleTop = true
                     restoreState = true
                 }
@@ -209,27 +202,30 @@ private fun RowScope.BottomIcon(
 
 @Composable
 private fun NotifiableIcon(icon: Int, size: Dp, iconSize: Dp, selected: Boolean, hasNewItems: Boolean) {
-    Box(Modifier.size(size)) {
+    Box(remember { Modifier.size(size) }) {
         Icon(
             painter = painterResource(id = icon),
             contentDescription = null,
-            modifier = Modifier.size(iconSize),
+            modifier = remember { Modifier.size(iconSize) },
             tint = if (selected) MaterialTheme.colors.primary else Color.Unspecified
         )
 
         if (hasNewItems) {
             Box(
-                Modifier
-                    .width(10.dp)
-                    .height(10.dp)
-                    .align(Alignment.TopEnd)
-            ) {
-                Box(
-                    modifier = Modifier
+                remember {
+                    Modifier
                         .width(10.dp)
                         .height(10.dp)
-                        .clip(shape = CircleShape)
-                        .background(MaterialTheme.colors.primary),
+                        .align(Alignment.TopEnd)
+                }
+            ) {
+                Box(
+                    modifier = remember {
+                        Modifier
+                            .width(10.dp)
+                            .height(10.dp)
+                            .clip(shape = CircleShape)
+                    }.background(MaterialTheme.colors.primary),
                     contentAlignment = Alignment.TopEnd
                 ) {
                     Text(
@@ -237,9 +233,11 @@ private fun NotifiableIcon(icon: Int, size: Dp, iconSize: Dp, selected: Boolean,
                         color = Color.White,
                         textAlign = TextAlign.Center,
                         fontSize = 12.sp,
-                        modifier = Modifier
-                            .wrapContentHeight()
-                            .align(Alignment.TopEnd)
+                        modifier = remember {
+                            Modifier
+                                .wrapContentHeight()
+                                .align(Alignment.TopEnd)
+                        }
                     )
                 }
             }
