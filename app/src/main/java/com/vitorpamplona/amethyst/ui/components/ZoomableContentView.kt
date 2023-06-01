@@ -64,7 +64,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.AsyncImage
-import coil.compose.AsyncImagePainter
 import coil.imageLoader
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.R
@@ -242,19 +241,22 @@ private fun LocalImageView(
                 contentScale = contentScale,
                 modifier = myModifier,
                 onError = {
-                    if (imageLoadingState != false)
+                    if (imageLoadingState != false) {
                         imageLoadingState = false
+                    }
                 },
                 onSuccess = {
-                    if (imageLoadingState != true)
+                    if (imageLoadingState != true) {
                         imageLoadingState = true
+                    }
                 }
             )
         }
 
         if (imageLoadingState == true) {
-            if (content.isVerified != null)
+            if (content.isVerified != null) {
                 HashVerificationSymbol(content.isVerified, Modifier.align(Alignment.TopEnd))
+            }
         } else if (imageLoadingState == false || content.localFile == null || !content.localFile.exists()) {
             BlankNote()
         } else {
@@ -309,8 +311,9 @@ private fun UrlImageView(
             contentScale = contentScale,
             modifier = myModifier,
             onError = {
-                if (imageLoadingStatus != false)
+                if (imageLoadingStatus != false) {
                     imageLoadingStatus = false
+                }
             },
             onSuccess = {
                 if (verifiedHash == null) {
