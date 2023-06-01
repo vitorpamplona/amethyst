@@ -92,6 +92,7 @@ private fun FeedLoaded(
 
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
+
     val notificationCacheState = NotificationCache.live.observeAsState()
     val notificationCache = notificationCacheState.value ?: return
 
@@ -99,9 +100,9 @@ private fun FeedLoaded(
         if (markAsRead.value) {
             for (note in state.feed.value) {
                 note.event?.let {
-                    val channel = note.channel()
-                    val route = if (channel != null) {
-                        "Channel/${channel.idHex}"
+                    val channelHex = note.channelHex()
+                    val route = if (channelHex != null) {
+                        "Channel/$channelHex"
                     } else {
                         val replyAuthorBase =
                             (note.event as? PrivateDmEvent)

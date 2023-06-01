@@ -102,7 +102,7 @@ open class NewPostViewModel : ViewModel() {
         }
 
         canAddInvoice = account.userProfile().info?.lnAddress() != null
-        canUsePoll = originalNote?.event !is PrivateDmEvent && originalNote?.channel() == null
+        canUsePoll = originalNote?.event !is PrivateDmEvent && originalNote?.channelHex() == null
         contentToAddUrl = null
 
         wantsForwardZapTo = false
@@ -114,7 +114,7 @@ open class NewPostViewModel : ViewModel() {
     }
 
     fun sendPost() {
-        val tagger = NewMessageTagger(originalNote?.channel(), mentions, replyTos, message.text)
+        val tagger = NewMessageTagger(originalNote?.channelHex(), mentions, replyTos, message.text)
         tagger.run()
 
         val zapReceiver = if (wantsForwardZapTo) {
@@ -129,8 +129,8 @@ open class NewPostViewModel : ViewModel() {
 
         if (wantsPoll) {
             account?.sendPoll(tagger.message, tagger.replyTos, tagger.mentions, pollOptions, valueMaximum, valueMinimum, consensusThreshold, closedAt, zapReceiver, wantsToMarkAsSensitive)
-        } else if (originalNote?.channel() != null) {
-            account?.sendChannelMessage(tagger.message, tagger.channel!!.idHex, tagger.replyTos, tagger.mentions, zapReceiver, wantsToMarkAsSensitive)
+        } else if (originalNote?.channelHex() != null) {
+            account?.sendChannelMessage(tagger.message, tagger.channelHex!!, tagger.replyTos, tagger.mentions, zapReceiver, wantsToMarkAsSensitive)
         } else if (originalNote?.event is PrivateDmEvent) {
             account?.sendPrivateMessage(tagger.message, originalNote!!.author!!.pubkeyHex, originalNote!!, tagger.mentions, zapReceiver, wantsToMarkAsSensitive)
         } else {

@@ -23,14 +23,12 @@ class ContactListEvent(
     // This function is only used by the user logged in
     // But it is used all the time.
     val verifiedFollowKeySet: Set<HexKey> by lazy {
-        tags.filter { it[0] == "p" }.mapNotNull {
-            it.getOrNull(1)?.let { unverifiedHex: String ->
-                try {
-                    decodePublicKey(unverifiedHex).toHexKey()
-                } catch (e: Exception) {
-                    Log.w("ContactListEvent", "Can't parse tags as a follows: ${it[1]}", e)
-                    null
-                }
+        tags.filter { it.size > 1 && it[0] == "p" }.mapNotNull {
+            try {
+                decodePublicKey(it[1]).toHexKey()
+            } catch (e: Exception) {
+                Log.w("ContactListEvent", "Can't parse tags as a follows: ${it[1]}", e)
+                null
             }
         }.toSet()
     }

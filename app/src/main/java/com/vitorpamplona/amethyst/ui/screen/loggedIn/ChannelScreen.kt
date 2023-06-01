@@ -229,7 +229,7 @@ fun ChannelScreen(
                     trailingIcon = {
                         PostButton(
                             onPost = {
-                                val tagger = NewMessageTagger(channel, listOfNotNull(replyTo.value?.author), listOfNotNull(replyTo.value), channelScreenModel.message.text)
+                                val tagger = NewMessageTagger(channel.idHex, listOfNotNull(replyTo.value?.author), listOfNotNull(replyTo.value), channelScreenModel.message.text)
                                 tagger.run()
                                 account.sendChannelMessage(tagger.message, channel.idHex, tagger.replyTos, tagger.mentions, wantsToMarkAsSensitive = false)
                                 channelScreenModel.message = TextFieldValue("")

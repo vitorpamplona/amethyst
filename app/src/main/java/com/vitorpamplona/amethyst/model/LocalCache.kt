@@ -429,8 +429,10 @@ object LocalCache {
                     masterNote.removeReport(deleteNote)
                 }
 
-                val channel = deleteNote.channel()
-                channel?.removeNote(deleteNote)
+                deleteNote.channelHex()?.let {
+                    val channel = checkGetOrCreateChannel(it)
+                    channel?.removeNote(deleteNote)
+                }
 
                 if (deleteNote.event is PrivateDmEvent) {
                     val author = deleteNote.author

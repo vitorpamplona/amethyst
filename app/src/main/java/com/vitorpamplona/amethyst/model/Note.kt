@@ -73,10 +73,6 @@ open class Note(val idHex: String) {
             ?: (event as? ChannelCreateEvent)?.id
     }
 
-    fun channel(): Channel? {
-        return channelHex()?.let { LocalCache.checkGetOrCreateChannel(it) }
-    }
-
     open fun address(): ATag? = null
 
     open fun createdAt() = event?.createdAt()

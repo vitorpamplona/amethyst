@@ -29,36 +29,35 @@ fun ReplyInformation(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    var dupMentions by remember { mutableStateOf<List<User>?>(null) }
+    var sortedMentions by remember { mutableStateOf<List<User>?>(null) }
 
     LaunchedEffect(Unit) {
         launch(Dispatchers.IO) {
-            dupMentions = mentions.mapNotNull { LocalCache.checkGetOrCreateUser(it) }
+            sortedMentions = mentions.mapNotNull { LocalCache.checkGetOrCreateUser(it) }
+                ?.toSet()?.sortedBy { !accountViewModel.account.userProfile().isFollowingCached(it) }
         }
     }
 
-    if (dupMentions != null) {
-        ReplyInformation(replyTo, dupMentions, accountViewModel) {
+    if (sortedMentions != null) {
+        ReplyInformation(replyTo, sortedMentions) {
             nav("User/${it.pubkeyHex}")
         }
     }
 }
 
 @Composable
-fun ReplyInformation(
+private fun ReplyInformation(
     replyTo: List<Note>?,
-    dupMentions: List<User>?,
-    accountViewModel: AccountViewModel,
+    sortedMentions: List<User>?,
     prefix: String = "",
     onUserTagClick: (User) -> Unit
 ) {
-    val mentions = dupMentions?.toSet()?.sortedBy { !accountViewModel.account.userProfile().isFollowingCached(it) }
-    var expanded by remember { mutableStateOf((mentions?.size ?: 0) <= 2) }
+    var expanded by remember { mutableStateOf((sortedMentions?.size ?: 0) <= 2) }
 
     FlowRow() {
-        if (mentions != null && mentions.isNotEmpty()) {
+        if (sortedMentions != null && sortedMentions.isNotEmpty()) {
             if (replyTo != null && replyTo.isNotEmpty()) {
-                val repliesToDisplay = if (expanded) mentions else mentions.take(2)
+                val repliesToDisplay = if (expanded) sortedMentions else sortedMentions.take(2)
 
                 Text(
                     stringResource(R.string.replying_to),
@@ -98,7 +97,7 @@ fun ReplyInformation(
                             )
 
                             ClickableText(
-                                AnnotatedString("${mentions.size - 2}"),
+                                AnnotatedString("${sortedMentions.size - 2}"),
                                 style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(alpha = 0.52f), fontSize = 13.sp),
                                 onClick = { expanded = true }
                             )
@@ -120,7 +119,7 @@ fun ReplyInformation(
 fun ReplyInformationChannel(
     replyTo: List<Note>?,
     mentions: List<String>,
-    channel: Channel,
+    channelHex: String,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -136,17 +135,19 @@ fun ReplyInformationChannel(
     }
 
     if (sortedMentions != null) {
-        ReplyInformationChannel(
-            replyTo,
-            sortedMentions,
-            channel,
-            onUserTagClick = {
-                nav("User/${it.pubkeyHex}")
-            },
-            onChannelTagClick = {
-                nav("Channel/${it.idHex}")
-            }
-        )
+        LoadChannel(channelHex) { channel ->
+            ReplyInformationChannel(
+                replyTo,
+                sortedMentions,
+                channel,
+                onUserTagClick = {
+                    nav("User/${it.pubkeyHex}")
+                },
+                onChannelTagClick = {
+                    nav("Channel/${it.idHex}")
+                }
+            )
+        }
     }
 }
 

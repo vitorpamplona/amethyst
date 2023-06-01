@@ -111,33 +111,34 @@ private fun VerticalDivider(color: Color) =
 
 @Composable
 fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, accountViewModel: AccountViewModel) {
-    val context = LocalContext.current
-    val primaryLight = lightenColor(MaterialTheme.colors.primary, 0.1f)
-    val cardShape = RoundedCornerShape(5.dp)
-    val clipboardManager = LocalClipboardManager.current
-    val scope = rememberCoroutineScope()
     var showSelectTextDialog by remember(note) { mutableStateOf(false) }
     var showDeleteAlertDialog by remember(note) { mutableStateOf(false) }
     var showBlockAlertDialog by remember(note) { mutableStateOf(false) }
     var showReportDialog by remember(note) { mutableStateOf(false) }
 
-    val backgroundColor = if (MaterialTheme.colors.isLight) {
-        MaterialTheme.colors.primary
-    } else {
-        MaterialTheme.colors.primary.copy(alpha = 0.32f).compositeOver(MaterialTheme.colors.background)
-    }
-
-    val showToast = { stringResource: Int ->
-        scope.launch {
-            Toast.makeText(
-                context,
-                context.getString(stringResource),
-                Toast.LENGTH_SHORT
-            ).show()
-        }
-    }
-
     if (popupExpanded) {
+        val context = LocalContext.current
+        val primaryLight = lightenColor(MaterialTheme.colors.primary, 0.1f)
+        val cardShape = RoundedCornerShape(5.dp)
+        val clipboardManager = LocalClipboardManager.current
+        val scope = rememberCoroutineScope()
+
+        val backgroundColor = if (MaterialTheme.colors.isLight) {
+            MaterialTheme.colors.primary
+        } else {
+            MaterialTheme.colors.primary.copy(alpha = 0.32f).compositeOver(MaterialTheme.colors.background)
+        }
+
+        val showToast = { stringResource: Int ->
+            scope.launch {
+                Toast.makeText(
+                    context,
+                    context.getString(stringResource),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+
         val isOwnNote = accountViewModel.isLoggedUser(note.author)
         val isFollowingUser = !isOwnNote && accountViewModel.isFollowing(note.author)
 

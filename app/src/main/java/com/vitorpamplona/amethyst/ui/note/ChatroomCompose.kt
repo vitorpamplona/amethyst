@@ -18,6 +18,7 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -66,39 +67,59 @@ fun ChatroomCompose(
 
     val scope = rememberCoroutineScope()
 
+    val channelHex by remember(noteState) {
+        derivedStateOf {
+            noteState?.note?.channelHex()
+        }
+    }
+
     if (note?.event == null) {
         BlankNote(Modifier)
-    } else if (note.channel() != null) {
-        val authorState by note.author!!.live().metadata.observeAsState()
-        val author = authorState?.user
+    } else if (channelHex != null) {
+        LoadChannel(baseChannelHex = channelHex!!) { channel ->
+            val authorState by note.author!!.live().metadata.observeAsState()
+            val authorName = remember(authorState) {
+                authorState?.user?.toBestDisplayName()
+            }
 
-        val channelState by note.channel()!!.live.observeAsState()
-        val channel = channelState?.channel
+            val chanHex = remember { channel.idHex }
 
-        val noteEvent = note.event
+            val channelState by channel.live.observeAsState()
+            val channelPicture by remember(channelState) {
+                derivedStateOf {
+                    channel.profilePicture()
+                }
+            }
+            val channelName by remember(channelState) {
+                derivedStateOf {
+                    channel.info.name
+                }
+            }
 
-        val description = if (noteEvent is ChannelCreateEvent) {
-            stringResource(R.string.channel_created)
-        } else if (noteEvent is ChannelMetadataEvent) {
-            "${stringResource(R.string.channel_information_changed_to)} "
-        } else {
-            noteEvent?.content()
-        }
-        channel?.let { chan ->
+            val noteEvent = note.event
+
+            val description = if (noteEvent is ChannelCreateEvent) {
+                stringResource(R.string.channel_created)
+            } else if (noteEvent is ChannelMetadataEvent) {
+                "${stringResource(R.string.channel_information_changed_to)} "
+            } else {
+                noteEvent?.content()
+            }
+
             var hasNewMessages by remember { mutableStateOf<Boolean>(false) }
 
             LaunchedEffect(key1 = notificationCache, key2 = note) {
                 scope.launch(Dispatchers.IO) {
                     note.createdAt()?.let { timestamp ->
                         hasNewMessages =
-                            timestamp > notificationCache.cache.load("Channel/${chan.idHex}")
+                            timestamp > notificationCache.cache.load("Channel/$chanHex")
                     }
                 }
             }
 
             ChannelName(
-                channelIdHex = chan.idHex,
-                channelPicture = chan.profilePicture(),
+                channelIdHex = chanHex,
+                channelPicture = channelPicture,
                 channelTitle = { modifier ->
                     Text(
                         text = buildAnnotatedString {
@@ -107,7 +128,7 @@ fun ChatroomCompose(
                                     fontWeight = FontWeight.Bold
                                 )
                             ) {
-                                append(chan.info.name)
+                                append(channelName)
                             }
 
                             withStyle(
@@ -125,9 +146,9 @@ fun ChatroomCompose(
                     )
                 },
                 channelLastTime = note.createdAt(),
-                channelLastContent = "${author?.toBestDisplayName()}: " + description,
+                channelLastContent = "$authorName: $description",
                 hasNewMessages = hasNewMessages,
-                onClick = { nav("Channel/${chan.idHex}") }
+                onClick = { nav("Channel/$chanHex") }
             )
         }
     } else {

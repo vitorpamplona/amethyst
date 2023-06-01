@@ -14,6 +14,7 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -45,9 +46,9 @@ import com.vitorpamplona.amethyst.service.NIP30Parser
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.nip19.Nip19
+import com.vitorpamplona.amethyst.ui.note.LoadChannel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @Composable
 fun ClickableRoute(
@@ -77,40 +78,52 @@ private fun DisplayEvent(
     var noteBase by remember(nip19) { mutableStateOf<Note?>(null) }
 
     LaunchedEffect(key1 = nip19.hex) {
-        withContext(Dispatchers.IO) {
-            noteBase = LocalCache.checkGetOrCreateNote(nip19.hex)
+        if (noteBase == null) {
+            launch(Dispatchers.IO) {
+                noteBase = LocalCache.checkGetOrCreateNote(nip19.hex)
+            }
         }
     }
 
     noteBase?.let {
         val noteState by it.live().metadata.observeAsState()
         val note = remember(noteState) { noteState?.note } ?: return
-        val channel = remember(noteState) { note.channel() }
+        val channelHex = remember(noteState) { note.channelHex() }
+        val noteIdDisplayNote = remember(noteState) { "@${note.idDisplayNote()}" }
 
         if (note.event is ChannelCreateEvent) {
             CreateClickableText(
-                clickablePart = "@${note.idDisplayNote()}",
+                clickablePart = noteIdDisplayNote,
                 suffix = "${nip19.additionalChars} ",
                 route = "Channel/${nip19.hex}",
                 nav = nav
             )
         } else if (note.event is PrivateDmEvent) {
             CreateClickableText(
-                clickablePart = "@${note.idDisplayNote()}",
+                clickablePart = noteIdDisplayNote,
                 suffix = "${nip19.additionalChars} ",
                 route = "Room/${note.author?.pubkeyHex}",
                 nav = nav
             )
-        } else if (channel != null) {
-            CreateClickableText(
-                clickablePart = channel.toBestDisplayName(),
-                suffix = "${nip19.additionalChars} ",
-                route = "Channel/${channel.idHex}",
-                nav = nav
-            )
+        } else if (channelHex != null) {
+            LoadChannel(baseChannelHex = channelHex) { baseChannel ->
+                val channelState by baseChannel.live.observeAsState()
+                val channelDisplayName by remember(channelState) {
+                    derivedStateOf {
+                        channelState?.channel?.toBestDisplayName() ?: noteIdDisplayNote
+                    }
+                }
+
+                CreateClickableText(
+                    clickablePart = channelDisplayName,
+                    suffix = "${nip19.additionalChars} ",
+                    route = "Channel/${baseChannel.idHex}",
+                    nav = nav
+                )
+            }
         } else {
             CreateClickableText(
-                clickablePart = "@${note.idDisplayNote()}",
+                clickablePart = noteIdDisplayNote,
                 suffix = "${nip19.additionalChars} ",
                 route = "Event/${nip19.hex}",
                 nav = nav
@@ -141,32 +154,42 @@ private fun DisplayNote(
     noteBase?.let {
         val noteState by it.live().metadata.observeAsState()
         val note = remember(noteState) { noteState?.note } ?: return
-        val channel = note.channel()
+        val channelHex = note.channelHex()
+        val noteIdDisplayNote = remember(noteState) { "@${note.idDisplayNote()}" }
 
         if (note.event is ChannelCreateEvent) {
             CreateClickableText(
-                clickablePart = "@${note.idDisplayNote()}",
+                clickablePart = noteIdDisplayNote,
                 suffix = "${nip19.additionalChars} ",
                 route = "Channel/${nip19.hex}",
                 nav = nav
             )
         } else if (note.event is PrivateDmEvent) {
             CreateClickableText(
-                clickablePart = "@${note.idDisplayNote()}",
+                clickablePart = noteIdDisplayNote,
                 suffix = "${nip19.additionalChars} ",
                 route = "Room/${note.author?.pubkeyHex}",
                 nav = nav
             )
-        } else if (channel != null) {
-            CreateClickableText(
-                clickablePart = channel.toBestDisplayName(),
-                suffix = "${nip19.additionalChars} ",
-                route = "Channel/${note.channel()?.idHex}",
-                nav = nav
-            )
+        } else if (channelHex != null) {
+            LoadChannel(baseChannelHex = channelHex) { baseChannel ->
+                val channelState by baseChannel.live.observeAsState()
+                val channelDisplayName by remember(channelState) {
+                    derivedStateOf {
+                        channelState?.channel?.toBestDisplayName() ?: noteIdDisplayNote
+                    }
+                }
+
+                CreateClickableText(
+                    clickablePart = channelDisplayName,
+                    suffix = "${nip19.additionalChars} ",
+                    route = "Channel/${baseChannel.idHex}",
+                    nav = nav
+                )
+            }
         } else {
             CreateClickableText(
-                clickablePart = "@${note.idDisplayNote()}",
+                clickablePart = noteIdDisplayNote,
                 suffix = "${nip19.additionalChars} ",
                 route = "Note/${nip19.hex}",
                 nav = nav
@@ -434,7 +457,9 @@ fun ClickableInLineIconRenderer(wordsInOrder: List<Renderable>, style: SpanStyle
                     AsyncImage(
                         model = value.url,
                         contentDescription = null,
-                        modifier = Modifier.fillMaxSize().padding(1.dp)
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(1.dp)
                     )
                 }
             )
@@ -498,7 +523,9 @@ fun InLineIconRenderer(
                     AsyncImage(
                         model = value.url,
                         contentDescription = null,
-                        modifier = Modifier.fillMaxSize().padding(horizontal = 1.dp)
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 1.dp)
                     )
                 }
             )

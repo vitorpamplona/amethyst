@@ -138,6 +138,8 @@ import java.io.File
 import java.math.BigDecimal
 import java.net.URL
 import java.util.Locale
+import kotlin.time.ExperimentalTime
+import kotlin.time.measureTimedValue
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -154,10 +156,12 @@ fun NoteCompose(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
+    println("NormalNote START NoteCompose")
     val noteState by baseNote.live().metadata.observeAsState()
     val noteEvent = remember(noteState) { noteState?.note?.event }
 
     if (noteEvent == null) {
+        println("NormalNote Rendering Blank")
         var popupExpanded by remember { mutableStateOf(false) }
 
         BlankNote(
@@ -186,6 +190,7 @@ fun NoteCompose(
             nav
         )
     }
+    println("NormalNote END NoteCompose")
 }
 
 @Composable
@@ -251,31 +256,23 @@ fun LoadedNoteCompose(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = remember(accountState) { accountState?.account } ?: return
+    var state by remember {
+        mutableStateOf(
+            NoteComposeReportState(
+                isAcceptable = true,
+                canPreview = true,
+                relevantReports = emptySet()
+            )
+        )
+    }
 
-    val noteReportsState by note.live().reports.observeAsState()
-    val noteForReports = remember(noteReportsState) { noteReportsState?.note } ?: return
-
-    var showReportedNote by remember { mutableStateOf(false) }
-    var state by remember { mutableStateOf(NoteComposeReportState(true, true, emptySet())) }
-
-    LaunchedEffect(key1 = noteReportsState, key2 = accountState) {
-        withContext(Dispatchers.IO) {
-            account.userProfile().let { loggedIn ->
-                val newCanPreview = note.author?.pubkeyHex == loggedIn.pubkeyHex ||
-                    (note.author?.let { loggedIn.isFollowingCached(it) } ?: true) ||
-                    !(noteForReports.hasAnyReports())
-
-                val newIsAcceptable = account.isAcceptable(noteForReports)
-                val newRelevantReports = account.getRelevantReports(noteForReports)
-
-                if (newIsAcceptable != state.isAcceptable || newCanPreview != state.canPreview) {
-                    state = NoteComposeReportState(newIsAcceptable, newCanPreview, newRelevantReports)
-                }
-            }
+    WatchForReports(note, accountViewModel) { newIsAcceptable, newCanPreview, newRelevantReports ->
+        if (newIsAcceptable != state.isAcceptable || newCanPreview != state.canPreview) {
+            state = NoteComposeReportState(newIsAcceptable, newCanPreview, newRelevantReports)
         }
     }
+
+    var showReportedNote by remember { mutableStateOf(false) }
 
     val showHiddenNote by remember(state, showReportedNote) {
         derivedStateOf {
@@ -316,7 +313,35 @@ fun LoadedNoteCompose(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun WatchForReports(
+    note: Note,
+    accountViewModel: AccountViewModel,
+    onChange: (Boolean, Boolean, Set<Note>) -> Unit
+) {
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val account = remember(accountState) { accountState?.account } ?: return
+
+    val noteReportsState by note.live().reports.observeAsState()
+    val noteForReports = remember(noteReportsState) { noteReportsState?.note } ?: return
+
+    LaunchedEffect(key1 = noteReportsState, key2 = accountState) {
+        launch(Dispatchers.Default) {
+            account.userProfile().let { loggedIn ->
+                val newCanPreview = note.author?.pubkeyHex == loggedIn.pubkeyHex ||
+                    (note.author?.let { loggedIn.isFollowingCached(it) } ?: true) ||
+                    !(noteForReports.hasAnyReports())
+
+                val newIsAcceptable = account.isAcceptable(noteForReports)
+                val newRelevantReports = account.getRelevantReports(noteForReports)
+
+                onChange(newIsAcceptable, newCanPreview, newRelevantReports)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class, ExperimentalTime::class)
 @Composable
 fun NormalNote(
     baseNote: Note,
@@ -346,6 +371,8 @@ fun NormalNote(
     } else if (noteEvent is FileStorageHeaderEvent) {
         FileStorageHeaderDisplay(baseNote)
     } else {
+        println("NormalNote LoadedNoteCompose")
+
         var isNew by remember { mutableStateOf<Boolean>(false) }
 
         val scope = rememberCoroutineScope()
@@ -368,6 +395,8 @@ fun NormalNote(
             }
         }
 
+        println("NormalNote LoadedNoteCompose Launched Effect")
+
         val primaryColor = MaterialTheme.colors.newItemBackgroundColor
         val defaultBackgroundColor = MaterialTheme.colors.background
 
@@ -382,6 +411,8 @@ fun NormalNote(
                 parentBackgroundColor ?: defaultBackgroundColor
             }
         }
+
+        println("NormalNote LoadedNoteCompose Background Color")
 
         val columnModifier = remember(backgroundColor) {
             modifier
@@ -398,6 +429,8 @@ fun NormalNote(
                 .background(backgroundColor)
         }
 
+        println("NormalNote LoadedNoteCompose Modifier")
+
         Column(modifier = columnModifier) {
             Row(
                 modifier = remember {
@@ -409,9 +442,14 @@ fun NormalNote(
                         )
                 }
             ) {
-                if (!isBoostedNote && !isQuotedNote) {
-                    DrawAuthorImages(baseNote, accountViewModel, nav)
+                println("NormalNote Before FirstUserInfo")
+                val (value, elapsed) = measureTimedValue {
+                    if (!isBoostedNote && !isQuotedNote) {
+                        DrawAuthorImages(baseNote, accountViewModel, nav)
+                    }
                 }
+                println("AAA $elapsed DrawAuthorImages")
+                println("NormalNote FirstUserInfo")
 
                 Column(
                     modifier = remember {
@@ -433,6 +471,7 @@ fun NormalNote(
                             nav
                         )
                     }
+                    println("NormalNote SecondUserInfo")
 
                     Spacer(modifier = Modifier.height(2.dp))
 
@@ -521,8 +560,8 @@ fun routeFor(note: Note, loggedIn: User): String? {
     val noteEvent = note.event
 
     if (noteEvent is ChannelMessageEvent || noteEvent is ChannelCreateEvent || noteEvent is ChannelMetadataEvent) {
-        note.channel()?.let {
-            return "Channel/${it.idHex}"
+        note.channelHex()?.let {
+            return "Channel/$it"
         }
     } else if (noteEvent is PrivateDmEvent) {
         return "Room/${noteEvent.talkingWith(loggedIn.pubkeyHex)}"
@@ -546,6 +585,7 @@ private fun RenderTextEvent(
 
     if (eventContent != null) {
         val isAuthorTheLoggedUser = remember(note.event) { accountViewModel.isLoggedUser(note.author) }
+
         if (makeItShort && isAuthorTheLoggedUser) {
             Text(
                 text = eventContent,
@@ -1232,7 +1272,7 @@ private fun ReplyRow(
 
         Spacer(modifier = Modifier.height(5.dp))
     } else if (noteEvent is ChannelMessageEvent && (note.replyTo != null || noteEvent.hasAnyTaggedUser())) {
-        note.channel()?.let {
+        note.channelHex()?.let {
             ReplyInformationChannel(note.replyTo, noteEvent.mentions(), it, accountViewModel, nav)
         }
 
@@ -1341,23 +1381,36 @@ fun TimeAgo(time: Long) {
     )
 }
 
+@OptIn(ExperimentalTime::class)
 @Composable
 private fun DrawAuthorImages(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val baseChannel = remember { baseNote.channel() }
+    val baseChannelHex = remember { baseNote.channelHex() }
     val modifier = remember { Modifier.width(55.dp) }
 
     Column(modifier) {
         // Draws the boosted picture outside the boosted card.
         Box(modifier = modifier, contentAlignment = Alignment.BottomEnd) {
-            NoteAuthorPicture(baseNote, nav, accountViewModel, 55.dp)
-
-            if (baseNote.event is RepostEvent) {
-                RepostNoteAuthorPicture(baseNote, accountViewModel, nav)
+            val (value1, elapsed1) = measureTimedValue {
+                NoteAuthorPicture(baseNote, nav, accountViewModel, 55.dp)
             }
 
-            if (baseNote.event is ChannelMessageEvent && baseChannel != null) {
-                ChannelNotePicture(baseChannel)
+            println("AAA $elapsed1 NoteAuthorPicture")
+
+            val (value2, elapsed2) = measureTimedValue {
+                if (baseNote.event is RepostEvent) {
+                    RepostNoteAuthorPicture(baseNote, accountViewModel, nav)
+                }
             }
+            println("AAA $elapsed2 RepostNoteAuthorPicture")
+
+            val (value3, elapsed3) = measureTimedValue {
+                if (baseNote.event is ChannelMessageEvent && baseChannelHex != null) {
+                    LoadChannel(baseChannelHex) { channel ->
+                        ChannelNotePicture(channel)
+                    }
+                }
+            }
+            println("AAA $elapsed3 ChannelNotePicture")
         }
 
         if (baseNote.event is RepostEvent) {
@@ -1374,9 +1427,28 @@ private fun DrawAuthorImages(baseNote: Note, accountViewModel: AccountViewModel,
 }
 
 @Composable
+fun LoadChannel(baseChannelHex: String, content: @Composable (Channel) -> Unit) {
+    var channel by remember(baseChannelHex) {
+        mutableStateOf<Channel?>(null)
+    }
+
+    LaunchedEffect(key1 = baseChannelHex) {
+        if (channel == null) {
+            launch(Dispatchers.IO) {
+                channel = LocalCache.checkGetOrCreateChannel(baseChannelHex)
+            }
+        }
+    }
+
+    channel?.let {
+        content(it)
+    }
+}
+
+@Composable
 private fun ChannelNotePicture(baseChannel: Channel) {
     val channelState by baseChannel.live.observeAsState()
-    val channel = channelState?.channel
+    val channel = remember(channelState) { channelState?.channel } ?: return
 
     val modifier = remember {
         Modifier
@@ -1391,25 +1463,23 @@ private fun ChannelNotePicture(baseChannel: Channel) {
             .height(30.dp)
     }
 
-    if (channel != null) {
-        val model = remember(channelState) {
-            ResizeImage(channel.profilePicture(), 30.dp)
-        }
+    val model = remember(channelState) {
+        ResizeImage(channel.profilePicture(), 30.dp)
+    }
 
-        Box(boxModifier) {
-            RobohashAsyncImageProxy(
-                robot = channel.idHex,
-                model = model,
-                contentDescription = stringResource(R.string.group_picture),
-                modifier = modifier
-                    .background(MaterialTheme.colors.background)
-                    .border(
-                        2.dp,
-                        MaterialTheme.colors.background,
-                        CircleShape
-                    )
-            )
-        }
+    Box(boxModifier) {
+        RobohashAsyncImageProxy(
+            robot = channel.idHex,
+            model = model,
+            contentDescription = stringResource(R.string.group_picture),
+            modifier = modifier
+                .background(MaterialTheme.colors.background)
+                .border(
+                    2.dp,
+                    MaterialTheme.colors.background,
+                    CircleShape
+                )
+        )
     }
 }
 
@@ -2153,8 +2223,10 @@ fun NoteAuthorPicture(
     onClick: ((User) -> Unit)? = null
 ) {
     val noteState by baseNote.live().metadata.observeAsState()
-    val author = remember(noteState) {
-        noteState?.note?.author
+    val author by remember(noteState) {
+        derivedStateOf {
+            noteState?.note?.author
+        }
     }
 
     val boxModifier = remember {
@@ -2179,7 +2251,7 @@ fun NoteAuthorPicture(
                 modifier = nullModifier.background(MaterialTheme.colors.background)
             )
         } else {
-            UserPicture(author, size, accountViewModel, modifier, onClick)
+            UserPicture(author!!, size, accountViewModel, modifier, onClick)
         }
     }
 }
@@ -2253,15 +2325,12 @@ fun UserPicture(
     accountViewModel: AccountViewModel
 ) {
     val myBoxModifier = remember {
-        Modifier
-            .width(size)
-            .height(size)
+        Modifier.size(size)
     }
 
     val myImageModifier = remember {
         modifier
-            .width(size)
-            .height(size)
+            .size(size)
             .clip(shape = CircleShape)
     }
 
@@ -2283,10 +2352,17 @@ fun UserPicture(
 private fun ObserveAndDisplayFollowingMark(userHex: String, iconSize: Dp, accountViewModel: AccountViewModel) {
     val accountFollowsState by accountViewModel.account.userProfile().live().follows.observeAsState()
 
-    val showFollowingMark by remember(accountFollowsState) {
-        derivedStateOf {
-            accountFollowsState?.user?.isFollowingCached(userHex) == true ||
-                (userHex == accountViewModel.account.userProfile().pubkeyHex)
+    var showFollowingMark by remember { mutableStateOf(false) }
+
+    LaunchedEffect(key1 = accountFollowsState) {
+        launch(Dispatchers.Default) {
+            val newShowFollowingMark =
+                accountFollowsState?.user?.isFollowingCached(userHex) == true ||
+                    (userHex == accountViewModel.account.userProfile().pubkeyHex)
+
+            if (newShowFollowingMark != showFollowingMark) {
+                showFollowingMark = newShowFollowingMark
+            }
         }
     }
 

@@ -21,7 +21,7 @@ import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 
 @Composable
-fun LoadRedirectScreen(eventId: String?, accountViewModel: AccountViewModel, navController: NavController) {
+fun LoadRedirectScreen(eventId: String?, navController: NavController) {
     if (eventId == null) return
 
     val baseNote = LocalCache.checkGetOrCreateNote(eventId) ?: return
@@ -31,7 +31,7 @@ fun LoadRedirectScreen(eventId: String?, accountViewModel: AccountViewModel, nav
 
     LaunchedEffect(key1 = noteState) {
         val event = note?.event
-        val channel = note?.channel()
+        val channelHex = note?.channelHex()
 
         if (event == null) {
             // stay here, loading
@@ -41,9 +41,9 @@ fun LoadRedirectScreen(eventId: String?, accountViewModel: AccountViewModel, nav
         } else if (event is PrivateDmEvent) {
             navController.backQueue.removeLast()
             navController.navigate("Room/${note.author?.pubkeyHex}")
-        } else if (channel != null) {
+        } else if (channelHex != null) {
             navController.backQueue.removeLast()
-            navController.navigate("Channel/${channel.idHex}")
+            navController.navigate("Channel/$channelHex")
         } else {
             navController.backQueue.removeLast()
             navController.navigate("Note/${note.idHex}")

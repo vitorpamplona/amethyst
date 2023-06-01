@@ -16,7 +16,12 @@ class ChannelMessageEvent(
     sig: HexKey
 ) : BaseTextNoteEvent(id, pubKey, createdAt, kind, tags, content, sig) {
 
-    fun channel() = tags.firstOrNull { it[0] == "e" && it.size > 3 && it[3] == "root" }?.getOrNull(1) ?: tags.firstOrNull { it.firstOrNull() == "e" }?.getOrNull(1)
+    fun channel() = tags.firstOrNull {
+        it.size > 3 && it[0] == "e" && it[3] == "root"
+    }?.get(1) ?: tags.firstOrNull {
+        it.size > 1 && it[0] == "e"
+    }?.get(1)
+
     override fun replyTos() = tags.filter { it.firstOrNull() == "e" && it.getOrNull(1) != channel() }.mapNotNull { it.getOrNull(1) }
 
     companion object {

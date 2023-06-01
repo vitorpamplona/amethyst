@@ -228,7 +228,6 @@ fun AppNavigation(
             composable(route.route, route.arguments, content = {
                 LoadRedirectScreen(
                     eventId = it.arguments?.getString("id"),
-                    accountViewModel = accountViewModel,
                     navController = navController
                 )
             })

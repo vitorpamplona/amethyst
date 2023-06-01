@@ -1,13 +1,12 @@
 package com.vitorpamplona.amethyst.ui.actions
 
-import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.parseDirtyWordForKey
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 
-class NewMessageTagger(var channel: Channel?, var mentions: List<User>?, var replyTos: List<Note>?, var message: String) {
+class NewMessageTagger(var channelHex: String?, var mentions: List<User>?, var replyTos: List<Note>?, var message: String) {
 
     fun addUserToMentions(user: User) {
         mentions = if (mentions?.contains(user) == true) mentions else mentions?.plus(user) ?: listOf(user)
@@ -20,12 +19,12 @@ class NewMessageTagger(var channel: Channel?, var mentions: List<User>?, var rep
 
     fun tagIndex(user: User): Int {
         // Postr Events assembles replies before mentions in the tag order
-        return (if (channel != null) 1 else 0) + (replyTos?.size ?: 0) + (mentions?.indexOf(user) ?: 0)
+        return (if (channelHex != null) 1 else 0) + (replyTos?.size ?: 0) + (mentions?.indexOf(user) ?: 0)
     }
 
     fun tagIndex(note: Note): Int {
         // Postr Events assembles replies before mentions in the tag order
-        return (if (channel != null) 1 else 0) + (replyTos?.indexOf(note) ?: 0)
+        return (if (channelHex != null) 1 else 0) + (replyTos?.indexOf(note) ?: 0)
     }
 
     fun run() {
