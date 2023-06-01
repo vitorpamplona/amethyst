@@ -201,7 +201,7 @@ private fun RenderWord(
     nav: (String) -> Unit,
     tags: List<List<String>>?
 ) {
-    val wordSpace = remember {
+    val wordSpace = remember(word) {
         "$word "
     }
 

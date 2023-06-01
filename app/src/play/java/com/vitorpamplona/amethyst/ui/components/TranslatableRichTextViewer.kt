@@ -68,7 +68,7 @@ fun TranslatableRichTextViewer(
         }
     }
 
-    val toBeViewed by remember {
+    val toBeViewed by remember(translatedTextState) {
         derivedStateOf {
             if (showOriginal) content else translatedTextState.result ?: content
         }
