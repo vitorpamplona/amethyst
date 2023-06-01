@@ -110,8 +110,6 @@ private fun RowScope.HasNewItemsIcon(
     accountViewModel: AccountViewModel,
     navController: NavHostController
 ) {
-    val scope = rememberCoroutineScope()
-
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = remember(accountState) { accountState?.account } ?: return
 
@@ -121,7 +119,7 @@ private fun RowScope.HasNewItemsIcon(
     var hasNewItems by remember { mutableStateOf<Boolean>(false) }
 
     LaunchedEffect(key1 = notifState, key2 = accountState) {
-        scope.launch(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             val newHasNewItems = route.hasNewItems(account, notif, emptySet())
             if (newHasNewItems != hasNewItems) {
                 hasNewItems = newHasNewItems
@@ -129,8 +127,8 @@ private fun RowScope.HasNewItemsIcon(
         }
     }
 
-    LaunchedEffect(accountState) {
-        scope.launch(Dispatchers.IO) {
+    LaunchedEffect(Unit) {
+        launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect {
                 val newHasNewItems = route.hasNewItems(account, notif, it)
                 if (newHasNewItems != hasNewItems) {
@@ -139,6 +137,8 @@ private fun RowScope.HasNewItemsIcon(
             }
         }
     }
+
+    val scope = rememberCoroutineScope()
 
     BottomIcon(
         icon = route.icon,

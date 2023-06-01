@@ -117,8 +117,6 @@ fun isNIP94Server(selectedServer: ServersAvailable?): Boolean {
 
 @Composable
 fun ImageVideoPost(postViewModel: NewMediaModel, acc: Account) {
-    val scope = rememberCoroutineScope()
-
     val fileServers = listOf(
         // Triple(ServersAvailable.IMGUR_NIP_94, stringResource(id = R.string.upload_server_imgur_nip94), stringResource(id = R.string.upload_server_imgur_nip94_explainer)),
         Triple(ServersAvailable.NOSTRIMG_NIP_94, stringResource(id = R.string.upload_server_nostrimg_nip94), stringResource(id = R.string.upload_server_nostrimg_nip94_explainer)),
@@ -152,7 +150,7 @@ fun ImageVideoPost(postViewModel: NewMediaModel, acc: Account) {
             var bitmap by remember { mutableStateOf<Bitmap?>(null) }
 
             LaunchedEffect(key1 = postViewModel.galleryUri) {
-                scope.launch(Dispatchers.IO) {
+                launch(Dispatchers.IO) {
                     postViewModel.galleryUri?.let {
                         try {
                             bitmap = resolver.loadThumbnail(it, Size(1200, 1000), null)

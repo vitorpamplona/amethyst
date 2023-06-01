@@ -727,7 +727,6 @@ fun ImageVideoDescription(
 ) {
     val resolver = LocalContext.current.contentResolver
     val mediaType = resolver.getType(uri) ?: ""
-    val scope = rememberCoroutineScope()
 
     val isImage = mediaType.startsWith("image")
     val isVideo = mediaType.startsWith("video")
@@ -830,7 +829,7 @@ fun ImageVideoDescription(
                     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
 
                     LaunchedEffect(key1 = uri) {
-                        scope.launch(Dispatchers.IO) {
+                        launch(Dispatchers.IO) {
                             try {
                                 bitmap = resolver.loadThumbnail(uri, Size(1200, 1000), null)
                             } catch (e: Exception) {

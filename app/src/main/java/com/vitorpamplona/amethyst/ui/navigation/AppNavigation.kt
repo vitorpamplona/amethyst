@@ -51,7 +51,6 @@ fun AppNavigation(
     nextPage: String? = null
 ) {
     var actionableNextPage by remember { mutableStateOf<String?>(nextPage) }
-    val scope = rememberCoroutineScope()
 
     val nav = remember {
         { route: String ->
@@ -68,7 +67,7 @@ fun AppNavigation(
 
                 LaunchedEffect(key1 = it) {
                     if (scrollToTop) {
-                        scope.launch {
+                        launch {
                             videoFeedViewModel.sendToTop()
                             it.arguments?.remove("scrollToTop")
                         }
@@ -89,7 +88,7 @@ fun AppNavigation(
 
                 LaunchedEffect(key1 = it) {
                     if (scrollToTop) {
-                        scope.launch {
+                        launch {
                             searchFeedViewModel.sendToTop()
                             it.arguments?.remove("scrollToTop")
                         }
@@ -111,7 +110,7 @@ fun AppNavigation(
 
                 LaunchedEffect(key1 = it) {
                     if (scrollToTop) {
-                        scope.launch {
+                        launch {
                             homeFeedViewModel.sendToTop()
                             repliesFeedViewModel.sendToTop()
                             it.arguments?.remove("scrollToTop")
@@ -129,7 +128,7 @@ fun AppNavigation(
 
                 if (nip47 != null) {
                     LaunchedEffect(key1 = Unit) {
-                        scope.launch {
+                        launch {
                             delay(1000)
                             it.arguments?.remove("nip47")
                         }
@@ -144,7 +143,7 @@ fun AppNavigation(
 
                 LaunchedEffect(key1 = it) {
                     if (scrollToTop) {
-                        scope.launch {
+                        launch {
                             notifFeedViewModel.clear()
                             notifFeedViewModel.sendToTop()
                             it.arguments?.remove("scrollToTop")

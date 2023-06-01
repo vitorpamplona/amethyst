@@ -1785,18 +1785,20 @@ fun FileHeaderDisplay(note: Note) {
     var content by remember { mutableStateOf<ZoomableContent?>(null) }
 
     LaunchedEffect(key1 = event.id) {
-        withContext(Dispatchers.IO) {
-            val blurHash = event.blurhash()
-            val hash = event.hash()
-            val dimensions = event.dimensions()
-            val description = event.content
-            val removedParamsFromUrl = fullUrl.split("?")[0].lowercase()
-            val isImage = imageExtensions.any { removedParamsFromUrl.endsWith(it) }
-            val uri = "nostr:" + note.toNEvent()
-            content = if (isImage) {
-                ZoomableUrlImage(fullUrl, description, hash, blurHash, dimensions, uri)
-            } else {
-                ZoomableUrlVideo(fullUrl, description, hash, uri)
+        if (content == null) {
+            launch(Dispatchers.IO) {
+                val blurHash = event.blurhash()
+                val hash = event.hash()
+                val dimensions = event.dimensions()
+                val description = event.content
+                val removedParamsFromUrl = fullUrl.split("?")[0].lowercase()
+                val isImage = imageExtensions.any { removedParamsFromUrl.endsWith(it) }
+                val uri = "nostr:" + note.toNEvent()
+                content = if (isImage) {
+                    ZoomableUrlImage(fullUrl, description, hash, blurHash, dimensions, uri)
+                } else {
+                    ZoomableUrlVideo(fullUrl, description, hash, uri)
+                }
             }
         }
     }
@@ -1814,7 +1816,7 @@ fun FileStorageHeaderDisplay(baseNote: Note) {
     var fileNote by remember { mutableStateOf<Note?>(null) }
 
     LaunchedEffect(key1 = eventHeader.id) {
-        withContext(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             fileNote = eventHeader.dataEventId()?.let { LocalCache.checkGetOrCreateNote(it) }
         }
     }
@@ -1826,33 +1828,35 @@ fun FileStorageHeaderDisplay(baseNote: Note) {
         var content by remember { mutableStateOf<ZoomableContent?>(null) }
 
         LaunchedEffect(key1 = eventHeader.id, key2 = noteState, key3 = note?.event) {
-            withContext(Dispatchers.IO) {
-                val uri = "nostr:" + baseNote.toNEvent()
-                val localDir = note?.idHex?.let { File(File(appContext.externalCacheDir, "NIP95"), it) }
-                val blurHash = eventHeader.blurhash()
-                val dimensions = eventHeader.dimensions()
-                val description = eventHeader.content
-                val mimeType = eventHeader.mimeType()
+            if (content == null) {
+                launch(Dispatchers.IO) {
+                    val uri = "nostr:" + baseNote.toNEvent()
+                    val localDir = note?.idHex?.let { File(File(appContext.externalCacheDir, "NIP95"), it) }
+                    val blurHash = eventHeader.blurhash()
+                    val dimensions = eventHeader.dimensions()
+                    val description = eventHeader.content
+                    val mimeType = eventHeader.mimeType()
 
-                content = if (mimeType?.startsWith("image") == true) {
-                    ZoomableLocalImage(
-                        localFile = localDir,
-                        mimeType = mimeType,
-                        description = description,
-                        blurhash = blurHash,
-                        dim = dimensions,
-                        isVerified = true,
-                        uri = uri
-                    )
-                } else {
-                    ZoomableLocalVideo(
-                        localFile = localDir,
-                        mimeType = mimeType,
-                        description = description,
-                        dim = dimensions,
-                        isVerified = true,
-                        uri = uri
-                    )
+                    content = if (mimeType?.startsWith("image") == true) {
+                        ZoomableLocalImage(
+                            localFile = localDir,
+                            mimeType = mimeType,
+                            description = description,
+                            blurhash = blurHash,
+                            dim = dimensions,
+                            isVerified = true,
+                            uri = uri
+                        )
+                    } else {
+                        ZoomableLocalVideo(
+                            localFile = localDir,
+                            mimeType = mimeType,
+                            description = description,
+                            dim = dimensions,
+                            isVerified = true,
+                            uri = uri
+                        )
+                    }
                 }
             }
         }

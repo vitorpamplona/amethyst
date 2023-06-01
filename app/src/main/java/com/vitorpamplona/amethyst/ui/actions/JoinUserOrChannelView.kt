@@ -145,7 +145,7 @@ private fun RenderSeach(
     }
 
     LaunchedEffect(Unit) {
-        scope.launch(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect {
                 if (searchBarViewModel.isSearching()) {
                     searchBarViewModel.invalidateData()

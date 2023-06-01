@@ -214,12 +214,12 @@ private fun LocalImageView(
     content: ZoomableLocalImage,
     mainImageModifier: Modifier
 ) {
-    // store the dialog open or close state
-    var imageState by remember {
-        mutableStateOf<AsyncImagePainter.State?>(null)
-    }
-
     BoxWithConstraints(contentAlignment = Alignment.Center) {
+        // store the dialog open or close state
+        var imageLoadingState by remember {
+            mutableStateOf<Boolean?>(null)
+        }
+
         val myModifier = remember {
             mainImageModifier
                 .widthIn(max = maxWidth)
@@ -241,17 +241,22 @@ private fun LocalImageView(
                 contentDescription = content.description,
                 contentScale = contentScale,
                 modifier = myModifier,
-                onLoading = {
-                    imageState = it
+                onError = {
+                    if (imageLoadingState != false)
+                        imageLoadingState = false
                 },
                 onSuccess = {
-                    imageState = it
+                    if (imageLoadingState != true)
+                        imageLoadingState = true
                 }
             )
         }
 
-        if (imageState is AsyncImagePainter.State.Success) {
-            HashVerificationSymbol(content.isVerified, Modifier.align(Alignment.TopEnd))
+        if (imageLoadingState == true) {
+            if (content.isVerified != null)
+                HashVerificationSymbol(content.isVerified, Modifier.align(Alignment.TopEnd))
+        } else if (imageLoadingState == false || content.localFile == null || !content.localFile.exists()) {
+            BlankNote()
         } else {
             if (content.blurhash != null) {
                 DisplayBlurHash(content.blurhash, content.description, contentScale, myModifier)
@@ -261,10 +266,6 @@ private fun LocalImageView(
                 }
             }
         }
-
-        if (imageState is AsyncImagePainter.State.Error || content.localFile == null || !content.localFile.exists()) {
-            BlankNote()
-        }
     }
 }
 
@@ -273,25 +274,18 @@ private fun UrlImageView(
     content: ZoomableUrlImage,
     mainImageModifier: Modifier
 ) {
+    val scope = rememberCoroutineScope()
+
     BoxWithConstraints(contentAlignment = Alignment.Center) {
-        val scope = rememberCoroutineScope()
         val context = LocalContext.current
 
         // store the dialog open or close state
-        var imageState by remember {
-            mutableStateOf<AsyncImagePainter.State?>(null)
+        var imageLoadingStatus by remember {
+            mutableStateOf<Boolean?>(null)
         }
 
         var verifiedHash by remember {
             mutableStateOf<Boolean?>(null)
-        }
-
-        LaunchedEffect(key1 = content.url, key2 = imageState) {
-            if (imageState is AsyncImagePainter.State.Success) {
-                scope.launch(Dispatchers.IO) {
-                    verifiedHash = verifyHash(content, context)
-                }
-            }
         }
 
         val myModifier = remember {
@@ -314,16 +308,28 @@ private fun UrlImageView(
             contentDescription = content.description,
             contentScale = contentScale,
             modifier = myModifier,
-            onLoading = {
-                imageState = it
+            onError = {
+                if (imageLoadingStatus != false)
+                    imageLoadingStatus = false
             },
             onSuccess = {
-                imageState = it
+                if (verifiedHash == null) {
+                    scope.launch(Dispatchers.IO) {
+                        verifiedHash = verifyHash(content, context)
+                    }
+                }
+                if (imageLoadingStatus != true) {
+                    imageLoadingStatus = true
+                }
             }
         )
 
-        if (imageState is AsyncImagePainter.State.Success) {
-            HashVerificationSymbol(verifiedHash, Modifier.align(Alignment.TopEnd))
+        if (imageLoadingStatus == true) {
+            verifiedHash?.let {
+                HashVerificationSymbol(it, Modifier.align(Alignment.TopEnd))
+            }
+        } else if (imageLoadingStatus == false) {
+            ClickableUrl(urlText = "${content.url} ", url = content.url)
         } else {
             if (content.blurhash != null) {
                 DisplayBlurHash(content.blurhash, content.description, contentScale, myModifier)
@@ -332,10 +338,6 @@ private fun UrlImageView(
                     DisplayUrlWithLoadingSymbol(content)
                 }
             }
-        }
-
-        if (imageState is AsyncImagePainter.State.Error) {
-            ClickableUrl(urlText = "${content.url} ", url = content.url)
         }
     }
 }
@@ -420,10 +422,12 @@ private fun DisplayBlurHash(
 
     val context = LocalContext.current
     AsyncImage(
-        model = BlurHashRequester.imageRequest(
-            context,
-            blurhash
-        ),
+        model = remember {
+            BlurHashRequester.imageRequest(
+                context,
+                blurhash
+            )
+        },
         contentDescription = description,
         contentScale = contentScale,
         modifier = modifier
@@ -522,9 +526,7 @@ private fun verifyHash(content: ZoomableUrlContent, context: Context): Boolean? 
 }
 
 @Composable
-private fun HashVerificationSymbol(verifiedHash: Boolean?, modifier: Modifier) {
-    if (verifiedHash == null) return
-
+private fun HashVerificationSymbol(verifiedHash: Boolean, modifier: Modifier) {
     val localContext = LocalContext.current
     val scope = rememberCoroutineScope()
 

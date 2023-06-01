@@ -88,10 +88,9 @@ fun LoadThumbAndThenVideoView(videoUri: String, description: String? = null, thu
     var loadingFinished by remember { mutableStateOf<Pair<Boolean, Drawable?>>(Pair(false, null)) }
 
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        scope.launch(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             try {
                 val request = ImageRequest.Builder(context).data(thumbUri).build()
                 val myCover = context.imageLoader.execute(request).drawable
