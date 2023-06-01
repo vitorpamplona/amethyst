@@ -178,13 +178,17 @@ private fun RenderWord(
     nav: (String) -> Unit,
     tags: List<List<String>>?
 ) {
+    val wordSpace = remember {
+        "$word "
+    }
+
     if (canPreview) {
         // Explicit URL
         val img = state.imagesForPager[word]
         if (img != null) {
             ZoomableContentView(img, state.imageList)
         } else if (state.urlSet.contains(word)) {
-            UrlPreview(word, "$word ")
+            UrlPreview(word, wordSpace)
         } else if (state.customEmoji.any { word.contains(it.key) }) {
             RenderCustomEmoji(word, state.customEmoji)
         } else if (word.startsWith("lnbc", true)) {
@@ -217,7 +221,7 @@ private fun RenderWord(
                 HashTag(word, nav)
             } else {
                 Text(
-                    text = "$word ",
+                    text = wordSpace,
                     style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
                 )
             }
@@ -232,26 +236,26 @@ private fun RenderWord(
                 Text("$additionalChars ")
             } else {
                 Text(
-                    text = "$word ",
+                    text = wordSpace,
                     style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
                 )
             }
         } else {
             Text(
-                text = "$word ",
+                text = wordSpace,
                 style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
             )
         }
     } else {
         if (state.urlSet.contains(word)) {
-            ClickableUrl("$word ", word)
+            ClickableUrl(wordSpace, word)
         } else if (word.startsWith("lnurl", true)) {
             val lnWithdrawal = LnWithdrawalUtil.findWithdrawal(word)
             if (lnWithdrawal != null) {
                 ClickableWithdrawal(withdrawalString = lnWithdrawal)
             } else {
                 Text(
-                    text = "$word ",
+                    text = wordSpace,
                     style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
                 )
             }
@@ -283,7 +287,7 @@ private fun RenderWord(
                 HashTag(word, nav)
             } else {
                 Text(
-                    text = "$word ",
+                    text = wordSpace,
                     style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
                 )
             }
@@ -298,13 +302,13 @@ private fun RenderWord(
                 Text("$additionalChars ")
             } else {
                 Text(
-                    text = "$word ",
+                    text = wordSpace,
                     style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
                 )
             }
         } else {
             Text(
-                text = "$word ",
+                text = wordSpace,
                 style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
             )
         }
