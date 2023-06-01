@@ -55,6 +55,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
+import androidx.compose.ui.Alignment.Companion.TopEnd
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -82,7 +83,6 @@ import coil.request.SuccessResult
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -286,7 +286,7 @@ fun LoadedNoteCompose(
     if (showHiddenNote) {
         HiddenNote(
             state.relevantReports,
-            accountViewModel.userProfile(),
+            accountViewModel,
             modifier,
             isBoostedNote,
             nav,
@@ -332,17 +332,13 @@ fun NormalNote(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = remember(accountState) { accountState?.account } ?: return
-    val loggedIn = remember(accountState) { accountState?.account?.userProfile() } ?: return
-
     val noteEvent = remember { baseNote.event }
     val channelHex = remember { baseNote.channelHex() }
 
     var popupExpanded by remember { mutableStateOf(false) }
 
     if ((noteEvent is ChannelCreateEvent || noteEvent is ChannelMetadataEvent) && channelHex != null) {
-        ChannelHeader(channelHex = channelHex, account = account, nav = nav)
+        ChannelHeader(channelHex = channelHex, accountViewModel = accountViewModel, nav = nav)
     } else if (noteEvent is BadgeDefinitionEvent) {
         BadgeDisplay(baseNote = baseNote)
     } else if (noteEvent is FileHeaderEvent) {
@@ -392,7 +388,7 @@ fun NormalNote(
                 .combinedClickable(
                     onClick = {
                         scope.launch {
-                            routeFor(baseNote, loggedIn)?.let {
+                            routeFor(baseNote, accountViewModel.userProfile())?.let {
                                 nav(it)
                             }
                         }
@@ -414,7 +410,7 @@ fun NormalNote(
                 }
             ) {
                 if (!isBoostedNote && !isQuotedNote) {
-                    DrawAuthorImages(baseNote, loggedIn, nav)
+                    DrawAuthorImages(baseNote, accountViewModel, nav)
                 }
 
                 Column(
@@ -426,7 +422,6 @@ fun NormalNote(
                     FirstUserInfoRow(
                         baseNote = baseNote,
                         showAuthorPicture = isQuotedNote,
-                        account = account,
                         accountViewModel = accountViewModel,
                         nav = nav
                     )
@@ -434,7 +429,7 @@ fun NormalNote(
                     if (noteEvent !is RepostEvent && !makeItShort && !isQuotedNote) {
                         SecondUserInfoRow(
                             baseNote,
-                            account,
+                            accountViewModel,
                             nav
                         )
                     }
@@ -446,7 +441,6 @@ fun NormalNote(
                             baseNote,
                             unPackReply,
                             backgroundColor,
-                            account,
                             accountViewModel,
                             nav
                         )
@@ -466,7 +460,7 @@ fun NormalNote(
                         }
 
                         is LongTextNoteEvent -> {
-                            RenderLongFormContent(baseNote, loggedIn, accountViewModel, nav)
+                            RenderLongFormContent(baseNote, accountViewModel, nav)
                         }
 
                         is BadgeAwardEvent -> {
@@ -478,7 +472,7 @@ fun NormalNote(
                         }
 
                         is AudioTrackEvent -> {
-                            RenderAudioTrack(baseNote, loggedIn, accountViewModel, nav)
+                            RenderAudioTrack(baseNote, accountViewModel, nav)
                         }
 
                         is PinListEvent -> {
@@ -812,7 +806,7 @@ fun DisplayPeopleList(
     )
 
     LaunchedEffect(Unit) {
-        withContext(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             members = noteEvent.bookmarkedPeople().mapNotNull { hex ->
                 LocalCache.checkGetOrCreateUser(hex)
             }.sortedBy { account.isFollowing(it) }.reversed()
@@ -883,7 +877,7 @@ private fun RenderBadgeAward(
     Text(text = stringResource(R.string.award_granted_to))
 
     LaunchedEffect(key1 = note) {
-        withContext(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             awardees = noteEvent.awardees().mapNotNull { hex ->
                 LocalCache.checkGetOrCreateUser(hex)
             }.sortedBy { account.isFollowing(it) }.reversed()
@@ -902,7 +896,7 @@ private fun RenderBadgeAward(
             ) {
                 UserPicture(
                     baseUser = user,
-                    baseUserAccount = accountViewModel.userProfile(),
+                    accountViewModel = accountViewModel,
                     size = 35.dp
                 )
             }
@@ -1098,13 +1092,12 @@ fun PinListHeader(
 @Composable
 private fun RenderAudioTrack(
     note: Note,
-    loggedIn: User,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
     val noteEvent = note.event as? AudioTrackEvent ?: return
 
-    AudioTrackHeader(noteEvent, note, loggedIn, nav)
+    AudioTrackHeader(noteEvent, accountViewModel, nav)
 
     ReactionsRow(note, accountViewModel, nav)
 
@@ -1117,13 +1110,12 @@ private fun RenderAudioTrack(
 @Composable
 private fun RenderLongFormContent(
     note: Note,
-    loggedIn: User,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
     val noteEvent = note.event as? LongTextNoteEvent ?: return
 
-    LongFormHeader(noteEvent, note, loggedIn)
+    LongFormHeader(noteEvent, note, accountViewModel)
 
     ReactionsRow(note, accountViewModel, nav)
 
@@ -1205,7 +1197,6 @@ private fun ReplyRow(
     note: Note,
     unPackReply: Boolean,
     backgroundColor: Color,
-    account: Account,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -1236,13 +1227,13 @@ private fun ReplyRow(
                 nav = nav
             )
         } else {
-            ReplyInformation(note.replyTo, noteEvent.mentions(), account, nav)
+            ReplyInformation(note.replyTo, noteEvent.mentions(), accountViewModel, nav)
         }
 
         Spacer(modifier = Modifier.height(5.dp))
     } else if (noteEvent is ChannelMessageEvent && (note.replyTo != null || noteEvent.hasAnyTaggedUser())) {
         note.channel()?.let {
-            ReplyInformationChannel(note.replyTo, noteEvent.mentions(), it, account, nav)
+            ReplyInformationChannel(note.replyTo, noteEvent.mentions(), it, accountViewModel, nav)
         }
 
         Spacer(modifier = Modifier.height(5.dp))
@@ -1252,7 +1243,7 @@ private fun ReplyRow(
 @Composable
 private fun SecondUserInfoRow(
     note: Note,
-    account: Account,
+    accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
     val noteEvent = remember { note.event } ?: return
@@ -1263,7 +1254,7 @@ private fun SecondUserInfoRow(
 
         val baseReward = remember { noteEvent.getReward() }
         if (baseReward != null) {
-            DisplayReward(baseReward, note, account, nav)
+            DisplayReward(baseReward, note, accountViewModel, nav)
         }
 
         val pow = remember { noteEvent.getPoWRank() }
@@ -1277,21 +1268,19 @@ private fun SecondUserInfoRow(
 private fun FirstUserInfoRow(
     baseNote: Note,
     showAuthorPicture: Boolean,
-    account: Account,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
     var moreActionsExpanded by remember { mutableStateOf(false) }
     val eventNote = remember { baseNote.event } ?: return
     val time = remember { baseNote.createdAt() } ?: return
-    val loggedIn = remember { account.userProfile() }
     val padding = remember {
         Modifier.padding(horizontal = 5.dp)
     }
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         if (showAuthorPicture) {
-            NoteAuthorPicture(baseNote, nav, loggedIn, 25.dp)
+            NoteAuthorPicture(baseNote, nav, accountViewModel, 25.dp)
             Spacer(padding)
             NoteUsernameDisplay(baseNote, Modifier.weight(1f))
         } else {
@@ -1305,7 +1294,7 @@ private fun FirstUserInfoRow(
                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
             )
         } else {
-            DisplayFollowingHashtagsInPost(eventNote, account, nav)
+            DisplayFollowingHashtagsInPost(eventNote, accountViewModel, nav)
         }
 
         TimeAgo(time)
@@ -1353,17 +1342,17 @@ fun TimeAgo(time: Long) {
 }
 
 @Composable
-private fun DrawAuthorImages(baseNote: Note, loggedIn: User, nav: (String) -> Unit) {
+private fun DrawAuthorImages(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val baseChannel = remember { baseNote.channel() }
     val modifier = remember { Modifier.width(55.dp) }
 
     Column(modifier) {
         // Draws the boosted picture outside the boosted card.
         Box(modifier = modifier, contentAlignment = Alignment.BottomEnd) {
-            NoteAuthorPicture(baseNote, nav, loggedIn, 55.dp)
+            NoteAuthorPicture(baseNote, nav, accountViewModel, 55.dp)
 
             if (baseNote.event is RepostEvent) {
-                RepostNoteAuthorPicture(baseNote, nav, loggedIn)
+                RepostNoteAuthorPicture(baseNote, accountViewModel, nav)
             }
 
             if (baseNote.event is ChannelMessageEvent && baseChannel != null) {
@@ -1427,8 +1416,8 @@ private fun ChannelNotePicture(baseChannel: Channel) {
 @Composable
 private fun RepostNoteAuthorPicture(
     baseNote: Note,
-    nav: (String) -> Unit,
-    loggedIn: User
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
 ) {
     val baseRepost = remember { baseNote.replyTo?.lastOrNull() }
 
@@ -1441,10 +1430,10 @@ private fun RepostNoteAuthorPicture(
     baseRepost?.let {
         Box(modifier) {
             NoteAuthorPicture(
-                it,
-                nav,
-                loggedIn,
-                35.dp,
+                baseNote = it,
+                nav = nav,
+                accountViewModel = accountViewModel,
+                size = 35.dp,
                 pictureModifier = Modifier.border(
                     2.dp,
                     MaterialTheme.colors.background,
@@ -1535,23 +1524,31 @@ fun DisplayHighlight(
 @Composable
 fun DisplayFollowingHashtagsInPost(
     noteEvent: EventInterface,
-    account: Account,
+    accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val followingTags = remember(accountState) {
+        accountState?.account?.followingTagSet() ?: emptySet()
+    }
+
     var firstTag by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(key1 = noteEvent.id()) {
+    LaunchedEffect(key1 = noteEvent.id(), followingTags) {
         withContext(Dispatchers.IO) {
-            firstTag = noteEvent.firstIsTaggedHashes(account.followingTagSet())
+            firstTag = noteEvent.firstIsTaggedHashes(followingTags)
         }
     }
 
     Column() {
         Row(verticalAlignment = Alignment.CenterVertically) {
             firstTag?.let {
+                val displayTag = remember(firstTag) { AnnotatedString(" #$firstTag") }
+                val route = remember(firstTag) { "Hashtag/$firstTag" }
+
                 ClickableText(
-                    text = AnnotatedString(" #$firstTag"),
-                    onClick = { nav("Hashtag/$firstTag") },
+                    text = displayTag,
+                    onClick = { nav(route) },
                     style = LocalTextStyle.current.copy(
                         color = MaterialTheme.colors.primary.copy(
                             alpha = 0.52f
@@ -1608,7 +1605,7 @@ fun DisplayPoW(
 fun DisplayReward(
     baseReward: BigDecimal,
     baseNote: Note,
-    account: Account,
+    accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
     var popupExpanded by remember { mutableStateOf(false) }
@@ -1628,51 +1625,65 @@ fun DisplayReward(
                 )
             )
 
-            val repliesState by baseNote.live().replies.observeAsState()
-            val replyNote = repliesState?.note
-
-            if (replyNote?.hasPledgeBy(account.userProfile()) == true) {
-                Icon(
-                    imageVector = Icons.Default.Bolt,
-                    contentDescription = stringResource(R.string.zaps),
-                    modifier = Modifier.size(20.dp),
-                    tint = BitcoinOrange
-                )
-            } else {
-                Icon(
-                    imageVector = Icons.Default.Bolt,
-                    contentDescription = stringResource(R.string.zaps),
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                )
-            }
-
-            var rewardAmount by remember {
-                mutableStateOf<BigDecimal?>(
-                    baseReward
-                )
-            }
-
-            LaunchedEffect(key1 = repliesState) {
-                withContext(Dispatchers.IO) {
-                    replyNote?.pledgedAmountByOthers()?.let {
-                        rewardAmount = baseReward.add(it)
-                    }
-                }
-            }
-
-            Text(
-                showAmount(rewardAmount),
-                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-            )
+            RenderPledgeAmount(baseNote, baseReward, accountViewModel)
         }
 
         if (popupExpanded) {
-            AddBountyAmountDialog(baseNote, account) {
+            AddBountyAmountDialog(baseNote, accountViewModel) {
                 popupExpanded = false
             }
         }
     }
+}
+
+@Composable
+private fun RenderPledgeAmount(
+    baseNote: Note,
+    baseReward: BigDecimal,
+    accountViewModel: AccountViewModel
+) {
+    val repliesState by baseNote.live().replies.observeAsState()
+    var rewardAmount by remember {
+        mutableStateOf<BigDecimal?>(
+            baseReward
+        )
+    }
+
+    var hasPledge by remember {
+        mutableStateOf<Boolean>(
+            false
+        )
+    }
+
+    LaunchedEffect(key1 = repliesState) {
+        withContext(Dispatchers.IO) {
+            repliesState?.note?.pledgedAmountByOthers()?.let {
+                rewardAmount = baseReward.add(it)
+            }
+            hasPledge = repliesState?.note?.hasPledgeBy(accountViewModel.userProfile()) == true
+        }
+    }
+
+    if (hasPledge) {
+        Icon(
+            imageVector = Icons.Default.Bolt,
+            contentDescription = stringResource(R.string.zaps),
+            modifier = Modifier.size(20.dp),
+            tint = BitcoinOrange
+        )
+    } else {
+        Icon(
+            imageVector = Icons.Default.Bolt,
+            contentDescription = stringResource(R.string.zaps),
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+        )
+    }
+
+    Text(
+        showAmount(rewardAmount),
+        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+    )
 }
 
 @Composable
@@ -1868,7 +1879,7 @@ fun FileStorageHeaderDisplay(baseNote: Note) {
 }
 
 @Composable
-fun AudioTrackHeader(noteEvent: AudioTrackEvent, note: Note, loggedIn: User, nav: (String) -> Unit) {
+fun AudioTrackHeader(noteEvent: AudioTrackEvent, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val media = remember { noteEvent.media() }
     val cover = remember { noteEvent.cover() }
     val subject = remember { noteEvent.subject() }
@@ -1908,7 +1919,7 @@ fun AudioTrackHeader(noteEvent: AudioTrackEvent, note: Note, loggedIn: User, nav
                             nav("User/${it.second.pubkeyHex}")
                         }
                 ) {
-                    UserPicture(it.second, loggedIn, 25.dp)
+                    UserPicture(it.second, 25.dp, accountViewModel)
                     Spacer(Modifier.width(5.dp))
                     UsernameDisplay(it.second, Modifier.weight(1f))
                     Spacer(Modifier.width(5.dp))
@@ -1945,7 +1956,11 @@ fun AudioTrackHeader(noteEvent: AudioTrackEvent, note: Note, loggedIn: User, nav
 }
 
 @Composable
-private fun LongFormHeader(noteEvent: LongTextNoteEvent, note: Note, loggedIn: User) {
+private fun LongFormHeader(noteEvent: LongTextNoteEvent, note: Note, accountViewModel: AccountViewModel) {
+    val image = remember(noteEvent) { noteEvent.image() }
+    val title = remember(noteEvent) { noteEvent.title() }
+    val summary = remember(noteEvent) { noteEvent.summary() ?: noteEvent.content.take(200).ifBlank { null } }
+
     Row(
         modifier = Modifier
             .clip(shape = RoundedCornerShape(15.dp))
@@ -1956,7 +1971,7 @@ private fun LongFormHeader(noteEvent: LongTextNoteEvent, note: Note, loggedIn: U
             )
     ) {
         Column {
-            noteEvent.image()?.let {
+            image?.let {
                 AsyncImage(
                     model = it,
                     contentDescription = stringResource(
@@ -1966,38 +1981,9 @@ private fun LongFormHeader(noteEvent: LongTextNoteEvent, note: Note, loggedIn: U
                     contentScale = ContentScale.FillWidth,
                     modifier = Modifier.fillMaxWidth()
                 )
-            } ?: Box() {
-                note.author?.info?.banner?.let {
-                    AsyncImage(
-                        model = it,
-                        contentDescription = stringResource(
-                            R.string.preview_card_image_for,
-                            it
-                        ),
-                        contentScale = ContentScale.FillWidth,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                } ?: Image(
-                    painter = painterResource(R.drawable.profile_banner),
-                    contentDescription = stringResource(R.string.profile_banner),
-                    contentScale = ContentScale.FillWidth,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(150.dp)
-                )
+            } ?: CreateImageHeader(note, accountViewModel)
 
-                Box(
-                    Modifier
-                        .width(75.dp)
-                        .height(75.dp)
-                        .padding(10.dp)
-                        .align(Alignment.BottomStart)
-                ) {
-                    NoteAuthorPicture(baseNote = note, baseUserAccount = loggedIn, size = 55.dp)
-                }
-            }
-
-            noteEvent.title()?.let {
+            title?.let {
                 Text(
                     text = it,
                     style = MaterialTheme.typography.body1,
@@ -2007,7 +1993,7 @@ private fun LongFormHeader(noteEvent: LongTextNoteEvent, note: Note, loggedIn: U
                 )
             }
 
-            noteEvent.summary()?.let {
+            summary?.let {
                 Text(
                     text = it,
                     style = MaterialTheme.typography.caption,
@@ -2019,16 +2005,45 @@ private fun LongFormHeader(noteEvent: LongTextNoteEvent, note: Note, loggedIn: U
                     overflow = TextOverflow.Ellipsis
                 )
             }
-                ?: Text(
-                    text = noteEvent.content.take(200),
-                    style = MaterialTheme.typography.caption,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
-                    color = Color.Gray,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis
-                )
+        }
+    }
+}
+
+@Composable
+private fun CreateImageHeader(
+    note: Note,
+    accountViewModel: AccountViewModel
+) {
+    val banner = remember(note.author?.info) { note.author?.info?.banner }
+
+    Box() {
+        banner?.let {
+            AsyncImage(
+                model = it,
+                contentDescription = stringResource(
+                    R.string.preview_card_image_for,
+                    it
+                ),
+                contentScale = ContentScale.FillWidth,
+                modifier = Modifier.fillMaxWidth()
+            )
+        } ?: Image(
+            painter = painterResource(R.drawable.profile_banner),
+            contentDescription = stringResource(R.string.profile_banner),
+            contentScale = ContentScale.FillWidth,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(150.dp)
+        )
+
+        Box(
+            Modifier
+                .width(75.dp)
+                .height(75.dp)
+                .padding(10.dp)
+                .align(Alignment.BottomStart)
+        ) {
+            NoteAuthorPicture(baseNote = note, accountViewModel = accountViewModel, size = 55.dp)
         }
     }
 }
@@ -2120,11 +2135,11 @@ private fun ShowMoreRelaysButton(onClick: () -> Unit) {
 fun NoteAuthorPicture(
     baseNote: Note,
     nav: (String) -> Unit,
-    userAccount: User,
+    accountViewModel: AccountViewModel,
     size: Dp,
     pictureModifier: Modifier = Modifier
 ) {
-    NoteAuthorPicture(baseNote, userAccount, size, pictureModifier) {
+    NoteAuthorPicture(baseNote, size, accountViewModel, pictureModifier) {
         nav("User/${it.pubkeyHex}")
     }
 }
@@ -2132,8 +2147,8 @@ fun NoteAuthorPicture(
 @Composable
 fun NoteAuthorPicture(
     baseNote: Note,
-    baseUserAccount: User,
     size: Dp,
+    accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
     onClick: ((User) -> Unit)? = null
 ) {
@@ -2164,7 +2179,7 @@ fun NoteAuthorPicture(
                 modifier = nullModifier.background(MaterialTheme.colors.background)
             )
         } else {
-            UserPicture(author, baseUserAccount, size, modifier, onClick)
+            UserPicture(author, size, accountViewModel, modifier, onClick)
         }
     }
 }
@@ -2173,11 +2188,11 @@ fun NoteAuthorPicture(
 fun UserPicture(
     user: User,
     nav: (String) -> Unit,
-    userAccount: User,
+    accountViewModel: AccountViewModel,
     size: Dp,
     pictureModifier: Modifier = Modifier
 ) {
-    UserPicture(user, userAccount, size, pictureModifier) {
+    UserPicture(user, size, accountViewModel, pictureModifier) {
         nav("User/${it.pubkeyHex}")
     }
 }
@@ -2186,14 +2201,13 @@ fun UserPicture(
 @Composable
 fun UserPicture(
     baseUser: User,
-    baseUserAccount: User,
     size: Dp,
+    accountViewModel: AccountViewModel,
     modifier: Modifier = remember { Modifier },
     onClick: ((User) -> Unit)? = null,
     onLongClick: ((User) -> Unit)? = null
 ) {
     val userState by baseUser.live().metadata.observeAsState()
-    val accountState by baseUserAccount.live().follows.observeAsState()
 
     val userPubkey = remember {
         baseUser.pubkeyHex
@@ -2202,12 +2216,6 @@ fun UserPicture(
     val userProfile by remember(userState) {
         derivedStateOf {
             userState?.user?.profilePicture()
-        }
-    }
-
-    val showFollowingMark by remember(accountState) {
-        derivedStateOf {
-            accountState?.user?.isFollowingCached(baseUser) == true || baseUser.pubkeyHex == accountState?.user?.pubkeyHex
         }
     }
 
@@ -2229,9 +2237,9 @@ fun UserPicture(
         UserPicture(
             userHex = userPubkey,
             userPicture = userProfile,
-            showFollowingMark = showFollowingMark,
             size = size,
-            modifier = modifier
+            modifier = modifier,
+            accountViewModel = accountViewModel
         )
     }
 }
@@ -2240,9 +2248,9 @@ fun UserPicture(
 fun UserPicture(
     userHex: String,
     userPicture: String?,
-    showFollowingMark: Boolean,
     size: Dp,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    accountViewModel: AccountViewModel
 ) {
     val myBoxModifier = remember {
         Modifier
@@ -2257,36 +2265,42 @@ fun UserPicture(
             .clip(shape = CircleShape)
     }
 
-    val myResizeImage = remember(userPicture) {
-        ResizeImage(userPicture, size)
-    }
-
-    Box(myBoxModifier) {
+    Box(myBoxModifier, contentAlignment = TopEnd) {
         RobohashAsyncImageProxy(
             robot = userHex,
-            model = myResizeImage,
+            model = remember(userPicture) {
+                ResizeImage(userPicture, size)
+            },
             contentDescription = stringResource(id = R.string.profile_image),
             modifier = myImageModifier.background(MaterialTheme.colors.background)
         )
 
-        if (showFollowingMark) {
-            val myIconBoxModifier = remember {
-                Modifier
-                    .width(size.div(3.5f))
-                    .height(size.div(3.5f))
-                    .align(Alignment.TopEnd)
-            }
-
-            FollowingIcon(myIconBoxModifier, size)
-        }
+        ObserveAndDisplayFollowingMark(userHex, size.div(3.5f), accountViewModel)
     }
 }
 
 @Composable
-private fun FollowingIcon(
-    myIconBoxModifier: Modifier,
-    size: Dp
-) {
+private fun ObserveAndDisplayFollowingMark(userHex: String, iconSize: Dp, accountViewModel: AccountViewModel) {
+    val accountFollowsState by accountViewModel.account.userProfile().live().follows.observeAsState()
+
+    val showFollowingMark by remember(accountFollowsState) {
+        derivedStateOf {
+            accountFollowsState?.user?.isFollowingCached(userHex) == true ||
+                (userHex == accountViewModel.account.userProfile().pubkeyHex)
+        }
+    }
+
+    if (showFollowingMark) {
+        FollowingIcon(iconSize)
+    }
+}
+
+@Composable
+private fun FollowingIcon(iconSize: Dp) {
+    val myIconBoxModifier = remember {
+        Modifier.size(iconSize)
+    }
+
     Box(myIconBoxModifier, contentAlignment = Alignment.Center) {
         val myIconBackgroundModifier = remember {
             Modifier
@@ -2299,9 +2313,7 @@ private fun FollowingIcon(
         )
 
         val myIconModifier = remember {
-            Modifier
-                .width(size.div(3.5f))
-                .height(size.div(3.5f))
+            Modifier.size(iconSize)
         }
 
         Icon(

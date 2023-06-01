@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.dp
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
 fun BlankNote(modifier: Modifier = Modifier, isQuote: Boolean = false, idHex: String? = null) {
@@ -54,7 +54,14 @@ fun BlankNote(modifier: Modifier = Modifier, isQuote: Boolean = false, idHex: St
 }
 
 @Composable
-fun HiddenNote(reports: Set<Note>, loggedIn: User, modifier: Modifier = Modifier, isQuote: Boolean = false, nav: (String) -> Unit, onClick: () -> Unit) {
+fun HiddenNote(
+    reports: Set<Note>,
+    accountViewModel: AccountViewModel,
+    modifier: Modifier = Modifier,
+    isQuote: Boolean = false,
+    nav: (String) -> Unit,
+    onClick: () -> Unit
+) {
     Column(modifier = modifier) {
         Row(modifier = Modifier.padding(horizontal = if (!isQuote) 12.dp else 6.dp)) {
             Column(modifier = Modifier.padding(start = if (!isQuote) 10.dp else 5.dp)) {
@@ -75,7 +82,7 @@ fun HiddenNote(reports: Set<Note>, loggedIn: User, modifier: Modifier = Modifier
                                 NoteAuthorPicture(
                                     baseNote = it,
                                     nav = nav,
-                                    userAccount = loggedIn,
+                                    accountViewModel = accountViewModel,
                                     size = 35.dp
                                 )
                             }

@@ -249,15 +249,11 @@ class User(val pubkeyHex: String) {
     }
 
     fun isFollowing(user: User): Boolean {
-        return latestContactList?.unverifiedFollowKeySet()?.toSet()?.let {
-            return user.pubkeyHex in it
-        } ?: false
+        return latestContactList?.isTaggedUser(user.pubkeyHex) ?: false
     }
 
     fun isFollowingHashtag(tag: String): Boolean {
-        return latestContactList?.unverifiedFollowTagSet()?.toSet()?.let {
-            return tag in it
-        } ?: false
+        return latestContactList?.isTaggedHash(tag) ?: false
     }
 
     fun isFollowingHashtagCached(tag: String): Boolean {
@@ -272,11 +268,17 @@ class User(val pubkeyHex: String) {
         } ?: false
     }
 
+    fun isFollowingCached(userHex: String): Boolean {
+        return latestContactList?.verifiedFollowKeySet?.let {
+            return userHex in it
+        } ?: false
+    }
+
     fun transientFollowCount(): Int? {
         return latestContactList?.unverifiedFollowKeySet()?.size
     }
 
-    fun transientFollowerCount(): Int {
+    suspend fun transientFollowerCount(): Int {
         return LocalCache.users.values.count { it.latestContactList?.isTaggedUser(pubkeyHex) ?: false }
     }
 
@@ -292,7 +294,7 @@ class User(val pubkeyHex: String) {
         return latestContactList?.verifiedFollowKeySet?.size
     }
 
-    fun cachedFollowerCount(): Int {
+    suspend fun cachedFollowerCount(): Int {
         return LocalCache.users.values.count { it.latestContactList?.isTaggedUser(pubkeyHex) ?: false }
     }
 

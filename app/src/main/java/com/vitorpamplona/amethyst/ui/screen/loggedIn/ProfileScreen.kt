@@ -66,7 +66,6 @@ import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.DisplayNip05ProfileStatus
 import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
-import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
@@ -74,14 +73,11 @@ import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
 import com.vitorpamplona.amethyst.ui.components.figureOutMimeType
 import com.vitorpamplona.amethyst.ui.dal.UserProfileBookmarksFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileConversationsFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowersFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileZapsFeedFilter
 import com.vitorpamplona.amethyst.ui.navigation.ShowQRDialog
 import com.vitorpamplona.amethyst.ui.note.UserPicture
-import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.screen.LnZapFeedView
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileBookmarksFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileConversationsFeedViewModel
@@ -91,9 +87,10 @@ import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileNewThreadsFeedViewMo
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileReportFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileZapsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableView
+import com.vitorpamplona.amethyst.ui.screen.RefreshingFeedUserFeedView
 import com.vitorpamplona.amethyst.ui.screen.RelayFeedView
 import com.vitorpamplona.amethyst.ui.screen.RelayFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.UserFeedView
+import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
@@ -108,14 +105,17 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, nav: (Str
 
     var userBase by remember { mutableStateOf<User?>(null) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(userId) {
         withContext(Dispatchers.IO) {
-            userBase = LocalCache.checkGetOrCreateUser(userId)
+            val newUserBase = LocalCache.checkGetOrCreateUser(userId)
+            if (newUserBase != userBase) {
+                userBase = newUserBase
+            }
         }
     }
 
     userBase?.let {
-        ProfileScreen(
+        PrepareViewModels(
             baseUser = it,
             accountViewModel = accountViewModel,
             nav = nav
@@ -123,13 +123,44 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, nav: (Str
     }
 }
 
+@Composable
+fun PrepareViewModels(baseUser: User, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    val followsFeedViewModel: NostrUserProfileFollowsUserFeedViewModel = viewModel(
+        key = baseUser.pubkeyHex + "UserProfileFollowsUserFeedViewModel",
+        factory = NostrUserProfileFollowsUserFeedViewModel.Factory(
+            baseUser,
+            accountViewModel.account
+        )
+    )
+
+    val followersFeedViewModel: NostrUserProfileFollowersUserFeedViewModel = viewModel(
+        key = baseUser.pubkeyHex + "UserProfileFollowersUserFeedViewModel",
+        factory = NostrUserProfileFollowersUserFeedViewModel.Factory(
+            baseUser,
+            accountViewModel.account
+        )
+    )
+
+    ProfileScreen(
+        baseUser = baseUser,
+        followsFeedViewModel,
+        followersFeedViewModel,
+        accountViewModel = accountViewModel,
+        nav = nav
+    )
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ProfileScreen(baseUser: User, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun ProfileScreen(
+    baseUser: User,
+    followsFeedViewModel: NostrUserProfileFollowsUserFeedViewModel,
+    followersFeedViewModel: NostrUserProfileFollowersUserFeedViewModel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
     UserProfileNewThreadFeedFilter.loadUserProfile(accountViewModel.account, baseUser)
     UserProfileConversationsFeedFilter.loadUserProfile(accountViewModel.account, baseUser)
-    UserProfileFollowersFeedFilter.loadUserProfile(accountViewModel.account, baseUser)
-    UserProfileFollowsFeedFilter.loadUserProfile(accountViewModel.account, baseUser)
     UserProfileZapsFeedFilter.loadUserProfile(baseUser)
     UserProfileReportsFeedFilter.loadUserProfile(baseUser)
     UserProfileBookmarksFeedFilter.loadUserProfile(accountViewModel.account, baseUser)
@@ -245,8 +276,8 @@ fun ProfileScreen(baseUser: User, accountViewModel: AccountViewModel, nav: (Stri
                         when (page) {
                             0 -> TabNotesNewThreads(accountViewModel, nav)
                             1 -> TabNotesConversations(accountViewModel, nav)
-                            2 -> TabFollows(baseUser, accountViewModel, nav)
-                            3 -> TabFollowers(baseUser, accountViewModel, nav)
+                            2 -> TabFollows(baseUser, followsFeedViewModel, accountViewModel, nav)
+                            3 -> TabFollows(baseUser, followersFeedViewModel, accountViewModel, nav)
                             4 -> TabReceivedZaps(baseUser, accountViewModel, nav)
                             5 -> TabBookmarks(baseUser, accountViewModel, nav)
                             6 -> TabReports(baseUser, accountViewModel, nav)
@@ -307,31 +338,53 @@ private fun ZapTabHeader(baseUser: User) {
     var zapAmount by remember { mutableStateOf<BigDecimal?>(null) }
 
     LaunchedEffect(key1 = userState) {
-        withContext(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             val tempAmount = baseUser.zappedAmount()
             withContext(Dispatchers.Main) {
-                zapAmount = tempAmount
+                if (zapAmount != tempAmount) {
+                    zapAmount = tempAmount
+                }
             }
         }
     }
 
-    Text(text = "${showAmount(zapAmount)} ${stringResource(id = R.string.zaps)}")
+    Text(text = "${showAmountAxis(zapAmount)} ${stringResource(id = R.string.zaps)}")
 }
 
 @Composable
 private fun FollowersTabHeader(baseUser: User) {
     val userState by baseUser.live().follows.observeAsState()
-    val userFollowers = remember(userState) { userState?.user?.transientFollowerCount() ?: "--" }
+    var followerCount by remember { mutableStateOf("--") }
 
-    Text(text = "$userFollowers ${stringResource(id = R.string.followers)}")
+    LaunchedEffect(key1 = userState) {
+        launch(Dispatchers.IO) {
+            val newFollower = userState?.user?.transientFollowerCount()?.toString() ?: "--"
+
+            if (followerCount != newFollower) {
+                followerCount = newFollower
+            }
+        }
+    }
+
+    Text(text = "$followerCount ${stringResource(id = R.string.followers)}")
 }
 
 @Composable
 private fun FollowTabHeader(baseUser: User) {
     val userState by baseUser.live().follows.observeAsState()
-    val userFollows = remember(userState) { userState?.user?.transientFollowCount() ?: "--" }
+    var followCount by remember { mutableStateOf("--") }
 
-    Text(text = "$userFollows ${stringResource(R.string.follows)}")
+    LaunchedEffect(key1 = userState) {
+        launch(Dispatchers.IO) {
+            val newFollow = userState?.user?.transientFollowCount()?.toString() ?: "--"
+
+            if (followCount != newFollow) {
+                followCount = newFollow
+            }
+        }
+    }
+
+    Text(text = "$followCount ${stringResource(R.string.follows)}")
 }
 
 @Composable
@@ -389,7 +442,7 @@ private fun ProfileHeader(
             ) {
                 UserPicture(
                     baseUser = baseUser,
-                    baseUserAccount = accountViewModel.userProfile(),
+                    accountViewModel = accountViewModel,
                     size = 100.dp,
                     modifier = Modifier.border(
                         3.dp,
@@ -402,7 +455,7 @@ private fun ProfileHeader(
                         }
                     },
                     onLongClick = {
-                        ResizeImage(it.info?.picture, 100.dp).proxyUrl()?.let { it1 ->
+                        it.info?.picture?.let { it1 ->
                             clipboardManager.setText(
                                 AnnotatedString(it1)
                             )
@@ -465,7 +518,7 @@ private fun ProfileActions(
 
     val isUserFollowingLoggedIn by remember(accountUserState, accountLocalUserState) {
         derivedStateOf {
-            baseUser.isFollowingCached(accountUser)
+            baseUser.isFollowing(accountUser)
         }
     }
 
@@ -937,40 +990,27 @@ fun TabBookmarks(baseUser: User, accountViewModel: AccountViewModel, nav: (Strin
 }
 
 @Composable
-fun TabFollows(baseUser: User, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val feedViewModel: NostrUserProfileFollowsUserFeedViewModel = viewModel()
-
-    val userState by baseUser.live().follows.observeAsState()
-
-    LaunchedEffect(userState) {
-        feedViewModel.invalidateData()
-    }
+fun TabFollows(baseUser: User, feedViewModel: UserFeedViewModel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    WatchFollowChanges(baseUser, feedViewModel)
 
     Column(Modifier.fillMaxHeight()) {
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            UserFeedView(feedViewModel, accountViewModel, nav, enablePullRefresh = false)
+            RefreshingFeedUserFeedView(feedViewModel, accountViewModel, nav, enablePullRefresh = false)
         }
     }
 }
 
 @Composable
-fun TabFollowers(baseUser: User, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val feedViewModel: NostrUserProfileFollowersUserFeedViewModel = viewModel()
-
+private fun WatchFollowChanges(
+    baseUser: User,
+    feedViewModel: UserFeedViewModel
+) {
     val userState by baseUser.live().follows.observeAsState()
 
     LaunchedEffect(userState) {
         feedViewModel.invalidateData()
-    }
-
-    Column(Modifier.fillMaxHeight()) {
-        Column(
-            modifier = Modifier.padding(vertical = 0.dp)
-        ) {
-            UserFeedView(feedViewModel, accountViewModel, nav, enablePullRefresh = false)
-        }
     }
 }
 

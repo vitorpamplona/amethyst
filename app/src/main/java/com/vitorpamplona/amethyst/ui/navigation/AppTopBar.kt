@@ -160,10 +160,6 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
 @OptIn(coil.annotation.ExperimentalCoilApi::class)
 @Composable
 fun GenericTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel, content: @Composable (AccountViewModel) -> Unit) {
-    val relayViewModel: RelayPoolViewModel = viewModel { RelayPoolViewModel() }
-    val connectedRelaysLiveData by relayViewModel.connectedRelaysLiveData.observeAsState()
-    val availableRelaysLiveData by relayViewModel.availableRelaysLiveData.observeAsState()
-
     val coroutineScope = rememberCoroutineScope()
 
     var wantsToEditRelays by remember {
@@ -195,29 +191,9 @@ fun GenericTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewMod
                             content(accountViewModel)
                         }
 
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .fillMaxHeight(),
-                            horizontalAlignment = Alignment.End
-
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxHeight(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    "${connectedRelaysLiveData ?: "--"}/${availableRelaysLiveData ?: "--"}",
-                                    color = if (connectedRelaysLiveData == 0) Color.Red else MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-                                    style = MaterialTheme.typography.subtitle1,
-                                    modifier = Modifier.clickable(
-                                        onClick = {
-                                            wantsToEditRelays = true
-                                        }
-                                    )
-                                )
-                            }
-                        }
+                        RelayStatus(
+                            { wantsToEditRelays = true }
+                        )
                     }
                 }
             },
@@ -229,20 +205,67 @@ fun GenericTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewMod
                 }
             },
             actions = {
-                IconButton(
-                    onClick = { wantsToEditRelays = true },
-                    modifier = Modifier
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.relays),
-                        null,
-                        modifier = Modifier.size(24.dp),
-                        tint = Color.Unspecified
-                    )
-                }
+                RelayIcon { wantsToEditRelays = true }
             }
         )
         Divider(thickness = 0.25.dp)
+    }
+}
+
+@Composable
+private fun RelayStatus(
+    onClick: () -> Unit
+) {
+    val relayViewModel: RelayPoolViewModel = viewModel { RelayPoolViewModel() }
+    val connectedRelaysLiveData = relayViewModel.connectedRelaysLiveData.observeAsState()
+    val availableRelaysLiveData = relayViewModel.availableRelaysLiveData.observeAsState()
+
+    val connectedRelaysText by remember(connectedRelaysLiveData, availableRelaysLiveData) {
+        derivedStateOf {
+            "${connectedRelaysLiveData.value ?: "--"}/${availableRelaysLiveData.value ?: "--"}"
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight(),
+        horizontalAlignment = Alignment.End
+    ) {
+        Row(
+            modifier = Modifier.fillMaxHeight(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = connectedRelaysText,
+                color = if (connectedRelaysLiveData.value == 0) {
+                    Color.Red
+                } else {
+                    MaterialTheme.colors.onSurface.copy(
+                        alpha = 0.32f
+                    )
+                },
+                style = MaterialTheme.typography.subtitle1,
+                modifier = Modifier.clickable(
+                    onClick = onClick
+                )
+            )
+        }
+    }
+}
+
+@Composable
+private fun RelayIcon(onClick: () -> Unit) {
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.relays),
+            null,
+            modifier = Modifier.size(24.dp),
+            tint = Color.Unspecified
+        )
     }
 }
 
@@ -252,15 +275,17 @@ private fun LoggedInUserPictureDrawer(
     onClick: () -> Unit
 ) {
     val accountUserState by accountViewModel.account.userProfile().live().metadata.observeAsState()
-    val accountUser = accountUserState?.user ?: return
+
+    val pubkeyHex = remember { accountUserState?.user?.pubkeyHex ?: "" }
+    val profilePicture = remember(accountUserState) { ResizeImage(accountUserState?.user?.profilePicture(), 34.dp) }
 
     IconButton(
         onClick = onClick,
         modifier = Modifier
     ) {
         RobohashAsyncImageProxy(
-            robot = remember { accountUser.pubkeyHex },
-            model = remember(accountUser) { ResizeImage(accountUser.profilePicture(), 34.dp) },
+            robot = pubkeyHex,
+            model = profilePicture,
             contentDescription = stringResource(id = R.string.profile_image),
             modifier = Modifier
                 .width(34.dp)

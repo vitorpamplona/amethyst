@@ -24,69 +24,89 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.dal.HiddenAccountsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.NostrHiddenAccountsFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.UserFeedView
+import com.vitorpamplona.amethyst.ui.screen.RefreshingFeedUserFeedView
 import kotlinx.coroutines.launch
+
+@Composable
+fun HiddenUsersScreen(accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    val feedViewModel: NostrHiddenAccountsFeedViewModel = viewModel(
+        factory = NostrHiddenAccountsFeedViewModel.Factory(accountViewModel.account)
+    )
+
+    HiddenUsersScreen(feedViewModel, accountViewModel, nav)
+}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun HiddenUsersScreen(accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account
-
+fun HiddenUsersScreen(
+    feedViewModel: NostrHiddenAccountsFeedViewModel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
     val lifeCycleOwner = LocalLifecycleOwner.current
-    val feedViewModel: NostrHiddenAccountsFeedViewModel = viewModel()
 
-    if (account != null) {
-        HiddenAccountsFeedFilter.account = account
-
-        LaunchedEffect(accountViewModel) {
-            HiddenAccountsFeedFilter.account = account
-            feedViewModel.invalidateData()
-        }
-
-        DisposableEffect(accountViewModel) {
-            val observer = LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) {
-                    println("Hidden Users Start")
-                    HiddenAccountsFeedFilter.account = account
-                    feedViewModel.invalidateData()
-                }
-                if (event == Lifecycle.Event.ON_PAUSE) {
-                    println("Hidden Users Stop")
-                }
+    DisposableEffect(accountViewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                println("Hidden Users Start")
+                feedViewModel.invalidateData()
             }
-
-            lifeCycleOwner.lifecycle.addObserver(observer)
-            onDispose {
-                lifeCycleOwner.lifecycle.removeObserver(observer)
+            if (event == Lifecycle.Event.ON_PAUSE) {
+                println("Hidden Users Stop")
             }
         }
 
-        Column(Modifier.fillMaxHeight()) {
-            Column(modifier = Modifier.padding(start = 10.dp, end = 10.dp)) {
-                val pagerState = rememberPagerState()
-                val coroutineScope = rememberCoroutineScope()
+        lifeCycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifeCycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
-                TabRow(
-                    backgroundColor = MaterialTheme.colors.background,
-                    selectedTabIndex = pagerState.currentPage
-                ) {
-                    Tab(
-                        selected = pagerState.currentPage == 0,
-                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
-                        text = {
-                            Text(text = stringResource(R.string.blocked_users))
-                        }
-                    )
-                }
-                HorizontalPager(pageCount = 1, state = pagerState) { page ->
-                    when (page) {
-                        0 -> UserFeedView(feedViewModel, accountViewModel, nav)
+    Column(Modifier.fillMaxHeight()) {
+        Column(modifier = Modifier.padding(start = 10.dp, end = 10.dp)) {
+            val pagerState = rememberPagerState()
+            val coroutineScope = rememberCoroutineScope()
+
+            TabRow(
+                backgroundColor = MaterialTheme.colors.background,
+                selectedTabIndex = pagerState.currentPage
+            ) {
+                Tab(
+                    selected = pagerState.currentPage == 0,
+                    onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
+                    text = {
+                        Text(text = stringResource(R.string.blocked_users))
                     }
+                )
+            }
+            HorizontalPager(pageCount = 1, state = pagerState) { page ->
+                when (page) {
+                    0 -> RefreshingUserFeedView(feedViewModel, accountViewModel, nav)
                 }
             }
         }
+    }
+}
+
+@Composable
+fun RefreshingUserFeedView(
+    feedViewModel: NostrHiddenAccountsFeedViewModel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    WatchAccount(feedViewModel, accountViewModel)
+    RefreshingFeedUserFeedView(feedViewModel, accountViewModel, nav)
+}
+
+@Composable
+fun WatchAccount(
+    feedViewModel: NostrHiddenAccountsFeedViewModel,
+    accountViewModel: AccountViewModel
+) {
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+
+    LaunchedEffect(accountViewModel, accountState) {
+        feedViewModel.invalidateData()
     }
 }

@@ -114,7 +114,7 @@ fun BoostSetCompose(boostSetCard: BoostSetCard, isInnerNote: Boolean = false, ro
                             NoteAuthorPicture(
                                 baseNote = it,
                                 nav = nav,
-                                userAccount = account.userProfile(),
+                                accountViewModel = accountViewModel,
                                 size = 35.dp
                             )
                         }

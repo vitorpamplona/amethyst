@@ -1004,10 +1004,10 @@ class Account(
     }
 
     private fun updateContactListTo(newContactList: ContactListEvent?) {
-        if (newContactList?.unverifiedFollowKeySet().isNullOrEmpty()) return
+        if (newContactList == null || newContactList.tags.isEmpty()) return
 
         // Events might be different objects, we have to compare their ids.
-        if (backupContactList?.id != newContactList?.id) {
+        if (backupContactList?.id != newContactList.id) {
             backupContactList = newContactList
             saveable.invalidateData()
         }

@@ -43,10 +43,6 @@ fun ZapSetCompose(zapSetCard: ZapSetCard, isInnerNote: Boolean = false, routeFor
     val noteState by zapSetCard.note.live().metadata.observeAsState()
     val note = noteState?.note
 
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
-
-    val noteEvent = note?.event
     var popupExpanded by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
@@ -77,7 +73,7 @@ fun ZapSetCompose(zapSetCard: ZapSetCard, isInnerNote: Boolean = false, routeFor
                         scope.launch {
                             routeFor(
                                 note,
-                                account.userProfile()
+                                accountViewModel.userProfile()
                             )?.let { nav(it) }
                         }
                     },
@@ -116,7 +112,7 @@ fun ZapSetCompose(zapSetCard: ZapSetCard, isInnerNote: Boolean = false, routeFor
                             NoteAuthorPicture(
                                 baseNote = it.key,
                                 nav = nav,
-                                userAccount = account.userProfile(),
+                                accountViewModel = accountViewModel,
                                 size = 35.dp
                             )
                         }

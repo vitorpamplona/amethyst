@@ -277,10 +277,9 @@ private fun AuthorPictureAndComment(
     accountViewModel: AccountViewModel
 ) {
     var content by remember { mutableStateOf<Triple<User?, String?, String?>>(Triple(zapRequest.author, null, null)) }
-    val scope = rememberCoroutineScope()
 
     LaunchedEffect(key1 = zapRequest.idHex, key2 = zapEvent?.idHex) {
-        scope.launch(Dispatchers.Default) {
+        launch(Dispatchers.Default) {
             (zapRequest.event as? LnZapRequestEvent)?.let {
                 val decryptedContent = accountViewModel.decryptZap(zapRequest)
                 val amount = (zapEvent?.event as? LnZapEvent)?.amount
@@ -438,22 +437,11 @@ fun FastNoteAuthorPicture(
         author.pubkeyHex
     }
 
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val loggedInLiveFollows = remember(accountState) { accountState?.account?.userProfile()?.live()?.follows } ?: return
-
-    val accountFollowsState by loggedInLiveFollows.observeAsState()
-
-    val showFollowingMark by remember(accountFollowsState) {
-        derivedStateOf {
-            accountFollowsState?.user?.isFollowingCached(author) == true || (author.pubkeyHex == accountFollowsState?.user?.pubkeyHex)
-        }
-    }
-
     UserPicture(
         userHex = authorPubKey,
         userPicture = profilePicture,
-        showFollowingMark = showFollowingMark,
         size = size,
-        modifier = pictureModifier
+        modifier = pictureModifier,
+        accountViewModel = accountViewModel
     )
 }

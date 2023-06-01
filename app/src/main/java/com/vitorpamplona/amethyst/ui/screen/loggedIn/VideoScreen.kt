@@ -247,11 +247,6 @@ private fun RenderVideoOrPictureNote(
     nav: (String) -> Unit
 ) {
     val noteEvent = note.event
-
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
-    val loggedIn = account.userProfile()
-
     var moreActionsExpanded by remember { mutableStateOf(false) }
 
     Column(Modifier.fillMaxSize(1f)) {
@@ -268,7 +263,7 @@ private fun RenderVideoOrPictureNote(
         Column(Modifier.weight(1f)) {
             Row(Modifier.padding(10.dp), verticalAlignment = Alignment.Bottom) {
                 Column(Modifier.size(55.dp), verticalArrangement = Arrangement.Center) {
-                    NoteAuthorPicture(note, nav, loggedIn, 55.dp)
+                    NoteAuthorPicture(note, nav, accountViewModel, 55.dp)
                 }
 
                 Column(

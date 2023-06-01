@@ -52,13 +52,13 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.ui.note.ChannelName
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SearchBarViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
@@ -72,9 +72,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
-fun JoinUserOrChannelView(onClose: () -> Unit, account: Account, nav: (String) -> Unit) {
+fun JoinUserOrChannelView(onClose: () -> Unit, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val searchBarViewModel: SearchBarViewModel = viewModel()
-    searchBarViewModel.account = account
+    searchBarViewModel.account = accountViewModel.account
 
     Dialog(
         onDismissRequest = {
@@ -115,7 +115,7 @@ fun JoinUserOrChannelView(onClose: () -> Unit, account: Account, nav: (String) -
 
                 Spacer(modifier = Modifier.height(15.dp))
 
-                RenderSeach(searchBarViewModel, account, nav)
+                RenderSeach(searchBarViewModel, accountViewModel, nav)
             }
         }
     }
@@ -125,7 +125,7 @@ fun JoinUserOrChannelView(onClose: () -> Unit, account: Account, nav: (String) -
 @Composable
 private fun RenderSeach(
     searchBarViewModel: SearchBarViewModel,
-    account: Account,
+    accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
     val scope = rememberCoroutineScope()
@@ -273,7 +273,7 @@ private fun RenderSeach(
                 ) { _, item ->
                     UserComposeForChat(
                         item,
-                        account = account,
+                        accountViewModel = accountViewModel,
                         nav = nav
                     )
                 }
@@ -305,7 +305,7 @@ private fun RenderSeach(
 @Composable
 fun UserComposeForChat(
     baseUser: User,
-    account: Account,
+    accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
     Column(
@@ -323,7 +323,7 @@ fun UserComposeForChat(
                 ),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            UserPicture(baseUser, nav, account.userProfile(), 55.dp)
+            UserPicture(baseUser, nav, accountViewModel, 55.dp)
 
             Column(modifier = Modifier.padding(start = 10.dp).weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {

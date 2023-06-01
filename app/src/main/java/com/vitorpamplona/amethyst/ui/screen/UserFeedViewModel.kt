@@ -2,7 +2,9 @@ package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
@@ -18,9 +20,29 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class NostrUserProfileFollowsUserFeedViewModel : UserFeedViewModel(UserProfileFollowsFeedFilter)
-class NostrUserProfileFollowersUserFeedViewModel : UserFeedViewModel(UserProfileFollowersFeedFilter)
-class NostrHiddenAccountsFeedViewModel : UserFeedViewModel(HiddenAccountsFeedFilter)
+class NostrUserProfileFollowsUserFeedViewModel(val user: User, val account: Account) : UserFeedViewModel(UserProfileFollowsFeedFilter(user, account)) {
+    class Factory(val user: User, val account: Account) : ViewModelProvider.Factory {
+        override fun <NostrUserProfileFollowsUserFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileFollowsUserFeedViewModel>): NostrUserProfileFollowsUserFeedViewModel {
+            return NostrUserProfileFollowsUserFeedViewModel(user, account) as NostrUserProfileFollowsUserFeedViewModel
+        }
+    }
+}
+
+class NostrUserProfileFollowersUserFeedViewModel(val user: User, val account: Account) : UserFeedViewModel(UserProfileFollowersFeedFilter(user, account)) {
+    class Factory(val user: User, val account: Account) : ViewModelProvider.Factory {
+        override fun <NostrUserProfileFollowersUserFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileFollowersUserFeedViewModel>): NostrUserProfileFollowersUserFeedViewModel {
+            return NostrUserProfileFollowersUserFeedViewModel(user, account) as NostrUserProfileFollowersUserFeedViewModel
+        }
+    }
+}
+
+class NostrHiddenAccountsFeedViewModel(val account: Account) : UserFeedViewModel(HiddenAccountsFeedFilter(account)) {
+    class Factory(val account: Account) : ViewModelProvider.Factory {
+        override fun <NostrHiddenAccountsFeedViewModel : ViewModel> create(modelClass: Class<NostrHiddenAccountsFeedViewModel>): NostrHiddenAccountsFeedViewModel {
+            return NostrHiddenAccountsFeedViewModel(account) as NostrHiddenAccountsFeedViewModel
+        }
+    }
+}
 
 open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel() {
     private val _feedContent = MutableStateFlow<UserFeedState>(UserFeedState.Loading)

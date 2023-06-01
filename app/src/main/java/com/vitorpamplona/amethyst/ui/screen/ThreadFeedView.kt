@@ -231,7 +231,7 @@ fun NoteMaster(
     } else if (!account.isAcceptable(noteForReports) && !showHiddenNote) {
         HiddenNote(
             account.getRelevantReports(noteForReports),
-            account.userProfile(),
+            accountViewModel,
             Modifier,
             false,
             nav,
@@ -255,7 +255,7 @@ fun NoteMaster(
                 NoteAuthorPicture(
                     baseNote = baseNote,
                     nav = nav,
-                    userAccount = account.userProfile(),
+                    accountViewModel = accountViewModel,
                     size = 55.dp
                 )
 
@@ -263,7 +263,7 @@ fun NoteMaster(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         NoteUsernameDisplay(baseNote, Modifier.weight(1f))
 
-                        DisplayFollowingHashtagsInPost(noteEvent, account, nav)
+                        DisplayFollowingHashtagsInPost(noteEvent, accountViewModel, nav)
 
                         Text(
                             timeAgo(note.createdAt(), context = context),
@@ -291,7 +291,7 @@ fun NoteMaster(
 
                         val baseReward = noteEvent.getReward()
                         if (baseReward != null) {
-                            DisplayReward(baseReward, baseNote, account, nav)
+                            DisplayReward(baseReward, baseNote, accountViewModel, nav)
                         }
 
                         val pow = noteEvent.getPoWRank()
@@ -357,7 +357,7 @@ fun NoteMaster(
                     if (noteEvent is PeopleListEvent) {
                         DisplayPeopleList(baseNote, MaterialTheme.colors.background, accountViewModel, nav)
                     } else if (noteEvent is AudioTrackEvent) {
-                        AudioTrackHeader(noteEvent, note, account.userProfile(), nav)
+                        AudioTrackHeader(noteEvent, accountViewModel, nav)
                     } else if (noteEvent is PinListEvent) {
                         PinListHeader(baseNote, MaterialTheme.colors.background, accountViewModel, nav)
                     } else if (noteEvent is HighlightEvent) {

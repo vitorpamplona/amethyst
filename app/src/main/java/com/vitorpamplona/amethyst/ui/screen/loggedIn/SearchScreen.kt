@@ -389,7 +389,7 @@ fun HashtagLine(tag: String, onClick: () -> Unit) {
 @Composable
 fun UserLine(
     baseUser: User,
-    account: Account,
+    accountViewModel: AccountViewModel,
     onClick: () -> Unit
 ) {
     Column(
@@ -405,7 +405,7 @@ fun UserLine(
                     top = 10.dp
                 )
         ) {
-            UserPicture(baseUser, account.userProfile(), 55.dp, Modifier, null)
+            UserPicture(baseUser, 55.dp, accountViewModel, Modifier, null)
 
             Column(
                 modifier = Modifier

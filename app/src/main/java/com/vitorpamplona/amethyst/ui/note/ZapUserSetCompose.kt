@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.ui.note
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -16,7 +15,6 @@ import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -35,12 +33,8 @@ import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ZapUserSetCompose(zapSetCard: ZapUserSetCard, isInnerNote: Boolean = false, routeForLastRead: String, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
-
     var isNew by remember { mutableStateOf<Boolean>(false) }
 
     LaunchedEffect(key1 = zapSetCard.createdAt()) {
@@ -96,7 +90,7 @@ fun ZapUserSetCompose(zapSetCard: ZapUserSetCard, isInnerNote: Boolean = false, 
                         NoteAuthorPicture(
                             baseNote = it.key,
                             nav = nav,
-                            userAccount = account.userProfile(),
+                            accountViewModel = accountViewModel,
                             size = 35.dp
                         )
                     }

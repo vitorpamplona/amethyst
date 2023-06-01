@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.compose.runtime.Immutable
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import com.vitorpamplona.amethyst.model.Account
@@ -30,6 +31,7 @@ import java.util.Locale
 private const val DEBUG_PLAINTEXT_PREFERENCES = false
 private const val DEBUG_PREFERENCES_NAME = "debug_prefs"
 
+@Immutable
 data class AccountInfo(
     val npub: String,
     val hasPrivKey: Boolean = false

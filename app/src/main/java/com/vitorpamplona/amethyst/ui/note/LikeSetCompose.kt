@@ -114,7 +114,7 @@ fun LikeSetCompose(likeSetCard: LikeSetCard, isInnerNote: Boolean = false, route
                             NoteAuthorPicture(
                                 baseNote = it,
                                 nav = nav,
-                                userAccount = account.userProfile(),
+                                accountViewModel = accountViewModel,
                                 size = 35.dp
                             )
                         }

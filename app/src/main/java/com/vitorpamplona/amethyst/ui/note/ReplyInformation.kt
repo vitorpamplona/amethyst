@@ -18,11 +18,17 @@ import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.*
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Composable
-fun ReplyInformation(replyTo: List<Note>?, mentions: List<String>, account: Account, nav: (String) -> Unit) {
+fun ReplyInformation(
+    replyTo: List<Note>?,
+    mentions: List<String>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
     var dupMentions by remember { mutableStateOf<List<User>?>(null) }
 
     LaunchedEffect(Unit) {
@@ -32,15 +38,21 @@ fun ReplyInformation(replyTo: List<Note>?, mentions: List<String>, account: Acco
     }
 
     if (dupMentions != null) {
-        ReplyInformation(replyTo, dupMentions, account) {
+        ReplyInformation(replyTo, dupMentions, accountViewModel) {
             nav("User/${it.pubkeyHex}")
         }
     }
 }
 
 @Composable
-fun ReplyInformation(replyTo: List<Note>?, dupMentions: List<User>?, account: Account, prefix: String = "", onUserTagClick: (User) -> Unit) {
-    val mentions = dupMentions?.toSet()?.sortedBy { !account.userProfile().isFollowingCached(it) }
+fun ReplyInformation(
+    replyTo: List<Note>?,
+    dupMentions: List<User>?,
+    accountViewModel: AccountViewModel,
+    prefix: String = "",
+    onUserTagClick: (User) -> Unit
+) {
+    val mentions = dupMentions?.toSet()?.sortedBy { !accountViewModel.account.userProfile().isFollowingCached(it) }
     var expanded by remember { mutableStateOf((mentions?.size ?: 0) <= 2) }
 
     FlowRow() {
@@ -66,7 +78,7 @@ fun ReplyInformation(replyTo: List<Note>?, dupMentions: List<User>?, account: Ac
                             )
                         } else if (idx < repliesToDisplay.size - 1) {
                             Text(
-                                "${stringResource(R.string.and)}",
+                                stringResource(R.string.and),
                                 fontSize = 13.sp,
                                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                             )
@@ -80,7 +92,7 @@ fun ReplyInformation(replyTo: List<Note>?, dupMentions: List<User>?, account: Ac
                             )
                         } else if (idx < repliesToDisplay.size) {
                             Text(
-                                "${stringResource(R.string.and)}",
+                                stringResource(R.string.and),
                                 fontSize = 13.sp,
                                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                             )
@@ -105,7 +117,13 @@ fun ReplyInformation(replyTo: List<Note>?, dupMentions: List<User>?, account: Ac
 }
 
 @Composable
-fun ReplyInformationChannel(replyTo: List<Note>?, mentions: List<String>, channel: Channel, account: Account, nav: (String) -> Unit) {
+fun ReplyInformationChannel(
+    replyTo: List<Note>?,
+    mentions: List<String>,
+    channel: Channel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
     var sortedMentions by remember { mutableStateOf<List<User>?>(null) }
 
     LaunchedEffect(Unit) {
@@ -113,7 +131,7 @@ fun ReplyInformationChannel(replyTo: List<Note>?, mentions: List<String>, channe
             sortedMentions = mentions
                 .mapNotNull { LocalCache.checkGetOrCreateUser(it) }
                 .toSet()
-                .sortedBy { account.isFollowing(it) }
+                .sortedBy { accountViewModel.account.isFollowing(it) }
         }
     }
 

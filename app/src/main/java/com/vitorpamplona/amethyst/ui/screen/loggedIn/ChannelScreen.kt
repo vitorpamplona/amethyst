@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -62,7 +63,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -145,7 +145,7 @@ fun ChannelScreen(
         Column(Modifier.fillMaxHeight()) {
             ChannelHeader(
                 channel,
-                account,
+                accountViewModel,
                 nav = nav
             )
 
@@ -260,7 +260,7 @@ fun ChannelScreen(
 }
 
 @Composable
-fun ChannelHeader(channelHex: String, account: Account, nav: (String) -> Unit) {
+fun ChannelHeader(channelHex: String, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     var baseChannel by remember { mutableStateOf<Channel?>(null) }
     val scope = rememberCoroutineScope()
 
@@ -271,12 +271,12 @@ fun ChannelHeader(channelHex: String, account: Account, nav: (String) -> Unit) {
     }
 
     baseChannel?.let {
-        ChannelHeader(it, account, nav)
+        ChannelHeader(it, accountViewModel, nav)
     }
 }
 
 @Composable
-fun ChannelHeader(baseChannel: Channel, account: Account, nav: (String) -> Unit) {
+fun ChannelHeader(baseChannel: Channel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val channelState by baseChannel.live.observeAsState()
     val channel = remember(channelState) { channelState?.channel } ?: return
 
@@ -327,17 +327,7 @@ fun ChannelHeader(baseChannel: Channel, account: Account, nav: (String) -> Unit)
                         .height(35.dp)
                         .padding(bottom = 3.dp)
                 ) {
-                    NoteCopyButton(channel)
-
-                    if (channel.creator == account.userProfile()) {
-                        EditButton(account, channel)
-                    }
-
-                    if (account.followingChannels.contains(channel.idHex)) {
-                        LeaveButton(account, channel, nav)
-                    } else {
-                        JoinButton(account, channel, nav)
-                    }
+                    ChannelActionOptions(channel, accountViewModel, nav)
                 }
             }
         }
@@ -346,6 +336,38 @@ fun ChannelHeader(baseChannel: Channel, account: Account, nav: (String) -> Unit)
             modifier = Modifier.padding(start = 12.dp, end = 12.dp),
             thickness = 0.25.dp
         )
+    }
+}
+
+@Composable
+private fun ChannelActionOptions(
+    channel: Channel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    NoteCopyButton(channel)
+
+    val isMe by remember(accountViewModel) {
+        derivedStateOf {
+            channel.creator == accountViewModel.account.userProfile()
+        }
+    }
+
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val isFollowing by remember(accountState) {
+        derivedStateOf {
+            accountState?.account?.followingChannels?.contains(channel.idHex) ?: false
+        }
+    }
+
+    if (isMe) {
+        EditButton(accountViewModel, channel)
+    }
+
+    if (isFollowing) {
+        LeaveButton(accountViewModel, channel, nav)
+    } else {
+        JoinButton(accountViewModel, channel, nav)
     }
 }
 
@@ -385,13 +407,13 @@ private fun NoteCopyButton(
 }
 
 @Composable
-private fun EditButton(account: Account, channel: Channel) {
+private fun EditButton(accountViewModel: AccountViewModel, channel: Channel) {
     var wantsToPost by remember {
         mutableStateOf(false)
     }
 
     if (wantsToPost) {
-        NewChannelView({ wantsToPost = false }, account = account, channel)
+        NewChannelView({ wantsToPost = false }, accountViewModel, channel)
     }
 
     Button(
@@ -414,11 +436,11 @@ private fun EditButton(account: Account, channel: Channel) {
 }
 
 @Composable
-private fun JoinButton(account: Account, channel: Channel, nav: (String) -> Unit) {
+private fun JoinButton(accountViewModel: AccountViewModel, channel: Channel, nav: (String) -> Unit) {
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
-            account.joinChannel(channel.idHex)
+            accountViewModel.account.joinChannel(channel.idHex)
         },
         shape = RoundedCornerShape(20.dp),
         colors = ButtonDefaults
@@ -432,11 +454,11 @@ private fun JoinButton(account: Account, channel: Channel, nav: (String) -> Unit
 }
 
 @Composable
-private fun LeaveButton(account: Account, channel: Channel, nav: (String) -> Unit) {
+private fun LeaveButton(accountViewModel: AccountViewModel, channel: Channel, nav: (String) -> Unit) {
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
-            account.leaveChannel(channel.idHex)
+            accountViewModel.account.leaveChannel(channel.idHex)
             nav(Route.Message.route)
         },
         shape = RoundedCornerShape(20.dp),

@@ -26,14 +26,12 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun UserFeedView(
+fun RefreshingFeedUserFeedView(
     viewModel: UserFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     enablePullRefresh: Boolean = true
 ) {
-    val feedState by viewModel.feedContent.collectAsState()
-
     var refreshing by remember { mutableStateOf(false) }
     val refresh = { refreshing = true; viewModel.invalidateData(); refreshing = false }
     val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = refresh)
@@ -46,31 +44,44 @@ fun UserFeedView(
 
     Box(modifier) {
         Column() {
-            Crossfade(targetState = feedState, animationSpec = tween(durationMillis = 100)) { state ->
-                when (state) {
-                    is UserFeedState.Empty -> {
-                        FeedEmpty {
-                            refreshing = true
-                        }
-                    }
-                    is UserFeedState.FeedError -> {
-                        FeedError(state.errorMessage) {
-                            refreshing = true
-                        }
-                    }
-                    is UserFeedState.Loaded -> {
-                        refreshing = false
-                        FeedLoaded(state, accountViewModel, nav)
-                    }
-                    is UserFeedState.Loading -> {
-                        LoadingFeed()
-                    }
-                }
-            }
+            UserFeedView(viewModel, accountViewModel, nav)
         }
 
         if (enablePullRefresh) {
             PullRefreshIndicator(refreshing, pullRefreshState, Modifier.align(Alignment.TopCenter))
+        }
+    }
+}
+
+@Composable
+fun UserFeedView(
+    viewModel: UserFeedViewModel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    val feedState by viewModel.feedContent.collectAsState()
+
+    Crossfade(targetState = feedState, animationSpec = tween(durationMillis = 100)) { state ->
+        when (state) {
+            is UserFeedState.Empty -> {
+                FeedEmpty {
+                    viewModel.invalidateData()
+                }
+            }
+
+            is UserFeedState.FeedError -> {
+                FeedError(state.errorMessage) {
+                    viewModel.invalidateData()
+                }
+            }
+
+            is UserFeedState.Loaded -> {
+                FeedLoaded(state, accountViewModel, nav)
+            }
+
+            is UserFeedState.Loading -> {
+                LoadingFeed()
+            }
         }
     }
 }

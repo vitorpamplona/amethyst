@@ -137,7 +137,7 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
                 }
             },
             floatingActionButton = {
-                FloatingButtons(navController, accountViewModel, accountStateViewModel)
+                FloatingButtons(navController, accountViewModel, accountStateViewModel, nav)
             },
             scaffoldState = scaffoldState
         ) {
@@ -161,16 +161,13 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
 }
 
 @Composable
-fun FloatingButtons(navController: NavHostController, accountViewModel: AccountViewModel, accountStateViewModel: AccountStateViewModel) {
+fun FloatingButtons(
+    navController: NavHostController,
+    accountViewModel: AccountViewModel,
+    accountStateViewModel: AccountStateViewModel,
+    nav: (String) -> Unit
+) {
     val accountState by accountStateViewModel.accountContent.collectAsState()
-
-    val nav = remember {
-        { route: String ->
-            if (getRouteWithArguments(navController) != route) {
-                navController.navigate(route)
-            }
-        }
-    }
 
     Crossfade(targetState = accountState, animationSpec = tween(durationMillis = 100)) { state ->
         when (state) {
@@ -185,7 +182,7 @@ fun FloatingButtons(navController: NavHostController, accountViewModel: AccountV
                     NewNoteButton(accountViewModel, nav)
                 }
                 if (currentRoute(navController) == Route.Message.base) {
-                    ChannelFabColumn(state.account, nav)
+                    ChannelFabColumn(accountViewModel, nav)
                 }
                 if (currentRoute(navController)?.substringBefore("?") == Route.Video.base) {
                     NewImageButton(accountViewModel, nav)

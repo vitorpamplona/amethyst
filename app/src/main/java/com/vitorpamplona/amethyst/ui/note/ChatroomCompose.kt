@@ -163,7 +163,7 @@ fun ChatroomCompose(
                 channelPicture = {
                     UserPicture(
                         userToComposeOn,
-                        accountViewModel.userProfile(),
+                        accountViewModel = accountViewModel,
                         size = 55.dp
                     )
                 },

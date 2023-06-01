@@ -133,7 +133,7 @@ fun ChatroomMessageCompose(
         if (!isAcceptableAndCanPreview.first && !showHiddenNote) {
             HiddenNote(
                 account.getRelevantReports(noteForReports),
-                account.userProfile(),
+                accountViewModel,
                 Modifier,
                 innerQuote,
                 nav,

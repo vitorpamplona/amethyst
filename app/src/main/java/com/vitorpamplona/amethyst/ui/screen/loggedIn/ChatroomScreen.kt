@@ -28,7 +28,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -61,18 +60,15 @@ import com.vitorpamplona.amethyst.ui.screen.NostrChatRoomFeedViewModel
 
 @Composable
 fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account
     val context = LocalContext.current
     val chatRoomScreenModel: NewPostViewModel = viewModel()
+    chatRoomScreenModel.account = accountViewModel.account
 
-    chatRoomScreenModel.account = account
-
-    if (account != null && userId != null) {
+    if (userId != null) {
         val replyTo = remember { mutableStateOf<Note?>(null) }
 
-        ChatroomFeedFilter.loadMessagesBetween(account, userId)
-        NostrChatroomDataSource.loadMessagesBetween(account, userId)
+        ChatroomFeedFilter.loadMessagesBetween(accountViewModel.account, userId)
+        NostrChatroomDataSource.loadMessagesBetween(accountViewModel.account, userId)
 
         val feedViewModel: NostrChatRoomFeedViewModel = viewModel()
         val lifeCycleOwner = LocalLifecycleOwner.current
@@ -105,7 +101,7 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, nav: (St
 
         Column(Modifier.fillMaxHeight()) {
             NostrChatroomDataSource.withUser?.let {
-                ChatroomHeader(it, account.userProfile(), nav = nav)
+                ChatroomHeader(it, accountViewModel, nav = nav)
             }
 
             Column(
@@ -178,7 +174,7 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, nav: (St
                     trailingIcon = {
                         PostButton(
                             onPost = {
-                                account.sendPrivateMessage(chatRoomScreenModel.message.text, userId, replyTo.value, null, wantsToMarkAsSensitive = false)
+                                accountViewModel.account.sendPrivateMessage(chatRoomScreenModel.message.text, userId, replyTo.value, null, wantsToMarkAsSensitive = false)
                                 chatRoomScreenModel.message = TextFieldValue("")
                                 replyTo.value = null
                                 feedViewModel.invalidateData() // Don't wait a full second before updating
@@ -193,7 +189,7 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, nav: (St
                             tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                             modifier = Modifier.padding(start = 5.dp)
                         ) {
-                            chatRoomScreenModel.upload(it, "", account.defaultFileServer, context)
+                            chatRoomScreenModel.upload(it, "", accountViewModel.account.defaultFileServer, context)
                         }
                     },
                     colors = TextFieldDefaults.textFieldColors(
@@ -207,7 +203,7 @@ fun ChatroomScreen(userId: String?, accountViewModel: AccountViewModel, nav: (St
 }
 
 @Composable
-fun ChatroomHeader(baseUser: User, accountUser: User, nav: (String) -> Unit) {
+fun ChatroomHeader(baseUser: User, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     Column(
         modifier = Modifier.clickable(
             onClick = { nav("User/${baseUser.pubkeyHex}") }
@@ -217,7 +213,7 @@ fun ChatroomHeader(baseUser: User, accountUser: User, nav: (String) -> Unit) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 UserPicture(
                     baseUser = baseUser,
-                    baseUserAccount = accountUser,
+                    accountViewModel = accountViewModel,
                     size = 35.dp
                 )
 

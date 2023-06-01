@@ -24,13 +24,13 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun NewChannelView(onClose: () -> Unit, account: Account, channel: Channel? = null) {
+fun NewChannelView(onClose: () -> Unit, accountViewModel: AccountViewModel, channel: Channel? = null) {
     val postViewModel: NewChannelViewModel = viewModel()
-    postViewModel.load(account, channel)
+    postViewModel.load(accountViewModel.account, channel)
 
     Dialog(
         onDismissRequest = { onClose() },

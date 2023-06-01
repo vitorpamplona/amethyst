@@ -32,6 +32,7 @@ import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -64,6 +65,7 @@ import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountBackupDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterialApi::class)
@@ -131,10 +133,6 @@ fun ProfileContent(
     val bestDisplayName = remember(accountUserState) { accountUserState?.user?.bestDisplayName() }
     val tags = remember(accountUserState) { accountUserState?.user?.info?.latestMetadata?.tags }
     val route = remember(accountUserState) { "User/${accountUserState?.user?.pubkeyHex}" }
-
-    val accountUserFollowsState by baseAccountUser.live().follows.observeAsState()
-    val followingCount = remember(accountUserFollowsState) { accountUserFollowsState?.user?.cachedFollowCount()?.toString() ?: "--" }
-    val followerCount = remember(accountUserFollowsState) { accountUserFollowsState?.user?.cachedFollowerCount()?.toString() ?: "--" }
 
     Box {
         if (profileBanner != null) {
@@ -221,22 +219,46 @@ fun ProfileContent(
                         }
                     })
             ) {
-                Row() {
-                    Text(
-                        text = followingCount,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(stringResource(R.string.following))
-                }
-                Row(modifier = Modifier.padding(start = 10.dp)) {
-                    Text(
-                        text = followerCount,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(stringResource(R.string.followers))
-                }
+                FollowingAndFollowerCounts(baseAccountUser)
             }
         }
+    }
+}
+
+@Composable
+private fun FollowingAndFollowerCounts(baseAccountUser: User) {
+    val accountUserFollowsState by baseAccountUser.live().follows.observeAsState()
+
+    var followingCount by remember { mutableStateOf("--") }
+    var followerCount by remember { mutableStateOf("--") }
+
+    LaunchedEffect(key1 = accountUserFollowsState) {
+        launch(Dispatchers.IO) {
+            val newFollowing = accountUserFollowsState?.user?.cachedFollowCount()?.toString() ?: "--"
+            val newFollower = accountUserFollowsState?.user?.cachedFollowerCount()?.toString() ?: "--"
+
+            if (followingCount != newFollowing) {
+                followingCount = newFollowing
+            }
+            if (followerCount != newFollower) {
+                followerCount = newFollower
+            }
+        }
+    }
+
+    Row() {
+        Text(
+            text = followingCount,
+            fontWeight = FontWeight.Bold
+        )
+        Text(stringResource(R.string.following))
+    }
+    Row(modifier = Modifier.padding(start = 10.dp)) {
+        Text(
+            text = followerCount,
+            fontWeight = FontWeight.Bold
+        )
+        Text(stringResource(R.string.followers))
     }
 }
 
@@ -257,7 +279,11 @@ fun ListContent(
     var conectOrbotDialogOpen by remember { mutableStateOf(false) }
     var proxyPort = remember { mutableStateOf(account.proxyPort.toString()) }
 
-    Column(modifier = modifier.fillMaxHeight().verticalScroll(rememberScrollState())) {
+    Column(
+        modifier = modifier
+            .fillMaxHeight()
+            .verticalScroll(rememberScrollState())
+    ) {
         if (accountUserPubKey != null) {
             NavigationRow(
                 title = stringResource(R.string.profile),

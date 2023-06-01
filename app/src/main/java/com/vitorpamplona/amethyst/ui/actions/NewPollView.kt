@@ -23,16 +23,16 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.ui.components.*
 import com.vitorpamplona.amethyst.ui.note.ReplyInformation
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.UserLine
 import kotlinx.coroutines.delay
 
 @Composable
-fun NewPollView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = null, account: Account) {
+fun NewPollView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = null, accountViewModel: AccountViewModel) {
     val pollViewModel: NewPostViewModel = viewModel()
 
     val context = LocalContext.current
@@ -40,7 +40,7 @@ fun NewPollView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
     val scrollState = rememberScrollState()
 
     LaunchedEffect(Unit) {
-        pollViewModel.load(account, baseReplyTo, quote)
+        pollViewModel.load(accountViewModel.account, baseReplyTo, quote)
         delay(100)
 
         pollViewModel.imageUploadingError.collect { error ->
@@ -108,7 +108,7 @@ fun NewPollView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                 .verticalScroll(scrollState)
                         ) {
                             if (pollViewModel.replyTos != null && baseReplyTo?.event is TextNoteEvent) {
-                                ReplyInformation(pollViewModel.replyTos, pollViewModel.mentions, account, "✖ ") {
+                                ReplyInformation(pollViewModel.replyTos, pollViewModel.mentions, accountViewModel, "✖ ") {
                                     pollViewModel.removeFromReplyList(it)
                                 }
                             }
@@ -151,7 +151,7 @@ fun NewPollView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                 userSuggestions,
                                 key = { _, item -> item.pubkeyHex }
                             ) { _, item ->
-                                UserLine(item, account) {
+                                UserLine(item, accountViewModel) {
                                     pollViewModel.autocompleteWithUser(item)
                                 }
                             }
