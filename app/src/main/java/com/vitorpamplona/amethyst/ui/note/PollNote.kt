@@ -269,18 +269,17 @@ fun ZapVote(
     nonClickablePrepend: @Composable () -> Unit,
     clickablePrepend: @Composable () -> Unit
 ) {
-    val zapsState by baseNote.live().zaps.observeAsState()
-    val zappedNote = zapsState?.note ?: return
+    val isLoggedUser by remember {
+        derivedStateOf {
+            accountViewModel.isLoggedUser(baseNote.author)
+        }
+    }
 
     var wantsToZap by remember { mutableStateOf(false) }
+    var zappingProgress by remember { mutableStateOf(0f) }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-
-    var zappingProgress by remember { mutableStateOf(0f) }
-
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
 
     nonClickablePrepend()
 
@@ -311,7 +310,7 @@ fun ZapVote(
                             )
                             .show()
                     }
-                } else if (accountViewModel.isLoggedUser(zappedNote.author)) {
+                } else if (isLoggedUser) {
                     scope.launch {
                         Toast
                             .makeText(
@@ -333,11 +332,13 @@ fun ZapVote(
                             .show()
                     }
                     return@combinedClickable
-                } else if (account.zapAmountChoices.size == 1 && pollViewModel.isValidInputVoteAmount(account.zapAmountChoices.first())) {
+                } else if (accountViewModel.account.zapAmountChoices.size == 1 &&
+                    pollViewModel.isValidInputVoteAmount(accountViewModel.account.zapAmountChoices.first())
+                ) {
                     scope.launch(Dispatchers.IO) {
                         accountViewModel.zap(
                             baseNote,
-                            account.zapAmountChoices.first() * 1000,
+                            accountViewModel.account.zapAmountChoices.first() * 1000,
                             poolOption.option,
                             "",
                             context,
@@ -354,7 +355,7 @@ fun ZapVote(
                                     zappingProgress = it
                                 }
                             },
-                            zapType = account.defaultZapType
+                            zapType = accountViewModel.account.defaultZapType
                         )
                     }
                 } else {

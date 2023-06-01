@@ -519,10 +519,8 @@ private fun ZapIcon(
     var wasZappedByLoggedInUser by remember { mutableStateOf(false) }
     val zapsState by baseNote.live().zaps.observeAsState()
 
-    val scope = rememberCoroutineScope()
-
     LaunchedEffect(key1 = zapsState) {
-        scope.launch(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             zapsState?.note?.let {
                 if (!wasZappedByLoggedInUser) {
                     val newWasZapped = accountViewModel.calculateIfNoteWasZappedByAccount(it)
@@ -559,17 +557,16 @@ private fun ZapAmountText(
     accountViewModel: AccountViewModel
 ) {
     val zapsState by baseNote.live().zaps.observeAsState()
-    val zappedNote = remember(zapsState) { zapsState?.note } ?: return
-
-    val scope = rememberCoroutineScope()
 
     var zapAmountTxt by remember { mutableStateOf("") }
 
     LaunchedEffect(key1 = zapsState) {
-        scope.launch(Dispatchers.IO) {
-            val newZapAmount = showAmount(accountViewModel.calculateZapAmount(zappedNote))
-            if (newZapAmount != zapAmountTxt) {
-                zapAmountTxt = newZapAmount
+        launch(Dispatchers.IO) {
+            zapsState?.note?.let {
+                val newZapAmount = showAmount(accountViewModel.calculateZapAmount(it))
+                if (newZapAmount != zapAmountTxt) {
+                    zapAmountTxt = newZapAmount
+                }
             }
         }
     }

@@ -54,7 +54,6 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
@@ -103,15 +102,19 @@ fun AppTopBar(followLists: FollowListViewModel, navController: NavHostController
 fun StoriesTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
     GenericTopBar(scaffoldState, accountViewModel) { accountViewModel ->
         val accountState by accountViewModel.accountLiveData.observeAsState()
-        accountState?.account?.let { account ->
-            FollowList(
-                followLists,
-                account.defaultStoriesFollowList,
-                account.userProfile(),
-                true
-            ) { listName ->
-                account.changeDefaultStoriesFollowList(listName)
+
+        val list by remember(accountState) {
+            derivedStateOf {
+                accountState?.account?.defaultStoriesFollowList ?: GLOBAL_FOLLOWS
             }
+        }
+
+        FollowList(
+            followLists,
+            list,
+            true
+        ) { listName ->
+            accountViewModel.account.changeDefaultStoriesFollowList(listName)
         }
     }
 }
@@ -120,15 +123,19 @@ fun StoriesTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState
 fun HomeTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
     GenericTopBar(scaffoldState, accountViewModel) { accountViewModel ->
         val accountState by accountViewModel.accountLiveData.observeAsState()
-        accountState?.account?.let { account ->
-            FollowList(
-                followLists,
-                account.defaultHomeFollowList,
-                account.userProfile(),
-                false
-            ) { listName ->
-                account.changeDefaultHomeFollowList(listName)
+
+        val list by remember(accountState) {
+            derivedStateOf {
+                accountState?.account?.defaultHomeFollowList ?: GLOBAL_FOLLOWS
             }
+        }
+
+        FollowList(
+            followLists,
+            list,
+            false
+        ) { listName ->
+            accountViewModel.account.changeDefaultHomeFollowList(listName)
         }
     }
 }
@@ -137,15 +144,19 @@ fun HomeTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, a
 fun NotificationTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
     GenericTopBar(scaffoldState, accountViewModel) { accountViewModel ->
         val accountState by accountViewModel.accountLiveData.observeAsState()
-        accountState?.account?.let { account ->
-            FollowList(
-                followLists,
-                account.defaultNotificationFollowList,
-                account.userProfile(),
-                true
-            ) { listName ->
-                account.changeDefaultNotificationFollowList(listName)
+
+        val list by remember(accountState) {
+            derivedStateOf {
+                accountState?.account?.defaultNotificationFollowList ?: GLOBAL_FOLLOWS
             }
+        }
+
+        FollowList(
+            followLists,
+            list,
+            true
+        ) { listName ->
+            accountViewModel.account.changeDefaultNotificationFollowList(listName)
         }
     }
 }
@@ -296,7 +307,7 @@ private fun LoggedInUserPictureDrawer(
 }
 
 @Composable
-fun FollowList(followListsModel: FollowListViewModel, listName: String, loggedIn: User, withGlobal: Boolean, onChange: (String) -> Unit) {
+fun FollowList(followListsModel: FollowListViewModel, listName: String, withGlobal: Boolean, onChange: (String) -> Unit) {
     val kind3Follow = Pair(KIND3_FOLLOWS, stringResource(id = R.string.follow_list_kind3follows))
     val globalFollow = Pair(GLOBAL_FOLLOWS, stringResource(id = R.string.follow_list_global))
 
@@ -339,7 +350,10 @@ class FollowListViewModel(val account: Account) : ViewModel() {
         val newFollowLists = LocalCache.addressables.mapNotNull {
             val event = (it.value.event as? PeopleListEvent)
             // Has to have an list
-            if (event != null && event.pubKey == account.userProfile().pubkeyHex && (event.tags.size > 1 || event.content.length > 50)) {
+            if (event != null &&
+                event.pubKey == account.userProfile().pubkeyHex &&
+                (event.tags.size > 1 || event.content.length > 50)
+            ) {
                 Pair(event.dTag(), event.dTag())
             } else {
                 null

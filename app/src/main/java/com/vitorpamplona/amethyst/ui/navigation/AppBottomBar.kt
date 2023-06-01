@@ -110,31 +110,11 @@ private fun RowScope.HasNewItemsIcon(
     accountViewModel: AccountViewModel,
     navController: NavHostController
 ) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = remember(accountState) { accountState?.account } ?: return
+    var hasNewItems by remember { mutableStateOf(false) }
 
-    val notifState by NotificationCache.live.observeAsState()
-    val notif = remember(notifState) { notifState?.cache } ?: return
-
-    var hasNewItems by remember { mutableStateOf<Boolean>(false) }
-
-    LaunchedEffect(key1 = notifState, key2 = accountState) {
-        launch(Dispatchers.IO) {
-            val newHasNewItems = route.hasNewItems(account, notif, emptySet())
-            if (newHasNewItems != hasNewItems) {
-                hasNewItems = newHasNewItems
-            }
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        launch(Dispatchers.IO) {
-            LocalCache.live.newEventBundles.collect {
-                val newHasNewItems = route.hasNewItems(account, notif, it)
-                if (newHasNewItems != hasNewItems) {
-                    hasNewItems = newHasNewItems
-                }
-            }
+    WatchPossibleNotificationChanges(route, accountViewModel) {
+        if (it != hasNewItems) {
+            hasNewItems = it
         }
     }
 
@@ -162,6 +142,33 @@ private fun RowScope.HasNewItemsIcon(
                     launchSingleTop = true
                     restoreState = true
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun WatchPossibleNotificationChanges(
+    route: Route,
+    accountViewModel: AccountViewModel,
+    onChange: (Boolean) -> Unit
+) {
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val account = remember(accountState) { accountState?.account } ?: return
+
+    val notifState by NotificationCache.live.observeAsState()
+    val notif = remember(notifState) { notifState?.cache } ?: return
+
+    LaunchedEffect(key1 = notifState, key2 = accountState) {
+        launch(Dispatchers.IO) {
+            onChange(route.hasNewItems(account, notif, emptySet()))
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        launch(Dispatchers.IO) {
+            LocalCache.live.newEventBundles.collect {
+                onChange(route.hasNewItems(account, notif, it))
             }
         }
     }

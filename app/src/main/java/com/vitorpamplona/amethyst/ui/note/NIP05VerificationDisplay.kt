@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Report
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -97,11 +98,14 @@ fun nip05VerificationAsAState(user: UserMetadata, pubkeyHex: String): State<Bool
 @Composable
 fun ObserveDisplayNip05Status(baseNote: Note, columnModifier: Modifier = Modifier) {
     val noteState by baseNote.live().metadata.observeAsState()
-    val note = noteState?.note ?: return
+    val author by remember(noteState) {
+        derivedStateOf {
+            noteState?.note?.author
+        }
+    }
 
-    val author = note.author
-    if (author != null) {
-        ObserveDisplayNip05Status(author, columnModifier)
+    author?.let {
+        ObserveDisplayNip05Status(it, columnModifier)
     }
 }
 

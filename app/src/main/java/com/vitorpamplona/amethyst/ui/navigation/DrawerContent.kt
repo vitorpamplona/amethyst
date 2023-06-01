@@ -76,16 +76,13 @@ fun DrawerContent(
     sheetState: ModalBottomSheetState,
     accountViewModel: AccountViewModel
 ) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
-
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = MaterialTheme.colors.background
     ) {
         Column() {
             ProfileContent(
-                account.userProfile(),
+                accountViewModel.account.userProfile(),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 25.dp)
@@ -98,17 +95,16 @@ fun DrawerContent(
                 modifier = Modifier.padding(top = 20.dp)
             )
             ListContent(
-                account.userProfile().pubkeyHex,
                 nav,
                 scaffoldState,
                 sheetState,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
-                account
+                accountViewModel
             )
 
-            BottomContent(account.userProfile(), scaffoldState, nav)
+            BottomContent(accountViewModel.account.userProfile(), scaffoldState, nav)
         }
     }
 }
@@ -265,13 +261,15 @@ private fun FollowingAndFollowerCounts(baseAccountUser: User) {
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun ListContent(
-    accountUserPubKey: String?,
     nav: (String) -> Unit,
     scaffoldState: ScaffoldState,
     sheetState: ModalBottomSheetState,
     modifier: Modifier,
-    account: Account
+    accountViewModel: AccountViewModel
 ) {
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val account = remember(accountState) { accountState?.account } ?: return
+
     val coroutineScope = rememberCoroutineScope()
     var backupDialogOpen by remember { mutableStateOf(false) }
     var checked by remember { mutableStateOf(account.proxy != null) }
@@ -284,25 +282,23 @@ fun ListContent(
             .fillMaxHeight()
             .verticalScroll(rememberScrollState())
     ) {
-        if (accountUserPubKey != null) {
-            NavigationRow(
-                title = stringResource(R.string.profile),
-                icon = Route.Profile.icon,
-                tint = MaterialTheme.colors.primary,
-                nav = nav,
-                scaffoldState = scaffoldState,
-                route = "User/$accountUserPubKey"
-            )
+        NavigationRow(
+            title = stringResource(R.string.profile),
+            icon = Route.Profile.icon,
+            tint = MaterialTheme.colors.primary,
+            nav = nav,
+            scaffoldState = scaffoldState,
+            route = "User/${account.userProfile().pubkeyHex}"
+        )
 
-            NavigationRow(
-                title = stringResource(R.string.bookmarks),
-                icon = Route.Bookmarks.icon,
-                tint = MaterialTheme.colors.onBackground,
-                nav = nav,
-                scaffoldState = scaffoldState,
-                route = Route.Bookmarks.route
-            )
-        }
+        NavigationRow(
+            title = stringResource(R.string.bookmarks),
+            icon = Route.Bookmarks.icon,
+            tint = MaterialTheme.colors.onBackground,
+            nav = nav,
+            scaffoldState = scaffoldState,
+            route = Route.Bookmarks.route
+        )
 
         NavigationRow(
             title = stringResource(R.string.security_filters),

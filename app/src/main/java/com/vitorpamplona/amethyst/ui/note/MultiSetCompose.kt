@@ -65,9 +65,6 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
     val noteState by baseNote.live().metadata.observeAsState()
     val note = remember(noteState) { noteState?.note } ?: return
 
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val loggedIn = remember(accountState) { accountState?.account?.userProfile() } ?: return
-
     var popupExpanded by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
@@ -108,7 +105,7 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
             .combinedClickable(
                 onClick = {
                     scope.launch {
-                        routeFor(baseNote, loggedIn)?.let { nav(it) }
+                        routeFor(baseNote, accountViewModel.userProfile())?.let { nav(it) }
                     }
                 },
                 onLongClick = { popupExpanded = true }

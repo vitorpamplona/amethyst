@@ -307,11 +307,13 @@ private fun ReportsTabHeader(baseUser: User) {
     var userReports by remember { mutableStateOf(0) }
 
     LaunchedEffect(key1 = userState) {
-        UserProfileReportsFeedFilter.user = baseUser
-        val newSize = UserProfileReportsFeedFilter.feed().size
+        launch(Dispatchers.IO) {
+            UserProfileReportsFeedFilter.user = baseUser
+            val newSize = UserProfileReportsFeedFilter.feed().size
 
-        if (newSize != userReports) {
-            userReports = newSize
+            if (newSize != userReports) {
+                userReports = newSize
+            }
         }
     }
 
@@ -321,12 +323,19 @@ private fun ReportsTabHeader(baseUser: User) {
 @Composable
 private fun BookmarkTabHeader(baseUser: User) {
     val userState by baseUser.live().bookmarks.observeAsState()
-    val userBookmarks = remember(userState) {
-        val bookmarkList = userState?.user?.latestBookmarkList
-        (bookmarkList?.taggedEvents()?.count() ?: 0) + (
-            bookmarkList?.taggedAddresses()?.count()
-                ?: 0
-            )
+
+    var userBookmarks by remember { mutableStateOf(0) }
+
+    LaunchedEffect(key1 = userState) {
+        launch(Dispatchers.IO) {
+            val bookmarkList = userState?.user?.latestBookmarkList
+
+            val newBookmarks = (bookmarkList?.taggedEvents()?.count() ?: 0) + (bookmarkList?.taggedAddresses()?.count() ?: 0)
+
+            if (newBookmarks != userBookmarks) {
+                userBookmarks = newBookmarks
+            }
+        }
     }
 
     Text(text = "$userBookmarks ${stringResource(R.string.bookmarks)}")

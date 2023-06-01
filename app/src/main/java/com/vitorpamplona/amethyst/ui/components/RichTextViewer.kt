@@ -449,10 +449,12 @@ private fun ObserveNIP19Event(
     var baseNote by remember(it) { mutableStateOf<Note?>(null) }
 
     LaunchedEffect(key1 = it.hex) {
-        launch(Dispatchers.IO) {
-            if (it.type == Nip19.Type.NOTE || it.type == Nip19.Type.EVENT || it.type == Nip19.Type.ADDRESS) {
-                LocalCache.checkGetOrCreateNote(it.hex)?.let { note ->
-                    baseNote = note
+        if (baseNote == null) {
+            launch(Dispatchers.IO) {
+                if (it.type == Nip19.Type.NOTE || it.type == Nip19.Type.EVENT || it.type == Nip19.Type.ADDRESS) {
+                    LocalCache.checkGetOrCreateNote(it.hex)?.let { note ->
+                        baseNote = note
+                    }
                 }
             }
         }
@@ -479,10 +481,12 @@ private fun ObserveNIP19User(
     var baseUser by remember(it) { mutableStateOf<User?>(null) }
 
     LaunchedEffect(key1 = it.hex) {
-        launch(Dispatchers.IO) {
-            if (it.type == Nip19.Type.USER) {
-                LocalCache.checkGetOrCreateUser(it.hex)?.let { user ->
-                    baseUser = user
+        if (baseUser == null) {
+            launch(Dispatchers.IO) {
+                if (it.type == Nip19.Type.USER) {
+                    LocalCache.checkGetOrCreateUser(it.hex)?.let { user ->
+                        baseUser = user
+                    }
                 }
             }
         }
@@ -782,27 +786,29 @@ fun TagLink(word: String, tags: List<List<String>>, canPreview: Boolean, backgro
     var baseNotePair by remember { mutableStateOf<Pair<Note, String?>?>(null) }
 
     LaunchedEffect(key1 = word) {
-        launch(Dispatchers.IO) {
-            val matcher = tagIndex.matcher(word)
-            val (index, suffix) = try {
-                matcher.find()
-                Pair(matcher.group(1)?.toInt(), matcher.group(2) ?: "")
-            } catch (e: Exception) {
-                Log.w("Tag Parser", "Couldn't link tag $word", e)
-                Pair(null, null)
-            }
+        if (baseUserPair == null && baseNotePair == null) {
+            launch(Dispatchers.IO) {
+                val matcher = tagIndex.matcher(word)
+                val (index, suffix) = try {
+                    matcher.find()
+                    Pair(matcher.group(1)?.toInt(), matcher.group(2) ?: "")
+                } catch (e: Exception) {
+                    Log.w("Tag Parser", "Couldn't link tag $word", e)
+                    Pair(null, null)
+                }
 
-            if (index != null && index >= 0 && index < tags.size) {
-                val tag = tags[index]
+                if (index != null && index >= 0 && index < tags.size) {
+                    val tag = tags[index]
 
-                if (tag.size > 1) {
-                    if (tag[0] == "p") {
-                        LocalCache.checkGetOrCreateUser(tag[1])?.let {
-                            baseUserPair = Pair(it, suffix)
-                        }
-                    } else if (tag[0] == "e" || tag[0] == "a") {
-                        LocalCache.checkGetOrCreateNote(tag[1])?.let {
-                            baseNotePair = Pair(it, suffix)
+                    if (tag.size > 1) {
+                        if (tag[0] == "p") {
+                            LocalCache.checkGetOrCreateUser(tag[1])?.let {
+                                baseUserPair = Pair(it, suffix)
+                            }
+                        } else if (tag[0] == "e" || tag[0] == "a") {
+                            LocalCache.checkGetOrCreateNote(tag[1])?.let {
+                                baseNotePair = Pair(it, suffix)
+                            }
                         }
                     }
                 }
