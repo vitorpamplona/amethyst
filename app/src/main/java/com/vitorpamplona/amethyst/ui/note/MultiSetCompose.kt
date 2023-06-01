@@ -262,9 +262,7 @@ fun AuthorGalleryZaps(
     Column(modifier = Modifier.padding(start = 10.dp)) {
         FlowRow() {
             authorNotes.forEach {
-                Box() {
-                    AuthorPictureAndComment(it.key, it.value, backgroundColor, nav, accountViewModel)
-                }
+                AuthorPictureAndComment(it.key, it.value, backgroundColor, nav, accountViewModel)
             }
         }
     }
@@ -329,17 +327,9 @@ private fun AuthorPictureAndComment(
 ) {
     val authorPictureModifier = remember { Modifier }
 
-    val modifier = remember(comment) {
-        if (comment != null) {
-            Modifier
-                .fillMaxWidth()
-                .clickable {
-                    nav(route)
-                }
-        } else {
-            Modifier.clickable {
-                nav(route)
-            }
+    val modifier = remember {
+        Modifier.clickable {
+            nav(route)
         }
     }
 
@@ -381,7 +371,7 @@ private fun AuthorPictureAndComment(
                 content = it,
                 canPreview = true,
                 tags = null,
-                modifier = Modifier.weight(1f),
+                modifier = remember { Modifier.fillMaxWidth() },
                 backgroundColor = backgroundColor,
                 accountViewModel = accountViewModel,
                 nav = nav

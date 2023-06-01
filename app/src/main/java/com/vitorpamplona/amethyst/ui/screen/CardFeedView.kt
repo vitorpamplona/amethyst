@@ -153,6 +153,10 @@ private fun FeedLoaded(
     nav: (String) -> Unit,
     routeForLastRead: String
 ) {
+    val defaultModifier = remember {
+        Modifier.fillMaxWidth().defaultMinSize(minHeight = 100.dp)
+    }
+
     LazyColumn(
         modifier = remember { Modifier.fillMaxSize() },
         contentPadding = remember {
@@ -164,7 +168,7 @@ private fun FeedLoaded(
         state = listState
     ) {
         itemsIndexed(state.feed.value, key = { _, item -> item.id() }) { _, item ->
-            Row(Modifier.fillMaxWidth().defaultMinSize(minHeight = 100.dp)) {
+            Row(defaultModifier) {
                 when (item) {
                     is NoteCard -> NoteCompose(
                         item.note,

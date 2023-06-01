@@ -604,7 +604,7 @@ private fun RenderPoll(
     nav: (String) -> Unit
 ) {
     val noteEvent = note.event as? PollNoteEvent ?: return
-    val eventContent = noteEvent.content()
+    val eventContent = remember { noteEvent.content() }
 
     if (makeItShort && accountViewModel.isLoggedUser(note.author)) {
         Text(
@@ -2249,32 +2249,39 @@ fun UserPicture(
                     .align(Alignment.TopEnd)
             }
 
-            val myIconBackgroundModifier = remember {
-                Modifier
-                    .clip(CircleShape)
-                    .fillMaxSize(0.6f)
-                    .align(Alignment.Center)
-            }
-
-            val myIconModifier = remember {
-                Modifier
-                    .width(size.div(3.5f))
-                    .height(size.div(3.5f))
-            }
-
-            Box(myIconBoxModifier, contentAlignment = Alignment.Center) {
-                Box(
-                    myIconBackgroundModifier.background(MaterialTheme.colors.background)
-                )
-
-                Icon(
-                    painter = painterResource(R.drawable.ic_verified),
-                    stringResource(id = R.string.following),
-                    modifier = myIconModifier,
-                    tint = Following
-                )
-            }
+            FollowingIcon(myIconBoxModifier, size)
         }
+    }
+}
+
+@Composable
+private fun FollowingIcon(
+    myIconBoxModifier: Modifier,
+    size: Dp
+) {
+    Box(myIconBoxModifier, contentAlignment = Alignment.Center) {
+        val myIconBackgroundModifier = remember {
+            Modifier
+                .clip(CircleShape)
+                .fillMaxSize(0.6f)
+        }
+
+        Box(
+            myIconBackgroundModifier.background(MaterialTheme.colors.background)
+        )
+
+        val myIconModifier = remember {
+            Modifier
+                .width(size.div(3.5f))
+                .height(size.div(3.5f))
+        }
+
+        Icon(
+            painter = painterResource(R.drawable.ic_verified),
+            stringResource(id = R.string.following),
+            modifier = myIconModifier,
+            tint = Following
+        )
     }
 }
 
