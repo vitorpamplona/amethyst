@@ -54,7 +54,6 @@ import coil.request.ImageRequest
 import com.google.android.exoplayer2.C
 import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.MediaItem
-import com.google.android.exoplayer2.MediaMetadata
 import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
@@ -126,17 +125,17 @@ fun VideoView(videoUri: Uri, description: String? = null, thumb: Drawable? = nul
     var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
 
     LaunchedEffect(key1 = videoUri) {
-        val mediaBuilder = MediaItem.Builder().setUri(videoUri)
-
-        description?.let {
-            mediaBuilder.setMediaMetadata(
-                MediaMetadata.Builder().setDisplayTitle(it).build()
-            )
+        if (exoPlayer == null) {
+            launch(Dispatchers.Default) {
+                exoPlayer = ExoPlayer.Builder(context).build()
+            }
         }
+    }
 
-        val media = mediaBuilder.build()
+    exoPlayer?.let {
+        val media = remember { MediaItem.Builder().setUri(videoUri).build() }
 
-        exoPlayer = ExoPlayer.Builder(context).build().apply {
+        it.apply {
             repeatMode = Player.REPEAT_MODE_ALL
             videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
             volume = if (mutedInstance.value) 0f else 1f
@@ -151,9 +150,7 @@ fun VideoView(videoUri: Uri, description: String? = null, thumb: Drawable? = nul
             }
             prepare()
         }
-    }
 
-    exoPlayer?.let {
         RenderVideoPlayer(it, context, thumb, onDialog, mutedInstance)
     }
 
@@ -232,14 +229,11 @@ fun Modifier.onVisibilityChanges(onVisibilityChanges: (Boolean) -> Unit): Modifi
     val view = LocalView.current
     var isVisible: Boolean? by remember { mutableStateOf(null) }
 
-    LaunchedEffect(isVisible) {
-        onVisibilityChanges(isVisible == true)
-    }
-
     onGloballyPositioned { coordinates ->
         val newIsVisible = coordinates.isCompletelyVisible(view)
         if (isVisible != newIsVisible) {
             isVisible = newIsVisible
+            onVisibilityChanges(isVisible == true)
         }
     }
 }

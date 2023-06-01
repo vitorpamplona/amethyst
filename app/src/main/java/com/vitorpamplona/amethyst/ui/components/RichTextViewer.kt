@@ -43,6 +43,15 @@ import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.uriToRoute
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.collections.immutable.ImmutableSet
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentMapOf
+import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableMap
+import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.net.MalformedURLException
@@ -108,10 +117,10 @@ fun RichTextViewer(
 @Stable
 class RichTextViewerState(
     val content: String,
-    val urlSet: Set<String>,
-    val imagesForPager: Map<String, ZoomableUrlContent>,
-    val imageList: List<ZoomableUrlContent>,
-    val customEmoji: Map<String, String>
+    val urlSet: ImmutableSet<String>,
+    val imagesForPager: ImmutableMap<String, ZoomableUrlContent>,
+    val imageList: ImmutableList<ZoomableUrlContent>,
+    val customEmoji: ImmutableMap<String, String>
 )
 
 @Composable
@@ -124,7 +133,15 @@ private fun RenderRegular(
     nav: (String) -> Unit
 ) {
     var state by remember(content) {
-        mutableStateOf(RichTextViewerState(content, emptySet(), emptyMap(), emptyList(), emptyMap()))
+        mutableStateOf(
+            RichTextViewerState(
+                content,
+                persistentSetOf(),
+                persistentMapOf(),
+                persistentListOf(),
+                persistentMapOf()
+            )
+        )
     }
 
     LaunchedEffect(key1 = content) {
@@ -146,7 +163,13 @@ private fun RenderRegular(
             val emojiMap = tags?.filter { it.size > 2 && it[0] == "emoji" }?.associate { ":${it[1]}:" to it[2] } ?: emptyMap()
 
             if (urlSet.isNotEmpty() || emojiMap.isNotEmpty()) {
-                state = RichTextViewerState(content, urlSet, imagesForPager, imageList, emojiMap)
+                state = RichTextViewerState(
+                    content,
+                    urlSet.toImmutableSet(),
+                    imagesForPager.toImmutableMap(),
+                    imageList.toImmutableList(),
+                    emojiMap.toImmutableMap()
+                )
             }
         }
     }
