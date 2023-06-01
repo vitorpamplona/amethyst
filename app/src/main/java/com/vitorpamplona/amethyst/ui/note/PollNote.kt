@@ -44,7 +44,7 @@ fun PollNote(
     nav: (String) -> Unit
 ) {
     val pollViewModel: PollNoteViewModel = viewModel(
-        key = baseNote.idHex
+        key = baseNote.idHex + "PollNoteViewModel"
     )
 
     pollViewModel.load(accountViewModel.account, baseNote)
