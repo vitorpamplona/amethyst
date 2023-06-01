@@ -3,10 +3,6 @@ package com.vitorpamplona.amethyst.model
 import com.vitorpamplona.amethyst.service.previews.BahaUrlPreview
 import com.vitorpamplona.amethyst.service.previews.IUrlPreviewCallback
 import com.vitorpamplona.amethyst.service.previews.UrlInfoItem
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
 
 object UrlCachedPreviewer {
     var cache = mapOf<String, UrlInfoItem>()
@@ -25,22 +21,19 @@ object UrlCachedPreviewer {
             return
         }
 
-        val scope = CoroutineScope(Job() + Dispatchers.IO)
-        scope.launch {
-            BahaUrlPreview(
-                url,
-                object : IUrlPreviewCallback {
-                    override fun onComplete(urlInfo: UrlInfoItem) {
-                        cache = cache + Pair(url, urlInfo)
-                        callback?.onComplete(urlInfo)
-                    }
-
-                    override fun onFailed(throwable: Throwable) {
-                        failures = failures + Pair(url, throwable)
-                        callback?.onFailed(throwable)
-                    }
+        BahaUrlPreview(
+            url,
+            object : IUrlPreviewCallback {
+                override fun onComplete(urlInfo: UrlInfoItem) {
+                    cache = cache + Pair(url, urlInfo)
+                    callback?.onComplete(urlInfo)
                 }
-            ).fetchUrlPreview()
-        }
+
+                override fun onFailed(throwable: Throwable) {
+                    failures = failures + Pair(url, throwable)
+                    callback?.onFailed(throwable)
+                }
+            }
+        ).fetchUrlPreview()
     }
 }

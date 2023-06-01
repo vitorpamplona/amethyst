@@ -95,6 +95,7 @@ import com.vitorpamplona.amethyst.ui.screen.RelayFeedView
 import com.vitorpamplona.amethyst.ui.screen.RelayFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.UserFeedView
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -736,7 +737,7 @@ private fun DisplayBadges(
             if (list.isNullOrEmpty()) {
                 null
             } else {
-                list
+                list.toImmutableList()
             }
         }
     }
@@ -759,9 +760,8 @@ private fun LoadAndRenderBadge(badgeAwardEventHex: String, nav: (String) -> Unit
         mutableStateOf<Note?>(null)
     }
 
-    val scope = rememberCoroutineScope()
     LaunchedEffect(key1 = badgeAwardEventHex) {
-        scope.launch(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             baseNote = LocalCache.getOrCreateNote(badgeAwardEventHex)
         }
     }
@@ -788,7 +788,7 @@ fun BadgeThumb(
     pictureModifier: Modifier = Modifier
 ) {
     BadgeThumb(note, size, pictureModifier) {
-        nav("Note/$it")
+        nav("Note/${note.idHex}")
     }
 }
 
@@ -808,7 +808,7 @@ fun BadgeThumb(
     ) {
         val noteState by baseNote.live().metadata.observeAsState()
         val event = remember(noteState) { noteState?.note?.event as? BadgeDefinitionEvent } ?: return
-        val image = remember(noteState) { event.thumb() ?: event.image() }
+        val image = remember(noteState) { event.thumb()?.ifBlank { null } ?: event.image()?.ifBlank { null } }
 
         if (image == null) {
             RobohashAsyncImage(

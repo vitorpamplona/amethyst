@@ -36,6 +36,7 @@ import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Report
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -82,11 +83,13 @@ import net.engawapg.lib.zoomable.zoomable
 import java.io.File
 import java.security.MessageDigest
 
+@Immutable
 abstract class ZoomableContent(
     val description: String? = null,
     val dim: String? = null
 )
 
+@Immutable
 abstract class ZoomableUrlContent(
     val url: String,
     description: String? = null,
@@ -95,6 +98,7 @@ abstract class ZoomableUrlContent(
     val uri: String? = null
 ) : ZoomableContent(description, dim)
 
+@Immutable
 class ZoomableUrlImage(
     url: String,
     description: String? = null,
@@ -104,6 +108,7 @@ class ZoomableUrlImage(
     uri: String? = null
 ) : ZoomableUrlContent(url, description, hash, dim, uri)
 
+@Immutable
 class ZoomableUrlVideo(
     url: String,
     description: String? = null,
@@ -112,6 +117,7 @@ class ZoomableUrlVideo(
     uri: String? = null
 ) : ZoomableUrlContent(url, description, hash, dim, uri)
 
+@Immutable
 abstract class ZoomablePreloadedContent(
     val localFile: File?,
     description: String? = null,
@@ -121,6 +127,7 @@ abstract class ZoomablePreloadedContent(
     val uri: String
 ) : ZoomableContent(description, dim)
 
+@Immutable
 class ZoomableLocalImage(
     localFile: File?,
     mimeType: String? = null,
@@ -131,6 +138,7 @@ class ZoomableLocalImage(
     uri: String
 ) : ZoomablePreloadedContent(localFile, description, mimeType, isVerified, dim, uri)
 
+@Immutable
 class ZoomableLocalVideo(
     localFile: File?,
     mimeType: String? = null,

@@ -122,6 +122,7 @@ fun SearchScreen(
 fun WatchAccountForSearchScreen(searchFeedViewModel: NostrGlobalFeedViewModel, accountViewModel: AccountViewModel) {
     LaunchedEffect(accountViewModel) {
         NostrGlobalDataSource.resetFilters()
+        NostrSearchEventOrUserDataSource.start()
         searchFeedViewModel.invalidateData(true)
     }
 }
@@ -130,7 +131,7 @@ class SearchBarViewModel : ViewModel() {
     var account: Account? = null
 
     var searchValue by mutableStateOf("")
-    val searchResults = mutableStateOf<List<User>>(emptyList())
+    val searchResultsUsers = mutableStateOf<List<User>>(emptyList())
     val searchResultsNotes = mutableStateOf<List<Note>>(emptyList())
     val searchResultsChannels = mutableStateOf<List<Channel>>(emptyList())
     val hashtagResults = mutableStateOf<List<String>>(emptyList())
@@ -147,21 +148,21 @@ class SearchBarViewModel : ViewModel() {
     private fun runSearch() {
         if (searchValue.isBlank()) {
             hashtagResults.value = emptyList()
-            searchResults.value = emptyList()
+            searchResultsUsers.value = emptyList()
             searchResultsChannels.value = emptyList()
             searchResultsNotes.value = emptyList()
             return
         }
 
         hashtagResults.value = findHashtags(searchValue)
-        searchResults.value = LocalCache.findUsersStartingWith(searchValue).sortedWith(compareBy({ account?.isFollowing(it) }, { it.toBestDisplayName() })).reversed()
+        searchResultsUsers.value = LocalCache.findUsersStartingWith(searchValue).sortedWith(compareBy({ account?.isFollowing(it) }, { it.toBestDisplayName() })).reversed()
         searchResultsNotes.value = LocalCache.findNotesStartingWith(searchValue).sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
         searchResultsChannels.value = LocalCache.findChannelsStartingWith(searchValue)
     }
 
     fun clean() {
         searchValue = ""
-        searchResults.value = emptyList()
+        searchResultsUsers.value = emptyList()
         searchResultsChannels.value = emptyList()
         searchResultsNotes.value = emptyList()
     }
@@ -183,7 +184,7 @@ class SearchBarViewModel : ViewModel() {
 @Composable
 private fun SearchBar(accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val searchBarViewModel: SearchBarViewModel = viewModel()
-    searchBarViewModel.account = accountViewModel.accountLiveData.value?.account
+    searchBarViewModel.account = accountViewModel.account
 
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
@@ -196,7 +197,7 @@ private fun SearchBar(accountViewModel: AccountViewModel, nav: (String) -> Unit)
     }
 
     LaunchedEffect(Unit) {
-        scope.launch(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect {
                 if (searchBarViewModel.isSearching()) {
                     searchBarViewModel.invalidateData()
@@ -306,7 +307,7 @@ private fun SearchBar(accountViewModel: AccountViewModel, nav: (String) -> Unit)
                 }
             }
 
-            itemsIndexed(searchBarViewModel.searchResults.value, key = { _, item -> "u" + item.pubkeyHex }) { _, item ->
+            itemsIndexed(searchBarViewModel.searchResultsUsers.value, key = { _, item -> "u" + item.pubkeyHex }) { _, item ->
                 UserCompose(item, accountViewModel = accountViewModel, nav = nav)
             }
 

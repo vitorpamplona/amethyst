@@ -489,15 +489,15 @@ fun InLineIconRenderer(
                 "inlineContent$idx",
                 InlineTextContent(
                     Placeholder(
-                        width = 17.sp,
-                        height = 17.sp,
+                        width = 20.sp,
+                        height = 20.sp,
                         placeholderVerticalAlign = PlaceholderVerticalAlign.Center
                     )
                 ) {
                     AsyncImage(
                         model = value.url,
                         contentDescription = null,
-                        modifier = Modifier.fillMaxSize().padding(1.dp)
+                        modifier = Modifier.fillMaxSize().padding(horizontal = 1.dp)
                     )
                 }
             )

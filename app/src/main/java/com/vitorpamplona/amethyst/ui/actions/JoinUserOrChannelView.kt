@@ -268,7 +268,7 @@ private fun RenderSeach(
                 state = listState
             ) {
                 itemsIndexed(
-                    searchBarViewModel.searchResults.value,
+                    searchBarViewModel.searchResultsUsers.value,
                     key = { _, item -> "u" + item.pubkeyHex }
                 ) { _, item ->
                     UserComposeForChat(

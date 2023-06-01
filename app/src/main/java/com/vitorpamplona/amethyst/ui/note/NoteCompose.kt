@@ -78,6 +78,7 @@ import androidx.core.graphics.drawable.toBitmap
 import androidx.core.graphics.get
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
+import coil.request.SuccessResult
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
@@ -1679,19 +1680,24 @@ fun BadgeDisplay(baseNote: Note) {
     val background = MaterialTheme.colors.background
     val badgeData = baseNote.event as? BadgeDefinitionEvent ?: return
 
-    val image = remember { badgeData.image() }
+    val image = remember { badgeData.thumb()?.ifBlank { null } ?: badgeData.image() }
     val name = remember { badgeData.name() }
     val description = remember { badgeData.description() }
 
     var backgroundFromImage by remember { mutableStateOf(Pair(background, background)) }
-    var imageResult by remember { mutableStateOf<AsyncImagePainter.State.Success?>(null) }
+    var imageResult by remember { mutableStateOf<SuccessResult?>(null) }
 
     LaunchedEffect(key1 = imageResult) {
-        withContext(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             imageResult?.let {
-                val backgroundColor = it.result.drawable.toBitmap(200, 200).copy(Bitmap.Config.ARGB_8888, false).get(0, 199)
+                val backgroundColor = it.drawable.toBitmap(200, 200).copy(Bitmap.Config.ARGB_8888, false).get(0, 199)
                 val colorFromImage = Color(backgroundColor)
-                val textBackground = if (colorFromImage.luminance() > 0.5) lightColors().onBackground else darkColors().onBackground
+                val textBackground = if (colorFromImage.luminance() > 0.5) {
+                    lightColors().onBackground
+                } else {
+                    darkColors().onBackground
+                }
+
                 backgroundFromImage = Pair(colorFromImage, textBackground)
             }
         }
@@ -1708,47 +1714,65 @@ fun BadgeDisplay(baseNote: Note) {
             )
             .background(backgroundFromImage.first)
     ) {
-        Column {
-            image.let {
-                AsyncImage(
-                    model = it,
-                    contentDescription = stringResource(
-                        R.string.badge_award_image_for,
-                        name ?: ""
-                    ),
-                    contentScale = ContentScale.FillWidth,
-                    modifier = Modifier.fillMaxWidth(),
-                    onSuccess = {
-                        imageResult = it
-                    }
-                )
+        RenderBadge(
+            image,
+            name,
+            backgroundFromImage.second,
+            description
+        ) {
+            if (imageResult == null) {
+                imageResult = it.result
             }
+        }
+    }
+}
 
-            name?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.body1,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 10.dp, end = 10.dp),
-                    color = backgroundFromImage.second
-                )
-            }
+@Composable
+private fun RenderBadge(
+    image: String?,
+    name: String?,
+    backgroundFromImage: Color,
+    description: String?,
+    onSuccess: (AsyncImagePainter.State.Success) -> Unit
+) {
+    Column {
+        image.let {
+            AsyncImage(
+                model = it,
+                contentDescription = stringResource(
+                    R.string.badge_award_image_for,
+                    name ?: ""
+                ),
+                contentScale = ContentScale.FillWidth,
+                modifier = Modifier.fillMaxWidth(),
+                onSuccess = onSuccess
+            )
+        }
 
-            description?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.caption,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
-                    color = Color.Gray,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+        name?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.body1,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 10.dp, end = 10.dp),
+                color = backgroundFromImage
+            )
+        }
+
+        description?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.caption,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
+                color = Color.Gray,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
