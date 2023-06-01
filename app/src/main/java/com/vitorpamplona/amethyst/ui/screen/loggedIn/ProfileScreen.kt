@@ -82,7 +82,6 @@ import com.vitorpamplona.amethyst.ui.dal.UserProfileZapsFeedFilter
 import com.vitorpamplona.amethyst.ui.navigation.ShowQRDialog
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.showAmount
-import com.vitorpamplona.amethyst.ui.screen.FeedView
 import com.vitorpamplona.amethyst.ui.screen.LnZapFeedView
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileBookmarksFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileConversationsFeedViewModel
@@ -91,10 +90,12 @@ import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileFollowsUserFeedViewM
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileNewThreadsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileReportFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileZapsFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.RefresheableView
 import com.vitorpamplona.amethyst.ui.screen.RelayFeedView
 import com.vitorpamplona.amethyst.ui.screen.RelayFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.UserFeedView
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -115,7 +116,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, nav: (Str
 
     userBase?.let {
         ProfileScreen(
-            user = it,
+            baseUser = it,
             accountViewModel = accountViewModel,
             nav = nav
         )
@@ -124,19 +125,16 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, nav: (Str
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ProfileScreen(user: User, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = remember(accountState) { accountState?.account } ?: return
+fun ProfileScreen(baseUser: User, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    UserProfileNewThreadFeedFilter.loadUserProfile(accountViewModel.account, baseUser)
+    UserProfileConversationsFeedFilter.loadUserProfile(accountViewModel.account, baseUser)
+    UserProfileFollowersFeedFilter.loadUserProfile(accountViewModel.account, baseUser)
+    UserProfileFollowsFeedFilter.loadUserProfile(accountViewModel.account, baseUser)
+    UserProfileZapsFeedFilter.loadUserProfile(baseUser)
+    UserProfileReportsFeedFilter.loadUserProfile(baseUser)
+    UserProfileBookmarksFeedFilter.loadUserProfile(accountViewModel.account, baseUser)
 
-    UserProfileNewThreadFeedFilter.loadUserProfile(account, user)
-    UserProfileConversationsFeedFilter.loadUserProfile(account, user)
-    UserProfileFollowersFeedFilter.loadUserProfile(account, user)
-    UserProfileFollowsFeedFilter.loadUserProfile(account, user)
-    UserProfileZapsFeedFilter.loadUserProfile(user)
-    UserProfileReportsFeedFilter.loadUserProfile(user)
-    UserProfileBookmarksFeedFilter.loadUserProfile(account, user)
-
-    NostrUserProfileDataSource.loadUserProfile(user)
+    NostrUserProfileDataSource.loadUserProfile(baseUser)
 
     val lifeCycleOwner = LocalLifecycleOwner.current
 
@@ -148,7 +146,7 @@ fun ProfileScreen(user: User, accountViewModel: AccountViewModel, nav: (String) 
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Profidle Start")
-                NostrUserProfileDataSource.loadUserProfile(user)
+                NostrUserProfileDataSource.loadUserProfile(baseUser)
                 NostrUserProfileDataSource.start()
             }
             if (event == Lifecycle.Event.ON_PAUSE) {
@@ -166,8 +164,6 @@ fun ProfileScreen(user: User, accountViewModel: AccountViewModel, nav: (String) 
             NostrUserProfileDataSource.stop()
         }
     }
-
-    val baseUser = NostrUserProfileDataSource.user ?: return
 
     var columnSize by remember { mutableStateOf(IntSize.Zero) }
     var tabsSize by remember { mutableStateOf(IntSize.Zero) }
@@ -209,7 +205,7 @@ fun ProfileScreen(user: User, accountViewModel: AccountViewModel, nav: (String) 
                     .fillMaxHeight()
             ) {
                 Column(modifier = Modifier.padding()) {
-                    ProfileHeader(baseUser, nav, account, accountViewModel)
+                    ProfileHeader(baseUser, nav, accountViewModel)
                     ScrollableTabRow(
                         backgroundColor = MaterialTheme.colors.background,
                         selectedTabIndex = pagerState.currentPage,
@@ -342,7 +338,6 @@ private fun FollowTabHeader(baseUser: User) {
 private fun ProfileHeader(
     baseUser: User,
     nav: (String) -> Unit,
-    account: Account,
     accountViewModel: AccountViewModel
 ) {
     var popupExpanded by remember { mutableStateOf(false) }
@@ -394,7 +389,7 @@ private fun ProfileHeader(
             ) {
                 UserPicture(
                     baseUser = baseUser,
-                    baseUserAccount = account.userProfile(),
+                    baseUserAccount = accountViewModel.userProfile(),
                     size = 100.dp,
                     modifier = Modifier.border(
                         3.dp,
@@ -427,11 +422,11 @@ private fun ProfileHeader(
                     // No need for this button anymore
                     // NPubCopyButton(baseUser)
 
-                    ProfileActions(baseUser, account, coroutineScope)
+                    ProfileActions(baseUser, accountViewModel, coroutineScope)
                 }
             }
 
-            DrawAdditionalInfo(baseUser, account, accountViewModel, nav)
+            DrawAdditionalInfo(baseUser, accountViewModel, nav)
 
             Divider(modifier = Modifier.padding(top = 6.dp))
         }
@@ -446,11 +441,14 @@ private fun ProfileHeader(
 @Composable
 private fun ProfileActions(
     baseUser: User,
-    account: Account,
+    accountViewModel: AccountViewModel,
     coroutineScope: CoroutineScope
 ) {
-    val accountUserState by account.userProfile().live().follows.observeAsState()
-    val accountLocalUserState by account.live.observeAsState()
+    val accountLocalUserState by accountViewModel.accountLiveData.observeAsState()
+    val account = remember(accountLocalUserState) { accountLocalUserState?.account } ?: return
+
+    val accountUserState by accountViewModel.account.userProfile().live().follows.observeAsState()
+
     val accountUser = remember(accountUserState) { accountUserState?.user } ?: return
 
     val isHidden by remember(accountUserState, accountLocalUserState) {
@@ -497,7 +495,7 @@ private fun ProfileActions(
 }
 
 @Composable
-private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+private fun DrawAdditionalInfo(baseUser: User, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val userState by baseUser.live().metadata.observeAsState()
     val user = remember(userState) { userState?.user } ?: return
     val tags = remember(userState) { userState?.user?.info?.latestMetadata?.tags }
@@ -607,7 +605,7 @@ private fun DrawAdditionalInfo(baseUser: User, account: Account, accountViewMode
 
     val lud16 = remember(userState) { user.info?.lud16?.trim() ?: user.info?.lud06?.trim() }
     val pubkeyHex = remember { baseUser.pubkeyHex }
-    DisplayLNAddress(lud16, pubkeyHex, account, scope, context)
+    DisplayLNAddress(lud16, pubkeyHex, accountViewModel.account, scope, context)
 
     val identities = user.info?.latestMetadata?.identityClaims()
     if (!identities.isNullOrEmpty()) {
@@ -733,23 +731,51 @@ private fun DisplayBadges(
     nav: (String) -> Unit
 ) {
     val userBadgeState by baseUser.live().badges.observeAsState()
-    val userBadge = remember(userBadgeState) { userBadgeState?.user } ?: return
-
-    userBadge.acceptedBadges?.let { note ->
-        (note.event as? BadgeProfilesEvent)?.let { event ->
-            FlowRow(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 5.dp)) {
-                event.badgeAwardEvents().forEach { badgeAwardEvent ->
-                    val baseNote = LocalCache.notes[badgeAwardEvent]
-                    if (baseNote != null) {
-                        val badgeAwardState by baseNote.live().metadata.observeAsState()
-                        val baseBadgeDefinition = badgeAwardState?.note?.replyTo?.firstOrNull()
-
-                        if (baseBadgeDefinition != null) {
-                            BadgeThumb(baseBadgeDefinition, nav, 35.dp)
-                        }
-                    }
-                }
+    val badgeList by remember(userBadgeState) {
+        derivedStateOf {
+            val list = (userBadgeState?.user?.acceptedBadges?.event as? BadgeProfilesEvent)?.badgeAwardEvents()
+            if (list.isNullOrEmpty()) {
+                null
+            } else {
+                list.toImmutableList()
             }
+        }
+    }
+
+    badgeList?.let { list ->
+        FlowRow(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(vertical = 5.dp)
+        ) {
+            list.forEach { badgeAwardEvent ->
+                LoadAndRenderBadge(badgeAwardEvent, nav)
+            }
+        }
+    }
+}
+
+@Composable
+private fun LoadAndRenderBadge(badgeAwardEventHex: String, nav: (String) -> Unit) {
+    var baseNote by remember {
+        mutableStateOf<Note?>(null)
+    }
+
+    LaunchedEffect(key1 = badgeAwardEventHex) {
+        launch(Dispatchers.IO) {
+            baseNote = LocalCache.getOrCreateNote(badgeAwardEventHex)
+        }
+    }
+
+    baseNote?.let {
+        val badgeAwardState by it.live().metadata.observeAsState()
+        val baseBadgeDefinition by remember(badgeAwardState) {
+            derivedStateOf {
+                badgeAwardState?.note?.replyTo?.firstOrNull()
+            }
+        }
+
+        baseBadgeDefinition?.let {
+            BadgeThumb(it, nav, 35.dp)
         }
     }
 }
@@ -762,7 +788,7 @@ fun BadgeThumb(
     pictureModifier: Modifier = Modifier
 ) {
     BadgeThumb(note, size, pictureModifier) {
-        nav("Note/${it.idHex}")
+        nav("Note/${note.idHex}")
     }
 }
 
@@ -771,19 +797,19 @@ fun BadgeThumb(
     baseNote: Note,
     size: Dp,
     pictureModifier: Modifier = Modifier,
-    onClick: ((Note) -> Unit)? = null
+    onClick: ((String) -> Unit)? = null
 ) {
-    val noteState by baseNote.live().metadata.observeAsState()
-    val note = noteState?.note ?: return
-
-    val event = (note.event as? BadgeDefinitionEvent)
-    val image = event?.thumb() ?: event?.image()
-
     Box(
-        Modifier
-            .width(size)
-            .height(size)
+        remember {
+            Modifier
+                .width(size)
+                .height(size)
+        }
     ) {
+        val noteState by baseNote.live().metadata.observeAsState()
+        val event = remember(noteState) { noteState?.note?.event as? BadgeDefinitionEvent } ?: return
+        val image = remember(noteState) { event.thumb()?.ifBlank { null } ?: event.image()?.ifBlank { null } }
+
         if (image == null) {
             RobohashAsyncImage(
                 robot = "authornotfound",
@@ -796,7 +822,7 @@ fun BadgeThumb(
             )
         } else {
             RobohashFallbackAsyncImage(
-                robot = note.idHex,
+                robot = event.id,
                 robotSize = size,
                 model = image,
                 contentDescription = stringResource(id = R.string.profile_image),
@@ -807,7 +833,7 @@ fun BadgeThumb(
                     .background(MaterialTheme.colors.background)
                     .run {
                         if (onClick != null) {
-                            this.clickable(onClick = { onClick(note) })
+                            this.clickable(onClick = { onClick(event.id) })
                         } else {
                             this
                         }
@@ -871,7 +897,7 @@ fun TabNotesNewThreads(accountViewModel: AccountViewModel, nav: (String) -> Unit
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            FeedView(feedViewModel, accountViewModel, nav, null, enablePullRefresh = false)
+            RefresheableView(feedViewModel, accountViewModel, nav, null, enablePullRefresh = false)
         }
     }
 }
@@ -888,7 +914,7 @@ fun TabNotesConversations(accountViewModel: AccountViewModel, nav: (String) -> U
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            FeedView(feedViewModel, accountViewModel, nav, null, enablePullRefresh = false)
+            RefresheableView(feedViewModel, accountViewModel, nav, null, enablePullRefresh = false)
         }
     }
 }
@@ -905,7 +931,7 @@ fun TabBookmarks(baseUser: User, accountViewModel: AccountViewModel, nav: (Strin
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            FeedView(feedViewModel, accountViewModel, nav, null, enablePullRefresh = false)
+            RefresheableView(feedViewModel, accountViewModel, nav, null, enablePullRefresh = false)
         }
     }
 }
@@ -981,7 +1007,7 @@ fun TabReports(baseUser: User, accountViewModel: AccountViewModel, nav: (String)
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            FeedView(feedViewModel, accountViewModel, nav, null, enablePullRefresh = false)
+            RefresheableView(feedViewModel, accountViewModel, nav, null, enablePullRefresh = false)
         }
     }
 }

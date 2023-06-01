@@ -476,7 +476,7 @@ fun ZapReaction(
         }
 
         if (wantsToChangeZapAmount) {
-            UpdateZapAmountDialog({ wantsToChangeZapAmount = false }, account = account)
+            UpdateZapAmountDialog({ wantsToChangeZapAmount = false }, accountViewModel = accountViewModel)
         }
 
         if (wantsToSetCustomZap) {

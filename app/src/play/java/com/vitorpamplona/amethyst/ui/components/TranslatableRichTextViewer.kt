@@ -55,26 +55,16 @@ fun TranslatableRichTextViewer(
     var showOriginal by remember { mutableStateOf(false) }
     var langSettingsPopupExpanded by remember { mutableStateOf(false) }
 
-    val accountState by accountViewModel.accountLanguagesLiveData.observeAsState()
-    val account = remember(accountState) { accountState?.account } ?: return
+    WatchLanguageChanges(content, accountViewModel) { result, newShowOriginal ->
+        if (translatedTextState.result != result.result ||
+            translatedTextState.sourceLang != result.sourceLang ||
+            translatedTextState.targetLang != result.targetLang
+        ) {
+            translatedTextState = result
+        }
 
-    val scope = rememberCoroutineScope()
-
-    LaunchedEffect(accountState) {
-        scope.launch(Dispatchers.IO) {
-            LanguageTranslatorService.autoTranslate(
-                content,
-                account.dontTranslateFrom,
-                account.translateTo
-            ).addOnCompleteListener { task ->
-                if (task.isSuccessful && content != task.result.result) {
-                    if (task.result.sourceLang != null && task.result.targetLang != null) {
-                        val preference = account.preferenceBetween(task.result.sourceLang!!, task.result.targetLang!!)
-                        showOriginal = preference == task.result.sourceLang
-                    }
-                    translatedTextState = task.result
-                }
-            }
+        if (showOriginal != newShowOriginal) {
+            showOriginal = newShowOriginal
         }
     }
 
@@ -98,139 +88,162 @@ fun TranslatableRichTextViewer(
         val target = translatedTextState.targetLang
         val source = translatedTextState.sourceLang
 
-        if (source != null && target != null) {
-            if (source != target) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 5.dp)
+        if (source != null && target != null && source != target) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 5.dp)
+            ) {
+                val clickableTextStyle =
+                    SpanStyle(color = MaterialTheme.colors.primary.copy(alpha = 0.52f))
+
+                val annotatedTranslationString = buildAnnotatedString {
+                    withStyle(clickableTextStyle) {
+                        pushStringAnnotation("langSettings", true.toString())
+                        append(stringResource(R.string.translations_auto))
+                    }
+
+                    append("-${stringResource(R.string.translations_translated_from)} ")
+
+                    withStyle(clickableTextStyle) {
+                        pushStringAnnotation("showOriginal", true.toString())
+                        append(Locale(source).displayName)
+                    }
+
+                    append(" ${stringResource(R.string.translations_to)} ")
+
+                    withStyle(clickableTextStyle) {
+                        pushStringAnnotation("showOriginal", false.toString())
+                        append(Locale(target).displayName)
+                    }
+                }
+
+                ClickableText(
+                    text = annotatedTranslationString,
+                    style = LocalTextStyle.current.copy(color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)),
+                    overflow = TextOverflow.Visible,
+                    maxLines = 3
+                ) { spanOffset ->
+                    annotatedTranslationString.getStringAnnotations(spanOffset, spanOffset)
+                        .firstOrNull()
+                        ?.also { span ->
+                            if (span.tag == "showOriginal") {
+                                showOriginal = span.item.toBoolean()
+                            } else {
+                                langSettingsPopupExpanded = !langSettingsPopupExpanded
+                            }
+                        }
+                }
+
+                DropdownMenu(
+                    expanded = langSettingsPopupExpanded,
+                    onDismissRequest = { langSettingsPopupExpanded = false }
                 ) {
-                    val clickableTextStyle =
-                        SpanStyle(color = MaterialTheme.colors.primary.copy(alpha = 0.52f))
-
-                    val annotatedTranslationString = buildAnnotatedString {
-                        withStyle(clickableTextStyle) {
-                            pushStringAnnotation("langSettings", true.toString())
-                            append(stringResource(R.string.translations_auto))
+                    DropdownMenuItem(onClick = {
+                        accountViewModel.dontTranslateFrom(source)
+                        langSettingsPopupExpanded = false
+                    }) {
+                        if (source in accountViewModel.account.dontTranslateFrom) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        } else {
+                            Spacer(modifier = Modifier.size(24.dp))
                         }
 
-                        append("-${stringResource(R.string.translations_translated_from)} ")
+                        Spacer(modifier = Modifier.size(10.dp))
 
-                        withStyle(clickableTextStyle) {
-                            pushStringAnnotation("showOriginal", true.toString())
-                            append(Locale(source).displayName)
-                        }
-
-                        append(" ${stringResource(R.string.translations_to)} ")
-
-                        withStyle(clickableTextStyle) {
-                            pushStringAnnotation("showOriginal", false.toString())
-                            append(Locale(target).displayName)
-                        }
+                        Text(stringResource(R.string.translations_never_translate_from_lang, Locale(source).displayName))
                     }
+                    Divider()
+                    DropdownMenuItem(onClick = {
+                        accountViewModel.prefer(source, target, source)
+                        langSettingsPopupExpanded = false
+                    }) {
+                        if (accountViewModel.account.preferenceBetween(source, target) == source) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        } else {
+                            Spacer(modifier = Modifier.size(24.dp))
+                        }
 
-                    ClickableText(
-                        text = annotatedTranslationString,
-                        style = LocalTextStyle.current.copy(color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)),
-                        overflow = TextOverflow.Visible,
-                        maxLines = 3
-                    ) { spanOffset ->
-                        annotatedTranslationString.getStringAnnotations(spanOffset, spanOffset)
-                            .firstOrNull()
-                            ?.also { span ->
-                                if (span.tag == "showOriginal") {
-                                    showOriginal = span.item.toBoolean()
+                        Spacer(modifier = Modifier.size(10.dp))
+
+                        Text(stringResource(R.string.translations_show_in_lang_first, Locale(source).displayName))
+                    }
+                    DropdownMenuItem(onClick = {
+                        accountViewModel.prefer(source, target, target)
+                        langSettingsPopupExpanded = false
+                    }) {
+                        if (accountViewModel.account.preferenceBetween(source, target) == target) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        } else {
+                            Spacer(modifier = Modifier.size(24.dp))
+                        }
+
+                        Spacer(modifier = Modifier.size(10.dp))
+
+                        Text(stringResource(R.string.translations_show_in_lang_first, Locale(target).displayName))
+                    }
+                    Divider()
+
+                    val languageList =
+                        ConfigurationCompat.getLocales(Resources.getSystem().configuration)
+                    for (i in 0 until languageList.size()) {
+                        languageList.get(i)?.let { lang ->
+                            DropdownMenuItem(onClick = {
+                                accountViewModel.translateTo(lang)
+                                langSettingsPopupExpanded = false
+                            }) {
+                                if (lang.language in accountViewModel.account.translateTo) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(24.dp)
+                                    )
                                 } else {
-                                    langSettingsPopupExpanded = !langSettingsPopupExpanded
+                                    Spacer(modifier = Modifier.size(24.dp))
                                 }
+
+                                Spacer(modifier = Modifier.size(10.dp))
+
+                                Text(stringResource(R.string.translations_always_translate_to_lang, lang.displayName))
                             }
+                        }
                     }
+                }
+            }
+        }
+    }
+}
 
-                    DropdownMenu(
-                        expanded = langSettingsPopupExpanded,
-                        onDismissRequest = { langSettingsPopupExpanded = false }
-                    ) {
-                        DropdownMenuItem(onClick = {
-                            accountViewModel.dontTranslateFrom(source)
-                            langSettingsPopupExpanded = false
-                        }) {
-                            if (source in account.dontTranslateFrom) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            } else {
-                                Spacer(modifier = Modifier.size(24.dp))
-                            }
+@Composable
+fun WatchLanguageChanges(content: String, accountViewModel: AccountViewModel, onTranslated: (ResultOrError, Boolean) -> Unit) {
+    val accountState by accountViewModel.accountLanguagesLiveData.observeAsState()
+    val account = remember(accountState) { accountState?.account } ?: return
 
-                            Spacer(modifier = Modifier.size(10.dp))
+    val scope = rememberCoroutineScope()
 
-                            Text(stringResource(R.string.translations_never_translate_from_lang, Locale(source).displayName))
-                        }
-                        Divider()
-                        DropdownMenuItem(onClick = {
-                            accountViewModel.prefer(source, target, source)
-                            langSettingsPopupExpanded = false
-                        }) {
-                            if (account.preferenceBetween(source, target) == source) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            } else {
-                                Spacer(modifier = Modifier.size(24.dp))
-                            }
-
-                            Spacer(modifier = Modifier.size(10.dp))
-
-                            Text(stringResource(R.string.translations_show_in_lang_first, Locale(source).displayName))
-                        }
-                        DropdownMenuItem(onClick = {
-                            accountViewModel.prefer(source, target, target)
-                            langSettingsPopupExpanded = false
-                        }) {
-                            if (account.preferenceBetween(source, target) == target) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            } else {
-                                Spacer(modifier = Modifier.size(24.dp))
-                            }
-
-                            Spacer(modifier = Modifier.size(10.dp))
-
-                            Text(stringResource(R.string.translations_show_in_lang_first, Locale(target).displayName))
-                        }
-                        Divider()
-
-                        val languageList =
-                            ConfigurationCompat.getLocales(Resources.getSystem().configuration)
-                        for (i in 0 until languageList.size()) {
-                            languageList.get(i)?.let { lang ->
-                                DropdownMenuItem(onClick = {
-                                    accountViewModel.translateTo(lang)
-                                    langSettingsPopupExpanded = false
-                                }) {
-                                    if (lang.language in account.translateTo) {
-                                        Icon(
-                                            imageVector = Icons.Default.Check,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(24.dp)
-                                        )
-                                    } else {
-                                        Spacer(modifier = Modifier.size(24.dp))
-                                    }
-
-                                    Spacer(modifier = Modifier.size(10.dp))
-
-                                    Text(stringResource(R.string.translations_always_translate_to_lang, lang.displayName))
-                                }
-                            }
-                        }
+    LaunchedEffect(accountState) {
+        scope.launch(Dispatchers.IO) {
+            LanguageTranslatorService.autoTranslate(
+                content,
+                account.dontTranslateFrom,
+                account.translateTo
+            ).addOnCompleteListener { task ->
+                if (task.isSuccessful && content != task.result.result) {
+                    if (task.result.sourceLang != null && task.result.targetLang != null) {
+                        val preference = account.preferenceBetween(task.result.sourceLang!!, task.result.targetLang!!)
+                        onTranslated(task.result, preference == task.result.sourceLang)
                     }
                 }
             }

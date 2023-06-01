@@ -87,7 +87,7 @@ fun ZapNoteCompose(baseNote: Pair<Note, Note>, accountViewModel: AccountViewMode
                 var zapAmount by remember { mutableStateOf<BigDecimal?>(null) }
 
                 LaunchedEffect(key1 = noteZap) {
-                    coroutineScope.launch(Dispatchers.IO) {
+                    launch(Dispatchers.IO) {
                         zapAmount = (noteZap.event as? LnZapEvent)?.amount
                     }
                 }

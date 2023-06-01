@@ -44,7 +44,6 @@ fun BoostSetCompose(boostSetCard: BoostSetCard, isInnerNote: Boolean = false, ro
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
-    val noteEvent = note?.event
     var popupExpanded by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()

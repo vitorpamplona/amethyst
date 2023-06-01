@@ -14,13 +14,14 @@ android {
         applicationId "com.vitorpamplona.amethyst"
         minSdk 26
         targetSdk 33
-        versionCode 191
-        versionName "0.53.7"
+        versionCode 192
+        versionName "0.54.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary true
         }
+        resConfigs("ar", "cs", "eo", "es", "fa", "fr", "hu", "night", "nl", "pt-rBR", "ru", "sv-rSE", "ta", "tr", "uk", "zh", "sh-rHK", "zh-rTW" )
     }
 
     buildTypes {

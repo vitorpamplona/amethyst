@@ -67,50 +67,47 @@ suspend fun getDocument(url: String, timeOut: Int = 30000): Document =
             .get()
     }
 
-suspend fun parseHtml(document: Document): UrlInfoItem =
+suspend fun parseHtml(url: String, document: Document): UrlInfoItem =
     withContext(Dispatchers.IO) {
         val metaTags = document.getElementsByTag(ELEMENT_TAG_META)
-        val urlInfo = UrlInfoItem()
+
+        var title: String = ""
+        var description: String = ""
+        var image: String = ""
+
         metaTags.forEach {
             val propertyTag = it.attr(ATTRIBUTE_VALUE_PROPERTY)
             when (propertyTag) {
-                in META_OG_TITLE -> if (urlInfo.title.isEmpty()) urlInfo.title = it.attr(CONTENT)
-                in META_OG_DESCRIPTION -> if (urlInfo.description.isEmpty()) {
-                    urlInfo.description =
-                        it.attr(CONTENT)
+                in META_OG_TITLE -> if (title.isEmpty()) title = it.attr(CONTENT)
+                in META_OG_DESCRIPTION -> if (description.isEmpty()) {
+                    description = it.attr(CONTENT)
                 }
-                in META_OG_IMAGE -> if (urlInfo.image.isEmpty()) urlInfo.image = it.attr(CONTENT)
+                in META_OG_IMAGE -> if (image.isEmpty()) image = it.attr(CONTENT)
             }
 
             when (it.attr(ATTRIBUTE_VALUE_NAME)) {
-                in META_NAME_TITLE -> if (urlInfo.title.isEmpty()) urlInfo.title = it.attr(CONTENT)
-                in META_NAME_DESCRIPTION -> if (urlInfo.description.isEmpty()) {
-                    urlInfo.description =
-                        it.attr(CONTENT)
+                in META_NAME_TITLE -> if (title.isEmpty()) title = it.attr(CONTENT)
+                in META_NAME_DESCRIPTION -> if (description.isEmpty()) {
+                    description = it.attr(CONTENT)
                 }
-                in META_OG_IMAGE -> if (urlInfo.image.isEmpty()) urlInfo.image = it.attr(CONTENT)
+                in META_OG_IMAGE -> if (image.isEmpty()) image = it.attr(CONTENT)
             }
 
             when (it.attr(ATTRIBUTE_VALUE_ITEMPROP)) {
-                in META_ITEMPROP_TITLE -> if (urlInfo.title.isEmpty()) {
-                    urlInfo.title =
-                        it.attr(CONTENT)
+                in META_ITEMPROP_TITLE -> if (title.isEmpty()) {
+                    title = it.attr(CONTENT)
                 }
-                in META_ITEMPROP_DESCRIPTION -> if (urlInfo.description.isEmpty()) {
-                    urlInfo.description =
-                        it.attr(
-                            CONTENT
-                        )
+                in META_ITEMPROP_DESCRIPTION -> if (description.isEmpty()) {
+                    description = it.attr(CONTENT)
                 }
-                in META_ITEMPROP_IMAGE -> if (urlInfo.image.isEmpty()) {
-                    urlInfo.image = it.attr(
-                        CONTENT
-                    )
+                in META_ITEMPROP_IMAGE -> if (image.isEmpty()) {
+                    image = it.attr(CONTENT)
                 }
             }
-            if (urlInfo.allFetchComplete()) {
-                return@withContext urlInfo
+
+            if (title.isNotEmpty() && description.isNotEmpty() && image.isNotEmpty()) {
+                return@withContext UrlInfoItem(url, title, description, image)
             }
         }
-        return@withContext urlInfo
+        return@withContext UrlInfoItem(url, title, description, image)
     }

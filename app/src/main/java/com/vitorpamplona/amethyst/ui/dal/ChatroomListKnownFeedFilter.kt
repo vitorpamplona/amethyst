@@ -10,8 +10,7 @@ import com.vitorpamplona.amethyst.ui.actions.updated
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTimedValue
 
-object ChatroomListKnownFeedFilter : AdditiveFeedFilter<Note>() {
-    lateinit var account: Account
+class ChatroomListKnownFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
 
     // returns the last Note of each user.
     override fun feed(): List<Note> {

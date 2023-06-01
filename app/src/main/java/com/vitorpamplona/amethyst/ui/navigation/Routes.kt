@@ -156,9 +156,8 @@ object HomeLatestItem : LatestItem() {
         newNotes: Set<Note>
     ): Boolean {
         val lastTime = cache.load("HomeFollows")
-        HomeNewThreadFeedFilter.account = account
 
-        val newestItem = updateNewestItem(newNotes, account, HomeNewThreadFeedFilter)
+        val newestItem = updateNewestItem(newNotes, account, HomeNewThreadFeedFilter(account))
 
         return (newestItem?.createdAt() ?: 0) > lastTime
     }
@@ -171,9 +170,8 @@ object NotificationLatestItem : LatestItem() {
         newNotes: Set<Note>
     ): Boolean {
         val lastTime = cache.load("Notification")
-        NotificationFeedFilter.account = account
 
-        val newestItem = updateNewestItem(newNotes, account, NotificationFeedFilter)
+        val newestItem = updateNewestItem(newNotes, account, NotificationFeedFilter(account))
 
         return (newestItem?.createdAt() ?: 0) > lastTime
     }
@@ -185,9 +183,7 @@ object MessagesLatestItem : LatestItem() {
         cache: NotificationCache,
         newNotes: Set<Note>
     ): Boolean {
-        ChatroomListKnownFeedFilter.account = account
-
-        val newestItem = updateNewestItem(newNotes, account, ChatroomListKnownFeedFilter)
+        val newestItem = updateNewestItem(newNotes, account, ChatroomListKnownFeedFilter(account))
 
         val roomUserHex = (newestItem?.event as? PrivateDmEvent)?.talkingWith(account.userProfile().pubkeyHex)
 

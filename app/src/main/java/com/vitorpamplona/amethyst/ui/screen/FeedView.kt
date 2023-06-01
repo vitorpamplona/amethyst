@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.Button
@@ -35,17 +36,14 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun FeedView(
+fun RefresheableView(
     viewModel: FeedViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     routeForLastRead: String?,
     scrollStateKey: String? = null,
-    scrollToTop: Boolean = false,
     enablePullRefresh: Boolean = true
 ) {
-    val feedState by viewModel.feedContent.collectAsState()
-
     var refreshing by remember { mutableStateOf(false) }
     val refresh = { refreshing = true; viewModel.invalidateData(); refreshing = false }
     val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = refresh)
@@ -58,42 +56,7 @@ fun FeedView(
 
     Box(modifier) {
         Column {
-            Crossfade(
-                targetState = feedState,
-                animationSpec = tween(durationMillis = 100)
-            ) { state ->
-                when (state) {
-                    is FeedState.Empty -> {
-                        FeedEmpty {
-                            refresh()
-                        }
-                    }
-
-                    is FeedState.FeedError -> {
-                        FeedError(state.errorMessage) {
-                            refresh()
-                        }
-                    }
-
-                    is FeedState.Loaded -> {
-                        if (refreshing) {
-                            refreshing = false
-                        }
-                        FeedLoaded(
-                            state,
-                            routeForLastRead,
-                            accountViewModel,
-                            nav,
-                            scrollStateKey,
-                            scrollToTop
-                        )
-                    }
-
-                    is FeedState.Loading -> {
-                        LoadingFeed()
-                    }
-                }
-            }
+            SaveableFeedState(viewModel, accountViewModel, nav, routeForLastRead, scrollStateKey)
         }
 
         if (enablePullRefresh) {
@@ -103,13 +66,12 @@ fun FeedView(
 }
 
 @Composable
-private fun FeedLoaded(
-    state: FeedState.Loaded,
-    routeForLastRead: String?,
+private fun SaveableFeedState(
+    viewModel: FeedViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
-    scrollStateKey: String?,
-    scrollToTop: Boolean = false
+    routeForLastRead: String?,
+    scrollStateKey: String? = null
 ) {
     val listState = if (scrollStateKey != null) {
         rememberForeverLazyListState(scrollStateKey)
@@ -117,14 +79,78 @@ private fun FeedLoaded(
         rememberLazyListState()
     }
 
-    if (scrollToTop) {
-        LaunchedEffect(Unit) {
-            if (listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0) {
-                listState.scrollToItem(index = 0)
+    WatchScrollToTop(viewModel, listState)
+
+    RenderFeed(viewModel, accountViewModel, listState, nav, routeForLastRead)
+}
+
+@Composable
+private fun RenderFeed(
+    viewModel: FeedViewModel,
+    accountViewModel: AccountViewModel,
+    listState: LazyListState,
+    nav: (String) -> Unit,
+    routeForLastRead: String?
+) {
+    val feedState by viewModel.feedContent.collectAsState()
+
+    Crossfade(
+        targetState = feedState,
+        animationSpec = tween(durationMillis = 100)
+    ) { state ->
+        when (state) {
+            is FeedState.Empty -> {
+                FeedEmpty {
+                    viewModel.invalidateData()
+                }
+            }
+
+            is FeedState.FeedError -> {
+                FeedError(state.errorMessage) {
+                    viewModel.invalidateData()
+                }
+            }
+
+            is FeedState.Loaded -> {
+                FeedLoaded(
+                    state,
+                    listState,
+                    routeForLastRead,
+                    accountViewModel,
+                    nav
+                )
+            }
+
+            is FeedState.Loading -> {
+                LoadingFeed()
             }
         }
     }
+}
 
+@Composable
+private fun WatchScrollToTop(
+    viewModel: FeedViewModel,
+    listState: LazyListState
+) {
+    val scrollToTop by viewModel.scrollToTop.collectAsState()
+
+    LaunchedEffect(scrollToTop) {
+        if (scrollToTop > 0 && viewModel.scrolltoTopPending) {
+            listState.scrollToItem(index = 0)
+            viewModel.sentToTop()
+        }
+    }
+}
+
+@Composable
+private fun FeedLoaded(
+    state: FeedState.Loaded,
+    listState: LazyListState,
+    routeForLastRead: String?,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
     val baseModifier = remember {
         Modifier
     }

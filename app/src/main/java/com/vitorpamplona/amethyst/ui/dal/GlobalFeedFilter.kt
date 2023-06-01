@@ -5,8 +5,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.*
 
-object GlobalFeedFilter : AdditiveFeedFilter<Note>() {
-    lateinit var account: Account
+class GlobalFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
 
     override fun feed(): List<Note> {
         val notes = innerApplyFilter(LocalCache.notes.values)

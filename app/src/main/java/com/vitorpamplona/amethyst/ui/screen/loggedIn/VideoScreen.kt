@@ -68,7 +68,6 @@ import com.vitorpamplona.amethyst.ui.actions.NewMediaModel
 import com.vitorpamplona.amethyst.ui.actions.NewMediaView
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
-import com.vitorpamplona.amethyst.ui.dal.VideoFeedFilter
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.FileHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.FileStorageHeaderDisplay
@@ -82,12 +81,12 @@ import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.screen.FeedEmpty
 import com.vitorpamplona.amethyst.ui.screen.FeedError
 import com.vitorpamplona.amethyst.ui.screen.FeedState
+import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.LoadingFeed
 import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.screen.rememberForeverPagerState
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -95,30 +94,16 @@ import kotlinx.coroutines.launch
 fun VideoScreen(
     videoFeedView: NostrVideoFeedViewModel,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-    scrollToTop: Boolean = false
+    nav: (String) -> Unit
 ) {
     val lifeCycleOwner = LocalLifecycleOwner.current
-    val account = accountViewModel.accountLiveData.value?.account ?: return
 
-    val accountState = account.live.observeAsState()
-
-    NostrVideoDataSource.account = account
-    VideoFeedFilter.account = account
-
-    LaunchedEffect(accountViewModel, accountState.value?.account?.defaultStoriesFollowList) {
-        VideoFeedFilter.account = account
-        NostrVideoDataSource.account = account
-        NostrVideoDataSource.resetFilters()
-        videoFeedView.invalidateData()
-    }
+    WatchAccountForVideoScreen(videoFeedView = videoFeedView, accountViewModel = accountViewModel)
 
     DisposableEffect(accountViewModel) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Video Start")
-                VideoFeedFilter.account = account
-                NostrVideoDataSource.account = account
                 NostrVideoDataSource.start()
             }
             if (event == Lifecycle.Event.ON_PAUSE) {
@@ -133,32 +118,69 @@ fun VideoScreen(
         }
     }
 
-    if (scrollToTop) {
-        val scope = rememberCoroutineScope()
-        LaunchedEffect(key1 = Unit) {
-            scope.launch(Dispatchers.IO) {
-                NostrVideoDataSource.resetFilters()
-                videoFeedView.invalidateData()
-            }
-        }
-    }
-
     Column(Modifier.fillMaxHeight()) {
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            FeedView(videoFeedView, accountViewModel, nav, ScrollStateKeys.VIDEO_SCREEN, scrollToTop)
+            SaveableFeedState(videoFeedView, accountViewModel, nav, ScrollStateKeys.VIDEO_SCREEN)
         }
     }
 }
 
 @Composable
-fun FeedView(
+fun WatchAccountForVideoScreen(videoFeedView: NostrVideoFeedViewModel, accountViewModel: AccountViewModel) {
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val account = remember(accountState) { accountState?.account } ?: return
+
+    LaunchedEffect(accountViewModel, account.defaultStoriesFollowList) {
+        NostrVideoDataSource.resetFilters()
+        videoFeedView.invalidateDataAndSendToTop(true)
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun SaveableFeedState(
     videoFeedView: NostrVideoFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
-    scrollStateKey: String? = null,
-    scrollToTop: Boolean = false
+    routeForLastRead: String?,
+    scrollStateKey: String? = null
+) {
+    val pagerState = if (scrollStateKey != null) {
+        rememberForeverPagerState(scrollStateKey)
+    } else {
+        remember { PagerState() }
+    }
+
+    WatchScrollToTop(videoFeedView, pagerState)
+
+    RenderPage(videoFeedView, accountViewModel, pagerState, nav)
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+public fun WatchScrollToTop(
+    viewModel: FeedViewModel,
+    pagerState: PagerState
+) {
+    val scrollToTop by viewModel.scrollToTop.collectAsState()
+
+    LaunchedEffect(scrollToTop) {
+        if (scrollToTop > 0 && viewModel.scrolltoTopPending) {
+            pagerState.scrollToPage(page = 0)
+            viewModel.sentToTop()
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun RenderPage(
+    videoFeedView: NostrVideoFeedViewModel,
+    accountViewModel: AccountViewModel,
+    pagerState: PagerState,
+    nav: (String) -> Unit
 ) {
     val feedState by videoFeedView.feedContent.collectAsState()
 
@@ -180,10 +202,9 @@ fun FeedView(
                     is FeedState.Loaded -> {
                         SlidingCarousel(
                             state.feed,
+                            pagerState,
                             accountViewModel,
-                            nav,
-                            scrollStateKey,
-                            scrollToTop
+                            nav
                         )
                     }
 
@@ -200,23 +221,10 @@ fun FeedView(
 @Composable
 fun SlidingCarousel(
     feed: MutableState<ImmutableList<Note>>,
+    pagerState: PagerState,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-    scrollStateKey: String? = null,
-    scrollToTop: Boolean = false
+    nav: (String) -> Unit
 ) {
-    val pagerState = if (scrollStateKey != null) {
-        rememberForeverPagerState(scrollStateKey)
-    } else {
-        remember { PagerState() }
-    }
-
-    if (scrollToTop) {
-        LaunchedEffect(Unit) {
-            pagerState.scrollToPage(page = 0)
-        }
-    }
-
     VerticalPager(
         pageCount = feed.value.size,
         state = pagerState,

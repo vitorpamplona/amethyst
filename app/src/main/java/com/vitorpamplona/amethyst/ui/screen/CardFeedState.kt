@@ -61,16 +61,22 @@ class ZapUserSetCard(val user: User, val zapEvents: ImmutableMap<Note, Note>) : 
 
 @Immutable
 class MultiSetCard(val note: Note, val boostEvents: ImmutableList<Note>, val likeEvents: ImmutableList<Note>, val zapEvents: ImmutableMap<Note, Note>) : Card() {
-    val createdAt = maxOf(
+    val maxCreatedAt = maxOf(
         zapEvents.maxOfOrNull { it.value.createdAt() ?: 0 } ?: 0,
         likeEvents.maxOfOrNull { it.createdAt() ?: 0 } ?: 0,
         boostEvents.maxOfOrNull { it.createdAt() ?: 0 } ?: 0
     )
 
+    val minCreatedAt = minOf(
+        zapEvents.minOfOrNull { it.value.createdAt() ?: Long.MAX_VALUE } ?: Long.MAX_VALUE,
+        likeEvents.minOfOrNull { it.createdAt() ?: Long.MAX_VALUE } ?: Long.MAX_VALUE,
+        boostEvents.minOfOrNull { it.createdAt() ?: Long.MAX_VALUE } ?: Long.MAX_VALUE
+    )
+
     override fun createdAt(): Long {
-        return createdAt
+        return maxCreatedAt
     }
-    override fun id() = note.idHex + "X" + createdAt
+    override fun id() = note.idHex + "X" + maxCreatedAt + "X" + minCreatedAt
 }
 
 @Immutable

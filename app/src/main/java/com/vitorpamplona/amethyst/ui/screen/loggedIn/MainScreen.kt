@@ -20,7 +20,6 @@ import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -37,8 +36,16 @@ import com.vitorpamplona.amethyst.ui.navigation.AppTopBar
 import com.vitorpamplona.amethyst.ui.navigation.DrawerContent
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.navigation.currentRoute
+import com.vitorpamplona.amethyst.ui.note.UserReactionsViewModel
 import com.vitorpamplona.amethyst.ui.screen.AccountState
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListKnownFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListNewFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrGlobalFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NotificationViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterialApi::class)
@@ -61,11 +68,51 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
         }
     }
 
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = remember(accountState) { accountState?.account }
+    val followLists: FollowListViewModel = viewModel(
+        key = accountViewModel.userProfile().pubkeyHex + "FollowListViewModel",
+        factory = FollowListViewModel.Factory(accountViewModel.account)
+    )
 
-    val followLists: FollowListViewModel = viewModel()
-    followLists.load(account)
+    // Avoids creating ViewModels for performance reasons (up to 1 second delays)
+    val homeFeedViewModel: NostrHomeFeedViewModel = viewModel(
+        key = accountViewModel.userProfile().pubkeyHex + "NostrHomeFeedViewModel",
+        factory = NostrHomeFeedViewModel.Factory(accountViewModel.account)
+    )
+
+    val repliesFeedViewModel: NostrHomeRepliesFeedViewModel = viewModel(
+        key = accountViewModel.userProfile().pubkeyHex + "NostrHomeRepliesFeedViewModel",
+        factory = NostrHomeRepliesFeedViewModel.Factory(accountViewModel.account)
+    )
+
+    val searchFeedViewModel: NostrGlobalFeedViewModel = viewModel(
+        key = accountViewModel.userProfile().pubkeyHex + "NostrGlobalFeedViewModel",
+        factory = NostrGlobalFeedViewModel.Factory(accountViewModel.account)
+    )
+
+    val videoFeedViewModel: NostrVideoFeedViewModel = viewModel(
+        key = accountViewModel.userProfile().pubkeyHex + "NostrVideoFeedViewModel",
+        factory = NostrVideoFeedViewModel.Factory(accountViewModel.account)
+    )
+
+    val notifFeedViewModel: NotificationViewModel = viewModel(
+        key = accountViewModel.userProfile().pubkeyHex + "NotificationViewModel",
+        factory = NotificationViewModel.Factory(accountViewModel.account)
+    )
+
+    val userReactionsStatsModel: UserReactionsViewModel = viewModel(
+        key = accountViewModel.userProfile().pubkeyHex + "UserReactionsViewModel",
+        factory = UserReactionsViewModel.Factory(accountViewModel.account)
+    )
+
+    val knownFeedViewModel: NostrChatroomListKnownFeedViewModel = viewModel(
+        key = accountViewModel.userProfile().pubkeyHex + "NostrChatroomListKnownFeedViewModel",
+        factory = NostrChatroomListKnownFeedViewModel.Factory(accountViewModel.account)
+    )
+
+    val newFeedViewModel: NostrChatroomListNewFeedViewModel = viewModel(
+        key = accountViewModel.userProfile().pubkeyHex + "NostrChatroomListNewFeedViewModel",
+        factory = NostrChatroomListNewFeedViewModel.Factory(accountViewModel.account)
+    )
 
     ModalBottomSheetLayout(
         sheetState = sheetState,
@@ -95,7 +142,19 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
             scaffoldState = scaffoldState
         ) {
             Column(modifier = Modifier.padding(bottom = it.calculateBottomPadding())) {
-                AppNavigation(navController, accountViewModel, startingPage)
+                AppNavigation(
+                    homeFeedViewModel,
+                    repliesFeedViewModel,
+                    knownFeedViewModel,
+                    newFeedViewModel,
+                    searchFeedViewModel,
+                    videoFeedViewModel,
+                    notifFeedViewModel,
+                    userReactionsStatsModel,
+                    navController,
+                    accountViewModel,
+                    startingPage
+                )
             }
         }
     }

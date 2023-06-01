@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.BitmapDrawable
 import android.net.Uri
+import android.service.notification.StatusBarNotification
 import androidx.core.app.NotificationCompat
 import coil.ImageLoader
 import coil.executeBlocking
@@ -133,13 +134,23 @@ object NotificationUtils {
         channelId: String,
         applicationContext: Context
     ) {
+        val notId = id.hashCode()
+
+        // dont notify twice
+        val notifications: Array<StatusBarNotification> = getActiveNotifications()
+        for (notification in notifications) {
+            if (notification.id == notId) {
+                return
+            }
+        }
+
         val contentIntent = Intent(applicationContext, MainActivity::class.java).apply {
             data = Uri.parse(uri)
         }
 
         val contentPendingIntent = PendingIntent.getActivity(
             applicationContext,
-            id.hashCode(),
+            notId,
             contentIntent,
             PendingIntent.FLAG_MUTABLE
         )
@@ -173,7 +184,7 @@ object NotificationUtils {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
 
-        notify(id.hashCode(), builder.build())
+        notify(notId, builder.build())
     }
 
     /**

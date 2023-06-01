@@ -3,13 +3,12 @@ package com.vitorpamplona.amethyst.ui.dal
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 
-object ChatroomListNewFeedFilter : FeedFilter<Note>() {
-    lateinit var account: Account
+class ChatroomListNewFeedFilter(val account: Account) : FeedFilter<Note>() {
 
     // returns the last Note of each user.
     override fun feed(): List<Note> {
         val me = account.userProfile()
-        val followingKeySet = ChatroomListKnownFeedFilter.account.followingKeySet()
+        val followingKeySet = account.followingKeySet()
 
         val privateChatrooms = account.userProfile().privateChatrooms
         val messagingWith = privateChatrooms.keys.filter {

@@ -26,6 +26,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -42,6 +44,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -72,13 +75,18 @@ import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.RelayPoolViewModel
+import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SpinnerSelectionDialog
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @Composable
 fun AppTopBar(followLists: FollowListViewModel, navController: NavHostController, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
@@ -93,27 +101,51 @@ fun AppTopBar(followLists: FollowListViewModel, navController: NavHostController
 
 @Composable
 fun StoriesTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
-    GenericTopBar(scaffoldState, accountViewModel) { account ->
-        FollowList(followLists, account.defaultStoriesFollowList, account.userProfile(), true) { listName ->
-            account.changeDefaultStoriesFollowList(listName)
+    GenericTopBar(scaffoldState, accountViewModel) { accountViewModel ->
+        val accountState by accountViewModel.accountLiveData.observeAsState()
+        accountState?.account?.let { account ->
+            FollowList(
+                followLists,
+                account.defaultStoriesFollowList,
+                account.userProfile(),
+                true
+            ) { listName ->
+                account.changeDefaultStoriesFollowList(listName)
+            }
         }
     }
 }
 
 @Composable
 fun HomeTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
-    GenericTopBar(scaffoldState, accountViewModel) { account ->
-        FollowList(followLists, account.defaultHomeFollowList, account.userProfile(), false) { listName ->
-            account.changeDefaultHomeFollowList(listName)
+    GenericTopBar(scaffoldState, accountViewModel) { accountViewModel ->
+        val accountState by accountViewModel.accountLiveData.observeAsState()
+        accountState?.account?.let { account ->
+            FollowList(
+                followLists,
+                account.defaultHomeFollowList,
+                account.userProfile(),
+                false
+            ) { listName ->
+                account.changeDefaultHomeFollowList(listName)
+            }
         }
     }
 }
 
 @Composable
 fun NotificationTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
-    GenericTopBar(scaffoldState, accountViewModel) { account ->
-        FollowList(followLists, account.defaultNotificationFollowList, account.userProfile(), true) { listName ->
-            account.changeDefaultNotificationFollowList(listName)
+    GenericTopBar(scaffoldState, accountViewModel) { accountViewModel ->
+        val accountState by accountViewModel.accountLiveData.observeAsState()
+        accountState?.account?.let { account ->
+            FollowList(
+                followLists,
+                account.defaultNotificationFollowList,
+                account.userProfile(),
+                true
+            ) { listName ->
+                account.changeDefaultNotificationFollowList(listName)
+            }
         }
     }
 }
@@ -127,10 +159,7 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
 
 @OptIn(coil.annotation.ExperimentalCoilApi::class)
 @Composable
-fun GenericTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel, content: @Composable (Account) -> Unit) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
-
+fun GenericTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel, content: @Composable (AccountViewModel) -> Unit) {
     val relayViewModel: RelayPoolViewModel = viewModel { RelayPoolViewModel() }
     val connectedRelaysLiveData by relayViewModel.connectedRelaysLiveData.observeAsState()
     val availableRelaysLiveData by relayViewModel.availableRelaysLiveData.observeAsState()
@@ -142,7 +171,7 @@ fun GenericTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewMod
     }
 
     if (wantsToEditRelays) {
-        NewRelayListView({ wantsToEditRelays = false }, account)
+        NewRelayListView({ wantsToEditRelays = false }, accountViewModel)
     }
 
     Column() {
@@ -163,7 +192,7 @@ fun GenericTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewMod
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
-                            content(account)
+                            content(accountViewModel)
                         }
 
                         Column(
@@ -193,7 +222,7 @@ fun GenericTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewMod
                 }
             },
             navigationIcon = {
-                LoggedInUserPictureDrawer(account) {
+                LoggedInUserPictureDrawer(accountViewModel) {
                     coroutineScope.launch {
                         scaffoldState.drawerState.open()
                     }
@@ -219,10 +248,10 @@ fun GenericTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewMod
 
 @Composable
 private fun LoggedInUserPictureDrawer(
-    account: Account,
+    accountViewModel: AccountViewModel,
     onClick: () -> Unit
 ) {
-    val accountUserState by account.userProfile().live().metadata.observeAsState()
+    val accountUserState by accountViewModel.account.userProfile().live().metadata.observeAsState()
     val accountUser = accountUserState?.user ?: return
 
     IconButton(
@@ -230,8 +259,8 @@ private fun LoggedInUserPictureDrawer(
         modifier = Modifier
     ) {
         RobohashAsyncImageProxy(
-            robot = accountUser.pubkeyHex,
-            model = ResizeImage(accountUser.profilePicture(), 34.dp),
+            robot = remember { accountUser.pubkeyHex },
+            model = remember(accountUser) { ResizeImage(accountUser.profilePicture(), 34.dp) },
             contentDescription = stringResource(id = R.string.profile_image),
             modifier = Modifier
                 .width(34.dp)
@@ -248,33 +277,31 @@ fun FollowList(followListsModel: FollowListViewModel, listName: String, loggedIn
 
     val defaultOptions = if (withGlobal) listOf(kind3Follow, globalFollow) else listOf(kind3Follow)
 
-    val followLists = remember(followListsModel.followLists) {
-        (defaultOptions + followListsModel.followLists)
+    val followLists by followListsModel.followLists.collectAsState()
+
+    val allLists = remember(followLists) {
+        (defaultOptions + followLists)
     }
 
     val followNames = remember(followLists) {
         derivedStateOf {
-            followLists.map { it.second }
+            allLists.map { it.second }
         }
     }
 
     SimpleTextSpinner(
-        placeholder = followLists.firstOrNull { it.first == listName }?.second ?: "Select an Option",
+        placeholder = allLists.firstOrNull { it.first == listName }?.second ?: "Select an Option",
         options = followNames.value,
         onSelect = {
-            onChange(followLists.getOrNull(it)?.first ?: KIND3_FOLLOWS)
+            onChange(allLists.getOrNull(it)?.first ?: KIND3_FOLLOWS)
         }
     )
 }
 
-class FollowListViewModel : ViewModel() {
-    var followLists by mutableStateOf<List<Pair<String, String>>>(emptyList())
-    var account: Account? = null
-
-    fun load(account: Account?) {
-        this.account = account
-        refresh()
-    }
+@Stable
+class FollowListViewModel(val account: Account) : ViewModel() {
+    private var _followLists = MutableStateFlow<ImmutableList<Pair<String, String>>>(emptyList<Pair<String, String>>().toPersistentList())
+    val followLists = _followLists.asStateFlow()
 
     fun refresh() {
         val scope = CoroutineScope(Job() + Dispatchers.Default)
@@ -284,28 +311,25 @@ class FollowListViewModel : ViewModel() {
     }
 
     private suspend fun refreshFollows() {
-        val myAccount = account ?: return
-
         val newFollowLists = LocalCache.addressables.mapNotNull {
             val event = (it.value.event as? PeopleListEvent)
             // Has to have an list
-            if (event != null && event.pubKey == myAccount.userProfile().pubkeyHex && (event.tags.size > 1 || event.content.length > 50)) {
+            if (event != null && event.pubKey == account.userProfile().pubkeyHex && (event.tags.size > 1 || event.content.length > 50)) {
                 Pair(event.dTag(), event.dTag())
             } else {
                 null
             }
-        }.sortedBy { it.second }
+        }.sortedBy { it.second }.toImmutableList()
 
-        withContext(Dispatchers.Main) {
-            if (followLists != newFollowLists) {
-                followLists = newFollowLists
-            }
+        if (!equalImmutableLists(_followLists.value, newFollowLists)) {
+            _followLists.emit(newFollowLists)
         }
     }
 
     var collectorJob: Job? = null
 
     init {
+        refresh()
         collectorJob = viewModelScope.launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect { newNotes ->
                 newNotes.forEach {
@@ -320,6 +344,12 @@ class FollowListViewModel : ViewModel() {
     override fun onCleared() {
         collectorJob?.cancel()
         super.onCleared()
+    }
+
+    class Factory(val account: Account) : ViewModelProvider.Factory {
+        override fun <FollowListViewModel : ViewModel> create(modelClass: Class<FollowListViewModel>): FollowListViewModel {
+            return FollowListViewModel(account) as FollowListViewModel
+        }
     }
 }
 

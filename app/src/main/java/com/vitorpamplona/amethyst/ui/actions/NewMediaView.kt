@@ -16,7 +16,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -117,8 +116,6 @@ fun isNIP94Server(selectedServer: ServersAvailable?): Boolean {
 
 @Composable
 fun ImageVideoPost(postViewModel: NewMediaModel, acc: Account) {
-    val scope = rememberCoroutineScope()
-
     val fileServers = listOf(
         // Triple(ServersAvailable.IMGUR_NIP_94, stringResource(id = R.string.upload_server_imgur_nip94), stringResource(id = R.string.upload_server_imgur_nip94_explainer)),
         Triple(ServersAvailable.NOSTRIMG_NIP_94, stringResource(id = R.string.upload_server_nostrimg_nip94), stringResource(id = R.string.upload_server_nostrimg_nip94_explainer)),
@@ -152,7 +149,7 @@ fun ImageVideoPost(postViewModel: NewMediaModel, acc: Account) {
             var bitmap by remember { mutableStateOf<Bitmap?>(null) }
 
             LaunchedEffect(key1 = postViewModel.galleryUri) {
-                scope.launch(Dispatchers.IO) {
+                launch(Dispatchers.IO) {
                     postViewModel.galleryUri?.let {
                         try {
                             bitmap = resolver.loadThumbnail(it, Size(1200, 1000), null)

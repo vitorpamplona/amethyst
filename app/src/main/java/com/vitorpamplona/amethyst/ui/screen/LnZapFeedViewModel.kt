@@ -58,14 +58,14 @@ open class LnZapFeedViewModel(val dataSource: FeedFilter<Pair<Note, Note>>) : Vi
         }
     }
 
-    private val bundler = BundledUpdate(250, Dispatchers.IO) {
-        // adds the time to perform the refresh into this delay
-        // holding off new updates in case of heavy refresh routines.
-        refreshSuspended()
-    }
+    private val bundler = BundledUpdate(250, Dispatchers.IO)
 
     fun invalidateData() {
-        bundler.invalidate()
+        bundler.invalidate() {
+            // adds the time to perform the refresh into this delay
+            // holding off new updates in case of heavy refresh routines.
+            refreshSuspended()
+        }
     }
 
     var collectorJob: Job? = null

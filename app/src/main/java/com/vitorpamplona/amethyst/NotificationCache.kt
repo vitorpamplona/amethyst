@@ -39,14 +39,14 @@ object NotificationCache {
 
 class NotificationLiveData(val cache: NotificationCache) : LiveData<NotificationState>(NotificationState(cache)) {
     // Refreshes observers in batches.
-    private val bundler = BundledUpdate(300, Dispatchers.IO) {
-        if (hasActiveObservers()) {
-            postValue(NotificationState(cache))
-        }
-    }
+    private val bundler = BundledUpdate(300, Dispatchers.IO)
 
     fun invalidateData() {
-        bundler.invalidate()
+        bundler.invalidate() {
+            if (hasActiveObservers()) {
+                postValue(NotificationState(cache))
+            }
+        }
     }
 }
 

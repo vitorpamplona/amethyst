@@ -103,16 +103,16 @@ abstract class NostrDataSource(val debugName: String) {
     }
 
     // Refreshes observers in batches.
-    private val bundler = BundledUpdate(300, Dispatchers.IO) {
-        // println("DataSource: ${this.javaClass.simpleName} InvalidateFilters")
-
-        // adds the time to perform the refresh into this delay
-        // holding off new updates in case of heavy refresh routines.
-        resetFiltersSuspend()
-    }
+    private val bundler = BundledUpdate(300, Dispatchers.IO)
 
     fun invalidateFilters() {
-        bundler.invalidate()
+        bundler.invalidate() {
+            // println("DataSource: ${this.javaClass.simpleName} InvalidateFilters")
+
+            // adds the time to perform the refresh into this delay
+            // holding off new updates in case of heavy refresh routines.
+            resetFiltersSuspend()
+        }
     }
 
     fun resetFilters() {

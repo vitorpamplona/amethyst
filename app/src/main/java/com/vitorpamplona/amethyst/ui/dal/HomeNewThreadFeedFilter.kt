@@ -10,9 +10,7 @@ import com.vitorpamplona.amethyst.service.model.PollNoteEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 
-object HomeNewThreadFeedFilter : AdditiveFeedFilter<Note>() {
-    lateinit var account: Account
-
+class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
     override fun feed(): List<Note> {
         val notes = innerApplyFilter(LocalCache.notes.values)
         val longFormNotes = innerApplyFilter(LocalCache.addressables.values)

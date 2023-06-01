@@ -21,6 +21,10 @@ object ScrollStateKeys {
     val HOME_REPLIES = Route.Home.base + "FollowsReplies"
 }
 
+object PagerStateKeys {
+    const val HOME_SCREEN = "Home"
+}
+
 @Composable
 fun rememberForeverLazyListState(
     key: String,
@@ -62,7 +66,7 @@ fun rememberForeverPagerState(
             savedOffset
         )
     }
-    DisposableEffect(Unit) {
+    DisposableEffect(scrollState) {
         onDispose {
             val lastIndex = scrollState.currentPage
             val lastOffset = scrollState.currentPageOffsetFraction

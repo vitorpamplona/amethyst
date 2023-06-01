@@ -10,7 +10,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -22,7 +21,6 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.previews.UrlInfoItem
-import java.net.URL
 
 @Composable
 fun UrlPreviewCard(
@@ -42,26 +40,15 @@ fun UrlPreviewCard(
             )
     ) {
         Column {
-            val validatedUrl = remember(url) { URL(previewInfo.url) }
-
-            // correctly treating relative images
-            val imageUrl = remember(url) {
-                if (previewInfo.image.startsWith("/")) {
-                    URL(validatedUrl, previewInfo.image).toString()
-                } else {
-                    previewInfo.image
-                }
-            }
-
             AsyncImage(
-                model = imageUrl,
-                contentDescription = stringResource(R.string.preview_card_image_for, validatedUrl),
+                model = previewInfo.imageUrlFullPath,
+                contentDescription = stringResource(R.string.preview_card_image_for, previewInfo.url),
                 contentScale = ContentScale.FillWidth,
                 modifier = Modifier.fillMaxWidth()
             )
 
             Text(
-                text = validatedUrl.host,
+                text = previewInfo.verifiedUrl?.host ?: previewInfo.url,
                 style = MaterialTheme.typography.caption,
                 modifier = Modifier
                     .fillMaxWidth()

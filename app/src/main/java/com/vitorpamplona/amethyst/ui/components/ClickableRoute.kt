@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
@@ -132,7 +133,7 @@ private fun DisplayNote(
     var noteBase by remember(nip19) { mutableStateOf<Note?>(null) }
 
     LaunchedEffect(key1 = nip19.hex) {
-        withContext(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             noteBase = LocalCache.checkGetOrCreateNote(nip19.hex)
         }
     }
@@ -188,7 +189,7 @@ private fun DisplayAddress(
     var noteBase by remember(nip19) { mutableStateOf<Note?>(null) }
 
     LaunchedEffect(key1 = nip19.hex) {
-        withContext(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             noteBase = LocalCache.checkGetOrCreateAddressableNote(nip19.hex)
         }
     }
@@ -220,7 +221,7 @@ private fun DisplayUser(
     var userBase by remember(nip19) { mutableStateOf<User?>(null) }
 
     LaunchedEffect(key1 = nip19.hex) {
-        withContext(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             userBase = LocalCache.checkGetOrCreateUser(nip19.hex)
         }
     }
@@ -489,15 +490,15 @@ fun InLineIconRenderer(
                 "inlineContent$idx",
                 InlineTextContent(
                     Placeholder(
-                        width = 17.sp,
-                        height = 17.sp,
+                        width = 20.sp,
+                        height = 20.sp,
                         placeholderVerticalAlign = PlaceholderVerticalAlign.Center
                     )
                 ) {
                     AsyncImage(
                         model = value.url,
                         contentDescription = null,
-                        modifier = Modifier.fillMaxSize().padding(1.dp)
+                        modifier = Modifier.fillMaxSize().padding(horizontal = 1.dp)
                     )
                 }
             )

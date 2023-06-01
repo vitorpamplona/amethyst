@@ -9,11 +9,11 @@ import androidx.compose.material.Divider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -23,7 +23,6 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.patrykandpatrick.vico.compose.axis.horizontal.bottomAxis
 import com.patrykandpatrick.vico.compose.axis.vertical.endAxis
 import com.patrykandpatrick.vico.compose.axis.vertical.startAxis
@@ -38,9 +37,7 @@ import com.patrykandpatrick.vico.core.chart.composed.plus
 import com.patrykandpatrick.vico.core.chart.line.LineChart
 import com.patrykandpatrick.vico.core.chart.values.ChartValues
 import com.patrykandpatrick.vico.core.component.shape.shader.DynamicShaders
-import com.patrykandpatrick.vico.core.entry.composed.plus
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
-import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.OneGiga
 import com.vitorpamplona.amethyst.ui.note.OneKilo
@@ -48,13 +45,11 @@ import com.vitorpamplona.amethyst.ui.note.OneMega
 import com.vitorpamplona.amethyst.ui.note.UserReactionsRow
 import com.vitorpamplona.amethyst.ui.note.UserReactionsViewModel
 import com.vitorpamplona.amethyst.ui.note.showCount
-import com.vitorpamplona.amethyst.ui.screen.CardFeedView
 import com.vitorpamplona.amethyst.ui.screen.NotificationViewModel
+import com.vitorpamplona.amethyst.ui.screen.RefresheableCardView
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.RoyalBlue
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.math.RoundingMode
 import kotlin.math.roundToInt
@@ -64,40 +59,21 @@ fun NotificationScreen(
     notifFeedViewModel: NotificationViewModel,
     userReactionsStatsModel: UserReactionsViewModel,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-    scrollToTop: Boolean = false
+    nav: (String) -> Unit
 ) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = remember(accountState) { accountState?.account } ?: return
-
-    LaunchedEffect(accountViewModel, account.defaultNotificationFollowList) {
-        NostrAccountDataSource.invalidateFilters()
-        NotificationFeedFilter.account = account
-        notifFeedViewModel.invalidateData(true)
-    }
+    WatchAccountForNotifications(notifFeedViewModel, accountViewModel)
 
     val lifeCycleOwner = LocalLifecycleOwner.current
     DisposableEffect(accountViewModel) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 NostrAccountDataSource.invalidateFilters()
-                NotificationFeedFilter.account = account
             }
         }
 
         lifeCycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifeCycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
-
-    if (scrollToTop) {
-        val scope = rememberCoroutineScope()
-        LaunchedEffect(key1 = Unit) {
-            scope.launch(Dispatchers.IO) {
-                notifFeedViewModel.clear()
-                notifFeedViewModel.invalidateData(true)
-            }
         }
     }
 
@@ -108,15 +84,32 @@ fun NotificationScreen(
             SummaryBar(
                 model = userReactionsStatsModel
             )
-            CardFeedView(
+            RefresheableCardView(
                 viewModel = notifFeedViewModel,
                 accountViewModel = accountViewModel,
                 nav = nav,
                 routeForLastRead = Route.Notification.base,
-                scrollStateKey = ScrollStateKeys.NOTIFICATION_SCREEN,
-                scrollToTop = scrollToTop
+                scrollStateKey = ScrollStateKeys.NOTIFICATION_SCREEN
             )
         }
+    }
+}
+
+@Composable
+fun WatchAccountForNotifications(
+    notifFeedViewModel: NotificationViewModel,
+    accountViewModel: AccountViewModel
+) {
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val account = remember(accountState) { accountState?.account } ?: return
+
+    LaunchedEffect(accountViewModel, account.defaultNotificationFollowList) {
+        NostrAccountDataSource.invalidateFilters()
+        if (notifFeedViewModel.scrollToTop.value > 0) {
+            notifFeedViewModel.clear()
+        }
+
+        notifFeedViewModel.invalidateDataAndSendToTop(true)
     }
 }
 
@@ -167,7 +160,9 @@ fun SummaryBar(model: UserReactionsViewModel) {
         )
 
     if (showChart) {
-        model.chartModel?.let {
+        val axisModel by model.axisLabels.collectAsState()
+        val chartModel by model.chartModel.collectAsState()
+        chartModel?.let {
             Row(
                 modifier = Modifier
                     .padding(vertical = 10.dp, horizontal = 20.dp)
@@ -186,7 +181,7 @@ fun SummaryBar(model: UserReactionsViewModel) {
                             valueFormatter = AmountAxisValueFormatter()
                         ),
                         bottomAxis = bottomAxis(
-                            valueFormatter = LabelValueFormatter(model.axisLabels)
+                            valueFormatter = LabelValueFormatter(axisModel)
                         )
                     )
                 }

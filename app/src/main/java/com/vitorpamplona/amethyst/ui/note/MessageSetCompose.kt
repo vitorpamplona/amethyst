@@ -107,7 +107,7 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, 
                         routeForLastRead = routeForLastRead,
                         isBoostedNote = true,
                         addMarginTop = false,
-                        parentBackgroundColor = backgroundColor,
+                        parentBackgroundColor = null,
                         accountViewModel = accountViewModel,
                         nav = nav
                     )

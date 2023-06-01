@@ -78,6 +78,7 @@ import androidx.core.graphics.drawable.toBitmap
 import androidx.core.graphics.get
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
+import coil.request.SuccessResult
 import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
@@ -604,7 +605,7 @@ private fun RenderPoll(
     nav: (String) -> Unit
 ) {
     val noteEvent = note.event as? PollNoteEvent ?: return
-    val eventContent = noteEvent.content()
+    val eventContent = remember { noteEvent.content() }
 
     if (makeItShort && accountViewModel.isLoggedUser(note.author)) {
         Text(
@@ -1679,19 +1680,24 @@ fun BadgeDisplay(baseNote: Note) {
     val background = MaterialTheme.colors.background
     val badgeData = baseNote.event as? BadgeDefinitionEvent ?: return
 
-    val image = remember { badgeData.image() }
+    val image = remember { badgeData.thumb()?.ifBlank { null } ?: badgeData.image() }
     val name = remember { badgeData.name() }
     val description = remember { badgeData.description() }
 
     var backgroundFromImage by remember { mutableStateOf(Pair(background, background)) }
-    var imageResult by remember { mutableStateOf<AsyncImagePainter.State.Success?>(null) }
+    var imageResult by remember { mutableStateOf<SuccessResult?>(null) }
 
     LaunchedEffect(key1 = imageResult) {
-        withContext(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             imageResult?.let {
-                val backgroundColor = it.result.drawable.toBitmap(200, 200).copy(Bitmap.Config.ARGB_8888, false).get(0, 199)
+                val backgroundColor = it.drawable.toBitmap(200, 200).copy(Bitmap.Config.ARGB_8888, false).get(0, 199)
                 val colorFromImage = Color(backgroundColor)
-                val textBackground = if (colorFromImage.luminance() > 0.5) lightColors().onBackground else darkColors().onBackground
+                val textBackground = if (colorFromImage.luminance() > 0.5) {
+                    lightColors().onBackground
+                } else {
+                    darkColors().onBackground
+                }
+
                 backgroundFromImage = Pair(colorFromImage, textBackground)
             }
         }
@@ -1708,47 +1714,65 @@ fun BadgeDisplay(baseNote: Note) {
             )
             .background(backgroundFromImage.first)
     ) {
-        Column {
-            image.let {
-                AsyncImage(
-                    model = it,
-                    contentDescription = stringResource(
-                        R.string.badge_award_image_for,
-                        name ?: ""
-                    ),
-                    contentScale = ContentScale.FillWidth,
-                    modifier = Modifier.fillMaxWidth(),
-                    onSuccess = {
-                        imageResult = it
-                    }
-                )
+        RenderBadge(
+            image,
+            name,
+            backgroundFromImage.second,
+            description
+        ) {
+            if (imageResult == null) {
+                imageResult = it.result
             }
+        }
+    }
+}
 
-            name?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.body1,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 10.dp, end = 10.dp),
-                    color = backgroundFromImage.second
-                )
-            }
+@Composable
+private fun RenderBadge(
+    image: String?,
+    name: String?,
+    backgroundFromImage: Color,
+    description: String?,
+    onSuccess: (AsyncImagePainter.State.Success) -> Unit
+) {
+    Column {
+        image.let {
+            AsyncImage(
+                model = it,
+                contentDescription = stringResource(
+                    R.string.badge_award_image_for,
+                    name ?: ""
+                ),
+                contentScale = ContentScale.FillWidth,
+                modifier = Modifier.fillMaxWidth(),
+                onSuccess = onSuccess
+            )
+        }
 
-            description?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.caption,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
-                    color = Color.Gray,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+        name?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.body1,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 10.dp, end = 10.dp),
+                color = backgroundFromImage
+            )
+        }
+
+        description?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.caption,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
+                color = Color.Gray,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
@@ -1761,18 +1785,20 @@ fun FileHeaderDisplay(note: Note) {
     var content by remember { mutableStateOf<ZoomableContent?>(null) }
 
     LaunchedEffect(key1 = event.id) {
-        withContext(Dispatchers.IO) {
-            val blurHash = event.blurhash()
-            val hash = event.hash()
-            val dimensions = event.dimensions()
-            val description = event.content
-            val removedParamsFromUrl = fullUrl.split("?")[0].lowercase()
-            val isImage = imageExtensions.any { removedParamsFromUrl.endsWith(it) }
-            val uri = "nostr:" + note.toNEvent()
-            content = if (isImage) {
-                ZoomableUrlImage(fullUrl, description, hash, blurHash, dimensions, uri)
-            } else {
-                ZoomableUrlVideo(fullUrl, description, hash, uri)
+        if (content == null) {
+            launch(Dispatchers.IO) {
+                val blurHash = event.blurhash()
+                val hash = event.hash()
+                val dimensions = event.dimensions()
+                val description = event.content
+                val removedParamsFromUrl = fullUrl.split("?")[0].lowercase()
+                val isImage = imageExtensions.any { removedParamsFromUrl.endsWith(it) }
+                val uri = "nostr:" + note.toNEvent()
+                content = if (isImage) {
+                    ZoomableUrlImage(fullUrl, description, hash, blurHash, dimensions, uri)
+                } else {
+                    ZoomableUrlVideo(fullUrl, description, hash, uri)
+                }
             }
         }
     }
@@ -1790,7 +1816,7 @@ fun FileStorageHeaderDisplay(baseNote: Note) {
     var fileNote by remember { mutableStateOf<Note?>(null) }
 
     LaunchedEffect(key1 = eventHeader.id) {
-        withContext(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             fileNote = eventHeader.dataEventId()?.let { LocalCache.checkGetOrCreateNote(it) }
         }
     }
@@ -1802,33 +1828,35 @@ fun FileStorageHeaderDisplay(baseNote: Note) {
         var content by remember { mutableStateOf<ZoomableContent?>(null) }
 
         LaunchedEffect(key1 = eventHeader.id, key2 = noteState, key3 = note?.event) {
-            withContext(Dispatchers.IO) {
-                val uri = "nostr:" + baseNote.toNEvent()
-                val localDir = note?.idHex?.let { File(File(appContext.externalCacheDir, "NIP95"), it) }
-                val blurHash = eventHeader.blurhash()
-                val dimensions = eventHeader.dimensions()
-                val description = eventHeader.content
-                val mimeType = eventHeader.mimeType()
+            if (content == null) {
+                launch(Dispatchers.IO) {
+                    val uri = "nostr:" + baseNote.toNEvent()
+                    val localDir = note?.idHex?.let { File(File(appContext.externalCacheDir, "NIP95"), it) }
+                    val blurHash = eventHeader.blurhash()
+                    val dimensions = eventHeader.dimensions()
+                    val description = eventHeader.content
+                    val mimeType = eventHeader.mimeType()
 
-                content = if (mimeType?.startsWith("image") == true) {
-                    ZoomableLocalImage(
-                        localFile = localDir,
-                        mimeType = mimeType,
-                        description = description,
-                        blurhash = blurHash,
-                        dim = dimensions,
-                        isVerified = true,
-                        uri = uri
-                    )
-                } else {
-                    ZoomableLocalVideo(
-                        localFile = localDir,
-                        mimeType = mimeType,
-                        description = description,
-                        dim = dimensions,
-                        isVerified = true,
-                        uri = uri
-                    )
+                    content = if (mimeType?.startsWith("image") == true) {
+                        ZoomableLocalImage(
+                            localFile = localDir,
+                            mimeType = mimeType,
+                            description = description,
+                            blurhash = blurHash,
+                            dim = dimensions,
+                            isVerified = true,
+                            uri = uri
+                        )
+                    } else {
+                        ZoomableLocalVideo(
+                            localFile = localDir,
+                            mimeType = mimeType,
+                            description = description,
+                            dim = dimensions,
+                            isVerified = true,
+                            uri = uri
+                        )
+                    }
                 }
             }
         }
@@ -2249,32 +2277,39 @@ fun UserPicture(
                     .align(Alignment.TopEnd)
             }
 
-            val myIconBackgroundModifier = remember {
-                Modifier
-                    .clip(CircleShape)
-                    .fillMaxSize(0.6f)
-                    .align(Alignment.Center)
-            }
-
-            val myIconModifier = remember {
-                Modifier
-                    .width(size.div(3.5f))
-                    .height(size.div(3.5f))
-            }
-
-            Box(myIconBoxModifier, contentAlignment = Alignment.Center) {
-                Box(
-                    myIconBackgroundModifier.background(MaterialTheme.colors.background)
-                )
-
-                Icon(
-                    painter = painterResource(R.drawable.ic_verified),
-                    stringResource(id = R.string.following),
-                    modifier = myIconModifier,
-                    tint = Following
-                )
-            }
+            FollowingIcon(myIconBoxModifier, size)
         }
+    }
+}
+
+@Composable
+private fun FollowingIcon(
+    myIconBoxModifier: Modifier,
+    size: Dp
+) {
+    Box(myIconBoxModifier, contentAlignment = Alignment.Center) {
+        val myIconBackgroundModifier = remember {
+            Modifier
+                .clip(CircleShape)
+                .fillMaxSize(0.6f)
+        }
+
+        Box(
+            myIconBackgroundModifier.background(MaterialTheme.colors.background)
+        )
+
+        val myIconModifier = remember {
+            Modifier
+                .width(size.div(3.5f))
+                .height(size.div(3.5f))
+        }
+
+        Icon(
+            painter = painterResource(R.drawable.ic_verified),
+            stringResource(id = R.string.following),
+            modifier = myIconModifier,
+            tint = Following
+        )
     }
 }
 
