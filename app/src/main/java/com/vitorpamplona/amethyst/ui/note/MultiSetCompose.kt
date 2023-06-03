@@ -287,8 +287,6 @@ private fun AuthorPictureAndComment(
         }
     }
 
-    println("AAAA $content")
-
     content.first?.let {
         val route by remember {
             derivedStateOf {

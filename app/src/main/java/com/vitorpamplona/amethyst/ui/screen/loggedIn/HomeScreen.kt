@@ -141,11 +141,18 @@ fun WatchAccountForHomeScreen(
     val account = remember(accountState) { accountState?.account } ?: return
     val scope = rememberCoroutineScope()
 
+    var firstTime by remember(accountViewModel) { mutableStateOf(true) }
+
     LaunchedEffect(accountViewModel, account.defaultHomeFollowList) {
-        scope.launch(Dispatchers.IO) {
-            NostrHomeDataSource.invalidateFilters()
-            homeFeedViewModel.invalidateDataAndSendToTop(true)
-            repliesFeedViewModel.invalidateDataAndSendToTop(true)
+        // Only invalidate when things change. Not in the first run
+        if (firstTime) {
+            firstTime = false
+        } else {
+            scope.launch(Dispatchers.IO) {
+                NostrHomeDataSource.invalidateFilters()
+                homeFeedViewModel.invalidateDataAndSendToTop(true)
+                repliesFeedViewModel.invalidateDataAndSendToTop(true)
+            }
         }
     }
 }

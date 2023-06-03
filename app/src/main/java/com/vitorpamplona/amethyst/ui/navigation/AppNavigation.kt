@@ -64,13 +64,9 @@ fun AppNavigation(
             composable(route.route, route.arguments, content = {
                 val scrollToTop = it.arguments?.getBoolean("scrollToTop") ?: false
 
-                LaunchedEffect(key1 = it) {
-                    if (scrollToTop) {
-                        launch {
-                            videoFeedViewModel.sendToTop()
-                            it.arguments?.remove("scrollToTop")
-                        }
-                    }
+                if (scrollToTop) {
+                    videoFeedViewModel.sendToTop()
+                    it.arguments?.remove("scrollToTop")
                 }
 
                 VideoScreen(
@@ -85,13 +81,9 @@ fun AppNavigation(
             composable(route.route, route.arguments, content = {
                 val scrollToTop = it.arguments?.getBoolean("scrollToTop") ?: false
 
-                LaunchedEffect(key1 = it) {
-                    if (scrollToTop) {
-                        launch {
-                            searchFeedViewModel.sendToTop()
-                            it.arguments?.remove("scrollToTop")
-                        }
-                    }
+                if (scrollToTop) {
+                    searchFeedViewModel.sendToTop()
+                    it.arguments?.remove("scrollToTop")
                 }
 
                 SearchScreen(
@@ -107,14 +99,10 @@ fun AppNavigation(
                 val scrollToTop = it.arguments?.getBoolean("scrollToTop") ?: false
                 val nip47 = it.arguments?.getString("nip47")
 
-                LaunchedEffect(key1 = it) {
-                    if (scrollToTop) {
-                        launch {
-                            homeFeedViewModel.sendToTop()
-                            repliesFeedViewModel.sendToTop()
-                            it.arguments?.remove("scrollToTop")
-                        }
-                    }
+                if (scrollToTop) {
+                    homeFeedViewModel.sendToTop()
+                    repliesFeedViewModel.sendToTop()
+                    it.arguments?.remove("scrollToTop")
                 }
 
                 HomeScreen(
@@ -140,14 +128,10 @@ fun AppNavigation(
             composable(route.route, route.arguments, content = {
                 val scrollToTop = it.arguments?.getBoolean("scrollToTop") ?: false
 
-                LaunchedEffect(key1 = it) {
-                    if (scrollToTop) {
-                        launch {
-                            notifFeedViewModel.clear()
-                            notifFeedViewModel.sendToTop()
-                            it.arguments?.remove("scrollToTop")
-                        }
-                    }
+                if (scrollToTop) {
+                    notifFeedViewModel.clear()
+                    notifFeedViewModel.sendToTop()
+                    it.arguments?.remove("scrollToTop")
                 }
 
                 NotificationScreen(

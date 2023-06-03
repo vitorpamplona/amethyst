@@ -54,11 +54,13 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
     val scrollToTop = _scrollToTop.asStateFlow()
     var scrolltoTopPending = false
 
-    suspend fun sendToTop() {
+    fun sendToTop() {
         if (scrolltoTopPending) return
 
         scrolltoTopPending = true
-        _scrollToTop.emit(_scrollToTop.value + 1)
+        viewModelScope.launch(Dispatchers.IO) {
+            _scrollToTop.emit(_scrollToTop.value + 1)
+        }
     }
 
     suspend fun sentToTop() {

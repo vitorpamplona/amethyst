@@ -133,9 +133,15 @@ fun WatchAccountForVideoScreen(videoFeedView: NostrVideoFeedViewModel, accountVi
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = remember(accountState) { accountState?.account } ?: return
 
+    var firstTime by remember(accountViewModel) { mutableStateOf(true) }
+
     LaunchedEffect(accountViewModel, account.defaultStoriesFollowList) {
-        NostrVideoDataSource.resetFilters()
-        videoFeedView.invalidateDataAndSendToTop(true)
+        if (firstTime) {
+            firstTime = false
+        } else {
+            NostrVideoDataSource.resetFilters()
+            videoFeedView.invalidateDataAndSendToTop(true)
+        }
     }
 }
 
