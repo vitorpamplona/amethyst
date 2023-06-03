@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
+import com.vitorpamplona.amethyst.ui.components.BundledInsert
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.RoyalBlue
@@ -280,9 +281,17 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
 
             collectorJob = viewModelScope.launch(Dispatchers.IO) {
                 LocalCache.live.newEventBundles.collect { newNotes ->
-                    addToStatsSuspend(newNotes)
+                    invalidateInsertData(newNotes)
                 }
             }
+        }
+    }
+
+    private val bundlerInsert = BundledInsert<Set<Note>>(250, Dispatchers.IO)
+
+    fun invalidateInsertData(newItems: Set<Note>) {
+        bundlerInsert.invalidateList(newItems) {
+            addToStatsSuspend(it.flatten().toSet())
         }
     }
 
