@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.navigation
 
 import android.graphics.Rect
+import android.os.Looper
 import android.view.ViewTreeObserver
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -168,7 +169,9 @@ fun WatchPossibleNotificationChanges(
     LaunchedEffect(Unit) {
         launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect {
-                onChange(route.hasNewItems(account, notif, it))
+                launch(Dispatchers.IO) {
+                    onChange(route.hasNewItems(account, notif, it))
+                }
             }
         }
     }
