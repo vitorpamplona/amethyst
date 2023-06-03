@@ -27,7 +27,6 @@ import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -120,9 +119,8 @@ fun VideoView(videoUri: Uri, description: String? = null, thumb: Drawable? = nul
     val context = LocalContext.current
     val lifecycleOwner = rememberUpdatedState(LocalLifecycleOwner.current)
 
-    val mutedInstance = remember { mutableStateOf(DefaultMutedSetting.value) }
-
     var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
+    val defaultVolume = remember { if (DefaultMutedSetting.value) 0f else 1f }
 
     LaunchedEffect(key1 = videoUri) {
         if (exoPlayer == null) {
@@ -138,7 +136,7 @@ fun VideoView(videoUri: Uri, description: String? = null, thumb: Drawable? = nul
         it.apply {
             repeatMode = Player.REPEAT_MODE_ALL
             videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
-            volume = if (mutedInstance.value) 0f else 1f
+            volume = defaultVolume
             if (videoUri.scheme?.startsWith("file") == true) {
                 setMediaItem(media)
             } else {
@@ -151,7 +149,7 @@ fun VideoView(videoUri: Uri, description: String? = null, thumb: Drawable? = nul
             prepare()
         }
 
-        RenderVideoPlayer(it, context, thumb, onDialog, mutedInstance)
+        RenderVideoPlayer(it, context, thumb, onDialog)
     }
 
     DisposableEffect(Unit) {
@@ -178,8 +176,7 @@ private fun RenderVideoPlayer(
     exoPlayer: ExoPlayer,
     context: Context,
     thumb: Drawable?,
-    onDialog: ((Boolean) -> Unit)?,
-    mutedInstance: MutableState<Boolean>
+    onDialog: ((Boolean) -> Unit)?
 ) {
     BoxWithConstraints() {
         AndroidView(
@@ -216,11 +213,10 @@ private fun RenderVideoPlayer(
             }
         )
 
-        MuteButton(mutedInstance) {
-            mutedInstance.value = !mutedInstance.value
-            DefaultMutedSetting.value = mutedInstance.value
+        MuteButton() { mute: Boolean ->
+            DefaultMutedSetting.value = mute
 
-            exoPlayer.volume = if (mutedInstance.value) 0f else 1f
+            exoPlayer.volume = if (mute) 0f else 1f
         }
     }
 }
@@ -255,7 +251,7 @@ fun LayoutCoordinates.isCompletelyVisible(view: View): Boolean {
 }
 
 @Composable
-private fun MuteButton(muted: MutableState<Boolean>, toggle: () -> Unit) {
+private fun MuteButton(toggle: (Boolean) -> Unit) {
     Box(
         remember {
             Modifier
@@ -272,11 +268,16 @@ private fun MuteButton(muted: MutableState<Boolean>, toggle: () -> Unit) {
                 .background(MaterialTheme.colors.background)
         )
 
+        val mutedInstance = remember { mutableStateOf(DefaultMutedSetting.value) }
+
         IconButton(
-            onClick = toggle,
+            onClick = {
+                mutedInstance.value = !mutedInstance.value
+                toggle(mutedInstance.value)
+            },
             modifier = Modifier.size(50.dp)
         ) {
-            if (muted.value) {
+            if (mutedInstance.value) {
                 Icon(
                     imageVector = Icons.Default.VolumeOff,
                     "Hash Verified",
