@@ -1712,11 +1712,17 @@ private fun RenderPledgeAmount(
     }
 
     LaunchedEffect(key1 = repliesState) {
-        withContext(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             repliesState?.note?.pledgedAmountByOthers()?.let {
-                rewardAmount = baseReward.add(it)
+                val newRewardAmount = baseReward.add(it)
+                if (newRewardAmount != rewardAmount) {
+                    rewardAmount = newRewardAmount
+                }
             }
-            hasPledge = repliesState?.note?.hasPledgeBy(accountViewModel.userProfile()) == true
+            val newHasPledge = repliesState?.note?.hasPledgeBy(accountViewModel.userProfile()) == true
+            if (hasPledge != newHasPledge) {
+                hasPledge = newHasPledge
+            }
         }
     }
 
