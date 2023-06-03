@@ -5,7 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -16,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,7 +32,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -40,10 +40,14 @@ fun ZapUserSetCompose(zapSetCard: ZapUserSetCard, isInnerNote: Boolean = false, 
     var isNew by remember { mutableStateOf<Boolean>(false) }
 
     LaunchedEffect(key1 = zapSetCard.createdAt()) {
-        withContext(Dispatchers.IO) {
-            isNew = zapSetCard.createdAt > NotificationCache.load(routeForLastRead)
+        launch(Dispatchers.IO) {
+            val newIsNew = zapSetCard.createdAt > NotificationCache.load(routeForLastRead)
 
             NotificationCache.markAsRead(routeForLastRead, zapSetCard.createdAt)
+
+            if (newIsNew != isNew) {
+                isNew = newIsNew
+            }
         }
     }
 
@@ -87,16 +91,8 @@ fun ZapUserSetCompose(zapSetCard: ZapUserSetCard, isInnerNote: Boolean = false, 
             }
 
             Column(modifier = Modifier.padding(start = if (!isInnerNote) 10.dp else 0.dp)) {
-                FlowRow() {
-                    zapSetCard.zapEvents.forEach {
-                        NoteAuthorPicture(
-                            baseNote = it.key,
-                            nav = nav,
-                            accountViewModel = accountViewModel,
-                            size = 35.dp
-                        )
-                    }
-                }
+                val zapEvents by remember { derivedStateOf { zapSetCard.zapEvents } }
+                AuthorGalleryZaps(zapEvents, backgroundColor, nav, accountViewModel)
 
                 UserCompose(baseUser = zapSetCard.user, accountViewModel = accountViewModel, nav = nav)
             }

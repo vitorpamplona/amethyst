@@ -178,7 +178,7 @@ private fun RenderLikeGallery(
 }
 
 @Composable
-private fun RenderZapGallery(
+fun RenderZapGallery(
     zapEvents: ImmutableMap<Note, Note>,
     backgroundColor: Color,
     nav: (String) -> Unit,
@@ -286,6 +286,8 @@ private fun AuthorPictureAndComment(
             }
         }
     }
+
+    println("AAAA $content")
 
     content.first?.let {
         val route by remember {
