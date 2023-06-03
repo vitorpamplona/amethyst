@@ -110,7 +110,7 @@ private fun OptionNote(
     backgroundColor: Color,
     nav: (String) -> Unit
 ) {
-    val tags = remember { baseNote.event?.tags() }
+    val tags = remember { baseNote.event?.tags() ?: emptyList() }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -164,7 +164,7 @@ private fun RenderOptionAfterVote(
     totalRatio: Float,
     color: Color,
     canPreview: Boolean,
-    tags: List<List<String>>?,
+    tags: List<List<String>>,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -231,7 +231,7 @@ private fun RenderOptionAfterVote(
 private fun RenderOptionBeforeVote(
     description: String,
     canPreview: Boolean,
-    tags: List<List<String>>?,
+    tags: List<List<String>>,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit

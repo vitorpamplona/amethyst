@@ -27,7 +27,7 @@ object LanguageTranslatorService {
     val tagRegex = Pattern.compile("(nostr:)?@?(nsec1|npub1|nevent1|naddr1|note1|nprofile1|nrelay1)([qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)", Pattern.CASE_INSENSITIVE)
 
     private val translators =
-        object : LruCache<TranslatorOptions, Translator>(10) {
+        object : LruCache<TranslatorOptions, Translator>(20) {
             override fun create(options: TranslatorOptions): Translator {
                 return Translation.getClient(options)
             }

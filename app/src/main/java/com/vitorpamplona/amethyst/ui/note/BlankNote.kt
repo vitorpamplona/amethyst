@@ -2,6 +2,8 @@ package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -17,7 +19,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -53,6 +54,7 @@ fun BlankNote(modifier: Modifier = Modifier, isQuote: Boolean = false, idHex: St
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HiddenNote(
     reports: Set<Note>,

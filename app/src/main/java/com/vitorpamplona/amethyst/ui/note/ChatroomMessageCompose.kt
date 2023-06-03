@@ -7,6 +7,8 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -48,7 +50,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
@@ -364,12 +365,13 @@ private fun RenderRegularTextNote(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val tags = remember { note.event?.tags() }
+    val tags = remember { note.event?.tags() ?: emptyList() }
     val eventContent = remember { accountViewModel.decrypt(note) }
     val modifier = remember { Modifier.padding(top = 5.dp) }
 
     if (eventContent != null) {
         val hasSensitiveContent = remember(note.event) { note.event?.isSensitive() ?: false }
+
         SensitivityWarning(
             hasSensitiveContent = hasSensitiveContent,
             accountViewModel = accountViewModel
@@ -495,6 +497,7 @@ data class RelayBadgesState(
     val noteRelaysSimple: List<String>
 )
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun RelayBadges(baseNote: Note) {
     val noteRelaysState by baseNote.live().relays.observeAsState()

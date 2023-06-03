@@ -381,6 +381,10 @@ fun NoteMaster(
                         if (eventContent != null) {
                             val hasSensitiveContent = remember(note.event) { note.event?.isSensitive() ?: false }
 
+                            val tags = remember(note) {
+                                note.event?.tags() ?: emptyList()
+                            }
+
                             SensitivityWarning(
                                 hasSensitiveContent = hasSensitiveContent,
                                 accountViewModel = accountViewModel
@@ -389,7 +393,7 @@ fun NoteMaster(
                                     eventContent,
                                     canPreview,
                                     Modifier.fillMaxWidth(),
-                                    note.event?.tags(),
+                                    tags,
                                     MaterialTheme.colors.background,
                                     accountViewModel,
                                     nav

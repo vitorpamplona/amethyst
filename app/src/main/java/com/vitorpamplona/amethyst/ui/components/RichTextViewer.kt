@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.components
 
 import android.util.Log
+import android.util.LruCache
 import android.util.Patterns
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -26,7 +27,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.google.accompanist.flowlayout.FlowRow
 import com.halilibo.richtext.markdown.Markdown
 import com.halilibo.richtext.markdown.MarkdownParseOptions
 import com.halilibo.richtext.ui.RichTextStyle
@@ -38,7 +38,6 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.checkForHashtagWithIcon
-import com.vitorpamplona.amethyst.service.lnurl.LnWithdrawalUtil
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -58,6 +57,7 @@ import java.net.MalformedURLException
 import java.net.URISyntaxException
 import java.net.URL
 import java.util.regex.Pattern
+import kotlin.time.ExperimentalTime
 
 val imageExtensions = listOf("png", "jpg", "gif", "bmp", "jpeg", "webp", "svg")
 val videoExtensions = listOf("mp4", "avi", "wmv", "mpg", "amv", "webm", "mov", "mp3")
@@ -98,15 +98,13 @@ fun RichTextViewer(
     content: String,
     canPreview: Boolean,
     modifier: Modifier = Modifier,
-    tags: List<List<String>>?,
+    tags: List<List<String>>,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val isMarkdown = remember(content) { isMarkdown(content) }
-
     Column(modifier = modifier) {
-        if (isMarkdown) {
+        if (remember(content) { isMarkdown(content) }) {
             RenderContentAsMarkdown(content, backgroundColor, tags, nav)
         } else {
             RenderRegular(content, tags, canPreview, backgroundColor, accountViewModel, nav)
@@ -114,63 +112,33 @@ fun RichTextViewer(
     }
 }
 
-@Stable
-class RichTextViewerState(
-    val content: String,
+val urlSetCache = LruCache<String, RichTextViewerState>(200)
+
+@Immutable
+data class RichTextViewerState(
     val urlSet: ImmutableSet<String>,
     val imagesForPager: ImmutableMap<String, ZoomableUrlContent>,
     val imageList: ImmutableList<ZoomableUrlContent>,
     val customEmoji: ImmutableMap<String, String>
 )
 
+@OptIn(ExperimentalTime::class, ExperimentalLayoutApi::class)
 @Composable
 private fun RenderRegular(
     content: String,
-    tags: List<List<String>>?,
+    tags: List<List<String>>,
     canPreview: Boolean,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    var state by remember(content) {
-        mutableStateOf(
-            RichTextViewerState(
-                content,
-                persistentSetOf(),
-                persistentMapOf(),
-                persistentListOf(),
-                persistentMapOf()
-            )
-        )
-    }
-
-    LaunchedEffect(key1 = content) {
-        launch(Dispatchers.IO) {
-            val urls = UrlDetector(content, UrlDetectorOptions.Default).detect()
-            val urlSet = urls.mapTo(LinkedHashSet(urls.size)) { it.originalUrl }
-            val imagesForPager = urlSet.mapNotNull { fullUrl ->
-                val removedParamsFromUrl = fullUrl.split("?")[0].lowercase()
-                if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-                    ZoomableUrlImage(fullUrl)
-                } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-                    ZoomableUrlVideo(fullUrl)
-                } else {
-                    null
-                }
-            }.associateBy { it.url }
-            val imageList = imagesForPager.values.toList()
-
-            val emojiMap = tags?.filter { it.size > 2 && it[0] == "emoji" }?.associate { ":${it[1]}:" to it[2] } ?: emptyMap()
-
-            if (urlSet.isNotEmpty() || emojiMap.isNotEmpty()) {
-                state = RichTextViewerState(
-                    content,
-                    urlSet.toImmutableSet(),
-                    imagesForPager.toImmutableMap(),
-                    imageList.toImmutableList(),
-                    emojiMap.toImmutableMap()
-                )
-            }
+    val state by remember(content) {
+        if (urlSetCache[content] != null) {
+            mutableStateOf(urlSetCache[content])
+        } else {
+            val newUrls = parseUrls(content, tags)
+            urlSetCache.put(content, newUrls)
+            mutableStateOf(newUrls)
         }
     }
 
@@ -185,10 +153,60 @@ private fun RenderRegular(
                 }
             }
             s.forEach { word: String ->
-                RenderWord(word, state, canPreview, backgroundColor, accountViewModel, nav, tags)
+                RenderWord(
+                    word,
+                    state,
+                    canPreview,
+                    backgroundColor,
+                    accountViewModel,
+                    nav,
+                    tags
+                )
             }
         }
     }
+}
+
+private fun parseUrls(
+    content: String,
+    tags: List<List<String>>
+): RichTextViewerState {
+    val urls = UrlDetector(content, UrlDetectorOptions.Default).detect()
+    val urlSet = urls.mapTo(LinkedHashSet(urls.size)) { it.originalUrl }
+    val imagesForPager = urlSet.mapNotNull { fullUrl ->
+        val removedParamsFromUrl = fullUrl.split("?")[0].lowercase()
+        if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
+            ZoomableUrlImage(fullUrl)
+        } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
+            ZoomableUrlVideo(fullUrl)
+        } else {
+            null
+        }
+    }.associateBy { it.url }
+    val imageList = imagesForPager.values.toList()
+
+    val emojiMap =
+        tags.filter { it.size > 2 && it[0] == "emoji" }.associate { ":${it[1]}:" to it[2] }
+
+    return if (urlSet.isNotEmpty() || emojiMap.isNotEmpty()) {
+        RichTextViewerState(
+            urlSet.toImmutableSet(),
+            imagesForPager.toImmutableMap(),
+            imageList.toImmutableList(),
+            emojiMap.toImmutableMap()
+        )
+    } else {
+        RichTextViewerState(
+            persistentSetOf(),
+            persistentMapOf(),
+            persistentListOf(),
+            persistentMapOf()
+        )
+    }
+}
+
+enum class WordType {
+    IMAGE, LINK, EMOJI, INVOICE, WITHDRAW, EMAIL, PHONE, BECH, HASH_INDEX, HASHTAG, SCHEMELESS_URL, OTHER
 }
 
 @Composable
@@ -199,150 +217,167 @@ private fun RenderWord(
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
-    tags: List<List<String>>?
+    tags: List<List<String>>
+) {
+    val type = remember(word) {
+        if (state.imagesForPager[word] != null) {
+            WordType.IMAGE
+        } else if (state.urlSet.contains(word)) {
+            WordType.LINK
+        } else if (state.customEmoji.any { word.contains(it.key) }) {
+            WordType.EMOJI
+        } else if (word.startsWith("lnbc", true)) {
+            WordType.INVOICE
+        } else if (word.startsWith("lnurl", true)) {
+            WordType.WITHDRAW
+        } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
+            WordType.EMAIL
+        } else if (word.length > 6 && Patterns.PHONE.matcher(word).matches()) {
+            WordType.PHONE
+        } else if (startsWithNIP19Scheme(word)) {
+            WordType.BECH
+        } else if (word.startsWith("#")) {
+            if (tagIndex.matcher(word).matches()) {
+                if (tags.isNotEmpty()) {
+                    WordType.HASH_INDEX
+                } else {
+                    WordType.OTHER
+                }
+            } else if (hashTagsPattern.matcher(word).matches()) {
+                WordType.HASHTAG
+            } else {
+                WordType.OTHER
+            }
+        } else if (noProtocolUrlValidator.matcher(word).matches()) {
+            WordType.SCHEMELESS_URL
+        } else {
+            WordType.OTHER
+        }
+    }
+
+    if (canPreview) {
+        RenderWordWithPreview(type, word, state, tags, backgroundColor, accountViewModel, nav)
+    } else {
+        RenderWordWithoutPreview(type, word, state, tags, backgroundColor, accountViewModel, nav)
+    }
+}
+
+@Composable
+private fun RenderWordWithoutPreview(
+    type: WordType,
+    word: String,
+    state: RichTextViewerState,
+    tags: List<List<String>>,
+    backgroundColor: Color,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
 ) {
     val wordSpace = remember(word) {
         "$word "
     }
 
-    if (canPreview) {
-        // Explicit URL
-        val img = state.imagesForPager[word]
-        if (img != null) {
-            ZoomableContentView(img, state.imageList)
-        } else if (state.urlSet.contains(word)) {
-            UrlPreview(word, wordSpace)
-        } else if (state.customEmoji.any { word.contains(it.key) }) {
-            RenderCustomEmoji(word, state.customEmoji)
-        } else if (word.startsWith("lnbc", true)) {
-            MayBeInvoicePreview(word)
-        } else if (word.startsWith("lnurl", true)) {
-            MayBeWithdrawal(word)
-        } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
-            ClickableEmail(word)
-        } else if (word.length > 6 && Patterns.PHONE.matcher(word).matches()) {
-            ClickablePhone(word)
-        } else if (isBechLink(word)) {
-            BechLink(
-                word,
-                canPreview,
-                backgroundColor,
-                accountViewModel,
-                nav
-            )
-        } else if (word.startsWith("#")) {
-            if (tagIndex.matcher(word).matches() && tags != null) {
-                TagLink(
-                    word,
-                    tags,
-                    canPreview,
-                    backgroundColor,
-                    accountViewModel,
-                    nav
-                )
-            } else if (hashTagsPattern.matcher(word).matches()) {
-                HashTag(word, nav)
-            } else {
-                Text(
-                    text = wordSpace,
-                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-                )
-            }
-        } else if (noProtocolUrlValidator.matcher(word).matches()) {
-            val matcher = noProtocolUrlValidator.matcher(word)
-            matcher.find()
-            val url = matcher.group(1) // url
-            val additionalChars = matcher.group(4) ?: "" // additional chars
-
-            if (url != null) {
-                ClickableUrl(url, "https://$url")
-                Text("$additionalChars ")
-            } else {
-                Text(
-                    text = wordSpace,
-                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-                )
-            }
-        } else {
-            Text(
-                text = wordSpace,
-                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-            )
-        }
-    } else {
-        if (state.urlSet.contains(word)) {
-            ClickableUrl(wordSpace, word)
-        } else if (word.startsWith("lnurl", true)) {
-            val lnWithdrawal = LnWithdrawalUtil.findWithdrawal(word)
-            if (lnWithdrawal != null) {
-                ClickableWithdrawal(withdrawalString = lnWithdrawal)
-            } else {
-                Text(
-                    text = wordSpace,
-                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-                )
-            }
-        } else if (state.customEmoji.any { word.contains(it.key) }) {
-            RenderCustomEmoji(word, state.customEmoji)
-        } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
-            ClickableEmail(word)
-        } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
-            ClickablePhone(word)
-        } else if (isBechLink(word)) {
-            BechLink(
-                word,
-                canPreview,
-                backgroundColor,
-                accountViewModel,
-                nav
-            )
-        } else if (word.startsWith("#")) {
-            if (tagIndex.matcher(word).matches() && tags != null) {
-                TagLink(
-                    word,
-                    tags,
-                    canPreview,
-                    backgroundColor,
-                    accountViewModel,
-                    nav
-                )
-            } else if (hashTagsPattern.matcher(word).matches()) {
-                HashTag(word, nav)
-            } else {
-                Text(
-                    text = wordSpace,
-                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-                )
-            }
-        } else if (noProtocolUrlValidator.matcher(word).matches()) {
-            val matcher = noProtocolUrlValidator.matcher(word)
-            matcher.find()
-            val url = matcher.group(1) // url
-            val additionalChars = matcher.group(4) ?: "" // additional chars
-
-            if (url != null) {
-                ClickableUrl(url, "https://$url")
-                Text("$additionalChars ")
-            } else {
-                Text(
-                    text = wordSpace,
-                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-                )
-            }
-        } else {
-            Text(
-                text = wordSpace,
-                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-            )
-        }
+    when (type) {
+        // Don't preview Images
+        WordType.IMAGE -> UrlPreview(word, wordSpace)
+        WordType.LINK -> UrlPreview(word, wordSpace)
+        WordType.EMOJI -> RenderCustomEmoji(word, state)
+        // Don't offer to pay invoices
+        WordType.INVOICE -> NormalWord(wordSpace)
+        // Don't offer to withdraw
+        WordType.WITHDRAW -> NormalWord(wordSpace)
+        WordType.EMAIL -> ClickableEmail(word)
+        WordType.PHONE -> ClickablePhone(word)
+        WordType.BECH -> BechLink(word, false, backgroundColor, accountViewModel, nav)
+        WordType.HASHTAG -> HashTag(word, nav)
+        WordType.HASH_INDEX -> TagLink(word, tags, false, backgroundColor, accountViewModel, nav)
+        WordType.SCHEMELESS_URL -> NoProtocolUrlRenderer(word)
+        WordType.OTHER -> NormalWord(wordSpace)
     }
 }
 
 @Composable
-fun RenderCustomEmoji(word: String, customEmoji: Map<String, String>) {
+private fun RenderWordWithPreview(
+    type: WordType,
+    word: String,
+    state: RichTextViewerState,
+    tags: List<List<String>>,
+    backgroundColor: Color,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    val wordSpace = remember(word) {
+        "$word "
+    }
+
+    when (type) {
+        WordType.IMAGE -> ZoomableContentView(word, state)
+        WordType.LINK -> UrlPreview(word, wordSpace)
+        WordType.EMOJI -> RenderCustomEmoji(word, state)
+        WordType.INVOICE -> MayBeInvoicePreview(word)
+        WordType.WITHDRAW -> MayBeWithdrawal(word)
+        WordType.EMAIL -> ClickableEmail(word)
+        WordType.PHONE -> ClickablePhone(word)
+        WordType.BECH -> BechLink(word, true, backgroundColor, accountViewModel, nav)
+        WordType.HASHTAG -> HashTag(word, nav)
+        WordType.HASH_INDEX -> TagLink(word, tags, true, backgroundColor, accountViewModel, nav)
+        WordType.SCHEMELESS_URL -> NoProtocolUrlRenderer(word)
+        WordType.OTHER -> NormalWord(wordSpace)
+    }
+}
+
+@Composable
+private fun ZoomableContentView(word: String, state: RichTextViewerState) {
+    state.imagesForPager[word]?.let {
+        ZoomableContentView(it, state.imageList)
+    }
+}
+
+@Composable
+private fun NormalWord(word: String) {
+    Text(
+        text = word,
+        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+    )
+}
+
+@Composable
+private fun NoProtocolUrlRenderer(word: String) {
+    val wordSpace = remember(word) {
+        "$word "
+    }
+
+    var linkedUrl by remember(word) {
+        mutableStateOf<Pair<String, String>?>(null)
+    }
+
+    LaunchedEffect(key1 = word) {
+        launch(Dispatchers.Default) {
+            val matcher = noProtocolUrlValidator.matcher(word)
+            if (matcher.find()) {
+                val url = matcher.group(1) // url
+                val additionalChars = matcher.group(4) ?: "" // additional chars
+
+                linkedUrl = Pair(url, additionalChars)
+            }
+        }
+    }
+
+    if (linkedUrl != null) {
+        ClickableUrl(linkedUrl!!.first, "https://${linkedUrl!!.first}")
+        Text("${linkedUrl!!.second} ")
+    } else {
+        Text(
+            text = wordSpace,
+            style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+        )
+    }
+}
+
+@Composable
+fun RenderCustomEmoji(word: String, state: RichTextViewerState) {
     CreateTextWithEmoji(
-        text = "$word ",
-        emojis = customEmoji
+        text = remember { "$word " },
+        emojis = state.customEmoji
     )
 }
 
@@ -382,19 +417,38 @@ private fun RenderContentAsMarkdown(content: String, backgroundColor: Color, tag
         )
     )
 
-    var markdownWithSpecialContent by remember(content) { mutableStateOf<String?>(null) }
-    var nip19References by remember(content) { mutableStateOf<List<Nip19.Return>>(emptyList()) }
-    var refresh by remember(content) { mutableStateOf(0) }
-
-    LaunchedEffect(key1 = content) {
-        launch(Dispatchers.IO) {
-            nip19References = returnNIP19References(content, tags)
-            markdownWithSpecialContent = returnMarkdownWithSpecialContent(content, tags)
+    val uri = LocalUriHandler.current
+    val onClick = { link: String ->
+        val route = uriToRoute(link)
+        if (route != null) {
+            nav(route)
+        } else {
+            runCatching { uri.openUri(link) }
         }
+        Unit
     }
 
-    LaunchedEffect(key1 = refresh) {
-        launch(Dispatchers.IO) {
+    MaterialRichText(
+        style = myMarkDownStyle
+    ) {
+        RefreshableContent(content, tags) {
+            Markdown(
+                content = it,
+                markdownParseOptions = MarkdownParseOptions.Default,
+                onLinkClicked = onClick
+            )
+        }
+    }
+}
+
+@Composable
+private fun RefreshableContent(content: String, tags: List<List<String>>?, onCompose: @Composable (String) -> Unit) {
+    var markdownWithSpecialContent by remember(content) { mutableStateOf<String?>(content) }
+
+    val scope = rememberCoroutineScope()
+
+    ObserverAllNIP19References(content, tags) {
+        scope.launch(Dispatchers.IO) {
             val newMarkdownWithSpecialContent = returnMarkdownWithSpecialContent(content, tags)
             if (markdownWithSpecialContent != newMarkdownWithSpecialContent) {
                 markdownWithSpecialContent = newMarkdownWithSpecialContent
@@ -402,30 +456,22 @@ private fun RenderContentAsMarkdown(content: String, backgroundColor: Color, tag
         }
     }
 
-    nip19References.forEach {
-        ObserveNIP19(it) {
-            refresh++
+    markdownWithSpecialContent?.let {
+        onCompose(it)
+    }
+}
+
+@Composable
+fun ObserverAllNIP19References(content: String, tags: List<List<String>>?, onRefresh: () -> Unit) {
+    var nip19References by remember(content) { mutableStateOf<List<Nip19.Return>>(emptyList()) }
+    LaunchedEffect(key1 = content) {
+        launch(Dispatchers.IO) {
+            nip19References = returnNIP19References(content, tags)
         }
     }
 
-    val uri = LocalUriHandler.current
-
-    markdownWithSpecialContent?.let {
-        MaterialRichText(
-            style = myMarkDownStyle
-        ) {
-            Markdown(
-                content = it,
-                markdownParseOptions = MarkdownParseOptions.Default
-            ) { link ->
-                val route = uriToRoute(link)
-                if (route != null) {
-                    nav(route)
-                } else {
-                    runCatching { uri.openUri(link) }
-                }
-            }
-        }
+    nip19References.forEach {
+        ObserveNIP19(it, onRefresh)
     }
 }
 
@@ -444,7 +490,7 @@ fun ObserveNIP19(
 @Composable
 private fun ObserveNIP19Event(
     it: Nip19.Return,
-    onRefresh: () -> Unit
+    onRefresh: suspend () -> Unit
 ) {
     var baseNote by remember(it) { mutableStateOf<Note?>(null) }
 
@@ -560,7 +606,7 @@ private fun returnNIP19References(content: String, tags: List<List<String>>?): L
     val listOfReferences = mutableListOf<Nip19.Return>()
     content.split('\n').forEach { paragraph ->
         paragraph.split(' ').forEach { word: String ->
-            if (isBechLink(word)) {
+            if (startsWithNIP19Scheme(word)) {
                 val parsedNip19 = Nip19.uriToRoute(word)
                 parsedNip19?.let {
                     listOfReferences.add(it)
@@ -587,12 +633,17 @@ private fun returnMarkdownWithSpecialContent(content: String, tags: List<List<St
     content.split('\n').forEach { paragraph ->
         paragraph.split(' ').forEach { word: String ->
             if (isValidURL(word)) {
-                returnContent += "[$word]($word) "
+                val removedParamsFromUrl = word.split("?")[0].lowercase()
+                if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
+                    returnContent += "$word "
+                } else {
+                    returnContent += "[$word]($word) "
+                }
             } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
                 returnContent += "[$word](mailto:$word) "
             } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
                 returnContent += "[$word](tel:$word) "
-            } else if (isBechLink(word)) {
+            } else if (startsWithNIP19Scheme(word)) {
                 val parsedNip19 = Nip19.uriToRoute(word)
                 returnContent += if (parsedNip19 !== null) {
                     val pair = getDisplayNameFromNip19(parsedNip19)
@@ -645,7 +696,7 @@ private fun isArabic(text: String): Boolean {
     return text.any { it in '\u0600'..'\u06FF' || it in '\u0750'..'\u077F' }
 }
 
-fun isBechLink(word: String): Boolean {
+fun startsWithNIP19Scheme(word: String): Boolean {
     val cleaned = word.lowercase().removePrefix("@").removePrefix("nostr:").removePrefix("@")
 
     return listOf("npub1", "naddr1", "note1", "nprofile1", "nevent1").any { cleaned.startsWith(it) }

@@ -10,7 +10,7 @@ fun TranslatableRichTextViewer(
     content: String,
     canPreview: Boolean,
     modifier: Modifier = Modifier,
-    tags: List<List<String>>?,
+    tags: List<List<String>>,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit

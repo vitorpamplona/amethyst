@@ -12,6 +12,8 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -80,7 +82,6 @@ import androidx.core.graphics.get
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.request.SuccessResult
-import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Channel
@@ -139,7 +140,6 @@ import java.math.BigDecimal
 import java.net.URL
 import java.util.Locale
 import kotlin.time.ExperimentalTime
-import kotlin.time.measureTimedValue
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -156,12 +156,10 @@ fun NoteCompose(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    println("NormalNote START NoteCompose")
     val noteState by baseNote.live().metadata.observeAsState()
     val noteEvent = remember(noteState) { noteState?.note?.event }
 
     if (noteEvent == null) {
-        println("NormalNote Rendering Blank")
         var popupExpanded by remember { mutableStateOf(false) }
 
         BlankNote(
@@ -190,7 +188,6 @@ fun NoteCompose(
             nav
         )
     }
-    println("NormalNote END NoteCompose")
 }
 
 @Composable
@@ -371,8 +368,6 @@ fun NormalNote(
     } else if (noteEvent is FileStorageHeaderEvent) {
         FileStorageHeaderDisplay(baseNote)
     } else {
-        println("NormalNote LoadedNoteCompose")
-
         var isNew by remember { mutableStateOf<Boolean>(false) }
 
         val scope = rememberCoroutineScope()
@@ -395,8 +390,6 @@ fun NormalNote(
             }
         }
 
-        println("NormalNote LoadedNoteCompose Launched Effect")
-
         val primaryColor = MaterialTheme.colors.newItemBackgroundColor
         val defaultBackgroundColor = MaterialTheme.colors.background
 
@@ -411,8 +404,6 @@ fun NormalNote(
                 parentBackgroundColor ?: defaultBackgroundColor
             }
         }
-
-        println("NormalNote LoadedNoteCompose Background Color")
 
         val columnModifier = remember(backgroundColor) {
             modifier
@@ -429,8 +420,6 @@ fun NormalNote(
                 .background(backgroundColor)
         }
 
-        println("NormalNote LoadedNoteCompose Modifier")
-
         Column(modifier = columnModifier) {
             Row(
                 modifier = remember {
@@ -442,14 +431,9 @@ fun NormalNote(
                         )
                 }
             ) {
-                println("NormalNote Before FirstUserInfo")
-                val (value, elapsed) = measureTimedValue {
-                    if (!isBoostedNote && !isQuotedNote) {
-                        DrawAuthorImages(baseNote, accountViewModel, nav)
-                    }
+                if (!isBoostedNote && !isQuotedNote) {
+                    DrawAuthorImages(baseNote, accountViewModel, nav)
                 }
-                println("AAA $elapsed DrawAuthorImages")
-                println("NormalNote FirstUserInfo")
 
                 Column(
                     modifier = remember {
@@ -471,7 +455,6 @@ fun NormalNote(
                             nav
                         )
                     }
-                    println("NormalNote SecondUserInfo")
 
                     Spacer(modifier = Modifier.height(2.dp))
 
@@ -601,7 +584,7 @@ private fun RenderTextEvent(
                 accountViewModel = accountViewModel
             ) {
                 val modifier = remember(note.event) { Modifier.fillMaxWidth() }
-                val tags = remember(note.event) { note.event?.tags() }
+                val tags = remember(note.event) { note.event?.tags() ?: emptyList() }
 
                 TranslatableRichTextViewer(
                     content = eventContent,
@@ -737,7 +720,7 @@ private fun RenderPrivateMessage(
         val hashtags = remember(note.event?.id()) { note.event?.hashtags() ?: emptyList() }
         val modifier = remember(note.event?.id()) { Modifier.fillMaxWidth() }
         val isAuthorTheLoggedUser = remember(note.event?.id()) { accountViewModel.isLoggedUser(note.author) }
-        val tags = remember(note.event?.id()) { note.event?.tags() }
+        val tags = remember(note.event?.id()) { note.event?.tags() ?: emptyList() }
 
         if (eventContent != null) {
             if (makeItShort && isAuthorTheLoggedUser) {
@@ -812,6 +795,7 @@ fun RenderPeopleList(
     )
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DisplayPeopleList(
     baseNote: Note,
@@ -900,6 +884,7 @@ fun DisplayPeopleList(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun RenderBadgeAward(
     note: Note,
@@ -1039,6 +1024,7 @@ private fun RenderPinListEvent(
     )
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PinListHeader(
     baseNote: Note,
@@ -1087,7 +1073,7 @@ fun PinListHeader(
                     TranslatableRichTextViewer(
                         content = pin,
                         canPreview = true,
-                        tags = emptyList(),
+                        tags = remember { emptyList() },
                         backgroundColor = backgroundColor,
                         accountViewModel = accountViewModel,
                         nav = nav
@@ -1197,7 +1183,7 @@ private fun RenderReport(
         content = content,
         canPreview = true,
         modifier = remember { Modifier },
-        tags = emptyList(),
+        tags = remember { emptyList() },
         backgroundColor = backgroundColor,
         accountViewModel = accountViewModel,
         nav = nav
@@ -1311,7 +1297,6 @@ private fun FirstUserInfoRow(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    var moreActionsExpanded by remember { mutableStateOf(false) }
     val eventNote = remember { baseNote.event } ?: return
     val time = remember { baseNote.createdAt() } ?: return
     val padding = remember {
@@ -1339,24 +1324,34 @@ private fun FirstUserInfoRow(
 
         TimeAgo(time)
 
-        IconButton(
-            modifier = Modifier.size(24.dp),
-            onClick = { moreActionsExpanded = true }
-        ) {
-            Icon(
-                imageVector = Icons.Default.MoreVert,
-                null,
-                modifier = Modifier.size(15.dp),
-                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-            )
+        MoreOptionsButton(baseNote, accountViewModel)
+    }
+}
 
-            NoteDropDownMenu(
-                baseNote,
-                moreActionsExpanded,
-                { moreActionsExpanded = false },
-                accountViewModel
-            )
-        }
+@Composable
+private fun MoreOptionsButton(
+    baseNote: Note,
+    accountViewModel: AccountViewModel
+) {
+    var moreActionsExpanded by remember { mutableStateOf(false) }
+
+    IconButton(
+        modifier = Modifier.size(24.dp),
+        onClick = { moreActionsExpanded = true }
+    ) {
+        Icon(
+            imageVector = Icons.Default.MoreVert,
+            null,
+            modifier = Modifier.size(15.dp),
+            tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+        )
+
+        NoteDropDownMenu(
+            baseNote,
+            moreActionsExpanded,
+            { moreActionsExpanded = false },
+            accountViewModel
+        )
     }
 }
 
@@ -1390,27 +1385,17 @@ private fun DrawAuthorImages(baseNote: Note, accountViewModel: AccountViewModel,
     Column(modifier) {
         // Draws the boosted picture outside the boosted card.
         Box(modifier = modifier, contentAlignment = Alignment.BottomEnd) {
-            val (value1, elapsed1) = measureTimedValue {
-                NoteAuthorPicture(baseNote, nav, accountViewModel, 55.dp)
+            NoteAuthorPicture(baseNote, nav, accountViewModel, 55.dp)
+
+            if (baseNote.event is RepostEvent) {
+                RepostNoteAuthorPicture(baseNote, accountViewModel, nav)
             }
 
-            println("AAA $elapsed1 NoteAuthorPicture")
-
-            val (value2, elapsed2) = measureTimedValue {
-                if (baseNote.event is RepostEvent) {
-                    RepostNoteAuthorPicture(baseNote, accountViewModel, nav)
+            if (baseNote.event is ChannelMessageEvent && baseChannelHex != null) {
+                LoadChannel(baseChannelHex) { channel ->
+                    ChannelNotePicture(channel)
                 }
             }
-            println("AAA $elapsed2 RepostNoteAuthorPicture")
-
-            val (value3, elapsed3) = measureTimedValue {
-                if (baseNote.event is ChannelMessageEvent && baseChannelHex != null) {
-                    LoadChannel(baseChannelHex) { channel ->
-                        ChannelNotePicture(channel)
-                    }
-                }
-            }
-            println("AAA $elapsed3 ChannelNotePicture")
         }
 
         if (baseNote.event is RepostEvent) {
@@ -1492,9 +1477,7 @@ private fun RepostNoteAuthorPicture(
     val baseRepost = remember { baseNote.replyTo?.lastOrNull() }
 
     val modifier = remember {
-        Modifier
-            .width(30.dp)
-            .height(30.dp)
+        Modifier.size(30.dp)
     }
 
     baseRepost?.let {
@@ -1503,7 +1486,7 @@ private fun RepostNoteAuthorPicture(
                 baseNote = it,
                 nav = nav,
                 accountViewModel = accountViewModel,
-                size = 35.dp,
+                size = 30.dp,
                 pictureModifier = Modifier.border(
                     2.dp,
                     MaterialTheme.colors.background,
@@ -1514,6 +1497,7 @@ private fun RepostNoteAuthorPicture(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DisplayHighlight(
     highlight: String,
@@ -1598,15 +1582,16 @@ fun DisplayFollowingHashtagsInPost(
     nav: (String) -> Unit
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
-    val followingTags = remember(accountState) {
-        accountState?.account?.followingTagSet() ?: emptySet()
-    }
-
     var firstTag by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(key1 = noteEvent.id(), followingTags) {
-        withContext(Dispatchers.IO) {
-            firstTag = noteEvent.firstIsTaggedHashes(followingTags)
+    LaunchedEffect(key1 = accountState) {
+        launch(Dispatchers.Default) {
+            val followingTags = accountState?.account?.followingTagSet() ?: emptySet()
+            val newFirstTag = noteEvent.firstIsTaggedHashes(followingTags)
+
+            if (firstTag != newFirstTag) {
+                firstTag = newFirstTag
+            }
         }
     }
 
@@ -1630,6 +1615,7 @@ fun DisplayFollowingHashtagsInPost(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DisplayUncitedHashtags(
     hashtags: List<String>,
@@ -2159,6 +2145,7 @@ private fun RelayBadges(baseNote: Note) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 @Stable
 private fun VerticalRelayPanelWithFlow(
@@ -2229,30 +2216,19 @@ fun NoteAuthorPicture(
         }
     }
 
-    val boxModifier = remember {
-        Modifier
-            .width(size)
-            .height(size)
-    }
-
-    val nullModifier = remember {
-        modifier
-            .width(size)
-            .height(size)
-            .clip(shape = CircleShape)
-    }
-
-    Box(boxModifier) {
-        if (author == null) {
-            RobohashAsyncImage(
-                robot = "authornotfound",
-                robotSize = size,
-                contentDescription = stringResource(R.string.unknown_author),
-                modifier = nullModifier.background(MaterialTheme.colors.background)
-            )
-        } else {
-            UserPicture(author!!, size, accountViewModel, modifier, onClick)
+    if (author == null) {
+        val nullModifier = remember {
+            modifier.size(size).clip(shape = CircleShape)
         }
+
+        RobohashAsyncImage(
+            robot = "authornotfound",
+            robotSize = size,
+            contentDescription = stringResource(R.string.unknown_author),
+            modifier = nullModifier.background(MaterialTheme.colors.background)
+        )
+    } else {
+        UserPicture(author!!, size, accountViewModel, modifier, onClick)
     }
 }
 
@@ -2316,6 +2292,7 @@ fun UserPicture(
     }
 }
 
+@OptIn(ExperimentalTime::class)
 @Composable
 fun UserPicture(
     userHex: String,
@@ -2401,6 +2378,7 @@ private fun FollowingIcon(iconSize: Dp) {
     }
 }
 
+@Immutable
 data class DropDownParams(
     val isFollowingAuthor: Boolean,
     val isPrivateBookmarkNote: Boolean,
@@ -2417,32 +2395,29 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
     val actContext = LocalContext.current
     var reportDialogShowing by remember { mutableStateOf(false) }
 
-    val bookmarkState by accountViewModel.userProfile().live().bookmarks.observeAsState()
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-
     var state by remember {
         mutableStateOf<DropDownParams>(
-            DropDownParams(false, false, false, false, false, null)
-        )
-    }
-
-    LaunchedEffect(key1 = note, key2 = bookmarkState, key3 = accountState) {
-        withContext(Dispatchers.IO) {
-            state = DropDownParams(
-                isFollowingAuthor = accountViewModel.isFollowing(note.author),
-                isPrivateBookmarkNote = accountViewModel.isInPrivateBookmarks(note),
-                isPublicBookmarkNote = accountViewModel.isInPublicBookmarks(note),
-                isLoggedUser = accountViewModel.isLoggedUser(note.author),
-                isSensitive = note.event?.isSensitive() ?: false,
-                showSensitiveContent = accountState?.account?.showSensitiveContent
+            DropDownParams(
+                isFollowingAuthor = false,
+                isPrivateBookmarkNote = false,
+                isPublicBookmarkNote = false,
+                isLoggedUser = false,
+                isSensitive = false,
+                showSensitiveContent = null
             )
-        }
+        )
     }
 
     DropdownMenu(
         expanded = popupExpanded,
         onDismissRequest = onDismiss
     ) {
+        WatchBookmarksFollowsAndAccount(note, accountViewModel) { newState ->
+            if (state != newState) {
+                state = newState
+            }
+        }
+
         if (!state.isFollowingAuthor) {
             DropdownMenuItem(onClick = {
                 accountViewModel.follow(
@@ -2512,7 +2487,6 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
                 Text("Block / Report")
             }
         }
-        // if (state.isSensitive) {
         Divider()
         if (state.showSensitiveContent == null || state.showSensitiveContent == true) {
             DropdownMenuItem(onClick = { accountViewModel.hideSensitiveContent(); onDismiss() }) {
@@ -2529,13 +2503,34 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
                 Text(stringResource(R.string.content_warning_see_warnings))
             }
         }
-        // }
     }
 
     if (reportDialogShowing) {
         ReportNoteDialog(note = note, accountViewModel = accountViewModel) {
             reportDialogShowing = false
             onDismiss()
+        }
+    }
+}
+
+@Composable
+fun WatchBookmarksFollowsAndAccount(note: Note, accountViewModel: AccountViewModel, onNew: (DropDownParams) -> Unit) {
+    val followState by accountViewModel.userProfile().live().follows.observeAsState()
+    val bookmarkState by accountViewModel.userProfile().live().bookmarks.observeAsState()
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+
+    LaunchedEffect(key1 = followState, key2 = bookmarkState, key3 = accountState) {
+        launch(Dispatchers.IO) {
+            onNew(
+                DropDownParams(
+                    isFollowingAuthor = accountViewModel.isFollowing(note.author),
+                    isPrivateBookmarkNote = accountViewModel.isInPrivateBookmarks(note),
+                    isPublicBookmarkNote = accountViewModel.isInPublicBookmarks(note),
+                    isLoggedUser = accountViewModel.isLoggedUser(note.author),
+                    isSensitive = note.event?.isSensitive() ?: false,
+                    showSensitiveContent = accountState?.account?.showSensitiveContent
+                )
+            )
         }
     }
 }

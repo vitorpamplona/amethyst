@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -65,7 +67,6 @@ import androidx.compose.ui.window.DialogProperties
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.AsyncImage
 import coil.imageLoader
-import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.BlurHashRequester
@@ -208,6 +209,7 @@ fun ZoomableContentView(content: ZoomableContent, images: List<ZoomableContent> 
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun LocalImageView(
     content: ZoomableLocalImage,
@@ -271,6 +273,7 @@ private fun LocalImageView(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun UrlImageView(
     content: ZoomableUrlImage,

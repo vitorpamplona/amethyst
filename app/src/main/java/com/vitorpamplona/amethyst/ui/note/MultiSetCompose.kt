@@ -6,6 +6,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -38,7 +40,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -249,6 +250,7 @@ private fun RenderBoostGallery(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AuthorGalleryZaps(
     authorNotes: ImmutableMap<Note, Note>,
@@ -366,7 +368,7 @@ private fun AuthorPictureAndComment(
             TranslatableRichTextViewer(
                 content = it,
                 canPreview = true,
-                tags = null,
+                tags = remember { emptyList() },
                 modifier = remember { Modifier.fillMaxWidth() },
                 backgroundColor = backgroundColor,
                 accountViewModel = accountViewModel,
@@ -376,6 +378,7 @@ private fun AuthorPictureAndComment(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AuthorGallery(
     authorNotes: ImmutableList<Note>,

@@ -16,7 +16,9 @@ import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 @Composable
 fun NoteUsernameDisplay(baseNote: Note, weight: Modifier = Modifier) {
     val noteState by baseNote.live().metadata.observeAsState()
-    val author = remember(noteState) { noteState?.note?.author } ?: return
+    val author = remember(noteState) {
+        noteState?.note?.author
+    } ?: return
 
     UsernameDisplay(author, weight)
 }

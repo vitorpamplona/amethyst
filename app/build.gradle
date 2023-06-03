@@ -154,8 +154,6 @@ dependencies {
     // create blurhash
     implementation group: 'io.trbl', name: 'blurhash', version: '1.0.0'
 
-    // Rendering clickable text
-    implementation "com.google.accompanist:accompanist-flowlayout:$accompanist_version"
     // Permission to upload pictures:
     implementation "com.google.accompanist:accompanist-permissions:$accompanist_version"
 

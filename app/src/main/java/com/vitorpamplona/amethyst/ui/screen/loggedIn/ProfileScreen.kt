@@ -699,7 +699,7 @@ private fun DrawAdditionalInfo(baseUser: User, accountViewModel: AccountViewMode
             TranslatableRichTextViewer(
                 content = it,
                 canPreview = false,
-                tags = null,
+                tags = remember { emptyList() },
                 backgroundColor = MaterialTheme.colors.background,
                 accountViewModel = accountViewModel,
                 nav = nav

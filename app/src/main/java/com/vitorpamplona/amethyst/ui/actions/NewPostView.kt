@@ -24,7 +24,6 @@ import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CurrencyBitcoin
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.ArrowForwardIos
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.rounded.Warning
@@ -291,7 +290,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                         } else {
                                             UrlPreview(myUrlPreview, myUrlPreview)
                                         }
-                                    } else if (isBechLink(myUrlPreview)) {
+                                    } else if (startsWithNIP19Scheme(myUrlPreview)) {
                                         BechLink(
                                             myUrlPreview,
                                             true,

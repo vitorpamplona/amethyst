@@ -1,5 +1,7 @@
 package com.vitorpamplona.amethyst.ui.note
 
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
@@ -14,7 +16,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.sp
-import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.*
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
@@ -45,6 +46,7 @@ fun ReplyInformation(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ReplyInformation(
     replyTo: List<Note>?,
@@ -166,6 +168,7 @@ fun ReplyInformationChannel(replyTo: List<Note>?, mentions: List<User>?, channel
     )
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ReplyInformationChannel(
     replyTo: List<Note>?,

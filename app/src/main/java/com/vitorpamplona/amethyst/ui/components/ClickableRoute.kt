@@ -47,6 +47,9 @@ import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.ui.note.LoadChannel
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -311,11 +314,51 @@ fun CreateTextWithEmoji(
     overflow: TextOverflow = TextOverflow.Clip,
     modifier: Modifier = Modifier
 ) {
-    val emojis = remember {
-        tags?.filter { it.size > 2 && it[0] == "emoji" }?.associate { ":${it[1]}:" to it[2] } ?: emptyMap()
+    var emojiList by remember(text) { mutableStateOf<ImmutableList<Renderable>>(persistentListOf()) }
+
+    LaunchedEffect(key1 = text) {
+        launch(Dispatchers.Default) {
+            val emojis =
+                tags?.filter { it.size > 2 && it[0] == "emoji" }?.associate { ":${it[1]}:" to it[2] } ?: emptyMap()
+
+            if (emojis.isNotEmpty()) {
+                val newEmojiList = assembleAnnotatedList(text, emojis)
+                if (newEmojiList.isNotEmpty()) {
+                    emojiList = newEmojiList.toImmutableList()
+                }
+            }
+        }
     }
 
-    CreateTextWithEmoji(text, emojis, color, textAlign, fontWeight, fontSize, maxLines, overflow, modifier)
+    val textColor = color.takeOrElse {
+        LocalTextStyle.current.color.takeOrElse {
+            LocalContentColor.current.copy(alpha = LocalContentAlpha.current)
+        }
+    }
+
+    if (emojiList.isEmpty()) {
+        Text(
+            text = text,
+            color = textColor,
+            textAlign = textAlign,
+            fontWeight = fontWeight,
+            fontSize = fontSize,
+            maxLines = maxLines,
+            overflow = overflow,
+            modifier = modifier
+        )
+    } else {
+        val style = LocalTextStyle.current.merge(
+            TextStyle(
+                color = textColor,
+                textAlign = textAlign,
+                fontWeight = fontWeight,
+                fontSize = fontSize
+            )
+        ).toSpanStyle()
+
+        InLineIconRenderer(emojiList, style, maxLines, overflow, modifier)
+    }
 }
 
 @Composable
@@ -330,13 +373,26 @@ fun CreateTextWithEmoji(
     overflow: TextOverflow = TextOverflow.Clip,
     modifier: Modifier = Modifier
 ) {
+    var emojiList by remember(text) { mutableStateOf<ImmutableList<Renderable>>(persistentListOf()) }
+
+    LaunchedEffect(key1 = text) {
+        if (emojis.isNotEmpty()) {
+            launch(Dispatchers.Default) {
+                val newEmojiList = assembleAnnotatedList(text, emojis)
+                if (newEmojiList.isNotEmpty()) {
+                    emojiList = newEmojiList.toImmutableList()
+                }
+            }
+        }
+    }
+
     val textColor = color.takeOrElse {
         LocalTextStyle.current.color.takeOrElse {
             LocalContentColor.current.copy(alpha = LocalContentAlpha.current)
         }
     }
 
-    if (emojis.isEmpty()) {
+    if (emojiList.isEmpty()) {
         Text(
             text = text,
             color = textColor,
@@ -348,10 +404,6 @@ fun CreateTextWithEmoji(
             modifier = modifier
         )
     } else {
-        val myList = remember {
-            assembleAnnotatedList(text, emojis)
-        }
-
         val style = LocalTextStyle.current.merge(
             TextStyle(
                 color = textColor,
@@ -361,7 +413,7 @@ fun CreateTextWithEmoji(
             )
         ).toSpanStyle()
 
-        InLineIconRenderer(myList, style, maxLines, overflow, modifier)
+        InLineIconRenderer(emojiList, style, maxLines, overflow, modifier)
     }
 }
 
@@ -372,22 +424,30 @@ fun CreateClickableTextWithEmoji(
     style: TextStyle,
     onClick: (Int) -> Unit
 ) {
-    val emojis = remember(tags) {
-        tags?.filter { it.size > 2 && it[0] == "emoji" }?.associate { ":${it[1]}:" to it[2] } ?: emptyMap()
+    var emojiList by remember(clickablePart) { mutableStateOf<ImmutableList<Renderable>>(persistentListOf()) }
+
+    LaunchedEffect(key1 = clickablePart) {
+        launch(Dispatchers.Default) {
+            val emojis =
+                tags?.filter { it.size > 2 && it[0] == "emoji" }?.associate { ":${it[1]}:" to it[2] } ?: emptyMap()
+
+            if (emojis.isNotEmpty()) {
+                val newEmojiList = assembleAnnotatedList(clickablePart, emojis)
+                if (newEmojiList.isNotEmpty()) {
+                    emojiList = newEmojiList.toImmutableList()
+                }
+            }
+        }
     }
 
-    if (emojis.isEmpty()) {
+    if (emojiList.isEmpty()) {
         ClickableText(
             AnnotatedString(clickablePart),
             style = style,
             onClick = onClick
         )
     } else {
-        val myList = remember {
-            assembleAnnotatedList(clickablePart, emojis)
-        }
-
-        ClickableInLineIconRenderer(myList, style.toSpanStyle()) {
+        ClickableInLineIconRenderer(emojiList, style.toSpanStyle()) {
             onClick(it)
         }
     }
@@ -403,30 +463,38 @@ fun CreateClickableTextWithEmoji(
     route: String,
     nav: (String) -> Unit
 ) {
-    val emojis = remember(tags) {
-        tags?.filter { it.size > 2 && it[0] == "emoji" }?.associate { ":${it[1]}:" to it[2] } ?: emptyMap()
+    var emojiLists by remember(clickablePart) {
+        mutableStateOf<Pair<ImmutableList<Renderable>, ImmutableList<Renderable>>?>(null)
     }
 
-    if (emojis.isEmpty()) {
+    LaunchedEffect(key1 = clickablePart) {
+        launch(Dispatchers.Default) {
+            val emojis =
+                tags?.filter { it.size > 2 && it[0] == "emoji" }?.associate { ":${it[1]}:" to it[2] } ?: emptyMap()
+
+            if (emojis.isNotEmpty()) {
+                val newEmojiList1 = assembleAnnotatedList(clickablePart, emojis)
+                val newEmojiList2 = assembleAnnotatedList(suffix, emojis)
+
+                if (newEmojiList1.isNotEmpty() || newEmojiList2.isNotEmpty()) {
+                    emojiLists = Pair(newEmojiList1.toImmutableList(), newEmojiList2.toImmutableList())
+                }
+            }
+        }
+    }
+
+    if (emojiLists == null) {
         CreateClickableText(clickablePart, suffix, overrideColor, fontWeight, route, nav)
     } else {
-        val myList = remember {
-            assembleAnnotatedList(clickablePart, emojis)
-        }
-
-        ClickableInLineIconRenderer(myList, LocalTextStyle.current.copy(color = overrideColor ?: MaterialTheme.colors.primary, fontWeight = fontWeight).toSpanStyle()) {
+        ClickableInLineIconRenderer(emojiLists!!.first, LocalTextStyle.current.copy(color = overrideColor ?: MaterialTheme.colors.primary, fontWeight = fontWeight).toSpanStyle()) {
             nav(route)
         }
 
-        val myList2 = remember {
-            assembleAnnotatedList(suffix, emojis)
-        }
-
-        InLineIconRenderer(myList2, LocalTextStyle.current.copy(color = overrideColor ?: MaterialTheme.colors.onBackground, fontWeight = fontWeight).toSpanStyle())
+        InLineIconRenderer(emojiLists!!.second, LocalTextStyle.current.copy(color = overrideColor ?: MaterialTheme.colors.onBackground, fontWeight = fontWeight).toSpanStyle())
     }
 }
 
-fun assembleAnnotatedList(text: String, emojis: Map<String, String>): List<Renderable> {
+suspend fun assembleAnnotatedList(text: String, emojis: Map<String, String>): List<Renderable> {
     return NIP30Parser().buildArray(text).map {
         val url = emojis[it]
         if (url != null) {

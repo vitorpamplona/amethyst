@@ -34,7 +34,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlin.time.ExperimentalTime
-import kotlin.time.measureTimedValue
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
@@ -166,17 +165,14 @@ private fun FeedLoaded(
         state = listState
     ) {
         itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
-            val (value, elapsed) = measureTimedValue {
-                NoteCompose(
-                    item,
-                    routeForLastRead = routeForLastRead,
-                    modifier = baseModifier,
-                    isBoostedNote = false,
-                    accountViewModel = accountViewModel,
-                    nav = nav
-                )
-            }
-            println("AAA NoteCompose $elapsed ${item.event?.content()}")
+            NoteCompose(
+                item,
+                routeForLastRead = routeForLastRead,
+                modifier = baseModifier,
+                isBoostedNote = false,
+                accountViewModel = accountViewModel,
+                nav = nav
+            )
         }
     }
 }

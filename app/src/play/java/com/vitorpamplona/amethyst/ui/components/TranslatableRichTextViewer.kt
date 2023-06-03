@@ -43,7 +43,7 @@ fun TranslatableRichTextViewer(
     content: String,
     canPreview: Boolean,
     modifier: Modifier = Modifier,
-    tags: List<List<String>>?,
+    tags: List<List<String>>,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -55,7 +55,7 @@ fun TranslatableRichTextViewer(
     var showOriginal by remember { mutableStateOf(false) }
     var langSettingsPopupExpanded by remember { mutableStateOf(false) }
 
-    WatchLanguageChanges(content, accountViewModel) { result, newShowOriginal ->
+    TranslateAndWatchLanguageChanges(content, accountViewModel) { result, newShowOriginal ->
         if (translatedTextState.result != result.result ||
             translatedTextState.sourceLang != result.sourceLang ||
             translatedTextState.targetLang != result.targetLang
@@ -227,7 +227,7 @@ fun TranslatableRichTextViewer(
 }
 
 @Composable
-fun WatchLanguageChanges(content: String, accountViewModel: AccountViewModel, onTranslated: (ResultOrError, Boolean) -> Unit) {
+fun TranslateAndWatchLanguageChanges(content: String, accountViewModel: AccountViewModel, onTranslated: (ResultOrError, Boolean) -> Unit) {
     val accountState by accountViewModel.accountLanguagesLiveData.observeAsState()
     val account = remember(accountState) { accountState?.account } ?: return
 
