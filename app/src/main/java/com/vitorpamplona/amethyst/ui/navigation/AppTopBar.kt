@@ -371,10 +371,8 @@ class FollowListViewModel(val account: Account) : ViewModel() {
         refresh()
         collectorJob = viewModelScope.launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect { newNotes ->
-                newNotes.forEach {
-                    if (it.event is PeopleListEvent) {
-                        refresh()
-                    }
+                if (newNotes.any { it.event is PeopleListEvent }) {
+                    refresh()
                 }
             }
         }

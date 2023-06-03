@@ -1,7 +1,6 @@
 package com.vitorpamplona.amethyst.ui.navigation
 
 import android.graphics.Rect
-import android.os.Looper
 import android.view.ViewTreeObserver
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
