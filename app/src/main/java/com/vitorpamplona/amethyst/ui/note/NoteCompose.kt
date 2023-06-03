@@ -40,7 +40,9 @@ import androidx.compose.material.Text
 import androidx.compose.material.darkColors
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.lightColors
@@ -67,6 +69,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
@@ -88,6 +91,8 @@ import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.UserMetadata
+import com.vitorpamplona.amethyst.service.model.AppDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
 import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
 import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
@@ -110,6 +115,7 @@ import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
+import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.LoadThumbAndThenVideoView
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
@@ -120,10 +126,12 @@ import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.components.ZoomableContent
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
+import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
 import com.vitorpamplona.amethyst.ui.components.ZoomableLocalImage
 import com.vitorpamplona.amethyst.ui.components.ZoomableLocalVideo
 import com.vitorpamplona.amethyst.ui.components.ZoomableUrlImage
 import com.vitorpamplona.amethyst.ui.components.ZoomableUrlVideo
+import com.vitorpamplona.amethyst.ui.components.figureOutMimeType
 import com.vitorpamplona.amethyst.ui.components.imageExtensions
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
@@ -469,6 +477,10 @@ fun NormalNote(
                     }
 
                     when (noteEvent) {
+                        is AppDefinitionEvent -> {
+                            RenderAppDefinition(baseNote, accountViewModel, nav)
+                        }
+
                         is ReactionEvent -> {
                             RenderReaction(baseNote, backgroundColor, accountViewModel, nav)
                         }
@@ -667,6 +679,190 @@ private fun RenderPoll(
         modifier = Modifier.padding(top = 10.dp),
         thickness = 0.25.dp
     )
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun RenderAppDefinition(
+    note: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    val noteEvent = note.event as? AppDefinitionEvent ?: return
+
+    val clipboardManager = LocalClipboardManager.current
+    val uri = LocalUriHandler.current
+
+    var metadata by remember {
+        mutableStateOf<UserMetadata?>(null)
+    }
+
+    LaunchedEffect(key1 = noteEvent) {
+        launch(Dispatchers.Default) {
+            metadata = noteEvent.appMetaData()
+        }
+    }
+
+    metadata?.let {
+        Box {
+            if (!it.banner.isNullOrBlank()) {
+                var zoomImageDialogOpen by remember { mutableStateOf(false) }
+
+                AsyncImage(
+                    model = it.banner,
+                    contentDescription = stringResource(id = R.string.profile_image),
+                    contentScale = ContentScale.FillWidth,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(125.dp)
+                        .combinedClickable(
+                            onClick = {},
+                            onLongClick = {
+                                clipboardManager.setText(AnnotatedString(it.banner!!))
+                            }
+                        )
+                )
+
+                if (zoomImageDialogOpen) {
+                    ZoomableImageDialog(imageUrl = figureOutMimeType(it.banner!!), onDismiss = { zoomImageDialogOpen = false })
+                }
+            } else {
+                Image(
+                    painter = painterResource(R.drawable.profile_banner),
+                    contentDescription = stringResource(id = R.string.profile_banner),
+                    contentScale = ContentScale.FillWidth,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(125.dp)
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 10.dp)
+                    .padding(top = 75.dp)
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    var zoomImageDialogOpen by remember { mutableStateOf(false) }
+
+                    Box(Modifier.size(100.dp)) {
+                        it.picture?.let {
+                            AsyncImage(
+                                model = it,
+                                contentDescription = null,
+                                contentScale = ContentScale.FillWidth,
+                                modifier = Modifier
+                                    .border(
+                                        3.dp,
+                                        MaterialTheme.colors.background,
+                                        CircleShape
+                                    )
+                                    .clip(shape = CircleShape)
+                                    .fillMaxSize()
+                                    .border(
+                                        3.dp,
+                                        MaterialTheme.colors.background,
+                                        CircleShape
+                                    )
+                                    .combinedClickable(
+                                        onClick = { zoomImageDialogOpen = true },
+                                        onLongClick = {
+                                            clipboardManager.setText(AnnotatedString(it))
+                                        }
+                                    )
+                            )
+                        }
+                    }
+
+                    if (zoomImageDialogOpen) {
+                        ZoomableImageDialog(imageUrl = figureOutMimeType(it.banner!!), onDismiss = { zoomImageDialogOpen = false })
+                    }
+
+                    Spacer(Modifier.weight(1f))
+
+                    Row(
+                        modifier = Modifier
+                            .height(35.dp)
+                            .padding(bottom = 3.dp)
+                    ) {
+                    }
+                }
+
+                it.anyName()?.let {
+                    Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 7.dp)) {
+                        CreateTextWithEmoji(
+                            text = it,
+                            tags = remember { note.event?.tags() ?: emptyList() },
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 25.sp
+                        )
+                    }
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = note.idDisplayNote(),
+                        modifier = Modifier.padding(top = 1.dp, bottom = 1.dp),
+                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    )
+
+                    IconButton(
+                        modifier = Modifier
+                            .size(25.dp)
+                            .padding(start = 5.dp),
+                        onClick = { clipboardManager.setText(AnnotatedString(note.idDisplayNote())); }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ContentCopy,
+                            null,
+                            modifier = Modifier.size(15.dp),
+                            tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                        )
+                    }
+                }
+
+                // DisplayNip05ProfileStatus(user)
+
+                val website = it.website
+                if (!website.isNullOrEmpty()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                            imageVector = Icons.Default.Link,
+                            contentDescription = stringResource(R.string.website),
+                            modifier = Modifier.size(16.dp)
+                        )
+
+                        ClickableText(
+                            text = AnnotatedString(website.removePrefix("https://")),
+                            onClick = { website.let { runCatching { uri.openUri(it) } } },
+                            style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary),
+                            modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp)
+                        )
+                    }
+                }
+
+                it.about?.let {
+                    Row(
+                        modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)
+                    ) {
+                        TranslatableRichTextViewer(
+                            content = it,
+                            canPreview = false,
+                            tags = remember { note.event?.tags() ?: emptyList() },
+                            backgroundColor = MaterialTheme.colors.background,
+                            accountViewModel = accountViewModel,
+                            nav = nav
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -2224,7 +2420,9 @@ fun NoteAuthorPicture(
 
     if (author == null) {
         val nullModifier = remember {
-            modifier.size(size).clip(shape = CircleShape)
+            modifier
+                .size(size)
+                .clip(shape = CircleShape)
         }
 
         RobohashAsyncImage(

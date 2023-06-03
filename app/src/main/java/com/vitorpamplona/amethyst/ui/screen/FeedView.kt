@@ -33,7 +33,6 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import kotlin.time.ExperimentalTime
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
@@ -144,7 +143,6 @@ private fun WatchScrollToTop(
     }
 }
 
-@OptIn(ExperimentalTime::class)
 @Composable
 private fun FeedLoaded(
     state: FeedState.Loaded,

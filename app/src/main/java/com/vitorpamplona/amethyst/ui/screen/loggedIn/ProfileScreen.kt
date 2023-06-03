@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.*
@@ -56,6 +58,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
+import com.vitorpamplona.amethyst.service.model.AppDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
 import com.vitorpamplona.amethyst.service.model.IdentityClaim
@@ -78,7 +81,9 @@ import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileZapsFeedFilter
 import com.vitorpamplona.amethyst.ui.navigation.ShowQRDialog
 import com.vitorpamplona.amethyst.ui.note.UserPicture
+import com.vitorpamplona.amethyst.ui.screen.FeedState
 import com.vitorpamplona.amethyst.ui.screen.LnZapFeedView
+import com.vitorpamplona.amethyst.ui.screen.NostrUserAppRecommendationsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileBookmarksFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileConversationsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileFollowersUserFeedViewModel
@@ -141,10 +146,18 @@ fun PrepareViewModels(baseUser: User, accountViewModel: AccountViewModel, nav: (
         )
     )
 
+    val appRecommendations: NostrUserAppRecommendationsFeedViewModel = viewModel(
+        key = baseUser.pubkeyHex + "UserAppRecommendationsFeedViewModel",
+        factory = NostrUserAppRecommendationsFeedViewModel.Factory(
+            baseUser
+        )
+    )
+
     ProfileScreen(
         baseUser = baseUser,
         followsFeedViewModel,
         followersFeedViewModel,
+        appRecommendations,
         accountViewModel = accountViewModel,
         nav = nav
     )
@@ -156,6 +169,7 @@ fun ProfileScreen(
     baseUser: User,
     followsFeedViewModel: NostrUserProfileFollowsUserFeedViewModel,
     followersFeedViewModel: NostrUserProfileFollowersUserFeedViewModel,
+    appRecommendations: NostrUserAppRecommendationsFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -236,7 +250,7 @@ fun ProfileScreen(
                     .fillMaxHeight()
             ) {
                 Column(modifier = Modifier.padding()) {
-                    ProfileHeader(baseUser, nav, accountViewModel)
+                    ProfileHeader(baseUser, appRecommendations, nav, accountViewModel)
                     ScrollableTabRow(
                         backgroundColor = MaterialTheme.colors.background,
                         selectedTabIndex = pagerState.currentPage,
@@ -279,9 +293,9 @@ fun ProfileScreen(
                             2 -> TabFollows(baseUser, followsFeedViewModel, accountViewModel, nav)
                             3 -> TabFollows(baseUser, followersFeedViewModel, accountViewModel, nav)
                             4 -> TabReceivedZaps(baseUser, accountViewModel, nav)
-                            5 -> TabBookmarks(baseUser, accountViewModel, nav)
-                            6 -> TabReports(baseUser, accountViewModel, nav)
-                            7 -> TabRelays(baseUser, accountViewModel)
+                            6 -> TabBookmarks(baseUser, accountViewModel, nav)
+                            7 -> TabReports(baseUser, accountViewModel, nav)
+                            8 -> TabRelays(baseUser, accountViewModel)
                         }
                     }
                 }
@@ -397,6 +411,7 @@ private fun FollowTabHeader(baseUser: User) {
 @Composable
 private fun ProfileHeader(
     baseUser: User,
+    appRecommendations: NostrUserAppRecommendationsFeedViewModel,
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
@@ -486,7 +501,7 @@ private fun ProfileHeader(
                 }
             }
 
-            DrawAdditionalInfo(baseUser, accountViewModel, nav)
+            DrawAdditionalInfo(baseUser, appRecommendations, accountViewModel, nav)
 
             Divider(modifier = Modifier.padding(top = 6.dp))
         }
@@ -555,7 +570,12 @@ private fun ProfileActions(
 }
 
 @Composable
-private fun DrawAdditionalInfo(baseUser: User, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+private fun DrawAdditionalInfo(
+    baseUser: User,
+    appRecommendations: NostrUserAppRecommendationsFeedViewModel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
     val userState by baseUser.live().metadata.observeAsState()
     val user = remember(userState) { userState?.user } ?: return
     val tags = remember(userState) { userState?.user?.info?.latestMetadata?.tags }
@@ -704,6 +724,8 @@ private fun DrawAdditionalInfo(baseUser: User, accountViewModel: AccountViewMode
             )
         }
     }
+
+    DisplayAppRecommendations(appRecommendations, nav)
 }
 
 @Composable
@@ -780,6 +802,81 @@ private fun DisplayLNAddress(
                     }
                 )
             }
+        }
+    }
+}
+
+@Composable
+@OptIn(ExperimentalLayoutApi::class)
+private fun DisplayAppRecommendations(
+    appRecommendations: NostrUserAppRecommendationsFeedViewModel,
+    nav: (String) -> Unit
+) {
+    val feedState by appRecommendations.feedContent.collectAsState()
+
+    LaunchedEffect(key1 = Unit) {
+        appRecommendations.invalidateData()
+    }
+
+    Crossfade(
+        targetState = feedState,
+        animationSpec = tween(durationMillis = 100)
+    ) { state ->
+        when (state) {
+            is FeedState.Loaded -> {
+                Column() {
+                    Text(stringResource(id = R.string.recommended_apps))
+
+                    FlowRow(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(vertical = 5.dp)
+                    ) {
+                        state.feed.value.forEach { app ->
+                            WatchApp(app, nav)
+                        }
+                    }
+                }
+            }
+
+            else -> {}
+        }
+    }
+}
+
+@Composable
+private fun WatchApp(baseApp: Note, nav: (String) -> Unit) {
+    val appState by baseApp.live().metadata.observeAsState()
+
+    var appLogo by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(key1 = appState) {
+        launch(Dispatchers.Default) {
+            val newAppLogo = (appState?.note?.event as? AppDefinitionEvent)?.appMetaData()?.picture?.ifBlank { null }
+            if (newAppLogo != appLogo) {
+                appLogo = newAppLogo
+            }
+        }
+    }
+
+    appLogo?.let {
+        Box(
+            remember {
+                Modifier
+                    .size(35.dp)
+                    .clickable {
+                        nav("Note/${baseApp.idHex}")
+                    }
+            }
+        ) {
+            AsyncImage(
+                model = appLogo,
+                contentDescription = null,
+                modifier = remember {
+                    Modifier
+                        .size(35.dp)
+                        .clip(shape = CircleShape)
+                }
+            )
         }
     }
 }
@@ -906,7 +1003,7 @@ fun BadgeThumb(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun DrawBanner(baseUser: User) {
+public fun DrawBanner(baseUser: User) {
     val userState by baseUser.live().metadata.observeAsState()
     val banner = remember(userState) { userState?.user?.info?.banner }
 
@@ -922,12 +1019,11 @@ private fun DrawBanner(baseUser: User) {
                 .fillMaxWidth()
                 .height(125.dp)
                 .combinedClickable(
-                    onClick = {},
+                    onClick = { zoomImageDialogOpen = true },
                     onLongClick = {
                         clipboardManager.setText(AnnotatedString(banner))
                     }
                 )
-                .clickable { zoomImageDialogOpen = true }
         )
 
         if (zoomImageDialogOpen) {

@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.BundledInsert
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
@@ -23,6 +24,7 @@ import com.vitorpamplona.amethyst.ui.dal.HashtagFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ThreadFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.UserProfileAppRecommendationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileBookmarksFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileNewThreadFeedFilter
@@ -102,6 +104,14 @@ class NostrHomeRepliesFeedViewModel(val account: Account) : FeedViewModel(HomeCo
 
 class NostrBookmarkPublicFeedViewModel : FeedViewModel(BookmarkPublicFeedFilter)
 class NostrBookmarkPrivateFeedViewModel : FeedViewModel(BookmarkPrivateFeedFilter)
+
+class NostrUserAppRecommendationsFeedViewModel(val user: User) : FeedViewModel(UserProfileAppRecommendationsFeedFilter(user)) {
+    class Factory(val user: User) : ViewModelProvider.Factory {
+        override fun <NostrUserAppRecommendationsFeedViewModel : ViewModel> create(modelClass: Class<NostrUserAppRecommendationsFeedViewModel>): NostrUserAppRecommendationsFeedViewModel {
+            return NostrUserAppRecommendationsFeedViewModel(user) as NostrUserAppRecommendationsFeedViewModel
+        }
+    }
+}
 
 @Stable
 abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {

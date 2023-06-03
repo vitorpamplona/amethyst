@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.model.AppDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
 import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.HighlightEvent
@@ -359,7 +360,14 @@ fun NoteMaster(
                     } else if (noteEvent is AudioTrackEvent) {
                         AudioTrackHeader(noteEvent, accountViewModel, nav)
                     } else if (noteEvent is PinListEvent) {
-                        PinListHeader(baseNote, MaterialTheme.colors.background, accountViewModel, nav)
+                        PinListHeader(
+                            baseNote,
+                            MaterialTheme.colors.background,
+                            accountViewModel,
+                            nav
+                        )
+                    } else if (noteEvent is AppDefinitionEvent) {
+                        RenderAppDefinition(baseNote, accountViewModel, nav)
                     } else if (noteEvent is HighlightEvent) {
                         DisplayHighlight(
                             noteEvent.quote(),

@@ -390,6 +390,10 @@ class UserMetadata {
     var updatedMetadataAt: Long = 0
     var latestMetadata: MetadataEvent? = null
 
+    fun anyName(): String? {
+        return display_name ?: displayName ?: name ?: username
+    }
+
     fun anyNameStartsWith(prefix: String): Boolean {
         return listOfNotNull(name, username, display_name, displayName, nip05, lud06, lud16)
             .any { it.startsWith(prefix, true) }

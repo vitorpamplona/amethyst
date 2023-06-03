@@ -1,8 +1,6 @@
 package com.vitorpamplona.amethyst.model
 
 import android.util.Log
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.nip19.Nip19
@@ -13,7 +11,6 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import nostr.postr.toNpub
-import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -23,12 +20,6 @@ import java.time.format.DateTimeFormatter
 import java.util.concurrent.ConcurrentHashMap
 
 object LocalCache {
-    val metadataParser by lazy {
-        jacksonObjectMapper()
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-            .readerFor(UserMetadata::class.java)
-    }
-
     val antiSpam = AntiSpamFilter()
 
     val users = ConcurrentHashMap<HexKey, User>(5000)
@@ -130,18 +121,10 @@ object LocalCache {
         // new event
         val oldUser = getOrCreateUser(event.pubKey)
         if (oldUser.info == null || event.createdAt > oldUser.info!!.updatedMetadataAt) {
-            val newUser = try {
-                metadataParser.readValue(
-                    ByteArrayInputStream(event.content.toByteArray(Charsets.UTF_8)),
-                    UserMetadata::class.java
-                )
-            } catch (e: Exception) {
-                e.printStackTrace()
-                Log.w("MT", "Content Parse Error ${e.localizedMessage} ${event.content}")
-                return
+            val newUserMetadata = event.contactMetaData()
+            if (newUserMetadata != null) {
+                oldUser.updateUserInfo(newUserMetadata, event)
             }
-
-            oldUser.updateUserInfo(newUser, event)
             // Log.d("MT", "New User Metadata ${oldUser.pubkeyDisplayHex} ${oldUser.toBestDisplayName()}")
         } else {
             // Log.d("MT","Relay sent a previous Metadata Event ${oldUser.toBestDisplayName()} ${formattedDateTime(event.createdAt)} > ${formattedDateTime(oldUser.updatedAt)}")
@@ -353,6 +336,30 @@ object LocalCache {
         awardDefinition.forEach {
             it.addReply(note)
         }
+
+        refreshObservers(note)
+    }
+
+    fun consume(event: AppDefinitionEvent) {
+        val note = getOrCreateAddressableNote(event.address())
+        val author = getOrCreateUser(event.pubKey)
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        note.loadEvent(event, author, emptyList())
+
+        refreshObservers(note)
+    }
+
+    fun consume(event: AppRecommendationEvent) {
+        val note = getOrCreateAddressableNote(event.address())
+        val author = getOrCreateUser(event.pubKey)
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        note.loadEvent(event, author, emptyList())
 
         refreshObservers(note)
     }
@@ -973,6 +980,8 @@ object LocalCache {
 
         try {
             when (event) {
+                is AppDefinitionEvent -> consume(event)
+                is AppRecommendationEvent -> consume(event)
                 is AudioTrackEvent -> consume(event)
                 is BadgeAwardEvent -> consume(event)
                 is BadgeDefinitionEvent -> consume(event)
