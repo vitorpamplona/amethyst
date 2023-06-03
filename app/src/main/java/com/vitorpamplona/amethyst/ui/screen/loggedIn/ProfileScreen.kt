@@ -347,12 +347,10 @@ private fun ZapTabHeader(baseUser: User) {
     var zapAmount by remember { mutableStateOf<BigDecimal?>(null) }
 
     LaunchedEffect(key1 = userState) {
-        launch(Dispatchers.IO) {
+        launch(Dispatchers.Default) {
             val tempAmount = baseUser.zappedAmount()
-            withContext(Dispatchers.Main) {
-                if (zapAmount != tempAmount) {
-                    zapAmount = tempAmount
-                }
+            if (zapAmount != tempAmount) {
+                zapAmount = tempAmount
             }
         }
     }
@@ -1027,11 +1025,7 @@ private fun WatchFollowChanges(
 fun TabReceivedZaps(baseUser: User, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val feedViewModel: NostrUserProfileZapsFeedViewModel = viewModel()
 
-    val userState by baseUser.live().zaps.observeAsState()
-
-    LaunchedEffect(userState) {
-        feedViewModel.invalidateData()
-    }
+    WatchZapsAndUpdateFeed(baseUser, feedViewModel)
 
     Column(Modifier.fillMaxHeight()) {
         Column(
@@ -1043,14 +1037,22 @@ fun TabReceivedZaps(baseUser: User, accountViewModel: AccountViewModel, nav: (St
 }
 
 @Composable
-fun TabReports(baseUser: User, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val feedViewModel: NostrUserProfileReportFeedViewModel = viewModel()
-
-    val userState by baseUser.live().reports.observeAsState()
+private fun WatchZapsAndUpdateFeed(
+    baseUser: User,
+    feedViewModel: NostrUserProfileZapsFeedViewModel
+) {
+    val userState by baseUser.live().zaps.observeAsState()
 
     LaunchedEffect(userState) {
         feedViewModel.invalidateData()
     }
+}
+
+@Composable
+fun TabReports(baseUser: User, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    val feedViewModel: NostrUserProfileReportFeedViewModel = viewModel()
+
+    WatchReportsAndUpdateFeed(baseUser, feedViewModel)
 
     Column(Modifier.fillMaxHeight()) {
         Column(
@@ -1058,6 +1060,17 @@ fun TabReports(baseUser: User, accountViewModel: AccountViewModel, nav: (String)
         ) {
             RefresheableView(feedViewModel, accountViewModel, nav, null, enablePullRefresh = false)
         }
+    }
+}
+
+@Composable
+private fun WatchReportsAndUpdateFeed(
+    baseUser: User,
+    feedViewModel: NostrUserProfileReportFeedViewModel
+) {
+    val userState by baseUser.live().reports.observeAsState()
+    LaunchedEffect(userState) {
+        feedViewModel.invalidateData()
     }
 }
 
