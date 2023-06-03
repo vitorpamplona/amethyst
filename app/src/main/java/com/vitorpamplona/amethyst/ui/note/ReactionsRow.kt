@@ -520,7 +520,7 @@ private fun ZapIcon(
     val zapsState by baseNote.live().zaps.observeAsState()
 
     LaunchedEffect(key1 = zapsState) {
-        launch(Dispatchers.IO) {
+        launch(Dispatchers.Default) {
             zapsState?.note?.let {
                 if (!wasZappedByLoggedInUser) {
                     val newWasZapped = accountViewModel.calculateIfNoteWasZappedByAccount(it)
@@ -561,7 +561,7 @@ private fun ZapAmountText(
     var zapAmountTxt by remember { mutableStateOf("") }
 
     LaunchedEffect(key1 = zapsState) {
-        launch(Dispatchers.IO) {
+        launch(Dispatchers.Default) {
             zapsState?.note?.let {
                 val newZapAmount = showAmount(accountViewModel.calculateZapAmount(it))
                 if (newZapAmount != zapAmountTxt) {

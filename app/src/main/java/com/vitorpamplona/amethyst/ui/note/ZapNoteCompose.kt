@@ -153,10 +153,18 @@ fun UserActionOptions(
     val coroutineScope = rememberCoroutineScope()
 
     val accountState by accountViewModel.accountLiveData.observeAsState()
-    val isHidden = remember(accountState) { accountState?.account?.isHidden(baseAuthor) } ?: return
+    val isHidden by remember(accountState) {
+        derivedStateOf {
+            accountState?.account?.isHidden(baseAuthor) ?: false
+        }
+    }
 
     val userState by accountViewModel.account.userProfile().live().follows.observeAsState()
-    val isFollowing = remember(userState) { userState?.user?.isFollowingCached(baseAuthor) } ?: return
+    val isFollowing by remember(userState) {
+        derivedStateOf {
+            userState?.user?.isFollowingCached(baseAuthor) ?: false
+        }
+    }
 
     if (isHidden) {
         ShowUserButton {

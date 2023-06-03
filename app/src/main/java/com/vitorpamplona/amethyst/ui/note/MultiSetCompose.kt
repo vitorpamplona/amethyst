@@ -63,92 +63,85 @@ import kotlinx.coroutines.launch
 fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val baseNote = remember { multiSetCard.note }
 
-    val noteState by baseNote.live().metadata.observeAsState()
-    val note = remember(noteState) { noteState?.note } ?: return
-
     var popupExpanded by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
 
-    if (note.event == null) {
-        BlankNote(Modifier, false)
+    var isNew by remember { mutableStateOf(false) }
+
+    LaunchedEffect(key1 = multiSetCard.createdAt()) {
+        launch(Dispatchers.IO) {
+            val newIsNew = multiSetCard.maxCreatedAt > NotificationCache.load(routeForLastRead)
+
+            NotificationCache.markAsRead(routeForLastRead, multiSetCard.maxCreatedAt)
+
+            if (newIsNew != isNew) {
+                isNew = newIsNew
+            }
+        }
+    }
+
+    val primaryColor = MaterialTheme.colors.newItemBackgroundColor
+    val defaultBackgroundColor = MaterialTheme.colors.background
+
+    val backgroundColor = if (isNew) {
+        primaryColor.compositeOver(defaultBackgroundColor)
     } else {
-        var isNew by remember { mutableStateOf(false) }
+        defaultBackgroundColor
+    }
 
-        LaunchedEffect(key1 = multiSetCard.createdAt()) {
-            scope.launch(Dispatchers.IO) {
-                val newIsNew = multiSetCard.maxCreatedAt > NotificationCache.load(routeForLastRead)
-
-                NotificationCache.markAsRead(routeForLastRead, multiSetCard.maxCreatedAt)
-
-                if (newIsNew != isNew) {
-                    isNew = newIsNew
+    val columnModifier = Modifier
+        .background(backgroundColor)
+        .padding(
+            start = 12.dp,
+            end = 12.dp,
+            top = 10.dp
+        )
+        .combinedClickable(
+            onClick = {
+                scope.launch {
+                    routeFor(baseNote, accountViewModel.userProfile())?.let { nav(it) }
                 }
-            }
+            },
+            onLongClick = { popupExpanded = true }
+        )
+        .fillMaxWidth()
+
+    val zapEvents by remember { derivedStateOf { multiSetCard.zapEvents } }
+    val boostEvents by remember { derivedStateOf { multiSetCard.boostEvents } }
+    val likeEvents by remember { derivedStateOf { multiSetCard.likeEvents } }
+
+    val hasZapEvents by remember { derivedStateOf { multiSetCard.zapEvents.isNotEmpty() } }
+    val hasBoostEvents by remember { derivedStateOf { multiSetCard.boostEvents.isNotEmpty() } }
+    val hasLikeEvents by remember { derivedStateOf { multiSetCard.likeEvents.isNotEmpty() } }
+
+    Column(modifier = columnModifier) {
+        if (hasZapEvents) {
+            RenderZapGallery(zapEvents, backgroundColor, nav, accountViewModel)
         }
 
-        val primaryColor = MaterialTheme.colors.newItemBackgroundColor
-        val defaultBackgroundColor = MaterialTheme.colors.background
-
-        val backgroundColor = if (isNew) {
-            primaryColor.compositeOver(defaultBackgroundColor)
-        } else {
-            defaultBackgroundColor
+        if (hasBoostEvents) {
+            RenderBoostGallery(boostEvents, backgroundColor, nav, accountViewModel)
         }
 
-        val columnModifier = Modifier
-            .background(backgroundColor)
-            .padding(
-                start = 12.dp,
-                end = 12.dp,
-                top = 10.dp
+        if (hasLikeEvents) {
+            RenderLikeGallery(likeEvents, backgroundColor, nav, accountViewModel)
+        }
+
+        Row(Modifier.fillMaxWidth()) {
+            Spacer(modifier = Modifier.width(65.dp))
+
+            NoteCompose(
+                baseNote = baseNote,
+                routeForLastRead = null,
+                modifier = Modifier.padding(top = 5.dp),
+                isBoostedNote = true,
+                parentBackgroundColor = backgroundColor,
+                accountViewModel = accountViewModel,
+                nav = nav
             )
-            .combinedClickable(
-                onClick = {
-                    scope.launch {
-                        routeFor(baseNote, accountViewModel.userProfile())?.let { nav(it) }
-                    }
-                },
-                onLongClick = { popupExpanded = true }
-            )
-            .fillMaxWidth()
 
-        val zapEvents by remember { derivedStateOf { multiSetCard.zapEvents } }
-        val boostEvents by remember { derivedStateOf { multiSetCard.boostEvents } }
-        val likeEvents by remember { derivedStateOf { multiSetCard.likeEvents } }
-
-        val hasZapEvents by remember { derivedStateOf { multiSetCard.zapEvents.isNotEmpty() } }
-        val hasBoostEvents by remember { derivedStateOf { multiSetCard.boostEvents.isNotEmpty() } }
-        val hasLikeEvents by remember { derivedStateOf { multiSetCard.likeEvents.isNotEmpty() } }
-
-        Column(modifier = columnModifier) {
-            if (hasZapEvents) {
-                RenderZapGallery(zapEvents, backgroundColor, nav, accountViewModel)
-            }
-
-            if (hasBoostEvents) {
-                RenderBoostGallery(boostEvents, backgroundColor, nav, accountViewModel)
-            }
-
-            if (hasLikeEvents) {
-                RenderLikeGallery(likeEvents, backgroundColor, nav, accountViewModel)
-            }
-
-            Row(Modifier.fillMaxWidth()) {
-                Spacer(modifier = Modifier.width(65.dp))
-
-                NoteCompose(
-                    baseNote = baseNote,
-                    routeForLastRead = null,
-                    modifier = Modifier.padding(top = 5.dp),
-                    isBoostedNote = true,
-                    parentBackgroundColor = backgroundColor,
-                    accountViewModel = accountViewModel,
-                    nav = nav
-                )
-
-                NoteDropDownMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
-            }
+            NoteDropDownMenu(baseNote, popupExpanded, { popupExpanded = false }, accountViewModel)
         }
     }
 }

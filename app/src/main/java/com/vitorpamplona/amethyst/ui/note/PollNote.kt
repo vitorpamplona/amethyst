@@ -91,10 +91,9 @@ private fun WatchZapsAndUpdateTallies(
     pollViewModel: PollNoteViewModel
 ) {
     val zapsState by baseNote.live().zaps.observeAsState()
-    val scope = rememberCoroutineScope()
 
     LaunchedEffect(key1 = zapsState) {
-        scope.launch(Dispatchers.IO) {
+        launch(Dispatchers.Default) {
             pollViewModel.refreshTallies()
         }
     }
