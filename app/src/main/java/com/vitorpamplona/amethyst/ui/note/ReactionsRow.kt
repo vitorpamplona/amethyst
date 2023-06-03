@@ -319,9 +319,16 @@ fun LikeReaction(
 fun LikeIcon(baseNote: Note, iconSize: Dp = 20.dp, grayTint: Color, loggedIn: User) {
     val reactionsState by baseNote.live().reactions.observeAsState()
 
-    val wasReactedByLoggedIn by remember(reactionsState) {
-        derivedStateOf {
-            reactionsState?.note?.isReactedBy(loggedIn) == true
+    var wasReactedByLoggedIn by remember(reactionsState) {
+        mutableStateOf(false)
+    }
+
+    LaunchedEffect(key1 = reactionsState) {
+        launch(Dispatchers.Default) {
+            val newWasReactedByLoggedIn = reactionsState?.note?.isReactedBy(loggedIn) == true
+            if (wasReactedByLoggedIn != newWasReactedByLoggedIn) {
+                wasReactedByLoggedIn = newWasReactedByLoggedIn
+            }
         }
     }
 
@@ -350,9 +357,16 @@ fun LikeIcon(baseNote: Note, iconSize: Dp = 20.dp, grayTint: Color, loggedIn: Us
 fun LikeText(baseNote: Note, grayTint: Color) {
     val reactionsState by baseNote.live().reactions.observeAsState()
 
-    val reactionsCount by remember(reactionsState) {
-        derivedStateOf {
-            " " + showCount(reactionsState?.note?.reactions?.size)
+    var reactionsCount by remember(reactionsState) {
+        mutableStateOf("")
+    }
+
+    LaunchedEffect(key1 = reactionsState) {
+        launch(Dispatchers.Default) {
+            val newReactionsCount = " " + showCount(reactionsState?.note?.reactions?.size)
+            if (reactionsCount != newReactionsCount) {
+                reactionsCount = newReactionsCount
+            }
         }
     }
 

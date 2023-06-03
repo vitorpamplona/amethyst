@@ -2120,7 +2120,7 @@ private fun RelayBadges(baseNote: Note) {
     var lazyRelayList by remember { mutableStateOf(emptyList<String>()) }
 
     LaunchedEffect(key1 = noteRelaysState, key2 = expanded) {
-        withContext(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             val relayList = noteRelays.relays.map {
                 it.removePrefix("wss://").removePrefix("ws://")
             }
