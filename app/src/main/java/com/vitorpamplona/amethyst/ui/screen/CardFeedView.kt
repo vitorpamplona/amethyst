@@ -28,12 +28,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.ui.note.BadgeCompose
-import com.vitorpamplona.amethyst.ui.note.BoostSetCompose
-import com.vitorpamplona.amethyst.ui.note.LikeSetCompose
 import com.vitorpamplona.amethyst.ui.note.MessageSetCompose
 import com.vitorpamplona.amethyst.ui.note.MultiSetCompose
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
-import com.vitorpamplona.amethyst.ui.note.ZapSetCompose
 import com.vitorpamplona.amethyst.ui.note.ZapUserSetCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -178,31 +175,7 @@ private fun FeedLoaded(
                         routeForLastRead = routeForLastRead
                     )
 
-                    is ZapSetCard -> ZapSetCompose(
-                        item,
-                        isInnerNote = false,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                        routeForLastRead = routeForLastRead
-                    )
-
                     is ZapUserSetCard -> ZapUserSetCompose(
-                        item,
-                        isInnerNote = false,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                        routeForLastRead = routeForLastRead
-                    )
-
-                    is LikeSetCard -> LikeSetCompose(
-                        item,
-                        isInnerNote = false,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                        routeForLastRead = routeForLastRead
-                    )
-
-                    is BoostSetCard -> BoostSetCompose(
                         item,
                         isInnerNote = false,
                         accountViewModel = accountViewModel,

@@ -33,24 +33,6 @@ class NoteCard(val note: Note) : Card() {
 }
 
 @Immutable
-class LikeSetCard(val note: Note, val likeEvents: List<Note>) : Card() {
-    val createdAt = likeEvents.maxOf { it.createdAt() ?: 0 }
-    override fun createdAt(): Long {
-        return createdAt
-    }
-    override fun id() = note.idHex + "L" + createdAt
-}
-
-@Immutable
-class ZapSetCard(val note: Note, val zapEvents: Map<Note, Note>) : Card() {
-    val createdAt = zapEvents.maxOf { it.value.createdAt() ?: 0 }
-    override fun createdAt(): Long {
-        return createdAt
-    }
-    override fun id() = note.idHex + "Z" + createdAt
-}
-
-@Immutable
 class ZapUserSetCard(val user: User, val zapEvents: ImmutableMap<Note, Note>) : Card() {
     val createdAt = zapEvents.maxOf { it.value.createdAt() ?: 0 }
     override fun createdAt(): Long {
@@ -77,17 +59,6 @@ class MultiSetCard(val note: Note, val boostEvents: ImmutableList<Note>, val lik
         return maxCreatedAt
     }
     override fun id() = note.idHex + "X" + maxCreatedAt + "X" + minCreatedAt
-}
-
-@Immutable
-class BoostSetCard(val note: Note, val boostEvents: List<Note>) : Card() {
-    val createdAt = boostEvents.maxOf { it.createdAt() ?: 0 }
-
-    override fun createdAt(): Long {
-        return createdAt
-    }
-
-    override fun id() = note.idHex + "B" + createdAt
 }
 
 @Immutable
