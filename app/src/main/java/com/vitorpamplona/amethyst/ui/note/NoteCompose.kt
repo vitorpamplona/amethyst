@@ -763,11 +763,7 @@ fun RenderAppDefinition(
                                     )
                                     .clip(shape = CircleShape)
                                     .fillMaxSize()
-                                    .border(
-                                        3.dp,
-                                        MaterialTheme.colors.background,
-                                        CircleShape
-                                    )
+                                    .background(MaterialTheme.colors.background)
                                     .combinedClickable(
                                         onClick = { zoomImageDialogOpen = true },
                                         onLongClick = {
