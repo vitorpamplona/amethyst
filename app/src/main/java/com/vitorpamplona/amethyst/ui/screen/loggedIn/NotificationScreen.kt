@@ -123,52 +123,52 @@ fun SummaryBar(model: UserReactionsViewModel) {
         showChart = !showChart
     }
 
-    val lineChartCount =
-        lineChart(
-            lines = listOf(RoyalBlue, Color.Green, Color.Red).map { lineChartColor ->
-                LineChart.LineSpec(
-                    lineColor = lineChartColor.toArgb(),
-                    lineBackgroundShader = DynamicShaders.fromBrush(
-                        Brush.verticalGradient(
-                            listOf(
-                                lineChartColor.copy(DefaultAlpha.LINE_BACKGROUND_SHADER_START),
-                                lineChartColor.copy(DefaultAlpha.LINE_BACKGROUND_SHADER_END)
-                            )
-                        )
-                    )
-                )
-            },
-            targetVerticalAxisPosition = AxisPosition.Vertical.Start
-        )
-
-    val lineChartZaps =
-        lineChart(
-            lines = listOf(BitcoinOrange).map { lineChartColor ->
-                LineChart.LineSpec(
-                    lineColor = lineChartColor.toArgb(),
-                    lineBackgroundShader = DynamicShaders.fromBrush(
-                        Brush.verticalGradient(
-                            listOf(
-                                lineChartColor.copy(DefaultAlpha.LINE_BACKGROUND_SHADER_START),
-                                lineChartColor.copy(DefaultAlpha.LINE_BACKGROUND_SHADER_END)
-                            )
-                        )
-                    )
-                )
-            },
-            targetVerticalAxisPosition = AxisPosition.Vertical.End
-        )
-
     if (showChart) {
-        val axisModel by model.axisLabels.collectAsState()
-        val chartModel by model.chartModel.collectAsState()
-        chartModel?.let {
-            Row(
-                modifier = Modifier
-                    .padding(vertical = 10.dp, horizontal = 20.dp)
-                    .clickable(onClick = { showChart = !showChart })
-            ) {
-                ProvideChartStyle() {
+        val lineChartCount =
+            lineChart(
+                lines = listOf(RoyalBlue, Color.Green, Color.Red).map { lineChartColor ->
+                    LineChart.LineSpec(
+                        lineColor = lineChartColor.toArgb(),
+                        lineBackgroundShader = DynamicShaders.fromBrush(
+                            Brush.verticalGradient(
+                                listOf(
+                                    lineChartColor.copy(DefaultAlpha.LINE_BACKGROUND_SHADER_START),
+                                    lineChartColor.copy(DefaultAlpha.LINE_BACKGROUND_SHADER_END)
+                                )
+                            )
+                        )
+                    )
+                },
+                targetVerticalAxisPosition = AxisPosition.Vertical.Start
+            )
+
+        val lineChartZaps =
+            lineChart(
+                lines = listOf(BitcoinOrange).map { lineChartColor ->
+                    LineChart.LineSpec(
+                        lineColor = lineChartColor.toArgb(),
+                        lineBackgroundShader = DynamicShaders.fromBrush(
+                            Brush.verticalGradient(
+                                listOf(
+                                    lineChartColor.copy(DefaultAlpha.LINE_BACKGROUND_SHADER_START),
+                                    lineChartColor.copy(DefaultAlpha.LINE_BACKGROUND_SHADER_END)
+                                )
+                            )
+                        )
+                    )
+                },
+                targetVerticalAxisPosition = AxisPosition.Vertical.End
+            )
+
+        Row(
+            modifier = Modifier
+                .padding(vertical = 10.dp, horizontal = 20.dp)
+                .clickable(onClick = { showChart = !showChart })
+        ) {
+            ProvideChartStyle() {
+                val axisModel by model.axisLabels.collectAsState()
+                val chartModel by model.chartModel.collectAsState()
+                chartModel?.let {
                     Chart(
                         chart = remember(lineChartCount, lineChartZaps) {
                             lineChartCount.plus(lineChartZaps)

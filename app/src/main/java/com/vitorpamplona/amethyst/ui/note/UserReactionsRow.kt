@@ -270,12 +270,6 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
     var collectorJob: Job? = null
 
     init {
-        _reactions.value = emptyMap()
-        _boosts.value = emptyMap()
-        _zaps.value = emptyMap()
-        _replies.value = emptyMap()
-        takenIntoAccount = emptySet()
-
         viewModelScope.launch(Dispatchers.IO) {
             initializeSuspend()
 

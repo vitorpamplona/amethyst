@@ -40,7 +40,6 @@ import androidx.compose.material.Text
 import androidx.compose.material.darkColors
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
@@ -798,30 +797,6 @@ fun RenderAppDefinition(
                         )
                     }
                 }
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = note.idDisplayNote(),
-                        modifier = Modifier.padding(top = 1.dp, bottom = 1.dp),
-                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                    )
-
-                    IconButton(
-                        modifier = Modifier
-                            .size(25.dp)
-                            .padding(start = 5.dp),
-                        onClick = { clipboardManager.setText(AnnotatedString(note.idDisplayNote())); }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ContentCopy,
-                            null,
-                            modifier = Modifier.size(15.dp),
-                            tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                        )
-                    }
-                }
-
-                // DisplayNip05ProfileStatus(user)
 
                 val website = it.website
                 if (!website.isNullOrEmpty()) {
