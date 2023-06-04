@@ -39,6 +39,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -143,27 +144,21 @@ fun DisplayAccount(
 
     baseUser?.let {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().clickable {
+                accountStateViewModel.switchUser(acc.npub)
+            }.padding(16.dp, 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable {
-                        accountStateViewModel.switchUser(acc.npub)
-                    },
+                modifier = Modifier.weight(1f),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(
-                    modifier = Modifier
-                        .padding(16.dp, 16.dp)
-                        .weight(1f),
+                    modifier = Modifier.weight(1f),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
-                        modifier = Modifier
-                            .width(55.dp)
-                            .padding(0.dp)
+                        modifier = Modifier.width(55.dp).padding(0.dp)
                     ) {
                         AccountPicture(it)
                     }
@@ -239,7 +234,9 @@ private fun AccountName(
     displayName?.let {
         CreateTextWithEmoji(
             text = it,
-            tags = tags
+            tags = tags,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 

@@ -268,12 +268,13 @@ object LocalCache {
         val note = getOrCreateAddressableNote(event.address())
         val author = getOrCreateUser(event.pubKey)
 
-        // Already processed this event.
-        if (note.event != null) return
+        if (note.event?.id() == event.id()) return
 
-        note.loadEvent(event, author, emptyList())
+        if (event.createdAt > (note.createdAt() ?: 0)) {
+            note.loadEvent(event, author, emptyList())
 
-        refreshObservers(note)
+            refreshObservers(note)
+        }
     }
 
     private fun consume(event: AudioTrackEvent) {
@@ -281,11 +282,13 @@ object LocalCache {
         val author = getOrCreateUser(event.pubKey)
 
         // Already processed this event.
-        if (note.event != null) return
+        if (note.event?.id() == event.id()) return
 
-        note.loadEvent(event, author, emptyList())
+        if (event.createdAt > (note.createdAt() ?: 0)) {
+            note.loadEvent(event, author, emptyList())
 
-        refreshObservers(note)
+            refreshObservers(note)
+        }
     }
 
     fun consume(event: BadgeDefinitionEvent) {
@@ -357,11 +360,13 @@ object LocalCache {
         val author = getOrCreateUser(event.pubKey)
 
         // Already processed this event.
-        if (note.event != null) return
+        if (note.event?.id() == event.id()) return
 
-        note.loadEvent(event, author, emptyList())
+        if (event.createdAt > (note.createdAt() ?: 0)) {
+            note.loadEvent(event, author, emptyList())
 
-        refreshObservers(note)
+            refreshObservers(note)
+        }
     }
 
     @Suppress("UNUSED_PARAMETER")

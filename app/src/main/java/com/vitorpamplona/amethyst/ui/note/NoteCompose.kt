@@ -1164,7 +1164,7 @@ private fun RenderRepost(
     boostedNote?.let {
         NoteCompose(
             it,
-            modifier = Modifier,
+            modifier = remember { Modifier },
             isBoostedNote = true,
             unPackReply = false,
             parentBackgroundColor = backgroundColor,
