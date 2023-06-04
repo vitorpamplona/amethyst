@@ -39,9 +39,6 @@ import kotlinx.coroutines.launch
 fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val baseNote = remember { messageSetCard.note }
 
-    val noteState by baseNote.live().metadata.observeAsState()
-    val note = remember(noteState) { noteState?.note }
-
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val loggedIn = remember(accountState) { accountState?.account?.userProfile() } ?: return
 
@@ -49,71 +46,69 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, 
 
     val scope = rememberCoroutineScope()
 
-    if (note == null) {
-        BlankNote(Modifier)
-    } else {
-        var isNew by remember { mutableStateOf(false) }
+    var isNew by remember { mutableStateOf(false) }
 
-        LaunchedEffect(key1 = messageSetCard.createdAt()) {
-            scope.launch(Dispatchers.IO) {
-                val newIsNew =
-                    messageSetCard.createdAt() > NotificationCache.load(routeForLastRead)
+    LaunchedEffect(key1 = messageSetCard.createdAt()) {
+        launch(Dispatchers.IO) {
+            val newIsNew =
+                messageSetCard.createdAt() > NotificationCache.load(routeForLastRead)
 
-                NotificationCache.markAsRead(routeForLastRead, messageSetCard.createdAt())
+            NotificationCache.markAsRead(routeForLastRead, messageSetCard.createdAt())
 
-                if (newIsNew != isNew) {
-                    isNew = newIsNew
-                }
+            if (newIsNew != isNew) {
+                isNew = newIsNew
             }
         }
+    }
 
-        val backgroundColor = if (isNew) {
-            MaterialTheme.colors.newItemBackgroundColor.compositeOver(MaterialTheme.colors.background)
-        } else {
-            MaterialTheme.colors.background
-        }
+    val backgroundColor = if (isNew) {
+        MaterialTheme.colors.newItemBackgroundColor.compositeOver(MaterialTheme.colors.background)
+    } else {
+        MaterialTheme.colors.background
+    }
 
-        val columnModifier = remember(isNew) {
-            Modifier
-                .background(backgroundColor)
-                .padding(
-                    start = 12.dp,
-                    end = 12.dp,
-                    top = 10.dp
-                )
-                .combinedClickable(
-                    onClick = {
-                        scope.launch {
-                            routeFor(
-                                baseNote,
-                                loggedIn
-                            )?.let { nav(it) }
-                        }
-                    },
-                    onLongClick = { popupExpanded = true }
-                )
-                .fillMaxWidth()
-        }
+    val columnModifier = remember(isNew) {
+        Modifier
+            .background(backgroundColor)
+            .padding(
+                start = 12.dp,
+                end = 12.dp,
+                top = 10.dp
+            )
+            .combinedClickable(
+                onClick = {
+                    scope.launch {
+                        routeFor(
+                            baseNote,
+                            loggedIn
+                        )?.let { nav(it) }
+                    }
+                },
+                onLongClick = { popupExpanded = true }
+            )
+            .fillMaxWidth()
+    }
 
-        Column(columnModifier) {
-            Row(Modifier.fillMaxWidth()) {
-                MessageIcon()
+    Column(columnModifier) {
+        Row(Modifier.fillMaxWidth()) {
+            MessageIcon()
 
-                Column(modifier = remember { Modifier.padding(start = 10.dp) }) {
-                    val routeForLastRead = "Room/${(baseNote.event as? PrivateDmEvent)?.talkingWith(loggedIn.pubkeyHex)}"
-
-                    NoteCompose(
-                        baseNote = baseNote,
-                        routeForLastRead = routeForLastRead,
-                        isBoostedNote = true,
-                        addMarginTop = false,
-                        parentBackgroundColor = null,
-                        accountViewModel = accountViewModel,
-                        nav = nav
-                    )
-
-                    NoteDropDownMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
+            Column(modifier = remember { Modifier.padding(start = 10.dp) }) {
+                val routeForLastRead = remember(baseNote) {
+                    "Room/${(baseNote.event as? PrivateDmEvent)?.talkingWith(loggedIn.pubkeyHex)}"
                 }
+
+                NoteCompose(
+                    baseNote = baseNote,
+                    routeForLastRead = routeForLastRead,
+                    isBoostedNote = true,
+                    addMarginTop = false,
+                    parentBackgroundColor = null,
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
+
+                NoteDropDownMenu(baseNote, popupExpanded, { popupExpanded = false }, accountViewModel)
             }
         }
     }

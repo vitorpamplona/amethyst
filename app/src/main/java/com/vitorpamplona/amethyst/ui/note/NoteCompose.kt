@@ -138,6 +138,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Following
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -1528,7 +1530,7 @@ fun TimeAgo(time: Long) {
     var timeStr by remember { mutableStateOf("") }
 
     LaunchedEffect(key1 = time) {
-        withContext(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             val newTimeStr = timeAgo(time, context = context)
             if (newTimeStr != timeStr) {
                 timeStr = newTimeStr
@@ -2279,31 +2281,22 @@ private fun CreateImageHeader(
 
 @Composable
 private fun RelayBadges(baseNote: Note) {
-    val noteRelaysState by baseNote.live().relays.observeAsState()
-    val noteRelays = remember(noteRelaysState) { noteRelaysState?.note } ?: return
-
     var expanded by remember { mutableStateOf(false) }
     var showShowMore by remember { mutableStateOf(false) }
     var lazyRelayList by remember { mutableStateOf(emptyList<String>()) }
 
-    LaunchedEffect(key1 = noteRelaysState, key2 = expanded) {
-        launch(Dispatchers.IO) {
-            val relayList = noteRelays.relays.map {
-                it.removePrefix("wss://").removePrefix("ws://")
-            }
+    WatchRelayLists(baseNote) { relayList ->
+        val relaysToDisplay = if (expanded) relayList else relayList.take(3)
+        val shouldListChange = lazyRelayList.size < 3 || lazyRelayList.size != relayList.size
 
-            val relaysToDisplay = if (expanded) relayList else relayList.take(3)
-            val shouldListChange = lazyRelayList.size < 3 || lazyRelayList.size != relayList.size
+        if (shouldListChange) {
+            lazyRelayList = relaysToDisplay
+        }
 
-            if (shouldListChange) {
-                lazyRelayList = relaysToDisplay
-            }
-
-            val nextShowMore = relayList.size > 3 && !expanded
-            if (nextShowMore != showShowMore) {
-                // only triggers recomposition when actually different
-                showShowMore = nextShowMore
-            }
+        val nextShowMore = relayList.size > 3 && !expanded
+        if (nextShowMore != showShowMore) {
+            // only triggers recomposition when actually different
+            showShowMore = nextShowMore
         }
     }
 
@@ -2314,6 +2307,21 @@ private fun RelayBadges(baseNote: Note) {
     if (showShowMore) {
         ShowMoreRelaysButton {
             expanded = true
+        }
+    }
+}
+
+@Composable
+private fun WatchRelayLists(baseNote: Note, onListChanges: (ImmutableList<String>) -> Unit) {
+    val noteRelaysState by baseNote.live().relays.observeAsState()
+
+    LaunchedEffect(key1 = noteRelaysState) {
+        launch(Dispatchers.IO) {
+            val relayList = noteRelaysState?.note?.relays?.map {
+                it.removePrefix("wss://").removePrefix("ws://")
+            } ?: emptyList()
+
+            onListChanges(relayList.toImmutableList())
         }
     }
 }
@@ -2467,7 +2475,6 @@ fun UserPicture(
     }
 }
 
-@OptIn(ExperimentalTime::class)
 @Composable
 fun UserPicture(
     userHex: String,
