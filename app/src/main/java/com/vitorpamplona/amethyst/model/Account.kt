@@ -1063,13 +1063,11 @@ class Account(
 
     fun isAcceptable(user: User): Boolean {
         return !isHidden(user) && // if user hasn't hided this author
-            user.reportsBy(userProfile()).isEmpty() && // if user has not reported this post
-            user.countReportAuthorsBy(followingKeySet()) < 5
+            user.reportsBy(userProfile()).isEmpty() // if user has not reported this post
     }
 
     fun isAcceptableDirect(note: Note): Boolean {
-        return note.reportsBy(userProfile()).isEmpty() && // if user has not reported this post
-            note.countReportAuthorsBy(followingKeySet()) < 5 // if it has 5 reports by reliable users
+        return note.reportsBy(userProfile()).isEmpty() // if user has not reported this post
     }
 
     fun isFollowing(user: User): Boolean {
