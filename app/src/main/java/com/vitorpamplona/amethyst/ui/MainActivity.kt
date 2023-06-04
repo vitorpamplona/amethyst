@@ -86,7 +86,9 @@ class MainActivity : FragmentActivity() {
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
         println("Trim Memory $level")
-        ServiceManager.cleanUp()
+        GlobalScope.launch(Dispatchers.Default) {
+            ServiceManager.cleanUp()
+        }
     }
 }
 
