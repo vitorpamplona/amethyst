@@ -213,7 +213,7 @@ fun ZoomableContentView(content: ZoomableContent, images: List<ZoomableContent> 
 @Composable
 private fun LocalImageView(
     content: ZoomableLocalImage,
-    mainImageModifier: Modifier
+    modifier: Modifier
 ) {
     BoxWithConstraints(contentAlignment = Alignment.Center) {
         // store the dialog open or close state
@@ -222,7 +222,7 @@ private fun LocalImageView(
         }
 
         val myModifier = remember {
-            mainImageModifier
+            modifier
                 .widthIn(max = maxWidth)
                 .heightIn(max = maxHeight)
                 .run {
@@ -277,7 +277,7 @@ private fun LocalImageView(
 @Composable
 private fun UrlImageView(
     content: ZoomableUrlImage,
-    mainImageModifier: Modifier
+    modifier: Modifier
 ) {
     val scope = rememberCoroutineScope()
 
@@ -294,7 +294,7 @@ private fun UrlImageView(
         }
 
         val myModifier = remember {
-            mainImageModifier
+            modifier
                 .widthIn(max = maxWidth)
                 .heightIn(max = maxHeight)
                 .run {
@@ -308,27 +308,33 @@ private fun UrlImageView(
             if (maxHeight.isFinite) ContentScale.Fit else ContentScale.FillWidth
         }
 
-        AsyncImage(
-            model = content.url,
-            contentDescription = content.description,
-            contentScale = contentScale,
-            modifier = myModifier,
-            onError = {
-                if (imageLoadingStatus != false) {
-                    imageLoadingStatus = false
-                }
-            },
-            onSuccess = {
-                if (verifiedHash == null) {
-                    scope.launch(Dispatchers.IO) {
-                        verifiedHash = verifyHash(content, context)
+        val dontPreloadMedia = true
+
+        if (dontPreloadMedia) {
+            imageLoadingStatus = false
+        } else {
+            AsyncImage(
+                model = content.url,
+                contentDescription = content.description,
+                contentScale = contentScale,
+                modifier = myModifier,
+                onError = {
+                    if (imageLoadingStatus != false) {
+                        imageLoadingStatus = false
+                    }
+                },
+                onSuccess = {
+                    if (verifiedHash == null) {
+                        scope.launch(Dispatchers.IO) {
+                            verifiedHash = verifyHash(content, context)
+                        }
+                    }
+                    if (imageLoadingStatus != true) {
+                        imageLoadingStatus = true
                     }
                 }
-                if (imageLoadingStatus != true) {
-                    imageLoadingStatus = true
-                }
-            }
-        )
+            )
+        }
 
         if (imageLoadingStatus == true) {
             verifiedHash?.let {
@@ -498,13 +504,13 @@ fun RenderImageOrVideo(content: ZoomableContent) {
         .zoomable(rememberZoomState())
 
     if (content is ZoomableUrlImage) {
-        UrlImageView(content = content, mainImageModifier = mainModifier)
+        UrlImageView(content = content, modifier = mainModifier)
     } else if (content is ZoomableUrlVideo) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize(1f)) {
             VideoView(content.url, content.description)
         }
     } else if (content is ZoomableLocalImage) {
-        LocalImageView(content = content, mainImageModifier = mainModifier)
+        LocalImageView(content = content, modifier = mainModifier)
     } else if (content is ZoomableLocalVideo) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize(1f)) {
             VideoView(content.localFile, content.description)
@@ -516,7 +522,7 @@ fun RenderImageOrVideo(content: ZoomableContent) {
 private fun verifyHash(content: ZoomableUrlContent, context: Context): Boolean? {
     if (content.hash == null) return null
 
-    context.imageLoader.diskCache?.get(content.url)?.use { snapshot ->
+    context.imageLoader.diskCache?.openSnapshot(content.url)?.use { snapshot ->
         val imageFile = snapshot.data.toFile()
         val bytes = imageFile.readBytes()
         val sha256 = MessageDigest.getInstance("SHA-256")
@@ -569,7 +575,7 @@ private fun HashVerificationSymbol(verifiedHash: Boolean, modifier: Modifier) {
                     modifier = Modifier.size(30.dp)
                 )
             }
-        } else if (verifiedHash == false) {
+        } else {
             IconButton(
                 onClick = {
                     scope.launch {
