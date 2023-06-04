@@ -1422,7 +1422,7 @@ private fun ReplyRow(
                 nav = nav
             )
         } else {
-            ReplyInformation(note.replyTo, noteEvent.mentions(), accountViewModel, nav)
+            // ReplyInformation(note.replyTo, noteEvent.mentions(), accountViewModel, nav)
         }
 
         Spacer(modifier = Modifier.height(5.dp))
