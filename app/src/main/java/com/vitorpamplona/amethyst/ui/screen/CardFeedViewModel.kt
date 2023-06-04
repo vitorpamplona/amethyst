@@ -10,6 +10,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
@@ -79,6 +80,8 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
 
     @Synchronized
     private fun refreshSuspended() {
+        checkNotInMainThread()
+
         val notes = localFilter.feed()
 
         val thisAccount = (localFilter as? NotificationFeedFilter)?.account
@@ -117,6 +120,8 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
     }
 
     private fun convertToCard(notes: Collection<Note>): List<Card> {
+        checkNotInMainThread()
+
         val reactionsPerEvent = mutableMapOf<Note, MutableList<Note>>()
         notes
             .filter { it.event is ReactionEvent }

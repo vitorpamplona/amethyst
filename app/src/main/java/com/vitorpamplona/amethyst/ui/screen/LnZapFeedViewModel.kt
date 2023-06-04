@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileZapsFeedFilter
@@ -30,6 +31,7 @@ open class LnZapFeedViewModel(val dataSource: FeedFilter<Pair<Note, Note>>) : Vi
     }
 
     private fun refreshSuspended() {
+        checkNotInMainThread()
         val notes = dataSource.loadTop()
 
         val oldNotesState = _feedContent.value

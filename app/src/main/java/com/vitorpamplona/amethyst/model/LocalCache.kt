@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.model
 
 import android.util.Log
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.service.relays.Relay
@@ -850,6 +851,8 @@ object LocalCache {
     }
 
     fun findUsersStartingWith(username: String): List<User> {
+        checkNotInMainThread()
+
         val key = decodePublicKeyAsHexOrNull(username)
 
         if (key != null && users[key] != null) {
@@ -864,6 +867,8 @@ object LocalCache {
     }
 
     fun findNotesStartingWith(text: String): List<Note> {
+        checkNotInMainThread()
+
         val key = try {
             Nip19.uriToRoute(text)?.hex ?: Hex.decode(text).toHexKey()
         } catch (e: Exception) {
@@ -889,6 +894,8 @@ object LocalCache {
     }
 
     fun findChannelsStartingWith(text: String): List<Channel> {
+        checkNotInMainThread()
+
         val key = try {
             Nip19.uriToRoute(text)?.hex ?: Hex.decode(text).toHexKey()
         } catch (e: Exception) {
@@ -917,6 +924,8 @@ object LocalCache {
     }
 
     fun pruneOldAndHiddenMessages(account: Account) {
+        checkNotInMainThread()
+
         channels.forEach { it ->
             val toBeRemoved = it.value.pruneOldAndHiddenMessages(account)
 
@@ -935,6 +944,8 @@ object LocalCache {
     }
 
     fun pruneHiddenMessages(account: Account) {
+        checkNotInMainThread()
+
         val toBeRemoved = account.hiddenUsers.map {
             (users[it]?.notes ?: emptySet())
         }.flatten()
@@ -962,6 +973,8 @@ object LocalCache {
     }
 
     fun pruneContactLists(userAccount: Account) {
+        checkNotInMainThread()
+
         var removingContactList = 0
         users.values.forEach {
             if (it != userAccount.userProfile() && (it.liveSet == null || it.liveSet?.isInUse() == false) && it.latestContactList != null) {
@@ -981,6 +994,8 @@ object LocalCache {
     }
 
     fun consume(event: Event, relay: Relay?) {
+        checkNotInMainThread()
+
         if (!event.hasValidSignature()) return
 
         try {

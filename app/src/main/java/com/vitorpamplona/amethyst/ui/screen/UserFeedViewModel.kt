@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HiddenAccountsFeedFilter
@@ -58,6 +59,8 @@ open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel() {
     }
 
     private fun refreshSuspended() {
+        checkNotInMainThread()
+
         val notes = dataSource.loadTop().toImmutableList()
 
         val oldNotesState = _feedContent.value
