@@ -1445,7 +1445,7 @@ private fun SecondUserInfoRow(
     val noteAuthor = remember { note.author } ?: return
 
     Row(verticalAlignment = Alignment.CenterVertically) {
-        ObserveDisplayNip05Status(noteAuthor, Modifier.weight(1f))
+        ObserveDisplayNip05Status(noteAuthor, remember { Modifier.weight(1f) })
 
         val baseReward = remember { noteEvent.getReward() }
         if (baseReward != null) {
