@@ -40,7 +40,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun ZapNoteCompose(baseReqResponse: ZapReqResponse, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val baseNoteRequest by baseReqResponse.request.live().metadata.observeAsState()
+    val baseNoteRequest by baseReqResponse.zapRequest.live().metadata.observeAsState()
 
     var baseAuthor by remember {
         mutableStateOf<User?>(null)

@@ -7,7 +7,7 @@ import com.vitorpamplona.amethyst.model.Note
 import kotlinx.collections.immutable.ImmutableList
 
 @Immutable
-data class ZapReqResponse(val request: Note, val zapEvent: Note)
+data class ZapReqResponse(val zapRequest: Note, val zapEvent: Note)
 
 @Stable
 sealed class LnZapFeedState {
