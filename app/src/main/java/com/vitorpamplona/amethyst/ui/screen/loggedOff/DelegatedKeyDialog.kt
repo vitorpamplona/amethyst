@@ -107,7 +107,7 @@ class Delegation(
     var validUntil: Long
 ) {
     override fun toString(): String {
-        val selectedKinds =  kinds.filter { it.checked.value }.joinToString(separator = "&") { "kind=${it.kind}" }
+        val selectedKinds = kinds.filter { it.checked.value }.joinToString(separator = "&") { "kind=${it.kind}" }
         val delegateeHex = delegatee.userProfile().pubkeyHex
         return "nostr:delegation:$delegateeHex:$selectedKinds&created_at>${validStarting.toString().dropLast(3)}&created_at<${validUntil.toString().dropLast(3)}"
     }
@@ -425,7 +425,6 @@ fun SelectSignaturePage(
                     }
                     isValidSig = false
                 }
-
             }
             isValidSig
         }
