@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
+import com.vitorpamplona.amethyst.ui.screen.ZapReqResponse
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.FollowButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ShowUserButton
@@ -38,37 +39,44 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Composable
-fun ZapNoteCompose(baseNote: Pair<Note, Note>, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val baseNoteRequest by baseNote.first.live().metadata.observeAsState()
-    val noteZapRequest = remember(baseNoteRequest) { baseNoteRequest?.note } ?: return
+fun ZapNoteCompose(baseReqResponse: ZapReqResponse, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    val baseNoteRequest by baseReqResponse.request.live().metadata.observeAsState()
 
     var baseAuthor by remember {
-        mutableStateOf(noteZapRequest.author)
+        mutableStateOf<User?>(null)
+    }
+
+    LaunchedEffect(baseNoteRequest) {
+        launch(Dispatchers.Default) {
+            (baseNoteRequest?.note?.event as? LnZapRequestEvent)?.let {
+                baseNoteRequest?.note?.let {
+                    val decryptedContent = accountViewModel.decryptZap(it)
+                    if (decryptedContent != null) {
+                        baseAuthor = LocalCache.getOrCreateUser(decryptedContent.pubKey)
+                    } else {
+                        baseAuthor = it.author
+                    }
+                }
+            }
+        }
     }
 
     if (baseAuthor == null) {
         BlankNote()
     } else {
+        val route = remember(baseAuthor) {
+            "User/${baseAuthor?.pubkeyHex}"
+        }
+
         Column(
             modifier =
             Modifier.clickable(
-                onClick = { nav("User/${baseAuthor?.pubkeyHex}") }
+                onClick = { nav(route) }
             ),
             verticalArrangement = Arrangement.Center
         ) {
-            LaunchedEffect(Unit) {
-                launch(Dispatchers.Default) {
-                    (noteZapRequest.event as? LnZapRequestEvent)?.let {
-                        val decryptedContent = accountViewModel.decryptZap(noteZapRequest)
-                        if (decryptedContent != null) {
-                            baseAuthor = LocalCache.getOrCreateUser(decryptedContent.pubKey)
-                        }
-                    }
-                }
-            }
-
             baseAuthor?.let {
-                RenderZapNote(it, baseNote.second, nav, accountViewModel)
+                RenderZapNote(it, baseReqResponse.zapEvent, nav, accountViewModel)
             }
 
             Divider(
@@ -87,30 +95,37 @@ private fun RenderZapNote(
     accountViewModel: AccountViewModel
 ) {
     Row(
-        modifier = Modifier
-            .padding(
-                start = 12.dp,
-                end = 12.dp,
-                top = 10.dp
-            ),
+        modifier = remember {
+            Modifier
+                .padding(
+                    start = 12.dp,
+                    end = 12.dp,
+                    top = 10.dp
+                )
+        },
         verticalAlignment = Alignment.CenterVertically
     ) {
         UserPicture(baseAuthor, nav, accountViewModel, 55.dp)
 
         Column(
-            modifier = Modifier
-                .padding(start = 10.dp)
-                .weight(1f)
+            modifier = remember {
+                Modifier
+                    .padding(start = 10.dp)
+                    .weight(1f)
+            }
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 UsernameDisplay(baseAuthor)
             }
-
-            AboutDisplay(baseAuthor)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                AboutDisplay(baseAuthor)
+            }
         }
 
         Column(
-            modifier = Modifier.padding(start = 10.dp),
+            modifier = remember {
+                Modifier.padding(start = 10.dp)
+            },
             verticalArrangement = Arrangement.Center
         ) {
             ZapAmount(zapNote)
@@ -125,13 +140,15 @@ private fun RenderZapNote(
 @Composable
 private fun ZapAmount(zapEventNote: Note) {
     val noteState by zapEventNote.live().metadata.observeAsState()
-    val noteZap = remember(noteState) { noteState?.note } ?: return
 
     var zapAmount by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(key1 = noteZap) {
+    LaunchedEffect(key1 = noteState) {
         launch(Dispatchers.IO) {
-            zapAmount = showAmountAxis((noteZap.event as? LnZapEvent)?.amount)
+            val newZapAmount = showAmountAxis((noteState?.note?.event as? LnZapEvent)?.amount)
+            if (zapAmount != newZapAmount) {
+                zapAmount = newZapAmount
+            }
         }
     }
 
@@ -151,18 +168,10 @@ fun UserActionOptions(
     accountViewModel: AccountViewModel
 ) {
     val scope = rememberCoroutineScope()
-
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val isHidden by remember(accountState) {
         derivedStateOf {
             accountState?.account?.isHidden(baseAuthor) ?: false
-        }
-    }
-
-    val userState by accountViewModel.account.userProfile().live().follows.observeAsState()
-    val isFollowing by remember(userState) {
-        derivedStateOf {
-            userState?.user?.isFollowingCached(baseAuthor) ?: false
         }
     }
 
@@ -172,7 +181,33 @@ fun UserActionOptions(
                 accountViewModel.show(baseAuthor)
             }
         }
-    } else if (isFollowing) {
+    } else {
+        ShowFollowingOrUnfollowingButton(baseAuthor, accountViewModel)
+    }
+}
+
+@Composable
+fun ShowFollowingOrUnfollowingButton(
+    baseAuthor: User,
+    accountViewModel: AccountViewModel
+) {
+    val scope = rememberCoroutineScope()
+
+    var isFollowing by remember { mutableStateOf(false) }
+    val accountFollowsState by accountViewModel.account.userProfile().live().follows.observeAsState()
+
+    LaunchedEffect(key1 = accountFollowsState) {
+        launch(Dispatchers.Default) {
+            val newShowFollowingMark =
+                accountFollowsState?.user?.isFollowing(baseAuthor) == true
+
+            if (newShowFollowingMark != isFollowing) {
+                isFollowing = newShowFollowingMark
+            }
+        }
+    }
+
+    if (isFollowing) {
         UnfollowButton { scope.launch(Dispatchers.IO) { accountViewModel.unfollow(baseAuthor) } }
     } else {
         FollowButton({ scope.launch(Dispatchers.IO) { accountViewModel.follow(baseAuthor) } })

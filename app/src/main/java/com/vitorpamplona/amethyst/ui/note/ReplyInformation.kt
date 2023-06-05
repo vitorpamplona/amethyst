@@ -20,6 +20,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.*
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -231,17 +232,14 @@ private fun ReplyInfoMention(
     onUserTagClick: (User) -> Unit
 ) {
     val innerUserState by user.live().metadata.observeAsState()
-    val innerUser = remember(innerUserState) {
-        innerUserState?.user
-    } ?: return
 
     CreateClickableTextWithEmoji(
-        clickablePart = "$prefix${innerUser.toBestDisplayName()}",
-        tags = innerUser.info?.latestMetadata?.tags,
+        clickablePart = remember(innerUserState) { "$prefix${innerUserState?.user?.toBestDisplayName()}" },
+        tags = remember(innerUserState) { innerUserState?.user?.info?.latestMetadata?.tags?.toImmutableList() },
         style = LocalTextStyle.current.copy(
             color = MaterialTheme.colors.primary.copy(alpha = 0.52f),
             fontSize = 13.sp
         ),
-        onClick = { onUserTagClick(innerUser) }
+        onClick = { onUserTagClick(user) }
     )
 }

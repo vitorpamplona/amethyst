@@ -702,55 +702,90 @@ fun startsWithNIP19Scheme(word: String): Boolean {
     return listOf("npub1", "naddr1", "note1", "nprofile1", "nevent1").any { cleaned.startsWith(it) }
 }
 
+@Immutable
+data class LoadedBechLink(val baseNote: Note?, val nip19: Nip19.Return)
+
 @Composable
 fun BechLink(word: String, canPreview: Boolean, backgroundColor: Color, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    var nip19Route by remember { mutableStateOf<Nip19.Return?>(null) }
-    var baseNotePair by remember { mutableStateOf<Pair<Note, String?>?>(null) }
+    var loadedLink by remember { mutableStateOf<LoadedBechLink?>(null) }
 
     LaunchedEffect(key1 = word) {
         launch(Dispatchers.IO) {
             Nip19.uriToRoute(word)?.let {
+                var returningNote: Note? = null
                 if (it.type == Nip19.Type.NOTE || it.type == Nip19.Type.EVENT || it.type == Nip19.Type.ADDRESS) {
                     LocalCache.checkGetOrCreateNote(it.hex)?.let { note ->
-                        baseNotePair = Pair(note, it.additionalChars)
+                        returningNote = note
                     }
                 }
 
-                nip19Route = it
+                loadedLink = LoadedBechLink(returningNote, it)
             }
         }
     }
 
     if (canPreview) {
-        baseNotePair?.let {
-            NoteCompose(
-                baseNote = it.first,
-                accountViewModel = accountViewModel,
-                modifier = Modifier
-                    .padding(top = 2.dp, bottom = 0.dp, start = 0.dp, end = 0.dp)
-                    .fillMaxWidth()
-                    .clip(shape = RoundedCornerShape(15.dp))
-                    .border(
-                        1.dp,
-                        MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
-                        RoundedCornerShape(15.dp)
-                    ),
-                parentBackgroundColor = backgroundColor,
-                isQuotedNote = true,
-                nav = nav
-            )
-            if (!it.second.isNullOrEmpty()) {
-                Text(
-                    "${it.second} "
-                )
+        loadedLink?.let { loadedLink ->
+            loadedLink.baseNote?.let {
+                DisplayFullNote(it, accountViewModel, backgroundColor, nav, loadedLink)
+            } ?: run {
+                ClickableRoute(loadedLink.nip19, nav)
             }
-        } ?: nip19Route?.let {
-            ClickableRoute(it, nav)
-        } ?: Text(text = "$word ")
+        } ?: run {
+            Text(text = remember { "$word " })
+        }
     } else {
-        nip19Route?.let {
-            ClickableRoute(it, nav)
-        } ?: Text(text = "$word ")
+        loadedLink?.let {
+            ClickableRoute(it.nip19, nav)
+        } ?: run {
+            Text(text = remember { "$word " })
+        }
+    }
+}
+
+@Composable
+private fun DisplayFullNote(
+    it: Note,
+    accountViewModel: AccountViewModel,
+    backgroundColor: Color,
+    nav: (String) -> Unit,
+    loadedLink: LoadedBechLink
+) {
+    val borderColor = MaterialTheme.colors.onSurface.copy(alpha = 0.12f)
+
+    val modifier = remember {
+        Modifier
+            .padding(top = 2.dp, bottom = 0.dp, start = 0.dp, end = 0.dp)
+            .fillMaxWidth()
+            .clip(shape = RoundedCornerShape(15.dp))
+            .border(
+                1.dp,
+                borderColor,
+                RoundedCornerShape(15.dp)
+            )
+    }
+
+    NoteCompose(
+        baseNote = it,
+        accountViewModel = accountViewModel,
+        modifier = modifier,
+        parentBackgroundColor = backgroundColor,
+        isQuotedNote = true,
+        nav = nav
+    )
+
+    val extraChars = remember(loadedLink) {
+        if (loadedLink.nip19.additionalChars.isNotBlank()) {
+            "${loadedLink.nip19.additionalChars} "
+        } else {
+            null
+        }
+    }
+
+    extraChars?.let {
+        Text(
+            it
+        )
     }
 }
 
@@ -876,12 +911,12 @@ fun TagLink(word: String, tags: List<List<String>>, canPreview: Boolean, backgro
             "User/${it.first.pubkeyHex}"
         }
         val userTags = remember(innerUserState) {
-            innerUserState?.user?.info?.latestMetadata?.tags
+            innerUserState?.user?.info?.latestMetadata?.tags?.toImmutableList()
         }
 
         CreateClickableTextWithEmoji(
             clickablePart = displayName,
-            suffix = "${it.second} ",
+            suffix = remember { "${it.second} " },
             tags = userTags,
             route = route,
             nav = nav

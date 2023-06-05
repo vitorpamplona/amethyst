@@ -13,6 +13,7 @@ import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -48,6 +49,7 @@ import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.ui.note.LoadChannel
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -269,7 +271,7 @@ private fun DisplayUser(
         val userState by it.live().metadata.observeAsState()
         val route = remember(userState) { "User/${it.pubkeyHex}" }
         val userDisplayName = remember(userState) { userState?.user?.toBestDisplayName() }
-        val userTags = remember(userState) { userState?.user?.info?.latestMetadata?.tags }
+        val userTags = remember(userState) { userState?.user?.info?.latestMetadata?.tags?.toImmutableList() }
         val addedCharts = remember {
             "${nip19.additionalChars} "
         }
@@ -323,7 +325,7 @@ fun CreateClickableText(
 @Composable
 fun CreateTextWithEmoji(
     text: String,
-    tags: List<List<String>>?,
+    tags: ImmutableList<List<String>>?,
     color: Color = Color.Unspecified,
     textAlign: TextAlign? = null,
     fontWeight: FontWeight? = null,
@@ -382,7 +384,7 @@ fun CreateTextWithEmoji(
 @Composable
 fun CreateTextWithEmoji(
     text: String,
-    emojis: Map<String, String>,
+    emojis: ImmutableMap<String, String>,
     color: Color = Color.Unspecified,
     textAlign: TextAlign? = null,
     fontWeight: FontWeight? = null,
@@ -438,7 +440,7 @@ fun CreateTextWithEmoji(
 @Composable
 fun CreateClickableTextWithEmoji(
     clickablePart: String,
-    tags: List<List<String>>?,
+    tags: ImmutableList<List<String>>?,
     style: TextStyle,
     onClick: (Int) -> Unit
 ) {
@@ -475,7 +477,7 @@ fun CreateClickableTextWithEmoji(
 fun CreateClickableTextWithEmoji(
     clickablePart: String,
     suffix: String,
-    tags: List<List<String>>?,
+    tags: ImmutableList<List<String>>?,
     overrideColor: Color? = null,
     fontWeight: FontWeight = FontWeight.Normal,
     route: String,
@@ -512,7 +514,7 @@ fun CreateClickableTextWithEmoji(
     }
 }
 
-suspend fun assembleAnnotatedList(text: String, emojis: Map<String, String>): List<Renderable> {
+suspend fun assembleAnnotatedList(text: String, emojis: Map<String, String>): ImmutableList<Renderable> {
     return NIP30Parser().buildArray(text).map {
         val url = emojis[it]
         if (url != null) {
@@ -520,15 +522,20 @@ suspend fun assembleAnnotatedList(text: String, emojis: Map<String, String>): Li
         } else {
             TextType(it)
         }
-    }
+    }.toImmutableList()
 }
 
+@Immutable
 open class Renderable()
+
+@Immutable
 class TextType(val text: String) : Renderable()
+
+@Immutable
 class ImageUrlType(val url: String) : Renderable()
 
 @Composable
-fun ClickableInLineIconRenderer(wordsInOrder: List<Renderable>, style: SpanStyle, onClick: (Int) -> Unit) {
+fun ClickableInLineIconRenderer(wordsInOrder: ImmutableList<Renderable>, style: SpanStyle, onClick: (Int) -> Unit) {
     val inlineContent = wordsInOrder.mapIndexedNotNull { idx, value ->
         if (value is ImageUrlType) {
             Pair(
@@ -589,7 +596,7 @@ fun ClickableInLineIconRenderer(wordsInOrder: List<Renderable>, style: SpanStyle
 
 @Composable
 fun InLineIconRenderer(
-    wordsInOrder: List<Renderable>,
+    wordsInOrder: ImmutableList<Renderable>,
     style: SpanStyle,
     maxLines: Int = Int.MAX_VALUE,
     overflow: TextOverflow = TextOverflow.Clip,

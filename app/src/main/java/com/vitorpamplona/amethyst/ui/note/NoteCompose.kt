@@ -792,18 +792,19 @@ fun RenderAppDefinition(
                     }
                 }
 
-                it.anyName()?.let {
+                val name = remember(it) { it.anyName() }
+                name?.let {
                     Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 7.dp)) {
                         CreateTextWithEmoji(
                             text = it,
-                            tags = remember { note.event?.tags() ?: emptyList() },
+                            tags = remember { (note.event?.tags() ?: emptyList()).toImmutableList() },
                             fontWeight = FontWeight.Bold,
                             fontSize = 25.sp
                         )
                     }
                 }
 
-                val website = it.website
+                val website = remember(it) { it.website }
                 if (!website.isNullOrEmpty()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
@@ -1717,7 +1718,7 @@ fun DisplayHighlight(
                 val userState by userBase.live().metadata.observeAsState()
                 val route = remember { "User/${userBase.pubkeyHex}" }
                 val userDisplayName = remember(userState) { userState?.user?.toBestDisplayName() }
-                val userTags = remember(userState) { userState?.user?.info?.latestMetadata?.tags }
+                val userTags = remember(userState) { userState?.user?.info?.latestMetadata?.tags?.toImmutableList() }
 
                 if (userDisplayName != null) {
                     CreateClickableTextWithEmoji(

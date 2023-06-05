@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.UserLine
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -385,10 +386,12 @@ fun Notifying(baseMentions: List<User>?, onClick: (User) -> Unit) {
 
             mentions.forEachIndexed { idx, user ->
                 val innerUserState by user.live().metadata.observeAsState()
-                val innerUser = innerUserState?.user
-
-                innerUser?.let { myUser ->
+                innerUserState?.user?.let { myUser ->
                     Spacer(modifier = Modifier.width(5.dp))
+
+                    val tags = remember(innerUserState) {
+                        myUser.info?.latestMetadata?.tags?.toImmutableList()
+                    }
 
                     Button(
                         shape = RoundedCornerShape(20.dp),
@@ -400,8 +403,8 @@ fun Notifying(baseMentions: List<User>?, onClick: (User) -> Unit) {
                         }
                     ) {
                         CreateTextWithEmoji(
-                            text = "✖ ${myUser.toBestDisplayName()}",
-                            tags = myUser.info?.latestMetadata?.tags,
+                            text = remember(innerUserState) { "✖ ${myUser.toBestDisplayName()}" },
+                            tags = tags,
                             color = Color.White,
                             textAlign = TextAlign.Center
                         )

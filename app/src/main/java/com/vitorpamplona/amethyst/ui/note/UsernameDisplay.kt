@@ -12,6 +12,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 
 @Composable
 fun NoteUsernameDisplay(baseNote: Note, weight: Modifier = Modifier) {
@@ -29,7 +31,7 @@ fun UsernameDisplay(baseUser: User, weight: Modifier = Modifier) {
     val bestUserName = remember(userState) { userState?.user?.bestUsername() }
     val bestDisplayName = remember(userState) { userState?.user?.bestDisplayName() }
     val npubDisplay = remember { baseUser.pubkeyDisplayHex() }
-    val tags = remember(userState) { userState?.user?.info?.latestMetadata?.tags }
+    val tags = remember(userState) { userState?.user?.info?.latestMetadata?.tags?.toImmutableList() }
 
     UserNameDisplay(bestUserName, bestDisplayName, npubDisplay, tags, weight)
 }
@@ -39,7 +41,7 @@ private fun UserNameDisplay(
     bestUserName: String?,
     bestDisplayName: String?,
     npubDisplay: String,
-    tags: List<List<String>>?,
+    tags: ImmutableList<List<String>>?,
     modifier: Modifier
 ) {
     if (bestUserName != null && bestDisplayName != null) {
@@ -49,7 +51,7 @@ private fun UserNameDisplay(
             fontWeight = FontWeight.Bold
         )
         CreateTextWithEmoji(
-            text = "@$bestUserName",
+            text = remember { "@$bestUserName" },
             tags = tags,
             color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
             maxLines = 1,
@@ -67,7 +69,7 @@ private fun UserNameDisplay(
         )
     } else if (bestUserName != null) {
         CreateTextWithEmoji(
-            text = "@$bestUserName",
+            text = remember { "@$bestUserName" },
             tags = tags,
             fontWeight = FontWeight.Bold,
             maxLines = 1,

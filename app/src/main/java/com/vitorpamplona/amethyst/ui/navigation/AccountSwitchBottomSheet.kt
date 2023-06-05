@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.LoginPage
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -227,7 +228,7 @@ private fun AccountName(
     }
     val tags by remember(userState) {
         derivedStateOf {
-            user.info?.latestMetadata?.tags
+            user.info?.latestMetadata?.tags?.toImmutableList()
         }
     }
 

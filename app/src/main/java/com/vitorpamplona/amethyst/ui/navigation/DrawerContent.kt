@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountBackupDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -128,7 +129,7 @@ fun ProfileContent(
     val profilePicture = remember(accountUserState) { accountUserState?.user?.profilePicture()?.ifBlank { null }?.let { ResizeImage(it, 100.dp) } }
     val bestUserName = remember(accountUserState) { accountUserState?.user?.bestUsername() }
     val bestDisplayName = remember(accountUserState) { accountUserState?.user?.bestDisplayName() }
-    val tags = remember(accountUserState) { accountUserState?.user?.info?.latestMetadata?.tags }
+    val tags = remember(accountUserState) { accountUserState?.user?.info?.latestMetadata?.tags?.toImmutableList() }
     val route = remember(accountUserState) { "User/${accountUserState?.user?.pubkeyHex}" }
 
     Box {
@@ -193,8 +194,8 @@ fun ProfileContent(
             }
             if (bestUserName != null) {
                 CreateTextWithEmoji(
-                    text = " @$bestUserName",
-                    tags = accountUser.info?.latestMetadata?.tags,
+                    text = remember { " @$bestUserName" },
+                    tags = tags,
                     color = Color.LightGray,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

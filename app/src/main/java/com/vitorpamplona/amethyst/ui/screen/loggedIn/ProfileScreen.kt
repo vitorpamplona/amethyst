@@ -78,7 +78,6 @@ import com.vitorpamplona.amethyst.ui.dal.UserProfileBookmarksFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.UserProfileZapsFeedFilter
 import com.vitorpamplona.amethyst.ui.navigation.ShowQRDialog
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.FeedState
@@ -154,11 +153,19 @@ fun PrepareViewModels(baseUser: User, accountViewModel: AccountViewModel, nav: (
         )
     )
 
+    val zapFeedViewModel: NostrUserProfileZapsFeedViewModel = viewModel(
+        key = baseUser.pubkeyHex + "UserProfileZapsFeedViewModel",
+        factory = NostrUserProfileZapsFeedViewModel.Factory(
+            baseUser
+        )
+    )
+
     ProfileScreen(
         baseUser = baseUser,
         followsFeedViewModel,
         followersFeedViewModel,
         appRecommendations,
+        zapFeedViewModel,
         accountViewModel = accountViewModel,
         nav = nav
     )
@@ -171,12 +178,12 @@ fun ProfileScreen(
     followsFeedViewModel: NostrUserProfileFollowsUserFeedViewModel,
     followersFeedViewModel: NostrUserProfileFollowersUserFeedViewModel,
     appRecommendations: NostrUserAppRecommendationsFeedViewModel,
+    zapFeedViewModel: NostrUserProfileZapsFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
     UserProfileNewThreadFeedFilter.loadUserProfile(accountViewModel.account, baseUser)
     UserProfileConversationsFeedFilter.loadUserProfile(accountViewModel.account, baseUser)
-    UserProfileZapsFeedFilter.loadUserProfile(baseUser)
     UserProfileReportsFeedFilter.loadUserProfile(baseUser)
     UserProfileBookmarksFeedFilter.loadUserProfile(accountViewModel.account, baseUser)
 
@@ -293,10 +300,10 @@ fun ProfileScreen(
                             1 -> TabNotesConversations(accountViewModel, nav)
                             2 -> TabFollows(baseUser, followsFeedViewModel, accountViewModel, nav)
                             3 -> TabFollows(baseUser, followersFeedViewModel, accountViewModel, nav)
-                            4 -> TabReceivedZaps(baseUser, accountViewModel, nav)
-                            6 -> TabBookmarks(baseUser, accountViewModel, nav)
-                            7 -> TabReports(baseUser, accountViewModel, nav)
-                            8 -> TabRelays(baseUser, accountViewModel)
+                            4 -> TabReceivedZaps(baseUser, zapFeedViewModel, accountViewModel, nav)
+                            5 -> TabBookmarks(baseUser, accountViewModel, nav)
+                            6 -> TabReports(baseUser, accountViewModel, nav)
+                            7 -> TabRelays(baseUser, accountViewModel)
                         }
                     }
                 }
@@ -579,7 +586,7 @@ private fun DrawAdditionalInfo(
 ) {
     val userState by baseUser.live().metadata.observeAsState()
     val user = remember(userState) { userState?.user } ?: return
-    val tags = remember(userState) { userState?.user?.info?.latestMetadata?.tags }
+    val tags = remember(userState) { userState?.user?.info?.latestMetadata?.tags?.toImmutableList() }
 
     val uri = LocalUriHandler.current
     val clipboardManager = LocalClipboardManager.current
@@ -1120,16 +1127,14 @@ private fun WatchFollowChanges(
 }
 
 @Composable
-fun TabReceivedZaps(baseUser: User, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val feedViewModel: NostrUserProfileZapsFeedViewModel = viewModel()
-
-    WatchZapsAndUpdateFeed(baseUser, feedViewModel)
+fun TabReceivedZaps(baseUser: User, zapFeedViewModel: NostrUserProfileZapsFeedViewModel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    WatchZapsAndUpdateFeed(baseUser, zapFeedViewModel)
 
     Column(Modifier.fillMaxHeight()) {
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            LnZapFeedView(feedViewModel, accountViewModel, nav, enablePullRefresh = false)
+            LnZapFeedView(zapFeedViewModel, accountViewModel, nav)
         }
     }
 }

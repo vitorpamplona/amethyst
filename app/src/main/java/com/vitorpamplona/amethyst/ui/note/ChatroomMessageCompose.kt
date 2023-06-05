@@ -418,7 +418,7 @@ private fun RenderChangeChannelMetadataNote(
 
     CreateTextWithEmoji(
         text = text,
-        tags = note.author?.info?.latestMetadata?.tags
+        tags = remember { note.author?.info?.latestMetadata?.tags?.toImmutableList() }
     )
 }
 
@@ -441,7 +441,7 @@ private fun RenderCreateChannelNote(note: Note) {
 
     CreateTextWithEmoji(
         text = text,
-        tags = note.author?.info?.latestMetadata?.tags
+        tags = remember { note.author?.info?.latestMetadata?.tags?.toImmutableList() }
     )
 }
 
@@ -457,7 +457,7 @@ private fun DrawAuthorInfo(
     val route = remember { "User/$pubkeyHex" }
     val userDisplayName = remember(userState) { userState?.user?.toBestDisplayName() }
     val userProfilePicture = remember(userState) { ResizeImage(userState?.user?.profilePicture(), 25.dp) }
-    val userTags = remember(userState) { userState?.user?.info?.latestMetadata?.tags }
+    val userTags = remember(userState) { userState?.user?.info?.latestMetadata?.tags?.toImmutableList() }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -468,17 +468,19 @@ private fun DrawAuthorInfo(
             robot = pubkeyHex,
             model = userProfilePicture,
             contentDescription = stringResource(id = R.string.profile_image),
-            modifier = Modifier
-                .width(25.dp)
-                .height(25.dp)
-                .clip(shape = CircleShape)
-                .clickable(onClick = {
-                    nav(route)
-                })
+            modifier = remember {
+                Modifier
+                    .width(25.dp)
+                    .height(25.dp)
+                    .clip(shape = CircleShape)
+                    .clickable(onClick = {
+                        nav(route)
+                    })
+            }
         )
 
         CreateClickableTextWithEmoji(
-            clickablePart = "  $userDisplayName",
+            clickablePart = remember { "  $userDisplayName" },
             suffix = "",
             tags = userTags,
             fontWeight = FontWeight.Bold,
