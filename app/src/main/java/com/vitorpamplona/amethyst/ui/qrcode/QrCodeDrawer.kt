@@ -29,18 +29,18 @@ import com.google.zxing.qrcode.encoder.QRCode
 const val QR_MARGIN_PX = 100f
 
 @Composable
-fun QrCodeDrawer(contents: String, modifier: Modifier = Modifier) {
+fun QrCodeDrawer(contents: String, modifier: Modifier = Modifier, followTheme: Boolean = true) {
     val qrCode = remember(contents) {
         createQrCode(contents = contents)
     }
 
-    val foregroundColor = MaterialTheme.colors.onSurface
+    val foregroundColor = if (followTheme) MaterialTheme.colors.onSurface else Color.Black
 
     Box(
         modifier = modifier
             .defaultMinSize(48.dp, 48.dp)
             .aspectRatio(1f)
-            .background(MaterialTheme.colors.background)
+            .background(if (followTheme) MaterialTheme.colors.background else Color.White)
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             // Calculate the height and width of each column/row

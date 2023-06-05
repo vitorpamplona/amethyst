@@ -61,6 +61,7 @@ fun LoginPage(
     val useProxy = remember { mutableStateOf(false) }
     val proxyPort = remember { mutableStateOf("9050") }
     var connectOrbotDialogOpen by remember { mutableStateOf(false) }
+    var delegatedKeyDialogOpen by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -253,6 +254,14 @@ fun LoginPage(
                 }
             }
 
+            if (delegatedKeyDialogOpen) {
+                DelegatedKeyDialog(
+                    { delegatedKeyDialogOpen = false },
+                    useProxy.value,
+                    proxyPort.value.toInt()
+                )
+            }
+
             Spacer(modifier = Modifier.height(20.dp))
 
             Box(modifier = Modifier.padding(40.dp, 0.dp, 40.dp, 0.dp)) {
@@ -298,7 +307,7 @@ fun LoginPage(
                     .fillMaxWidth(),
                 onClick = {
                     if (acceptedTerms.value) {
-                        accountViewModel.newKey(useProxy.value, proxyPort.value.toInt())
+                        delegatedKeyDialogOpen = true
                     } else {
                         termsAcceptanceIsRequired =
                             context.getString(R.string.acceptance_of_terms_is_required)
