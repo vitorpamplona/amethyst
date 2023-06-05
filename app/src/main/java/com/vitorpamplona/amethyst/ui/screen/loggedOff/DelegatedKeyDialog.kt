@@ -107,7 +107,7 @@ class Delegation(
     var validUntil: Long
 ) {
     override fun toString(): String {
-        val selectedKinds = kinds.joinToString(separator = "&") { if (it.checked.value) "kind=${it.kind}" else "" }
+        val selectedKinds =  kinds.filter { it.checked.value }.joinToString(separator = "&") { "kind=${it.kind}" }
         val delegateeHex = delegatee.userProfile().pubkeyHex
         return "nostr:delegation:$delegateeHex:$selectedKinds&created_at>${validStarting.toString().dropLast(3)}&created_at<${validUntil.toString().dropLast(3)}"
     }
@@ -400,18 +400,34 @@ fun SelectSignaturePage(
         pagerState,
         {
             delegation.signature = signature.value.text
-            val sig = Hex.decode(delegation.signature)
-            val token = Event.sha256.digest(delegation.toString().toByteArray())
-            val parsed = Nip19.uriToRoute(delegation.delegator)
-            val pubKeyParsed = parsed?.hex?.hexToByteArray()
-            if (!Secp256k1.get().verifySchnorr(sig, token, pubKeyParsed!!)) {
+            var isValidSig = true
+            if (delegation.signature.isBlank()) {
                 scope.launch {
-                    Toast.makeText(context, "Invalid signature", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Signature is required", Toast.LENGTH_SHORT).show()
                 }
-                false
-            } else {
-                true
+                isValidSig = false
             }
+            if (isValidSig) {
+                try {
+                    val sig = Hex.decode(delegation.signature)
+                    val token = Event.sha256.digest(delegation.toString().toByteArray())
+                    val parsed = Nip19.uriToRoute(delegation.delegator)
+                    val pubKeyParsed = parsed?.hex?.hexToByteArray()
+                    if (!Secp256k1.get().verifySchnorr(sig, token, pubKeyParsed!!)) {
+                        scope.launch {
+                            Toast.makeText(context, "Invalid signature", Toast.LENGTH_SHORT).show()
+                        }
+                        isValidSig = false
+                    }
+                } catch (e: Exception) {
+                    scope.launch {
+                        Toast.makeText(context, "Invalid signature", Toast.LENGTH_SHORT).show()
+                    }
+                    isValidSig = false
+                }
+
+            }
+            isValidSig
         }
     ) {
         Text("Scan signature from hardware wallet")
