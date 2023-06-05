@@ -4,13 +4,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import kotlinx.collections.immutable.ImmutableList
 
 @Composable
 fun TranslatableRichTextViewer(
     content: String,
     canPreview: Boolean,
     modifier: Modifier = Modifier,
-    tags: List<List<String>>,
+    tags: ImmutableList<List<String>>,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
