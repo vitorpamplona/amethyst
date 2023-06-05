@@ -113,6 +113,16 @@ class Delegation(
     }
 }
 
+fun toTags(token: String): MutableList<List<String>> {
+    val keys = token.split(":")
+    val tags = mutableListOf<List<String>>()
+    tags.add(listOf(keys[1]))
+    tags.add(listOf(keys[2]))
+    tags.add(listOf(keys[3]))
+
+    return tags
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DelegatedKeyDialog(
