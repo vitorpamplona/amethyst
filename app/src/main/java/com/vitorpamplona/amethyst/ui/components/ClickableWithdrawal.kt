@@ -13,14 +13,14 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.service.lnurl.LnWithdrawalUtil
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 
 @Composable
 fun MayBeWithdrawal(lnurlWord: String) {
     var lnWithdrawal by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(key1 = lnurlWord) {
-        withContext(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             lnWithdrawal = LnWithdrawalUtil.findWithdrawal(lnurlWord)
         }
     }
@@ -38,11 +38,19 @@ fun MayBeWithdrawal(lnurlWord: String) {
 fun ClickableWithdrawal(withdrawalString: String) {
     val context = LocalContext.current
 
+    val uri = remember(withdrawalString) {
+        Uri.parse("lightning:$withdrawalString")
+    }
+
+    val withdraw = remember(withdrawalString) {
+        AnnotatedString("$withdrawalString ")
+    }
+
     ClickableText(
-        text = AnnotatedString("$withdrawalString "),
+        text = withdraw,
         onClick = {
             runCatching {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("lightning:$withdrawalString"))
+                val intent = Intent(Intent.ACTION_VIEW, uri)
                 ContextCompat.startActivity(context, intent, null)
             }
         },

@@ -143,8 +143,10 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
 
                         PostButton(
                             onPost = {
-                                postViewModel.sendPost()
-                                onClose()
+                                scope.launch(Dispatchers.IO) {
+                                    postViewModel.sendPost()
+                                    onClose()
+                                }
                             },
                             isActive = postViewModel.canPost()
                         )

@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.service.relays
 
 import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.EventInterface
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -32,6 +33,8 @@ object Client : RelayPool.Listener {
 
     @Synchronized
     fun connect(relays: Array<Relay>) {
+        checkNotInMainThread()
+
         RelayPool.register(this)
         RelayPool.unloadRelays()
         RelayPool.loadRelays(relays.toList())
@@ -54,6 +57,8 @@ object Client : RelayPool.Listener {
         subscriptionId: String = UUID.randomUUID().toString().substring(0..10),
         filters: List<TypedFilter> = listOf()
     ) {
+        checkNotInMainThread()
+
         subscriptions = subscriptions + Pair(subscriptionId, filters)
         RelayPool.sendFilter(subscriptionId)
     }
@@ -62,11 +67,15 @@ object Client : RelayPool.Listener {
         subscriptionId: String = UUID.randomUUID().toString().substring(0..10),
         filters: List<TypedFilter> = listOf()
     ) {
+        checkNotInMainThread()
+
         subscriptions = subscriptions + Pair(subscriptionId, filters)
         RelayPool.sendFilterOnlyIfDisconnected()
     }
 
     fun send(signedEvent: EventInterface, relay: String? = null, feedTypes: Set<FeedType>? = null, onDone: (() -> Unit)? = null) {
+        checkNotInMainThread()
+
         if (relay == null) {
             RelayPool.send(signedEvent)
         } else {
@@ -91,7 +100,7 @@ object Client : RelayPool.Listener {
     }
 
     @OptIn(DelicateCoroutinesApi::class)
-    fun newSporadicRelay(url: String, feedTypes: Set<FeedType>?, onConnected: (Relay) -> Unit, onDone: (() -> Unit)?) {
+    private fun newSporadicRelay(url: String, feedTypes: Set<FeedType>?, onConnected: (Relay) -> Unit, onDone: (() -> Unit)?) {
         val relay = Relay(url, true, true, feedTypes ?: emptySet(), HttpClient.getProxy())
         RelayPool.addRelay(relay)
 

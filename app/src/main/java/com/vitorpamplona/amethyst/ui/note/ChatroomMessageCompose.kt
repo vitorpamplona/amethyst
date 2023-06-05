@@ -53,7 +53,6 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
@@ -66,6 +65,7 @@ import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -265,7 +265,6 @@ fun ChatroomMessageCompose(
                                         else -> {
                                             RenderRegularTextNote(
                                                 note,
-                                                loggedIn,
                                                 isAcceptableAndCanPreview.second,
                                                 backgroundBubbleColor,
                                                 accountViewModel,
@@ -359,13 +358,12 @@ fun ChatTimeAgo(time: Long) {
 @Composable
 private fun RenderRegularTextNote(
     note: Note,
-    loggedIn: User,
     canPreview: Boolean,
     backgroundBubbleColor: Color,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val tags = remember { note.event?.tags() ?: emptyList() }
+    val tags = remember(note.event) { note.event?.tags()?.toImmutableList() ?: emptyList<List<String>>().toImmutableList() }
     val eventContent = remember { accountViewModel.decrypt(note) }
     val modifier = remember { Modifier.padding(top = 5.dp) }
 

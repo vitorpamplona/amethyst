@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.ui.note.BadgeCompose
 import com.vitorpamplona.amethyst.ui.note.MessageSetCompose
@@ -45,8 +46,15 @@ fun RefresheableCardView(
     enablePullRefresh: Boolean = true
 ) {
     var refreshing by remember { mutableStateOf(false) }
-    val refresh = { refreshing = true; viewModel.invalidateData(); refreshing = false }
-    val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = refresh)
+    val pullRefreshState = rememberPullRefreshState(
+        refreshing,
+        onRefresh =
+        {
+            refreshing = true
+            viewModel.invalidateData()
+            refreshing = false
+        }
+    )
 
     val modifier = if (enablePullRefresh) {
         Modifier.pullRefresh(pullRefreshState)
@@ -151,7 +159,9 @@ private fun FeedLoaded(
     routeForLastRead: String
 ) {
     val defaultModifier = remember {
-        Modifier.fillMaxWidth().defaultMinSize(minHeight = 100.dp)
+        Modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 100.dp)
     }
 
     LazyColumn(
@@ -168,7 +178,7 @@ private fun FeedLoaded(
             Row(defaultModifier) {
                 when (item) {
                     is NoteCard -> NoteCompose(
-                        item.note,
+                        item,
                         isBoostedNote = false,
                         accountViewModel = accountViewModel,
                         nav = nav,
@@ -207,4 +217,37 @@ private fun FeedLoaded(
             }
         }
     }
+}
+
+@Composable
+fun NoteCompose(
+    baseNote: NoteCard,
+    routeForLastRead: String? = null,
+    modifier: Modifier = remember { Modifier },
+    isBoostedNote: Boolean = false,
+    isQuotedNote: Boolean = false,
+    unPackReply: Boolean = true,
+    makeItShort: Boolean = false,
+    addMarginTop: Boolean = true,
+    parentBackgroundColor: Color? = null,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    val note = remember(baseNote) {
+        baseNote.note
+    }
+
+    NoteCompose(
+        baseNote = note,
+        routeForLastRead = routeForLastRead,
+        modifier = modifier,
+        isBoostedNote = isBoostedNote,
+        isQuotedNote = isQuotedNote,
+        unPackReply = unPackReply,
+        makeItShort = makeItShort,
+        addMarginTop = addMarginTop,
+        parentBackgroundColor = parentBackgroundColor,
+        accountViewModel = accountViewModel,
+        nav = nav
+    )
 }

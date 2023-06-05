@@ -123,6 +123,8 @@ abstract class NostrDataSource(val debugName: String) {
     }
 
     fun resetFiltersSuspend() {
+        checkNotInMainThread()
+
         // saves the channels that are currently active
         val activeSubscriptions = subscriptions.values.filter { it.typedFilters != null }
         // saves the current content to only update if it changes

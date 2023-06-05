@@ -24,7 +24,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 
-open class NewPostViewModel : ViewModel() {
+open class NewPostViewModel() : ViewModel() {
     var account: Account? = null
     var originalNote: Note? = null
 
@@ -132,7 +132,7 @@ open class NewPostViewModel : ViewModel() {
         } else if (originalNote?.channelHex() != null) {
             account?.sendChannelMessage(tagger.message, tagger.channelHex!!, tagger.replyTos, tagger.mentions, zapReceiver, wantsToMarkAsSensitive)
         } else if (originalNote?.event is PrivateDmEvent) {
-            account?.sendPrivateMessage(tagger.message, originalNote!!.author!!.pubkeyHex, originalNote!!, tagger.mentions, zapReceiver, wantsToMarkAsSensitive)
+            account?.sendPrivateMessage(tagger.message, originalNote!!.author!!, originalNote!!, tagger.mentions, zapReceiver, wantsToMarkAsSensitive)
         } else {
             account?.sendPost(tagger.message, tagger.replyTos, tagger.mentions, null, zapReceiver, wantsToMarkAsSensitive)
         }
@@ -226,7 +226,11 @@ open class NewPostViewModel : ViewModel() {
             userSuggestionsMainMessage = true
             if (lastWord.startsWith("@") && lastWord.length > 2) {
                 NostrSearchEventOrUserDataSource.search(lastWord.removePrefix("@"))
-                userSuggestions = LocalCache.findUsersStartingWith(lastWord.removePrefix("@")).sortedWith(compareBy({ account?.isFollowing(it) }, { it.toBestDisplayName() })).reversed()
+                viewModelScope.launch(Dispatchers.IO) {
+                    userSuggestions = LocalCache.findUsersStartingWith(lastWord.removePrefix("@"))
+                        .sortedWith(compareBy({ account?.isFollowing(it) }, { it.toBestDisplayName() }))
+                        .reversed()
+                }
             } else {
                 NostrSearchEventOrUserDataSource.clear()
                 userSuggestions = emptyList()
@@ -242,7 +246,15 @@ open class NewPostViewModel : ViewModel() {
             userSuggestionsMainMessage = false
             if (lastWord.startsWith("@") && lastWord.length > 2) {
                 NostrSearchEventOrUserDataSource.search(lastWord.removePrefix("@"))
-                userSuggestions = LocalCache.findUsersStartingWith(lastWord.removePrefix("@")).sortedWith(compareBy({ account?.isFollowing(it) }, { it.toBestDisplayName() })).reversed()
+                viewModelScope.launch(Dispatchers.IO) {
+                    userSuggestions = LocalCache.findUsersStartingWith(lastWord.removePrefix("@"))
+                        .sortedWith(
+                            compareBy(
+                                { account?.isFollowing(it) },
+                                { it.toBestDisplayName() }
+                            )
+                        ).reversed()
+                }
             } else {
                 NostrSearchEventOrUserDataSource.clear()
                 userSuggestions = emptyList()

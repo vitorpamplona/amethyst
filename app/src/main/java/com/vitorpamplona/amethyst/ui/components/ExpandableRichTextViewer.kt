@@ -27,6 +27,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import kotlinx.collections.immutable.ImmutableList
 
 const val SHORT_TEXT_LENGTH = 350
 
@@ -34,8 +35,8 @@ const val SHORT_TEXT_LENGTH = 350
 fun ExpandableRichTextViewer(
     content: String,
     canPreview: Boolean,
-    modifier: Modifier = Modifier,
-    tags: List<List<String>>,
+    modifier: Modifier,
+    tags: ImmutableList<List<String>>,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -87,18 +88,26 @@ fun ExpandableRichTextViewer(
                         )
                     )
             ) {
-                Button(
-                    modifier = Modifier.padding(top = 10.dp),
-                    onClick = { showFullText = !showFullText },
-                    shape = RoundedCornerShape(20.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        backgroundColor = MaterialTheme.colors.primary.copy(alpha = 0.32f).compositeOver(MaterialTheme.colors.background)
-                    ),
-                    contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
-                ) {
-                    Text(text = stringResource(R.string.show_more), color = Color.White)
+                ShowMoreButton() {
+                    showFullText = !showFullText
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ShowMoreButton(onClick: () -> Unit) {
+    Button(
+        modifier = Modifier.padding(top = 10.dp),
+        onClick = onClick,
+        shape = RoundedCornerShape(20.dp),
+        colors = ButtonDefaults.buttonColors(
+            backgroundColor = MaterialTheme.colors.primary.copy(alpha = 0.32f)
+                .compositeOver(MaterialTheme.colors.background)
+        ),
+        contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
+    ) {
+        Text(text = stringResource(R.string.show_more), color = Color.White)
     }
 }

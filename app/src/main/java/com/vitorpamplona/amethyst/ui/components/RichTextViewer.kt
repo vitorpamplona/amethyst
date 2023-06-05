@@ -97,8 +97,8 @@ fun isMarkdown(content: String): Boolean {
 fun RichTextViewer(
     content: String,
     canPreview: Boolean,
-    modifier: Modifier = Modifier,
-    tags: List<List<String>>,
+    modifier: Modifier,
+    tags: ImmutableList<List<String>>,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -126,7 +126,7 @@ data class RichTextViewerState(
 @Composable
 private fun RenderRegular(
     content: String,
-    tags: List<List<String>>,
+    tags: ImmutableList<List<String>>,
     canPreview: Boolean,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
@@ -217,7 +217,7 @@ private fun RenderWord(
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
-    tags: List<List<String>>
+    tags: ImmutableList<List<String>>
 ) {
     val type = remember(word) {
         if (state.imagesForPager[word] != null) {
@@ -267,7 +267,7 @@ private fun RenderWordWithoutPreview(
     type: WordType,
     word: String,
     state: RichTextViewerState,
-    tags: List<List<String>>,
+    tags: ImmutableList<List<String>>,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -300,7 +300,7 @@ private fun RenderWordWithPreview(
     type: WordType,
     word: String,
     state: RichTextViewerState,
-    tags: List<List<String>>,
+    tags: ImmutableList<List<String>>,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -382,7 +382,7 @@ fun RenderCustomEmoji(word: String, state: RichTextViewerState) {
 }
 
 @Composable
-private fun RenderContentAsMarkdown(content: String, backgroundColor: Color, tags: List<List<String>>?, nav: (String) -> Unit) {
+private fun RenderContentAsMarkdown(content: String, backgroundColor: Color, tags: ImmutableList<List<String>>?, nav: (String) -> Unit) {
     val myMarkDownStyle = richTextDefaults.copy(
         codeBlockStyle = richTextDefaults.codeBlockStyle?.copy(
             textStyle = TextStyle(

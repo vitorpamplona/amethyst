@@ -3,7 +3,9 @@ package com.vitorpamplona.amethyst.model
 import android.util.Log
 import android.util.LruCache
 import androidx.lifecycle.LiveData
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.Event
+import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import kotlinx.coroutines.Dispatchers
@@ -16,6 +18,8 @@ class AntiSpamFilter {
 
     @Synchronized
     fun isSpam(event: Event, relay: Relay?): Boolean {
+        checkNotInMainThread()
+
         val idHex = event.id
 
         // if short message, ok
@@ -28,6 +32,7 @@ class AntiSpamFilter {
         val hash = (event.content + event.tags.flatten().joinToString(",")).hashCode()
 
         if ((recentMessages[hash] != null && recentMessages[hash] != idHex) || spamMessages[hash] != null) {
+            Log.w("Potential SPAM Message for sharing", "${Nip19.createNEvent(event.id, event.pubKey, event.kind, null)}")
             Log.w("Potential SPAM Message", "${event.id} ${recentMessages[hash]} ${spamMessages[hash] != null} ${relay?.url} ${event.content.replace("\n", " | ")}")
 
             // Log down offenders

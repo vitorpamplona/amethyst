@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.service.relays
 import android.util.Log
 import com.google.gson.JsonElement
 import com.vitorpamplona.amethyst.BuildConfig
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.EventInterface
 import com.vitorpamplona.amethyst.service.model.RelayAuthEvent
@@ -69,6 +70,7 @@ class Relay(
 
     @Synchronized
     fun requestAndWatch() {
+        checkNotInMainThread()
         requestAndWatch {
             // Sends everything.
             Client.allSubscriptions().forEach {
@@ -79,6 +81,7 @@ class Relay(
 
     @Synchronized
     fun requestAndWatch(onConnected: (Relay) -> Unit) {
+        checkNotInMainThread()
         if (socket != null) return
 
         try {

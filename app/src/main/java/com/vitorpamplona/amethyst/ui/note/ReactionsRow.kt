@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.note
 
+import android.content.Context
 import android.widget.Toast
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -62,6 +63,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
@@ -201,7 +203,9 @@ fun BoostReaction(
         onClick = {
             if (accountViewModel.isWriteable()) {
                 if (accountViewModel.hasBoosted(baseNote)) {
-                    accountViewModel.deleteBoostsTo(baseNote)
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.deleteBoostsTo(baseNote)
+                    }
                 } else {
                     wantsToBoost = true
                 }
@@ -293,10 +297,12 @@ fun LikeReaction(
         modifier = iconButtonModifier,
         onClick = {
             if (accountViewModel.isWriteable()) {
-                if (accountViewModel.hasReactedTo(baseNote)) {
-                    accountViewModel.deleteReactionTo(baseNote)
-                } else {
-                    accountViewModel.reactTo(baseNote)
+                scope.launch(Dispatchers.IO) {
+                    if (accountViewModel.hasReactedTo(baseNote)) {
+                        accountViewModel.deleteReactionTo(baseNote)
+                    } else {
+                        accountViewModel.reactTo(baseNote)
+                    }
                 }
             } else {
                 scope.launch {
@@ -386,9 +392,6 @@ fun ZapReaction(
     iconSize: Dp = 20.dp,
     animationSize: Dp = 14.dp
 ) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = remember(accountState) { accountState?.account } ?: return
-
     var wantsToZap by remember { mutableStateOf(false) }
     var wantsToChangeZapAmount by remember { mutableStateOf(false) }
     var wantsToSetCustomZap by remember { mutableStateOf(false) }
@@ -407,53 +410,18 @@ fun ZapReaction(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = rememberRipple(bounded = false, radius = 24.dp),
                 onClick = {
-                    if (account.zapAmountChoices.isEmpty()) {
-                        scope.launch {
-                            Toast
-                                .makeText(
-                                    context,
-                                    context.getString(R.string.no_zap_amount_setup_long_press_to_change),
-                                    Toast.LENGTH_SHORT
-                                )
-                                .show()
+                    zapClick(
+                        baseNote,
+                        accountViewModel,
+                        scope,
+                        context,
+                        onZappingProgress = { progress: Float ->
+                            zappingProgress = progress
+                        },
+                        onMultipleChoices = {
+                            wantsToZap = true
                         }
-                    } else if (!accountViewModel.isWriteable()) {
-                        scope.launch {
-                            Toast
-                                .makeText(
-                                    context,
-                                    context.getString(R.string.login_with_a_private_key_to_be_able_to_send_zaps),
-                                    Toast.LENGTH_SHORT
-                                )
-                                .show()
-                        }
-                    } else if (account.zapAmountChoices.size == 1) {
-                        scope.launch(Dispatchers.IO) {
-                            accountViewModel.zap(
-                                baseNote,
-                                account.zapAmountChoices.first() * 1000,
-                                null,
-                                "",
-                                context,
-                                onError = {
-                                    scope.launch {
-                                        zappingProgress = 0f
-                                        Toast
-                                            .makeText(context, it, Toast.LENGTH_SHORT)
-                                            .show()
-                                    }
-                                },
-                                onProgress = {
-                                    scope.launch(Dispatchers.Main) {
-                                        zappingProgress = it
-                                    }
-                                },
-                                zapType = account.defaultZapType
-                            )
-                        }
-                    } else if (account.zapAmountChoices.size > 1) {
-                        wantsToZap = true
-                    }
+                    )
                 },
                 onLongClick = {
                     wantsToChangeZapAmount = true
@@ -494,7 +462,7 @@ fun ZapReaction(
         }
 
         if (wantsToSetCustomZap) {
-            ZapCustomDialog({ wantsToSetCustomZap = false }, account = account, accountViewModel, baseNote)
+            ZapCustomDialog({ wantsToSetCustomZap = false }, accountViewModel, baseNote)
         }
 
         if (zappingProgress > 0.00001 && zappingProgress < 0.99999) {
@@ -507,7 +475,7 @@ fun ZapReaction(
 
             CircularProgressIndicator(
                 progress = animatedProgress,
-                modifier = Modifier.size(animationSize),
+                modifier = remember { Modifier.size(animationSize) },
                 strokeWidth = 2.dp
             )
         } else {
@@ -521,6 +489,63 @@ fun ZapReaction(
     }
 
     ZapAmountText(baseNote, grayTint, accountViewModel)
+}
+
+private fun zapClick(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    scope: CoroutineScope,
+    context: Context,
+    onZappingProgress: (Float) -> Unit,
+    onMultipleChoices: () -> Unit
+) {
+    if (accountViewModel.account.zapAmountChoices.isEmpty()) {
+        scope.launch {
+            Toast
+                .makeText(
+                    context,
+                    context.getString(R.string.no_zap_amount_setup_long_press_to_change),
+                    Toast.LENGTH_SHORT
+                )
+                .show()
+        }
+    } else if (!accountViewModel.isWriteable()) {
+        scope.launch {
+            Toast
+                .makeText(
+                    context,
+                    context.getString(R.string.login_with_a_private_key_to_be_able_to_send_zaps),
+                    Toast.LENGTH_SHORT
+                )
+                .show()
+        }
+    } else if (accountViewModel.account.zapAmountChoices.size == 1) {
+        scope.launch(Dispatchers.IO) {
+            accountViewModel.zap(
+                baseNote,
+                accountViewModel.account.zapAmountChoices.first() * 1000,
+                null,
+                "",
+                context,
+                onError = {
+                    scope.launch {
+                        onZappingProgress(0f)
+                        Toast
+                            .makeText(context, it, Toast.LENGTH_SHORT)
+                            .show()
+                    }
+                },
+                onProgress = {
+                    scope.launch(Dispatchers.Main) {
+                        onZappingProgress(it)
+                    }
+                },
+                zapType = accountViewModel.account.defaultZapType
+            )
+        }
+    } else if (accountViewModel.account.zapAmountChoices.size > 1) {
+        onMultipleChoices()
+    }
 }
 
 @Composable
@@ -593,7 +618,7 @@ private fun ZapAmountText(
 }
 
 @Composable
-public fun ViewCountReaction(
+fun ViewCountReaction(
     idHex: String,
     grayTint: Color,
     iconSize: Dp = 20.dp,
@@ -653,12 +678,15 @@ private fun BoostTypeChoicePopup(baseNote: Note, accountViewModel: AccountViewMo
         offset = IntOffset(0, -50),
         onDismissRequest = { onDismiss() }
     ) {
-        FlowRow() {
+        FlowRow {
+            val scope = rememberCoroutineScope()
             Button(
                 modifier = Modifier.padding(horizontal = 3.dp),
                 onClick = {
-                    accountViewModel.boost(baseNote)
-                    onDismiss()
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.boost(baseNote)
+                        onDismiss()
+                    }
                 },
                 shape = RoundedCornerShape(20.dp),
                 colors = ButtonDefaults

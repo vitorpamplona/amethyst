@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.model
 
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.previews.BahaUrlPreview
 import com.vitorpamplona.amethyst.service.previews.IUrlPreviewCallback
 import com.vitorpamplona.amethyst.service.previews.UrlInfoItem
@@ -11,6 +12,8 @@ object UrlCachedPreviewer {
         private set
 
     fun previewInfo(url: String, callback: IUrlPreviewCallback? = null) {
+        checkNotInMainThread()
+
         cache[url]?.let {
             callback?.onComplete(it)
             return

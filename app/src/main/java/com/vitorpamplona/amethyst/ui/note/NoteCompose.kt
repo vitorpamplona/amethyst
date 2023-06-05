@@ -139,6 +139,7 @@ import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Following
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -155,7 +156,7 @@ import kotlin.time.ExperimentalTime
 fun NoteCompose(
     baseNote: Note,
     routeForLastRead: String? = null,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = remember { Modifier },
     isBoostedNote: Boolean = false,
     isQuotedNote: Boolean = false,
     unPackReply: Boolean = true,
@@ -214,13 +215,12 @@ fun CheckHiddenNoteCompose(
     nav: (String) -> Unit
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = remember(accountState) { accountState?.account } ?: return
 
     val isHidden by remember(accountState) {
         derivedStateOf {
             val isSensitive = note.event?.isSensitive() ?: false
 
-            account.isHidden(note.author!!) || (isSensitive && account.showSensitiveContent == false)
+            accountState?.account?.isHidden(note.author!!) == true || (isSensitive && accountState?.account?.showSensitiveContent == false)
         }
     }
 
@@ -347,7 +347,7 @@ private fun WatchForReports(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalTime::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun NormalNote(
     baseNote: Note,
@@ -366,8 +366,6 @@ fun NormalNote(
     val noteEvent = remember { baseNote.event }
     val channelHex = remember { baseNote.channelHex() }
 
-    var popupExpanded by remember { mutableStateOf(false) }
-
     if ((noteEvent is ChannelCreateEvent || noteEvent is ChannelMetadataEvent) && channelHex != null) {
         ChannelHeader(channelHex = channelHex, accountViewModel = accountViewModel, nav = nav)
     } else if (noteEvent is BadgeDefinitionEvent) {
@@ -378,11 +376,12 @@ fun NormalNote(
         FileStorageHeaderDisplay(baseNote)
     } else {
         var isNew by remember { mutableStateOf<Boolean>(false) }
+        var popupExpanded by remember { mutableStateOf(false) }
 
         val scope = rememberCoroutineScope()
 
         LaunchedEffect(key1 = routeForLastRead) {
-            scope.launch(Dispatchers.IO) {
+            launch(Dispatchers.IO) {
                 routeForLastRead?.let {
                     val lastTime = NotificationCache.load(it)
 
@@ -596,8 +595,8 @@ private fun RenderTextEvent(
                 hasSensitiveContent = hasSensitiveContent,
                 accountViewModel = accountViewModel
             ) {
-                val modifier = remember(note.event) { Modifier.fillMaxWidth() }
-                val tags = remember(note.event) { note.event?.tags() ?: emptyList() }
+                val modifier = remember(note) { Modifier.fillMaxWidth() }
+                val tags = remember(note) { note.event?.tags()?.toImmutableList() ?: emptyList<List<String>>().toImmutableList() }
 
                 TranslatableRichTextViewer(
                     content = eventContent,
@@ -646,18 +645,21 @@ private fun RenderPoll(
         )
     } else {
         val hasSensitiveContent = remember(note.event) { note.event?.isSensitive() ?: false }
+
+        val tags = remember(note) { note.event?.tags()?.toImmutableList() ?: emptyList<List<String>>().toImmutableList() }
+
         SensitivityWarning(
             hasSensitiveContent = hasSensitiveContent,
             accountViewModel = accountViewModel
         ) {
             TranslatableRichTextViewer(
-                eventContent,
+                content = eventContent,
                 canPreview = canPreview && !makeItShort,
-                Modifier.fillMaxWidth(),
-                noteEvent.tags(),
-                backgroundColor,
-                accountViewModel,
-                nav
+                modifier = remember { Modifier.fillMaxWidth() },
+                tags = tags,
+                backgroundColor = backgroundColor,
+                accountViewModel = accountViewModel,
+                nav = nav
             )
 
             PollNote(
@@ -669,7 +671,8 @@ private fun RenderPoll(
             )
         }
 
-        DisplayUncitedHashtags(noteEvent.hashtags(), eventContent, nav)
+        var hashtags = remember { noteEvent.hashtags() }
+        DisplayUncitedHashtags(hashtags, eventContent, nav)
     }
 
     if (!makeItShort) {
@@ -823,10 +826,11 @@ fun RenderAppDefinition(
                     Row(
                         modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)
                     ) {
+                        val tags = remember(note) { note.event?.tags()?.toImmutableList() ?: emptyList<List<String>>().toImmutableList() }
                         TranslatableRichTextViewer(
                             content = it,
                             canPreview = false,
-                            tags = remember { note.event?.tags() ?: emptyList() },
+                            tags = tags,
                             backgroundColor = MaterialTheme.colors.background,
                             accountViewModel = accountViewModel,
                             nav = nav
@@ -889,7 +893,8 @@ private fun RenderPrivateMessage(
         val hashtags = remember(note.event?.id()) { note.event?.hashtags() ?: emptyList() }
         val modifier = remember(note.event?.id()) { Modifier.fillMaxWidth() }
         val isAuthorTheLoggedUser = remember(note.event?.id()) { accountViewModel.isLoggedUser(note.author) }
-        val tags = remember(note.event?.id()) { note.event?.tags() ?: emptyList() }
+
+        val tags = remember(note) { note.event?.tags()?.toImmutableList() ?: emptyList<List<String>>().toImmutableList() }
 
         if (eventContent != null) {
             if (makeItShort && isAuthorTheLoggedUser) {
@@ -930,7 +935,7 @@ private fun RenderPrivateMessage(
             ),
             canPreview = !makeItShort,
             Modifier.fillMaxWidth(),
-            emptyList(),
+            persistentListOf(),
             backgroundColor,
             accountViewModel,
             nav
@@ -1203,7 +1208,7 @@ fun PinListHeader(
 ) {
     val noteEvent = baseNote.event as? PinListEvent ?: return
 
-    var pins by remember { mutableStateOf(noteEvent.pins()) }
+    val pins by remember { mutableStateOf(noteEvent.pins()) }
 
     var expanded by remember {
         mutableStateOf(false)
@@ -1242,7 +1247,7 @@ fun PinListHeader(
                     TranslatableRichTextViewer(
                         content = pin,
                         canPreview = true,
-                        tags = remember { emptyList() },
+                        tags = remember { persistentListOf() },
                         backgroundColor = backgroundColor,
                         accountViewModel = accountViewModel,
                         nav = nav
@@ -1352,7 +1357,7 @@ private fun RenderReport(
         content = content,
         canPreview = true,
         modifier = remember { Modifier },
-        tags = remember { emptyList() },
+        tags = remember { persistentListOf() },
         backgroundColor = backgroundColor,
         accountViewModel = accountViewModel,
         nav = nav
@@ -1690,7 +1695,7 @@ fun DisplayHighlight(
         quote,
         canPreview = canPreview && !makeItShort,
         Modifier.fillMaxWidth(),
-        emptyList(),
+        persistentListOf(),
         backgroundColor,
         accountViewModel,
         nav
@@ -2600,6 +2605,8 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
             }
         }
 
+        val scope = rememberCoroutineScope()
+
         if (!state.isFollowingAuthor) {
             DropdownMenuItem(onClick = {
                 accountViewModel.follow(
@@ -2610,13 +2617,32 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
             }
             Divider()
         }
-        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(accountViewModel.decrypt(note) ?: "")); onDismiss() }) {
+        DropdownMenuItem(
+            onClick = {
+                scope.launch(Dispatchers.IO) {
+                    clipboardManager.setText(AnnotatedString(accountViewModel.decrypt(note) ?: ""))
+                    onDismiss()
+                }
+            }
+        ) {
             Text(stringResource(R.string.copy_text))
         }
-        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString("nostr:${note.author?.pubkeyNpub()}")); onDismiss() }) {
+        DropdownMenuItem(
+            onClick = {
+                scope.launch(Dispatchers.IO) {
+                    clipboardManager.setText(AnnotatedString("nostr:${note.author?.pubkeyNpub()}"))
+                    onDismiss()
+                }
+            }
+        ) {
             Text(stringResource(R.string.copy_user_pubkey))
         }
-        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString("nostr:" + note.toNEvent())); onDismiss() }) {
+        DropdownMenuItem(onClick = {
+            scope.launch(Dispatchers.IO) {
+                clipboardManager.setText(AnnotatedString("nostr:" + note.toNEvent()))
+                onDismiss()
+            }
+        }) {
             Text(stringResource(R.string.copy_note_id))
         }
         DropdownMenuItem(onClick = {
@@ -2638,30 +2664,30 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
         }
         Divider()
         if (state.isPrivateBookmarkNote) {
-            DropdownMenuItem(onClick = { accountViewModel.removePrivateBookmark(note); onDismiss() }) {
+            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.removePrivateBookmark(note); onDismiss() } }) {
                 Text(stringResource(R.string.remove_from_private_bookmarks))
             }
         } else {
-            DropdownMenuItem(onClick = { accountViewModel.addPrivateBookmark(note); onDismiss() }) {
+            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.addPrivateBookmark(note); onDismiss() } }) {
                 Text(stringResource(R.string.add_to_private_bookmarks))
             }
         }
         if (state.isPublicBookmarkNote) {
-            DropdownMenuItem(onClick = { accountViewModel.removePublicBookmark(note); onDismiss() }) {
+            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.removePublicBookmark(note); onDismiss() } }) {
                 Text(stringResource(R.string.remove_from_public_bookmarks))
             }
         } else {
-            DropdownMenuItem(onClick = { accountViewModel.addPublicBookmark(note); onDismiss() }) {
+            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.addPublicBookmark(note); onDismiss() } }) {
                 Text(stringResource(R.string.add_to_public_bookmarks))
             }
         }
         Divider()
-        DropdownMenuItem(onClick = { accountViewModel.broadcast(note); onDismiss() }) {
+        DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.broadcast(note); onDismiss() } }) {
             Text(stringResource(R.string.broadcast))
         }
         Divider()
         if (state.isLoggedUser) {
-            DropdownMenuItem(onClick = { accountViewModel.delete(note); onDismiss() }) {
+            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.delete(note); onDismiss() } }) {
                 Text(stringResource(R.string.request_deletion))
             }
         } else {
@@ -2671,17 +2697,17 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
         }
         Divider()
         if (state.showSensitiveContent == null || state.showSensitiveContent == true) {
-            DropdownMenuItem(onClick = { accountViewModel.hideSensitiveContent(); onDismiss() }) {
+            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.hideSensitiveContent(); onDismiss() } }) {
                 Text(stringResource(R.string.content_warning_hide_all_sensitive_content))
             }
         }
         if (state.showSensitiveContent == null || state.showSensitiveContent == false) {
-            DropdownMenuItem(onClick = { accountViewModel.disableContentWarnings(); onDismiss() }) {
+            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.disableContentWarnings(); onDismiss() } }) {
                 Text(stringResource(R.string.content_warning_show_all_sensitive_content))
             }
         }
         if (state.showSensitiveContent != null) {
-            DropdownMenuItem(onClick = { accountViewModel.seeContentWarnings(); onDismiss() }) {
+            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.seeContentWarnings(); onDismiss() } }) {
                 Text(stringResource(R.string.content_warning_see_warnings))
             }
         }

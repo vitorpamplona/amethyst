@@ -62,7 +62,7 @@ import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.NostrGlobalFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.RefresheableView
+import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -113,7 +113,7 @@ fun SearchScreen(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
             SearchBar(accountViewModel, nav)
-            RefresheableView(searchFeedViewModel, accountViewModel, nav, null, ScrollStateKeys.GLOBAL_SCREEN)
+            RefresheableFeedView(searchFeedViewModel, null, accountViewModel, nav, ScrollStateKeys.GLOBAL_SCREEN)
         }
     }
 }

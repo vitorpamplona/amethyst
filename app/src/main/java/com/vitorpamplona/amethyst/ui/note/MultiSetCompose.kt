@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -361,7 +362,7 @@ private fun AuthorPictureAndComment(
             TranslatableRichTextViewer(
                 content = it,
                 canPreview = true,
-                tags = remember { emptyList() },
+                tags = remember { persistentListOf() },
                 modifier = remember { Modifier.fillMaxWidth() },
                 backgroundColor = backgroundColor,
                 accountViewModel = accountViewModel,

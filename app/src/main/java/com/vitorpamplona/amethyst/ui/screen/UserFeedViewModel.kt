@@ -47,7 +47,7 @@ class NostrHiddenAccountsFeedViewModel(val account: Account) : UserFeedViewModel
     }
 }
 
-open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel() {
+open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel(), InvalidatableViewModel {
     private val _feedContent = MutableStateFlow<UserFeedState>(UserFeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
 
@@ -91,8 +91,8 @@ open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel() {
 
     private val bundler = BundledUpdate(250, Dispatchers.IO)
 
-    fun invalidateData() {
-        bundler.invalidate() {
+    override fun invalidateData(ignoreIfDoing: Boolean) {
+        bundler.invalidate(ignoreIfDoing) {
             // adds the time to perform the refresh into this delay
             // holding off new updates in case of heavy refresh routines.
             refreshSuspended()
@@ -113,4 +113,8 @@ open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel() {
         collectorJob?.cancel()
         super.onCleared()
     }
+}
+
+interface InvalidatableViewModel {
+    fun invalidateData(ignoreIfDoing: Boolean = false)
 }

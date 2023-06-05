@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterialApi::class)
@@ -388,10 +389,7 @@ fun NoteMaster(
 
                         if (eventContent != null) {
                             val hasSensitiveContent = remember(note.event) { note.event?.isSensitive() ?: false }
-
-                            val tags = remember(note) {
-                                note.event?.tags() ?: emptyList()
-                            }
+                            val tags = remember(note) { note.event?.tags()?.toImmutableList() ?: emptyList<List<String>>().toImmutableList() }
 
                             SensitivityWarning(
                                 hasSensitiveContent = hasSensitiveContent,

@@ -150,7 +150,7 @@ fun UserActionOptions(
     baseAuthor: User,
     accountViewModel: AccountViewModel
 ) {
-    val coroutineScope = rememberCoroutineScope()
+    val scope = rememberCoroutineScope()
 
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val isHidden by remember(accountState) {
@@ -168,12 +168,14 @@ fun UserActionOptions(
 
     if (isHidden) {
         ShowUserButton {
-            accountViewModel.show(baseAuthor)
+            scope.launch(Dispatchers.IO) {
+                accountViewModel.show(baseAuthor)
+            }
         }
     } else if (isFollowing) {
-        UnfollowButton { coroutineScope.launch(Dispatchers.IO) { accountViewModel.unfollow(baseAuthor) } }
+        UnfollowButton { scope.launch(Dispatchers.IO) { accountViewModel.unfollow(baseAuthor) } }
     } else {
-        FollowButton({ coroutineScope.launch(Dispatchers.IO) { accountViewModel.follow(baseAuthor) } })
+        FollowButton({ scope.launch(Dispatchers.IO) { accountViewModel.follow(baseAuthor) } })
     }
 }
 

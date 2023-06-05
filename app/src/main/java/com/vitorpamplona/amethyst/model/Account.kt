@@ -567,16 +567,15 @@ class Account(
         LocalCache.consume(signedEvent, null)
     }
 
-    fun sendPrivateMessage(message: String, toUser: String, replyingTo: Note? = null, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean) {
+    fun sendPrivateMessage(message: String, toUser: User, replyingTo: Note? = null, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean) {
         if (!isWriteable()) return
-        val user = LocalCache.users[toUser] ?: return
 
         val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
         val mentionsHex = mentions?.map { it.pubkeyHex }
 
         val signedEvent = PrivateDmEvent.create(
-            recipientPubKey = user.pubkey(),
-            publishedRecipientPubKey = user.pubkey(),
+            recipientPubKey = toUser.pubkey(),
+            publishedRecipientPubKey = toUser.pubkey(),
             msg = message,
             replyTos = repliesToHex,
             mentions = mentionsHex,
@@ -1135,7 +1134,9 @@ class Account(
 
         // saves contact list for the next time.
         userProfile().live().follows.observeForever {
-            updateContactListTo(userProfile().latestContactList)
+            GlobalScope.launch(Dispatchers.IO) {
+                updateContactListTo(userProfile().latestContactList)
+            }
         }
 
         // imports transient blocks due to spam.

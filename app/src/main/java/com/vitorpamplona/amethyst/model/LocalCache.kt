@@ -32,6 +32,8 @@ object LocalCache {
         ConcurrentHashMap<HexKey, Pair<Note?, (LnZapPaymentResponseEvent) -> Unit>>(10)
 
     fun checkGetOrCreateUser(key: String): User? {
+        checkNotInMainThread()
+
         if (isValidHexNpub(key)) {
             return getOrCreateUser(key)
         }
@@ -40,6 +42,8 @@ object LocalCache {
 
     @Synchronized
     fun getOrCreateUser(key: HexKey): User {
+        // checkNotInMainThread()
+
         return users[key] ?: run {
             val answer = User(key)
             users.put(key, answer)
@@ -48,6 +52,8 @@ object LocalCache {
     }
 
     fun checkGetOrCreateNote(key: String): Note? {
+        checkNotInMainThread()
+
         if (ATag.isATag(key)) {
             return checkGetOrCreateAddressableNote(key)
         }
@@ -59,6 +65,8 @@ object LocalCache {
 
     @Synchronized
     fun getOrCreateNote(idHex: String): Note {
+        checkNotInMainThread()
+
         return notes[idHex] ?: run {
             val answer = Note(idHex)
             notes.put(idHex, answer)
@@ -67,6 +75,8 @@ object LocalCache {
     }
 
     fun checkGetOrCreateChannel(key: String): Channel? {
+        checkNotInMainThread()
+
         if (isValidHexNpub(key)) {
             return getOrCreateChannel(key)
         }
@@ -85,6 +95,8 @@ object LocalCache {
 
     @Synchronized
     fun getOrCreateChannel(key: String): Channel {
+        checkNotInMainThread()
+
         return channels[key] ?: run {
             val answer = Channel(key)
             channels.put(key, answer)
@@ -108,6 +120,8 @@ object LocalCache {
 
     @Synchronized
     fun getOrCreateAddressableNote(key: ATag): AddressableNote {
+        checkNotInMainThread()
+
         // we can't use naddr here because naddr might include relay info and
         // the preferred relay should not be part of the index.
         return addressables[key.toTag()] ?: run {

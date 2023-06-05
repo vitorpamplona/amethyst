@@ -59,10 +59,6 @@ class AccountViewModel(val account: Account) : ViewModel() {
         account.delete(account.boostsTo(note))
     }
 
-    fun zap(note: Note, amount: Long, pollOption: Int?, message: String, context: Context, onError: (String) -> Unit, onProgress: (percent: Float) -> Unit) {
-        zap(note, amount, pollOption, message, context, onError, onProgress, account.defaultZapType)
-    }
-
     fun calculateIfNoteWasZappedByAccount(zappedNote: Note): Boolean {
         return account.calculateIfNoteWasZappedByAccount(zappedNote)
     }

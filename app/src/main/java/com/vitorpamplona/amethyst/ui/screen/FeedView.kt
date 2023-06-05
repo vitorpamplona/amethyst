@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
@@ -34,15 +36,27 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
+@Composable
+fun RefresheableFeedView(
+    viewModel: FeedViewModel,
+    routeForLastRead: String?,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+
+    scrollStateKey: String? = null,
+    enablePullRefresh: Boolean = true
+) {
+    RefresheableView(viewModel, enablePullRefresh) {
+        SaveableFeedState(viewModel, accountViewModel, nav, routeForLastRead, scrollStateKey)
+    }
+}
+
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun RefresheableView(
-    viewModel: FeedViewModel,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-    routeForLastRead: String?,
-    scrollStateKey: String? = null,
-    enablePullRefresh: Boolean = true
+    viewModel: InvalidatableViewModel,
+    enablePullRefresh: Boolean = true,
+    content: @Composable () -> Unit
 ) {
     var refreshing by remember { mutableStateOf(false) }
     val refresh = { refreshing = true; viewModel.invalidateData(); refreshing = false }
@@ -56,7 +70,7 @@ fun RefresheableView(
 
     Box(modifier) {
         Column {
-            SaveableFeedState(viewModel, accountViewModel, nav, routeForLastRead, scrollStateKey)
+            content()
         }
 
         if (enablePullRefresh) {
@@ -73,6 +87,17 @@ private fun SaveableFeedState(
     routeForLastRead: String?,
     scrollStateKey: String? = null
 ) {
+    SaveableFeedState(viewModel, scrollStateKey) { listState ->
+        RenderFeed(viewModel, accountViewModel, listState, nav, routeForLastRead)
+    }
+}
+
+@Composable
+fun SaveableFeedState(
+    viewModel: FeedViewModel,
+    scrollStateKey: String? = null,
+    content: @Composable (LazyListState) -> Unit
+) {
     val listState = if (scrollStateKey != null) {
         rememberForeverLazyListState(scrollStateKey)
     } else {
@@ -81,7 +106,7 @@ private fun SaveableFeedState(
 
     WatchScrollToTop(viewModel, listState)
 
-    RenderFeed(viewModel, accountViewModel, listState, nav, routeForLastRead)
+    content(listState)
 }
 
 @Composable
@@ -163,14 +188,16 @@ private fun FeedLoaded(
         state = listState
     ) {
         itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
-            NoteCompose(
-                item,
-                routeForLastRead = routeForLastRead,
-                modifier = baseModifier,
-                isBoostedNote = false,
-                accountViewModel = accountViewModel,
-                nav = nav
-            )
+            Row(Modifier.fillMaxWidth().defaultMinSize(minHeight = 75.dp)) {
+                NoteCompose(
+                    item,
+                    routeForLastRead = routeForLastRead,
+                    modifier = baseModifier,
+                    isBoostedNote = false,
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
+            }
         }
     }
 }

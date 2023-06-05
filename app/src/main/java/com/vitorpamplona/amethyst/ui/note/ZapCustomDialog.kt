@@ -56,13 +56,13 @@ class ZapOptionstViewModel : ViewModel() {
 }
 
 @Composable
-fun ZapCustomDialog(onClose: () -> Unit, account: Account, accountViewModel: AccountViewModel, baseNote: Note) {
+fun ZapCustomDialog(onClose: () -> Unit, accountViewModel: AccountViewModel, baseNote: Note) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val postViewModel: ZapOptionstViewModel = viewModel()
 
-    LaunchedEffect(account) {
-        postViewModel.load(account)
+    LaunchedEffect(accountViewModel) {
+        postViewModel.load(accountViewModel.account)
     }
 
     var zappingProgress by remember { mutableStateOf(0f) }
@@ -76,7 +76,7 @@ fun ZapCustomDialog(onClose: () -> Unit, account: Account, accountViewModel: Acc
 
     val zapOptions = zapTypes.map { it.second }
     val zapOptionExplainers = zapTypes.map { it.third }
-    var selectedZapType by remember { mutableStateOf(account.defaultZapType) }
+    var selectedZapType by remember(accountViewModel) { mutableStateOf(accountViewModel.account.defaultZapType) }
 
     Dialog(
         onDismissRequest = { onClose() },
@@ -158,7 +158,7 @@ fun ZapCustomDialog(onClose: () -> Unit, account: Account, accountViewModel: Acc
 
                     TextSpinner(
                         label = stringResource(id = R.string.zap_type),
-                        placeholder = zapTypes.filter { it.first == account.defaultZapType }.first().second,
+                        placeholder = zapTypes.filter { it.first == accountViewModel.account.defaultZapType }.first().second,
                         options = zapOptions,
                         explainers = zapOptionExplainers,
                         onSelect = {

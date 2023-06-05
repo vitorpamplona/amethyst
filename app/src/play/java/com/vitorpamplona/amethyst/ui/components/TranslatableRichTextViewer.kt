@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.service.lang.ResultOrError
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -43,7 +44,7 @@ fun TranslatableRichTextViewer(
     content: String,
     canPreview: Boolean,
     modifier: Modifier = Modifier,
-    tags: List<List<String>>,
+    tags: ImmutableList<List<String>>,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -74,7 +75,7 @@ fun TranslatableRichTextViewer(
         }
     }
 
-    Column() {
+    Column {
         ExpandableRichTextViewer(
             toBeViewed,
             canPreview,
@@ -89,6 +90,8 @@ fun TranslatableRichTextViewer(
         val source = translatedTextState.sourceLang
 
         if (source != null && target != null && source != target) {
+            val scope = rememberCoroutineScope()
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -140,8 +143,10 @@ fun TranslatableRichTextViewer(
                     onDismissRequest = { langSettingsPopupExpanded = false }
                 ) {
                     DropdownMenuItem(onClick = {
-                        accountViewModel.dontTranslateFrom(source)
-                        langSettingsPopupExpanded = false
+                        scope.launch(Dispatchers.IO) {
+                            accountViewModel.dontTranslateFrom(source)
+                            langSettingsPopupExpanded = false
+                        }
                     }) {
                         if (source in accountViewModel.account.dontTranslateFrom) {
                             Icon(
@@ -159,8 +164,10 @@ fun TranslatableRichTextViewer(
                     }
                     Divider()
                     DropdownMenuItem(onClick = {
-                        accountViewModel.prefer(source, target, source)
-                        langSettingsPopupExpanded = false
+                        scope.launch(Dispatchers.IO) {
+                            accountViewModel.prefer(source, target, source)
+                            langSettingsPopupExpanded = false
+                        }
                     }) {
                         if (accountViewModel.account.preferenceBetween(source, target) == source) {
                             Icon(
@@ -177,8 +184,10 @@ fun TranslatableRichTextViewer(
                         Text(stringResource(R.string.translations_show_in_lang_first, Locale(source).displayName))
                     }
                     DropdownMenuItem(onClick = {
-                        accountViewModel.prefer(source, target, target)
-                        langSettingsPopupExpanded = false
+                        scope.launch(Dispatchers.IO) {
+                            accountViewModel.prefer(source, target, target)
+                            langSettingsPopupExpanded = false
+                        }
                     }) {
                         if (accountViewModel.account.preferenceBetween(source, target) == target) {
                             Icon(
@@ -201,8 +210,10 @@ fun TranslatableRichTextViewer(
                     for (i in 0 until languageList.size()) {
                         languageList.get(i)?.let { lang ->
                             DropdownMenuItem(onClick = {
-                                accountViewModel.translateTo(lang)
-                                langSettingsPopupExpanded = false
+                                scope.launch(Dispatchers.IO) {
+                                    accountViewModel.translateTo(lang)
+                                    langSettingsPopupExpanded = false
+                                }
                             }) {
                                 if (lang.language in accountViewModel.account.translateTo) {
                                     Icon(

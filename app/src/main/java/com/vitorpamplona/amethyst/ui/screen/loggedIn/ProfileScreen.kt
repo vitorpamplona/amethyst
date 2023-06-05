@@ -91,12 +91,13 @@ import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileFollowsUserFeedViewM
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileNewThreadsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileReportFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileZapsFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.RefresheableView
+import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.RefreshingFeedUserFeedView
 import com.vitorpamplona.amethyst.ui.screen.RelayFeedView
 import com.vitorpamplona.amethyst.ui.screen.RelayFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -717,7 +718,7 @@ private fun DrawAdditionalInfo(
             TranslatableRichTextViewer(
                 content = it,
                 canPreview = false,
-                tags = remember { emptyList() },
+                tags = remember { persistentListOf() },
                 backgroundColor = MaterialTheme.colors.background,
                 accountViewModel = accountViewModel,
                 nav = nav
@@ -767,6 +768,7 @@ private fun DisplayLNAddress(
                     userHex,
                     account,
                     onSuccess = {
+                        zapExpanded = false
                         // pay directly
                         if (account.hasWalletConnectSetup()) {
                             account.sendZapPaymentRequestFor(it, null) { response ->
@@ -1053,7 +1055,7 @@ fun TabNotesNewThreads(accountViewModel: AccountViewModel, nav: (String) -> Unit
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            RefresheableView(feedViewModel, accountViewModel, nav, null, enablePullRefresh = false)
+            RefresheableFeedView(feedViewModel, null, accountViewModel, nav, enablePullRefresh = false)
         }
     }
 }
@@ -1070,7 +1072,7 @@ fun TabNotesConversations(accountViewModel: AccountViewModel, nav: (String) -> U
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            RefresheableView(feedViewModel, accountViewModel, nav, null, enablePullRefresh = false)
+            RefresheableFeedView(feedViewModel, null, accountViewModel, nav, enablePullRefresh = false)
         }
     }
 }
@@ -1087,7 +1089,7 @@ fun TabBookmarks(baseUser: User, accountViewModel: AccountViewModel, nav: (Strin
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            RefresheableView(feedViewModel, accountViewModel, nav, null, enablePullRefresh = false)
+            RefresheableFeedView(feedViewModel, null, accountViewModel, nav, enablePullRefresh = false)
         }
     }
 }
@@ -1154,7 +1156,7 @@ fun TabReports(baseUser: User, accountViewModel: AccountViewModel, nav: (String)
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            RefresheableView(feedViewModel, accountViewModel, nav, null, enablePullRefresh = false)
+            RefresheableFeedView(feedViewModel, null, accountViewModel, nav, enablePullRefresh = false)
         }
     }
 }
@@ -1310,6 +1312,8 @@ fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () ->
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
+    val scope = rememberCoroutineScope()
+
     DropdownMenu(
         expanded = popupExpanded,
         onDismissRequest = onDismiss
@@ -1322,51 +1326,65 @@ fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () ->
             Divider()
             if (account.isHidden(user)) {
                 DropdownMenuItem(onClick = {
-                    accountViewModel.show(user)
-                    onDismiss()
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.show(user)
+                        onDismiss()
+                    }
                 }) {
                     Text(stringResource(R.string.unblock_user))
                 }
             } else {
                 DropdownMenuItem(onClick = {
-                    accountViewModel.hide(user)
-                    onDismiss()
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.hide(user)
+                        onDismiss()
+                    }
                 }) {
                     Text(stringResource(id = R.string.block_hide_user))
                 }
             }
             Divider()
             DropdownMenuItem(onClick = {
-                accountViewModel.report(user, ReportEvent.ReportType.SPAM)
-                accountViewModel.hide(user)
+                scope.launch(Dispatchers.IO) {
+                    accountViewModel.report(user, ReportEvent.ReportType.SPAM)
+                    accountViewModel.hide(user)
+                }
                 onDismiss()
             }) {
                 Text(stringResource(id = R.string.report_spam_scam))
             }
             DropdownMenuItem(onClick = {
-                accountViewModel.report(user, ReportEvent.ReportType.PROFANITY)
-                accountViewModel.hide(user)
+                scope.launch(Dispatchers.IO) {
+                    accountViewModel.report(user, ReportEvent.ReportType.PROFANITY)
+                    accountViewModel.hide(user)
+                }
                 onDismiss()
             }) {
                 Text(stringResource(R.string.report_hateful_speech))
             }
             DropdownMenuItem(onClick = {
-                accountViewModel.report(user, ReportEvent.ReportType.IMPERSONATION)
-                accountViewModel.hide(user)
+                scope.launch(Dispatchers.IO) {
+                    accountViewModel.report(user, ReportEvent.ReportType.IMPERSONATION)
+                    accountViewModel.hide(user)
+                }
                 onDismiss()
             }) {
                 Text(stringResource(id = R.string.report_impersonation))
             }
             DropdownMenuItem(onClick = {
-                accountViewModel.report(user, ReportEvent.ReportType.NUDITY)
-                accountViewModel.hide(user)
+                scope.launch(Dispatchers.IO) {
+                    accountViewModel.report(user, ReportEvent.ReportType.NUDITY)
+                    accountViewModel.hide(user)
+                }
                 onDismiss()
             }) {
                 Text(stringResource(R.string.report_nudity_porn))
             }
             DropdownMenuItem(onClick = {
-                accountViewModel.report(user, ReportEvent.ReportType.ILLEGAL)
-                accountViewModel.hide(user)
+                scope.launch(Dispatchers.IO) {
+                    accountViewModel.report(user, ReportEvent.ReportType.ILLEGAL)
+                    accountViewModel.hide(user)
+                }
                 onDismiss()
             }) {
                 Text(stringResource(id = R.string.report_illegal_behaviour))

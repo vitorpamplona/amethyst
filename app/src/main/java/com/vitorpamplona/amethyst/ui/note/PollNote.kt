@@ -30,6 +30,8 @@ import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.*
@@ -109,7 +111,7 @@ private fun OptionNote(
     backgroundColor: Color,
     nav: (String) -> Unit
 ) {
-    val tags = remember { baseNote.event?.tags() ?: emptyList() }
+    val tags = remember(baseNote) { baseNote.event?.tags()?.toImmutableList() ?: emptyList<List<String>>().toImmutableList() }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -163,7 +165,7 @@ private fun RenderOptionAfterVote(
     totalRatio: Float,
     color: Color,
     canPreview: Boolean,
-    tags: List<List<String>>,
+    tags: ImmutableList<List<String>>,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -230,7 +232,7 @@ private fun RenderOptionAfterVote(
 private fun RenderOptionBeforeVote(
     description: String,
     canPreview: Boolean,
-    tags: List<List<String>>,
+    tags: ImmutableList<List<String>>,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit

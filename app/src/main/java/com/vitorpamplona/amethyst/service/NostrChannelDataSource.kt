@@ -2,7 +2,6 @@ package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Channel
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
@@ -12,9 +11,9 @@ object NostrChannelDataSource : NostrDataSource("ChatroomFeed") {
     var account: Account? = null
     var channel: Channel? = null
 
-    fun loadMessagesBetween(account: Account, channelId: String) {
+    fun loadMessagesBetween(account: Account, channel: Channel) {
         this.account = account
-        channel = LocalCache.getOrCreateChannel(channelId)
+        this.channel = channel
         resetFilters()
     }
 

@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.BookmarkListEvent
 import com.vitorpamplona.amethyst.service.model.ContactListEvent
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
@@ -185,6 +186,8 @@ class User(val pubkeyHex: String) {
 
     @Synchronized
     private fun getOrCreatePrivateChatroom(user: User): Chatroom {
+        checkNotInMainThread()
+
         return privateChatrooms[user] ?: run {
             val privateChatroom = Chatroom(setOf<Note>())
             privateChatrooms = privateChatrooms + Pair(user, privateChatroom)
@@ -194,6 +197,8 @@ class User(val pubkeyHex: String) {
 
     @Synchronized
     fun addMessage(user: User, msg: Note) {
+        checkNotInMainThread()
+
         val privateChatroom = getOrCreatePrivateChatroom(user)
         if (msg !in privateChatroom.roomMessages) {
             privateChatroom.roomMessages = privateChatroom.roomMessages + msg
@@ -203,6 +208,8 @@ class User(val pubkeyHex: String) {
 
     @Synchronized
     fun removeMessage(user: User, msg: Note) {
+        checkNotInMainThread()
+
         val privateChatroom = getOrCreatePrivateChatroom(user)
         if (msg in privateChatroom.roomMessages) {
             privateChatroom.roomMessages = privateChatroom.roomMessages - msg

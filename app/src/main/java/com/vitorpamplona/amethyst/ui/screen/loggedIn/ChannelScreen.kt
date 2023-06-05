@@ -74,13 +74,13 @@ import com.vitorpamplona.amethyst.ui.actions.PostButton
 import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
-import com.vitorpamplona.amethyst.ui.dal.ChannelFeedFilter
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
-import com.vitorpamplona.amethyst.ui.screen.ChatroomFeedView
 import com.vitorpamplona.amethyst.ui.screen.NostrChannelFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.RefreshingChatroomFeedView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun ChannelScreen(
@@ -88,174 +88,256 @@ fun ChannelScreen(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account
-    val context = LocalContext.current
+    if (channelId == null) return
+
+    var channelBase by remember { mutableStateOf<Channel?>(null) }
+
+    LaunchedEffect(channelId) {
+        withContext(Dispatchers.IO) {
+            val newChannelBase = LocalCache.checkGetOrCreateChannel(channelId)
+            if (newChannelBase != channelBase) {
+                channelBase = newChannelBase
+            }
+        }
+    }
+
+    channelBase?.let {
+        PrepareChannelViewModels(
+            baseChannel = it,
+            accountViewModel = accountViewModel,
+            nav = nav
+        )
+    }
+}
+
+@Composable
+fun PrepareChannelViewModels(baseChannel: Channel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    val feedViewModel: NostrChannelFeedViewModel = viewModel(
+        key = baseChannel.idHex + "ChannelFeedViewModel",
+        factory = NostrChannelFeedViewModel.Factory(
+            baseChannel,
+            accountViewModel.account
+        )
+    )
+
     val channelScreenModel: NewPostViewModel = viewModel()
+    channelScreenModel.account = accountViewModel.account
 
-    channelScreenModel.account = account
+    ChannelScreen(
+        channel = baseChannel,
+        feedViewModel = feedViewModel,
+        newPostModel = channelScreenModel,
+        accountViewModel = accountViewModel,
+        nav = nav
+    )
+}
 
-    if (account != null && channelId != null) {
+@Composable
+fun ChannelScreen(
+    channel: Channel,
+    feedViewModel: NostrChannelFeedViewModel,
+    newPostModel: NewPostViewModel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    val context = LocalContext.current
+
+    NostrChannelDataSource.loadMessagesBetween(accountViewModel.account, channel)
+
+    val lifeCycleOwner = LocalLifecycleOwner.current
+
+    LaunchedEffect(Unit) {
+        NostrChannelDataSource.start()
+
+        feedViewModel.invalidateData()
+        newPostModel.imageUploadingError.collect { error ->
+            Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    DisposableEffect(accountViewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                println("Channel Start")
+                NostrChannelDataSource.start()
+                feedViewModel.invalidateData()
+            }
+            if (event == Lifecycle.Event.ON_PAUSE) {
+                println("Channel Stop")
+
+                NostrChannelDataSource.clear()
+                NostrChannelDataSource.stop()
+            }
+        }
+
+        lifeCycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifeCycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    Column(Modifier.fillMaxHeight()) {
+        ChannelHeader(
+            channel,
+            accountViewModel,
+            nav = nav
+        )
+
         val replyTo = remember { mutableStateOf<Note?>(null) }
 
-        ChannelFeedFilter.loadMessagesBetween(account, channelId)
-        NostrChannelDataSource.loadMessagesBetween(account, channelId)
-
-        val channelState by NostrChannelDataSource.channel!!.live.observeAsState()
-        val channel = channelState?.channel ?: return
-
-        ChannelFeedFilter.loadMessagesBetween(account, channelId)
-
-        val feedViewModel: NostrChannelFeedViewModel = viewModel()
-        val lifeCycleOwner = LocalLifecycleOwner.current
-
-        LaunchedEffect(Unit) {
-            ChannelFeedFilter.loadMessagesBetween(account, channelId)
-            NostrChannelDataSource.loadMessagesBetween(account, channelId)
-
-            feedViewModel.invalidateData()
-            channelScreenModel.imageUploadingError.collect { error ->
-                Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
-            }
-        }
-
-        DisposableEffect(channelId) {
-            val observer = LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) {
-                    println("Channel Start")
-                    ChannelFeedFilter.loadMessagesBetween(account, channelId)
-                    NostrChannelDataSource.loadMessagesBetween(account, channelId)
-
-                    feedViewModel.invalidateData()
-                }
-                if (event == Lifecycle.Event.ON_PAUSE) {
-                    println("Channel Stop")
-
-                    NostrChannelDataSource.clear()
-                    NostrChannelDataSource.stop()
-                }
-            }
-
-            lifeCycleOwner.lifecycle.addObserver(observer)
-            onDispose {
-                lifeCycleOwner.lifecycle.removeObserver(observer)
-            }
-        }
-
-        Column(Modifier.fillMaxHeight()) {
-            ChannelHeader(
-                channel,
-                accountViewModel,
-                nav = nav
-            )
-
-            Column(
-                modifier = Modifier
+        Column(
+            modifier = remember {
+                Modifier
                     .fillMaxHeight()
                     .padding(vertical = 0.dp)
                     .weight(1f, true)
-            ) {
-                ChatroomFeedView(feedViewModel, accountViewModel, nav, "Channel/$channelId") {
+            }
+        ) {
+            RefreshingChatroomFeedView(
+                viewModel = feedViewModel,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                routeForLastRead = "Channel/${channel.idHex}",
+                onWantsToReply = {
                     replyTo.value = it
                 }
-            }
+            )
+        }
 
-            Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
-            Row(
-                Modifier
-                    .padding(horizontal = 10.dp)
-                    .animateContentSize(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                val replyingNote = replyTo.value
-                if (replyingNote != null) {
-                    Column(Modifier.weight(1f)) {
-                        ChatroomMessageCompose(
-                            baseNote = replyingNote,
-                            null,
-                            innerQuote = true,
-                            accountViewModel = accountViewModel,
-                            nav = nav,
-                            onWantsToReply = {
-                                replyTo.value = it
-                            }
-                        )
-                    }
-
-                    Column(Modifier.padding(end = 10.dp)) {
-                        IconButton(
-                            modifier = Modifier.size(30.dp),
-                            onClick = { replyTo.value = null }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Cancel,
-                                null,
-                                modifier = Modifier
-                                    .padding(end = 5.dp)
-                                    .size(30.dp),
-                                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                            )
-                        }
-                    }
-                }
-            }
-
-            // LAST ROW
-            Row(
-                modifier = Modifier
-                    .padding(start = 10.dp, end = 10.dp, bottom = 10.dp, top = 5.dp)
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TextField(
-                    value = channelScreenModel.message,
-                    onValueChange = {
-                        channelScreenModel.updateMessage(it)
-                    },
-                    keyboardOptions = KeyboardOptions.Default.copy(
-                        capitalization = KeyboardCapitalization.Sentences
-                    ),
-                    shape = RoundedCornerShape(25.dp),
-                    modifier = Modifier.weight(1f, true),
-                    placeholder = {
-                        Text(
-                            text = stringResource(R.string.reply_here),
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                        )
-                    },
-                    textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
-                    trailingIcon = {
-                        PostButton(
-                            onPost = {
-                                val tagger = NewMessageTagger(channel.idHex, listOfNotNull(replyTo.value?.author), listOfNotNull(replyTo.value), channelScreenModel.message.text)
-                                tagger.run()
-                                account.sendChannelMessage(tagger.message, channel.idHex, tagger.replyTos, tagger.mentions, wantsToMarkAsSensitive = false)
-                                channelScreenModel.message = TextFieldValue("")
-                                replyTo.value = null
-                                feedViewModel.invalidateData() // Don't wait a full second before updating
-                            },
-                            isActive = channelScreenModel.message.text.isNotBlank() && !channelScreenModel.isUploadingImage,
-                            modifier = Modifier.padding(end = 10.dp)
-                        )
-                    },
-                    leadingIcon = {
-                        UploadFromGallery(
-                            isUploading = channelScreenModel.isUploadingImage,
-                            tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-                            modifier = Modifier.padding(start = 5.dp)
-                        ) {
-                            channelScreenModel.upload(it, "", account.defaultFileServer, context)
-                        }
-                    },
-                    colors = TextFieldDefaults.textFieldColors(
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent
-                    )
-                )
+        replyTo.value?.let {
+            DisplayReplyingToNote(it, accountViewModel, nav) {
+                replyTo.value = null
             }
         }
+
+        val scope = rememberCoroutineScope()
+
+        // LAST ROW
+        EditFieldRow(newPostModel, accountViewModel) {
+            scope.launch {
+                val tagger = NewMessageTagger(
+                    channelHex = channel.idHex,
+                    mentions = listOfNotNull(replyTo.value?.author),
+                    replyTos = listOfNotNull(replyTo.value),
+                    message = newPostModel.message.text
+                )
+                tagger.run()
+                accountViewModel.account.sendChannelMessage(
+                    message = tagger.message,
+                    toChannel = channel.idHex,
+                    replyTo = tagger.replyTos,
+                    mentions = tagger.mentions,
+                    wantsToMarkAsSensitive = false
+                )
+                newPostModel.message = TextFieldValue("")
+                replyTo.value = null
+                feedViewModel.sendToTop()
+            }
+        }
+    }
+}
+
+@Composable
+fun DisplayReplyingToNote(
+    replyingNote: Note?,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+    onCancel: () -> Unit
+) {
+    Row(
+        Modifier
+            .padding(horizontal = 10.dp)
+            .animateContentSize(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (replyingNote != null) {
+            Column(remember { Modifier.weight(1f) }) {
+                ChatroomMessageCompose(
+                    baseNote = replyingNote,
+                    null,
+                    innerQuote = true,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    onWantsToReply = {}
+                )
+            }
+
+            Column(Modifier.padding(end = 10.dp)) {
+                IconButton(
+                    modifier = Modifier.size(30.dp),
+                    onClick = onCancel
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Cancel,
+                        null,
+                        modifier = Modifier
+                            .padding(end = 5.dp)
+                            .size(30.dp),
+                        tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun EditFieldRow(
+    channelScreenModel: NewPostViewModel,
+    accountViewModel: AccountViewModel,
+    onSendNewMessage: () -> Unit
+) {
+    val context = LocalContext.current
+
+    Row(
+        modifier = Modifier
+            .padding(start = 10.dp, end = 10.dp, bottom = 10.dp, top = 5.dp)
+            .fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        TextField(
+            value = channelScreenModel.message,
+            onValueChange = {
+                channelScreenModel.updateMessage(it)
+            },
+            keyboardOptions = KeyboardOptions.Default.copy(
+                capitalization = KeyboardCapitalization.Sentences
+            ),
+            shape = RoundedCornerShape(25.dp),
+            modifier = Modifier.weight(1f, true),
+            placeholder = {
+                Text(
+                    text = stringResource(R.string.reply_here),
+                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                )
+            },
+            textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+            trailingIcon = {
+                PostButton(
+                    onPost = {
+                        onSendNewMessage()
+                    },
+                    isActive = channelScreenModel.message.text.isNotBlank() && !channelScreenModel.isUploadingImage,
+                    modifier = Modifier.padding(end = 10.dp)
+                )
+            },
+            leadingIcon = {
+                UploadFromGallery(
+                    isUploading = channelScreenModel.isUploadingImage,
+                    tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                    modifier = Modifier.padding(start = 5.dp)
+                ) {
+                    channelScreenModel.upload(it, "", accountViewModel.account.defaultFileServer, context)
+                }
+            },
+            colors = TextFieldDefaults.textFieldColors(
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent
+            )
+        )
     }
 }
 

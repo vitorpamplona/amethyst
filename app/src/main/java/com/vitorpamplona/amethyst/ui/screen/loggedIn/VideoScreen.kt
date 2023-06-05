@@ -253,11 +253,9 @@ private fun RenderVideoOrPictureNote(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val noteEvent = note.event
-    var moreActionsExpanded by remember { mutableStateOf(false) }
-
-    Column(Modifier.fillMaxSize(1f)) {
-        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+    Column(remember { Modifier.fillMaxSize(1f) }) {
+        Row(remember { Modifier.weight(1f) }, verticalAlignment = Alignment.CenterVertically) {
+            val noteEvent = remember { note.event }
             if (noteEvent is FileHeaderEvent) {
                 FileHeaderDisplay(note)
             } else if (noteEvent is FileStorageHeaderEvent) {
@@ -266,57 +264,90 @@ private fun RenderVideoOrPictureNote(
         }
     }
 
-    Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.fillMaxSize(1f)) {
-        Column(Modifier.weight(1f)) {
-            Row(Modifier.padding(10.dp), verticalAlignment = Alignment.Bottom) {
-                Column(Modifier.size(55.dp), verticalArrangement = Arrangement.Center) {
-                    NoteAuthorPicture(note, nav, accountViewModel, 55.dp)
-                }
-
-                Column(
-                    Modifier
-                        .padding(start = 10.dp, end = 10.dp)
-                        .height(60.dp)
-                        .weight(1f),
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        NoteUsernameDisplay(note, Modifier.weight(1f))
-
-                        IconButton(
-                            modifier = Modifier.size(24.dp),
-                            onClick = { moreActionsExpanded = true }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.MoreVert,
-                                null,
-                                modifier = Modifier.size(20.dp),
-                                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                            )
-
-                            NoteDropDownMenu(note, moreActionsExpanded, { moreActionsExpanded = false }, accountViewModel)
-                        }
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        ObserveDisplayNip05Status(note.author!!, Modifier.weight(1f))
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 5.dp)) {
-                        RelayBadges(baseNote = note)
-                    }
-                }
-            }
+    Row(verticalAlignment = Alignment.Bottom, modifier = remember { Modifier.fillMaxSize(1f) }) {
+        Column(remember { Modifier.weight(1f) }) {
+            RenderVideoOrPicture(note, nav, accountViewModel)
         }
 
         Column(
-            Modifier
-                .width(65.dp)
-                .padding(bottom = 10.dp),
+            remember {
+                Modifier
+                    .width(65.dp)
+                    .padding(bottom = 10.dp)
+            },
             verticalArrangement = Arrangement.Center
         ) {
             Row(horizontalArrangement = Arrangement.Center) {
                 ReactionsColumn(note, accountViewModel, nav)
             }
         }
+    }
+}
+
+@Composable
+private fun RenderVideoOrPicture(
+    note: Note,
+    nav: (String) -> Unit,
+    accountViewModel: AccountViewModel
+) {
+    Row(remember { Modifier.padding(10.dp) }, verticalAlignment = Alignment.Bottom) {
+        Column(remember { Modifier.size(55.dp) }, verticalArrangement = Arrangement.Center) {
+            NoteAuthorPicture(note, nav, accountViewModel, 55.dp)
+        }
+
+        Column(
+            remember {
+                Modifier
+                    .padding(start = 10.dp, end = 10.dp)
+                    .height(60.dp)
+                    .weight(1f)
+            },
+            verticalArrangement = Arrangement.Center
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                NoteUsernameDisplay(note, remember { Modifier.weight(1f) })
+                VideoUserOptionAction(note, accountViewModel)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                ObserveDisplayNip05Status(
+                    remember { note.author!! },
+                    remember { Modifier.weight(1f) }
+                )
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(top = 5.dp)
+            ) {
+                RelayBadges(baseNote = note)
+            }
+        }
+    }
+}
+
+@Composable
+private fun VideoUserOptionAction(
+    note: Note,
+    accountViewModel: AccountViewModel
+) {
+    var moreActionsExpanded by remember { mutableStateOf(false) }
+
+    IconButton(
+        modifier = remember { Modifier.size(24.dp) },
+        onClick = { moreActionsExpanded = true }
+    ) {
+        Icon(
+            imageVector = Icons.Default.MoreVert,
+            null,
+            modifier = remember { Modifier.size(20.dp) },
+            tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+        )
+
+        NoteDropDownMenu(
+            note,
+            moreActionsExpanded,
+            { moreActionsExpanded = false },
+            accountViewModel
+        )
     }
 }
 

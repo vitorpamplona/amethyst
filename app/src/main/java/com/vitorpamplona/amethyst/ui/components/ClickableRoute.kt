@@ -68,7 +68,9 @@ fun ClickableRoute(
         DisplayEvent(nip19, nav)
     } else {
         Text(
-            "@${nip19.hex}${nip19.additionalChars} "
+            remember {
+                "@${nip19.hex}${nip19.additionalChars} "
+            }
         )
     }
 }
@@ -93,19 +95,20 @@ private fun DisplayEvent(
         val note = remember(noteState) { noteState?.note } ?: return
         val channelHex = remember(noteState) { note.channelHex() }
         val noteIdDisplayNote = remember(noteState) { "@${note.idDisplayNote()}" }
+        val addedCharts = remember { "${nip19.additionalChars} " }
 
         if (note.event is ChannelCreateEvent) {
             CreateClickableText(
                 clickablePart = noteIdDisplayNote,
-                suffix = "${nip19.additionalChars} ",
-                route = "Channel/${nip19.hex}",
+                suffix = addedCharts,
+                route = remember(noteState) { "Channel/${nip19.hex}" },
                 nav = nav
             )
         } else if (note.event is PrivateDmEvent) {
             CreateClickableText(
                 clickablePart = noteIdDisplayNote,
-                suffix = "${nip19.additionalChars} ",
-                route = "Room/${note.author?.pubkeyHex}",
+                suffix = addedCharts,
+                route = remember(noteState) { "Room/${note.author?.pubkeyHex}" },
                 nav = nav
             )
         } else if (channelHex != null) {
@@ -119,16 +122,16 @@ private fun DisplayEvent(
 
                 CreateClickableText(
                     clickablePart = channelDisplayName,
-                    suffix = "${nip19.additionalChars} ",
-                    route = "Channel/${baseChannel.idHex}",
+                    suffix = addedCharts,
+                    route = remember(noteState) { "Channel/${baseChannel.idHex}" },
                     nav = nav
                 )
             }
         } else {
             CreateClickableText(
                 clickablePart = noteIdDisplayNote,
-                suffix = "${nip19.additionalChars} ",
-                route = "Event/${nip19.hex}",
+                suffix = addedCharts,
+                route = remember(noteState) { "Event/${nip19.hex}" },
                 nav = nav
             )
         }
@@ -136,7 +139,9 @@ private fun DisplayEvent(
 
     if (noteBase == null) {
         Text(
-            "@${nip19.hex}${nip19.additionalChars} "
+            remember {
+                "@${nip19.hex}${nip19.additionalChars} "
+            }
         )
     }
 }
@@ -157,21 +162,22 @@ private fun DisplayNote(
     noteBase?.let {
         val noteState by it.live().metadata.observeAsState()
         val note = remember(noteState) { noteState?.note } ?: return
-        val channelHex = note.channelHex()
+        val channelHex = remember(noteState) { note.channelHex() }
         val noteIdDisplayNote = remember(noteState) { "@${note.idDisplayNote()}" }
+        val addedCharts = remember { "${nip19.additionalChars} " }
 
         if (note.event is ChannelCreateEvent) {
             CreateClickableText(
                 clickablePart = noteIdDisplayNote,
-                suffix = "${nip19.additionalChars} ",
-                route = "Channel/${nip19.hex}",
+                suffix = addedCharts,
+                route = remember(noteState) { "Channel/${nip19.hex}" },
                 nav = nav
             )
         } else if (note.event is PrivateDmEvent) {
             CreateClickableText(
                 clickablePart = noteIdDisplayNote,
-                suffix = "${nip19.additionalChars} ",
-                route = "Room/${note.author?.pubkeyHex}",
+                suffix = addedCharts,
+                route = remember(noteState) { "Room/${note.author?.pubkeyHex}" },
                 nav = nav
             )
         } else if (channelHex != null) {
@@ -185,16 +191,16 @@ private fun DisplayNote(
 
                 CreateClickableText(
                     clickablePart = channelDisplayName,
-                    suffix = "${nip19.additionalChars} ",
-                    route = "Channel/${baseChannel.idHex}",
+                    suffix = addedCharts,
+                    route = remember(noteState) { "Channel/${baseChannel.idHex}" },
                     nav = nav
                 )
             }
         } else {
             CreateClickableText(
                 clickablePart = noteIdDisplayNote,
-                suffix = "${nip19.additionalChars} ",
-                route = "Note/${nip19.hex}",
+                suffix = addedCharts,
+                route = remember(noteState) { "Note/${nip19.hex}" },
                 nav = nav
             )
         }
@@ -202,7 +208,9 @@ private fun DisplayNote(
 
     if (noteBase == null) {
         Text(
-            "@${nip19.hex}${nip19.additionalChars} "
+            remember {
+                "@${nip19.hex}${nip19.additionalChars} "
+            }
         )
     }
 }
@@ -222,19 +230,24 @@ private fun DisplayAddress(
 
     noteBase?.let {
         val noteState by it.live().metadata.observeAsState()
-        val note = remember(noteState) { noteState?.note } ?: return
+
+        val route = remember(noteState) { "Note/${nip19.hex}" }
+        val displayName = remember(noteState) { "@${noteState?.note?.idDisplayNote()}" }
+        val addedCharts = remember { "${nip19.additionalChars} " }
 
         CreateClickableText(
-            clickablePart = "@${note.idDisplayNote()}",
-            suffix = "${nip19.additionalChars} ",
-            route = "Note/${nip19.hex}",
+            clickablePart = displayName,
+            suffix = addedCharts,
+            route = route,
             nav = nav
         )
     }
 
     if (noteBase == null) {
         Text(
-            "@${nip19.hex}${nip19.additionalChars} "
+            remember {
+                "@${nip19.hex}${nip19.additionalChars} "
+            }
         )
     }
 }
@@ -257,11 +270,14 @@ private fun DisplayUser(
         val route = remember(userState) { "User/${it.pubkeyHex}" }
         val userDisplayName = remember(userState) { userState?.user?.toBestDisplayName() }
         val userTags = remember(userState) { userState?.user?.info?.latestMetadata?.tags }
+        val addedCharts = remember {
+            "${nip19.additionalChars} "
+        }
 
         if (userDisplayName != null) {
             CreateClickableTextWithEmoji(
                 clickablePart = userDisplayName,
-                suffix = "${nip19.additionalChars} ",
+                suffix = addedCharts,
                 tags = userTags,
                 route = route,
                 nav = nav
@@ -271,7 +287,9 @@ private fun DisplayUser(
 
     if (userBase == null) {
         Text(
-            "@${nip19.hex}${nip19.additionalChars} "
+            remember {
+                "@${nip19.hex}${nip19.additionalChars} "
+            }
         )
     }
 }

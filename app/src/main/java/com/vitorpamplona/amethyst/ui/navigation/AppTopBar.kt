@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.NostrThreadDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.PeopleListEvent
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.RelayPool
@@ -347,6 +348,8 @@ class FollowListViewModel(val account: Account) : ViewModel() {
     }
 
     private suspend fun refreshFollows() {
+        checkNotInMainThread()
+
         val newFollowLists = LocalCache.addressables.mapNotNull {
             val event = (it.value.event as? PeopleListEvent)
             // Has to have an list

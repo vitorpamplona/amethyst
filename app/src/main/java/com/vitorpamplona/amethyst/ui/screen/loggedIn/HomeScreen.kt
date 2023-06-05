@@ -34,7 +34,7 @@ import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.PagerStateKeys
-import com.vitorpamplona.amethyst.ui.screen.RefresheableView
+import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.screen.rememberForeverPagerState
 import kotlinx.collections.immutable.ImmutableList
@@ -121,7 +121,7 @@ private fun HomePages(
     }
 
     HorizontalPager(pageCount = 2, state = pagerState) { page ->
-        RefresheableView(
+        RefresheableFeedView(
             viewModel = tabs[page].viewModel,
             accountViewModel = accountViewModel,
             nav = nav,

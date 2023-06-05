@@ -1,9 +1,10 @@
 package com.vitorpamplona.amethyst.service
 
 import android.os.Looper
+import com.vitorpamplona.amethyst.BuildConfig
 
 fun checkNotInMainThread() {
-    if (isMainThread()) throw OnMainThreadException("It should not be in the MainThread")
+    if (BuildConfig.DEBUG && isMainThread()) throw OnMainThreadException("It should not be in the MainThread")
 }
 
 fun isMainThread() = Looper.myLooper() == Looper.getMainLooper()

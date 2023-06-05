@@ -1,7 +1,6 @@
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.relays.FeedType
@@ -12,9 +11,9 @@ object NostrChatroomDataSource : NostrDataSource("ChatroomFeed") {
     lateinit var account: Account
     var withUser: User? = null
 
-    fun loadMessagesBetween(accountIn: Account, userId: String) {
+    fun loadMessagesBetween(accountIn: Account, user: User) {
         account = accountIn
-        withUser = LocalCache.users[userId]
+        withUser = user
         resetFilters()
     }
 

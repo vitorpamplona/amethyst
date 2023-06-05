@@ -14,6 +14,7 @@ import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -26,6 +27,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Composable
 fun NewChannelView(onClose: () -> Unit, accountViewModel: AccountViewModel, channel: Channel? = null) {
@@ -53,10 +56,14 @@ fun NewChannelView(onClose: () -> Unit, accountViewModel: AccountViewModel, chan
                         onClose()
                     })
 
+                    val scope = rememberCoroutineScope()
+
                     PostButton(
                         onPost = {
-                            postViewModel.create()
-                            onClose()
+                            scope.launch(Dispatchers.IO) {
+                                postViewModel.create()
+                                onClose()
+                            }
                         },
                         postViewModel.channelName.value.text.isNotBlank()
                     )
@@ -100,7 +107,9 @@ fun NewChannelView(onClose: () -> Unit, accountViewModel: AccountViewModel, chan
 
                 OutlinedTextField(
                     label = { Text(text = stringResource(R.string.description)) },
-                    modifier = Modifier.fillMaxWidth().height(100.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp),
                     value = postViewModel.channelDescription.value,
                     onValueChange = { postViewModel.channelDescription.value = it },
                     placeholder = {
