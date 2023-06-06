@@ -112,6 +112,8 @@ import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
+import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
+import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
@@ -139,8 +141,11 @@ import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Following
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -245,7 +250,7 @@ fun CheckHiddenNoteCompose(
 data class NoteComposeReportState(
     val isAcceptable: Boolean,
     val canPreview: Boolean,
-    val relevantReports: Set<Note>
+    val relevantReports: ImmutableSet<Note>
 )
 
 @Composable
@@ -267,14 +272,14 @@ fun LoadedNoteCompose(
             NoteComposeReportState(
                 isAcceptable = true,
                 canPreview = true,
-                relevantReports = emptySet()
+                relevantReports = persistentSetOf()
             )
         )
     }
 
     WatchForReports(note, accountViewModel) { newIsAcceptable, newCanPreview, newRelevantReports ->
         if (newIsAcceptable != state.isAcceptable || newCanPreview != state.canPreview) {
-            state = NoteComposeReportState(newIsAcceptable, newCanPreview, newRelevantReports)
+            state = NoteComposeReportState(newIsAcceptable, newCanPreview, newRelevantReports.toImmutableSet())
         }
     }
 
@@ -596,7 +601,7 @@ private fun RenderTextEvent(
                 accountViewModel = accountViewModel
             ) {
                 val modifier = remember(note) { Modifier.fillMaxWidth() }
-                val tags = remember(note) { note.event?.tags()?.toImmutableList() ?: emptyList<List<String>>().toImmutableList() }
+                val tags = remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: ImmutableListOfLists() }
 
                 TranslatableRichTextViewer(
                     content = eventContent,
@@ -609,7 +614,7 @@ private fun RenderTextEvent(
                 )
             }
 
-            val hashtags = remember(note.event) { note.event?.hashtags() ?: emptyList() }
+            val hashtags = remember(note.event) { note.event?.hashtags()?.toImmutableList() ?: persistentListOf() }
             DisplayUncitedHashtags(hashtags, eventContent, nav)
         }
     }
@@ -646,7 +651,7 @@ private fun RenderPoll(
     } else {
         val hasSensitiveContent = remember(note.event) { note.event?.isSensitive() ?: false }
 
-        val tags = remember(note) { note.event?.tags()?.toImmutableList() ?: emptyList<List<String>>().toImmutableList() }
+        val tags = remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: ImmutableListOfLists() }
 
         SensitivityWarning(
             hasSensitiveContent = hasSensitiveContent,
@@ -671,7 +676,7 @@ private fun RenderPoll(
             )
         }
 
-        var hashtags = remember { noteEvent.hashtags() }
+        var hashtags = remember { noteEvent.hashtags().toImmutableList() }
         DisplayUncitedHashtags(hashtags, eventContent, nav)
     }
 
@@ -797,7 +802,7 @@ fun RenderAppDefinition(
                     Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 7.dp)) {
                         CreateTextWithEmoji(
                             text = it,
-                            tags = remember { (note.event?.tags() ?: emptyList()).toImmutableList() },
+                            tags = remember { (note.event?.tags() ?: emptyList()).toImmutableListOfLists() },
                             fontWeight = FontWeight.Bold,
                             fontSize = 25.sp
                         )
@@ -827,7 +832,7 @@ fun RenderAppDefinition(
                     Row(
                         modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)
                     ) {
-                        val tags = remember(note) { note.event?.tags()?.toImmutableList() ?: emptyList<List<String>>().toImmutableList() }
+                        val tags = remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: ImmutableListOfLists() }
                         TranslatableRichTextViewer(
                             content = it,
                             canPreview = false,
@@ -891,11 +896,11 @@ private fun RenderPrivateMessage(
     if (withMe) {
         val eventContent = remember { accountViewModel.decrypt(note) }
 
-        val hashtags = remember(note.event?.id()) { note.event?.hashtags() ?: emptyList() }
+        val hashtags = remember(note.event?.id()) { note.event?.hashtags()?.toImmutableList() ?: persistentListOf() }
         val modifier = remember(note.event?.id()) { Modifier.fillMaxWidth() }
         val isAuthorTheLoggedUser = remember(note.event?.id()) { accountViewModel.isLoggedUser(note.author) }
 
-        val tags = remember(note) { note.event?.tags()?.toImmutableList() ?: emptyList<List<String>>().toImmutableList() }
+        val tags = remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: ImmutableListOfLists() }
 
         if (eventContent != null) {
             if (makeItShort && isAuthorTheLoggedUser) {
@@ -936,7 +941,7 @@ private fun RenderPrivateMessage(
             ),
             canPreview = !makeItShort,
             Modifier.fillMaxWidth(),
-            persistentListOf(),
+            ImmutableListOfLists(),
             backgroundColor,
             accountViewModel,
             nav
@@ -1248,7 +1253,7 @@ fun PinListHeader(
                     TranslatableRichTextViewer(
                         content = pin,
                         canPreview = true,
-                        tags = remember { persistentListOf() },
+                        tags = remember { ImmutableListOfLists() },
                         backgroundColor = backgroundColor,
                         accountViewModel = accountViewModel,
                         nav = nav
@@ -1358,7 +1363,7 @@ private fun RenderReport(
         content = content,
         canPreview = true,
         modifier = remember { Modifier },
-        tags = remember { persistentListOf() },
+        tags = remember { ImmutableListOfLists() },
         backgroundColor = backgroundColor,
         accountViewModel = accountViewModel,
         nav = nav
@@ -1433,8 +1438,12 @@ private fun ReplyRow(
 
         Spacer(modifier = Modifier.height(5.dp))
     } else if (noteEvent is ChannelMessageEvent && (note.replyTo != null || noteEvent.hasAnyTaggedUser())) {
-        note.channelHex()?.let {
-            ReplyInformationChannel(note.replyTo, noteEvent.mentions(), it, accountViewModel, nav)
+        val channelHex = note.channelHex()
+        channelHex?.let {
+            val replies = remember { note.replyTo?.toImmutableList() }
+            val mentions = remember { noteEvent.mentions().toImmutableList() }
+
+            ReplyInformationChannel(replies, mentions, it, accountViewModel, nav)
         }
 
         Spacer(modifier = Modifier.height(5.dp))
@@ -1453,7 +1462,7 @@ private fun SecondUserInfoRow(
     Row(verticalAlignment = Alignment.CenterVertically) {
         ObserveDisplayNip05Status(noteAuthor, remember { Modifier.weight(1f) })
 
-        val baseReward = remember { noteEvent.getReward() }
+        val baseReward = remember { noteEvent.getReward()?.let { Reward(it) } }
         if (baseReward != null) {
             DisplayReward(baseReward, note, accountViewModel, nav)
         }
@@ -1695,8 +1704,8 @@ fun DisplayHighlight(
     TranslatableRichTextViewer(
         quote,
         canPreview = canPreview && !makeItShort,
-        Modifier.fillMaxWidth(),
-        persistentListOf(),
+        remember { Modifier.fillMaxWidth() },
+        remember { ImmutableListOfLists<String>(emptyList()) },
         backgroundColor,
         accountViewModel,
         nav
@@ -1718,7 +1727,7 @@ fun DisplayHighlight(
                 val userState by userBase.live().metadata.observeAsState()
                 val route = remember { "User/${userBase.pubkeyHex}" }
                 val userDisplayName = remember(userState) { userState?.user?.toBestDisplayName() }
-                val userTags = remember(userState) { userState?.user?.info?.latestMetadata?.tags?.toImmutableList() }
+                val userTags = remember(userState) { userState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists() }
 
                 if (userDisplayName != null) {
                     CreateClickableTextWithEmoji(
@@ -1793,7 +1802,7 @@ fun DisplayFollowingHashtagsInPost(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DisplayUncitedHashtags(
-    hashtags: List<String>,
+    hashtags: ImmutableList<String>,
     eventContent: String,
     nav: (String) -> Unit
 ) {
@@ -1832,9 +1841,12 @@ fun DisplayPoW(
     )
 }
 
+@Stable
+data class Reward(val amount: BigDecimal)
+
 @Composable
 fun DisplayReward(
-    baseReward: BigDecimal,
+    baseReward: Reward,
     baseNote: Note,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -1870,13 +1882,13 @@ fun DisplayReward(
 @Composable
 private fun RenderPledgeAmount(
     baseNote: Note,
-    baseReward: BigDecimal,
+    baseReward: Reward,
     accountViewModel: AccountViewModel
 ) {
     val repliesState by baseNote.live().replies.observeAsState()
-    var rewardAmount by remember {
-        mutableStateOf<BigDecimal?>(
-            baseReward
+    var reward by remember {
+        mutableStateOf<String>(
+            showAmount(baseReward.amount)
         )
     }
 
@@ -1889,9 +1901,9 @@ private fun RenderPledgeAmount(
     LaunchedEffect(key1 = repliesState) {
         launch(Dispatchers.IO) {
             repliesState?.note?.pledgedAmountByOthers()?.let {
-                val newRewardAmount = baseReward.add(it)
-                if (newRewardAmount != rewardAmount) {
-                    rewardAmount = newRewardAmount
+                val newRewardAmount = showAmount(baseReward.amount.add(it))
+                if (newRewardAmount != reward) {
+                    reward = newRewardAmount
                 }
             }
             val newHasPledge = repliesState?.note?.hasPledgeBy(accountViewModel.userProfile()) == true
@@ -1918,7 +1930,7 @@ private fun RenderPledgeAmount(
     }
 
     Text(
-        showAmount(rewardAmount),
+        text = reward,
         color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
     )
 }
@@ -2052,7 +2064,7 @@ fun FileHeaderDisplay(note: Note) {
     }
 
     content?.let {
-        ZoomableContentView(content = it, listOf(it))
+        ZoomableContentView(content = it)
     }
 }
 
@@ -2110,7 +2122,7 @@ fun FileStorageHeaderDisplay(baseNote: Note) {
         }
 
         content?.let {
-            ZoomableContentView(content = it, listOf(it))
+            ZoomableContentView(content = it)
         }
     }
 }
@@ -2289,14 +2301,14 @@ private fun CreateImageHeader(
 private fun RelayBadges(baseNote: Note) {
     var expanded by remember { mutableStateOf(false) }
     var showShowMore by remember { mutableStateOf(false) }
-    var lazyRelayList by remember { mutableStateOf(emptyList<String>()) }
+    var lazyRelayList by remember { mutableStateOf<ImmutableList<String>>(persistentListOf()) }
 
     WatchRelayLists(baseNote) { relayList ->
         val relaysToDisplay = if (expanded) relayList else relayList.take(3)
         val shouldListChange = lazyRelayList.size < 3 || lazyRelayList.size != relayList.size
 
         if (shouldListChange) {
-            lazyRelayList = relaysToDisplay
+            lazyRelayList = relaysToDisplay.toImmutableList()
         }
 
         val nextShowMore = relayList.size > 3 && !expanded
@@ -2336,7 +2348,7 @@ private fun WatchRelayLists(baseNote: Note, onListChanges: (ImmutableList<String
 @Composable
 @Stable
 private fun VerticalRelayPanelWithFlow(
-    relays: List<String>
+    relays: ImmutableList<String>
 ) {
     // FlowRow Seems to be a lot faster than LazyVerticalGrid
     FlowRow() {

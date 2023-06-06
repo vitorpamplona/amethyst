@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.decodePublicKey
 import com.vitorpamplona.amethyst.model.toHexKey
+import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
@@ -57,7 +58,6 @@ import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.LoginPage
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -228,7 +228,7 @@ private fun AccountName(
     }
     val tags by remember(userState) {
         derivedStateOf {
-            user.info?.latestMetadata?.tags?.toImmutableList()
+            user.info?.latestMetadata?.tags?.toImmutableListOfLists()
         }
     }
 

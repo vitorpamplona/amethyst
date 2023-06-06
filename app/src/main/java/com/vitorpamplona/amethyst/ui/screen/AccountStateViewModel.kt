@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.screen
 
 import android.content.Context
+import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
@@ -22,6 +23,7 @@ import nostr.postr.Persona
 import nostr.postr.bechToBytes
 import java.util.regex.Pattern
 
+@Stable
 class AccountStateViewModel(val context: Context) : ViewModel() {
     private val _accountContent = MutableStateFlow<AccountState>(AccountState.LoggedOff)
     val accountContent = _accountContent.asStateFlow()

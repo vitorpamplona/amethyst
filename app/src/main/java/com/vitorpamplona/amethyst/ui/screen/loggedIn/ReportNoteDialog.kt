@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.ui.theme.WarningColor
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -55,7 +56,7 @@ fun ReportNoteDialog(note: Note, accountViewModel: AccountViewModel, onDismiss: 
         Pair(ReportEvent.ReportType.ILLEGAL, stringResource(R.string.report_dialog_illegal))
     )
 
-    val reasonOptions = reportTypes.map { it.second }
+    val reasonOptions = remember { reportTypes.map { it.second }.toImmutableList() }
     var additionalReason by remember { mutableStateOf("") }
     var selectedReason by remember { mutableStateOf(-1) }
 

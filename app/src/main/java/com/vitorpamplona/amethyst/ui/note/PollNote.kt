@@ -27,11 +27,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
+import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
+import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.*
@@ -111,7 +111,9 @@ private fun OptionNote(
     backgroundColor: Color,
     nav: (String) -> Unit
 ) {
-    val tags = remember(baseNote) { baseNote.event?.tags()?.toImmutableList() ?: emptyList<List<String>>().toImmutableList() }
+    val tags = remember(baseNote) {
+        baseNote.event?.tags()?.toImmutableListOfLists() ?: ImmutableListOfLists()
+    }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -165,7 +167,7 @@ private fun RenderOptionAfterVote(
     totalRatio: Float,
     color: Color,
     canPreview: Boolean,
-    tags: ImmutableList<List<String>>,
+    tags: ImmutableListOfLists<String>,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -232,7 +234,7 @@ private fun RenderOptionAfterVote(
 private fun RenderOptionBeforeVote(
     description: String,
     canPreview: Boolean,
-    tags: ImmutableList<List<String>>,
+    tags: ImmutableListOfLists<String>,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit

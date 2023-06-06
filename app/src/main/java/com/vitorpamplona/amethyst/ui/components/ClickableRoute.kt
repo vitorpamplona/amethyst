@@ -47,6 +47,8 @@ import com.vitorpamplona.amethyst.service.NIP30Parser
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.nip19.Nip19
+import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
+import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.note.LoadChannel
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
@@ -271,7 +273,7 @@ private fun DisplayUser(
         val userState by it.live().metadata.observeAsState()
         val route = remember(userState) { "User/${it.pubkeyHex}" }
         val userDisplayName = remember(userState) { userState?.user?.toBestDisplayName() }
-        val userTags = remember(userState) { userState?.user?.info?.latestMetadata?.tags?.toImmutableList() }
+        val userTags = remember(userState) { userState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists() }
         val addedCharts = remember {
             "${nip19.additionalChars} "
         }
@@ -325,7 +327,7 @@ fun CreateClickableText(
 @Composable
 fun CreateTextWithEmoji(
     text: String,
-    tags: ImmutableList<List<String>>?,
+    tags: ImmutableListOfLists<String>?,
     color: Color = Color.Unspecified,
     textAlign: TextAlign? = null,
     fontWeight: FontWeight? = null,
@@ -339,7 +341,7 @@ fun CreateTextWithEmoji(
     LaunchedEffect(key1 = text) {
         launch(Dispatchers.Default) {
             val emojis =
-                tags?.filter { it.size > 2 && it[0] == "emoji" }?.associate { ":${it[1]}:" to it[2] } ?: emptyMap()
+                tags?.lists?.filter { it.size > 2 && it[0] == "emoji" }?.associate { ":${it[1]}:" to it[2] } ?: emptyMap()
 
             if (emojis.isNotEmpty()) {
                 val newEmojiList = assembleAnnotatedList(text, emojis)
@@ -440,7 +442,7 @@ fun CreateTextWithEmoji(
 @Composable
 fun CreateClickableTextWithEmoji(
     clickablePart: String,
-    tags: ImmutableList<List<String>>?,
+    tags: ImmutableListOfLists<String>?,
     style: TextStyle,
     onClick: (Int) -> Unit
 ) {
@@ -449,7 +451,7 @@ fun CreateClickableTextWithEmoji(
     LaunchedEffect(key1 = clickablePart) {
         launch(Dispatchers.Default) {
             val emojis =
-                tags?.filter { it.size > 2 && it[0] == "emoji" }?.associate { ":${it[1]}:" to it[2] } ?: emptyMap()
+                tags?.lists?.filter { it.size > 2 && it[0] == "emoji" }?.associate { ":${it[1]}:" to it[2] } ?: emptyMap()
 
             if (emojis.isNotEmpty()) {
                 val newEmojiList = assembleAnnotatedList(clickablePart, emojis)
@@ -477,7 +479,7 @@ fun CreateClickableTextWithEmoji(
 fun CreateClickableTextWithEmoji(
     clickablePart: String,
     suffix: String,
-    tags: ImmutableList<List<String>>?,
+    tags: ImmutableListOfLists<String>?,
     overrideColor: Color? = null,
     fontWeight: FontWeight = FontWeight.Normal,
     route: String,
@@ -490,7 +492,7 @@ fun CreateClickableTextWithEmoji(
     LaunchedEffect(key1 = clickablePart) {
         launch(Dispatchers.Default) {
             val emojis =
-                tags?.filter { it.size > 2 && it[0] == "emoji" }?.associate { ":${it[1]}:" to it[2] } ?: emptyMap()
+                tags?.lists?.filter { it.size > 2 && it[0] == "emoji" }?.associate { ":${it[1]}:" to it[2] } ?: emptyMap()
 
             if (emojis.isNotEmpty()) {
                 val newEmojiList1 = assembleAnnotatedList(clickablePart, emojis)

@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.actions
 
 import android.content.Context
 import android.net.Uri
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
@@ -24,6 +25,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 
+@Stable
 open class NewPostViewModel() : ViewModel() {
     var account: Account? = null
     var originalNote: Note? = null

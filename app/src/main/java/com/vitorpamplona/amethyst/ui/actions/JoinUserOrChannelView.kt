@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.Divider
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
@@ -73,9 +75,23 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun JoinUserOrChannelView(onClose: () -> Unit, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val searchBarViewModel: SearchBarViewModel = viewModel()
-    searchBarViewModel.account = accountViewModel.account
+    val searchBarViewModel: SearchBarViewModel = viewModel(
+        key = accountViewModel.account.userProfile().pubkeyHex + "SearchBarViewModel",
+        factory = SearchBarViewModel.Factory(
+            accountViewModel.account
+        )
+    )
 
+    JoinUserOrChannelView(
+        searchBarViewModel = searchBarViewModel,
+        onClose = onClose,
+        accountViewModel = accountViewModel,
+        nav = nav
+    )
+}
+
+@Composable
+fun JoinUserOrChannelView(searchBarViewModel: SearchBarViewModel, onClose: () -> Unit, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     Dialog(
         onDismissRequest = {
             NostrSearchEventOrUserDataSource.clear()
@@ -88,7 +104,9 @@ fun JoinUserOrChannelView(onClose: () -> Unit, accountViewModel: AccountViewMode
     ) {
         Surface() {
             Column(
-                modifier = Modifier.padding(10.dp).heightIn(min = 500.dp)
+                modifier = Modifier
+                    .padding(10.dp)
+                    .heightIn(min = 500.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -115,27 +133,19 @@ fun JoinUserOrChannelView(onClose: () -> Unit, accountViewModel: AccountViewMode
 
                 Spacer(modifier = Modifier.height(15.dp))
 
-                RenderSeach(searchBarViewModel, accountViewModel, nav)
+                RenderSearch(searchBarViewModel, accountViewModel, nav)
             }
         }
     }
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
-private fun RenderSeach(
+private fun RenderSearch(
     searchBarViewModel: SearchBarViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
-
-    // initialize focus reference to be able to request focus programmatically
-    val focusRequester = remember { FocusRequester() }
-    val keyboardController = LocalSoftwareKeyboardController.current
-
-    val onlineSearch = NostrSearchEventOrUserDataSource
 
     val lifeCycleOwner = LocalLifecycleOwner.current
 
@@ -147,7 +157,7 @@ private fun RenderSeach(
     LaunchedEffect(Unit) {
         launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect {
-                if (searchBarViewModel.isSearching()) {
+                if (searchBarViewModel.isSearchingFun()) {
                     searchBarViewModel.invalidateData()
                 }
             }
@@ -155,9 +165,6 @@ private fun RenderSeach(
     }
 
     LaunchedEffect(Unit) {
-        delay(100)
-        focusRequester.requestFocus()
-
         // Wait for text changes to stop for 300 ms before firing off search.
         withContext(Dispatchers.IO) {
             searchTextChanges.receiveAsFlow()
@@ -166,13 +173,13 @@ private fun RenderSeach(
                 .debounce(300)
                 .collectLatest {
                     if (it.length >= 2) {
-                        onlineSearch.search(it.trim())
+                        NostrSearchEventOrUserDataSource.search(it.trim())
                     }
 
                     searchBarViewModel.invalidateData()
 
                     // makes sure to show the top of the search
-                    scope.launch(Dispatchers.Main) {
+                    launch(Dispatchers.Main) {
                         listState.animateScrollToItem(0)
                     }
                 }
@@ -200,8 +207,32 @@ private fun RenderSeach(
     }
 
     // LAST ROW
+    SearchEditTextForJoin(searchBarViewModel, searchTextChanges)
+
+    RenderSearchResults(searchBarViewModel, listState, accountViewModel, nav)
+}
+
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+private fun SearchEditTextForJoin(
+    searchBarViewModel: SearchBarViewModel,
+    searchTextChanges: Channel<String>
+) {
+    val scope = rememberCoroutineScope()
+
+    // initialize focus reference to be able to request focus programmatically
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    LaunchedEffect(Unit) {
+        delay(100)
+        focusRequester.requestFocus()
+    }
+
     Row(
-        modifier = Modifier.padding(horizontal = 10.dp).fillMaxWidth(),
+        modifier = Modifier
+            .padding(horizontal = 10.dp)
+            .fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -238,11 +269,11 @@ private fun RenderSeach(
                 )
             },
             trailingIcon = {
-                if (searchBarViewModel.isTrailingIconVisible) {
+                if (searchBarViewModel.isSearching) {
                     IconButton(
                         onClick = {
                             searchBarViewModel.clean()
-                            onlineSearch.clear()
+                            NostrSearchEventOrUserDataSource.clear()
                         }
                     ) {
                         Icon(
@@ -254,10 +285,24 @@ private fun RenderSeach(
             }
         )
     }
+}
 
-    if (searchBarViewModel.searchValue.isNotBlank()) {
+@Composable
+private fun RenderSearchResults(
+    searchBarViewModel: SearchBarViewModel,
+    listState: LazyListState,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    if (searchBarViewModel.isSearching) {
+        val users by searchBarViewModel.searchResultsUsers.collectAsState()
+        val channels by searchBarViewModel.searchResultsChannels.collectAsState()
+
         Row(
-            modifier = Modifier.fillMaxWidth().fillMaxHeight().padding(vertical = 10.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight()
+                .padding(vertical = 10.dp)
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxHeight(),
@@ -268,7 +313,7 @@ private fun RenderSeach(
                 state = listState
             ) {
                 itemsIndexed(
-                    searchBarViewModel.searchResultsUsers.value,
+                    users,
                     key = { _, item -> "u" + item.pubkeyHex }
                 ) { _, item ->
                     UserComposeForChat(
@@ -279,7 +324,7 @@ private fun RenderSeach(
                 }
 
                 itemsIndexed(
-                    searchBarViewModel.searchResultsChannels.value,
+                    channels,
                     key = { _, item -> "c" + item.idHex }
                 ) { _, item ->
                     ChannelName(
@@ -325,7 +370,11 @@ fun UserComposeForChat(
         ) {
             UserPicture(baseUser, nav, accountViewModel, 55.dp)
 
-            Column(modifier = Modifier.padding(start = 10.dp).weight(1f)) {
+            Column(
+                modifier = Modifier
+                    .padding(start = 10.dp)
+                    .weight(1f)
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     UsernameDisplay(baseUser)
                 }

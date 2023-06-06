@@ -83,26 +83,46 @@ fun UserReactionsRow(
             )
         }
 
-        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
-            val replies by model.replies.collectAsState()
-            UserReplyReaction(replies[model.today()])
+        Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
+            UserReplyModel(model)
         }
 
-        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
-            val boosts by model.boosts.collectAsState()
-            UserBoostReaction(boosts[model.today()])
+        Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
+            UserBoostModel(model)
         }
 
-        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
-            val reactions by model.reactions.collectAsState()
-            UserLikeReaction(reactions[model.today()])
+        Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
+            UserReactionModel(model)
         }
 
-        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
-            val zaps by model.zaps.collectAsState()
-            UserZapReaction(zaps[model.today()])
+        Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
+            UserZapModel(model)
         }
     }
+}
+
+@Composable
+private fun UserZapModel(model: UserReactionsViewModel) {
+    val zaps by model.zaps.collectAsState()
+    UserZapReaction(showAmountAxis(zaps[model.today()]))
+}
+
+@Composable
+private fun UserReactionModel(model: UserReactionsViewModel) {
+    val reactions by model.reactions.collectAsState()
+    UserLikeReaction(reactions[model.today()])
+}
+
+@Composable
+private fun UserBoostModel(model: UserReactionsViewModel) {
+    val boosts by model.boosts.collectAsState()
+    UserBoostReaction(boosts[model.today()])
+}
+
+@Composable
+private fun UserReplyModel(model: UserReactionsViewModel) {
+    val replies by model.replies.collectAsState()
+    UserReplyReaction(replies[model.today()])
 }
 
 @Stable
@@ -368,10 +388,8 @@ fun UserLikeReaction(
 
 @Composable
 fun UserZapReaction(
-    amount: BigDecimal?
+    amount: String
 ) {
-    val showAmounts = remember(amount) { showAmountAxis(amount) }
-
     Icon(
         imageVector = Icons.Default.Bolt,
         contentDescription = stringResource(R.string.zaps),
@@ -382,7 +400,7 @@ fun UserZapReaction(
     Spacer(modifier = Modifier.width(8.dp))
 
     Text(
-        showAmounts,
+        amount,
         fontWeight = FontWeight.Bold,
         fontSize = 18.sp
     )

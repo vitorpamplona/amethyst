@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen
 
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -28,6 +29,7 @@ class NostrUserProfileZapsFeedViewModel(user: User) : LnZapFeedViewModel(UserPro
     }
 }
 
+@Stable
 open class LnZapFeedViewModel(val dataSource: FeedFilter<ZapReqResponse>) : ViewModel() {
     private val _feedContent = MutableStateFlow<LnZapFeedState>(LnZapFeedState.Loading)
     val feedContent = _feedContent.asStateFlow()

@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.service.lang
 
 import android.util.LruCache
+import androidx.compose.runtime.Immutable
 import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
 import com.google.mlkit.nl.languageid.LanguageIdentification
@@ -13,11 +14,12 @@ import com.linkedin.urls.detection.UrlDetector
 import com.linkedin.urls.detection.UrlDetectorOptions
 import java.util.regex.Pattern
 
-class ResultOrError(
-    var result: String?,
-    var sourceLang: String?,
-    var targetLang: String?,
-    var error: Exception?
+@Immutable
+data class ResultOrError(
+    val result: String?,
+    val sourceLang: String?,
+    val targetLang: String?,
+    val error: Exception?
 )
 
 object LanguageTranslatorService {

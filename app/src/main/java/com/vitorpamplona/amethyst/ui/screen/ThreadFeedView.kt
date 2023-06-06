@@ -60,6 +60,8 @@ import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.PeopleListEvent
 import com.vitorpamplona.amethyst.service.model.PinListEvent
 import com.vitorpamplona.amethyst.service.model.PollNoteEvent
+import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
+import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
@@ -81,6 +83,7 @@ import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterialApi::class)
@@ -231,8 +234,12 @@ fun NoteMaster(
     if (noteEvent == null) {
         BlankNote()
     } else if (!account.isAcceptable(noteForReports) && !showHiddenNote) {
+        val reports = remember {
+            account.getRelevantReports(noteForReports).toImmutableSet()
+        }
+
         HiddenNote(
-            account.getRelevantReports(noteForReports),
+            reports,
             accountViewModel,
             Modifier,
             false,
@@ -289,14 +296,14 @@ fun NoteMaster(
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        ObserveDisplayNip05Status(baseNote, Modifier.weight(1f))
+                        ObserveDisplayNip05Status(baseNote, remember { Modifier.weight(1f) })
 
-                        val baseReward = noteEvent.getReward()
+                        val baseReward = remember { noteEvent.getReward()?.let { Reward(it) } }
                         if (baseReward != null) {
                             DisplayReward(baseReward, baseNote, accountViewModel, nav)
                         }
 
-                        val pow = noteEvent.getPoWRank()
+                        val pow = remember { noteEvent.getPoWRank() }
                         if (pow > 20) {
                             DisplayPoW(pow)
                         }
@@ -389,7 +396,7 @@ fun NoteMaster(
 
                         if (eventContent != null) {
                             val hasSensitiveContent = remember(note.event) { note.event?.isSensitive() ?: false }
-                            val tags = remember(note) { note.event?.tags()?.toImmutableList() ?: emptyList<List<String>>().toImmutableList() }
+                            val tags = remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: ImmutableListOfLists() }
 
                             SensitivityWarning(
                                 hasSensitiveContent = hasSensitiveContent,
@@ -398,7 +405,7 @@ fun NoteMaster(
                                 TranslatableRichTextViewer(
                                     eventContent,
                                     canPreview,
-                                    Modifier.fillMaxWidth(),
+                                    remember { Modifier.fillMaxWidth() },
                                     tags,
                                     MaterialTheme.colors.background,
                                     accountViewModel,
@@ -406,7 +413,10 @@ fun NoteMaster(
                                 )
                             }
 
-                            DisplayUncitedHashtags(noteEvent.hashtags(), eventContent, nav)
+                            val hashtags = remember {
+                                noteEvent.hashtags().toImmutableList()
+                            }
+                            DisplayUncitedHashtags(hashtags, eventContent, nav)
 
                             if (noteEvent is PollNoteEvent) {
                                 PollNote(

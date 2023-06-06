@@ -64,6 +64,7 @@ import androidx.compose.ui.unit.isFinite
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.net.toUri
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.AsyncImage
 import coil.imageLoader
@@ -75,6 +76,8 @@ import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.actions.SaveToGallery
 import com.vitorpamplona.amethyst.ui.note.BlankNote
 import com.vitorpamplona.amethyst.ui.theme.Nip05
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -164,7 +167,7 @@ fun figureOutMimeType(fullUrl: String): ZoomableContent {
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
-fun ZoomableContentView(content: ZoomableContent, images: List<ZoomableContent> = listOf(content)) {
+fun ZoomableContentView(content: ZoomableContent, images: ImmutableList<ZoomableContent> = listOf(content).toImmutableList()) {
     val clipboardManager = LocalClipboardManager.current
 
     // store the dialog open or close state
@@ -201,7 +204,10 @@ fun ZoomableContentView(content: ZoomableContent, images: List<ZoomableContent> 
         is ZoomableUrlImage -> UrlImageView(content, mainImageModifier)
         is ZoomableUrlVideo -> VideoView(content.url, content.description) { dialogOpen = true }
         is ZoomableLocalImage -> LocalImageView(content, mainImageModifier)
-        is ZoomableLocalVideo -> VideoView(content.localFile, content.description) { dialogOpen = true }
+        is ZoomableLocalVideo ->
+            content.localFile?.let {
+                VideoView(it.toUri().toString(), content.description) { dialogOpen = true }
+            }
     }
 
     if (dialogOpen) {
@@ -442,7 +448,7 @@ private fun DisplayBlurHash(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ZoomableImageDialog(imageUrl: ZoomableContent, allImages: List<ZoomableContent> = listOf(imageUrl), onDismiss: () -> Unit) {
+fun ZoomableImageDialog(imageUrl: ZoomableContent, allImages: ImmutableList<ZoomableContent> = listOf(imageUrl).toImmutableList(), onDismiss: () -> Unit) {
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -507,7 +513,9 @@ fun RenderImageOrVideo(content: ZoomableContent) {
         LocalImageView(content = content, mainImageModifier = mainModifier)
     } else if (content is ZoomableLocalVideo) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize(1f)) {
-            VideoView(content.localFile, content.description)
+            content.localFile?.let {
+                VideoView(it.toUri().toString(), content.description)
+            }
         }
     }
 }

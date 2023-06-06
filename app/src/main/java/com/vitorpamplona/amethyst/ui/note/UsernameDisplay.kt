@@ -11,9 +11,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
+import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.toImmutableList
 
 @Composable
 fun NoteUsernameDisplay(baseNote: Note, weight: Modifier = Modifier) {
@@ -31,7 +31,7 @@ fun UsernameDisplay(baseUser: User, weight: Modifier = Modifier) {
     val bestUserName = remember(userState) { userState?.user?.bestUsername() }
     val bestDisplayName = remember(userState) { userState?.user?.bestDisplayName() }
     val npubDisplay = remember { baseUser.pubkeyDisplayHex() }
-    val tags = remember(userState) { userState?.user?.info?.latestMetadata?.tags?.toImmutableList() }
+    val tags = remember(userState) { userState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists() }
 
     UserNameDisplay(bestUserName, bestDisplayName, npubDisplay, tags, weight)
 }
@@ -41,7 +41,7 @@ private fun UserNameDisplay(
     bestUserName: String?,
     bestDisplayName: String?,
     npubDisplay: String,
-    tags: ImmutableList<List<String>>?,
+    tags: ImmutableListOfLists<String>?,
     modifier: Modifier
 ) {
     if (bestUserName != null && bestDisplayName != null) {

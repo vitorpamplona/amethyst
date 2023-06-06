@@ -13,6 +13,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.model.GitHubIdentity
 import com.vitorpamplona.amethyst.service.model.MastodonIdentity
 import com.vitorpamplona.amethyst.service.model.TwitterIdentity
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import java.io.ByteArrayInputStream
@@ -119,7 +120,9 @@ class NewUserMetadataViewModel : ViewModel() {
         val writer = StringWriter()
         ObjectMapper().writeValue(writer, currentJson)
 
-        account.sendNewUserMetadata(writer.buffer.toString(), newClaims)
+        viewModelScope.launch(Dispatchers.IO) {
+            account.sendNewUserMetadata(writer.buffer.toString(), newClaims)
+        }
 
         clear()
     }

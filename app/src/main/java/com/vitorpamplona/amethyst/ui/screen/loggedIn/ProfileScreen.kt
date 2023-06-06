@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -65,7 +64,9 @@ import com.vitorpamplona.amethyst.service.model.IdentityClaim
 import com.vitorpamplona.amethyst.service.model.PayInvoiceErrorResponse
 import com.vitorpamplona.amethyst.service.model.PayInvoiceSuccessResponse
 import com.vitorpamplona.amethyst.service.model.ReportEvent
+import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
+import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.DisplayNip05ProfileStatus
 import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
@@ -96,9 +97,7 @@ import com.vitorpamplona.amethyst.ui.screen.RelayFeedView
 import com.vitorpamplona.amethyst.ui.screen.RelayFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -426,7 +425,6 @@ private fun ProfileHeader(
     var popupExpanded by remember { mutableStateOf(false) }
     var zoomImageDialogOpen by remember { mutableStateOf(false) }
 
-    val coroutineScope = rememberCoroutineScope()
     val clipboardManager = LocalClipboardManager.current
 
     Box {
@@ -505,7 +503,7 @@ private fun ProfileHeader(
                     // No need for this button anymore
                     // NPubCopyButton(baseUser)
 
-                    ProfileActions(baseUser, accountViewModel, coroutineScope)
+                    ProfileActions(baseUser, accountViewModel)
                 }
             }
 
@@ -524,9 +522,10 @@ private fun ProfileHeader(
 @Composable
 private fun ProfileActions(
     baseUser: User,
-    accountViewModel: AccountViewModel,
-    coroutineScope: CoroutineScope
+    accountViewModel: AccountViewModel
 ) {
+    val scope = rememberCoroutineScope()
+
     val accountLocalUserState by accountViewModel.accountLiveData.observeAsState()
     val account = remember(accountLocalUserState) { accountLocalUserState?.account } ?: return
 
@@ -561,16 +560,16 @@ private fun ProfileActions(
             account.showUser(baseUser.pubkeyHex)
         }
     } else if (isLoggedInFollowingUser) {
-        UnfollowButton { coroutineScope.launch(Dispatchers.IO) { account.unfollow(baseUser) } }
+        UnfollowButton { scope.launch(Dispatchers.IO) { account.unfollow(baseUser) } }
     } else {
         if (isUserFollowingLoggedIn) {
             FollowButton(
-                { coroutineScope.launch(Dispatchers.IO) { account.follow(baseUser) } },
+                { scope.launch(Dispatchers.IO) { account.follow(baseUser) } },
                 R.string.follow_back
             )
         } else {
             FollowButton(
-                { coroutineScope.launch(Dispatchers.IO) { account.follow(baseUser) } },
+                { scope.launch(Dispatchers.IO) { account.follow(baseUser) } },
                 R.string.follow
             )
         }
@@ -586,12 +585,10 @@ private fun DrawAdditionalInfo(
 ) {
     val userState by baseUser.live().metadata.observeAsState()
     val user = remember(userState) { userState?.user } ?: return
-    val tags = remember(userState) { userState?.user?.info?.latestMetadata?.tags?.toImmutableList() }
+    val tags = remember(userState) { userState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists() }
 
     val uri = LocalUriHandler.current
     val clipboardManager = LocalClipboardManager.current
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
 
     (user.bestDisplayName() ?: user.bestUsername())?.let {
         Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 7.dp)) {
@@ -693,7 +690,7 @@ private fun DrawAdditionalInfo(
 
     val lud16 = remember(userState) { user.info?.lud16?.trim() ?: user.info?.lud06?.trim() }
     val pubkeyHex = remember { baseUser.pubkeyHex }
-    DisplayLNAddress(lud16, pubkeyHex, accountViewModel.account, scope, context)
+    DisplayLNAddress(lud16, pubkeyHex, accountViewModel.account)
 
     val identities = user.info?.latestMetadata?.identityClaims()
     if (!identities.isNullOrEmpty()) {
@@ -725,7 +722,7 @@ private fun DrawAdditionalInfo(
             TranslatableRichTextViewer(
                 content = it,
                 canPreview = false,
-                tags = remember { persistentListOf() },
+                tags = remember { ImmutableListOfLists(emptyList()) },
                 backgroundColor = MaterialTheme.colors.background,
                 accountViewModel = accountViewModel,
                 nav = nav
@@ -740,10 +737,10 @@ private fun DrawAdditionalInfo(
 private fun DisplayLNAddress(
     lud16: String?,
     userHex: String,
-    account: Account,
-    scope: CoroutineScope,
-    context: Context
+    account: Account
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var zapExpanded by remember { mutableStateOf(false) }
 
     if (!lud16.isNullOrEmpty()) {

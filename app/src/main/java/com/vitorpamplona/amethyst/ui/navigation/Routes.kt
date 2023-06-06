@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.navigation
 
 import android.os.Bundle
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.navigation.NamedNavArgument
 import androidx.navigation.NavDestination
@@ -18,12 +19,16 @@ import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ChatroomListKnownFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 
+@Immutable
 sealed class Route(
     val route: String,
     val icon: Int,
     val hasNewItems: (Account, NotificationCache, Set<com.vitorpamplona.amethyst.model.Note>) -> Boolean = { _, _, _ -> false },
-    val arguments: List<NamedNavArgument> = emptyList()
+    val arguments: ImmutableList<NamedNavArgument> = persistentListOf()
 ) {
     val base: String
         get() = route.substringBefore("?")
@@ -34,26 +39,26 @@ sealed class Route(
         arguments = listOf(
             navArgument("scrollToTop") { type = NavType.BoolType; defaultValue = false },
             navArgument("nip47") { type = NavType.StringType; nullable = true; defaultValue = null }
-        ),
+        ).toImmutableList(),
         hasNewItems = { accountViewModel, cache, newNotes -> HomeLatestItem.hasNewItems(accountViewModel, cache, newNotes) }
     )
 
     object Search : Route(
         route = "Search?scrollToTop={scrollToTop}",
         icon = R.drawable.ic_globe,
-        arguments = listOf(navArgument("scrollToTop") { type = NavType.BoolType; defaultValue = false })
+        arguments = listOf(navArgument("scrollToTop") { type = NavType.BoolType; defaultValue = false }).toImmutableList()
     )
 
     object Video : Route(
         route = "Video?scrollToTop={scrollToTop}",
         icon = R.drawable.ic_video,
-        arguments = listOf(navArgument("scrollToTop") { type = NavType.BoolType; defaultValue = false })
+        arguments = listOf(navArgument("scrollToTop") { type = NavType.BoolType; defaultValue = false }).toImmutableList()
     )
 
     object Notification : Route(
         route = "Notification?scrollToTop={scrollToTop}",
         icon = R.drawable.ic_notifications,
-        arguments = listOf(navArgument("scrollToTop") { type = NavType.BoolType; defaultValue = false }),
+        arguments = listOf(navArgument("scrollToTop") { type = NavType.BoolType; defaultValue = false }).toImmutableList(),
         hasNewItems = { accountViewModel, cache, newNotes -> NotificationLatestItem.hasNewItems(accountViewModel, cache, newNotes) }
     )
 
@@ -76,37 +81,37 @@ sealed class Route(
     object Profile : Route(
         route = "User/{id}",
         icon = R.drawable.ic_profile,
-        arguments = listOf(navArgument("id") { type = NavType.StringType })
+        arguments = listOf(navArgument("id") { type = NavType.StringType }).toImmutableList()
     )
 
     object Note : Route(
         route = "Note/{id}",
         icon = R.drawable.ic_moments,
-        arguments = listOf(navArgument("id") { type = NavType.StringType })
+        arguments = listOf(navArgument("id") { type = NavType.StringType }).toImmutableList()
     )
 
     object Hashtag : Route(
         route = "Hashtag/{id}",
         icon = R.drawable.ic_moments,
-        arguments = listOf(navArgument("id") { type = NavType.StringType })
+        arguments = listOf(navArgument("id") { type = NavType.StringType }).toImmutableList()
     )
 
     object Room : Route(
         route = "Room/{id}",
         icon = R.drawable.ic_moments,
-        arguments = listOf(navArgument("id") { type = NavType.StringType })
+        arguments = listOf(navArgument("id") { type = NavType.StringType }).toImmutableList()
     )
 
     object Channel : Route(
         route = "Channel/{id}",
         icon = R.drawable.ic_moments,
-        arguments = listOf(navArgument("id") { type = NavType.StringType })
+        arguments = listOf(navArgument("id") { type = NavType.StringType }).toImmutableList()
     )
 
     object Event : Route(
         route = "Event/{id}",
         icon = R.drawable.ic_moments,
-        arguments = listOf(navArgument("id") { type = NavType.StringType })
+        arguments = listOf(navArgument("id") { type = NavType.StringType }).toImmutableList()
     )
 }
 

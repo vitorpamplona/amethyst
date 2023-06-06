@@ -27,19 +27,18 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.lnurl.LnInvoiceUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.math.BigDecimal
 import java.text.NumberFormat
 
 @Composable
 fun MayBeInvoicePreview(lnbcWord: String) {
-    var lnInvoice by remember { mutableStateOf<Pair<String, BigDecimal?>?>(null) }
+    var lnInvoice by remember { mutableStateOf<Pair<String, String?>?>(null) }
 
     LaunchedEffect(key1 = lnbcWord) {
         withContext(Dispatchers.IO) {
             val myInvoice = LnInvoiceUtil.findInvoice(lnbcWord)
             if (myInvoice != null) {
                 val myInvoiceAmount = try {
-                    LnInvoiceUtil.getAmountInSats(myInvoice)
+                    NumberFormat.getInstance().format(LnInvoiceUtil.getAmountInSats(myInvoice))
                 } catch (e: Exception) {
                     e.printStackTrace()
                     null
@@ -60,7 +59,7 @@ fun MayBeInvoicePreview(lnbcWord: String) {
 }
 
 @Composable
-fun InvoicePreview(lnInvoice: String, amount: BigDecimal?) {
+fun InvoicePreview(lnInvoice: String, amount: String?) {
     val context = LocalContext.current
 
     Column(
@@ -100,9 +99,7 @@ fun InvoicePreview(lnInvoice: String, amount: BigDecimal?) {
 
             amount?.let {
                 Text(
-                    text = "${
-                    NumberFormat.getInstance().format(amount)
-                    } ${stringResource(id = R.string.sats)}",
+                    text = "$it ${stringResource(id = R.string.sats)}",
                     fontSize = 25.sp,
                     fontWeight = FontWeight.W500,
                     modifier = Modifier

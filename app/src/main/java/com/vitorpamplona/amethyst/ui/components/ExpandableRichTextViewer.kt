@@ -26,8 +26,8 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import kotlinx.collections.immutable.ImmutableList
 
 const val SHORT_TEXT_LENGTH = 350
 
@@ -36,7 +36,7 @@ fun ExpandableRichTextViewer(
     content: String,
     canPreview: Boolean,
     modifier: Modifier,
-    tags: ImmutableList<List<String>>,
+    tags: ImmutableListOfLists<String>,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit

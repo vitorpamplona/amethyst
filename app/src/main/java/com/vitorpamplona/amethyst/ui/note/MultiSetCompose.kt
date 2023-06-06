@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
+import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.MultiSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -55,7 +56,6 @@ import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -362,7 +362,7 @@ private fun AuthorPictureAndComment(
             TranslatableRichTextViewer(
                 content = it,
                 canPreview = true,
-                tags = remember { persistentListOf() },
+                tags = remember { ImmutableListOfLists() },
                 modifier = remember { Modifier.fillMaxWidth() },
                 backgroundColor = backgroundColor,
                 accountViewModel = accountViewModel,

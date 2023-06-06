@@ -18,13 +18,16 @@ import androidx.compose.material.rememberDrawerState
 import androidx.compose.material.rememberModalBottomSheetState
 import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavHostController
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.vitorpamplona.amethyst.ui.buttons.ChannelFabColumn
 import com.vitorpamplona.amethyst.ui.buttons.NewNoteButton
@@ -60,10 +63,31 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
         skipHalfExpanded = true
     )
 
-    val nav = remember {
+    val navState = navController.currentBackStackEntryAsState()
+
+    val nav = remember(navController) {
         { route: String ->
             if (getRouteWithArguments(navController) != route) {
                 navController.navigate(route)
+            }
+        }
+    }
+
+    val navBottomRow = remember(navController) {
+        { route: Route, selected: Boolean ->
+            if (!selected) {
+                navController.navigate(route.base) {
+                    popUpTo(Route.Home.route)
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            } else {
+                val newRoute = route.route.replace("{scrollToTop}", "true")
+                navController.navigate(newRoute) {
+                    popUpTo(Route.Home.route)
+                    launchSingleTop = true
+                    restoreState = true
+                }
             }
         }
     }
@@ -125,10 +149,10 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
                 .background(MaterialTheme.colors.primaryVariant)
                 .statusBarsPadding(),
             bottomBar = {
-                AppBottomBar(navController, accountViewModel)
+                AppBottomBar(accountViewModel, navState, navBottomRow)
             },
             topBar = {
-                AppTopBar(followLists, navController, scaffoldState, accountViewModel)
+                AppTopBar(followLists, navState, scaffoldState, accountViewModel)
             },
             drawerContent = {
                 DrawerContent(nav, scaffoldState, sheetState, accountViewModel)
@@ -137,7 +161,7 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
                 }
             },
             floatingActionButton = {
-                FloatingButtons(navController, accountViewModel, accountStateViewModel, nav)
+                FloatingButtons(navState, accountViewModel, accountStateViewModel, nav)
             },
             scaffoldState = scaffoldState
         ) {
@@ -162,7 +186,7 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
 
 @Composable
 fun FloatingButtons(
-    navController: NavHostController,
+    navEntryState: State<NavBackStackEntry?>,
     accountViewModel: AccountViewModel,
     accountStateViewModel: AccountStateViewModel,
     nav: (String) -> Unit
@@ -178,16 +202,27 @@ fun FloatingButtons(
                 // Does nothing.
             }
             is AccountState.LoggedIn -> {
-                if (currentRoute(navController)?.substringBefore("?") == Route.Home.base) {
-                    NewNoteButton(accountViewModel, nav)
-                }
-                if (currentRoute(navController) == Route.Message.base) {
-                    ChannelFabColumn(accountViewModel, nav)
-                }
-                if (currentRoute(navController)?.substringBefore("?") == Route.Video.base) {
-                    NewImageButton(accountViewModel, nav)
-                }
+                WritePermissionButtons(navEntryState, accountViewModel, nav)
             }
         }
+    }
+}
+
+@Composable
+private fun WritePermissionButtons(
+    navEntryState: State<NavBackStackEntry?>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    val currentRoute by remember(navEntryState.value) {
+        derivedStateOf {
+            navEntryState.value?.destination?.route?.substringBefore("?")
+        }
+    }
+
+    when (currentRoute) {
+        Route.Home.base -> NewNoteButton(accountViewModel, nav)
+        Route.Message.base -> ChannelFabColumn(accountViewModel, nav)
+        Route.Video.base -> NewImageButton(accountViewModel, nav)
     }
 }

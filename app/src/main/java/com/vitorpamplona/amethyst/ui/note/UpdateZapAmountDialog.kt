@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.ui.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.getFragmentActivity
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope as rememberCoroutineScope
@@ -212,8 +213,8 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, nip47uri: String? = null, account
         Triple(LnZapEvent.ZapType.NONZAP, stringResource(id = R.string.zap_type_nonzap), stringResource(id = R.string.zap_type_nonzap_explainer))
     )
 
-    val zapOptions = zapTypes.map { it.second }
-    val zapOptionExplainers = zapTypes.map { it.third }
+    val zapOptions = remember { zapTypes.map { it.second }.toImmutableList() }
+    val zapOptionExplainers = remember { zapTypes.map { it.third }.toImmutableList() }
 
     LaunchedEffect(accountViewModel) {
         postViewModel.load()

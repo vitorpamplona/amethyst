@@ -39,6 +39,8 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.checkForHashtagWithIcon
 import com.vitorpamplona.amethyst.service.nip19.Nip19
+import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
+import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.uriToRoute
@@ -57,7 +59,6 @@ import java.net.MalformedURLException
 import java.net.URISyntaxException
 import java.net.URL
 import java.util.regex.Pattern
-import kotlin.time.ExperimentalTime
 
 val imageExtensions = listOf("png", "jpg", "gif", "bmp", "jpeg", "webp", "svg")
 val videoExtensions = listOf("mp4", "avi", "wmv", "mpg", "amv", "webm", "mov", "mp3")
@@ -98,7 +99,7 @@ fun RichTextViewer(
     content: String,
     canPreview: Boolean,
     modifier: Modifier,
-    tags: ImmutableList<List<String>>,
+    tags: ImmutableListOfLists<String>,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -122,11 +123,11 @@ data class RichTextViewerState(
     val customEmoji: ImmutableMap<String, String>
 )
 
-@OptIn(ExperimentalTime::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun RenderRegular(
     content: String,
-    tags: ImmutableList<List<String>>,
+    tags: ImmutableListOfLists<String>,
     canPreview: Boolean,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
@@ -169,7 +170,7 @@ private fun RenderRegular(
 
 private fun parseUrls(
     content: String,
-    tags: List<List<String>>
+    tags: ImmutableListOfLists<String>
 ): RichTextViewerState {
     val urls = UrlDetector(content, UrlDetectorOptions.Default).detect()
     val urlSet = urls.mapTo(LinkedHashSet(urls.size)) { it.originalUrl }
@@ -186,7 +187,7 @@ private fun parseUrls(
     val imageList = imagesForPager.values.toList()
 
     val emojiMap =
-        tags.filter { it.size > 2 && it[0] == "emoji" }.associate { ":${it[1]}:" to it[2] }
+        tags.lists.filter { it.size > 2 && it[0] == "emoji" }.associate { ":${it[1]}:" to it[2] }
 
     return if (urlSet.isNotEmpty() || emojiMap.isNotEmpty()) {
         RichTextViewerState(
@@ -217,7 +218,7 @@ private fun RenderWord(
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
-    tags: ImmutableList<List<String>>
+    tags: ImmutableListOfLists<String>
 ) {
     val type = remember(word) {
         if (state.imagesForPager[word] != null) {
@@ -238,7 +239,7 @@ private fun RenderWord(
             WordType.BECH
         } else if (word.startsWith("#")) {
             if (tagIndex.matcher(word).matches()) {
-                if (tags.isNotEmpty()) {
+                if (tags.lists.isNotEmpty()) {
                     WordType.HASH_INDEX
                 } else {
                     WordType.OTHER
@@ -267,7 +268,7 @@ private fun RenderWordWithoutPreview(
     type: WordType,
     word: String,
     state: RichTextViewerState,
-    tags: ImmutableList<List<String>>,
+    tags: ImmutableListOfLists<String>,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -300,7 +301,7 @@ private fun RenderWordWithPreview(
     type: WordType,
     word: String,
     state: RichTextViewerState,
-    tags: ImmutableList<List<String>>,
+    tags: ImmutableListOfLists<String>,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -382,7 +383,7 @@ fun RenderCustomEmoji(word: String, state: RichTextViewerState) {
 }
 
 @Composable
-private fun RenderContentAsMarkdown(content: String, backgroundColor: Color, tags: ImmutableList<List<String>>?, nav: (String) -> Unit) {
+private fun RenderContentAsMarkdown(content: String, backgroundColor: Color, tags: ImmutableListOfLists<String>?, nav: (String) -> Unit) {
     val myMarkDownStyle = richTextDefaults.copy(
         codeBlockStyle = richTextDefaults.codeBlockStyle?.copy(
             textStyle = TextStyle(
@@ -442,17 +443,13 @@ private fun RenderContentAsMarkdown(content: String, backgroundColor: Color, tag
 }
 
 @Composable
-private fun RefreshableContent(content: String, tags: List<List<String>>?, onCompose: @Composable (String) -> Unit) {
+private fun RefreshableContent(content: String, tags: ImmutableListOfLists<String>?, onCompose: @Composable (String) -> Unit) {
     var markdownWithSpecialContent by remember(content) { mutableStateOf<String?>(content) }
 
-    val scope = rememberCoroutineScope()
-
     ObserverAllNIP19References(content, tags) {
-        scope.launch(Dispatchers.IO) {
-            val newMarkdownWithSpecialContent = returnMarkdownWithSpecialContent(content, tags)
-            if (markdownWithSpecialContent != newMarkdownWithSpecialContent) {
-                markdownWithSpecialContent = newMarkdownWithSpecialContent
-            }
+        val newMarkdownWithSpecialContent = returnMarkdownWithSpecialContent(content, tags)
+        if (markdownWithSpecialContent != newMarkdownWithSpecialContent) {
+            markdownWithSpecialContent = newMarkdownWithSpecialContent
         }
     }
 
@@ -462,7 +459,7 @@ private fun RefreshableContent(content: String, tags: List<List<String>>?, onCom
 }
 
 @Composable
-fun ObserverAllNIP19References(content: String, tags: List<List<String>>?, onRefresh: () -> Unit) {
+fun ObserverAllNIP19References(content: String, tags: ImmutableListOfLists<String>?, onRefresh: () -> Unit) {
     var nip19References by remember(content) { mutableStateOf<List<Nip19.Return>>(emptyList()) }
     LaunchedEffect(key1 = content) {
         launch(Dispatchers.IO) {
@@ -490,7 +487,7 @@ fun ObserveNIP19(
 @Composable
 private fun ObserveNIP19Event(
     it: Nip19.Return,
-    onRefresh: suspend () -> Unit
+    onRefresh: () -> Unit
 ) {
     var baseNote by remember(it) { mutableStateOf<Note?>(null) }
 
@@ -551,7 +548,7 @@ private fun ObserveNIP19User(
     }
 }
 
-private fun getDisplayNameAndNIP19FromTag(tag: String, tags: List<List<String>>): Pair<String, String>? {
+private fun getDisplayNameAndNIP19FromTag(tag: String, tags: ImmutableListOfLists<String>): Pair<String, String>? {
     val matcher = tagIndex.matcher(tag)
     val (index, suffix) = try {
         matcher.find()
@@ -561,8 +558,8 @@ private fun getDisplayNameAndNIP19FromTag(tag: String, tags: List<List<String>>)
         Pair(null, null)
     }
 
-    if (index != null && index >= 0 && index < tags.size) {
-        val tag = tags[index]
+    if (index != null && index >= 0 && index < tags.lists.size) {
+        val tag = tags.lists[index]
 
         if (tag.size > 1) {
             if (tag[0] == "p") {
@@ -602,7 +599,7 @@ private fun getDisplayNameFromNip19(nip19: Nip19.Return): Pair<String, String>? 
     return null
 }
 
-private fun returnNIP19References(content: String, tags: List<List<String>>?): List<Nip19.Return> {
+private fun returnNIP19References(content: String, tags: ImmutableListOfLists<String>?): List<Nip19.Return> {
     val listOfReferences = mutableListOf<Nip19.Return>()
     content.split('\n').forEach { paragraph ->
         paragraph.split(' ').forEach { word: String ->
@@ -615,7 +612,7 @@ private fun returnNIP19References(content: String, tags: List<List<String>>?): L
         }
     }
 
-    tags?.forEach {
+    tags?.lists?.forEach {
         if (it[0] == "p" && it.size > 1) {
             listOfReferences.add(Nip19.Return(Nip19.Type.USER, it[1], null, null, null, ""))
         } else if (it[0] == "e" && it.size > 1) {
@@ -628,7 +625,7 @@ private fun returnNIP19References(content: String, tags: List<List<String>>?): L
     return listOfReferences
 }
 
-private fun returnMarkdownWithSpecialContent(content: String, tags: List<List<String>>?): String {
+private fun returnMarkdownWithSpecialContent(content: String, tags: ImmutableListOfLists<String>?): String {
     var returnContent = ""
     content.split('\n').forEach { paragraph ->
         paragraph.split(' ').forEach { word: String ->
@@ -867,7 +864,7 @@ fun HashTag(word: String, nav: (String) -> Unit) {
 }
 
 @Composable
-fun TagLink(word: String, tags: List<List<String>>, canPreview: Boolean, backgroundColor: Color, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun TagLink(word: String, tags: ImmutableListOfLists<String>, canPreview: Boolean, backgroundColor: Color, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     var baseUserPair by remember { mutableStateOf<Pair<User, String?>?>(null) }
     var baseNotePair by remember { mutableStateOf<Pair<Note, String?>?>(null) }
 
@@ -883,8 +880,8 @@ fun TagLink(word: String, tags: List<List<String>>, canPreview: Boolean, backgro
                     Pair(null, null)
                 }
 
-                if (index != null && index >= 0 && index < tags.size) {
-                    val tag = tags[index]
+                if (index != null && index >= 0 && index < tags.lists.size) {
+                    val tag = tags.lists[index]
 
                     if (tag.size > 1) {
                         if (tag[0] == "p") {
@@ -911,7 +908,7 @@ fun TagLink(word: String, tags: List<List<String>>, canPreview: Boolean, backgro
             "User/${it.first.pubkeyHex}"
         }
         val userTags = remember(innerUserState) {
-            innerUserState?.user?.info?.latestMetadata?.tags?.toImmutableList()
+            innerUserState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists()
         }
 
         CreateClickableTextWithEmoji(

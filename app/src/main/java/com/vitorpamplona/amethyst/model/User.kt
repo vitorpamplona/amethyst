@@ -362,6 +362,7 @@ class UserLiveSet(u: User) {
     }
 }
 
+@Immutable
 data class RelayInfo(
     val url: String,
     var lastEvent: Long,
@@ -403,7 +404,7 @@ class UserMetadata {
 
     fun anyNameStartsWith(prefix: String): Boolean {
         return listOfNotNull(name, username, display_name, displayName, nip05, lud06, lud16)
-            .any { it.startsWith(prefix, true) }
+            .any { it.contains(prefix, true) }
     }
 
     fun lnAddress(): String? {

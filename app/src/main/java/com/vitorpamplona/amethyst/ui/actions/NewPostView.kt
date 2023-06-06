@@ -30,6 +30,7 @@ import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -70,6 +71,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.UserLine
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -163,7 +165,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                 .fillMaxWidth()
                                 .verticalScroll(scrollState)
                         ) {
-                            Notifying(postViewModel.mentions) {
+                            Notifying(postViewModel.mentions?.toImmutableList()) {
                                 postViewModel.removeFromReplyList(it)
                             }
 
@@ -373,7 +375,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun Notifying(baseMentions: List<User>?, onClick: (User) -> Unit) {
+fun Notifying(baseMentions: ImmutableList<User>?, onClick: (User) -> Unit) {
     val mentions = baseMentions?.toSet()
 
     FlowRow(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 10.dp)) {
@@ -390,7 +392,7 @@ fun Notifying(baseMentions: List<User>?, onClick: (User) -> Unit) {
                     Spacer(modifier = Modifier.width(5.dp))
 
                     val tags = remember(innerUserState) {
-                        myUser.info?.latestMetadata?.tags?.toImmutableList()
+                        myUser.info?.latestMetadata?.tags?.toImmutableListOfLists()
                     }
 
                     Button(
@@ -747,8 +749,8 @@ fun ImageVideoDescription(
         Triple(ServersAvailable.NIP95, stringResource(id = R.string.upload_server_relays_nip95), stringResource(id = R.string.upload_server_relays_nip95_explainer))
     )
 
-    val fileServerOptions = fileServers.map { it.second }
-    val fileServerExplainers = fileServers.map { it.third }
+    val fileServerOptions = remember { fileServers.map { it.second }.toImmutableList() }
+    val fileServerExplainers = remember { fileServers.map { it.third }.toImmutableList() }
 
     var selectedServer by remember { mutableStateOf(defaultServer) }
     var message by remember { mutableStateOf("") }
@@ -854,7 +856,7 @@ fun ImageVideoDescription(
                         )
                     }
                 } else {
-                    VideoView(uri)
+                    VideoView(uri.toString())
                 }
             }
 
@@ -921,4 +923,11 @@ fun ImageVideoDescription(
             }
         }
     }
+}
+
+@Stable
+data class ImmutableListOfLists<T>(val lists: List<List<T>> = emptyList())
+
+fun List<List<String>>.toImmutableListOfLists(): ImmutableListOfLists<String> {
+    return ImmutableListOfLists(this)
 }

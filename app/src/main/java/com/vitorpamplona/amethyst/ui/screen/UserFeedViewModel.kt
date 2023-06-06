@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen
 
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -47,6 +48,7 @@ class NostrHiddenAccountsFeedViewModel(val account: Account) : UserFeedViewModel
     }
 }
 
+@Stable
 open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel(), InvalidatableViewModel {
     private val _feedContent = MutableStateFlow<UserFeedState>(UserFeedState.Loading)
     val feedContent = _feedContent.asStateFlow()

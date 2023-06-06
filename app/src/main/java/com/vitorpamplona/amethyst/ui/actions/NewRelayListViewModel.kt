@@ -7,6 +7,7 @@ import com.vitorpamplona.amethyst.service.model.ContactListEvent
 import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.RelayPool
+import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -46,7 +47,7 @@ class NewRelayListViewModel : ViewModel() {
             if (relayFile != null) {
                 relayFile.map {
                     val liveRelay = RelayPool.getRelay(it.key)
-                    val localInfoFeedTypes = account.localRelays.filter { localRelay -> localRelay.url == it.key }.firstOrNull()?.feedTypes ?: FeedType.values().toSet()
+                    val localInfoFeedTypes = account.localRelays.filter { localRelay -> localRelay.url == it.key }.firstOrNull()?.feedTypes ?: FeedType.values().toSet().toImmutableSet()
 
                     val errorCounter = liveRelay?.errorCounter ?: 0
                     val eventDownloadCounter = liveRelay?.eventDownloadCounterInBytes ?: 0

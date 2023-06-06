@@ -33,8 +33,8 @@ import androidx.core.os.ConfigurationCompat
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.service.lang.ResultOrError
+import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -44,7 +44,7 @@ fun TranslatableRichTextViewer(
     content: String,
     canPreview: Boolean,
     modifier: Modifier = Modifier,
-    tags: ImmutableList<List<String>>,
+    tags: ImmutableListOfLists<String>,
     backgroundColor: Color,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit

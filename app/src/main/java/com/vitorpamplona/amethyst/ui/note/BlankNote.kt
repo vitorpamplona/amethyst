@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import kotlinx.collections.immutable.ImmutableSet
 
 @Composable
 fun BlankNote(modifier: Modifier = Modifier, isQuote: Boolean = false, idHex: String? = null) {
@@ -57,7 +58,7 @@ fun BlankNote(modifier: Modifier = Modifier, isQuote: Boolean = false, idHex: St
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HiddenNote(
-    reports: Set<Note>,
+    reports: ImmutableSet<Note>,
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
     isQuote: Boolean = false,

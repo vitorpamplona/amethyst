@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -74,8 +75,8 @@ fun ZapCustomDialog(onClose: () -> Unit, accountViewModel: AccountViewModel, bas
         Triple(LnZapEvent.ZapType.NONZAP, stringResource(id = R.string.zap_type_nonzap), stringResource(id = R.string.zap_type_nonzap_explainer))
     )
 
-    val zapOptions = zapTypes.map { it.second }
-    val zapOptionExplainers = zapTypes.map { it.third }
+    val zapOptions = remember { zapTypes.map { it.second }.toImmutableList() }
+    val zapOptionExplainers = remember { zapTypes.map { it.third }.toImmutableList() }
     var selectedZapType by remember(accountViewModel) { mutableStateOf(accountViewModel.account.defaultZapType) }
 
     Dialog(

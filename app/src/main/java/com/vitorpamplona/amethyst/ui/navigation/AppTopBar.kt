@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -47,6 +48,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import coil.Coil
 import com.vitorpamplona.amethyst.R
@@ -89,8 +91,19 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 @Composable
-fun AppTopBar(followLists: FollowListViewModel, navController: NavHostController, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
-    when (currentRoute(navController)?.substringBefore("?")) {
+fun AppTopBar(
+    followLists: FollowListViewModel,
+    navEntryState: State<NavBackStackEntry?>,
+    scaffoldState: ScaffoldState,
+    accountViewModel: AccountViewModel
+) {
+    val currentRoute by remember(navEntryState.value) {
+        derivedStateOf {
+            navEntryState?.value?.destination?.route?.substringBefore("?")
+        }
+    }
+
+    when (currentRoute) {
         // Route.Profile.route -> TopBarWithBackButton(nav)
         Route.Home.base -> HomeTopBar(followLists, scaffoldState, accountViewModel)
         Route.Video.base -> StoriesTopBar(followLists, scaffoldState, accountViewModel)
@@ -320,15 +333,15 @@ fun FollowList(followListsModel: FollowListViewModel, listName: String, withGlob
         (defaultOptions + followLists)
     }
 
-    val followNames = remember(followLists) {
+    val followNames by remember(followLists) {
         derivedStateOf {
-            allLists.map { it.second }
+            allLists.map { it.second }.toImmutableList()
         }
     }
 
     SimpleTextSpinner(
         placeholder = allLists.firstOrNull { it.first == listName }?.second ?: "Select an Option",
-        options = followNames.value,
+        options = followNames,
         onSelect = {
             onChange(allLists.getOrNull(it)?.first ?: KIND3_FOLLOWS)
         }
@@ -396,8 +409,8 @@ class FollowListViewModel(val account: Account) : ViewModel() {
 @Composable
 fun SimpleTextSpinner(
     placeholder: String,
-    options: List<String>,
-    explainers: List<String>? = null,
+    options: ImmutableList<String>,
+    explainers: ImmutableList<String>? = null,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {

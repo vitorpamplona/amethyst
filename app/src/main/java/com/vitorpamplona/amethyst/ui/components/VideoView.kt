@@ -1,8 +1,6 @@
 package com.vitorpamplona.amethyst.ui.components
 
-import android.content.Context
 import android.graphics.drawable.Drawable
-import android.net.Uri
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
@@ -27,6 +25,7 @@ import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,7 +44,6 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.isFinite
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import coil.imageLoader
@@ -60,25 +58,8 @@ import com.google.android.exoplayer2.ui.StyledPlayerView
 import com.vitorpamplona.amethyst.VideoCache
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.io.File
 
 public var DefaultMutedSetting = mutableStateOf(true)
-
-@Composable
-fun VideoView(localFile: File?, description: String? = null, onDialog: ((Boolean) -> Unit)? = null) {
-    if (localFile != null) {
-        val video = remember(localFile) { localFile.toUri() }
-
-        VideoView(video, description, null, onDialog)
-    }
-}
-
-@Composable
-fun VideoView(videoUri: String, description: String? = null, onDialog: ((Boolean) -> Unit)? = null) {
-    val video = remember(videoUri) { Uri.parse(videoUri) }
-
-    VideoView(video, description, null, onDialog)
-}
 
 @Composable
 fun LoadThumbAndThenVideoView(videoUri: String, description: String? = null, thumbUri: String, onDialog: ((Boolean) -> Unit)? = null) {
@@ -105,39 +86,37 @@ fun LoadThumbAndThenVideoView(videoUri: String, description: String? = null, thu
 
     if (loadingFinished.first) {
         if (loadingFinished.second != null) {
-            val video = remember(videoUri) { Uri.parse(videoUri) }
-
-            VideoView(video, description, loadingFinished.second, onDialog)
+            VideoView(videoUri, description, VideoThumb(loadingFinished.second), onDialog)
         } else {
-            VideoView(videoUri, description, onDialog)
+            VideoView(videoUri, description, null, onDialog)
         }
     }
 }
 
 @Composable
-fun VideoView(videoUri: Uri, description: String? = null, thumb: Drawable? = null, onDialog: ((Boolean) -> Unit)? = null) {
+fun VideoView(videoUri: String, description: String? = null, thumb: VideoThumb? = null, onDialog: ((Boolean) -> Unit)? = null) {
     val context = LocalContext.current
     val lifecycleOwner = rememberUpdatedState(LocalLifecycleOwner.current)
 
-    var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
+    var exoPlayerData by remember { mutableStateOf<VideoPlayer?>(null) }
     val defaultVolume = remember { if (DefaultMutedSetting.value) 0f else 1f }
 
     LaunchedEffect(key1 = videoUri) {
-        if (exoPlayer == null) {
+        if (exoPlayerData == null) {
             launch(Dispatchers.Default) {
-                exoPlayer = ExoPlayer.Builder(context).build()
+                exoPlayerData = VideoPlayer(ExoPlayer.Builder(context).build())
             }
         }
     }
 
-    exoPlayer?.let {
+    exoPlayerData?.let {
         val media = remember { MediaItem.Builder().setUri(videoUri).build() }
 
-        it.apply {
+        it.exoPlayer.apply {
             repeatMode = Player.REPEAT_MODE_ALL
             videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
             volume = defaultVolume
-            if (videoUri.scheme?.startsWith("file") == true) {
+            if (videoUri.startsWith("file") == true) {
                 setMediaItem(media)
             } else {
                 setMediaSource(
@@ -149,14 +128,14 @@ fun VideoView(videoUri: Uri, description: String? = null, thumb: Drawable? = nul
             prepare()
         }
 
-        RenderVideoPlayer(it, context, thumb, onDialog)
+        RenderVideoPlayer(it, thumb, onDialog)
     }
 
     DisposableEffect(Unit) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_PAUSE -> {
-                    exoPlayer?.pause()
+                    exoPlayerData?.exoPlayer?.pause()
                 }
                 else -> {}
             }
@@ -165,19 +144,30 @@ fun VideoView(videoUri: Uri, description: String? = null, thumb: Drawable? = nul
         lifecycle.addObserver(observer)
 
         onDispose {
-            exoPlayer?.release()
+            exoPlayerData?.exoPlayer?.release()
             lifecycle.removeObserver(observer)
         }
     }
 }
 
+@Stable
+data class VideoPlayer(
+    val exoPlayer: ExoPlayer
+)
+
+@Stable
+data class VideoThumb(
+    val thumb: Drawable?
+)
+
 @Composable
 private fun RenderVideoPlayer(
-    exoPlayer: ExoPlayer,
-    context: Context,
-    thumb: Drawable?,
+    playerData: VideoPlayer,
+    thumbData: VideoThumb?,
     onDialog: ((Boolean) -> Unit)?
 ) {
+    val context = LocalContext.current
+
     BoxWithConstraints() {
         AndroidView(
             modifier = Modifier
@@ -185,27 +175,27 @@ private fun RenderVideoPlayer(
                 .defaultMinSize(minHeight = 70.dp)
                 .align(Alignment.Center)
                 .onVisibilityChanges { visible ->
-                    if (visible && !exoPlayer.isPlaying) {
-                        exoPlayer.play()
-                    } else if (!visible && exoPlayer.isPlaying) {
-                        exoPlayer.pause()
+                    if (visible && !playerData.exoPlayer.isPlaying) {
+                        playerData.exoPlayer.play()
+                    } else if (!visible && playerData.exoPlayer.isPlaying) {
+                        playerData.exoPlayer.pause()
                     }
                 },
             factory = {
                 StyledPlayerView(context).apply {
-                    player = exoPlayer
+                    player = playerData.exoPlayer
                     layoutParams = FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
                     )
                     controllerAutoShow = false
-                    thumb?.let { defaultArtwork = thumb }
+                    thumbData?.thumb?.let { defaultArtwork = it }
                     hideController()
                     resizeMode =
                         if (maxHeight.isFinite) AspectRatioFrameLayout.RESIZE_MODE_FIT else AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
                     onDialog?.let { innerOnDialog ->
                         setFullscreenButtonClickListener {
-                            exoPlayer.pause()
+                            playerData.exoPlayer.pause()
                             innerOnDialog(it)
                         }
                     }
@@ -216,7 +206,7 @@ private fun RenderVideoPlayer(
         MuteButton() { mute: Boolean ->
             DefaultMutedSetting.value = mute
 
-            exoPlayer.volume = if (mute) 0f else 1f
+            playerData.exoPlayer.volume = if (mute) 0f else 1f
         }
     }
 }

@@ -56,6 +56,8 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
+import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
+import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
@@ -65,7 +67,7 @@ import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
-import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -132,8 +134,11 @@ fun ChatroomMessageCompose(
         }
 
         if (!isAcceptableAndCanPreview.first && !showHiddenNote) {
+            val reports = remember {
+                account.getRelevantReports(noteForReports).toImmutableSet()
+            }
             HiddenNote(
-                account.getRelevantReports(noteForReports),
+                reports,
                 accountViewModel,
                 Modifier,
                 innerQuote,
@@ -363,7 +368,7 @@ private fun RenderRegularTextNote(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val tags = remember(note.event) { note.event?.tags()?.toImmutableList() ?: emptyList<List<String>>().toImmutableList() }
+    val tags = remember(note.event) { note.event?.tags()?.toImmutableListOfLists() ?: ImmutableListOfLists() }
     val eventContent = remember { accountViewModel.decrypt(note) }
     val modifier = remember { Modifier.padding(top = 5.dp) }
 
@@ -418,7 +423,7 @@ private fun RenderChangeChannelMetadataNote(
 
     CreateTextWithEmoji(
         text = text,
-        tags = remember { note.author?.info?.latestMetadata?.tags?.toImmutableList() }
+        tags = remember { note.author?.info?.latestMetadata?.tags?.toImmutableListOfLists() }
     )
 }
 
@@ -441,7 +446,7 @@ private fun RenderCreateChannelNote(note: Note) {
 
     CreateTextWithEmoji(
         text = text,
-        tags = remember { note.author?.info?.latestMetadata?.tags?.toImmutableList() }
+        tags = remember { note.author?.info?.latestMetadata?.tags?.toImmutableListOfLists() }
     )
 }
 
@@ -457,7 +462,7 @@ private fun DrawAuthorInfo(
     val route = remember { "User/$pubkeyHex" }
     val userDisplayName = remember(userState) { userState?.user?.toBestDisplayName() }
     val userProfilePicture = remember(userState) { ResizeImage(userState?.user?.profilePicture(), 25.dp) }
-    val userTags = remember(userState) { userState?.user?.info?.latestMetadata?.tags?.toImmutableList() }
+    val userTags = remember(userState) { userState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists() }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,

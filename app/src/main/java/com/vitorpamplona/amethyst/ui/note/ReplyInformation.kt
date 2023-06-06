@@ -18,25 +18,29 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.*
+import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Composable
 fun ReplyInformation(
-    replyTo: List<Note>?,
-    mentions: List<String>,
+    replyTo: ImmutableList<Note>?,
+    mentions: ImmutableList<String>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    var sortedMentions by remember { mutableStateOf<List<User>?>(null) }
+    var sortedMentions by remember { mutableStateOf<ImmutableList<User>?>(null) }
 
     LaunchedEffect(Unit) {
         launch(Dispatchers.IO) {
             sortedMentions = mentions.mapNotNull { LocalCache.checkGetOrCreateUser(it) }
-                ?.toSet()?.sortedBy { !accountViewModel.account.userProfile().isFollowingCached(it) }
+                .toSet()
+                .sortedBy { !accountViewModel.account.userProfile().isFollowingCached(it) }
+                .toImmutableList()
         }
     }
 
@@ -50,8 +54,8 @@ fun ReplyInformation(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ReplyInformation(
-    replyTo: List<Note>?,
-    sortedMentions: List<User>?,
+    replyTo: ImmutableList<Note>?,
+    sortedMentions: ImmutableList<User>?,
     prefix: String = "",
     onUserTagClick: (User) -> Unit
 ) {
@@ -120,13 +124,13 @@ private fun ReplyInformation(
 
 @Composable
 fun ReplyInformationChannel(
-    replyTo: List<Note>?,
-    mentions: List<String>,
+    replyTo: ImmutableList<Note>?,
+    mentions: ImmutableList<String>,
     channelHex: String,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    var sortedMentions by remember { mutableStateOf<List<User>?>(null) }
+    var sortedMentions by remember { mutableStateOf<ImmutableList<User>?>(null) }
 
     LaunchedEffect(Unit) {
         launch(Dispatchers.IO) {
@@ -134,6 +138,7 @@ fun ReplyInformationChannel(
                 .mapNotNull { LocalCache.checkGetOrCreateUser(it) }
                 .toSet()
                 .sortedBy { accountViewModel.account.isFollowing(it) }
+                .toImmutableList()
         }
     }
 
@@ -155,7 +160,7 @@ fun ReplyInformationChannel(
 }
 
 @Composable
-fun ReplyInformationChannel(replyTo: List<Note>?, mentions: List<User>?, channel: Channel, nav: (String) -> Unit) {
+fun ReplyInformationChannel(replyTo: ImmutableList<Note>?, mentions: ImmutableList<User>?, channel: Channel, nav: (String) -> Unit) {
     ReplyInformationChannel(
         replyTo,
         mentions,
@@ -172,8 +177,8 @@ fun ReplyInformationChannel(replyTo: List<Note>?, mentions: List<User>?, channel
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ReplyInformationChannel(
-    replyTo: List<Note>?,
-    mentions: List<User>?,
+    replyTo: ImmutableList<Note>?,
+    mentions: ImmutableList<User>?,
     baseChannel: Channel,
     prefix: String = "",
     onUserTagClick: (User) -> Unit,
@@ -235,7 +240,7 @@ private fun ReplyInfoMention(
 
     CreateClickableTextWithEmoji(
         clickablePart = remember(innerUserState) { "$prefix${innerUserState?.user?.toBestDisplayName()}" },
-        tags = remember(innerUserState) { innerUserState?.user?.info?.latestMetadata?.tags?.toImmutableList() },
+        tags = remember(innerUserState) { innerUserState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists() },
         style = LocalTextStyle.current.copy(
             color = MaterialTheme.colors.primary.copy(alpha = 0.52f),
             fontSize = 13.sp

@@ -10,6 +10,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -17,36 +21,66 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun LoadRedirectScreen(eventId: String?, navController: NavController) {
     if (eventId == null) return
 
-    val baseNote = LocalCache.checkGetOrCreateNote(eventId) ?: return
+    var noteBase by remember { mutableStateOf<Note?>(null) }
 
+    val nav = remember(navController) {
+        { route: String ->
+            navController.backQueue.removeLast()
+            navController.navigate(route)
+        }
+    }
+
+    LaunchedEffect(eventId) {
+        withContext(Dispatchers.IO) {
+            val newNoteBase = LocalCache.checkGetOrCreateNote(eventId)
+            if (newNoteBase != noteBase) {
+                noteBase = newNoteBase
+            }
+        }
+    }
+
+    noteBase?.let {
+        LoadRedirectScreen(
+            baseNote = it,
+            nav = nav
+        )
+    }
+}
+
+@Composable
+fun LoadRedirectScreen(baseNote: Note, nav: (String) -> Unit) {
     val noteState by baseNote.live().metadata.observeAsState()
-    val note = noteState?.note
+
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(key1 = noteState) {
-        val event = note?.event
-        val channelHex = note?.channelHex()
+        scope.launch {
+            val note = noteState?.note
+            val event = note?.event
+            val channelHex = note?.channelHex()
 
-        if (event == null) {
-            // stay here, loading
-        } else if (event is ChannelCreateEvent) {
-            navController.backQueue.removeLast()
-            navController.navigate("Channel/${note.idHex}")
-        } else if (event is PrivateDmEvent) {
-            navController.backQueue.removeLast()
-            navController.navigate("Room/${note.author?.pubkeyHex}")
-        } else if (channelHex != null) {
-            navController.backQueue.removeLast()
-            navController.navigate("Channel/$channelHex")
-        } else {
-            navController.backQueue.removeLast()
-            navController.navigate("Note/${note.idHex}")
+            if (event == null) {
+                // stay here, loading
+            } else if (event is ChannelCreateEvent) {
+                nav("Channel/${note.idHex}")
+            } else if (event is PrivateDmEvent) {
+                nav("Room/${note.author?.pubkeyHex}")
+            } else if (channelHex != null) {
+                nav("Channel/$channelHex")
+            } else {
+                nav("Note/${note.idHex}")
+            }
         }
     }
 
@@ -58,6 +92,6 @@ fun LoadRedirectScreen(eventId: String?, navController: NavController) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(stringResource(R.string.looking_for_event, eventId))
+        Text(stringResource(R.string.looking_for_event, baseNote.idHex))
     }
 }
