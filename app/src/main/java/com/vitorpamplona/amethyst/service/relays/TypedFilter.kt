@@ -55,6 +55,9 @@ class TypedFilter(
         filter.limit?.run {
             jsonObject.addProperty("limit", filter.limit)
         }
+        filter.search?.run {
+            jsonObject.addProperty("search", filter.search)
+        }
         return jsonObject
     }
 }
