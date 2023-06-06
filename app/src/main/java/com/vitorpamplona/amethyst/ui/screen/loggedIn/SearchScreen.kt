@@ -187,7 +187,7 @@ class SearchBarViewModel(val account: Account) : ViewModel() {
         _searchResultsChannels.emit(LocalCache.findChannelsStartingWith(searchValue))
     }
 
-    fun clean() {
+    fun clear() {
         searchValue = ""
         _searchResultsUsers.value = emptyList()
         _searchResultsChannels.value = emptyList()
@@ -317,7 +317,7 @@ private fun SearchTextField(
                 if (searchBarViewModel.isSearching) {
                     IconButton(
                         onClick = {
-                            searchBarViewModel.clean()
+                            searchBarViewModel.clear()
                             NostrSearchEventOrUserDataSource.clear()
                         }
                     ) {
