@@ -176,7 +176,7 @@ dependencies {
     playImplementation 'com.google.mlkit:translate:17.0.1'
 
     // PushNotifications
-    playImplementation platform('com.google.firebase:firebase-bom:32.0.0')
+    playImplementation platform('com.google.firebase:firebase-bom:32.1.0')
     playImplementation 'com.google.firebase:firebase-messaging-ktx'
 
     // Charts
