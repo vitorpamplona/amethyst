@@ -27,3 +27,24 @@ task installGitHook(type: Copy) {
     fileMode 0777
 }
 tasks.getByPath(':app:preBuild').dependsOn installGitHook
+
+subprojects {
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+        kotlinOptions {
+            if (project.findProperty("composeCompilerReports") == "true") {
+                freeCompilerArgs += [
+                        "-P",
+                        "plugin:androidx.compose.compiler.plugins.kotlin:reportsDestination=" +
+                                project.buildDir.absolutePath + "/compose_compiler"
+                ]
+            }
+            if (project.findProperty("composeCompilerMetrics") == "true") {
+                freeCompilerArgs += [
+                        "-P",
+                        "plugin:androidx.compose.compiler.plugins.kotlin:metricsDestination=" +
+                                project.buildDir.absolutePath + "/compose_compiler"
+                ]
+            }
+        }
+    }
+}
