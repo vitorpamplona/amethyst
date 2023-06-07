@@ -391,4 +391,6 @@
     <string name="content_warning_hide_all_sensitive_content">Az érzékeny tartalmat mindig rejtse el</string>
     <string name="content_warning_show_all_sensitive_content">Az érzékeny tartalmat mindig jelenítse meg</string>
     <string name="content_warning_see_warnings">A tartalomra vonatkozó figyelmeztetéseket mindig jelenítse meg</string>
+    
+    <string name="recommended_apps">Ajánlottak: </string>
 </resources>
