@@ -7,6 +7,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -26,11 +27,14 @@ import androidx.compose.material.ProgressIndicatorDefaults
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -63,23 +67,188 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.math.RoundingMode
-import kotlin.math.abs
 import kotlin.math.roundToInt
 
 @Composable
-fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun ReactionsRow(baseNote: Note, showReactions: Boolean, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
 
-    var wantsToReplyTo by remember {
+    var wantsToSeeReactions = remember {
+        mutableStateOf<Boolean>(false)
+    }
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    Row(verticalAlignment = CenterVertically, modifier = Modifier.padding(start = 10.dp)) {
+        if (showReactions) {
+            Row(
+                verticalAlignment = CenterVertically,
+                modifier = Modifier
+                    .width(65.dp)
+                    .padding(start = 31.dp),
+                horizontalArrangement = Arrangement.Start
+            ) {
+                ExpandButton(baseNote, wantsToSeeReactions)
+            }
+        }
+
+        Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
+            ReplyReactionWithDialog(accountViewModel, nav, baseNote, grayTint)
+        }
+        Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
+            BoostWithDialog(accountViewModel, nav, baseNote, grayTint)
+        }
+        Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
+            LikeReaction(baseNote, grayTint, accountViewModel)
+        }
+        Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
+            ZapReaction(baseNote, grayTint, accountViewModel)
+        }
+        Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
+            ViewCountReaction(baseNote.idHex, grayTint)
+        }
+    }
+
+    if (showReactions && wantsToSeeReactions.value) {
+        ReactionDetailGallery(baseNote, nav, accountViewModel)
+    }
+}
+
+@Composable
+private fun ExpandButton(baseNote: Note, wantsToSeeReactions: MutableState<Boolean>) {
+    val zapsState by baseNote.live().zaps.observeAsState()
+    val boostsState by baseNote.live().boosts.observeAsState()
+    val reactionsState by baseNote.live().reactions.observeAsState()
+
+    val hasReactions by remember(zapsState, boostsState, reactionsState) {
+        derivedStateOf {
+            baseNote.zaps.isNotEmpty() ||
+                baseNote.boosts.isNotEmpty() ||
+                baseNote.reactions.isNotEmpty()
+        }
+    }
+
+    if (hasReactions) {
+        IconButton(
+            onClick = {
+                wantsToSeeReactions.value = !wantsToSeeReactions.value
+            },
+            modifier = Modifier.size(20.dp)
+        ) {
+            if (wantsToSeeReactions.value) {
+                Icon(
+                    imageVector = Icons.Default.ExpandLess,
+                    null,
+                    modifier = Modifier.size(22.dp),
+                    tint = MaterialTheme.colors.onSurface.copy(alpha = 0.22f)
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.ExpandMore,
+                    null,
+                    modifier = Modifier.size(22.dp),
+                    tint = MaterialTheme.colors.onSurface.copy(alpha = 0.22f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReactionDetailGallery(
+    baseNote: Note,
+    nav: (String) -> Unit,
+    accountViewModel: AccountViewModel
+) {
+    val zapsState by baseNote.live().zaps.observeAsState()
+    val boostsState by baseNote.live().boosts.observeAsState()
+    val reactionsState by baseNote.live().reactions.observeAsState()
+
+    val hasReactions by remember(zapsState, boostsState, reactionsState) {
+        derivedStateOf {
+            baseNote.zaps.isNotEmpty() ||
+                baseNote.boosts.isNotEmpty() ||
+                baseNote.reactions.isNotEmpty()
+        }
+    }
+
+    if (hasReactions) {
+        Row(verticalAlignment = CenterVertically, modifier = Modifier.padding(start = 10.dp, top = 5.dp)) {
+            Column() {
+                val zapEvents by remember(zapsState) { derivedStateOf { baseNote.zaps.toImmutableMap() } }
+                val boostEvents by remember(boostsState) { derivedStateOf { baseNote.boosts.toImmutableList() } }
+                val likeEvents by remember(reactionsState) { derivedStateOf { baseNote.reactions.toImmutableList() } }
+
+                val hasZapEvents by remember(zapsState) { derivedStateOf { baseNote.zaps.isNotEmpty() } }
+                val hasBoostEvents by remember(boostsState) { derivedStateOf { baseNote.boosts.isNotEmpty() } }
+                val hasLikeEvents by remember(reactionsState) { derivedStateOf { baseNote.reactions.isNotEmpty() } }
+
+                if (hasZapEvents) {
+                    RenderZapGallery(
+                        zapEvents,
+                        MaterialTheme.colors.background,
+                        nav,
+                        accountViewModel
+                    )
+                }
+
+                if (hasBoostEvents) {
+                    RenderBoostGallery(
+                        boostEvents,
+                        MaterialTheme.colors.background,
+                        nav,
+                        accountViewModel
+                    )
+                }
+
+                if (hasLikeEvents) {
+                    RenderLikeGallery(
+                        likeEvents,
+                        MaterialTheme.colors.background,
+                        nav,
+                        accountViewModel
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BoostWithDialog(
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+    baseNote: Note,
+    grayTint: Color
+) {
+    var wantsToQuote by remember {
         mutableStateOf<Note?>(null)
     }
 
-    var wantsToQuote by remember {
+    if (wantsToQuote != null) {
+        NewPostView({ wantsToQuote = null }, null, wantsToQuote, accountViewModel, nav)
+    }
+
+    BoostReaction(baseNote, grayTint, accountViewModel) {
+        wantsToQuote = baseNote
+    }
+}
+
+@Composable
+private fun ReplyReactionWithDialog(
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+    baseNote: Note,
+    grayTint: Color
+) {
+    var wantsToReplyTo by remember {
         mutableStateOf<Note?>(null)
     }
 
@@ -87,32 +256,8 @@ fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel, nav: (Strin
         NewPostView({ wantsToReplyTo = null }, wantsToReplyTo, null, accountViewModel, nav)
     }
 
-    if (wantsToQuote != null) {
-        NewPostView({ wantsToQuote = null }, null, wantsToQuote, accountViewModel, nav)
-    }
-
-    Spacer(modifier = Modifier.height(8.dp))
-
-    Row(verticalAlignment = CenterVertically) {
-        Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
-            ReplyReaction(baseNote, grayTint, accountViewModel) {
-                wantsToReplyTo = baseNote
-            }
-        }
-        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
-            BoostReaction(baseNote, grayTint, accountViewModel) {
-                wantsToQuote = baseNote
-            }
-        }
-        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
-            LikeReaction(baseNote, grayTint, accountViewModel)
-        }
-        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
-            ZapReaction(baseNote, grayTint, accountViewModel)
-        }
-        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
-            ViewCountReaction(baseNote.idHex, grayTint)
-        }
+    ReplyReaction(baseNote, grayTint, accountViewModel) {
+        wantsToReplyTo = baseNote
     }
 }
 

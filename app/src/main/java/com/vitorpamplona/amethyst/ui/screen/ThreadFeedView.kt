@@ -437,15 +437,15 @@ fun NoteMaster(
                             }
                         }
                     }
-
-                    ReactionsRow(note, accountViewModel, nav)
-
-                    Divider(
-                        modifier = Modifier.padding(top = 10.dp),
-                        thickness = 0.25.dp
-                    )
                 }
             }
+
+            ReactionsRow(note, true, accountViewModel, nav)
+
+            Divider(
+                modifier = Modifier.padding(top = 10.dp),
+                thickness = 0.25.dp
+            )
         }
 
         NoteQuickActionMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)

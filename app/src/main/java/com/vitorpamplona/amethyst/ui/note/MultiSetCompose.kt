@@ -150,7 +150,7 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
 }
 
 @Composable
-private fun RenderLikeGallery(
+fun RenderLikeGallery(
     likeEvents: ImmutableList<Note>,
     backgroundColor: Color,
     nav: (String) -> Unit,
@@ -182,7 +182,7 @@ private fun RenderLikeGallery(
 
 @Composable
 fun RenderZapGallery(
-    zapEvents: ImmutableMap<Note, Note>,
+    zapEvents: ImmutableMap<Note, Note?>,
     backgroundColor: Color,
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
@@ -212,7 +212,7 @@ fun RenderZapGallery(
 }
 
 @Composable
-private fun RenderBoostGallery(
+fun RenderBoostGallery(
     boostEvents: ImmutableList<Note>,
     backgroundColor: Color,
     nav: (String) -> Unit,
@@ -249,7 +249,7 @@ private fun RenderBoostGallery(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AuthorGalleryZaps(
-    authorNotes: ImmutableMap<Note, Note>,
+    authorNotes: ImmutableMap<Note, Note?>,
     backgroundColor: Color,
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel

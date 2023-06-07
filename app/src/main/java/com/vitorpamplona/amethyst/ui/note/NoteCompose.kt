@@ -138,6 +138,7 @@ import com.vitorpamplona.amethyst.ui.components.ZoomableUrlImage
 import com.vitorpamplona.amethyst.ui.components.ZoomableUrlVideo
 import com.vitorpamplona.amethyst.ui.components.figureOutMimeType
 import com.vitorpamplona.amethyst.ui.components.imageExtensions
+import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
@@ -560,6 +561,15 @@ fun NormalNote(
                     NoteQuickActionMenu(baseNote, popupExpanded, { popupExpanded = false }, accountViewModel)
                 }
             }
+
+            if (!makeItShort) {
+                ReactionsRow(baseNote, !isBoostedNote && !isQuotedNote, accountViewModel, nav)
+            }
+
+            Divider(
+                modifier = Modifier.padding(top = 10.dp),
+                thickness = 0.25.dp
+            )
         }
     }
 }
@@ -626,15 +636,6 @@ private fun RenderTextEvent(
             DisplayUncitedHashtags(hashtags, eventContent, nav)
         }
     }
-
-    if (!makeItShort) {
-        ReactionsRow(note, accountViewModel, nav)
-    }
-
-    Divider(
-        modifier = Modifier.padding(top = 10.dp),
-        thickness = 0.25.dp
-    )
 }
 
 @Composable
@@ -687,15 +688,6 @@ private fun RenderPoll(
         var hashtags = remember { noteEvent.hashtags().toImmutableList() }
         DisplayUncitedHashtags(hashtags, eventContent, nav)
     }
-
-    if (!makeItShort) {
-        ReactionsRow(note, accountViewModel, nav)
-    }
-
-    Divider(
-        modifier = Modifier.padding(top = 10.dp),
-        thickness = 0.25.dp
-    )
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -877,15 +869,6 @@ private fun RenderHighlight(
         accountViewModel,
         nav
     )
-
-    if (!makeItShort) {
-        ReactionsRow(note, accountViewModel, nav)
-    }
-
-    Divider(
-        modifier = Modifier.padding(top = 10.dp),
-        thickness = 0.25.dp
-    )
 }
 
 @Composable
@@ -955,15 +938,6 @@ private fun RenderPrivateMessage(
             nav
         )
     }
-
-    if (!makeItShort) {
-        ReactionsRow(note, accountViewModel, nav)
-    }
-
-    Divider(
-        modifier = Modifier.padding(top = 10.dp),
-        thickness = 0.25.dp
-    )
 }
 
 @Composable
@@ -974,13 +948,6 @@ fun RelaySetList(
     nav: (String) -> Unit
 ) {
     DisplayRelaySet(baseNote, backgroundColor, accountViewModel, nav)
-
-    ReactionsRow(baseNote, accountViewModel, nav)
-
-    Divider(
-        modifier = Modifier.padding(top = 10.dp),
-        thickness = 0.25.dp
-    )
 }
 
 @Composable
@@ -991,13 +958,6 @@ fun RenderPeopleList(
     nav: (String) -> Unit
 ) {
     DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
-
-    ReactionsRow(baseNote, accountViewModel, nav)
-
-    Divider(
-        modifier = Modifier.padding(top = 10.dp),
-        thickness = 0.25.dp
-    )
 }
 
 @Composable
@@ -1282,13 +1242,6 @@ private fun RenderBadgeAward(
             nav = nav
         )
     }
-
-    ReactionsRow(note, accountViewModel, nav)
-
-    Divider(
-        modifier = Modifier.padding(top = 10.dp),
-        thickness = 0.25.dp
-    )
 }
 
 @Composable
@@ -1350,16 +1303,7 @@ private fun RenderPinListEvent(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val noteEvent = baseNote.event as? PinListEvent ?: return
-
     PinListHeader(baseNote, backgroundColor, accountViewModel, nav)
-
-    ReactionsRow(baseNote, accountViewModel, nav)
-
-    Divider(
-        modifier = Modifier.padding(top = 10.dp),
-        thickness = 0.25.dp
-    )
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -1462,13 +1406,6 @@ private fun RenderAudioTrack(
     val noteEvent = note.event as? AudioTrackEvent ?: return
 
     AudioTrackHeader(noteEvent, accountViewModel, nav)
-
-    ReactionsRow(note, accountViewModel, nav)
-
-    Divider(
-        modifier = Modifier.padding(top = 10.dp),
-        thickness = 0.25.dp
-    )
 }
 
 @Composable
@@ -1480,13 +1417,6 @@ private fun RenderLongFormContent(
     val noteEvent = note.event as? LongTextNoteEvent ?: return
 
     LongFormHeader(noteEvent, note, accountViewModel)
-
-    ReactionsRow(note, accountViewModel, nav)
-
-    Divider(
-        modifier = Modifier.padding(top = 10.dp),
-        thickness = 0.25.dp
-    )
 }
 
 @Composable
@@ -1547,13 +1477,6 @@ private fun RenderReport(
             nav = nav
         )
     }
-
-    ReactionsRow(note, accountViewModel, nav)
-
-    Divider(
-        modifier = Modifier.padding(top = 10.dp),
-        thickness = 0.25.dp
-    )
 }
 
 @Composable
@@ -2458,17 +2381,17 @@ private fun CreateImageHeader(
 private fun RelayBadges(baseNote: Note) {
     var expanded by remember { mutableStateOf(false) }
     var showShowMore by remember { mutableStateOf(false) }
+
     var lazyRelayList by remember { mutableStateOf<ImmutableList<String>>(persistentListOf()) }
+    var shortRelayList by remember { mutableStateOf<ImmutableList<String>>(persistentListOf()) }
 
     WatchRelayLists(baseNote) { relayList ->
-        val relaysToDisplay = if (expanded) relayList else relayList.take(3)
-        val shouldListChange = lazyRelayList.size < 3 || lazyRelayList.size != relayList.size
-
-        if (shouldListChange) {
-            lazyRelayList = relaysToDisplay.toImmutableList()
+        if (!equalImmutableLists(relayList, lazyRelayList)) {
+            lazyRelayList = relayList.toImmutableList()
+            shortRelayList = relayList.take(3).toImmutableList()
         }
 
-        val nextShowMore = relayList.size > 3 && !expanded
+        val nextShowMore = relayList.size > 3
         if (nextShowMore != showShowMore) {
             // only triggers recomposition when actually different
             showShowMore = nextShowMore
@@ -2477,9 +2400,13 @@ private fun RelayBadges(baseNote: Note) {
 
     Spacer(Modifier.height(10.dp))
 
-    VerticalRelayPanelWithFlow(lazyRelayList)
+    if (expanded) {
+        VerticalRelayPanelWithFlow(lazyRelayList)
+    } else {
+        VerticalRelayPanelWithFlow(shortRelayList)
+    }
 
-    if (showShowMore) {
+    if (showShowMore && !expanded) {
         ShowMoreRelaysButton {
             expanded = true
         }
