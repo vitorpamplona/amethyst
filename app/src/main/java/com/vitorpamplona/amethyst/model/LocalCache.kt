@@ -119,17 +119,25 @@ object LocalCache {
     }
 
     @Synchronized
-    fun getOrCreateAddressableNote(key: ATag): AddressableNote {
+    fun getOrCreateAddressableNoteInternal(key: ATag): AddressableNote {
         checkNotInMainThread()
 
         // we can't use naddr here because naddr might include relay info and
         // the preferred relay should not be part of the index.
         return addressables[key.toTag()] ?: run {
             val answer = AddressableNote(key)
-            answer.author = checkGetOrCreateUser(key.pubKeyHex)
             addressables.put(key.toTag(), answer)
             answer
         }
+    }
+
+    fun getOrCreateAddressableNote(key: ATag): AddressableNote {
+        val note = getOrCreateAddressableNoteInternal(key)
+        // Loads the user outside a Syncronized block to avoid blocking
+        if (note.author == null) {
+            note.author = checkGetOrCreateUser(key.pubKeyHex)
+        }
+        return note
     }
 
     fun consume(event: MetadataEvent) {
