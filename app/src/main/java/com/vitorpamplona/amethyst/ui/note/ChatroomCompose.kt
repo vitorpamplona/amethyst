@@ -127,15 +127,9 @@ private fun ChannelRoomCompose(
 
     var hasNewMessages by remember { mutableStateOf<Boolean>(false) }
 
-    LaunchedEffect(key1 = note) {
-        launch(Dispatchers.IO) {
-            note.createdAt()?.let { timestamp ->
-                val lastTime = NotificationCache.load(route)
-                val newHasNewMessages = timestamp > lastTime
-                if (hasNewMessages != newHasNewMessages) {
-                    hasNewMessages = newHasNewMessages
-                }
-            }
+    WatchNotificationChanges(note, route) { newHasNewMessages ->
+        if (hasNewMessages != newHasNewMessages) {
+            hasNewMessages = newHasNewMessages
         }
     }
 
@@ -181,24 +175,15 @@ private fun UserRoomCompose(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val noteEvent = note.event
-
     var hasNewMessages by remember { mutableStateOf<Boolean>(false) }
 
     val route = remember(user) {
         "Room/${user.pubkeyHex}"
     }
 
-    LaunchedEffect(key1 = note) {
-        launch(Dispatchers.IO) {
-            noteEvent?.let {
-                val lastTime = NotificationCache.load(route)
-
-                val newHasNewMessages = it.createdAt() > lastTime
-                if (hasNewMessages != newHasNewMessages) {
-                    hasNewMessages = newHasNewMessages
-                }
-            }
+    WatchNotificationChanges(note, route) { newHasNewMessages ->
+        if (hasNewMessages != newHasNewMessages) {
+            hasNewMessages = newHasNewMessages
         }
     }
 
@@ -216,6 +201,24 @@ private fun UserRoomCompose(
         hasNewMessages = hasNewMessages,
         onClick = { nav(route) }
     )
+}
+
+@Composable
+private fun WatchNotificationChanges(
+    note: Note,
+    route: String,
+    onNewStatus: (Boolean) -> Unit
+) {
+    val cacheState by NotificationCache.live.observeAsState()
+
+    LaunchedEffect(key1 = note, cacheState) {
+        launch(Dispatchers.IO) {
+            note.event?.createdAt()?.let {
+                val lastTime = NotificationCache.load(route)
+                onNewStatus(it > lastTime)
+            }
+        }
+    }
 }
 
 @Composable

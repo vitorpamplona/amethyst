@@ -138,7 +138,7 @@ open class Event(
             .replace("\\u2028", "\u2028")
             .replace("\\u2029", "\u2029")
 
-        return sha256.digest(rawEventJson.toByteArray()).toHexKey()
+        return MessageDigest.getInstance("SHA-256").digest(rawEventJson.toByteArray()).toHexKey()
     }
 
     private class EventDeserializer : JsonDeserializer<Event> {
@@ -212,7 +212,6 @@ open class Event(
     companion object {
         private val secp256k1 = Secp256k1.get()
 
-        val sha256: MessageDigest = MessageDigest.getInstance("SHA-256")
         val gson: Gson = GsonBuilder()
             .disableHtmlEscaping()
             .registerTypeAdapter(Event::class.java, EventSerializer())
@@ -259,6 +258,7 @@ open class Event(
             PrivateDmEvent.kind -> PrivateDmEvent(id, pubKey, createdAt, tags, content, sig)
             ReactionEvent.kind -> ReactionEvent(id, pubKey, createdAt, tags, content, sig)
             RecommendRelayEvent.kind -> RecommendRelayEvent(id, pubKey, createdAt, tags, content, sig, lenient)
+            RelaySetEvent.kind -> RelaySetEvent(id, pubKey, createdAt, tags, content, sig)
             ReportEvent.kind -> ReportEvent(id, pubKey, createdAt, tags, content, sig)
             RepostEvent.kind -> RepostEvent(id, pubKey, createdAt, tags, content, sig)
             TextNoteEvent.kind -> TextNoteEvent(id, pubKey, createdAt, tags, content, sig)
@@ -283,7 +283,7 @@ open class Event(
                 .replace("\\u2028", "\u2028")
                 .replace("\\u2029", "\u2029")
 
-            return sha256.digest(rawEventJson.toByteArray())
+            return MessageDigest.getInstance("SHA-256").digest(rawEventJson.toByteArray())
         }
 
         fun create(privateKey: ByteArray, kind: Int, tags: List<List<String>> = emptyList(), content: String = "", createdAt: Long = Date().time / 1000): Event {

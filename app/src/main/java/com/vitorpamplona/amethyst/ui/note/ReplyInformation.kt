@@ -187,6 +187,10 @@ fun ReplyInformationChannel(
     val channelState by baseChannel.live.observeAsState()
     val channel = channelState?.channel ?: return
 
+    val channelName = remember(channelState) {
+        AnnotatedString("${channel.info.name} ")
+    }
+
     FlowRow() {
         Text(
             stringResource(R.string.in_channel),
@@ -195,7 +199,7 @@ fun ReplyInformationChannel(
         )
 
         ClickableText(
-            AnnotatedString("${channel.info.name} "),
+            text = channelName,
             style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(alpha = 0.52f), fontSize = 13.sp),
             onClick = { onChannelTagClick(channel) }
         )

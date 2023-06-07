@@ -65,12 +65,10 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
     val baseNote = remember { multiSetCard.note }
 
     var popupExpanded by remember { mutableStateOf(false) }
-
     val scope = rememberCoroutineScope()
-
     var isNew by remember { mutableStateOf(false) }
 
-    LaunchedEffect(key1 = multiSetCard.createdAt()) {
+    LaunchedEffect(key1 = multiSetCard) {
         launch(Dispatchers.IO) {
             val newIsNew = multiSetCard.maxCreatedAt > NotificationCache.load(routeForLastRead)
 
@@ -85,10 +83,14 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
     val primaryColor = MaterialTheme.colors.newItemBackgroundColor
     val defaultBackgroundColor = MaterialTheme.colors.background
 
-    val backgroundColor = if (isNew) {
-        primaryColor.compositeOver(defaultBackgroundColor)
-    } else {
-        defaultBackgroundColor
+    val backgroundColor by remember(isNew) {
+        derivedStateOf {
+            if (isNew) {
+                primaryColor.compositeOver(defaultBackgroundColor)
+            } else {
+                defaultBackgroundColor
+            }
+        }
     }
 
     val columnModifier = Modifier
@@ -148,7 +150,7 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
 }
 
 @Composable
-private fun RenderLikeGallery(
+fun RenderLikeGallery(
     likeEvents: ImmutableList<Note>,
     backgroundColor: Color,
     nav: (String) -> Unit,
@@ -180,7 +182,7 @@ private fun RenderLikeGallery(
 
 @Composable
 fun RenderZapGallery(
-    zapEvents: ImmutableMap<Note, Note>,
+    zapEvents: ImmutableMap<Note, Note?>,
     backgroundColor: Color,
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
@@ -210,7 +212,7 @@ fun RenderZapGallery(
 }
 
 @Composable
-private fun RenderBoostGallery(
+fun RenderBoostGallery(
     boostEvents: ImmutableList<Note>,
     backgroundColor: Color,
     nav: (String) -> Unit,
@@ -247,7 +249,7 @@ private fun RenderBoostGallery(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AuthorGalleryZaps(
-    authorNotes: ImmutableMap<Note, Note>,
+    authorNotes: ImmutableMap<Note, Note?>,
     backgroundColor: Color,
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
@@ -332,7 +334,7 @@ private fun AuthorPictureAndComment(
         Box(modifier = remember { Modifier.size(35.dp) }, contentAlignment = Alignment.BottomCenter) {
             FastNoteAuthorPicture(
                 author = author,
-                size = 35.dp,
+                size = remember { 35.dp },
                 accountViewModel = accountViewModel,
                 pictureModifier = authorPictureModifier
             )
@@ -380,10 +382,10 @@ fun AuthorGallery(
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
-    Column(modifier = Modifier.padding(start = 10.dp)) {
+    Column(modifier = remember { Modifier.padding(start = 10.dp) }) {
         FlowRow() {
             authorNotes.forEach { note ->
-                Box(Modifier.size(35.dp)) {
+                Box(remember { Modifier.size(35.dp) }) {
                     NotePictureAndComment(note, backgroundColor, nav, accountViewModel)
                 }
             }

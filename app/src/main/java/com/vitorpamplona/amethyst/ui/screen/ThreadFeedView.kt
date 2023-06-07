@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.PeopleListEvent
 import com.vitorpamplona.amethyst.service.model.PinListEvent
 import com.vitorpamplona.amethyst.service.model.PollNoteEvent
+import com.vitorpamplona.amethyst.service.model.RelaySetEvent
 import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
@@ -374,6 +375,13 @@ fun NoteMaster(
                             accountViewModel,
                             nav
                         )
+                    } else if (noteEvent is RelaySetEvent) {
+                        DisplayRelaySet(
+                            baseNote,
+                            MaterialTheme.colors.background,
+                            accountViewModel,
+                            nav
+                        )
                     } else if (noteEvent is AppDefinitionEvent) {
                         RenderAppDefinition(baseNote, accountViewModel, nav)
                     } else if (noteEvent is HighlightEvent) {
@@ -429,15 +437,15 @@ fun NoteMaster(
                             }
                         }
                     }
-
-                    ReactionsRow(note, accountViewModel, nav)
-
-                    Divider(
-                        modifier = Modifier.padding(top = 10.dp),
-                        thickness = 0.25.dp
-                    )
                 }
             }
+
+            ReactionsRow(note, true, accountViewModel, nav)
+
+            Divider(
+                modifier = Modifier.padding(top = 10.dp),
+                thickness = 0.25.dp
+            )
         }
 
         NoteQuickActionMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)

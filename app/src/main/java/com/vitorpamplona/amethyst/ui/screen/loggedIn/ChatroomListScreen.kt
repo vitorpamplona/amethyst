@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.ui.screen.ChatroomListFeedView
 import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListKnownFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListNewFeedViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -150,9 +151,11 @@ fun ChatroomListScreen(
 @Composable
 fun WatchAccountForListScreen(knownFeedViewModel: NostrChatroomListKnownFeedViewModel, newFeedViewModel: NostrChatroomListNewFeedViewModel, accountViewModel: AccountViewModel) {
     LaunchedEffect(accountViewModel) {
-        NostrChatroomListDataSource.start()
-        knownFeedViewModel.invalidateData(true)
-        newFeedViewModel.invalidateData(true)
+        launch(Dispatchers.IO) {
+            NostrChatroomListDataSource.start()
+            knownFeedViewModel.invalidateData(true)
+            newFeedViewModel.invalidateData(true)
+        }
     }
 }
 

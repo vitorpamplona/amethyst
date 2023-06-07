@@ -51,7 +51,7 @@ fun ChatroomScreen(
     var userRoom by remember { mutableStateOf<User?>(null) }
 
     LaunchedEffect(userId) {
-        withContext(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             val newUser = LocalCache.checkGetOrCreateUser(userId)
             if (newUser != userRoom) {
                 userRoom = newUser
@@ -105,11 +105,15 @@ fun ChatroomScreen(
     val lifeCycleOwner = LocalLifecycleOwner.current
 
     LaunchedEffect(baseUser, accountViewModel) {
-        NostrChatroomDataSource.start()
+        launch(Dispatchers.IO) {
+            NostrChatroomDataSource.start()
+            feedViewModel.invalidateData()
 
-        feedViewModel.invalidateData()
-        newPostModel.imageUploadingError.collect { error ->
-            Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+            newPostModel.imageUploadingError.collect { error ->
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 

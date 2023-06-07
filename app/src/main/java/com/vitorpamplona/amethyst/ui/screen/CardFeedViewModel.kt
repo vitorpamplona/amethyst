@@ -314,6 +314,8 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
     init {
         collectorJob = viewModelScope.launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect { newNotes ->
+                checkNotInMainThread()
+
                 if (localFilter is AdditiveFeedFilter && _feedContent.value is CardFeedState.Loaded) {
                     invalidateInsertData(newNotes)
                 } else {

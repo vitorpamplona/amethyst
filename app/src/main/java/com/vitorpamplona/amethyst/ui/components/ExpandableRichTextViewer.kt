@@ -97,7 +97,7 @@ fun ExpandableRichTextViewer(
 }
 
 @Composable
-private fun ShowMoreButton(onClick: () -> Unit) {
+public fun ShowMoreButton(onClick: () -> Unit) {
     Button(
         modifier = Modifier.padding(top = 10.dp),
         onClick = onClick,

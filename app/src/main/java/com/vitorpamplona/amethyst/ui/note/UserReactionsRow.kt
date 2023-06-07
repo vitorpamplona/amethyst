@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
@@ -295,6 +296,8 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
 
             collectorJob = viewModelScope.launch(Dispatchers.IO) {
                 LocalCache.live.newEventBundles.collect { newNotes ->
+                    checkNotInMainThread()
+
                     invalidateInsertData(newNotes)
                 }
             }
@@ -310,6 +313,7 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
     }
 
     override fun onCleared() {
+        collectorJob?.cancel()
         super.onCleared()
     }
 

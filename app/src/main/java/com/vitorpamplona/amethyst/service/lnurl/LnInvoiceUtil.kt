@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.service.lnurl
 
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import java.math.BigDecimal
 import java.util.Locale
 import java.util.regex.Pattern
@@ -98,7 +99,7 @@ object LnInvoiceUtil {
      * @return invoice amount in bitcoins, zero if the invoice has no amount
      * @throws RuntimeException if invoice format is incorrect
      */
-    fun getAmount(invoice: String): BigDecimal {
+    private fun getAmount(invoice: String): BigDecimal {
         try {
             decodeUnlimitedLength(invoice) // checksum must match
         } catch (e: AddressFormatException) {
@@ -121,6 +122,8 @@ object LnInvoiceUtil {
     }
 
     fun getAmountInSats(invoice: String): BigDecimal {
+        checkNotInMainThread()
+
         return getAmount(invoice).multiply(BigDecimal(100000000))
     }
 

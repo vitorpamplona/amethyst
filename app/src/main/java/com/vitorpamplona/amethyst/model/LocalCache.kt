@@ -119,17 +119,25 @@ object LocalCache {
     }
 
     @Synchronized
-    fun getOrCreateAddressableNote(key: ATag): AddressableNote {
+    fun getOrCreateAddressableNoteInternal(key: ATag): AddressableNote {
         checkNotInMainThread()
 
         // we can't use naddr here because naddr might include relay info and
         // the preferred relay should not be part of the index.
         return addressables[key.toTag()] ?: run {
             val answer = AddressableNote(key)
-            answer.author = checkGetOrCreateUser(key.pubKeyHex)
             addressables.put(key.toTag(), answer)
             answer
         }
+    }
+
+    fun getOrCreateAddressableNote(key: ATag): AddressableNote {
+        val note = getOrCreateAddressableNoteInternal(key)
+        // Loads the user outside a Syncronized block to avoid blocking
+        if (note.author == null) {
+            note.author = checkGetOrCreateUser(key.pubKeyHex)
+        }
+        return note
     }
 
     fun consume(event: MetadataEvent) {
@@ -280,6 +288,19 @@ object LocalCache {
     }
 
     private fun consume(event: PinListEvent) {
+        val note = getOrCreateAddressableNote(event.address())
+        val author = getOrCreateUser(event.pubKey)
+
+        if (note.event?.id() == event.id()) return
+
+        if (event.createdAt > (note.createdAt() ?: 0)) {
+            note.loadEvent(event, author, emptyList())
+
+            refreshObservers(note)
+        }
+    }
+
+    private fun consume(event: RelaySetEvent) {
         val note = getOrCreateAddressableNote(event.address())
         val author = getOrCreateUser(event.pubKey)
 
@@ -1007,10 +1028,17 @@ object LocalCache {
         live.invalidateData(newNote)
     }
 
-    fun consume(event: Event, relay: Relay?) {
+    fun verifyAndConsume(event: Event, relay: Relay?) {
         checkNotInMainThread()
 
-        if (!event.hasValidSignature()) return
+        if (!event.hasValidSignature()) {
+            try {
+                event.checkSignature()
+            } catch (e: Exception) {
+                Log.w("Event failed retest ${event.kind}", e.message ?: "")
+            }
+            return
+        }
 
         try {
             when (event) {
@@ -1035,7 +1063,7 @@ object LocalCache {
                 is HighlightEvent -> consume(event, relay)
                 is LnZapEvent -> {
                     event.zapRequest?.let {
-                        consume(it, relay)
+                        verifyAndConsume(it, relay)
                     }
                     consume(event)
                 }
@@ -1049,10 +1077,11 @@ object LocalCache {
                 is PeopleListEvent -> consume(event)
                 is ReactionEvent -> consume(event)
                 is RecommendRelayEvent -> consume(event)
+                is RelaySetEvent -> consume(event)
                 is ReportEvent -> consume(event, relay)
                 is RepostEvent -> {
                     event.containedPost()?.let {
-                        consume(it, relay)
+                        verifyAndConsume(it, relay)
                     }
                     consume(event)
                 }

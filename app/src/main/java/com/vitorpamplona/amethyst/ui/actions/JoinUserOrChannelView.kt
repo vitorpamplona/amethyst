@@ -30,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
@@ -57,6 +58,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.note.ChannelName
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -95,7 +97,7 @@ fun JoinUserOrChannelView(searchBarViewModel: SearchBarViewModel, onClose: () ->
     Dialog(
         onDismissRequest = {
             NostrSearchEventOrUserDataSource.clear()
-            searchBarViewModel.clean()
+            searchBarViewModel.clear()
             onClose()
         },
         properties = DialogProperties(
@@ -114,7 +116,7 @@ fun JoinUserOrChannelView(searchBarViewModel: SearchBarViewModel, onClose: () ->
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     CloseButton(onCancel = {
-                        searchBarViewModel.clean()
+                        searchBarViewModel.clear()
                         NostrSearchEventOrUserDataSource.clear()
                         onClose()
                     })
@@ -157,6 +159,7 @@ private fun RenderSearch(
     LaunchedEffect(Unit) {
         launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect {
+                checkNotInMainThread()
                 if (searchBarViewModel.isSearchingFun()) {
                     searchBarViewModel.invalidateData()
                 }
@@ -225,8 +228,10 @@ private fun SearchEditTextForJoin(
     val keyboardController = LocalSoftwareKeyboardController.current
 
     LaunchedEffect(Unit) {
-        delay(100)
-        focusRequester.requestFocus()
+        launch {
+            delay(100)
+            focusRequester.requestFocus()
+        }
     }
 
     Row(
@@ -272,7 +277,7 @@ private fun SearchEditTextForJoin(
                 if (searchBarViewModel.isSearching) {
                     IconButton(
                         onClick = {
-                            searchBarViewModel.clean()
+                            searchBarViewModel.clear()
                             NostrSearchEventOrUserDataSource.clear()
                         }
                     ) {
@@ -316,31 +321,20 @@ private fun RenderSearchResults(
                     users,
                     key = { _, item -> "u" + item.pubkeyHex }
                 ) { _, item ->
-                    UserComposeForChat(
-                        item,
-                        accountViewModel = accountViewModel,
-                        nav = nav
-                    )
+                    UserComposeForChat(item, accountViewModel) {
+                        nav("Room/${item.pubkeyHex}")
+                        searchBarViewModel.clear()
+                    }
                 }
 
                 itemsIndexed(
                     channels,
                     key = { _, item -> "c" + item.idHex }
                 ) { _, item ->
-                    ChannelName(
-                        channelIdHex = item.idHex,
-                        channelPicture = item.profilePicture(),
-                        channelTitle = {
-                            Text(
-                                "${item.info.name}",
-                                fontWeight = FontWeight.Bold
-                            )
-                        },
-                        channelLastTime = null,
-                        channelLastContent = item.info.about,
-                        false,
-                        onClick = { nav("Channel/${item.idHex}") }
-                    )
+                    RenderChannel(item) {
+                        nav("Channel/${item.idHex}")
+                        searchBarViewModel.clear()
+                    }
                 }
             }
         }
@@ -348,15 +342,36 @@ private fun RenderSearchResults(
 }
 
 @Composable
+private fun RenderChannel(
+    item: com.vitorpamplona.amethyst.model.Channel,
+    onClick: () -> Unit
+) {
+    ChannelName(
+        channelIdHex = item.idHex,
+        channelPicture = item.profilePicture(),
+        channelTitle = {
+            Text(
+                "${item.info.name}",
+                fontWeight = FontWeight.Bold
+            )
+        },
+        channelLastTime = null,
+        channelLastContent = item.info.about,
+        false,
+        onClick = onClick
+    )
+}
+
+@Composable
 fun UserComposeForChat(
     baseUser: User,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
+    onClick: () -> Unit
 ) {
     Column(
         modifier =
         Modifier.clickable(
-            onClick = { nav("Room/${baseUser.pubkeyHex}") }
+            onClick = onClick
         )
     ) {
         Row(
@@ -368,7 +383,7 @@ fun UserComposeForChat(
                 ),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            UserPicture(baseUser, nav, accountViewModel, 55.dp)
+            UserPicture(baseUser, 55.dp, accountViewModel)
 
             Column(
                 modifier = Modifier
@@ -379,15 +394,7 @@ fun UserComposeForChat(
                     UsernameDisplay(baseUser)
                 }
 
-                val baseUserState by baseUser.live().metadata.observeAsState()
-                val user = baseUserState?.user ?: return
-
-                Text(
-                    user.info?.about ?: "",
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                DisplayUserAboutInfo(baseUser)
             }
         }
 
@@ -396,4 +403,21 @@ fun UserComposeForChat(
             thickness = 0.25.dp
         )
     }
+}
+
+@Composable
+private fun DisplayUserAboutInfo(baseUser: User) {
+    val baseUserState by baseUser.live().metadata.observeAsState()
+    val about by remember(baseUserState) {
+        derivedStateOf {
+            baseUserState?.user?.info?.about ?: ""
+        }
+    }
+
+    Text(
+        text = about,
+        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
+    )
 }

@@ -89,10 +89,6 @@ class Account(
         return followingChannels.map { LocalCache.getOrCreateChannel(it) }
     }
 
-    fun hiddenUsers(): List<User> {
-        return (hiddenUsers + transientHiddenUsers).map { LocalCache.getOrCreateUser(it) }
-    }
-
     fun isWriteable(): Boolean {
         return loggedIn.privKey != null
     }

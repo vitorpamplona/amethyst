@@ -23,7 +23,7 @@ class EventNotificationConsumer(private val applicationContext: Context) {
         val scope = CoroutineScope(Job() + Dispatchers.IO)
         scope.launch {
             // adds to database
-            LocalCache.consume(event, null)
+            LocalCache.verifyAndConsume(event, null)
 
             when (event) {
                 is PrivateDmEvent -> notify(event)

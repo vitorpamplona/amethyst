@@ -143,27 +143,46 @@ private fun RenderRegular(
         }
     }
 
+    val paragraphs = remember(content) {
+        content.split('\n').toImmutableList()
+    }
+
     // FlowRow doesn't work well with paragraphs. So we need to split them
-    content.split('\n').forEach { paragraph ->
-        FlowRow() {
-            val s = remember(paragraph) {
-                if (isArabic(paragraph)) {
-                    paragraph.trim().split(' ').reversed()
-                } else {
-                    paragraph.trim().split(' ')
-                }
-            }
-            s.forEach { word: String ->
-                RenderWord(
-                    word,
-                    state,
-                    canPreview,
-                    backgroundColor,
-                    accountViewModel,
-                    nav,
-                    tags
-                )
-            }
+    paragraphs.forEach { paragraph ->
+        RenderParagraph(paragraph, state, canPreview, backgroundColor, accountViewModel, nav, tags)
+    }
+}
+
+@Composable
+@OptIn(ExperimentalLayoutApi::class)
+private fun RenderParagraph(
+    paragraph: String,
+    state: RichTextViewerState,
+    canPreview: Boolean,
+    backgroundColor: Color,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+    tags: ImmutableListOfLists<String>
+) {
+    val s = remember(paragraph) {
+        if (isArabic(paragraph)) {
+            paragraph.trim().split(' ').reversed().toImmutableList()
+        } else {
+            paragraph.trim().split(' ').toImmutableList()
+        }
+    }
+
+    FlowRow() {
+        s.forEach { word: String ->
+            RenderWord(
+                word,
+                state,
+                canPreview,
+                backgroundColor,
+                accountViewModel,
+                nav,
+                tags
+            )
         }
     }
 }
@@ -863,13 +882,14 @@ fun HashTag(word: String, nav: (String) -> Unit) {
     } ?: Text(text = "$word ")
 }
 
+data class LoadedTag(val user: User?, val note: Note?, val addedChars: String)
+
 @Composable
 fun TagLink(word: String, tags: ImmutableListOfLists<String>, canPreview: Boolean, backgroundColor: Color, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    var baseUserPair by remember { mutableStateOf<Pair<User, String?>?>(null) }
-    var baseNotePair by remember { mutableStateOf<Pair<Note, String?>?>(null) }
+    var loadedTag by remember { mutableStateOf<LoadedTag?>(null) }
 
     LaunchedEffect(key1 = word) {
-        if (baseUserPair == null && baseNotePair == null) {
+        if (loadedTag == null) {
             launch(Dispatchers.IO) {
                 val matcher = tagIndex.matcher(word)
                 val (index, suffix) = try {
@@ -877,7 +897,7 @@ fun TagLink(word: String, tags: ImmutableListOfLists<String>, canPreview: Boolea
                     Pair(matcher.group(1)?.toInt(), matcher.group(2) ?: "")
                 } catch (e: Exception) {
                     Log.w("Tag Parser", "Couldn't link tag $word", e)
-                    Pair(null, null)
+                    Pair(null, "")
                 }
 
                 if (index != null && index >= 0 && index < tags.lists.size) {
@@ -886,11 +906,11 @@ fun TagLink(word: String, tags: ImmutableListOfLists<String>, canPreview: Boolea
                     if (tag.size > 1) {
                         if (tag[0] == "p") {
                             LocalCache.checkGetOrCreateUser(tag[1])?.let {
-                                baseUserPair = Pair(it, suffix)
+                                loadedTag = LoadedTag(it, null, suffix)
                             }
                         } else if (tag[0] == "e" || tag[0] == "a") {
                             LocalCache.checkGetOrCreateNote(tag[1])?.let {
-                                baseNotePair = Pair(it, suffix)
+                                loadedTag = LoadedTag(null, it, suffix)
                             }
                         }
                     }
@@ -899,55 +919,80 @@ fun TagLink(word: String, tags: ImmutableListOfLists<String>, canPreview: Boolea
         }
     }
 
-    baseUserPair?.let {
-        val innerUserState by it.first.live().metadata.observeAsState()
-        val displayName = remember(innerUserState) {
-            innerUserState?.user?.toBestDisplayName() ?: ""
-        }
-        val route = remember(innerUserState) {
-            "User/${it.first.pubkeyHex}"
-        }
-        val userTags = remember(innerUserState) {
-            innerUserState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists()
+    if (loadedTag == null) {
+        Text(
+            text = remember {
+                "$word "
+            }
+        )
+    } else {
+        loadedTag?.user?.let {
+            DisplayUserFromTag(it, loadedTag?.addedChars ?: "", nav)
         }
 
-        CreateClickableTextWithEmoji(
-            clickablePart = displayName,
-            suffix = remember { "${it.second} " },
-            tags = userTags,
-            route = route,
+        loadedTag?.note?.let {
+            DisplayNoteFromTag(it, loadedTag?.addedChars ?: "", canPreview, accountViewModel, backgroundColor, nav)
+        }
+    }
+}
+
+@Composable
+private fun DisplayNoteFromTag(
+    baseNote: Note,
+    addedChars: String,
+    canPreview: Boolean,
+    accountViewModel: AccountViewModel,
+    backgroundColor: Color,
+    nav: (String) -> Unit
+) {
+    if (canPreview) {
+        NoteCompose(
+            baseNote = baseNote,
+            accountViewModel = accountViewModel,
+            modifier = Modifier
+                .padding(top = 2.dp, bottom = 0.dp, start = 0.dp, end = 0.dp)
+                .fillMaxWidth()
+                .clip(shape = RoundedCornerShape(15.dp))
+                .border(
+                    1.dp,
+                    MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
+                    RoundedCornerShape(15.dp)
+                ),
+            parentBackgroundColor = backgroundColor,
+            isQuotedNote = true,
             nav = nav
         )
-    }
-
-    baseNotePair?.let {
-        if (canPreview) {
-            NoteCompose(
-                baseNote = it.first,
-                accountViewModel = accountViewModel,
-                modifier = Modifier
-                    .padding(top = 2.dp, bottom = 0.dp, start = 0.dp, end = 0.dp)
-                    .fillMaxWidth()
-                    .clip(shape = RoundedCornerShape(15.dp))
-                    .border(
-                        1.dp,
-                        MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
-                        RoundedCornerShape(15.dp)
-                    ),
-                parentBackgroundColor = backgroundColor,
-                isQuotedNote = true,
-                nav = nav
-            )
-            it.second?.ifBlank { null }?.let {
-                Text(text = "$it ")
-            }
-        } else {
-            ClickableNoteTag(it.first, nav)
-            Text(text = "${it.second} ")
+        addedChars.ifBlank { null }?.let {
+            Text(text = remember { "$it " })
         }
+    } else {
+        ClickableNoteTag(baseNote, nav)
+        Text(text = remember { "$addedChars " })
+    }
+}
+
+@Composable
+private fun DisplayUserFromTag(
+    baseUser: User,
+    addedChars: String,
+    nav: (String) -> Unit
+) {
+    val innerUserState by baseUser.live().metadata.observeAsState()
+    val displayName = remember(innerUserState) {
+        innerUserState?.user?.toBestDisplayName() ?: ""
+    }
+    val route = remember(innerUserState) {
+        "User/${baseUser.pubkeyHex}"
+    }
+    val userTags = remember(innerUserState) {
+        innerUserState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists()
     }
 
-    if (baseNotePair == null && baseUserPair == null) {
-        Text(text = "$word ")
-    }
+    CreateClickableTextWithEmoji(
+        clickablePart = displayName,
+        suffix = remember { "$addedChars " },
+        tags = userTags,
+        route = route,
+        nav = nav
+    )
 }

@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.lnurl.LnInvoiceUtil
 import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.nip19.Nip19
@@ -179,6 +180,7 @@ open class Note(val idHex: String) {
 
     @Synchronized
     fun addZap(zapRequest: Note, zap: Note?) {
+        checkNotInMainThread()
         if (zapRequest !in zaps.keys) {
             zaps = zaps + Pair(zapRequest, zap)
             liveSet?.zaps?.invalidateData()
@@ -190,6 +192,7 @@ open class Note(val idHex: String) {
 
     @Synchronized
     fun addZapPayment(zapPaymentRequest: Note, zapPayment: Note?) {
+        checkNotInMainThread()
         if (zapPaymentRequest !in zapPayments.keys) {
             zapPayments = zapPayments + Pair(zapPaymentRequest, zapPayment)
             liveSet?.zaps?.invalidateData()

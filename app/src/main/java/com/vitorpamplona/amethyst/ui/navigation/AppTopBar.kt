@@ -99,10 +99,20 @@ fun AppTopBar(
 ) {
     val currentRoute by remember(navEntryState.value) {
         derivedStateOf {
-            navEntryState?.value?.destination?.route?.substringBefore("?")
+            navEntryState.value?.destination?.route?.substringBefore("?")
         }
     }
 
+    RenderTopRouteBar(currentRoute, followLists, scaffoldState, accountViewModel)
+}
+
+@Composable
+private fun RenderTopRouteBar(
+    currentRoute: String?,
+    followLists: FollowListViewModel,
+    scaffoldState: ScaffoldState,
+    accountViewModel: AccountViewModel
+) {
     when (currentRoute) {
         // Route.Profile.route -> TopBarWithBackButton(nav)
         Route.Home.base -> HomeTopBar(followLists, scaffoldState, accountViewModel)
@@ -242,15 +252,6 @@ private fun RelayStatus(
     onClick: () -> Unit
 ) {
     val relayViewModel: RelayPoolViewModel = viewModel { RelayPoolViewModel() }
-    val connectedRelaysLiveData = relayViewModel.connectedRelaysLiveData.observeAsState()
-    val availableRelaysLiveData = relayViewModel.availableRelaysLiveData.observeAsState()
-
-    val connectedRelaysText by remember(connectedRelaysLiveData, availableRelaysLiveData) {
-        derivedStateOf {
-            "${connectedRelaysLiveData.value ?: "--"}/${availableRelaysLiveData.value ?: "--"}"
-        }
-    }
-
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -261,22 +262,54 @@ private fun RelayStatus(
             modifier = Modifier.fillMaxHeight(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = connectedRelaysText,
-                color = if (connectedRelaysLiveData.value == 0) {
-                    Color.Red
-                } else {
-                    MaterialTheme.colors.onSurface.copy(
-                        alpha = 0.32f
-                    )
-                },
-                style = MaterialTheme.typography.subtitle1,
-                modifier = Modifier.clickable(
-                    onClick = onClick
-                )
-            )
+            RelayStatus(relayViewModel, onClick)
         }
     }
+}
+
+@Composable
+private fun RelayStatus(
+    relayViewModel: RelayPoolViewModel,
+    onClick: () -> Unit
+) {
+    val connectedRelaysLiveData = relayViewModel.connectedRelaysLiveData.observeAsState()
+    val availableRelaysLiveData = relayViewModel.availableRelaysLiveData.observeAsState()
+
+    val connectedRelaysText by remember(connectedRelaysLiveData, availableRelaysLiveData) {
+        derivedStateOf {
+            "${connectedRelaysLiveData.value ?: "--"}/${availableRelaysLiveData.value ?: "--"}"
+        }
+    }
+
+    val isConnected by remember(connectedRelaysLiveData) {
+        derivedStateOf {
+            (connectedRelaysLiveData.value ?: 0) > 0
+        }
+    }
+
+    RenderRelayStatus(connectedRelaysText, isConnected, onClick)
+}
+
+@Composable
+private fun RenderRelayStatus(
+    connectedRelaysText: String,
+    isConnected: Boolean,
+    onClick: () -> Unit
+) {
+    Text(
+        text = connectedRelaysText,
+        color = if (isConnected) {
+            MaterialTheme.colors.onSurface.copy(
+                alpha = 0.32f
+            )
+        } else {
+            Color.Red
+        },
+        style = MaterialTheme.typography.subtitle1,
+        modifier = Modifier.clickable(
+            onClick = onClick
+        )
+    )
 }
 
 @Composable
@@ -387,6 +420,7 @@ class FollowListViewModel(val account: Account) : ViewModel() {
         refresh()
         collectorJob = viewModelScope.launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect { newNotes ->
+                checkNotInMainThread()
                 if (newNotes.any { it.event is PeopleListEvent }) {
                     refresh()
                 }

@@ -76,6 +76,7 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -99,8 +100,12 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
         delay(100)
         focusRequester.requestFocus()
 
-        postViewModel.imageUploadingError.collect { error ->
-            Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+        launch(Dispatchers.IO) {
+            postViewModel.imageUploadingError.collect { error ->
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 

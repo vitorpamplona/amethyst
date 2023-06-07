@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrGlobalDataSource
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.AboutDisplay
 import com.vitorpamplona.amethyst.ui.note.ChannelName
@@ -144,9 +145,11 @@ fun SearchScreen(
 @Composable
 fun WatchAccountForSearchScreen(searchFeedViewModel: NostrGlobalFeedViewModel, accountViewModel: AccountViewModel) {
     LaunchedEffect(accountViewModel) {
-        NostrGlobalDataSource.resetFilters()
-        NostrSearchEventOrUserDataSource.start()
-        searchFeedViewModel.invalidateData(true)
+        launch(Dispatchers.IO) {
+            NostrGlobalDataSource.resetFilters()
+            NostrSearchEventOrUserDataSource.start()
+            searchFeedViewModel.invalidateData(true)
+        }
     }
 }
 
@@ -187,7 +190,7 @@ class SearchBarViewModel(val account: Account) : ViewModel() {
         _searchResultsChannels.emit(LocalCache.findChannelsStartingWith(searchValue))
     }
 
-    fun clean() {
+    fun clear() {
         searchValue = ""
         _searchResultsUsers.value = emptyList()
         _searchResultsChannels.value = emptyList()
@@ -231,6 +234,8 @@ private fun SearchBar(
     LaunchedEffect(Unit) {
         launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect {
+                checkNotInMainThread()
+
                 if (searchBarViewModel.isSearchingFun()) {
                     searchBarViewModel.invalidateData()
                 }
@@ -317,7 +322,7 @@ private fun SearchTextField(
                 if (searchBarViewModel.isSearching) {
                     IconButton(
                         onClick = {
-                            searchBarViewModel.clean()
+                            searchBarViewModel.clear()
                             NostrSearchEventOrUserDataSource.clear()
                         }
                     ) {

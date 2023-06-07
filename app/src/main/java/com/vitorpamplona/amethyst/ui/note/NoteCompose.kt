@@ -57,6 +57,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Alignment.Companion.TopEnd
 import androidx.compose.ui.Modifier
@@ -109,10 +110,12 @@ import com.vitorpamplona.amethyst.service.model.PinListEvent
 import com.vitorpamplona.amethyst.service.model.PollNoteEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
+import com.vitorpamplona.amethyst.service.model.RelaySetEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
+import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
 import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
@@ -123,6 +126,7 @@ import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
+import com.vitorpamplona.amethyst.ui.components.ShowMoreButton
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.components.ZoomableContent
@@ -134,6 +138,7 @@ import com.vitorpamplona.amethyst.ui.components.ZoomableUrlImage
 import com.vitorpamplona.amethyst.ui.components.ZoomableUrlVideo
 import com.vitorpamplona.amethyst.ui.components.figureOutMimeType
 import com.vitorpamplona.amethyst.ui.components.imageExtensions
+import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
@@ -154,7 +159,6 @@ import java.io.File
 import java.math.BigDecimal
 import java.net.URL
 import java.util.Locale
-import kotlin.time.ExperimentalTime
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -331,20 +335,21 @@ private fun WatchForReports(
     onChange: (Boolean, Boolean, Set<Note>) -> Unit
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = remember(accountState) { accountState?.account } ?: return
-
     val noteReportsState by note.live().reports.observeAsState()
-    val noteForReports = remember(noteReportsState) { noteReportsState?.note } ?: return
 
     LaunchedEffect(key1 = noteReportsState, key2 = accountState) {
         launch(Dispatchers.Default) {
-            account.userProfile().let { loggedIn ->
-                val newCanPreview = note.author?.pubkeyHex == loggedIn.pubkeyHex ||
-                    (note.author?.let { loggedIn.isFollowingCached(it) } ?: true) ||
-                    !(noteForReports.hasAnyReports())
+            accountState?.account?.let { loggedIn ->
+                val newCanPreview = note.author?.pubkeyHex == loggedIn.userProfile().pubkeyHex ||
+                    (note.author?.let { loggedIn.userProfile().isFollowingCached(it) } ?: true) ||
+                    noteReportsState?.note?.hasAnyReports() != true
 
-                val newIsAcceptable = account.isAcceptable(noteForReports)
-                val newRelevantReports = account.getRelevantReports(noteForReports)
+                val newIsAcceptable = noteReportsState?.note?.let {
+                    loggedIn.isAcceptable(it)
+                } ?: true
+                val newRelevantReports = noteReportsState?.note?.let {
+                    loggedIn.getRelevantReports(it)
+                } ?: emptySet()
 
                 onChange(newIsAcceptable, newCanPreview, newRelevantReports)
             }
@@ -510,6 +515,10 @@ fun NormalNote(
                             RenderPeopleList(baseNote, backgroundColor, accountViewModel, nav)
                         }
 
+                        is RelaySetEvent -> {
+                            RelaySetList(baseNote, backgroundColor, accountViewModel, nav)
+                        }
+
                         is AudioTrackEvent -> {
                             RenderAudioTrack(baseNote, accountViewModel, nav)
                         }
@@ -552,6 +561,15 @@ fun NormalNote(
                     NoteQuickActionMenu(baseNote, popupExpanded, { popupExpanded = false }, accountViewModel)
                 }
             }
+
+            if (!makeItShort) {
+                ReactionsRow(baseNote, !isBoostedNote && !isQuotedNote, accountViewModel, nav)
+            }
+
+            Divider(
+                modifier = Modifier.padding(top = 10.dp),
+                thickness = 0.25.dp
+            )
         }
     }
 }
@@ -618,15 +636,6 @@ private fun RenderTextEvent(
             DisplayUncitedHashtags(hashtags, eventContent, nav)
         }
     }
-
-    if (!makeItShort) {
-        ReactionsRow(note, accountViewModel, nav)
-    }
-
-    Divider(
-        modifier = Modifier.padding(top = 10.dp),
-        thickness = 0.25.dp
-    )
 }
 
 @Composable
@@ -679,15 +688,6 @@ private fun RenderPoll(
         var hashtags = remember { noteEvent.hashtags().toImmutableList() }
         DisplayUncitedHashtags(hashtags, eventContent, nav)
     }
-
-    if (!makeItShort) {
-        ReactionsRow(note, accountViewModel, nav)
-    }
-
-    Divider(
-        modifier = Modifier.padding(top = 10.dp),
-        thickness = 0.25.dp
-    )
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -869,15 +869,6 @@ private fun RenderHighlight(
         accountViewModel,
         nav
     )
-
-    if (!makeItShort) {
-        ReactionsRow(note, accountViewModel, nav)
-    }
-
-    Divider(
-        modifier = Modifier.padding(top = 10.dp),
-        thickness = 0.25.dp
-    )
 }
 
 @Composable
@@ -947,15 +938,16 @@ private fun RenderPrivateMessage(
             nav
         )
     }
+}
 
-    if (!makeItShort) {
-        ReactionsRow(note, accountViewModel, nav)
-    }
-
-    Divider(
-        modifier = Modifier.padding(top = 10.dp),
-        thickness = 0.25.dp
-    )
+@Composable
+fun RelaySetList(
+    baseNote: Note,
+    backgroundColor: Color,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    DisplayRelaySet(baseNote, backgroundColor, accountViewModel, nav)
 }
 
 @Composable
@@ -966,13 +958,139 @@ fun RenderPeopleList(
     nav: (String) -> Unit
 ) {
     DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
+}
 
-    ReactionsRow(baseNote, accountViewModel, nav)
+@Composable
+fun DisplayRelaySet(
+    baseNote: Note,
+    backgroundColor: Color,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    val noteEvent = baseNote.event as? RelaySetEvent ?: return
 
-    Divider(
-        modifier = Modifier.padding(top = 10.dp),
-        thickness = 0.25.dp
+    val relays by remember {
+        mutableStateOf<ImmutableList<String>>(
+            noteEvent.relays().toImmutableList()
+        )
+    }
+
+    var expanded by remember {
+        mutableStateOf(false)
+    }
+
+    val toMembersShow = if (expanded) {
+        relays
+    } else {
+        relays.take(3)
+    }
+
+    val relayListName by remember {
+        derivedStateOf {
+            "#${noteEvent.dTag()}"
+        }
+    }
+
+    val relayDescription by remember {
+        derivedStateOf {
+            noteEvent.description()
+        }
+    }
+
+    Text(
+        text = relayListName,
+        fontWeight = FontWeight.Bold,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(5.dp),
+        textAlign = TextAlign.Center
     )
+
+    relayDescription?.let {
+        Text(
+            text = it,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(5.dp),
+            textAlign = TextAlign.Center,
+            color = Color.Gray
+        )
+    }
+
+    Box {
+        Column(modifier = Modifier.padding(top = 5.dp)) {
+            toMembersShow.forEach { relay ->
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = CenterVertically) {
+                    Text(
+                        relay.trim().removePrefix("wss://").removePrefix("ws://").removeSuffix("/"),
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .padding(start = 10.dp, bottom = 5.dp)
+                            .weight(1f)
+                    )
+
+                    Column(modifier = Modifier.padding(start = 10.dp)) {
+                        RelayOptionsAction(relay, accountViewModel)
+                    }
+                }
+            }
+        }
+
+        if (relays.size > 3 && !expanded) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                backgroundColor.copy(alpha = 0f),
+                                backgroundColor
+                            )
+                        )
+                    )
+            ) {
+                ShowMoreButton {
+                    expanded = !expanded
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RelayOptionsAction(
+    relay: String,
+    accountViewModel: AccountViewModel
+) {
+    val userStateRelayInfo by accountViewModel.account.userProfile().live().relayInfo.observeAsState()
+    val isCurrentlyOnTheUsersList by remember(userStateRelayInfo) {
+        derivedStateOf {
+            userStateRelayInfo?.user?.latestContactList?.relays()?.none { it.key == relay } == true
+        }
+    }
+
+    var wantsToAddRelay by remember {
+        mutableStateOf("")
+    }
+
+    if (wantsToAddRelay.isNotEmpty()) {
+        NewRelayListView({ wantsToAddRelay = "" }, accountViewModel, wantsToAddRelay)
+    }
+
+    if (isCurrentlyOnTheUsersList) {
+        AddRelayButton { wantsToAddRelay = relay }
+    } else {
+        RemoveRelayButton { wantsToAddRelay = relay }
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -1124,13 +1242,6 @@ private fun RenderBadgeAward(
             nav = nav
         )
     }
-
-    ReactionsRow(note, accountViewModel, nav)
-
-    Divider(
-        modifier = Modifier.padding(top = 10.dp),
-        thickness = 0.25.dp
-    )
 }
 
 @Composable
@@ -1192,16 +1303,7 @@ private fun RenderPinListEvent(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val noteEvent = baseNote.event as? PinListEvent ?: return
-
     PinListHeader(baseNote, backgroundColor, accountViewModel, nav)
-
-    ReactionsRow(baseNote, accountViewModel, nav)
-
-    Divider(
-        modifier = Modifier.padding(top = 10.dp),
-        thickness = 0.25.dp
-    )
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -1304,13 +1406,6 @@ private fun RenderAudioTrack(
     val noteEvent = note.event as? AudioTrackEvent ?: return
 
     AudioTrackHeader(noteEvent, accountViewModel, nav)
-
-    ReactionsRow(note, accountViewModel, nav)
-
-    Divider(
-        modifier = Modifier.padding(top = 10.dp),
-        thickness = 0.25.dp
-    )
 }
 
 @Composable
@@ -1322,13 +1417,6 @@ private fun RenderLongFormContent(
     val noteEvent = note.event as? LongTextNoteEvent ?: return
 
     LongFormHeader(noteEvent, note, accountViewModel)
-
-    ReactionsRow(note, accountViewModel, nav)
-
-    Divider(
-        modifier = Modifier.padding(top = 10.dp),
-        thickness = 0.25.dp
-    )
 }
 
 @Composable
@@ -1389,13 +1477,6 @@ private fun RenderReport(
             nav = nav
         )
     }
-
-    ReactionsRow(note, accountViewModel, nav)
-
-    Divider(
-        modifier = Modifier.padding(top = 10.dp),
-        thickness = 0.25.dp
-    )
 }
 
 @Composable
@@ -1489,11 +1570,11 @@ private fun FirstUserInfoRow(
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         if (showAuthorPicture) {
-            NoteAuthorPicture(baseNote, nav, accountViewModel, 25.dp)
+            NoteAuthorPicture(baseNote, nav, accountViewModel, remember { 25.dp })
             Spacer(padding)
-            NoteUsernameDisplay(baseNote, Modifier.weight(1f))
+            NoteUsernameDisplay(baseNote, remember { Modifier.weight(1f) })
         } else {
-            NoteUsernameDisplay(baseNote, Modifier.weight(1f))
+            NoteUsernameDisplay(baseNote, remember { Modifier.weight(1f) })
         }
 
         if (eventNote is RepostEvent) {
@@ -1560,7 +1641,6 @@ fun TimeAgo(time: Long) {
     )
 }
 
-@OptIn(ExperimentalTime::class)
 @Composable
 private fun DrawAuthorImages(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val baseChannelHex = remember { baseNote.channelHex() }
@@ -1670,7 +1750,7 @@ private fun RepostNoteAuthorPicture(
                 baseNote = it,
                 nav = nav,
                 accountViewModel = accountViewModel,
-                size = 30.dp,
+                size = remember { 30.dp },
                 pictureModifier = Modifier.border(
                     2.dp,
                     MaterialTheme.colors.background,
@@ -2301,17 +2381,17 @@ private fun CreateImageHeader(
 private fun RelayBadges(baseNote: Note) {
     var expanded by remember { mutableStateOf(false) }
     var showShowMore by remember { mutableStateOf(false) }
+
     var lazyRelayList by remember { mutableStateOf<ImmutableList<String>>(persistentListOf()) }
+    var shortRelayList by remember { mutableStateOf<ImmutableList<String>>(persistentListOf()) }
 
     WatchRelayLists(baseNote) { relayList ->
-        val relaysToDisplay = if (expanded) relayList else relayList.take(3)
-        val shouldListChange = lazyRelayList.size < 3 || lazyRelayList.size != relayList.size
-
-        if (shouldListChange) {
-            lazyRelayList = relaysToDisplay.toImmutableList()
+        if (!equalImmutableLists(relayList, lazyRelayList)) {
+            lazyRelayList = relayList.toImmutableList()
+            shortRelayList = relayList.take(3).toImmutableList()
         }
 
-        val nextShowMore = relayList.size > 3 && !expanded
+        val nextShowMore = relayList.size > 3
         if (nextShowMore != showShowMore) {
             // only triggers recomposition when actually different
             showShowMore = nextShowMore
@@ -2320,9 +2400,13 @@ private fun RelayBadges(baseNote: Note) {
 
     Spacer(Modifier.height(10.dp))
 
-    VerticalRelayPanelWithFlow(lazyRelayList)
+    if (expanded) {
+        VerticalRelayPanelWithFlow(lazyRelayList)
+    } else {
+        VerticalRelayPanelWithFlow(shortRelayList)
+    }
 
-    if (showShowMore) {
+    if (showShowMore && !expanded) {
         ShowMoreRelaysButton {
             expanded = true
         }
@@ -2511,6 +2595,8 @@ fun UserPicture(
             .clip(shape = CircleShape)
     }
 
+    val myIconSize = remember(size) { size.div(3.5f) }
+
     Box(myBoxModifier, contentAlignment = TopEnd) {
         RobohashAsyncImageProxy(
             robot = userHex,
@@ -2521,7 +2607,7 @@ fun UserPicture(
             modifier = myImageModifier.background(MaterialTheme.colors.background)
         )
 
-        ObserveAndDisplayFollowingMark(userHex, size.div(3.5f), accountViewModel)
+        ObserveAndDisplayFollowingMark(userHex, myIconSize, accountViewModel)
     }
 }
 
