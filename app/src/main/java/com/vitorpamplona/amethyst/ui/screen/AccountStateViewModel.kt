@@ -43,7 +43,7 @@ class AccountStateViewModel(val context: Context) : ViewModel() {
         }
     }
 
-    fun startUI(key: String, useProxy: Boolean, proxyPort: Int, delegationToken: String = "", delegatorNPubKey: String = "", delegationSignature: String = "") {
+    fun startUI(key: String, useProxy: Boolean, proxyPort: Int, delegationToken: String = "", delegatorHexKey: String = "", delegationSignature: String = "") {
         val pattern = Pattern.compile(".+@.+\\.[a-z]+")
         val parsed = Nip19.uriToRoute(key)
         val pubKeyParsed = parsed?.hex?.hexToByteArray()
@@ -51,14 +51,14 @@ class AccountStateViewModel(val context: Context) : ViewModel() {
 
         val account =
             if (key.startsWith("nsec")) {
-                Account(Persona(privKey = key.bechToBytes()), proxy = proxy, proxyPort = proxyPort, delegationToken = delegationToken, delegatorNPubKey = delegatorNPubKey, delegationSignature = delegationSignature)
+                Account(Persona(privKey = key.bechToBytes()), proxy = proxy, proxyPort = proxyPort, delegationToken = delegationToken, delegatorHexKey = delegatorHexKey, delegationSignature = delegationSignature)
             } else if (pubKeyParsed != null) {
-                Account(Persona(pubKey = pubKeyParsed), proxy = proxy, proxyPort = proxyPort, delegationToken = delegationToken, delegatorNPubKey = delegatorNPubKey, delegationSignature = delegationSignature)
+                Account(Persona(pubKey = pubKeyParsed), proxy = proxy, proxyPort = proxyPort, delegationToken = delegationToken, delegatorHexKey = delegatorHexKey, delegationSignature = delegationSignature)
             } else if (pattern.matcher(key).matches()) {
                 // Evaluate NIP-5
-                Account(Persona(), proxy = proxy, proxyPort = proxyPort, delegationToken = delegationToken, delegatorNPubKey = delegatorNPubKey, delegationSignature = delegationSignature)
+                Account(Persona(), proxy = proxy, proxyPort = proxyPort, delegationToken = delegationToken, delegatorHexKey = delegatorHexKey, delegationSignature = delegationSignature)
             } else {
-                Account(Persona(Hex.decode(key)), proxy = proxy, proxyPort = proxyPort, delegationToken = delegationToken, delegatorNPubKey = delegatorNPubKey, delegationSignature = delegationSignature)
+                Account(Persona(Hex.decode(key)), proxy = proxy, proxyPort = proxyPort, delegationToken = delegationToken, delegatorHexKey = delegatorHexKey, delegationSignature = delegationSignature)
             }
 
         LocalPreferences.updatePrefsForLogin(account)
@@ -73,7 +73,7 @@ class AccountStateViewModel(val context: Context) : ViewModel() {
 
     fun newKey(useProxy: Boolean, proxyPort: Int) {
         val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", proxyPort)
-        val account = Account(Persona(), proxy = proxy, proxyPort = proxyPort, delegationToken = "", delegatorNPubKey = "", delegationSignature = "")
+        val account = Account(Persona(), proxy = proxy, proxyPort = proxyPort, delegationToken = "", delegatorHexKey = "", delegationSignature = "")
         // saves to local preferences
         LocalPreferences.updatePrefsForLogin(account)
         startUI(account)

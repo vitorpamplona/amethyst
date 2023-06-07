@@ -71,7 +71,7 @@ class Account(
     var warnAboutPostsWithReports: Boolean = true,
     var filterSpamFromStrangers: Boolean = true,
     var delegationToken: String,
-    var delegatorNPubKey: String,
+    var delegatorHexKey: String,
     var delegationSignature: String
 ) {
     var transientHiddenUsers: Set<String> = setOf()
@@ -525,7 +525,7 @@ class Account(
             privateKey = loggedIn.privKey!!,
             delegationToken = delegationToken,
             delegationSignature = delegationSignature,
-            delegationNPub = delegatorNPubKey
+            delegationHexKey = delegatorHexKey
         )
 
         Client.send(signedEvent)

@@ -110,13 +110,6 @@ class Delegation(
     }
 }
 
-fun toTags(token: String, signature: String, nPubKey: String): List<String> {
-    val keys = token.split(":")
-    val parsed = Nip19.uriToRoute(nPubKey)
-
-    return listOf(keys[1], parsed?.hex!!, keys[3], signature)
-}
-
 const val PAGES = 6
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -133,7 +126,7 @@ fun DelegatedKeyDialog(
     val calendar = Calendar.getInstance()
     calendar.add(Calendar.MONTH, 1)
     val delegation = Delegation(
-        Account(Persona(), proxy = proxy, proxyPort = proxyPort, delegatorNPubKey = "", delegationToken = "", delegationSignature = ""),
+        Account(Persona(), proxy = proxy, proxyPort = proxyPort, delegatorHexKey = "", delegationToken = "", delegationSignature = ""),
         "",
         listOf(
             Kind(1, "TextNote", remember { mutableStateOf(true) }),

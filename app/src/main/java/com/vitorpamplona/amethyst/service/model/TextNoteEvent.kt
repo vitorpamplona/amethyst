@@ -5,8 +5,8 @@ import com.linkedin.urls.detection.UrlDetector
 import com.linkedin.urls.detection.UrlDetectorOptions
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
+import com.vitorpamplona.amethyst.service.Nip26
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.findHashtags
-import com.vitorpamplona.amethyst.ui.screen.loggedOff.toTags
 import nostr.postr.Utils
 import java.util.Date
 
@@ -42,7 +42,7 @@ class TextNoteEvent(
             privateKey: ByteArray,
             createdAt: Long = Date().time / 1000,
             delegationToken: String,
-            delegationNPub: String,
+            delegationHexKey: String,
             delegationSignature: String
         ): TextNoteEvent {
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
@@ -94,7 +94,7 @@ class TextNoteEvent(
                 tags.add(listOf("content-warning", ""))
             }
             if (delegationToken.isNotBlank()) {
-                tags.add(toTags(delegationToken, delegationSignature, delegationNPub))
+                tags.add(Nip26.toTags(delegationToken, delegationSignature, delegationHexKey))
             }
 
             val id = generateId(pubKey, createdAt, kind, tags, msg)
