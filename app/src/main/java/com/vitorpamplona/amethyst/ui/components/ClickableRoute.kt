@@ -62,20 +62,46 @@ fun ClickableRoute(
     nip19: Nip19.Return,
     nav: (String) -> Unit
 ) {
-    if (nip19.type == Nip19.Type.USER) {
-        DisplayUser(nip19, nav)
-    } else if (nip19.type == Nip19.Type.ADDRESS) {
-        DisplayAddress(nip19, nav)
-    } else if (nip19.type == Nip19.Type.NOTE) {
-        DisplayNote(nip19, nav)
-    } else if (nip19.type == Nip19.Type.EVENT) {
-        DisplayEvent(nip19, nav)
-    } else {
-        Text(
-            remember {
-                "@${nip19.hex}${nip19.additionalChars} "
+    when (nip19.type) {
+        Nip19.Type.USER -> {
+            DisplayUser(nip19, nav)
+        }
+        Nip19.Type.ADDRESS -> {
+            DisplayAddress(nip19, nav)
+        }
+        Nip19.Type.NOTE -> {
+            DisplayNote(nip19, nav)
+        }
+        Nip19.Type.EVENT -> {
+            DisplayEvent(nip19, nav)
+        }
+        else -> {
+            Text(
+                remember {
+                    "@${nip19.hex}${nip19.additionalChars} "
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun LoadNote(
+    hex: String,
+    content: @Composable (Note) -> Unit
+) {
+    var noteBase by remember(hex) { mutableStateOf<Note?>(null) }
+
+    LaunchedEffect(key1 = hex) {
+        if (noteBase == null) {
+            launch(Dispatchers.IO) {
+                noteBase = LocalCache.checkGetOrCreateNote(hex)
             }
-        )
+        }
+    }
+
+    noteBase?.let {
+        content(it)
     }
 }
 
@@ -84,69 +110,8 @@ private fun DisplayEvent(
     nip19: Nip19.Return,
     nav: (String) -> Unit
 ) {
-    var noteBase by remember(nip19) { mutableStateOf<Note?>(null) }
-
-    LaunchedEffect(key1 = nip19.hex) {
-        if (noteBase == null) {
-            launch(Dispatchers.IO) {
-                noteBase = LocalCache.checkGetOrCreateNote(nip19.hex)
-            }
-        }
-    }
-
-    noteBase?.let {
-        val noteState by it.live().metadata.observeAsState()
-        val note = remember(noteState) { noteState?.note } ?: return
-        val channelHex = remember(noteState) { note.channelHex() }
-        val noteIdDisplayNote = remember(noteState) { "@${note.idDisplayNote()}" }
-        val addedCharts = remember { "${nip19.additionalChars} " }
-
-        if (note.event is ChannelCreateEvent) {
-            CreateClickableText(
-                clickablePart = noteIdDisplayNote,
-                suffix = addedCharts,
-                route = remember(noteState) { "Channel/${nip19.hex}" },
-                nav = nav
-            )
-        } else if (note.event is PrivateDmEvent) {
-            CreateClickableText(
-                clickablePart = noteIdDisplayNote,
-                suffix = addedCharts,
-                route = remember(noteState) { "Room/${note.author?.pubkeyHex}" },
-                nav = nav
-            )
-        } else if (channelHex != null) {
-            LoadChannel(baseChannelHex = channelHex) { baseChannel ->
-                val channelState by baseChannel.live.observeAsState()
-                val channelDisplayName by remember(channelState) {
-                    derivedStateOf {
-                        channelState?.channel?.toBestDisplayName() ?: noteIdDisplayNote
-                    }
-                }
-
-                CreateClickableText(
-                    clickablePart = channelDisplayName,
-                    suffix = addedCharts,
-                    route = remember(noteState) { "Channel/${baseChannel.idHex}" },
-                    nav = nav
-                )
-            }
-        } else {
-            CreateClickableText(
-                clickablePart = noteIdDisplayNote,
-                suffix = addedCharts,
-                route = remember(noteState) { "Event/${nip19.hex}" },
-                nav = nav
-            )
-        }
-    }
-
-    if (noteBase == null) {
-        Text(
-            remember {
-                "@${nip19.hex}${nip19.additionalChars} "
-            }
-        )
+    LoadNote(nip19.hex) {
+        DisplayNoteLink(it, nip19, nav)
     }
 }
 
@@ -155,66 +120,61 @@ private fun DisplayNote(
     nip19: Nip19.Return,
     nav: (String) -> Unit
 ) {
-    var noteBase by remember(nip19) { mutableStateOf<Note?>(null) }
-
-    LaunchedEffect(key1 = nip19.hex) {
-        launch(Dispatchers.IO) {
-            noteBase = LocalCache.checkGetOrCreateNote(nip19.hex)
-        }
+    LoadNote(nip19.hex) {
+        DisplayNoteLink(it, nip19, nav)
     }
+}
 
-    noteBase?.let {
-        val noteState by it.live().metadata.observeAsState()
-        val note = remember(noteState) { noteState?.note } ?: return
-        val channelHex = remember(noteState) { note.channelHex() }
-        val noteIdDisplayNote = remember(noteState) { "@${note.idDisplayNote()}" }
-        val addedCharts = remember { "${nip19.additionalChars} " }
+@Composable
+private fun DisplayNoteLink(
+    it: Note,
+    nip19: Nip19.Return,
+    nav: (String) -> Unit
+) {
+    val noteState by it.live().metadata.observeAsState()
 
-        if (note.event is ChannelCreateEvent) {
-            CreateClickableText(
-                clickablePart = noteIdDisplayNote,
-                suffix = addedCharts,
-                route = remember(noteState) { "Channel/${nip19.hex}" },
-                nav = nav
-            )
-        } else if (note.event is PrivateDmEvent) {
-            CreateClickableText(
-                clickablePart = noteIdDisplayNote,
-                suffix = addedCharts,
-                route = remember(noteState) { "Room/${note.author?.pubkeyHex}" },
-                nav = nav
-            )
-        } else if (channelHex != null) {
-            LoadChannel(baseChannelHex = channelHex) { baseChannel ->
-                val channelState by baseChannel.live.observeAsState()
-                val channelDisplayName by remember(channelState) {
-                    derivedStateOf {
-                        channelState?.channel?.toBestDisplayName() ?: noteIdDisplayNote
-                    }
+    val note = remember(noteState) { noteState?.note } ?: return
+
+    val channelHex = remember(noteState) { note.channelHex() }
+    val noteIdDisplayNote = remember(noteState) { "@${note.idDisplayNote()}" }
+    val addedCharts = remember { "${nip19.additionalChars} " }
+
+    if (note.event is ChannelCreateEvent || nip19.kind == ChannelCreateEvent.kind) {
+        CreateClickableText(
+            clickablePart = noteIdDisplayNote,
+            suffix = addedCharts,
+            route = remember(noteState) { "Channel/${nip19.hex}" },
+            nav = nav
+        )
+    } else if (note.event is PrivateDmEvent || nip19.kind == PrivateDmEvent.kind) {
+        CreateClickableText(
+            clickablePart = noteIdDisplayNote,
+            suffix = addedCharts,
+            route = remember(noteState) { "Room/${note.author?.pubkeyHex}" },
+            nav = nav
+        )
+    } else if (channelHex != null) {
+        LoadChannel(baseChannelHex = channelHex) { baseChannel ->
+            val channelState by baseChannel.live.observeAsState()
+            val channelDisplayName by remember(channelState) {
+                derivedStateOf {
+                    channelState?.channel?.toBestDisplayName() ?: noteIdDisplayNote
                 }
-
-                CreateClickableText(
-                    clickablePart = channelDisplayName,
-                    suffix = addedCharts,
-                    route = remember(noteState) { "Channel/${baseChannel.idHex}" },
-                    nav = nav
-                )
             }
-        } else {
+
             CreateClickableText(
-                clickablePart = noteIdDisplayNote,
+                clickablePart = channelDisplayName,
                 suffix = addedCharts,
-                route = remember(noteState) { "Note/${nip19.hex}" },
+                route = remember(noteState) { "Channel/${baseChannel.idHex}" },
                 nav = nav
             )
         }
-    }
-
-    if (noteBase == null) {
-        Text(
-            remember {
-                "@${nip19.hex}${nip19.additionalChars} "
-            }
+    } else {
+        CreateClickableText(
+            clickablePart = noteIdDisplayNote,
+            suffix = addedCharts,
+            route = remember(noteState) { "Event/${nip19.hex}" },
+            nav = nav
         )
     }
 }
