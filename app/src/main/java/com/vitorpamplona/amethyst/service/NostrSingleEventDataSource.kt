@@ -114,17 +114,6 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
             TypedFilter(
                 types = COMMON_FEED_TYPES,
                 filter = JsonFilter(
-                    kinds = listOf(
-                        TextNoteEvent.kind, LongTextNoteEvent.kind, PollNoteEvent.kind,
-                        ReactionEvent.kind, RepostEvent.kind,
-                        LnZapEvent.kind, LnZapRequestEvent.kind,
-                        ChannelMessageEvent.kind, ChannelCreateEvent.kind, ChannelMetadataEvent.kind,
-                        BadgeDefinitionEvent.kind, BadgeAwardEvent.kind, BadgeProfilesEvent.kind,
-                        PrivateDmEvent.kind,
-                        FileHeaderEvent.kind, FileStorageEvent.kind, FileStorageHeaderEvent.kind,
-                        HighlightEvent.kind, AudioTrackEvent.kind, PinListEvent.kind,
-                        PeopleListEvent.kind, BookmarkListEvent.kind
-                    ),
                     ids = interestedEvents.toList()
                 )
             )
