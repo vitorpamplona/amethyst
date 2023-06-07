@@ -105,6 +105,8 @@ open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel(), In
 
     init {
         collectorJob = viewModelScope.launch(Dispatchers.IO) {
+            checkNotInMainThread()
+
             LocalCache.live.newEventBundles.collect { newNotes ->
                 invalidateData()
             }

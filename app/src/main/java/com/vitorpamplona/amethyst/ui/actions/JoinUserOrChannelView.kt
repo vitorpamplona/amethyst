@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.note.ChannelName
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -158,6 +159,7 @@ private fun RenderSearch(
     LaunchedEffect(Unit) {
         launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect {
+                checkNotInMainThread()
                 if (searchBarViewModel.isSearchingFun()) {
                     searchBarViewModel.invalidateData()
                 }

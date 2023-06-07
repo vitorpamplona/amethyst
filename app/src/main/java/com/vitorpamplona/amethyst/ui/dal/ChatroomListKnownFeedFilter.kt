@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.ui.dal
 
-import android.util.Log
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -84,7 +83,7 @@ class ChatroomListKnownFeedFilter(val account: Account) : AdditiveFeedFilter<Not
             sort(myNewList.toSet()).take(1000)
         }
 
-        Log.d("Time", "${this.javaClass.simpleName} Modified Additive Feed in $elapsed with ${feed.size} objects")
+        // Log.d("Time", "${this.javaClass.simpleName} Modified Additive Feed in $elapsed with ${feed.size} objects")
         return feed
     }
 

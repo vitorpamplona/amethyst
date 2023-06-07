@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrGlobalDataSource
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.AboutDisplay
 import com.vitorpamplona.amethyst.ui.note.ChannelName
@@ -231,6 +232,8 @@ private fun SearchBar(
     LaunchedEffect(Unit) {
         launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect {
+                checkNotInMainThread()
+
                 if (searchBarViewModel.isSearchingFun()) {
                     searchBarViewModel.invalidateData()
                 }

@@ -246,6 +246,8 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), I
     init {
         collectorJob = viewModelScope.launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect { newNotes ->
+                checkNotInMainThread()
+
                 if (localFilter is AdditiveFeedFilter &&
                     (_feedContent.value is FeedState.Loaded || _feedContent.value is FeedState.Empty)
                 ) {

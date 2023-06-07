@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.service.relays
 
 import androidx.lifecycle.LiveData
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.EventInterface
 import kotlinx.coroutines.CoroutineScope
@@ -48,6 +49,8 @@ object RelayPool : Relay.Listener {
     }
 
     fun requestAndWatch() {
+        checkNotInMainThread()
+
         relays.forEach { it.requestAndWatch() }
     }
 

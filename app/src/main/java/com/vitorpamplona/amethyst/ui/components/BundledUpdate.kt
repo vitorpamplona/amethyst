@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.components
 
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -58,6 +59,8 @@ class BundledInsert<T>(
     private var queue = LinkedBlockingQueue<T>()
 
     fun invalidateList(newObject: T, onUpdate: suspend (Set<T>) -> Unit) {
+        checkNotInMainThread()
+
         queue.put(newObject)
         if (onlyOneInBlock.getAndSet(true)) {
             return

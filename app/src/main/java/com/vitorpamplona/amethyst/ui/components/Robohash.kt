@@ -12,6 +12,7 @@ import coil.fetch.SourceResult
 import coil.request.ImageRequest
 import coil.request.Options
 import coil.size.Size
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import okio.Buffer
 import java.security.MessageDigest
 
@@ -67,6 +68,7 @@ class HashImageFetcher(
 ) : Fetcher {
 
     override suspend fun fetch(): SourceResult {
+        checkNotInMainThread()
         val source = try {
             Buffer().apply { write(svgString(data.toString()).toByteArray()) }
         } finally {
