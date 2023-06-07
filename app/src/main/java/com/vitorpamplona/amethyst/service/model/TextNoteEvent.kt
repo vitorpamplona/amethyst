@@ -6,6 +6,7 @@ import com.linkedin.urls.detection.UrlDetectorOptions
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.findHashtags
+import com.vitorpamplona.amethyst.ui.screen.loggedOff.toTags
 import nostr.postr.Utils
 import java.util.Date
 
@@ -39,7 +40,10 @@ class TextNoteEvent(
             directMentions: Set<HexKey>,
 
             privateKey: ByteArray,
-            createdAt: Long = Date().time / 1000
+            createdAt: Long = Date().time / 1000,
+            delegationToken: String,
+            delegationNPub: String,
+            delegationSignature: String
         ): TextNoteEvent {
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf<List<String>>()
@@ -88,6 +92,9 @@ class TextNoteEvent(
             }
             if (markAsSensitive) {
                 tags.add(listOf("content-warning", ""))
+            }
+            if (delegationToken.isNotBlank()) {
+                tags.add(toTags(delegationToken, delegationSignature, delegationNPub))
             }
 
             val id = generateId(pubKey, createdAt, kind, tags, msg)

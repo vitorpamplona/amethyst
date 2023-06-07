@@ -522,7 +522,10 @@ class Account(
             replyingTo = replyingTo,
             root = root,
             directMentions = directMentions,
-            privateKey = loggedIn.privKey!!
+            privateKey = loggedIn.privKey!!,
+            delegationToken = delegationToken,
+            delegationSignature = delegationSignature,
+            delegationNPub = delegatorNPubKey
         )
 
         Client.send(signedEvent)
