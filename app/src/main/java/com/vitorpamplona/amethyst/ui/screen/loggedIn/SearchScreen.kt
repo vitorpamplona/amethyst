@@ -145,9 +145,11 @@ fun SearchScreen(
 @Composable
 fun WatchAccountForSearchScreen(searchFeedViewModel: NostrGlobalFeedViewModel, accountViewModel: AccountViewModel) {
     LaunchedEffect(accountViewModel) {
-        NostrGlobalDataSource.resetFilters()
-        NostrSearchEventOrUserDataSource.start()
-        searchFeedViewModel.invalidateData(true)
+        launch(Dispatchers.IO) {
+            NostrGlobalDataSource.resetFilters()
+            NostrSearchEventOrUserDataSource.start()
+            searchFeedViewModel.invalidateData(true)
+        }
     }
 }
 

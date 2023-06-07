@@ -70,7 +70,6 @@ import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 val ChatBubbleShapeMe = RoundedCornerShape(15.dp, 15.dp, 3.dp, 15.dp)
 val ChatBubbleShapeThem = RoundedCornerShape(3.dp, 15.dp, 15.dp, 15.dp)
@@ -348,7 +347,7 @@ fun ChatTimeAgo(time: Long) {
     var timeStr by remember { mutableStateOf("") }
 
     LaunchedEffect(key1 = time) {
-        withContext(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             timeStr = timeAgoShort(time, context = context)
         }
     }

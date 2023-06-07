@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.PeopleListEvent
 import com.vitorpamplona.amethyst.service.model.PinListEvent
 import com.vitorpamplona.amethyst.service.model.PollNoteEvent
+import com.vitorpamplona.amethyst.service.model.RelaySetEvent
 import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
@@ -369,6 +370,13 @@ fun NoteMaster(
                         AudioTrackHeader(noteEvent, accountViewModel, nav)
                     } else if (noteEvent is PinListEvent) {
                         PinListHeader(
+                            baseNote,
+                            MaterialTheme.colors.background,
+                            accountViewModel,
+                            nav
+                        )
+                    } else if (noteEvent is RelaySetEvent) {
+                        DisplayRelaySet(
                             baseNote,
                             MaterialTheme.colors.background,
                             accountViewModel,

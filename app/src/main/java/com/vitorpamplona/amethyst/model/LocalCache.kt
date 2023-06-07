@@ -300,6 +300,19 @@ object LocalCache {
         }
     }
 
+    private fun consume(event: RelaySetEvent) {
+        val note = getOrCreateAddressableNote(event.address())
+        val author = getOrCreateUser(event.pubKey)
+
+        if (note.event?.id() == event.id()) return
+
+        if (event.createdAt > (note.createdAt() ?: 0)) {
+            note.loadEvent(event, author, emptyList())
+
+            refreshObservers(note)
+        }
+    }
+
     private fun consume(event: AudioTrackEvent) {
         val note = getOrCreateAddressableNote(event.address())
         val author = getOrCreateUser(event.pubKey)
@@ -1015,7 +1028,7 @@ object LocalCache {
         live.invalidateData(newNote)
     }
 
-    fun consume(event: Event, relay: Relay?) {
+    fun verifyAndConsume(event: Event, relay: Relay?) {
         checkNotInMainThread()
 
         if (!event.hasValidSignature()) {
@@ -1050,7 +1063,7 @@ object LocalCache {
                 is HighlightEvent -> consume(event, relay)
                 is LnZapEvent -> {
                     event.zapRequest?.let {
-                        consume(it, relay)
+                        verifyAndConsume(it, relay)
                     }
                     consume(event)
                 }
@@ -1064,10 +1077,11 @@ object LocalCache {
                 is PeopleListEvent -> consume(event)
                 is ReactionEvent -> consume(event)
                 is RecommendRelayEvent -> consume(event)
+                is RelaySetEvent -> consume(event)
                 is ReportEvent -> consume(event, relay)
                 is RepostEvent -> {
                     event.containedPost()?.let {
-                        consume(it, relay)
+                        verifyAndConsume(it, relay)
                     }
                     consume(event)
                 }

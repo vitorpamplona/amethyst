@@ -26,7 +26,6 @@ import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @Composable
 fun LoadRedirectScreen(eventId: String?, navController: NavController) {
@@ -42,7 +41,7 @@ fun LoadRedirectScreen(eventId: String?, navController: NavController) {
     }
 
     LaunchedEffect(eventId) {
-        withContext(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             val newNoteBase = LocalCache.checkGetOrCreateNote(eventId)
             if (newNoteBase != noteBase) {
                 noteBase = newNoteBase

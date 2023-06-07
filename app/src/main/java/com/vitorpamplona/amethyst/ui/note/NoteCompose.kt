@@ -57,6 +57,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Alignment.Companion.TopEnd
 import androidx.compose.ui.Modifier
@@ -109,10 +110,12 @@ import com.vitorpamplona.amethyst.service.model.PinListEvent
 import com.vitorpamplona.amethyst.service.model.PollNoteEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
+import com.vitorpamplona.amethyst.service.model.RelaySetEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
+import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
 import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
@@ -123,6 +126,7 @@ import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
+import com.vitorpamplona.amethyst.ui.components.ShowMoreButton
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.components.ZoomableContent
@@ -508,6 +512,10 @@ fun NormalNote(
 
                         is PeopleListEvent -> {
                             RenderPeopleList(baseNote, backgroundColor, accountViewModel, nav)
+                        }
+
+                        is RelaySetEvent -> {
+                            RelaySetList(baseNote, backgroundColor, accountViewModel, nav)
                         }
 
                         is AudioTrackEvent -> {
@@ -959,6 +967,23 @@ private fun RenderPrivateMessage(
 }
 
 @Composable
+fun RelaySetList(
+    baseNote: Note,
+    backgroundColor: Color,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    DisplayRelaySet(baseNote, backgroundColor, accountViewModel, nav)
+
+    ReactionsRow(baseNote, accountViewModel, nav)
+
+    Divider(
+        modifier = Modifier.padding(top = 10.dp),
+        thickness = 0.25.dp
+    )
+}
+
+@Composable
 fun RenderPeopleList(
     baseNote: Note,
     backgroundColor: Color,
@@ -973,6 +998,139 @@ fun RenderPeopleList(
         modifier = Modifier.padding(top = 10.dp),
         thickness = 0.25.dp
     )
+}
+
+@Composable
+fun DisplayRelaySet(
+    baseNote: Note,
+    backgroundColor: Color,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    val noteEvent = baseNote.event as? RelaySetEvent ?: return
+
+    val relays by remember {
+        mutableStateOf<ImmutableList<String>>(
+            noteEvent.relays().toImmutableList()
+        )
+    }
+
+    var expanded by remember {
+        mutableStateOf(false)
+    }
+
+    val toMembersShow = if (expanded) {
+        relays
+    } else {
+        relays.take(3)
+    }
+
+    val relayListName by remember {
+        derivedStateOf {
+            "#${noteEvent.dTag()}"
+        }
+    }
+
+    val relayDescription by remember {
+        derivedStateOf {
+            noteEvent.description()
+        }
+    }
+
+    Text(
+        text = relayListName,
+        fontWeight = FontWeight.Bold,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(5.dp),
+        textAlign = TextAlign.Center
+    )
+
+    relayDescription?.let {
+        Text(
+            text = it,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(5.dp),
+            textAlign = TextAlign.Center,
+            color = Color.Gray
+        )
+    }
+
+    Box {
+        Column(modifier = Modifier.padding(top = 5.dp)) {
+            toMembersShow.forEach { relay ->
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = CenterVertically) {
+                    Text(
+                        relay.trim().removePrefix("wss://").removePrefix("ws://").removeSuffix("/"),
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .padding(start = 10.dp, bottom = 5.dp)
+                            .weight(1f)
+                    )
+
+                    Column(modifier = Modifier.padding(start = 10.dp)) {
+                        RelayOptionsAction(relay, accountViewModel)
+                    }
+                }
+            }
+        }
+
+        if (relays.size > 3 && !expanded) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                backgroundColor.copy(alpha = 0f),
+                                backgroundColor
+                            )
+                        )
+                    )
+            ) {
+                ShowMoreButton {
+                    expanded = !expanded
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RelayOptionsAction(
+    relay: String,
+    accountViewModel: AccountViewModel
+) {
+    val userStateRelayInfo by accountViewModel.account.userProfile().live().relayInfo.observeAsState()
+    val isCurrentlyOnTheUsersList by remember(userStateRelayInfo) {
+        derivedStateOf {
+            userStateRelayInfo?.user?.latestContactList?.relays()?.none { it.key == relay } == true
+        }
+    }
+
+    var wantsToAddRelay by remember {
+        mutableStateOf("")
+    }
+
+    if (wantsToAddRelay.isNotEmpty()) {
+        NewRelayListView({ wantsToAddRelay = "" }, accountViewModel, wantsToAddRelay)
+    }
+
+    if (isCurrentlyOnTheUsersList) {
+        AddRelayButton { wantsToAddRelay = relay }
+    } else {
+        RemoveRelayButton { wantsToAddRelay = relay }
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)

@@ -39,7 +39,7 @@ abstract class NostrDataSource(val debugName: String) {
                     eventCounter = eventCounter + Pair(key, Counter(1))
                 }
 
-                LocalCache.consume(event, relay)
+                LocalCache.verifyAndConsume(event, relay)
             }
         }
 
