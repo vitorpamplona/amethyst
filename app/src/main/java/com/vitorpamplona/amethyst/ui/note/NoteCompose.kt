@@ -154,7 +154,6 @@ import java.io.File
 import java.math.BigDecimal
 import java.net.URL
 import java.util.Locale
-import kotlin.time.ExperimentalTime
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -331,20 +330,21 @@ private fun WatchForReports(
     onChange: (Boolean, Boolean, Set<Note>) -> Unit
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = remember(accountState) { accountState?.account } ?: return
-
     val noteReportsState by note.live().reports.observeAsState()
-    val noteForReports = remember(noteReportsState) { noteReportsState?.note } ?: return
 
     LaunchedEffect(key1 = noteReportsState, key2 = accountState) {
         launch(Dispatchers.Default) {
-            account.userProfile().let { loggedIn ->
-                val newCanPreview = note.author?.pubkeyHex == loggedIn.pubkeyHex ||
-                    (note.author?.let { loggedIn.isFollowingCached(it) } ?: true) ||
-                    !(noteForReports.hasAnyReports())
+            accountState?.account?.let { loggedIn ->
+                val newCanPreview = note.author?.pubkeyHex == loggedIn.userProfile().pubkeyHex ||
+                    (note.author?.let { loggedIn.userProfile().isFollowingCached(it) } ?: true) ||
+                    noteReportsState?.note?.hasAnyReports() != true
 
-                val newIsAcceptable = account.isAcceptable(noteForReports)
-                val newRelevantReports = account.getRelevantReports(noteForReports)
+                val newIsAcceptable = noteReportsState?.note?.let {
+                    loggedIn.isAcceptable(it)
+                } ?: true
+                val newRelevantReports = noteReportsState?.note?.let {
+                    loggedIn.getRelevantReports(it)
+                } ?: emptySet()
 
                 onChange(newIsAcceptable, newCanPreview, newRelevantReports)
             }
@@ -1489,11 +1489,11 @@ private fun FirstUserInfoRow(
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         if (showAuthorPicture) {
-            NoteAuthorPicture(baseNote, nav, accountViewModel, 25.dp)
+            NoteAuthorPicture(baseNote, nav, accountViewModel, remember { 25.dp })
             Spacer(padding)
-            NoteUsernameDisplay(baseNote, Modifier.weight(1f))
+            NoteUsernameDisplay(baseNote, remember { Modifier.weight(1f) })
         } else {
-            NoteUsernameDisplay(baseNote, Modifier.weight(1f))
+            NoteUsernameDisplay(baseNote, remember { Modifier.weight(1f) })
         }
 
         if (eventNote is RepostEvent) {
@@ -1560,7 +1560,6 @@ fun TimeAgo(time: Long) {
     )
 }
 
-@OptIn(ExperimentalTime::class)
 @Composable
 private fun DrawAuthorImages(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val baseChannelHex = remember { baseNote.channelHex() }
@@ -1670,7 +1669,7 @@ private fun RepostNoteAuthorPicture(
                 baseNote = it,
                 nav = nav,
                 accountViewModel = accountViewModel,
-                size = 30.dp,
+                size = remember { 30.dp },
                 pictureModifier = Modifier.border(
                     2.dp,
                     MaterialTheme.colors.background,
@@ -2511,6 +2510,8 @@ fun UserPicture(
             .clip(shape = CircleShape)
     }
 
+    val myIconSize = remember(size) { size.div(3.5f) }
+
     Box(myBoxModifier, contentAlignment = TopEnd) {
         RobohashAsyncImageProxy(
             robot = userHex,
@@ -2521,7 +2522,7 @@ fun UserPicture(
             modifier = myImageModifier.background(MaterialTheme.colors.background)
         )
 
-        ObserveAndDisplayFollowingMark(userHex, size.div(3.5f), accountViewModel)
+        ObserveAndDisplayFollowingMark(userHex, myIconSize, accountViewModel)
     }
 }
 

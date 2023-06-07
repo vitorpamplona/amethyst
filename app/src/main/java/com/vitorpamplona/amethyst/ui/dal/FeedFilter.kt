@@ -39,7 +39,7 @@ abstract class AdditiveFeedFilter<T> : FeedFilter<T>() {
             }
         }
 
-        Log.d("Time", "${this.javaClass.simpleName} Additive Feed in $elapsed with ${feed.size} objects")
+        // Log.d("Time", "${this.javaClass.simpleName} Additive Feed in $elapsed with ${feed.size} objects")
         return feed
     }
 }
