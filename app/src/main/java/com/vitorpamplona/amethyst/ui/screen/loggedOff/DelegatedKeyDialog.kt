@@ -75,13 +75,10 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.service.HttpClient
-import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.navigation.QrCodeDrawer
 import com.vitorpamplona.amethyst.ui.qrcode.SimpleQrCodeScanner
-import fr.acinq.secp256k1.Hex
-import fr.acinq.secp256k1.Secp256k1
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import nostr.postr.Persona
@@ -99,7 +96,7 @@ enum class DateType {
 }
 
 class Delegation(
-    private var delegatee: Account,
+    var delegatee: Account,
     var delegator: String,
     var kinds: List<Kind>,
     var signature: String,
@@ -113,22 +110,22 @@ class Delegation(
     }
 }
 
-fun toTags(token: String): MutableList<List<String>> {
+fun toTags(token: String, signature: String, nPubKey: String): List<String> {
     val keys = token.split(":")
-    val tags = mutableListOf<List<String>>()
-    tags.add(listOf(keys[1]))
-    tags.add(listOf(keys[2]))
-    tags.add(listOf(keys[3]))
+    val parsed = Nip19.uriToRoute(nPubKey)
 
-    return tags
+    return listOf(keys[1], parsed?.hex!!, keys[3], signature)
 }
+
+const val PAGES = 6
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DelegatedKeyDialog(
     onClose: () -> Unit,
     useProxy: Boolean,
-    proxyPort: Int
+    proxyPort: Int,
+    onSuccess: (it: Delegation) -> Unit
 ) {
     val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", proxyPort)
     val context = LocalContext.current
@@ -136,7 +133,7 @@ fun DelegatedKeyDialog(
     val calendar = Calendar.getInstance()
     calendar.add(Calendar.MONTH, 1)
     val delegation = Delegation(
-        Account(Persona(), proxy = proxy, proxyPort = proxyPort),
+        Account(Persona(), proxy = proxy, proxyPort = proxyPort, delegatorNPubKey = "", delegationToken = "", delegationSignature = ""),
         "",
         listOf(
             Kind(1, "TextNote", remember { mutableStateOf(true) }),
@@ -157,7 +154,7 @@ fun DelegatedKeyDialog(
     ) {
         Surface {
             HorizontalPager(
-                pageCount = 6,
+                pageCount = PAGES,
                 state = pagerState,
                 userScrollEnabled = false
             ) { page ->
@@ -205,7 +202,8 @@ fun DelegatedKeyDialog(
                         delegation,
                         signature,
                         onClose,
-                        pagerState
+                        pagerState,
+                        onSuccess
                     )
                 }
             }
@@ -236,6 +234,8 @@ fun GenerateDelegationPage(
         pagerState
     ) {
         Text("Generate delegation string")
+        println(delegation.delegatee.userProfile().pubkeyNpub())
+        println(delegation.toString())
         Button(
             modifier = Modifier.padding(10.dp),
             onClick = {
@@ -383,7 +383,8 @@ fun SelectSignaturePage(
     delegation: Delegation,
     signature: MutableState<TextFieldValue>,
     onClose: () -> Unit,
-    pagerState: PagerState
+    pagerState: PagerState,
+    onSuccess: (it: Delegation) -> Unit
 ) {
     var dialogOpen by remember {
         mutableStateOf(false)
@@ -417,24 +418,28 @@ fun SelectSignaturePage(
                 }
                 isValidSig = false
             }
+//            if (isValidSig) {
+//                try {
+//                    val sig = Hex.decode(delegation.signature)
+//                    val token = Event.sha256.digest(delegation.toString().toByteArray())
+//                    val parsed = Nip19.uriToRoute(delegation.delegator)
+//                    val pubKeyParsed = parsed?.hex?.hexToByteArray()
+//                    if (!Secp256k1.get().verifySchnorr(sig, token, pubKeyParsed!!)) {
+//                        scope.launch {
+//                            Toast.makeText(context, "Invalid signature", Toast.LENGTH_SHORT).show()
+//                        }
+//                        isValidSig = false
+//                    }
+//                } catch (e: Exception) {
+//                    scope.launch {
+//                        Toast.makeText(context, "Invalid signature", Toast.LENGTH_SHORT).show()
+//                    }
+//                    isValidSig = false
+//                }
+//            }
             if (isValidSig) {
-                try {
-                    val sig = Hex.decode(delegation.signature)
-                    val token = Event.sha256.digest(delegation.toString().toByteArray())
-                    val parsed = Nip19.uriToRoute(delegation.delegator)
-                    val pubKeyParsed = parsed?.hex?.hexToByteArray()
-                    if (!Secp256k1.get().verifySchnorr(sig, token, pubKeyParsed!!)) {
-                        scope.launch {
-                            Toast.makeText(context, "Invalid signature", Toast.LENGTH_SHORT).show()
-                        }
-                        isValidSig = false
-                    }
-                } catch (e: Exception) {
-                    scope.launch {
-                        Toast.makeText(context, "Invalid signature", Toast.LENGTH_SHORT).show()
-                    }
-                    isValidSig = false
-                }
+                onClose()
+                onSuccess(delegation)
             }
             isValidSig
         }
@@ -852,6 +857,7 @@ private fun CustomPage(
                     if (!onValidation()) {
                         return@Button
                     }
+
                     scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
                 },
                 shape = RoundedCornerShape(20.dp),

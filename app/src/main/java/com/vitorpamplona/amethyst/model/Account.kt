@@ -69,7 +69,10 @@ class Account(
     var proxyPort: Int,
     var showSensitiveContent: Boolean? = null,
     var warnAboutPostsWithReports: Boolean = true,
-    var filterSpamFromStrangers: Boolean = true
+    var filterSpamFromStrangers: Boolean = true,
+    var delegationToken: String,
+    var delegatorNPubKey: String,
+    var delegationSignature: String
 ) {
     var transientHiddenUsers: Set<String> = setOf()
 

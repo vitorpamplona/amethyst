@@ -63,6 +63,9 @@ private object PrefKeys {
     const val SHOW_SENSITIVE_CONTENT = "show_sensitive_content"
     const val WARN_ABOUT_REPORTS = "warn_about_reports"
     const val FILTER_SPAM_FROM_STRANGERS = "filter_spam_from_strangers"
+    const val DELEGATION_TOKEN = "delegation_token"
+    const val DELEGATOR_NPUB = "delegator_npub"
+    const val DELEGATION_SIGNATURE = "delegation_signature"
     val LAST_READ: (String) -> String = { route -> "last_read_route_$route" }
 }
 
@@ -221,6 +224,9 @@ object LocalPreferences {
             putInt(PrefKeys.PROXY_PORT, account.proxyPort)
             putBoolean(PrefKeys.WARN_ABOUT_REPORTS, account.warnAboutPostsWithReports)
             putBoolean(PrefKeys.FILTER_SPAM_FROM_STRANGERS, account.filterSpamFromStrangers)
+            putString(PrefKeys.DELEGATION_TOKEN, account.delegationToken)
+            putString(PrefKeys.DELEGATOR_NPUB, account.delegatorNPubKey)
+            putString(PrefKeys.DELEGATION_SIGNATURE, account.delegationSignature)
 
             if (account.showSensitiveContent == null) {
                 remove(PrefKeys.SHOW_SENSITIVE_CONTENT)
@@ -310,8 +316,12 @@ object LocalPreferences {
             } else {
                 null
             }
+
             val filterSpam = getBoolean(PrefKeys.FILTER_SPAM_FROM_STRANGERS, true)
             val warnAboutReports = getBoolean(PrefKeys.WARN_ABOUT_REPORTS, true)
+            val delegationToken = getString(PrefKeys.DELEGATION_TOKEN, "")
+            val delegatorNPubKey = getString(PrefKeys.DELEGATOR_NPUB, "")
+            val delegationSignature = getString(PrefKeys.DELEGATION_SIGNATURE, "")
 
             val a = Account(
                 Persona(privKey = privKey?.hexToByteArray(), pubKey = pubKey.hexToByteArray()),
@@ -335,7 +345,10 @@ object LocalPreferences {
                 proxyPort,
                 showSensitiveContent,
                 warnAboutReports,
-                filterSpam
+                filterSpam,
+                delegationToken!!,
+                delegatorNPubKey!!,
+                delegationSignature!!
             )
 
             return a

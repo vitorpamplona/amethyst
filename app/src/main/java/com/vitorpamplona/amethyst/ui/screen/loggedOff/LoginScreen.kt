@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.ui.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import nostr.postr.toNsec
 import java.util.*
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -258,7 +259,10 @@ fun LoginPage(
                 DelegatedKeyDialog(
                     { delegatedKeyDialogOpen = false },
                     useProxy.value,
-                    proxyPort.value.toInt()
+                    proxyPort.value.toInt(),
+                    {
+                        accountViewModel.startUI(it.delegatee.loggedIn.privKey!!.toNsec(), useProxy.value, proxyPort.value.toInt(), it.toString(), it.delegator, it.signature)
+                    }
                 )
             }
 
