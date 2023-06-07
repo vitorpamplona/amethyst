@@ -106,10 +106,14 @@ fun ChatroomScreen(
 
     LaunchedEffect(baseUser, accountViewModel) {
         NostrChatroomDataSource.start()
-
         feedViewModel.invalidateData()
-        newPostModel.imageUploadingError.collect { error ->
-            Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+
+        launch(Dispatchers.IO) {
+            newPostModel.imageUploadingError.collect { error ->
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 

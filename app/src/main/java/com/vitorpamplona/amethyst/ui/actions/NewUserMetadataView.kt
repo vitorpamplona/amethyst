@@ -28,6 +28,9 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
@@ -37,8 +40,12 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
     LaunchedEffect(Unit) {
         postViewModel.load(account)
 
-        postViewModel.imageUploadingError.collect { error ->
-            Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+        launch(Dispatchers.IO) {
+            postViewModel.imageUploadingError.collect { error ->
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 
