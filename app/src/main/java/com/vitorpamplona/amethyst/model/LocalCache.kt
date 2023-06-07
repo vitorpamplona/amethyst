@@ -1018,7 +1018,14 @@ object LocalCache {
     fun consume(event: Event, relay: Relay?) {
         checkNotInMainThread()
 
-        if (!event.hasValidSignature()) return
+        if (!event.hasValidSignature()) {
+            try {
+                event.checkSignature()
+            } catch (e: Exception) {
+                Log.w("Event failed retest ${event.kind}", e.message ?: "")
+            }
+            return
+        }
 
         try {
             when (event) {
