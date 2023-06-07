@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.ui.note.MultiSetCompose
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.ZapUserSetCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
@@ -100,9 +101,11 @@ private fun WatchScrollToTop(
     val scrollToTop by viewModel.scrollToTop.collectAsState()
 
     LaunchedEffect(scrollToTop) {
-        if (scrollToTop > 0 && viewModel.scrolltoTopPending) {
-            listState.scrollToItem(index = 0)
-            viewModel.sentToTop()
+        launch {
+            if (scrollToTop > 0 && viewModel.scrolltoTopPending) {
+                listState.scrollToItem(index = 0)
+                viewModel.sentToTop()
+            }
         }
     }
 }
@@ -118,11 +121,10 @@ fun RenderCardFeed(
     val feedState by viewModel.feedContent.collectAsState()
 
     Crossfade(
-        modifier = Modifier.fillMaxSize(),
+        modifier = remember { Modifier.fillMaxSize() },
         targetState = feedState,
         animationSpec = tween(durationMillis = 100)
     ) { state ->
-
         when (state) {
             is CardFeedState.Empty -> {
                 FeedEmpty {
@@ -176,46 +178,56 @@ private fun FeedLoaded(
     ) {
         itemsIndexed(state.feed.value, key = { _, item -> item.id() }) { _, item ->
             Row(defaultModifier) {
-                when (item) {
-                    is NoteCard -> NoteCompose(
-                        item,
-                        isBoostedNote = false,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                        routeForLastRead = routeForLastRead
-                    )
-
-                    is ZapUserSetCard -> ZapUserSetCompose(
-                        item,
-                        isInnerNote = false,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                        routeForLastRead = routeForLastRead
-                    )
-
-                    is MultiSetCard -> MultiSetCompose(
-                        item,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                        routeForLastRead = routeForLastRead
-                    )
-
-                    is BadgeCard -> BadgeCompose(
-                        item,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                        routeForLastRead = routeForLastRead
-                    )
-
-                    is MessageSetCard -> MessageSetCompose(
-                        messageSetCard = item,
-                        routeForLastRead = routeForLastRead,
-                        accountViewModel = accountViewModel,
-                        nav = nav
-                    )
-                }
+                RenderCardItem(item, accountViewModel, nav, routeForLastRead)
             }
         }
+    }
+}
+
+@Composable
+private fun RenderCardItem(
+    item: Card,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+    routeForLastRead: String
+) {
+    when (item) {
+        is NoteCard -> NoteCompose(
+            item,
+            isBoostedNote = false,
+            accountViewModel = accountViewModel,
+            nav = nav,
+            routeForLastRead = routeForLastRead
+        )
+
+        is ZapUserSetCard -> ZapUserSetCompose(
+            item,
+            isInnerNote = false,
+            accountViewModel = accountViewModel,
+            nav = nav,
+            routeForLastRead = routeForLastRead
+        )
+
+        is MultiSetCard -> MultiSetCompose(
+            item,
+            accountViewModel = accountViewModel,
+            nav = nav,
+            routeForLastRead = routeForLastRead
+        )
+
+        is BadgeCard -> BadgeCompose(
+            item,
+            accountViewModel = accountViewModel,
+            nav = nav,
+            routeForLastRead = routeForLastRead
+        )
+
+        is MessageSetCard -> MessageSetCompose(
+            messageSetCard = item,
+            routeForLastRead = routeForLastRead,
+            accountViewModel = accountViewModel,
+            nav = nav
+        )
     }
 }
 
