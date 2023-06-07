@@ -67,10 +67,15 @@ fun keyboardAsState(): State<Keyboard> {
             view.getWindowVisibleDisplayFrame(rect)
             val screenHeight = view.rootView.height
             val keypadHeight = screenHeight - rect.bottom
-            keyboardState.value = if (keypadHeight > screenHeight * 0.15) {
+
+            val newKeyboardValue = if (keypadHeight > screenHeight * 0.15) {
                 Keyboard.Opened
             } else {
                 Keyboard.Closed
+            }
+
+            if (newKeyboardValue != keyboardState.value) {
+                keyboardState.value = newKeyboardValue
             }
         }
         view.viewTreeObserver.addOnGlobalLayoutListener(onGlobalListener)
@@ -87,18 +92,27 @@ fun keyboardAsState(): State<Keyboard> {
 fun AppBottomBar(accountViewModel: AccountViewModel, navEntryState: State<NavBackStackEntry?>, nav: (Route, Boolean) -> Unit) {
     val isKeyboardOpen by keyboardAsState()
     if (isKeyboardOpen == Keyboard.Closed) {
-        Column() {
-            Divider(
-                thickness = 0.25.dp
-            )
-            BottomNavigation(
-                modifier = Modifier,
-                elevation = 0.dp,
-                backgroundColor = MaterialTheme.colors.background
-            ) {
-                bottomNavigationItems.forEach { item ->
-                    HasNewItemsIcon(item, accountViewModel, navEntryState, nav)
-                }
+        RenderBottomMenu(accountViewModel, navEntryState, nav)
+    }
+}
+
+@Composable
+private fun RenderBottomMenu(
+    accountViewModel: AccountViewModel,
+    navEntryState: State<NavBackStackEntry?>,
+    nav: (Route, Boolean) -> Unit
+) {
+    Column() {
+        Divider(
+            thickness = 0.25.dp
+        )
+        BottomNavigation(
+            modifier = Modifier,
+            elevation = 0.dp,
+            backgroundColor = MaterialTheme.colors.background
+        ) {
+            bottomNavigationItems.forEach { item ->
+                HasNewItemsIcon(item, accountViewModel, navEntryState, nav)
             }
         }
     }
@@ -180,6 +194,18 @@ private fun RowScope.BottomIcon(
         }
     }
 
+    NavigationIcon(icon, size, iconSize, selected, hasNewItems, onClick)
+}
+
+@Composable
+private fun RowScope.NavigationIcon(
+    icon: Int,
+    size: Dp,
+    iconSize: Dp,
+    selected: Boolean,
+    hasNewItems: Boolean,
+    onClick: (Boolean) -> Unit
+) {
     BottomNavigationItem(
         icon = {
             NotifiableIcon(
