@@ -221,7 +221,7 @@ fun ChannelScreen(
 
         // LAST ROW
         EditFieldRow(newPostModel, isPrivate = false, accountViewModel = accountViewModel) {
-            scope.launch {
+            scope.launch(Dispatchers.IO) {
                 val tagger = NewMessageTagger(
                     channelHex = channel.idHex,
                     mentions = listOfNotNull(replyTo.value?.author),
