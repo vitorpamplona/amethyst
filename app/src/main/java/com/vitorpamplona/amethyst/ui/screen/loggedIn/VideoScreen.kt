@@ -88,8 +88,10 @@ import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.screen.rememberForeverPagerState
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun VideoScreen(
@@ -415,11 +417,13 @@ fun NewImageButton(accountViewModel: AccountViewModel, nav: (String) -> Unit) {
 
     val postViewModel: NewMediaModel = viewModel()
     postViewModel.onceUploaded {
-        scope.launch {
+        scope.launch(Dispatchers.Default) {
             // awaits an refresh on the list
             delay(250)
-            val route = Route.Video.route.replace("{scrollToTop}", "true")
-            nav(route)
+            withContext(Dispatchers.Main) {
+                val route = Route.Video.route.replace("{scrollToTop}", "true")
+                nav(route)
+            }
         }
     }
 
