@@ -224,6 +224,7 @@ private fun SearchBar(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
+    val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
 
     // Create a channel for processing search queries.
@@ -270,7 +271,11 @@ private fun SearchBar(
     }
 
     // LAST ROW
-    SearchTextField(searchBarViewModel, searchTextChanges)
+    SearchTextField(searchBarViewModel) {
+        scope.launch(Dispatchers.IO) {
+            searchTextChanges.trySend(it)
+        }
+    }
 
     DisplaySearchResults(listState, searchBarViewModel, nav, accountViewModel)
 }
@@ -278,10 +283,8 @@ private fun SearchBar(
 @Composable
 private fun SearchTextField(
     searchBarViewModel: SearchBarViewModel,
-    searchTextChanges: kotlinx.coroutines.channels.Channel<String>
+    onTextChanges: (String) -> Unit
 ) {
-    val scope = rememberCoroutineScope()
-
     Row(
         modifier = Modifier
             .padding(10.dp)
@@ -293,9 +296,7 @@ private fun SearchTextField(
             value = searchBarViewModel.searchValue,
             onValueChange = {
                 searchBarViewModel.updateSearchValue(it)
-                scope.launch(Dispatchers.IO) {
-                    searchTextChanges.trySend(it)
-                }
+                onTextChanges(it)
             },
             shape = RoundedCornerShape(25.dp),
             keyboardOptions = KeyboardOptions.Default.copy(
