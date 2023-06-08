@@ -11,6 +11,7 @@ fun checkForHashtagWithIcon(tag: String): HashtagIcon? {
         "lightning", "lightningnetwork" -> HashtagIcon(R.drawable.ht_lightning, "Lightning", Color.Unspecified, Modifier.padding(1.dp, 3.dp, 0.dp, 0.dp))
         "zap", "zaps", "zapper", "zappers", "zapping", "zapped", "zapathon", "zapraiser", "zaplife", "zapchain" -> HashtagIcon(R.drawable.zap, "Zap", Color.Unspecified, Modifier.padding(1.dp, 3.dp, 0.dp, 0.dp))
         "amethyst" -> HashtagIcon(R.drawable.amethyst, "Amethyst", Color.Unspecified, Modifier.padding(3.dp, 2.dp, 0.dp, 0.dp))
+        "onyx" -> HashtagIcon(R.drawable.black_heart, "Onyx", Color.Unspecified, Modifier.padding(1.dp, 3.dp, 0.dp, 0.dp))
         "plebs", "pleb", "plebchain" -> HashtagIcon(R.drawable.plebs, "Pleb", Color.Unspecified, Modifier.padding(2.dp, 2.dp, 0.dp, 1.dp))
         "coffee", "coffeechain", "cafe" -> HashtagIcon(R.drawable.coffee, "Coffee", Color.Unspecified, Modifier.padding(2.dp, 2.dp, 0.dp, 0.dp))
         "skullofsatoshi" -> HashtagIcon(R.drawable.skull, "SkullofSatoshi", Color.Unspecified, Modifier.padding(2.dp, 1.dp, 0.dp, 0.dp))
