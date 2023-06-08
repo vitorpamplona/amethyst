@@ -101,11 +101,10 @@ fun WatchAccountForNotifications(
     accountViewModel: AccountViewModel
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = remember(accountState) { accountState?.account } ?: return
 
     var firstTime by remember(accountViewModel) { mutableStateOf(true) }
 
-    LaunchedEffect(accountViewModel, account.defaultNotificationFollowList) {
+    LaunchedEffect(accountViewModel, accountState?.account?.defaultNotificationFollowList) {
         if (firstTime) {
             firstTime = false
         } else {

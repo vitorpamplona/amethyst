@@ -130,7 +130,7 @@ fun AppNavigation(
 
                 if (scrollToTop) {
                     notifFeedViewModel.clear()
-                    notifFeedViewModel.sendToTop()
+                    notifFeedViewModel.invalidateDataAndSendToTop()
                     it.arguments?.remove("scrollToTop")
                 }
 
