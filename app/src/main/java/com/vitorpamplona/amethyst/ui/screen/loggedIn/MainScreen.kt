@@ -79,14 +79,12 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
                 navController.navigate(route.base) {
                     popUpTo(Route.Home.route)
                     launchSingleTop = true
-                    restoreState = true
                 }
             } else {
                 val newRoute = route.route.replace("{scrollToTop}", "true")
                 navController.navigate(newRoute) {
                     popUpTo(Route.Home.route)
                     launchSingleTop = true
-                    restoreState = true
                 }
             }
         }
