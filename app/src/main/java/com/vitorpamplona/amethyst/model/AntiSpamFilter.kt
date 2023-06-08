@@ -28,7 +28,7 @@ class AntiSpamFilter {
 
         // if the message is actually short but because it cites a user/event, the nostr: string is really long, make it ok.
         // The idea here is to avoid considering repeated "@Bot, command" messages spam, while still blocking repeated "lnbc..." invoices or fishing urls
-        if (event.content.length < 180 && Nip19.nip19regex.matcher(event.content).matches()) return false
+        if (event.content.length < 180 && Nip19.nip19regex.matcher(event.content).find()) return false
 
         // double list strategy:
         // if duplicated, it goes into spam. 1000 spam messages are saved into the spam list.
