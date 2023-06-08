@@ -94,12 +94,14 @@ fun LoadThumbAndThenVideoView(videoUri: String, description: String? = null, thu
 }
 
 @Composable
-fun VideoView(videoUri: String, description: String? = null, thumb: VideoThumb? = null, onDialog: ((Boolean) -> Unit)? = null) {
-    val context = LocalContext.current
-    val lifecycleOwner = rememberUpdatedState(LocalLifecycleOwner.current)
-
+fun VideoView(
+    videoUri: String,
+    description: String? = null,
+    thumb: VideoThumb? = null,
+    onDialog: ((Boolean) -> Unit)? = null
+) {
     var exoPlayerData by remember { mutableStateOf<VideoPlayer?>(null) }
-    val defaultVolume = remember { if (DefaultMutedSetting.value) 0f else 1f }
+    val context = LocalContext.current
 
     LaunchedEffect(key1 = videoUri) {
         if (exoPlayerData == null) {
@@ -110,41 +112,60 @@ fun VideoView(videoUri: String, description: String? = null, thumb: VideoThumb? 
     }
 
     exoPlayerData?.let {
-        val media = remember { MediaItem.Builder().setUri(videoUri).build() }
-
-        it.exoPlayer.apply {
-            repeatMode = Player.REPEAT_MODE_ALL
-            videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
-            volume = defaultVolume
-            if (videoUri.startsWith("file") == true) {
-                setMediaItem(media)
-            } else {
-                setMediaSource(
-                    ProgressiveMediaSource.Factory(VideoCache.get()).createMediaSource(
-                        media
-                    )
-                )
-            }
-            prepare()
-        }
-
-        RenderVideoPlayer(it, thumb, onDialog)
+        VideoView(videoUri, description, it, thumb, onDialog)
     }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            exoPlayerData?.exoPlayer?.release()
+        }
+    }
+}
+
+@Composable
+fun VideoView(
+    videoUri: String,
+    description: String? = null,
+    exoPlayerData: VideoPlayer,
+    thumb: VideoThumb? = null,
+    onDialog: ((Boolean) -> Unit)? = null
+) {
+    val lifecycleOwner = rememberUpdatedState(LocalLifecycleOwner.current)
+    val defaultVolume = remember { if (DefaultMutedSetting.value) 0f else 1f }
+
+    val media = remember { MediaItem.Builder().setUri(videoUri).build() }
+
+    exoPlayerData.exoPlayer.apply {
+        repeatMode = Player.REPEAT_MODE_ALL
+        videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
+        volume = defaultVolume
+        if (videoUri.startsWith("file") == true) {
+            setMediaItem(media)
+        } else {
+            setMediaSource(
+                ProgressiveMediaSource.Factory(VideoCache.get()).createMediaSource(
+                    media
+                )
+            )
+        }
+        prepare()
+    }
+
+    RenderVideoPlayer(exoPlayerData, thumb, onDialog)
 
     DisposableEffect(Unit) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_PAUSE -> {
-                    exoPlayerData?.exoPlayer?.pause()
+                    exoPlayerData.exoPlayer.pause()
                 }
                 else -> {}
             }
         }
         val lifecycle = lifecycleOwner.value.lifecycle
-        lifecycle.addObserver(observer)
 
+        lifecycle.addObserver(observer)
         onDispose {
-            exoPlayerData?.exoPlayer?.release()
             lifecycle.removeObserver(observer)
         }
     }
