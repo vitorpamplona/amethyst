@@ -169,7 +169,7 @@ fun ChatroomScreen(
         val scope = rememberCoroutineScope()
 
         // LAST ROW
-        EditFieldRow(newPostModel, accountViewModel) {
+        EditFieldRow(newPostModel, isPrivate = true, accountViewModel) {
             scope.launch(Dispatchers.IO) {
                 accountViewModel.account.sendPrivateMessage(
                     message = newPostModel.message.text,

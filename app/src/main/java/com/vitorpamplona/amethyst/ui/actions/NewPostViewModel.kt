@@ -19,6 +19,7 @@ import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.service.model.BaseTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
+import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import com.vitorpamplona.amethyst.ui.components.isValidURL
 import com.vitorpamplona.amethyst.ui.components.noProtocolUrlValidator
 import kotlinx.coroutines.Dispatchers
@@ -142,35 +143,52 @@ open class NewPostViewModel() : ViewModel() {
         cancel()
     }
 
-    fun upload(it: Uri, description: String, server: ServersAvailable, context: Context) {
+    fun upload(galleryUri: Uri, description: String, server: ServersAvailable, context: Context) {
         isUploadingImage = true
         contentToAddUrl = null
 
         val contentResolver = context.contentResolver
+        val contentType = contentResolver.getType(galleryUri)
 
-        if (server == ServersAvailable.NIP95) {
-            val contentType = contentResolver.getType(it)
-            contentResolver.openInputStream(it)?.use {
-                createNIP95Record(it.readBytes(), contentType, description)
-            }
-        } else {
-            ImageUploader.uploadImage(
-                uri = it,
-                server = server,
-                contentResolver = contentResolver,
-                onSuccess = { imageUrl, mimeType ->
-                    if (isNIP94Server(server)) {
-                        createNIP94Record(imageUrl, mimeType, description)
+        viewModelScope.launch(Dispatchers.IO) {
+            MediaCompressor().compress(
+                galleryUri,
+                contentType,
+                context.applicationContext,
+                onReady = { fileUri, contentType, size ->
+                    if (server == ServersAvailable.NIP95) {
+                        contentResolver.openInputStream(fileUri)?.use {
+                            createNIP95Record(it.readBytes(), contentType, description)
+                        }
                     } else {
-                        isUploadingImage = false
-                        message = TextFieldValue(message.text + "\n\n" + imageUrl)
-                        urlPreview = findUrlInMessage()
+                        ImageUploader.uploadImage(
+                            uri = fileUri,
+                            contentType = contentType,
+                            size = size,
+                            server = server,
+                            contentResolver = contentResolver,
+                            onSuccess = { imageUrl, mimeType ->
+                                if (isNIP94Server(server)) {
+                                    createNIP94Record(imageUrl, mimeType, description)
+                                } else {
+                                    isUploadingImage = false
+                                    message = TextFieldValue(message.text + "\n\n" + imageUrl)
+                                    urlPreview = findUrlInMessage()
+                                }
+                            },
+                            onError = {
+                                isUploadingImage = false
+                                viewModelScope.launch {
+                                    imageUploadingError.emit("Failed to upload the image / video")
+                                }
+                            }
+                        )
                     }
                 },
                 onError = {
                     isUploadingImage = false
                     viewModelScope.launch {
-                        imageUploadingError.emit("Failed to upload the image / video")
+                        imageUploadingError.emit(it)
                     }
                 }
             )

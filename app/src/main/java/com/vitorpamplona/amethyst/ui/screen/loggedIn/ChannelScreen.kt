@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.ui.actions.NewChannelView
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.PostButton
+import com.vitorpamplona.amethyst.ui.actions.ServersAvailable
 import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
@@ -219,7 +220,7 @@ fun ChannelScreen(
         val scope = rememberCoroutineScope()
 
         // LAST ROW
-        EditFieldRow(newPostModel, accountViewModel) {
+        EditFieldRow(newPostModel, isPrivate = false, accountViewModel = accountViewModel) {
             scope.launch {
                 val tagger = NewMessageTagger(
                     channelHex = channel.idHex,
@@ -290,6 +291,7 @@ fun DisplayReplyingToNote(
 @Composable
 fun EditFieldRow(
     channelScreenModel: NewPostViewModel,
+    isPrivate: Boolean,
     accountViewModel: AccountViewModel,
     onSendNewMessage: () -> Unit
 ) {
@@ -334,7 +336,22 @@ fun EditFieldRow(
                     tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                     modifier = Modifier.padding(start = 5.dp)
                 ) {
-                    channelScreenModel.upload(it, "", accountViewModel.account.defaultFileServer, context)
+                    val fileServer = if (isPrivate) {
+                        // TODO: Make private servers
+                        when (accountViewModel.account.defaultFileServer) {
+                            ServersAvailable.NOSTR_BUILD -> ServersAvailable.NOSTR_BUILD
+                            ServersAvailable.NOSTRIMG -> ServersAvailable.NOSTRIMG
+                            ServersAvailable.NOSTRFILES_DEV -> ServersAvailable.NOSTRFILES_DEV
+                            ServersAvailable.NOSTR_BUILD_NIP_94 -> ServersAvailable.NOSTR_BUILD
+                            ServersAvailable.NOSTRIMG_NIP_94 -> ServersAvailable.NOSTRIMG
+                            ServersAvailable.NOSTRFILES_DEV_NIP_94 -> ServersAvailable.NOSTRFILES_DEV
+                            ServersAvailable.NIP95 -> ServersAvailable.NOSTR_BUILD
+                        }
+                    } else {
+                        accountViewModel.account.defaultFileServer
+                    }
+
+                    channelScreenModel.upload(it, "", fileServer, context)
                 }
             },
             colors = TextFieldDefaults.textFieldColors(

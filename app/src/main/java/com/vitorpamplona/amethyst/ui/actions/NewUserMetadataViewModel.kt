@@ -13,6 +13,8 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.model.GitHubIdentity
 import com.vitorpamplona.amethyst.service.model.MastodonIdentity
 import com.vitorpamplona.amethyst.service.model.TwitterIdentity
+import com.vitorpamplona.amethyst.ui.components.MediaCompressor
+import id.zelory.compressor.Compressor.compress
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
@@ -143,46 +145,67 @@ class NewUserMetadataViewModel : ViewModel() {
     }
 
     fun uploadForPicture(uri: Uri, context: Context) {
-        upload(
-            uri,
-            context,
-            onUploading = {
-                isUploadingImageForPicture = it
-            },
-            onUploaded = {
-                picture.value = it
-            }
-        )
+        viewModelScope.launch(Dispatchers.IO) {
+            upload(
+                uri,
+                context,
+                onUploading = {
+                    isUploadingImageForPicture = it
+                },
+                onUploaded = {
+                    picture.value = it
+                }
+            )
+        }
     }
 
     fun uploadForBanner(uri: Uri, context: Context) {
-        upload(
-            uri,
-            context,
-            onUploading = {
-                isUploadingImageForBanner = it
-            },
-            onUploaded = {
-                banner.value = it
-            }
-        )
+        viewModelScope.launch(Dispatchers.IO) {
+            upload(
+                uri,
+                context,
+                onUploading = {
+                    isUploadingImageForBanner = it
+                },
+                onUploaded = {
+                    banner.value = it
+                }
+            )
+        }
     }
 
-    fun upload(it: Uri, context: Context, onUploading: (Boolean) -> Unit, onUploaded: (String) -> Unit) {
+    private suspend fun upload(galleryUri: Uri, context: Context, onUploading: (Boolean) -> Unit, onUploaded: (String) -> Unit) {
         onUploading(true)
 
-        ImageUploader.uploadImage(
-            uri = it,
-            server = account.defaultFileServer,
-            contentResolver = context.contentResolver,
-            onSuccess = { imageUrl, mimeType ->
-                onUploading(false)
-                onUploaded(imageUrl)
+        val contentResolver = context.contentResolver
+
+        MediaCompressor().compress(
+            galleryUri,
+            contentResolver.getType(galleryUri),
+            context.applicationContext,
+            onReady = { fileUri, contentType, size ->
+                ImageUploader.uploadImage(
+                    uri = fileUri,
+                    contentType = contentType,
+                    size = size,
+                    server = account.defaultFileServer,
+                    contentResolver = contentResolver,
+                    onSuccess = { imageUrl, mimeType ->
+                        onUploading(false)
+                        onUploaded(imageUrl)
+                    },
+                    onError = {
+                        onUploading(false)
+                        viewModelScope.launch {
+                            imageUploadingError.emit("Failed to upload the image / video")
+                        }
+                    }
+                )
             },
             onError = {
                 onUploading(false)
                 viewModelScope.launch {
-                    imageUploadingError.emit("Failed to upload the image / video")
+                    imageUploadingError.emit(it)
                 }
             }
         )

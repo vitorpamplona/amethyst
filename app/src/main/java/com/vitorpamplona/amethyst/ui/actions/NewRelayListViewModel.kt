@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.actions
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.service.model.ContactListEvent
@@ -8,9 +9,11 @@ import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import kotlinx.collections.immutable.toImmutableSet
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 class NewRelayListViewModel : ViewModel() {
     private lateinit var account: Account
@@ -25,7 +28,9 @@ class NewRelayListViewModel : ViewModel() {
 
     fun create() {
         relays.let {
-            account.saveRelayList(it.value)
+            viewModelScope.launch(Dispatchers.IO) {
+                account.saveRelayList(it.value)
+            }
         }
 
         clear()

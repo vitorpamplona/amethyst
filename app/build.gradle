@@ -188,6 +188,11 @@ dependencies {
     // immutable collections to avoid recomposition
     implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable:0.3.5")
 
+    // Video compression lib
+    implementation 'com.github.AbedElazizShe:LightCompressor:1.2.3'
+    // Image compression lib
+    implementation 'id.zelory:compressor:3.0.1'
+
     // Automatic memory leak detection
     debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.11'
 
