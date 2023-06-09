@@ -2,10 +2,12 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.Checkbox
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Tab
 import androidx.compose.material.TabRow
@@ -15,7 +17,11 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
@@ -23,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.screen.NostrHiddenAccountsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefreshingFeedUserFeedView
@@ -67,6 +74,20 @@ fun HiddenUsersScreen(
         Column(modifier = Modifier.padding(start = 10.dp, end = 10.dp)) {
             val pagerState = rememberPagerState()
             val coroutineScope = rememberCoroutineScope()
+            var checked by remember { mutableStateOf(accountViewModel.account.optOutFromFilters) }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(
+                    checked = checked,
+                    onCheckedChange = {
+                        checked = it
+                        accountViewModel.account.updateOptOutFromFilters(checked)
+                        LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
+                    }
+                )
+
+                Text(stringResource(R.string.opt_out_from_filters))
+            }
 
             TabRow(
                 backgroundColor = MaterialTheme.colors.background,

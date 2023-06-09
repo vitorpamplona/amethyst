@@ -6,6 +6,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
+import com.vitorpamplona.amethyst.OptOutFromFilters
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
 import com.vitorpamplona.amethyst.service.model.*
@@ -66,7 +67,8 @@ class Account(
     var backupContactList: ContactListEvent? = null,
     var proxy: Proxy?,
     var proxyPort: Int,
-    var showSensitiveContent: Boolean? = null
+    var showSensitiveContent: Boolean? = null,
+    var optOutFromFilters: Boolean = false
 ) {
     var transientHiddenUsers: Set<String> = setOf()
 
@@ -76,6 +78,13 @@ class Account(
     val saveable: AccountLiveData = AccountLiveData(this)
 
     var userProfileCache: User? = null
+
+    fun updateOptOutFromFilters(value: Boolean) {
+        optOutFromFilters = value
+        OptOutFromFilters.start(optOutFromFilters)
+        live.invalidateData()
+        saveable.invalidateData()
+    }
 
     fun userProfile(): User {
         return userProfileCache ?: run {
@@ -1057,12 +1066,19 @@ class Account(
     }
 
     fun isAcceptable(user: User): Boolean {
+        if (optOutFromFilters) {
+            return !isHidden(user) && // if user hasn't hided this author
+                user.reportsBy(userProfile()).isEmpty() // if user has not reported this post
+        }
         return !isHidden(user) && // if user hasn't hided this author
             user.reportsBy(userProfile()).isEmpty() && // if user has not reported this post
             user.countReportAuthorsBy(followingKeySet()) < 5
     }
 
     fun isAcceptableDirect(note: Note): Boolean {
+        if (optOutFromFilters) {
+            return note.reportsBy(userProfile()).isEmpty()
+        }
         return note.reportsBy(userProfile()).isEmpty() && // if user has not reported this post
             note.countReportAuthorsBy(followingKeySet()) < 5 // if it has 5 reports by reliable users
     }

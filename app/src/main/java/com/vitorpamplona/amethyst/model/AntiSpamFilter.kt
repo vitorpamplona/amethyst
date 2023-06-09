@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.model
 import android.util.Log
 import android.util.LruCache
 import androidx.lifecycle.LiveData
+import com.vitorpamplona.amethyst.OptOutFromFilters
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.nip19.Nip19
@@ -19,6 +20,8 @@ class AntiSpamFilter {
     @Synchronized
     fun isSpam(event: Event, relay: Relay?): Boolean {
         checkNotInMainThread()
+
+        if (OptOutFromFilters.optOutFromFilters) return false
 
         val idHex = event.id
 

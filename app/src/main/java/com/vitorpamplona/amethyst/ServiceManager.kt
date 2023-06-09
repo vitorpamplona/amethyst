@@ -36,6 +36,7 @@ object ServiceManager {
 
         // Resets Proxy Use
         HttpClient.start(account)
+        OptOutFromFilters.start(account?.optOutFromFilters ?: false)
         Coil.setImageLoader {
             ImageLoader.Builder(context).components {
                 if (Build.VERSION.SDK_INT >= 28) {
