@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -97,6 +96,7 @@ import com.vitorpamplona.amethyst.ui.screen.RelayFeedView
 import com.vitorpamplona.amethyst.ui.screen.RelayFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -439,7 +439,7 @@ private fun ProfileHeader(
                     .size(30.dp)
                     .align(Alignment.Center),
                 onClick = { popupExpanded = true },
-                shape = RoundedCornerShape(20.dp),
+                shape = ButtonBorder,
                 colors = ButtonDefaults
                     .buttonColors(
                         backgroundColor = MaterialTheme.colors.background
@@ -1216,7 +1216,7 @@ private fun MessageButton(user: User, nav: (String) -> Unit) {
             .padding(horizontal = 3.dp)
             .width(50.dp),
         onClick = { nav("Room/${user.pubkeyHex}") },
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
@@ -1246,7 +1246,7 @@ private fun EditButton(account: Account) {
             .padding(horizontal = 3.dp)
             .width(50.dp),
         onClick = { wantsToEdit = true },
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = MaterialTheme.colors.primary
@@ -1265,7 +1265,7 @@ fun UnfollowButton(onClick: () -> Unit) {
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = onClick,
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = MaterialTheme.colors.primary
@@ -1281,7 +1281,7 @@ fun FollowButton(onClick: () -> Unit, text: Int = R.string.follow) {
     Button(
         modifier = Modifier.padding(start = 3.dp),
         onClick = onClick,
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = MaterialTheme.colors.primary
@@ -1297,7 +1297,7 @@ fun ShowUserButton(onClick: () -> Unit) {
     Button(
         modifier = Modifier.padding(start = 3.dp),
         onClick = onClick,
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = MaterialTheme.colors.primary

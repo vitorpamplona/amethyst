@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.MaterialTheme
@@ -28,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 
 const val SHORT_TEXT_LENGTH = 350
 
@@ -101,7 +101,7 @@ public fun ShowMoreButton(onClick: () -> Unit) {
     Button(
         modifier = Modifier.padding(top = 10.dp),
         onClick = onClick,
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults.buttonColors(
             backgroundColor = MaterialTheme.colors.primary.copy(alpha = 0.32f)
                 .compositeOver(MaterialTheme.colors.background)

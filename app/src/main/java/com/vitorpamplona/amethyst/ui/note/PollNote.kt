@@ -3,7 +3,6 @@ package com.vitorpamplona.amethyst.ui.note
 import android.widget.Toast
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
@@ -32,6 +31,8 @@ import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.*
@@ -179,11 +180,11 @@ private fun RenderOptionAfterVote(
     Box(
         Modifier
             .fillMaxWidth(0.75f)
-            .clip(shape = RoundedCornerShape(15.dp))
+            .clip(shape = QuoteBorder)
             .border(
                 2.dp,
                 color,
-                RoundedCornerShape(15.dp)
+                QuoteBorder
             )
     ) {
         LinearProgressIndicator(
@@ -242,11 +243,11 @@ private fun RenderOptionBeforeVote(
     Box(
         Modifier
             .fillMaxWidth(0.75f)
-            .clip(shape = RoundedCornerShape(15.dp))
+            .clip(shape = QuoteBorder)
             .border(
                 2.dp,
                 MaterialTheme.colors.primary,
-                RoundedCornerShape(15.dp)
+                QuoteBorder
             )
     ) {
         TranslatableRichTextViewer(
@@ -490,7 +491,7 @@ fun FilteredZapAmountChoicePopup(
                             onDismiss()
                         }
                     },
-                    shape = RoundedCornerShape(20.dp),
+                    shape = ButtonBorder,
                     colors = ButtonDefaults
                         .buttonColors(
                             backgroundColor = MaterialTheme.colors.primary

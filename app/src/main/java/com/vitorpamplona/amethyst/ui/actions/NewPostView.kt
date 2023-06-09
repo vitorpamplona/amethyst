@@ -71,6 +71,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.UserLine
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -288,11 +290,11 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                                 modifier = Modifier
                                                     .padding(top = 4.dp)
                                                     .fillMaxWidth()
-                                                    .clip(shape = RoundedCornerShape(15.dp))
+                                                    .clip(shape = QuoteBorder)
                                                     .border(
                                                         1.dp,
                                                         MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
-                                                        RoundedCornerShape(15.dp)
+                                                        QuoteBorder
                                                     )
                                             )
                                         } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
@@ -401,7 +403,7 @@ fun Notifying(baseMentions: ImmutableList<User>?, onClick: (User) -> Unit) {
                     }
 
                     Button(
-                        shape = RoundedCornerShape(20.dp),
+                        shape = ButtonBorder,
                         colors = ButtonDefaults.buttonColors(
                             backgroundColor = MaterialTheme.colors.primary.copy(alpha = 0.32f)
                         ),
@@ -619,7 +621,7 @@ fun CloseButton(onCancel: () -> Unit) {
         onClick = {
             onCancel()
         },
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = Color.Gray
@@ -643,7 +645,7 @@ fun PostButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifier = 
                 onPost()
             }
         },
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = if (isActive) MaterialTheme.colors.primary else Color.Gray
@@ -662,7 +664,7 @@ fun SaveButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifier = 
                 onPost()
             }
         },
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = if (isActive) MaterialTheme.colors.primary else Color.Gray
@@ -681,7 +683,7 @@ fun CreateButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifier 
                 onPost()
             }
         },
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = if (isActive) MaterialTheme.colors.primary else Color.Gray
@@ -700,7 +702,7 @@ fun SearchButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifier 
                 onPost()
             }
         },
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = if (isActive) MaterialTheme.colors.primary else Color.Gray
@@ -764,11 +766,11 @@ fun ImageVideoDescription(
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = 30.dp, end = 30.dp)
-            .clip(shape = RoundedCornerShape(10.dp))
+            .clip(shape = QuoteBorder)
             .border(
                 1.dp,
                 MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
-                RoundedCornerShape(15.dp)
+                QuoteBorder
             )
     ) {
         Column(
@@ -919,7 +921,7 @@ fun ImageVideoDescription(
                 onClick = {
                     onAdd(message, selectedServer)
                 },
-                shape = RoundedCornerShape(15.dp),
+                shape = QuoteBorder,
                 colors = ButtonDefaults.buttonColors(
                     backgroundColor = MaterialTheme.colors.primary
                 )

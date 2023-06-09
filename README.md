@@ -61,10 +61,10 @@ Or get the latest APK from the [Releases Section](https://github.com/vitorpamplo
 - [x] Push Notifications (Zaps and Messages)
 - [x] Generic Tags (NIP-12)
 - [x] Sensitive Content (NIP-36)
+- [x] View Individual Reactions (Like, Boost, Zaps, Reports) per Post
 - [ ] Marketplace (NIP-15)
 - [ ] Image/Video Capture in the app
-- [ ] Local Database 
-- [ ] View Individual Reactions (Like, Boost, Zaps, Reports) per Post
+- [ ] Local Database
 - [ ] Bookmarks, Pinned Posts, Muted Events (NIP-51)
 - [ ] Relay Pages (NIP-11)
 - [ ] Proof of Work in the Phone (NIP-13, NIP-20)

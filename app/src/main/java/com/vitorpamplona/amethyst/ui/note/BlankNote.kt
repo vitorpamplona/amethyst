@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Divider
@@ -22,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import kotlinx.collections.immutable.ImmutableSet
 
 @Composable
@@ -96,7 +96,7 @@ fun HiddenNote(
                         Button(
                             modifier = Modifier.padding(top = 10.dp),
                             onClick = onClick,
-                            shape = RoundedCornerShape(20.dp),
+                            shape = ButtonBorder,
                             colors = ButtonDefaults
                                 .buttonColors(
                                     backgroundColor = MaterialTheme.colors.primary

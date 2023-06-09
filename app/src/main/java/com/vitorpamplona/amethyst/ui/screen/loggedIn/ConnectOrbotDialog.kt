@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
@@ -36,6 +35,7 @@ import com.halilibo.richtext.ui.material.MaterialRichText
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.components.richTextDefaults
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import kotlinx.coroutines.launch
 
 @Composable
@@ -141,7 +141,7 @@ fun UseOrbotButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifie
                 onPost()
             }
         },
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = if (isActive) MaterialTheme.colors.primary else Color.Gray

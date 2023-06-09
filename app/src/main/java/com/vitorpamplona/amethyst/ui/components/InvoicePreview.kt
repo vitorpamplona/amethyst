@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat.startActivity
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.lnurl.LnInvoiceUtil
+import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.NumberFormat
@@ -66,8 +66,8 @@ fun InvoicePreview(lnInvoice: String, amount: String?) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = 30.dp, end = 30.dp)
-            .clip(shape = RoundedCornerShape(10.dp))
-            .border(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.12f), RoundedCornerShape(15.dp))
+            .clip(shape = QuoteBorder)
+            .border(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.12f), QuoteBorder)
     ) {
         Column(
             modifier = Modifier
@@ -118,7 +118,7 @@ fun InvoicePreview(lnInvoice: String, amount: String?) {
                         startActivity(context, intent, null)
                     }
                 },
-                shape = RoundedCornerShape(15.dp),
+                shape = QuoteBorder,
                 colors = ButtonDefaults.buttonColors(
                     backgroundColor = MaterialTheme.colors.primary
                 )

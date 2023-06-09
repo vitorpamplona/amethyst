@@ -79,6 +79,7 @@ import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.ui.screen.NostrChannelFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefreshingChatroomFeedView
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -485,7 +486,7 @@ private fun NoteCopyButton(
             .padding(horizontal = 3.dp)
             .width(50.dp),
         onClick = { popupExpanded = true },
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
@@ -525,7 +526,7 @@ private fun EditButton(accountViewModel: AccountViewModel, channel: Channel) {
             .padding(horizontal = 3.dp)
             .width(50.dp),
         onClick = { wantsToPost = true },
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = MaterialTheme.colors.primary
@@ -546,7 +547,7 @@ private fun JoinButton(accountViewModel: AccountViewModel, channel: Channel, nav
         onClick = {
             accountViewModel.account.joinChannel(channel.idHex)
         },
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = MaterialTheme.colors.primary
@@ -565,7 +566,7 @@ private fun LeaveButton(accountViewModel: AccountViewModel, channel: Channel, na
             accountViewModel.account.leaveChannel(channel.idHex)
             nav(Route.Message.route)
         },
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = MaterialTheme.colors.primary

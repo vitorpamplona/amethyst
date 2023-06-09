@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CutCornerShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
@@ -142,7 +141,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Following
+import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
@@ -1289,7 +1290,7 @@ fun DisplayPeopleList(
                 Button(
                     modifier = Modifier.padding(top = 10.dp),
                     onClick = { expanded = !expanded },
-                    shape = RoundedCornerShape(20.dp),
+                    shape = ButtonBorder,
                     colors = ButtonDefaults.buttonColors(
                         backgroundColor = MaterialTheme.colors.primary.copy(alpha = 0.32f)
                             .compositeOver(MaterialTheme.colors.background)
@@ -1504,7 +1505,7 @@ fun PinListHeader(
                 Button(
                     modifier = Modifier.padding(top = 10.dp),
                     onClick = { expanded = !expanded },
-                    shape = RoundedCornerShape(20.dp),
+                    shape = ButtonBorder,
                     colors = ButtonDefaults.buttonColors(
                         backgroundColor = MaterialTheme.colors.primary.copy(alpha = 0.32f)
                             .compositeOver(MaterialTheme.colors.background)
@@ -1585,11 +1586,11 @@ private fun RenderReport(
             modifier = Modifier
                 .padding(top = 5.dp)
                 .fillMaxWidth()
-                .clip(shape = RoundedCornerShape(15.dp))
+                .clip(shape = QuoteBorder)
                 .border(
                     1.dp,
                     MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
-                    RoundedCornerShape(15.dp)
+                    QuoteBorder
                 ),
             unPackReply = false,
             makeItShort = true,
@@ -1621,11 +1622,11 @@ private fun ReplyRow(
                 modifier = Modifier
                     .padding(top = 5.dp)
                     .fillMaxWidth()
-                    .clip(shape = RoundedCornerShape(15.dp))
+                    .clip(shape = QuoteBorder)
                     .border(
                         1.dp,
                         MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
-                        RoundedCornerShape(15.dp)
+                        QuoteBorder
                     ),
                 unPackReply = false,
                 makeItShort = true,
@@ -2413,11 +2414,11 @@ private fun LongFormHeader(noteEvent: LongTextNoteEvent, note: Note, accountView
 
     Row(
         modifier = Modifier
-            .clip(shape = RoundedCornerShape(15.dp))
+            .clip(shape = QuoteBorder)
             .border(
                 1.dp,
                 MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
-                RoundedCornerShape(15.dp)
+                QuoteBorder
             )
     ) {
         Column {

@@ -6,7 +6,6 @@ import android.util.Patterns
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
@@ -43,6 +42,7 @@ import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.uriToRoute
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
@@ -412,11 +412,11 @@ private fun RenderContentAsMarkdown(content: String, backgroundColor: Color, tag
             modifier = Modifier
                 .padding(0.dp)
                 .fillMaxWidth()
-                .clip(shape = RoundedCornerShape(15.dp))
+                .clip(shape = QuoteBorder)
                 .border(
                     1.dp,
                     MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
-                    RoundedCornerShape(15.dp)
+                    QuoteBorder
                 )
                 .background(
                     MaterialTheme.colors.onSurface
@@ -767,17 +767,18 @@ private fun DisplayFullNote(
     nav: (String) -> Unit,
     loadedLink: LoadedBechLink
 ) {
+    println("AAA: Display Full Note")
     val borderColor = MaterialTheme.colors.onSurface.copy(alpha = 0.12f)
 
     val modifier = remember {
         Modifier
             .padding(top = 2.dp, bottom = 0.dp, start = 0.dp, end = 0.dp)
             .fillMaxWidth()
-            .clip(shape = RoundedCornerShape(15.dp))
+            .clip(shape = QuoteBorder)
             .border(
                 1.dp,
                 borderColor,
-                RoundedCornerShape(15.dp)
+                QuoteBorder
             )
     }
 
@@ -952,11 +953,11 @@ private fun DisplayNoteFromTag(
             modifier = Modifier
                 .padding(top = 2.dp, bottom = 0.dp, start = 0.dp, end = 0.dp)
                 .fillMaxWidth()
-                .clip(shape = RoundedCornerShape(15.dp))
+                .clip(shape = QuoteBorder)
                 .border(
                     1.dp,
                     MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
-                    RoundedCornerShape(15.dp)
+                    QuoteBorder
                 ),
             parentBackgroundColor = backgroundColor,
             isQuotedNote = true,

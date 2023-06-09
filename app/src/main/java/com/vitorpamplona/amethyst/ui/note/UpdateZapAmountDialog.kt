@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
@@ -78,6 +77,7 @@ import com.vitorpamplona.amethyst.ui.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.getFragmentActivity
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -280,7 +280,7 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, nip47uri: String? = null, account
                                     postViewModel.amountSet.forEach { amountInSats ->
                                         Button(
                                             modifier = Modifier.padding(horizontal = 3.dp),
-                                            shape = RoundedCornerShape(20.dp),
+                                            shape = ButtonBorder,
                                             colors = ButtonDefaults.buttonColors(
                                                 backgroundColor = MaterialTheme.colors.primary
                                             ),
@@ -335,7 +335,7 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, nip47uri: String? = null, account
 
                             Button(
                                 onClick = { postViewModel.addAmount() },
-                                shape = RoundedCornerShape(20.dp),
+                                shape = ButtonBorder,
                                 colors = ButtonDefaults.buttonColors(
                                     backgroundColor = MaterialTheme.colors.primary
                                 )

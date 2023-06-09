@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material.Icon
@@ -76,6 +75,7 @@ import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.actions.SaveToGallery
 import com.vitorpamplona.amethyst.ui.note.BlankNote
 import com.vitorpamplona.amethyst.ui.theme.Nip05
+import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -177,11 +177,11 @@ fun ZoomableContentView(content: ZoomableContent, images: ImmutableList<Zoomable
 
     var mainImageModifier = Modifier
         .fillMaxWidth()
-        .clip(shape = RoundedCornerShape(15.dp))
+        .clip(shape = QuoteBorder)
         .border(
             1.dp,
             MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
-            RoundedCornerShape(15.dp)
+            QuoteBorder
         )
 
     if (content is ZoomableUrlContent) {
