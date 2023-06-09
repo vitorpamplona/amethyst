@@ -812,9 +812,6 @@ fun RenderAppDefinition(
 ) {
     val noteEvent = note.event as? AppDefinitionEvent ?: return
 
-    val clipboardManager = LocalClipboardManager.current
-    val uri = LocalUriHandler.current
-
     var metadata by remember {
         mutableStateOf<UserMetadata?>(null)
     }
@@ -827,6 +824,9 @@ fun RenderAppDefinition(
 
     metadata?.let {
         Box {
+            val clipboardManager = LocalClipboardManager.current
+            val uri = LocalUriHandler.current
+
             if (!it.banner.isNullOrBlank()) {
                 var zoomImageDialogOpen by remember { mutableStateOf(false) }
 
@@ -2797,9 +2797,6 @@ data class DropDownParams(
 
 @Composable
 fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, accountViewModel: AccountViewModel) {
-    val clipboardManager = LocalClipboardManager.current
-    val appContext = LocalContext.current.applicationContext
-    val actContext = LocalContext.current
     var reportDialogShowing by remember { mutableStateOf(false) }
 
     var state by remember {
@@ -2819,6 +2816,10 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
         expanded = popupExpanded,
         onDismissRequest = onDismiss
     ) {
+        val clipboardManager = LocalClipboardManager.current
+        val appContext = LocalContext.current.applicationContext
+        val actContext = LocalContext.current
+
         WatchBookmarksFollowsAndAccount(note, accountViewModel) { newState ->
             if (state != newState) {
                 state = newState

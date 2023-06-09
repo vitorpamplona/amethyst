@@ -425,8 +425,6 @@ private fun ProfileHeader(
     var popupExpanded by remember { mutableStateOf(false) }
     var zoomImageDialogOpen by remember { mutableStateOf(false) }
 
-    val clipboardManager = LocalClipboardManager.current
-
     Box {
         DrawBanner(baseUser)
 
@@ -468,6 +466,8 @@ private fun ProfileHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Bottom
             ) {
+                val clipboardManager = LocalClipboardManager.current
+
                 UserPicture(
                     baseUser = baseUser,
                     accountViewModel = accountViewModel,

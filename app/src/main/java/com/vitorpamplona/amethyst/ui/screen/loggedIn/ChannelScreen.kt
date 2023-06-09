@@ -478,7 +478,6 @@ private fun ChannelActionOptions(
 private fun NoteCopyButton(
     note: Channel
 ) {
-    val clipboardManager = LocalClipboardManager.current
     var popupExpanded by remember { mutableStateOf(false) }
 
     Button(
@@ -502,6 +501,8 @@ private fun NoteCopyButton(
             expanded = popupExpanded,
             onDismissRequest = { popupExpanded = false }
         ) {
+            val clipboardManager = LocalClipboardManager.current
+
             DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString("nostr:" + note.idNote())); popupExpanded = false }) {
                 Text(stringResource(R.string.copy_channel_id_note_to_the_clipboard))
             }
