@@ -186,9 +186,8 @@ object LocalCache {
     }
 
     fun consume(event: TextNoteEvent, relay: Relay? = null) {
-        val note = getOrCreateNote(event.id)
         val author = getOrCreateUser(event.pubKey)
-
+        val note = getOrCreateNote(event.id)
         if (relay != null) {
             author.addRelayBeingUsed(relay, event.createdAt)
             note.addRelay(relay)
@@ -218,6 +217,15 @@ object LocalCache {
             it.addReply(note)
         }
 
+        val delegation = event.tags().filter {
+            it.contains("delegation")
+        }
+        if (delegation.isNotEmpty()) {
+            val pubKey = delegation[0][1]
+            val delegatedAuthor = getOrCreateUser(pubKey)
+            delegatedAuthor.addNote(note)
+            note.loadEvent(event, delegatedAuthor, replyTo)
+        }
         refreshObservers(note)
     }
 

@@ -374,6 +374,7 @@ fun NormalNote(
 ) {
     val noteEvent = remember { baseNote.event }
     val channelHex = remember { baseNote.channelHex() }
+    val isDelegated = noteEvent?.tags()?.any { it.contains("delegation") } == true
 
     if ((noteEvent is ChannelCreateEvent || noteEvent is ChannelMetadataEvent) && channelHex != null) {
         ChannelHeader(channelHex = channelHex, accountViewModel = accountViewModel, nav = nav)
