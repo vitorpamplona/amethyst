@@ -119,6 +119,8 @@ fun ReactionsRow(baseNote: Note, showReactionDetail: Boolean, accountViewModel: 
     if (showReactionDetail && wantsToSeeReactions.value) {
         ReactionDetailGallery(baseNote, nav, accountViewModel)
     }
+
+    Spacer(modifier = Modifier.height(8.dp))
 }
 
 @Composable

@@ -143,7 +143,7 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
         val isOwnNote = accountViewModel.isLoggedUser(note.author)
         val isFollowingUser = !isOwnNote && accountViewModel.isFollowing(note.author)
 
-        Popup(onDismissRequest = onDismiss) {
+        Popup(onDismissRequest = onDismiss, alignment = Alignment.Center) {
             Card(
                 modifier = Modifier.shadow(elevation = 6.dp, shape = cardShape),
                 shape = cardShape,
