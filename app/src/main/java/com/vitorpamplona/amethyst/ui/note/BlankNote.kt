@@ -46,10 +46,12 @@ fun BlankNote(modifier: Modifier = Modifier, isQuote: Boolean = false, idHex: St
                     )
                 }
 
-                Divider(
-                    modifier = Modifier.padding(vertical = 10.dp),
-                    thickness = 0.25.dp
-                )
+                if (!isQuote) {
+                    Divider(
+                        modifier = Modifier.padding(vertical = 10.dp),
+                        thickness = 0.25.dp
+                    )
+                }
             }
         }
     }

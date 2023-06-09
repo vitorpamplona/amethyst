@@ -187,7 +187,7 @@ fun NoteCompose(
                     onLongClick = { popupExpanded = true }
                 )
             },
-            isBoostedNote
+            isBoostedNote || isQuotedNote
         )
 
         NoteQuickActionMenu(baseNote, popupExpanded, { popupExpanded = false }, accountViewModel)
@@ -528,6 +528,10 @@ private fun NoteWithReactions(
                 accountViewModel,
                 nav
             )
+        } else {
+            if (!isQuotedNote && !isBoostedNote) {
+                Spacer(modifier = Modifier.height(10.dp))
+            }
         }
 
         if (!isQuotedNote && !isBoostedNote) {

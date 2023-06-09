@@ -4,6 +4,7 @@ import android.content.Context
 import android.widget.Toast
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -84,7 +85,7 @@ fun ReactionsRow(baseNote: Note, showReactionDetail: Boolean, accountViewModel: 
         mutableStateOf<Boolean>(false)
     }
 
-    Spacer(modifier = Modifier.height(8.dp))
+    Spacer(modifier = Modifier.height(8.dp).border(1.dp, Color.Red))
 
     Row(verticalAlignment = CenterVertically, modifier = Modifier.padding(start = 10.dp)) {
         if (showReactionDetail) {
@@ -269,7 +270,7 @@ fun ReplyReaction(
     grayTint: Color,
     accountViewModel: AccountViewModel,
     showCounter: Boolean = true,
-    iconSize: Dp = 20.dp,
+    iconSize: Dp = 18.dp,
     onPress: () -> Unit
 ) {
     val context = LocalContext.current
