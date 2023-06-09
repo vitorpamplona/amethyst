@@ -25,10 +25,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.collections.immutable.ImmutableSet
 
 @Composable
-fun BlankNote(modifier: Modifier = Modifier, isQuote: Boolean = false, idHex: String? = null) {
+fun BlankNote(modifier: Modifier = Modifier, showDivider: Boolean = false, idHex: String? = null) {
     Column(modifier = modifier) {
-        Row(modifier = Modifier.padding(horizontal = if (!isQuote) 12.dp else 6.dp)) {
-            Column(modifier = Modifier.padding(start = if (!isQuote) 10.dp else 5.dp)) {
+        Row() {
+            Column() {
                 Row(
                     modifier = Modifier.padding(
                         start = 20.dp,
@@ -46,7 +46,7 @@ fun BlankNote(modifier: Modifier = Modifier, isQuote: Boolean = false, idHex: St
                     )
                 }
 
-                if (!isQuote) {
+                if (!showDivider) {
                     Divider(
                         modifier = Modifier.padding(vertical = 10.dp),
                         thickness = 0.25.dp

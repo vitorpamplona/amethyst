@@ -443,7 +443,6 @@ fun NoteMaster(
             ReactionsRow(note, true, accountViewModel, nav)
 
             Divider(
-                modifier = Modifier.padding(top = 10.dp),
                 thickness = 0.25.dp
             )
         }

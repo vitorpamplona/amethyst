@@ -356,7 +356,6 @@ private fun WatchForReports(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun NormalNote(
     baseNote: Note,
@@ -490,19 +489,17 @@ private fun NoteWithReactions(
                         start = if (!isBoostedNote) 12.dp else 0.dp,
                         end = if (!isBoostedNote) 12.dp else 0.dp,
                         top = if (addMarginTop && !isBoostedNote) 10.dp else 0.dp
+                        // Don't add margin to the bottom because of the Divider down below
                     )
             }
         ) {
             if (notBoostedNorQuote) {
                 DrawAuthorImages(baseNote, accountViewModel, nav)
+                Spacer(modifier = Modifier.width(10.dp))
             }
 
             NoteBody(
                 baseNote,
-                modifier = remember {
-                    Modifier
-                        .padding(start = if (notBoostedNorQuote) 10.dp else 0.dp)
-                },
                 isQuotedNote,
                 unPackReply,
                 makeItShort,
@@ -529,7 +526,7 @@ private fun NoteWithReactions(
                 nav
             )
         } else {
-            if (!isQuotedNote && !isBoostedNote) {
+            if (!isQuotedNote && !isBoostedNote && baseNote.event !is RepostEvent) {
                 Spacer(modifier = Modifier.height(10.dp))
             }
         }
@@ -545,7 +542,6 @@ private fun NoteWithReactions(
 @Composable
 private fun NoteBody(
     baseNote: Note,
-    modifier: Modifier,
     showAuthorPicture: Boolean = false,
     unPackReply: Boolean = true,
     makeItShort: Boolean = false,
@@ -555,9 +551,7 @@ private fun NoteBody(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    Column(
-        modifier = modifier
-    ) {
+    Column() {
         FirstUserInfoRow(
             baseNote = baseNote,
             showAuthorPicture = showAuthorPicture,
