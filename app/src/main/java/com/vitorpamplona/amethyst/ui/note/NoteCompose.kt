@@ -158,8 +158,6 @@ import java.io.File
 import java.math.BigDecimal
 import java.net.URL
 import java.util.Locale
-import kotlin.time.ExperimentalTime
-import kotlin.time.measureTimedValue
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
