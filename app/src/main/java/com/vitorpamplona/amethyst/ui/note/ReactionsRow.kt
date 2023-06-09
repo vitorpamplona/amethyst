@@ -77,7 +77,7 @@ import java.math.RoundingMode
 import kotlin.math.roundToInt
 
 @Composable
-fun ReactionsRow(baseNote: Note, showReactions: Boolean, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun ReactionsRow(baseNote: Note, showReactionDetail: Boolean, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
 
     var wantsToSeeReactions = remember {
@@ -87,7 +87,7 @@ fun ReactionsRow(baseNote: Note, showReactions: Boolean, accountViewModel: Accou
     Spacer(modifier = Modifier.height(8.dp))
 
     Row(verticalAlignment = CenterVertically, modifier = Modifier.padding(start = 10.dp)) {
-        if (showReactions) {
+        if (showReactionDetail) {
             Row(
                 verticalAlignment = CenterVertically,
                 modifier = Modifier
@@ -116,7 +116,7 @@ fun ReactionsRow(baseNote: Note, showReactions: Boolean, accountViewModel: Accou
         }
     }
 
-    if (showReactions && wantsToSeeReactions.value) {
+    if (showReactionDetail && wantsToSeeReactions.value) {
         ReactionDetailGallery(baseNote, nav, accountViewModel)
     }
 }
