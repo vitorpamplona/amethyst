@@ -22,12 +22,14 @@ class EventNotificationConsumer(private val applicationContext: Context) {
     fun consume(event: Event) {
         val scope = CoroutineScope(Job() + Dispatchers.IO)
         scope.launch {
-            // adds to database
-            LocalCache.verifyAndConsume(event, null)
+            if (LocalCache.notes[event.id] == null) {
+                // adds to database
+                LocalCache.verifyAndConsume(event, null)
 
-            when (event) {
-                is PrivateDmEvent -> notify(event)
-                is LnZapEvent -> notify(event)
+                when (event) {
+                    is PrivateDmEvent -> notify(event)
+                    is LnZapEvent -> notify(event)
+                }
             }
         }
     }
