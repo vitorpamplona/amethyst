@@ -179,19 +179,17 @@ fun NoteCompose(
     val noteEvent = remember(noteState) { noteState?.note?.event }
 
     if (noteEvent == null) {
-        var popupExpanded by remember { mutableStateOf(false) }
-
-        BlankNote(
-            remember {
-                modifier.combinedClickable(
-                    onClick = { },
-                    onLongClick = { popupExpanded = true }
-                )
-            },
-            isBoostedNote || isQuotedNote
-        )
-
-        NoteQuickActionMenu(baseNote, popupExpanded, { popupExpanded = false }, accountViewModel)
+        LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
+            BlankNote(
+                remember {
+                    modifier.combinedClickable(
+                        onClick = { },
+                        onLongClick = showPopup
+                    )
+                },
+                isBoostedNote || isQuotedNote
+            )
+        }
     } else {
         CheckHiddenNoteCompose(
             baseNote,
@@ -384,7 +382,7 @@ fun NormalNote(
     } else if (noteEvent is FileStorageHeaderEvent) {
         FileStorageHeaderDisplay(baseNote)
     } else {
-        NoteWithReactions(
+        CheckNewAndRenderNote(
             baseNote,
             routeForLastRead,
             modifier,
@@ -403,7 +401,7 @@ fun NormalNote(
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
-private fun NoteWithReactions(
+private fun CheckNewAndRenderNote(
     baseNote: Note,
     routeForLastRead: String? = null,
     modifier: Modifier = Modifier,
@@ -418,9 +416,6 @@ private fun NoteWithReactions(
     nav: (String) -> Unit
 ) {
     var isNew by remember { mutableStateOf<Boolean>(false) }
-    var popupExpanded by remember { mutableStateOf(false) }
-
-    val scope = rememberCoroutineScope()
 
     LaunchedEffect(key1 = routeForLastRead) {
         launch(Dispatchers.IO) {
@@ -455,7 +450,43 @@ private fun NoteWithReactions(
         }
     }
 
-    val columnModifier = remember(backgroundColor) {
+    LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
+        RenderNoteWithReactions(
+            backgroundColor,
+            showPopup,
+            modifier,
+            baseNote,
+            accountViewModel,
+            nav,
+            isBoostedNote,
+            isQuotedNote,
+            addMarginTop,
+            unPackReply,
+            makeItShort,
+            canPreview
+        )
+    }
+}
+
+@Composable
+@OptIn(ExperimentalFoundationApi::class)
+private fun RenderNoteWithReactions(
+    backgroundColor: Color,
+    showPopup: () -> Unit,
+    modifier: Modifier,
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+    isBoostedNote: Boolean,
+    isQuotedNote: Boolean,
+    addMarginTop: Boolean,
+    unPackReply: Boolean,
+    makeItShort: Boolean,
+    canPreview: Boolean
+) {
+    val scope = rememberCoroutineScope()
+
+    val columnModifier = remember(backgroundColor, showPopup) {
         modifier
             .combinedClickable(
                 onClick = {
@@ -465,7 +496,7 @@ private fun NoteWithReactions(
                         }
                     }
                 },
-                onLongClick = { popupExpanded = true }
+                onLongClick = showPopup
             )
             .background(backgroundColor)
     }
@@ -509,13 +540,6 @@ private fun NoteWithReactions(
                 backgroundColor,
                 accountViewModel,
                 nav
-            )
-
-            NoteQuickActionMenu(
-                baseNote,
-                popupExpanded,
-                { popupExpanded = false },
-                accountViewModel
             )
         }
 
