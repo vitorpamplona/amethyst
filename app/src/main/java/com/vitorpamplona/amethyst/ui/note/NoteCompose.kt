@@ -47,6 +47,7 @@ import androidx.compose.material.lightColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -60,6 +61,7 @@ import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Alignment.Companion.TopEnd
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
@@ -145,6 +147,7 @@ import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Following
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
+import com.vitorpamplona.amethyst.ui.theme.replyBackground
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
@@ -171,7 +174,7 @@ fun NoteCompose(
     unPackReply: Boolean = true,
     makeItShort: Boolean = false,
     addMarginTop: Boolean = true,
-    parentBackgroundColor: Color? = null,
+    parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -217,7 +220,7 @@ fun CheckHiddenNoteCompose(
     unPackReply: Boolean = true,
     makeItShort: Boolean = false,
     addMarginTop: Boolean = true,
-    parentBackgroundColor: Color? = null,
+    parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -265,7 +268,7 @@ fun LoadedNoteCompose(
     unPackReply: Boolean = true,
     makeItShort: Boolean = false,
     addMarginTop: Boolean = true,
-    parentBackgroundColor: Color? = null,
+    parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -366,7 +369,7 @@ fun NormalNote(
     makeItShort: Boolean = false,
     addMarginTop: Boolean = true,
     canPreview: Boolean = true,
-    parentBackgroundColor: Color? = null,
+    parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -400,7 +403,6 @@ fun NormalNote(
 }
 
 @Composable
-@OptIn(ExperimentalFoundationApi::class)
 private fun CheckNewAndRenderNote(
     baseNote: Note,
     routeForLastRead: String? = null,
@@ -411,13 +413,15 @@ private fun CheckNewAndRenderNote(
     makeItShort: Boolean = false,
     addMarginTop: Boolean = true,
     canPreview: Boolean = true,
-    parentBackgroundColor: Color? = null,
+    parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    var isNew by remember { mutableStateOf<Boolean>(false) }
+    val newItemColor = MaterialTheme.colors.newItemBackgroundColor
+    val defaultBackgroundColor = MaterialTheme.colors.background
+    val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
 
-    LaunchedEffect(key1 = routeForLastRead) {
+    LaunchedEffect(key1 = routeForLastRead, key2 = parentBackgroundColor?.value) {
         launch(Dispatchers.IO) {
             routeForLastRead?.let {
                 val lastTime = NotificationCache.load(it)
@@ -426,44 +430,52 @@ private fun CheckNewAndRenderNote(
                 if (createdAt != null) {
                     NotificationCache.markAsRead(it, createdAt)
 
-                    val newIsNew = createdAt > lastTime
-                    if (newIsNew != isNew) {
-                        isNew = newIsNew
+                    val isNew = createdAt > lastTime
+
+                    val newBackgroundColor = if (isNew) {
+                        if (parentBackgroundColor != null) {
+                            newItemColor.compositeOver(parentBackgroundColor.value)
+                        } else {
+                            newItemColor.compositeOver(defaultBackgroundColor)
+                        }
+                    } else {
+                        parentBackgroundColor?.value ?: defaultBackgroundColor
                     }
+
+                    if (newBackgroundColor != backgroundColor.value) {
+                        backgroundColor.value = newBackgroundColor
+                    }
+                }
+            } ?: run {
+                val newBackgroundColor = parentBackgroundColor?.value ?: defaultBackgroundColor
+
+                if (newBackgroundColor != backgroundColor.value) {
+                    backgroundColor.value = newBackgroundColor
                 }
             }
         }
     }
 
-    val primaryColor = MaterialTheme.colors.newItemBackgroundColor
-    val defaultBackgroundColor = MaterialTheme.colors.background
-
-    val backgroundColor = remember(isNew, parentBackgroundColor) {
-        if (isNew) {
-            if (parentBackgroundColor != null) {
-                primaryColor.compositeOver(parentBackgroundColor)
-            } else {
-                primaryColor.compositeOver(defaultBackgroundColor)
-            }
-        } else {
-            parentBackgroundColor ?: defaultBackgroundColor
+    val updatedModifier = remember(backgroundColor.value) {
+        modifier.drawBehind {
+            drawRect(backgroundColor.value)
         }
     }
 
     LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
         RenderNoteWithReactions(
-            backgroundColor,
-            showPopup,
-            modifier,
-            baseNote,
-            accountViewModel,
-            nav,
-            isBoostedNote,
-            isQuotedNote,
-            addMarginTop,
-            unPackReply,
-            makeItShort,
-            canPreview
+            modifier = updatedModifier,
+            backgroundColor = backgroundColor,
+            baseNote = baseNote,
+            isBoostedNote = isBoostedNote,
+            isQuotedNote = isQuotedNote,
+            addMarginTop = addMarginTop,
+            unPackReply = unPackReply,
+            makeItShort = makeItShort,
+            canPreview = canPreview,
+            accountViewModel = accountViewModel,
+            showPopup = showPopup,
+            nav = nav
         )
     }
 }
@@ -471,22 +483,22 @@ private fun CheckNewAndRenderNote(
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 private fun RenderNoteWithReactions(
-    backgroundColor: Color,
-    showPopup: () -> Unit,
-    modifier: Modifier,
     baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    backgroundColor: MutableState<Color>,
+    modifier: Modifier,
     isBoostedNote: Boolean,
     isQuotedNote: Boolean,
     addMarginTop: Boolean,
     unPackReply: Boolean,
     makeItShort: Boolean,
-    canPreview: Boolean
+    canPreview: Boolean,
+    accountViewModel: AccountViewModel,
+    showPopup: () -> Unit,
+    nav: (String) -> Unit
 ) {
     val scope = rememberCoroutineScope()
 
-    val columnModifier = remember(backgroundColor, showPopup) {
+    val columnModifier = remember(showPopup) {
         modifier
             .combinedClickable(
                 onClick = {
@@ -498,7 +510,6 @@ private fun RenderNoteWithReactions(
                 },
                 onLongClick = showPopup
             )
-            .background(backgroundColor)
     }
 
     val notBoostedNorQuote by remember {
@@ -531,24 +542,24 @@ private fun RenderNoteWithReactions(
             }
 
             NoteBody(
-                baseNote,
-                isQuotedNote,
-                unPackReply,
-                makeItShort,
-                canPreview,
-                showSecondRow,
-                backgroundColor,
-                accountViewModel,
-                nav
+                baseNote = baseNote,
+                showAuthorPicture = isQuotedNote,
+                unPackReply = unPackReply,
+                makeItShort = makeItShort,
+                canPreview = canPreview,
+                showSecondRow = showSecondRow,
+                backgroundColor = backgroundColor,
+                accountViewModel = accountViewModel,
+                nav = nav
             )
         }
 
         if (!makeItShort && baseNote.event !is RepostEvent) {
             ReactionsRow(
-                baseNote,
-                notBoostedNorQuote,
-                accountViewModel,
-                nav
+                baseNote = baseNote,
+                showReactionDetail = notBoostedNorQuote,
+                accountViewModel = accountViewModel,
+                nav = nav
             )
         } else {
             if (!isBoostedNote && baseNote.event !is RepostEvent) {
@@ -572,7 +583,7 @@ private fun NoteBody(
     makeItShort: Boolean = false,
     canPreview: Boolean = true,
     showSecondRow: Boolean,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -618,7 +629,7 @@ private fun NoteBody(
 @Composable
 private fun RenderNoteRow(
     baseNote: Note,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     makeItShort: Boolean,
     canPreview: Boolean,
     accountViewModel: AccountViewModel,
@@ -651,11 +662,11 @@ private fun RenderNoteRow(
         }
 
         is PeopleListEvent -> {
-            RenderPeopleList(baseNote, backgroundColor, accountViewModel, nav)
+            DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
         }
 
         is RelaySetEvent -> {
-            RelaySetList(baseNote, backgroundColor, accountViewModel, nav)
+            DisplayRelaySet(baseNote, backgroundColor, accountViewModel, nav)
         }
 
         is AudioTrackEvent -> {
@@ -733,7 +744,7 @@ private fun RenderTextEvent(
     note: Note,
     makeItShort: Boolean,
     canPreview: Boolean,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -781,7 +792,7 @@ private fun RenderPoll(
     note: Note,
     makeItShort: Boolean,
     canPreview: Boolean,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -971,11 +982,15 @@ fun RenderAppDefinition(
                         modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)
                     ) {
                         val tags = remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: ImmutableListOfLists() }
+                        val bgColor = MaterialTheme.colors.background
+                        val backgroundColor = remember {
+                            mutableStateOf(bgColor)
+                        }
                         TranslatableRichTextViewer(
                             content = it,
                             canPreview = false,
                             tags = tags,
-                            backgroundColor = MaterialTheme.colors.background,
+                            backgroundColor = backgroundColor,
                             accountViewModel = accountViewModel,
                             nav = nav
                         )
@@ -991,7 +1006,7 @@ private fun RenderHighlight(
     note: Note,
     makeItShort: Boolean,
     canPreview: Boolean,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -1022,7 +1037,7 @@ private fun RenderPrivateMessage(
     note: Note,
     makeItShort: Boolean,
     canPreview: Boolean,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -1087,29 +1102,9 @@ private fun RenderPrivateMessage(
 }
 
 @Composable
-fun RelaySetList(
-    baseNote: Note,
-    backgroundColor: Color,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
-) {
-    DisplayRelaySet(baseNote, backgroundColor, accountViewModel, nav)
-}
-
-@Composable
-fun RenderPeopleList(
-    baseNote: Note,
-    backgroundColor: Color,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
-) {
-    DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
-}
-
-@Composable
 fun DisplayRelaySet(
     baseNote: Note,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -1195,14 +1190,16 @@ fun DisplayRelaySet(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .background(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(
-                                backgroundColor.copy(alpha = 0f),
-                                backgroundColor
+                    .drawBehind {
+                        drawRect(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    backgroundColor.value.copy(alpha = 0f),
+                                    backgroundColor.value
+                                )
                             )
                         )
-                    )
+                    }
             ) {
                 ShowMoreButton {
                     expanded = !expanded
@@ -1243,7 +1240,7 @@ private fun RelayOptionsAction(
 @Composable
 fun DisplayPeopleList(
     baseNote: Note,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -1302,14 +1299,16 @@ fun DisplayPeopleList(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .background(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(
-                                backgroundColor.copy(alpha = 0f),
-                                backgroundColor
+                    .drawBehind {
+                        drawRect(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    backgroundColor.value.copy(alpha = 0f),
+                                    backgroundColor.value
+                                )
                             )
                         )
-                    )
+                    }
             ) {
                 Button(
                     modifier = Modifier.padding(top = 10.dp),
@@ -1332,7 +1331,7 @@ fun DisplayPeopleList(
 @Composable
 private fun RenderBadgeAward(
     note: Note,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -1393,7 +1392,7 @@ private fun RenderBadgeAward(
 @Composable
 private fun RenderReaction(
     note: Note,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -1421,7 +1420,7 @@ private fun RenderReaction(
 @Composable
 private fun RenderRepost(
     note: Note,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -1445,7 +1444,7 @@ private fun RenderRepost(
 @Composable
 private fun RenderPinListEvent(
     baseNote: Note,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -1456,7 +1455,7 @@ private fun RenderPinListEvent(
 @Composable
 fun PinListHeader(
     baseNote: Note,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -1517,14 +1516,16 @@ fun PinListHeader(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .background(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(
-                                backgroundColor.copy(alpha = 0f),
-                                backgroundColor
+                    .drawBehind {
+                        drawRect(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    backgroundColor.value.copy(alpha = 0f),
+                                    backgroundColor.value
+                                )
                             )
                         )
-                    )
+                    }
             ) {
                 Button(
                     modifier = Modifier.padding(top = 10.dp),
@@ -1568,7 +1569,7 @@ private fun RenderLongFormContent(
 @Composable
 private fun RenderReport(
     note: Note,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -1629,52 +1630,84 @@ private fun RenderReport(
 private fun ReplyRow(
     note: Note,
     unPackReply: Boolean,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
     val noteEvent = note.event
 
-    if (noteEvent is TextNoteEvent && (note.replyTo != null || noteEvent.hasAnyTaggedUser())) {
-        val replyingDirectlyTo = remember {
-            note.replyTo?.lastOrNull()
+    val showReply by remember {
+        derivedStateOf {
+            noteEvent is TextNoteEvent && (note.replyTo != null || noteEvent.hasAnyTaggedUser())
         }
+    }
+
+    val showChannelReply by remember {
+        derivedStateOf {
+            noteEvent is ChannelMessageEvent && (note.replyTo != null || noteEvent.hasAnyTaggedUser())
+        }
+    }
+
+    if (showReply) {
+        val replyingDirectlyTo = remember { note.replyTo?.lastOrNull() }
         if (replyingDirectlyTo != null && unPackReply) {
-            NoteCompose(
-                baseNote = replyingDirectlyTo,
-                isQuotedNote = true,
-                modifier = Modifier
-                    .padding(top = 5.dp)
-                    .fillMaxWidth()
-                    .clip(shape = QuoteBorder)
-                    .border(
-                        1.dp,
-                        MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
-                        QuoteBorder
-                    ),
-                unPackReply = false,
-                makeItShort = true,
-                parentBackgroundColor = MaterialTheme.colors.onSurface.copy(alpha = 0.05f)
-                    .compositeOver(backgroundColor),
-                accountViewModel = accountViewModel,
-                nav = nav
-            )
+            ReplyNoteComposition(replyingDirectlyTo, backgroundColor, accountViewModel, nav)
+            Spacer(modifier = Modifier.height(5.dp))
         } else {
             // ReplyInformation(note.replyTo, noteEvent.mentions(), accountViewModel, nav)
         }
-
-        Spacer(modifier = Modifier.height(5.dp))
-    } else if (noteEvent is ChannelMessageEvent && (note.replyTo != null || noteEvent.hasAnyTaggedUser())) {
+    } else if (showChannelReply) {
         val channelHex = note.channelHex()
         channelHex?.let {
             val replies = remember { note.replyTo?.toImmutableList() }
-            val mentions = remember { noteEvent.mentions().toImmutableList() }
+            val mentions = remember { (note.event as? ChannelMessageEvent)?.mentions()?.toImmutableList() ?: persistentListOf() }
 
             ReplyInformationChannel(replies, mentions, it, accountViewModel, nav)
+            Spacer(modifier = Modifier.height(5.dp))
         }
-
-        Spacer(modifier = Modifier.height(5.dp))
     }
+}
+
+@Composable
+private fun ReplyNoteComposition(
+    replyingDirectlyTo: Note,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    val replyBackgroundColor = remember {
+        mutableStateOf(backgroundColor.value)
+    }
+    val defaultReplyBackground = MaterialTheme.colors.replyBackground
+
+    LaunchedEffect(key1 = backgroundColor.value, key2 = defaultReplyBackground) {
+        launch(Dispatchers.IO) {
+            val newReplyBackgroundColor =
+                defaultReplyBackground.compositeOver(backgroundColor.value)
+            if (replyBackgroundColor.value != newReplyBackgroundColor) {
+                replyBackgroundColor.value = newReplyBackgroundColor
+            }
+        }
+    }
+
+    NoteCompose(
+        baseNote = replyingDirectlyTo,
+        isQuotedNote = true,
+        modifier = Modifier
+            .padding(top = 5.dp)
+            .fillMaxWidth()
+            .clip(shape = QuoteBorder)
+            .border(
+                1.dp,
+                MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
+                QuoteBorder
+            ),
+        unPackReply = false,
+        makeItShort = true,
+        parentBackgroundColor = replyBackgroundColor,
+        accountViewModel = accountViewModel,
+        nav = nav
+    )
 }
 
 @Composable
@@ -1915,7 +1948,7 @@ fun DisplayHighlight(
     url: String?,
     makeItShort: Boolean,
     canPreview: Boolean,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {

@@ -719,11 +719,16 @@ private fun DrawAdditionalInfo(
         Row(
             modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)
         ) {
+            val defaultBackground = MaterialTheme.colors.background
+            val background = remember {
+                mutableStateOf(defaultBackground)
+            }
+
             TranslatableRichTextViewer(
                 content = it,
                 canPreview = false,
                 tags = remember { ImmutableListOfLists(emptyList()) },
-                backgroundColor = MaterialTheme.colors.background,
+                backgroundColor = background,
                 accountViewModel = accountViewModel,
                 nav = nav
             )

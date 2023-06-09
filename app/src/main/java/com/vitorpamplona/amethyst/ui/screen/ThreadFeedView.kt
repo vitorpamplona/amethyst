@@ -42,7 +42,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -82,7 +81,7 @@ import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
+import com.vitorpamplona.amethyst.ui.theme.selectedNote
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.delay
@@ -151,6 +150,11 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
                                 } else {
                                     Column() {
                                         Row() {
+                                            val selectedNoteColor = MaterialTheme.colors.selectedNote
+                                            val background = remember {
+                                                if (item.idHex == noteId) mutableStateOf(selectedNoteColor) else null
+                                            }
+
                                             NoteCompose(
                                                 item,
                                                 modifier = Modifier.drawReplyLevel(
@@ -158,7 +162,7 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
                                                     MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
                                                     if (item.idHex == noteId) MaterialTheme.colors.primary.copy(alpha = 0.52f) else MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
                                                 ),
-                                                parentBackgroundColor = if (item.idHex == noteId) MaterialTheme.colors.newItemBackgroundColor.compositeOver(MaterialTheme.colors.background) else null,
+                                                parentBackgroundColor = background,
                                                 isBoostedNote = false,
                                                 unPackReply = false,
                                                 accountViewModel = accountViewModel,
@@ -231,6 +235,9 @@ fun NoteMaster(
     val noteEvent = note?.event
 
     var popupExpanded by remember { mutableStateOf(false) }
+
+    val defaultBackgroundColor = MaterialTheme.colors.background
+    val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
 
     if (noteEvent == null) {
         BlankNote()
@@ -365,20 +372,20 @@ fun NoteMaster(
             ) {
                 Column() {
                     if (noteEvent is PeopleListEvent) {
-                        DisplayPeopleList(baseNote, MaterialTheme.colors.background, accountViewModel, nav)
+                        DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
                     } else if (noteEvent is AudioTrackEvent) {
                         AudioTrackHeader(noteEvent, accountViewModel, nav)
                     } else if (noteEvent is PinListEvent) {
                         PinListHeader(
                             baseNote,
-                            MaterialTheme.colors.background,
+                            backgroundColor,
                             accountViewModel,
                             nav
                         )
                     } else if (noteEvent is RelaySetEvent) {
                         DisplayRelaySet(
                             baseNote,
-                            MaterialTheme.colors.background,
+                            backgroundColor,
                             accountViewModel,
                             nav
                         )
@@ -415,7 +422,7 @@ fun NoteMaster(
                                     canPreview,
                                     remember { Modifier.fillMaxWidth() },
                                     tags,
-                                    MaterialTheme.colors.background,
+                                    backgroundColor,
                                     accountViewModel,
                                     nav
                                 )

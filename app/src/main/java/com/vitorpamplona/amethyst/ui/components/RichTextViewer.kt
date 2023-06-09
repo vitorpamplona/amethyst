@@ -100,7 +100,7 @@ fun RichTextViewer(
     canPreview: Boolean,
     modifier: Modifier,
     tags: ImmutableListOfLists<String>,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -129,7 +129,7 @@ private fun RenderRegular(
     content: String,
     tags: ImmutableListOfLists<String>,
     canPreview: Boolean,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -159,7 +159,7 @@ private fun RenderParagraph(
     paragraph: String,
     state: RichTextViewerState,
     canPreview: Boolean,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     tags: ImmutableListOfLists<String>
@@ -234,7 +234,7 @@ private fun RenderWord(
     word: String,
     state: RichTextViewerState,
     canPreview: Boolean,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     tags: ImmutableListOfLists<String>
@@ -288,7 +288,7 @@ private fun RenderWordWithoutPreview(
     word: String,
     state: RichTextViewerState,
     tags: ImmutableListOfLists<String>,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -321,7 +321,7 @@ private fun RenderWordWithPreview(
     word: String,
     state: RichTextViewerState,
     tags: ImmutableListOfLists<String>,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -402,7 +402,7 @@ fun RenderCustomEmoji(word: String, state: RichTextViewerState) {
 }
 
 @Composable
-private fun RenderContentAsMarkdown(content: String, backgroundColor: Color, tags: ImmutableListOfLists<String>?, nav: (String) -> Unit) {
+private fun RenderContentAsMarkdown(content: String, backgroundColor: MutableState<Color>, tags: ImmutableListOfLists<String>?, nav: (String) -> Unit) {
     val myMarkDownStyle = richTextDefaults.copy(
         codeBlockStyle = richTextDefaults.codeBlockStyle?.copy(
             textStyle = TextStyle(
@@ -421,7 +421,7 @@ private fun RenderContentAsMarkdown(content: String, backgroundColor: Color, tag
                 .background(
                     MaterialTheme.colors.onSurface
                         .copy(alpha = 0.05f)
-                        .compositeOver(backgroundColor)
+                        .compositeOver(backgroundColor.value)
                 )
         ),
         stringStyle = richTextDefaults.stringStyle?.copy(
@@ -432,7 +432,7 @@ private fun RenderContentAsMarkdown(content: String, backgroundColor: Color, tag
                 fontFamily = FontFamily.Monospace,
                 fontSize = 14.sp,
                 background = MaterialTheme.colors.onSurface.copy(alpha = 0.22f)
-                    .compositeOver(backgroundColor)
+                    .compositeOver(backgroundColor.value)
             )
         )
     )
@@ -722,7 +722,7 @@ fun startsWithNIP19Scheme(word: String): Boolean {
 data class LoadedBechLink(val baseNote: Note?, val nip19: Nip19.Return)
 
 @Composable
-fun BechLink(word: String, canPreview: Boolean, backgroundColor: Color, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun BechLink(word: String, canPreview: Boolean, backgroundColor: MutableState<Color>, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     var loadedLink by remember { mutableStateOf<LoadedBechLink?>(null) }
 
     LaunchedEffect(key1 = word) {
@@ -763,11 +763,10 @@ fun BechLink(word: String, canPreview: Boolean, backgroundColor: Color, accountV
 private fun DisplayFullNote(
     it: Note,
     accountViewModel: AccountViewModel,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     nav: (String) -> Unit,
     loadedLink: LoadedBechLink
 ) {
-    println("AAA: Display Full Note")
     val borderColor = MaterialTheme.colors.onSurface.copy(alpha = 0.12f)
 
     val modifier = remember {
@@ -886,7 +885,7 @@ fun HashTag(word: String, nav: (String) -> Unit) {
 data class LoadedTag(val user: User?, val note: Note?, val addedChars: String)
 
 @Composable
-fun TagLink(word: String, tags: ImmutableListOfLists<String>, canPreview: Boolean, backgroundColor: Color, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun TagLink(word: String, tags: ImmutableListOfLists<String>, canPreview: Boolean, backgroundColor: MutableState<Color>, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     var loadedTag by remember { mutableStateOf<LoadedTag?>(null) }
 
     LaunchedEffect(key1 = word) {
@@ -943,7 +942,7 @@ private fun DisplayNoteFromTag(
     addedChars: String,
     canPreview: Boolean,
     accountViewModel: AccountViewModel,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     nav: (String) -> Unit
 ) {
     if (canPreview) {

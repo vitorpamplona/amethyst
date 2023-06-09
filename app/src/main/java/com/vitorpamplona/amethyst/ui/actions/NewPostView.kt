@@ -303,10 +303,15 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                             UrlPreview(myUrlPreview, myUrlPreview)
                                         }
                                     } else if (startsWithNIP19Scheme(myUrlPreview)) {
+                                        val bgColor = MaterialTheme.colors.background
+                                        val backgroundColor = remember {
+                                            mutableStateOf(bgColor)
+                                        }
+
                                         BechLink(
                                             myUrlPreview,
                                             true,
-                                            MaterialTheme.colors.background,
+                                            backgroundColor,
                                             accountViewModel,
                                             nav
                                         )

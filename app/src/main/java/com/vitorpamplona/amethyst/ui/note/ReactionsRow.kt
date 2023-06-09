@@ -173,6 +173,9 @@ private fun ReactionDetailGallery(
     val boostsState by baseNote.live().boosts.observeAsState()
     val reactionsState by baseNote.live().reactions.observeAsState()
 
+    val defaultBackgroundColor = MaterialTheme.colors.background
+    val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
+
     val hasReactions by remember(zapsState, boostsState, reactionsState) {
         derivedStateOf {
             baseNote.zaps.isNotEmpty() ||
@@ -195,7 +198,7 @@ private fun ReactionDetailGallery(
                 if (hasZapEvents) {
                     RenderZapGallery(
                         zapEvents,
-                        MaterialTheme.colors.background,
+                        backgroundColor,
                         nav,
                         accountViewModel
                     )
@@ -204,7 +207,7 @@ private fun ReactionDetailGallery(
                 if (hasBoostEvents) {
                     RenderBoostGallery(
                         boostEvents,
-                        MaterialTheme.colors.background,
+                        backgroundColor,
                         nav,
                         accountViewModel
                     )
@@ -213,7 +216,7 @@ private fun ReactionDetailGallery(
                 if (hasLikeEvents) {
                     RenderLikeGallery(
                         likeEvents,
-                        MaterialTheme.colors.background,
+                        backgroundColor,
                         nav,
                         accountViewModel
                     )

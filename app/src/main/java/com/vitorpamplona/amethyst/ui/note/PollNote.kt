@@ -42,7 +42,7 @@ import kotlin.math.roundToInt
 fun PollNote(
     baseNote: Note,
     canPreview: Boolean,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -67,7 +67,7 @@ fun PollNote(
     baseNote: Note,
     pollViewModel: PollNoteViewModel,
     canPreview: Boolean,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -109,7 +109,7 @@ private fun OptionNote(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     canPreview: Boolean,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     nav: (String) -> Unit
 ) {
     val tags = remember(baseNote) {
@@ -169,7 +169,7 @@ private fun RenderOptionAfterVote(
     color: Color,
     canPreview: Boolean,
     tags: ImmutableListOfLists<String>,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -236,7 +236,7 @@ private fun RenderOptionBeforeVote(
     description: String,
     canPreview: Boolean,
     tags: ImmutableListOfLists<String>,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {

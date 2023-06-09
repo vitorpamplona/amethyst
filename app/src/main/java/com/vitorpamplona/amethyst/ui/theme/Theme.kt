@@ -9,8 +9,8 @@ import androidx.compose.material.darkColors
 import androidx.compose.material.lightColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 
@@ -26,20 +26,25 @@ private val LightColorPalette = lightColors(
     primaryVariant = Purple700,
     secondary = Teal200,
     secondaryVariant = Color(0xFFB66605)
-
-  /* Other default colors to override
-    background = Color.White,
-    surface = Color.White,
-    onPrimary = Color.White,
-    onSecondary = Color.Black,
-    onBackground = Color.Black,
-    onSurface = Color.Black,
-    */
 )
 
+private val DarkNewItemBackground = DarkColorPalette.primary.copy(0.12f)
+private val LightNewItemBackground = LightColorPalette.primary.copy(0.12f)
+
+private val DarkReplyItemBackground = DarkColorPalette.onSurface.copy(alpha = 0.05f)
+private val LightReplyItemBackground = LightColorPalette.onSurface.copy(alpha = 0.05f)
+
+private val DarkSelectedNote = DarkNewItemBackground.compositeOver(DarkColorPalette.background)
+private val LightSelectedNote = LightNewItemBackground.compositeOver(LightColorPalette.background)
+
 val Colors.newItemBackgroundColor: Color
-    @Composable
-    get() = remember { if (isLight) primary.copy(0.05f) else primary.copy(0.12f) }
+    get() = if (isLight) LightNewItemBackground else DarkNewItemBackground
+
+val Colors.replyBackground: Color
+    get() = if (isLight) LightReplyItemBackground else DarkReplyItemBackground
+
+val Colors.selectedNote: Color
+    get() = if (isLight) LightSelectedNote else DarkSelectedNote
 
 @Composable
 fun AmethystTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {

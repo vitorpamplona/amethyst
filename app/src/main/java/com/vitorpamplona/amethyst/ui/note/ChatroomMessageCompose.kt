@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -78,7 +79,7 @@ fun ChatroomMessageCompose(
     baseNote: Note,
     routeForLastRead: String?,
     innerQuote: Boolean = false,
-    parentBackgroundColor: Color? = null,
+    parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     onWantsToReply: (Note) -> Unit
@@ -143,22 +144,30 @@ fun ChatroomMessageCompose(
                 onClick = { showHiddenNote = true }
             )
         } else {
-            val backgroundBubbleColor: Color
-            val alignment: Arrangement.Horizontal
-            val shape: Shape
+            val loggedInColors = MaterialTheme.colors.primary.copy(alpha = 0.32f)
+            val otherColors = MaterialTheme.colors.onSurface.copy(alpha = 0.12f)
+            val defaultBackground = MaterialTheme.colors.background
 
-            if (note.author == loggedIn) {
-                backgroundBubbleColor = MaterialTheme.colors.primary.copy(alpha = 0.32f)
-                    .compositeOver(parentBackgroundColor ?: MaterialTheme.colors.background)
-
-                alignment = Arrangement.End
-                shape = ChatBubbleShapeMe
-            } else {
-                backgroundBubbleColor = MaterialTheme.colors.onSurface.copy(alpha = 0.12f)
-                    .compositeOver(parentBackgroundColor ?: MaterialTheme.colors.background)
-
-                alignment = Arrangement.Start
-                shape = ChatBubbleShapeThem
+            val backgroundBubbleColor = remember {
+                if (note.author == loggedIn) {
+                    mutableStateOf(loggedInColors.compositeOver(parentBackgroundColor?.value ?: defaultBackground))
+                } else {
+                    mutableStateOf(otherColors.compositeOver(parentBackgroundColor?.value ?: defaultBackground))
+                }
+            }
+            val alignment: Arrangement.Horizontal = remember {
+                if (note.author == loggedIn) {
+                    Arrangement.End
+                } else {
+                    Arrangement.Start
+                }
+            }
+            val shape: Shape = remember {
+                if (note.author == loggedIn) {
+                    ChatBubbleShapeMe
+                } else {
+                    ChatBubbleShapeThem
+                }
             }
 
             val scope = rememberCoroutineScope()
@@ -206,7 +215,7 @@ fun ChatroomMessageCompose(
                         }
                     ) {
                         Surface(
-                            color = backgroundBubbleColor,
+                            color = backgroundBubbleColor.value,
                             shape = shape,
                             modifier = Modifier
                                 .combinedClickable(
@@ -361,7 +370,7 @@ fun ChatTimeAgo(time: Long) {
 private fun RenderRegularTextNote(
     note: Note,
     canPreview: Boolean,
-    backgroundBubbleColor: Color,
+    backgroundBubbleColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {

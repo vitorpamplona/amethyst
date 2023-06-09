@@ -1,7 +1,6 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,6 +26,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -54,25 +55,33 @@ fun BadgeCompose(likeSetCard: BadgeCard, isInnerNote: Boolean = false, routeForL
     if (note == null) {
         BlankNote(Modifier, isInnerNote)
     } else {
-        var isNew by remember { mutableStateOf<Boolean>(false) }
+        val defaultBackgroundColor = MaterialTheme.colors.background
+        val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
+        val newItemColor = MaterialTheme.colors.newItemBackgroundColor
 
         LaunchedEffect(key1 = likeSetCard) {
             scope.launch(Dispatchers.IO) {
-                isNew = likeSetCard.createdAt() > NotificationCache.load(routeForLastRead)
+                val isNew = likeSetCard.createdAt() > NotificationCache.load(routeForLastRead)
 
                 NotificationCache.markAsRead(routeForLastRead, likeSetCard.createdAt())
-            }
-        }
 
-        val backgroundColor = if (isNew) {
-            MaterialTheme.colors.newItemBackgroundColor.compositeOver(MaterialTheme.colors.background)
-        } else {
-            MaterialTheme.colors.background
+                val newBackgroundColor = if (isNew) {
+                    newItemColor.compositeOver(defaultBackgroundColor)
+                } else {
+                    defaultBackgroundColor
+                }
+
+                if (backgroundColor.value != newBackgroundColor) {
+                    backgroundColor.value = newBackgroundColor
+                }
+            }
         }
 
         Column(
             modifier = Modifier
-                .background(backgroundColor)
+                .drawBehind {
+                    drawRect(backgroundColor.value)
+                }
                 .combinedClickable(
                     onClick = {
                         scope.launch {
