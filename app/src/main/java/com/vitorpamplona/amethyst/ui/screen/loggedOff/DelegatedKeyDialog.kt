@@ -129,9 +129,16 @@ fun DelegatedKeyDialog(
         Account(Persona(), proxy = proxy, proxyPort = proxyPort, delegatorHexKey = "", delegationToken = "", delegationSignature = ""),
         "",
         listOf(
+            Kind(0, "SetMetadata", remember { mutableStateOf(false) }),
             Kind(1, "TextNote", remember { mutableStateOf(true) }),
-            Kind(3, "Contacts", remember { mutableStateOf(true) }),
-            Kind(7, "Reaction", remember { mutableStateOf(true) })
+            Kind(3, "Contacts", remember { mutableStateOf(false) }),
+            Kind(4, "DM's", remember { mutableStateOf(false) }),
+            Kind(5, "Delete", remember { mutableStateOf(false) }),
+            Kind(6, "Repost", remember { mutableStateOf(false) }),
+            Kind(7, "Reaction", remember { mutableStateOf(true) }),
+            Kind(9734, "Zap", remember { mutableStateOf(true) }),
+            Kind(30000, "Pubkey lists (Blocked/Muted)", remember { mutableStateOf(false) }),
+            Kind(30001, "Event lists (Pinned/Bookmarked)", remember { mutableStateOf(false) })
         ),
         "",
         Calendar.getInstance().timeInMillis,
