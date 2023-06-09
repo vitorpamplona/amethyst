@@ -7,6 +7,7 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
@@ -108,9 +109,10 @@ class MainActivity : FragmentActivity() {
         // network is available for use
         override fun onAvailable(network: Network) {
             super.onAvailable(network)
-
+            Log.d("NETWORKCALLBACK", "onAvailable: Disconnecting and connecting again")
             // Only starts after login
             GlobalScope.launch(Dispatchers.IO) {
+                ServiceManager.pause()
                 ServiceManager.start(this@MainActivity)
             }
         }
@@ -126,7 +128,7 @@ class MainActivity : FragmentActivity() {
         // lost network connection
         override fun onLost(network: Network) {
             super.onLost(network)
-
+            Log.d("NETWORKCALLBACK", "onLost: Disconnecting and pausing relay's connection")
             // Only starts after login
             GlobalScope.launch(Dispatchers.IO) {
                 ServiceManager.pause()

@@ -19,6 +19,7 @@ object VideoCache {
 
     lateinit var cacheDataSourceFactory: CacheDataSource.Factory
 
+    @Synchronized
     fun init(context: Context) {
         if (!this::simpleCache.isInitialized) {
             exoDatabaseProvider = StandaloneDatabaseProvider(context)

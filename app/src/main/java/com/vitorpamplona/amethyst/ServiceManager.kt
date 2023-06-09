@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst
 
 import android.content.Context
 import android.os.Build
+import android.util.Log
 import coil.Coil
 import coil.ImageLoader
 import coil.decode.GifDecoder
@@ -31,7 +32,10 @@ object ServiceManager {
         start(context)
     }
 
+    @Synchronized
     fun start(context: Context) {
+        Log.d("ServiceManager", "Starting Relay Services")
+
         val myAccount = account
 
         // Resets Proxy Use
@@ -75,6 +79,8 @@ object ServiceManager {
     }
 
     fun pause() {
+        Log.d("ServiceManager", "Pausing Relay Services")
+
         NostrAccountDataSource.stop()
         NostrHomeDataSource.stop()
         NostrChannelDataSource.stop()
