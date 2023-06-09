@@ -4,7 +4,6 @@ import android.content.Context
 import android.widget.Toast
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -85,7 +84,7 @@ fun ReactionsRow(baseNote: Note, showReactionDetail: Boolean, accountViewModel: 
         mutableStateOf<Boolean>(false)
     }
 
-    Spacer(modifier = Modifier.height(8.dp).border(1.dp, Color.Red))
+    Spacer(modifier = Modifier.height(5.dp))
 
     Row(verticalAlignment = CenterVertically, modifier = Modifier.padding(start = 10.dp)) {
         if (showReactionDetail) {
@@ -121,7 +120,7 @@ fun ReactionsRow(baseNote: Note, showReactionDetail: Boolean, accountViewModel: 
         ReactionDetailGallery(baseNote, nav, accountViewModel)
     }
 
-    Spacer(modifier = Modifier.height(8.dp))
+    Spacer(modifier = Modifier.height(5.dp))
 }
 
 @Composable

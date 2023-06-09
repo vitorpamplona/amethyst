@@ -526,7 +526,7 @@ private fun NoteWithReactions(
                 nav
             )
         } else {
-            if (!isQuotedNote && !isBoostedNote && baseNote.event !is RepostEvent) {
+            if (!isBoostedNote && baseNote.event !is RepostEvent) {
                 Spacer(modifier = Modifier.height(10.dp))
             }
         }
