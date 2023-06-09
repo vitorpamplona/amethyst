@@ -970,12 +970,20 @@ private fun RenderHighlight(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val noteEvent = note.event as? HighlightEvent ?: return
+    val quote = remember {
+        (note.event as? HighlightEvent)?.quote() ?: ""
+    }
+    val author = remember() {
+        (note.event as? HighlightEvent)?.author()
+    }
+    val url = remember() {
+        (note.event as? HighlightEvent)?.inUrl()
+    }
 
     DisplayHighlight(
-        noteEvent.quote(),
-        noteEvent.author(),
-        noteEvent.inUrl(),
+        quote,
+        author,
+        url,
         makeItShort,
         canPreview,
         backgroundColor,
