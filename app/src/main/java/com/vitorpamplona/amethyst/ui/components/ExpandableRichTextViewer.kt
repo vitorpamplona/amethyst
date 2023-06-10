@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -23,13 +22,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.secondaryButtonBackground
 
 const val SHORT_TEXT_LENGTH = 350
 
@@ -101,14 +100,13 @@ fun ExpandableRichTextViewer(
 }
 
 @Composable
-public fun ShowMoreButton(onClick: () -> Unit) {
+fun ShowMoreButton(onClick: () -> Unit) {
     Button(
         modifier = Modifier.padding(top = 10.dp),
         onClick = onClick,
         shape = ButtonBorder,
         colors = ButtonDefaults.buttonColors(
-            backgroundColor = MaterialTheme.colors.primary.copy(alpha = 0.32f)
-                .compositeOver(MaterialTheme.colors.background)
+            backgroundColor = MaterialTheme.colors.secondaryButtonBackground
         ),
         contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
     ) {

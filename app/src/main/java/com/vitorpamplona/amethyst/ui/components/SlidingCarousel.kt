@@ -25,6 +25,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -68,7 +69,7 @@ fun DotsIndicator(
     totalDots: Int,
     selectedIndex: Int,
     selectedColor: Color = MaterialTheme.colors.primary /* Color.Yellow */,
-    unSelectedColor: Color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f) /* Color.Gray */,
+    unSelectedColor: Color = MaterialTheme.colors.placeholderText /* Color.Gray */,
     dotSize: Dp
 ) {
     LazyRow(

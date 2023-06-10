@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -38,7 +39,7 @@ fun NewPollPrimaryDescription(pollViewModel: NewPostViewModel) {
     )
     val colorValid = TextFieldDefaults.outlinedTextFieldColors(
         focusedBorderColor = MaterialTheme.colors.primary,
-        unfocusedBorderColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+        unfocusedBorderColor = MaterialTheme.colors.placeholderText
     )
 
     OutlinedTextField(
@@ -49,7 +50,7 @@ fun NewPollPrimaryDescription(pollViewModel: NewPostViewModel) {
         label = {
             Text(
                 text = stringResource(R.string.poll_primary_description),
-                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                color = MaterialTheme.colors.placeholderText
             )
         },
         keyboardOptions = KeyboardOptions.Default.copy(
@@ -67,7 +68,7 @@ fun NewPollPrimaryDescription(pollViewModel: NewPostViewModel) {
         placeholder = {
             Text(
                 text = stringResource(R.string.poll_primary_description),
-                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                color = MaterialTheme.colors.placeholderText
             )
         },
         colors = if (isInputValid) colorValid else colorInValid,

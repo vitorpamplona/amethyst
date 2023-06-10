@@ -97,6 +97,7 @@ import com.vitorpamplona.amethyst.ui.screen.RelayFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -447,7 +448,7 @@ private fun ProfileHeader(
                 contentPadding = PaddingValues(0.dp)
             ) {
                 Icon(
-                    tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                    tint = MaterialTheme.colors.placeholderText,
                     imageVector = Icons.Default.MoreVert,
                     contentDescription = stringResource(R.string.more_options)
                 )
@@ -610,7 +611,7 @@ private fun DrawAdditionalInfo(
                 CreateTextWithEmoji(
                     text = "@$it",
                     tags = tags,
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    color = MaterialTheme.colors.placeholderText
                 )
             }
         }
@@ -620,7 +621,7 @@ private fun DrawAdditionalInfo(
         Text(
             text = user.pubkeyDisplayHex(),
             modifier = Modifier.padding(top = 1.dp, bottom = 1.dp),
-            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+            color = MaterialTheme.colors.placeholderText
         )
 
         IconButton(
@@ -633,7 +634,7 @@ private fun DrawAdditionalInfo(
                 imageVector = Icons.Default.ContentCopy,
                 null,
                 modifier = Modifier.size(15.dp),
-                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                tint = MaterialTheme.colors.placeholderText
             )
         }
 
@@ -660,7 +661,7 @@ private fun DrawAdditionalInfo(
                 painter = painterResource(R.drawable.ic_qrcode),
                 null,
                 modifier = Modifier.size(15.dp),
-                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                tint = MaterialTheme.colors.placeholderText
             )
         }
     }
@@ -673,7 +674,7 @@ private fun DrawAdditionalInfo(
     if (!website.isNullOrEmpty()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
-                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                tint = MaterialTheme.colors.placeholderText,
                 imageVector = Icons.Default.Link,
                 contentDescription = stringResource(R.string.website),
                 modifier = Modifier.size(16.dp)
@@ -1224,7 +1225,7 @@ private fun MessageButton(user: User, nav: (String) -> Unit) {
         shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
-                backgroundColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                backgroundColor = MaterialTheme.colors.placeholderText
             )
     ) {
         Icon(

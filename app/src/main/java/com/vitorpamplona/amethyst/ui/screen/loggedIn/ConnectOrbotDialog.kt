@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.components.richTextDefaults
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.launch
 
 @Composable
@@ -121,7 +122,7 @@ fun ConnectOrbotDialog(onClose: () -> Unit, onPost: () -> Unit, portNumber: Muta
                             placeholder = {
                                 Text(
                                     text = "9050",
-                                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                    color = MaterialTheme.colors.placeholderText
                                 )
                             }
                         )

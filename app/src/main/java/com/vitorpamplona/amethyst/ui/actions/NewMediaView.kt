@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.components.*
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -221,7 +222,7 @@ fun ImageVideoPost(postViewModel: NewMediaModel, acc: Account) {
                 placeholder = {
                     Text(
                         text = stringResource(R.string.content_description_example),
-                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                        color = MaterialTheme.colors.placeholderText
                     )
                 },
                 keyboardOptions = KeyboardOptions.Default.copy(

@@ -22,6 +22,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -46,30 +48,35 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, 
 
     val scope = rememberCoroutineScope()
 
-    var isNew by remember { mutableStateOf(false) }
+    val defaultBackgroundColor = MaterialTheme.colors.background
+    val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
+    val newItemColor = MaterialTheme.colors.newItemBackgroundColor
 
-    LaunchedEffect(key1 = messageSetCard.createdAt()) {
-        launch(Dispatchers.IO) {
-            val newIsNew =
-                messageSetCard.createdAt() > NotificationCache.load(routeForLastRead)
+    LaunchedEffect(key1 = messageSetCard) {
+        scope.launch(Dispatchers.IO) {
+            val isNew = messageSetCard.createdAt() > NotificationCache.load(routeForLastRead)
 
             NotificationCache.markAsRead(routeForLastRead, messageSetCard.createdAt())
 
-            if (newIsNew != isNew) {
-                isNew = newIsNew
+            val newBackgroundColor = if (isNew) {
+                newItemColor.compositeOver(defaultBackgroundColor)
+            } else {
+                defaultBackgroundColor
+            }
+
+            if (backgroundColor.value != newBackgroundColor) {
+                backgroundColor.value = newBackgroundColor
             }
         }
     }
 
-    val backgroundColor = if (isNew) {
-        MaterialTheme.colors.newItemBackgroundColor.compositeOver(MaterialTheme.colors.background)
-    } else {
-        MaterialTheme.colors.background
-    }
-
-    val columnModifier = remember(isNew) {
+    val columnModifier = remember(backgroundColor.value) {
         Modifier
-            .background(backgroundColor)
+            .drawBehind {
+                drawRect(
+                    backgroundColor.value
+                )
+            }
             .padding(
                 start = 12.dp,
                 end = 12.dp,

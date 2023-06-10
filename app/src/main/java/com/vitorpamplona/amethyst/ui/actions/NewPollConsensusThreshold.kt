@@ -22,6 +22,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
 fun NewPollConsensusThreshold(pollViewModel: NewPostViewModel) {
@@ -43,7 +44,7 @@ fun NewPollConsensusThreshold(pollViewModel: NewPostViewModel) {
     )
     val colorValid = TextFieldDefaults.outlinedTextFieldColors(
         focusedBorderColor = MaterialTheme.colors.primary,
-        unfocusedBorderColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+        unfocusedBorderColor = MaterialTheme.colors.placeholderText
     )
 
     Row(
@@ -59,13 +60,13 @@ fun NewPollConsensusThreshold(pollViewModel: NewPostViewModel) {
             label = {
                 Text(
                     text = stringResource(R.string.poll_consensus_threshold),
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    color = MaterialTheme.colors.placeholderText
                 )
             },
             placeholder = {
                 Text(
                     text = stringResource(R.string.poll_consensus_threshold_percent),
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    color = MaterialTheme.colors.placeholderText
                 )
             }
         )

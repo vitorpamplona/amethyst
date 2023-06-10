@@ -33,6 +33,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.*
@@ -124,7 +126,7 @@ private fun OptionNote(
             val color = if (poolOption.consensusThreadhold) {
                 Color.Green.copy(alpha = 0.32f)
             } else {
-                MaterialTheme.colors.primary.copy(alpha = 0.32f)
+                MaterialTheme.colors.mediumImportanceLink
             }
 
             ZapVote(
@@ -411,7 +413,7 @@ fun ZapVote(
                     imageVector = Icons.Outlined.Bolt,
                     contentDescription = stringResource(id = R.string.zaps),
                     modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    tint = MaterialTheme.colors.placeholderText
                 )
             } else {
                 Spacer(Modifier.width(3.dp))
@@ -429,7 +431,7 @@ fun ZapVote(
         Text(
             showAmount(poolOption.zappedValue),
             fontSize = 14.sp,
-            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+            color = MaterialTheme.colors.placeholderText,
             modifier = modifier
         )
     }

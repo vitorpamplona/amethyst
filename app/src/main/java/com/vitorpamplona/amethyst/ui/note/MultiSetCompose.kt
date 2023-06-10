@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
+import com.vitorpamplona.amethyst.ui.theme.overPictureBackground
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.coroutines.Dispatchers
@@ -341,10 +342,11 @@ private fun AuthorPictureAndComment(
 
             amount?.let {
                 Box(modifier = Modifier.fillMaxSize().clip(shape = CircleShape), contentAlignment = Alignment.BottomCenter) {
+                    val backgroundColor = MaterialTheme.colors.overPictureBackground
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(MaterialTheme.colors.background.copy(0.62f)),
+                            .drawBehind { drawRect(backgroundColor) },
                         contentAlignment = Alignment.BottomCenter
                     ) {
                         Text(

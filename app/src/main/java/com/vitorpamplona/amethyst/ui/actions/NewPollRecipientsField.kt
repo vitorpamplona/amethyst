@@ -10,6 +10,7 @@ import androidx.compose.ui.res.stringResource
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
 fun NewPollRecipientsField(pollViewModel: NewPostViewModel, account: Account) {
@@ -29,13 +30,13 @@ fun NewPollRecipientsField(pollViewModel: NewPostViewModel, account: Account) {
         label = {
             Text(
                 text = stringResource(R.string.poll_zap_recipients),
-                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                color = MaterialTheme.colors.placeholderText
             )
         },
         placeholder = {
             Text(
                 text = stringResource(R.string.poll_zap_recipients),
-                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                color = MaterialTheme.colors.placeholderText
             )
         }
 

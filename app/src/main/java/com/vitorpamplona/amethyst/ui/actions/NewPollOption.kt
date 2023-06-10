@@ -11,6 +11,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
 fun NewPollOption(pollViewModel: NewPostViewModel, optionIndex: Int) {
@@ -35,13 +36,13 @@ fun NewPollOption(pollViewModel: NewPostViewModel, optionIndex: Int) {
             label = {
                 Text(
                     text = stringResource(R.string.poll_option_index).format(optionIndex + 1),
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    color = MaterialTheme.colors.placeholderText
                 )
             },
             placeholder = {
                 Text(
                     text = stringResource(R.string.poll_option_description),
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    color = MaterialTheme.colors.placeholderText
                 )
             },
             keyboardOptions = KeyboardOptions.Default.copy(

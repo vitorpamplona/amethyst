@@ -37,6 +37,8 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import kotlinx.coroutines.launch
 
 @Composable
@@ -57,7 +59,7 @@ fun InvoiceRequest(
             .fillMaxWidth()
             .padding(start = 30.dp, end = 30.dp)
             .clip(shape = QuoteBorder)
-            .border(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.12f), QuoteBorder)
+            .border(1.dp, MaterialTheme.colors.subtleBorder, QuoteBorder)
     ) {
         Column(
             modifier = Modifier
@@ -98,7 +100,7 @@ fun InvoiceRequest(
                 placeholder = {
                     Text(
                         text = stringResource(R.string.thank_you_so_much),
-                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                        color = MaterialTheme.colors.placeholderText
                     )
                 },
                 keyboardOptions = KeyboardOptions.Default.copy(
@@ -123,7 +125,7 @@ fun InvoiceRequest(
                 placeholder = {
                     Text(
                         text = "1000",
-                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                        color = MaterialTheme.colors.placeholderText
                     )
                 },
                 keyboardOptions = KeyboardOptions.Default.copy(

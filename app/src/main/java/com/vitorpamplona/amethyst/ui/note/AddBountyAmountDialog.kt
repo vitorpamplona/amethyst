@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.PostButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 class AddBountyAmountViewModel : ViewModel() {
     private var account: Account? = null
@@ -124,7 +125,7 @@ fun AddBountyAmountDialog(bounty: Note, accountViewModel: AccountViewModel, onCl
                         placeholder = {
                             Text(
                                 text = "10000, 50000, 5000000",
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                color = MaterialTheme.colors.placeholderText
                             )
                         },
                         singleLine = true

@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.amethyst.ui.uriToRoute
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
@@ -415,7 +416,7 @@ private fun RenderContentAsMarkdown(content: String, backgroundColor: MutableSta
                 .clip(shape = QuoteBorder)
                 .border(
                     1.dp,
-                    MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
+                    MaterialTheme.colors.subtleBorder,
                     QuoteBorder
                 )
                 .background(
@@ -767,7 +768,7 @@ private fun DisplayFullNote(
     nav: (String) -> Unit,
     loadedLink: LoadedBechLink
 ) {
-    val borderColor = MaterialTheme.colors.onSurface.copy(alpha = 0.12f)
+    val borderColor = MaterialTheme.colors.subtleBorder
 
     val modifier = remember {
         Modifier
@@ -955,7 +956,7 @@ private fun DisplayNoteFromTag(
                 .clip(shape = QuoteBorder)
                 .border(
                     1.dp,
-                    MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
+                    MaterialTheme.colors.subtleBorder,
                     QuoteBorder
                 ),
             parentBackgroundColor = backgroundColor,

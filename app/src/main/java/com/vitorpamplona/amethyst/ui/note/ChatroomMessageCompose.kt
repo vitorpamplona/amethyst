@@ -38,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.compositeOver
@@ -69,6 +70,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeMe
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeThem
 import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
+import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -144,8 +148,8 @@ fun ChatroomMessageCompose(
                 onClick = { showHiddenNote = true }
             )
         } else {
-            val loggedInColors = MaterialTheme.colors.primary.copy(alpha = 0.32f)
-            val otherColors = MaterialTheme.colors.onSurface.copy(alpha = 0.12f)
+            val loggedInColors = MaterialTheme.colors.mediumImportanceLink
+            val otherColors = MaterialTheme.colors.subtleBorder
             val defaultBackground = MaterialTheme.colors.background
 
             val backgroundBubbleColor = remember {
@@ -327,7 +331,7 @@ private fun StatusRow(
     accountViewModel: AccountViewModel,
     onWantsToReply: (Note) -> Unit
 ) {
-    val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+    val grayTint = MaterialTheme.colors.placeholderText
     val time = remember { baseNote.createdAt() ?: 0 }
 
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -361,7 +365,7 @@ fun ChatTimeAgo(time: Long) {
 
     Text(
         timeStr,
-        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+        color = MaterialTheme.colors.placeholderText,
         fontSize = 12.sp
     )
 }
@@ -544,7 +548,7 @@ private fun RelayBadges(baseNote: Note) {
                 imageVector = Icons.Default.ChevronRight,
                 null,
                 modifier = Modifier.size(15.dp),
-                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                tint = MaterialTheme.colors.placeholderText
             )
         }
     }
@@ -569,10 +573,13 @@ fun RenderRelay(dirtyUrl: String) {
             .clickable(onClick = { uri.openUri(website) })
     }
 
+    val backgroundColor = MaterialTheme.colors.background
+
     val iconModifier = remember(dirtyUrl) {
         Modifier
             .size(13.dp)
             .clip(shape = CircleShape)
+            .drawBehind { drawRect(backgroundColor) }
     }
 
     Box(
@@ -580,11 +587,11 @@ fun RenderRelay(dirtyUrl: String) {
     ) {
         RobohashFallbackAsyncImage(
             robot = iconUrl,
-            robotSize = 13.dp,
+            robotSize = remember { 13.dp },
             model = iconUrl,
             contentDescription = stringResource(id = R.string.relay_icon),
             colorFilter = RelayIconFilter,
-            modifier = iconModifier.background(MaterialTheme.colors.background)
+            modifier = iconModifier
         )
     }
 }

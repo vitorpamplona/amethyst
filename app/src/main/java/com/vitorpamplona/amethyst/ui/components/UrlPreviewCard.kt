@@ -21,6 +21,7 @@ import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.previews.UrlInfoItem
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 
 @Composable
 fun UrlPreviewCard(
@@ -35,7 +36,7 @@ fun UrlPreviewCard(
             .clip(shape = QuoteBorder)
             .border(
                 1.dp,
-                MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
+                MaterialTheme.colors.subtleBorder,
                 QuoteBorder
             )
     ) {

@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,8 +25,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.text.ClickableText
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Divider
 import androidx.compose.material.DropdownMenu
 import androidx.compose.material.DropdownMenuItem
@@ -143,11 +140,13 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
-import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Following
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyBackground
+import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
@@ -756,7 +755,7 @@ private fun RenderTextEvent(
         if (makeItShort && isAuthorTheLoggedUser) {
             Text(
                 text = eventContent,
-                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                color = MaterialTheme.colors.placeholderText,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
@@ -802,7 +801,7 @@ private fun RenderPoll(
     if (makeItShort && accountViewModel.isLoggedUser(note.author)) {
         Text(
             text = eventContent,
-            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+            color = MaterialTheme.colors.placeholderText,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
@@ -962,7 +961,7 @@ fun RenderAppDefinition(
                 if (!website.isNullOrEmpty()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                            tint = MaterialTheme.colors.placeholderText,
                             imageVector = Icons.Default.Link,
                             contentDescription = stringResource(R.string.website),
                             modifier = Modifier.size(16.dp)
@@ -1058,7 +1057,7 @@ private fun RenderPrivateMessage(
             if (makeItShort && isAuthorTheLoggedUser) {
                 Text(
                     text = eventContent,
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                    color = MaterialTheme.colors.placeholderText,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -1310,17 +1309,8 @@ fun DisplayPeopleList(
                         )
                     }
             ) {
-                Button(
-                    modifier = Modifier.padding(top = 10.dp),
-                    onClick = { expanded = !expanded },
-                    shape = ButtonBorder,
-                    colors = ButtonDefaults.buttonColors(
-                        backgroundColor = MaterialTheme.colors.primary.copy(alpha = 0.32f)
-                            .compositeOver(MaterialTheme.colors.background)
-                    ),
-                    contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
-                ) {
-                    Text(text = stringResource(R.string.show_more), color = Color.White)
+                ShowMoreButton {
+                    expanded = !expanded
                 }
             }
         }
@@ -1527,17 +1517,8 @@ fun PinListHeader(
                         )
                     }
             ) {
-                Button(
-                    modifier = Modifier.padding(top = 10.dp),
-                    onClick = { expanded = !expanded },
-                    shape = ButtonBorder,
-                    colors = ButtonDefaults.buttonColors(
-                        backgroundColor = MaterialTheme.colors.primary.copy(alpha = 0.32f)
-                            .compositeOver(MaterialTheme.colors.background)
-                    ),
-                    contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
-                ) {
-                    Text(text = stringResource(R.string.show_more), color = Color.White)
+                ShowMoreButton {
+                    expanded = !expanded
                 }
             }
         }
@@ -1614,7 +1595,7 @@ private fun RenderReport(
                 .clip(shape = QuoteBorder)
                 .border(
                     1.dp,
-                    MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
+                    MaterialTheme.colors.subtleBorder,
                     QuoteBorder
                 ),
             unPackReply = false,
@@ -1699,7 +1680,7 @@ private fun ReplyNoteComposition(
             .clip(shape = QuoteBorder)
             .border(
                 1.dp,
-                MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
+                MaterialTheme.colors.subtleBorder,
                 QuoteBorder
             ),
         unPackReply = false,
@@ -1760,7 +1741,7 @@ private fun FirstUserInfoRow(
             Text(
                 "  ${stringResource(id = R.string.boosted)}",
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                color = MaterialTheme.colors.placeholderText
             )
         } else {
             DisplayFollowingHashtagsInPost(eventNote, accountViewModel, nav)
@@ -1787,7 +1768,7 @@ private fun MoreOptionsButton(
             imageVector = Icons.Default.MoreVert,
             null,
             modifier = Modifier.size(15.dp),
-            tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+            tint = MaterialTheme.colors.placeholderText
         )
 
         NoteDropDownMenu(
@@ -1815,7 +1796,7 @@ fun TimeAgo(time: Long) {
 
     Text(
         timeStr,
-        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+        color = MaterialTheme.colors.placeholderText,
         maxLines = 1
     )
 }
@@ -1878,11 +1859,19 @@ private fun ChannelNotePicture(baseChannel: Channel) {
     val channelState by baseChannel.live.observeAsState()
     val channel = remember(channelState) { channelState?.channel } ?: return
 
+    val backgroundColor = MaterialTheme.colors.background
+
     val modifier = remember {
         Modifier
             .width(30.dp)
             .height(30.dp)
             .clip(shape = CircleShape)
+            .drawBehind { drawRect(backgroundColor) }
+            .border(
+                2.dp,
+                backgroundColor,
+                CircleShape
+            )
     }
 
     val boxModifier = remember {
@@ -1901,12 +1890,6 @@ private fun ChannelNotePicture(baseChannel: Channel) {
             model = model,
             contentDescription = stringResource(R.string.group_picture),
             modifier = modifier
-                .background(MaterialTheme.colors.background)
-                .border(
-                    2.dp,
-                    MaterialTheme.colors.background,
-                    CircleShape
-                )
         )
     }
 }
@@ -2184,13 +2167,13 @@ private fun RenderPledgeAmount(
             imageVector = Icons.Default.Bolt,
             contentDescription = stringResource(R.string.zaps),
             modifier = Modifier.size(20.dp),
-            tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+            tint = MaterialTheme.colors.placeholderText
         )
     }
 
     Text(
         text = reward,
-        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+        color = MaterialTheme.colors.placeholderText
     )
 }
 
@@ -2228,7 +2211,7 @@ fun BadgeDisplay(baseNote: Note) {
             .clip(shape = CutCornerShape(20, 20, 20, 20))
             .border(
                 5.dp,
-                MaterialTheme.colors.primary.copy(alpha = 0.32f),
+                MaterialTheme.colors.mediumImportanceLink,
                 CutCornerShape(20)
             )
             .background(backgroundFromImage.first)
@@ -2434,7 +2417,7 @@ fun AudioTrackHeader(noteEvent: AudioTrackEvent, accountViewModel: AccountViewMo
                     it.first.role?.let {
                         Text(
                             text = it.capitalize(Locale.ROOT),
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                            color = MaterialTheme.colors.placeholderText,
                             maxLines = 1
                         )
                     }
@@ -2474,7 +2457,7 @@ private fun LongFormHeader(noteEvent: LongTextNoteEvent, note: Note, accountView
             .clip(shape = QuoteBorder)
             .border(
                 1.dp,
-                MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
+                MaterialTheme.colors.subtleBorder,
                 QuoteBorder
             )
     ) {
@@ -2644,7 +2627,7 @@ private fun ShowMoreRelaysButton(onClick: () -> Unit) {
                 imageVector = Icons.Default.ExpandMore,
                 null,
                 modifier = iconModifier,
-                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                tint = MaterialTheme.colors.placeholderText
             )
         }
     }
@@ -2679,17 +2662,20 @@ fun NoteAuthorPicture(
     }
 
     if (author == null) {
+        val backgroundColor = MaterialTheme.colors.background
+
         val nullModifier = remember {
             modifier
                 .size(size)
                 .clip(shape = CircleShape)
+                .drawBehind { drawRect(backgroundColor) }
         }
 
         RobohashAsyncImage(
             robot = "authornotfound",
             robotSize = size,
             contentDescription = stringResource(R.string.unknown_author),
-            modifier = nullModifier.background(MaterialTheme.colors.background)
+            modifier = nullModifier
         )
     } else {
         UserPicture(author!!, size, accountViewModel, modifier, onClick)
@@ -2764,6 +2750,8 @@ fun UserPicture(
     modifier: Modifier = Modifier,
     accountViewModel: AccountViewModel
 ) {
+    val backgroundColor = MaterialTheme.colors.background
+
     val myBoxModifier = remember {
         Modifier.size(size)
     }
@@ -2772,6 +2760,7 @@ fun UserPicture(
         modifier
             .size(size)
             .clip(shape = CircleShape)
+            .drawBehind { drawRect(backgroundColor) }
     }
 
     val myIconSize = remember(size) { size.div(3.5f) }
@@ -2783,7 +2772,7 @@ fun UserPicture(
                 ResizeImage(userPicture, size)
             },
             contentDescription = stringResource(id = R.string.profile_image),
-            modifier = myImageModifier.background(MaterialTheme.colors.background)
+            modifier = myImageModifier
         )
 
         ObserveAndDisplayFollowingMark(userHex, myIconSize, accountViewModel)
@@ -2820,14 +2809,17 @@ private fun FollowingIcon(iconSize: Dp) {
     }
 
     Box(myIconBoxModifier, contentAlignment = Alignment.Center) {
+        val backgroundColor = MaterialTheme.colors.background
+
         val myIconBackgroundModifier = remember {
             Modifier
                 .clip(CircleShape)
                 .fillMaxSize(0.6f)
+                .drawBehind { drawRect(backgroundColor) }
         }
 
         Box(
-            myIconBackgroundModifier.background(MaterialTheme.colors.background)
+            myIconBackgroundModifier
         )
 
         val myIconModifier = remember {

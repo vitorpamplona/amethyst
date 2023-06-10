@@ -81,6 +81,8 @@ import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.selectedNote
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
@@ -141,8 +143,8 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
                                         item,
                                         modifier = Modifier.drawReplyLevel(
                                             item.replyLevel(),
-                                            MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-                                            if (item.idHex == noteId) MaterialTheme.colors.primary.copy(alpha = 0.52f) else MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                            MaterialTheme.colors.placeholderText,
+                                            if (item.idHex == noteId) MaterialTheme.colors.lessImportantLink else MaterialTheme.colors.placeholderText
                                         ),
                                         accountViewModel = accountViewModel,
                                         nav = nav
@@ -159,8 +161,8 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
                                                 item,
                                                 modifier = Modifier.drawReplyLevel(
                                                     item.replyLevel(),
-                                                    MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-                                                    if (item.idHex == noteId) MaterialTheme.colors.primary.copy(alpha = 0.52f) else MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                                    MaterialTheme.colors.placeholderText,
+                                                    if (item.idHex == noteId) MaterialTheme.colors.lessImportantLink else MaterialTheme.colors.placeholderText
                                                 ),
                                                 parentBackgroundColor = background,
                                                 isBoostedNote = false,
@@ -284,7 +286,7 @@ fun NoteMaster(
 
                         Text(
                             timeAgo(note.createdAt(), context = context),
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                            color = MaterialTheme.colors.placeholderText,
                             maxLines = 1
                         )
 
@@ -296,7 +298,7 @@ fun NoteMaster(
                                 imageVector = Icons.Default.MoreVert,
                                 null,
                                 modifier = Modifier.size(15.dp),
-                                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                tint = MaterialTheme.colors.placeholderText
                             )
 
                             NoteDropDownMenu(baseNote, moreActionsExpanded, { moreActionsExpanded = false }, accountViewModel)

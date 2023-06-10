@@ -25,6 +25,7 @@ import androidx.core.content.ContextCompat.startActivity
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.lnurl.LnInvoiceUtil
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.NumberFormat
@@ -67,7 +68,7 @@ fun InvoicePreview(lnInvoice: String, amount: String?) {
             .fillMaxWidth()
             .padding(start = 30.dp, end = 30.dp)
             .clip(shape = QuoteBorder)
-            .border(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.12f), QuoteBorder)
+            .border(1.dp, MaterialTheme.colors.subtleBorder, QuoteBorder)
     ) {
         Column(
             modifier = Modifier

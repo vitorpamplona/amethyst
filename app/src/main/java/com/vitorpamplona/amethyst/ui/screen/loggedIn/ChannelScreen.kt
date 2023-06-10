@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.ui.screen.NostrChannelFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -281,7 +282,7 @@ fun DisplayReplyingToNote(
                         modifier = Modifier
                             .padding(end = 5.dp)
                             .size(30.dp),
-                        tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                        tint = MaterialTheme.colors.placeholderText
                     )
                 }
             }
@@ -318,7 +319,7 @@ fun EditFieldRow(
             placeholder = {
                 Text(
                     text = stringResource(R.string.reply_here),
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    color = MaterialTheme.colors.placeholderText
                 )
             },
             textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
@@ -334,7 +335,7 @@ fun EditFieldRow(
             leadingIcon = {
                 UploadFromGallery(
                     isUploading = channelScreenModel.isUploadingImage,
-                    tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                    tint = MaterialTheme.colors.placeholderText,
                     modifier = Modifier.padding(start = 5.dp)
                 ) {
                     val fileServer = if (isPrivate) {
@@ -418,7 +419,7 @@ fun ChannelHeader(baseChannel: Channel, accountViewModel: AccountViewModel, nav:
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             "${channel.info.about}",
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                            color = MaterialTheme.colors.placeholderText,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                             fontSize = 12.sp
@@ -489,7 +490,7 @@ private fun NoteCopyButton(
         shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
-                backgroundColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                backgroundColor = MaterialTheme.colors.placeholderText
             )
     ) {
         Icon(

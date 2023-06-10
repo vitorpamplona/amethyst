@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.CoroutineScope
@@ -78,7 +79,7 @@ import kotlin.math.roundToInt
 
 @Composable
 fun ReactionsRow(baseNote: Note, showReactionDetail: Boolean, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+    val grayTint = MaterialTheme.colors.placeholderText
 
     var wantsToSeeReactions = remember {
         mutableStateOf<Boolean>(false)

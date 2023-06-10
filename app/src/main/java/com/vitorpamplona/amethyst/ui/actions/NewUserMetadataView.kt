@@ -28,6 +28,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -95,7 +96,7 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                             placeholder = {
                                 Text(
                                     text = stringResource(R.string.my_display_name),
-                                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                    color = MaterialTheme.colors.placeholderText
                                 )
                             },
                             keyboardOptions = KeyboardOptions.Default.copy(
@@ -114,7 +115,7 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                             placeholder = {
                                 Text(
                                     text = stringResource(R.string.my_username),
-                                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                    color = MaterialTheme.colors.placeholderText
                                 )
                             },
                             singleLine = true
@@ -133,7 +134,7 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                         placeholder = {
                             Text(
                                 text = stringResource(id = R.string.about_me),
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                color = MaterialTheme.colors.placeholderText
                             )
                         },
                         keyboardOptions = KeyboardOptions.Default.copy(
@@ -152,13 +153,13 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                         placeholder = {
                             Text(
                                 text = "https://mywebsite.com/me.jpg",
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                color = MaterialTheme.colors.placeholderText
                             )
                         },
                         leadingIcon = {
                             UploadFromGallery(
                                 isUploading = postViewModel.isUploadingImageForPicture,
-                                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                                tint = MaterialTheme.colors.placeholderText,
                                 modifier = Modifier.padding(start = 5.dp)
                             ) {
                                 postViewModel.uploadForPicture(it, context)
@@ -177,13 +178,13 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                         placeholder = {
                             Text(
                                 text = "https://mywebsite.com/mybanner.jpg",
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                color = MaterialTheme.colors.placeholderText
                             )
                         },
                         leadingIcon = {
                             UploadFromGallery(
                                 isUploading = postViewModel.isUploadingImageForBanner,
-                                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                                tint = MaterialTheme.colors.placeholderText,
                                 modifier = Modifier.padding(start = 5.dp)
                             ) {
                                 postViewModel.uploadForBanner(it, context)
@@ -202,7 +203,7 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                         placeholder = {
                             Text(
                                 text = "https://mywebsite.com",
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                color = MaterialTheme.colors.placeholderText
                             )
                         },
                         singleLine = true
@@ -218,7 +219,7 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                         placeholder = {
                             Text(
                                 text = "_@mywebsite.com",
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                color = MaterialTheme.colors.placeholderText
                             )
                         },
                         singleLine = true
@@ -233,7 +234,7 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                         placeholder = {
                             Text(
                                 text = "me@mylightiningnode.com",
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                color = MaterialTheme.colors.placeholderText
                             )
                         },
                         singleLine = true
@@ -249,7 +250,7 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                         placeholder = {
                             Text(
                                 text = stringResource(R.string.lnurl),
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                color = MaterialTheme.colors.placeholderText
                             )
                         }
                     )
@@ -264,7 +265,7 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                         placeholder = {
                             Text(
                                 text = stringResource(R.string.twitter_proof_url_template),
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                color = MaterialTheme.colors.placeholderText
                             )
                         }
                     )
@@ -279,7 +280,7 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                         placeholder = {
                             Text(
                                 text = stringResource(R.string.mastodon_proof_url_template),
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                color = MaterialTheme.colors.placeholderText
                             )
                         }
                     )
@@ -294,7 +295,7 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                         placeholder = {
                             Text(
                                 text = stringResource(R.string.github_proof_url_template),
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                color = MaterialTheme.colors.placeholderText
                             )
                         }
                     )

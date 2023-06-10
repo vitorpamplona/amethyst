@@ -73,6 +73,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.UserLine
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -200,7 +203,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                 placeholder = {
                                     Text(
                                         text = stringResource(R.string.what_s_on_your_mind),
-                                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                        color = MaterialTheme.colors.placeholderText
                                     )
                                 },
                                 colors = TextFieldDefaults
@@ -219,9 +222,9 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
 
                                 Button(
                                     onClick = { postViewModel.pollOptions[postViewModel.pollOptions.size] = "" },
-                                    border = BorderStroke(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.32f)),
+                                    border = BorderStroke(1.dp, MaterialTheme.colors.placeholderText),
                                     colors = ButtonDefaults.outlinedButtonColors(
-                                        contentColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                        contentColor = MaterialTheme.colors.placeholderText
                                     )
                                 ) {
                                     Image(
@@ -293,7 +296,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                                     .clip(shape = QuoteBorder)
                                                     .border(
                                                         1.dp,
-                                                        MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
+                                                        MaterialTheme.colors.subtleBorder,
                                                         QuoteBorder
                                                     )
                                             )
@@ -395,7 +398,7 @@ fun Notifying(baseMentions: ImmutableList<User>?, onClick: (User) -> Unit) {
             Text(
                 stringResource(R.string.reply_notify),
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                color = MaterialTheme.colors.placeholderText
             )
 
             mentions.forEachIndexed { idx, user ->
@@ -410,7 +413,7 @@ fun Notifying(baseMentions: ImmutableList<User>?, onClick: (User) -> Unit) {
                     Button(
                         shape = ButtonBorder,
                         colors = ButtonDefaults.buttonColors(
-                            backgroundColor = MaterialTheme.colors.primary.copy(alpha = 0.32f)
+                            backgroundColor = MaterialTheme.colors.mediumImportanceLink
                         ),
                         onClick = {
                             onClick(myUser)
@@ -551,7 +554,7 @@ private fun ForwardZapTo(
             placeholder = {
                 Text(
                     text = stringResource(R.string.zap_forward_lnAddress),
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                    color = MaterialTheme.colors.placeholderText,
                     fontSize = 14.sp
                 )
             },
@@ -774,7 +777,7 @@ fun ImageVideoDescription(
             .clip(shape = QuoteBorder)
             .border(
                 1.dp,
-                MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
+                MaterialTheme.colors.subtleBorder,
                 QuoteBorder
             )
     ) {
@@ -819,7 +822,7 @@ fun ImageVideoDescription(
                         modifier = Modifier
                             .padding(end = 5.dp)
                             .size(30.dp),
-                        tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                        tint = MaterialTheme.colors.placeholderText
                     )
                 }
             }
@@ -909,7 +912,7 @@ fun ImageVideoDescription(
                         placeholder = {
                             Text(
                                 text = stringResource(R.string.content_description_example),
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                color = MaterialTheme.colors.placeholderText
                             )
                         },
                         keyboardOptions = KeyboardOptions.Default.copy(
