@@ -58,7 +58,8 @@ class MediaCompressor {
                     }
 
                     override fun onFailure(index: Int, failureMessage: String) {
-                        onError(failureMessage)
+                        // keeps going with original video
+                        onReady(uri, contentType, null)
                     }
 
                     override fun onCancelled(index: Int) {
