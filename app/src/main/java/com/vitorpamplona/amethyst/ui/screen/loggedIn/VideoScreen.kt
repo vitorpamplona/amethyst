@@ -302,7 +302,7 @@ private fun RenderVideoOrPicture(
             remember {
                 Modifier
                     .padding(start = 10.dp, end = 10.dp)
-                    .height(60.dp)
+                    .height(65.dp)
                     .weight(1f)
             },
             verticalArrangement = Arrangement.Center
@@ -319,7 +319,7 @@ private fun RenderVideoOrPicture(
             }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(top = 5.dp)
+                modifier = Modifier.padding(top = 2.dp)
             ) {
                 RelayBadges(baseNote = note)
             }
@@ -335,7 +335,7 @@ private fun VideoUserOptionAction(
     var moreActionsExpanded by remember { mutableStateOf(false) }
 
     IconButton(
-        modifier = remember { Modifier.size(24.dp) },
+        modifier = remember { Modifier.size(22.dp) },
         onClick = { moreActionsExpanded = true }
     ) {
         Icon(
