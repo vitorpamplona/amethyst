@@ -739,7 +739,7 @@ fun routeFor(note: Note, loggedIn: User): String? {
 }
 
 @Composable
-private fun RenderTextEvent(
+fun RenderTextEvent(
     note: Note,
     makeItShort: Boolean,
     canPreview: Boolean,
@@ -747,7 +747,16 @@ private fun RenderTextEvent(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val eventContent = remember(note.event) { accountViewModel.decrypt(note) }
+    val eventContent = remember(note.event) {
+        val subject = (note.event as? TextNoteEvent)?.subject()?.ifEmpty { null }
+        val body = accountViewModel.decrypt(note)
+
+        if (subject != null) {
+            "## $subject\n$body"
+        } else {
+            body
+        }
+    }
 
     if (eventContent != null) {
         val isAuthorTheLoggedUser = remember(note.event) { accountViewModel.isLoggedUser(note.author) }
@@ -787,7 +796,7 @@ private fun RenderTextEvent(
 }
 
 @Composable
-private fun RenderPoll(
+fun RenderPoll(
     note: Note,
     makeItShort: Boolean,
     canPreview: Boolean,
