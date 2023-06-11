@@ -12,6 +12,7 @@ import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material.Icon
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.ProvideTextStyle
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -23,11 +24,15 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.halilibo.richtext.markdown.Markdown
 import com.halilibo.richtext.markdown.MarkdownParseOptions
+import com.halilibo.richtext.ui.HeadingStyle
 import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.material.MaterialRichText
 import com.halilibo.richtext.ui.resolveDefaults
@@ -84,6 +89,36 @@ fun isValidURL(url: String?): Boolean {
     }
 }
 
+internal val DefaultHeadingStyle: HeadingStyle = { level, textStyle ->
+    when (level) {
+        0 -> textStyle.copy(
+            fontSize = 30.sp,
+            fontWeight = FontWeight.Light
+        )
+        1 -> textStyle.copy(
+            fontSize = 26.sp,
+            fontWeight = FontWeight.Light
+        )
+        2 -> textStyle.copy(
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Light
+        )
+        3 -> textStyle.copy(
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold
+        )
+        4 -> textStyle.copy(
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold
+        )
+        5 -> textStyle.copy(
+            fontWeight = FontWeight.Bold
+        )
+        else -> textStyle
+    }
+}
+
+internal val DefaultParagraphSpacing: TextUnit = 12.sp
 val richTextDefaults = RichTextStyle().resolveDefaults()
 
 fun isMarkdown(content: String): Boolean {
@@ -405,6 +440,8 @@ fun RenderCustomEmoji(word: String, state: RichTextViewerState) {
 @Composable
 private fun RenderContentAsMarkdown(content: String, backgroundColor: MutableState<Color>, tags: ImmutableListOfLists<String>?, nav: (String) -> Unit) {
     val myMarkDownStyle = richTextDefaults.copy(
+        paragraphSpacing = DefaultParagraphSpacing,
+        headingStyle = DefaultHeadingStyle,
         codeBlockStyle = richTextDefaults.codeBlockStyle?.copy(
             textStyle = TextStyle(
                 fontFamily = FontFamily.Monospace,
@@ -449,15 +486,17 @@ private fun RenderContentAsMarkdown(content: String, backgroundColor: MutableSta
         Unit
     }
 
-    MaterialRichText(
-        style = myMarkDownStyle
-    ) {
-        RefreshableContent(content, tags) {
-            Markdown(
-                content = it,
-                markdownParseOptions = MarkdownParseOptions.Default,
-                onLinkClicked = onClick
-            )
+    ProvideTextStyle(TextStyle(lineHeight = 1.30.em)) {
+        MaterialRichText(
+            style = myMarkDownStyle
+        ) {
+            RefreshableContent(content, tags) {
+                Markdown(
+                    content = it,
+                    markdownParseOptions = MarkdownParseOptions.Default,
+                    onLinkClicked = onClick
+                )
+            }
         }
     }
 }
@@ -652,7 +691,7 @@ private fun returnMarkdownWithSpecialContent(content: String, tags: ImmutableLis
             if (isValidURL(word)) {
                 val removedParamsFromUrl = word.split("?")[0].lowercase()
                 if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-                    returnContent += "$word "
+                    returnContent += "![]($word) "
                 } else {
                     returnContent += "[$word]($word) "
                 }

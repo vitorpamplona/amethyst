@@ -22,6 +22,7 @@ import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.ProvideTextStyle
 import androidx.compose.material.SnackbarDefaults.backgroundColor
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
@@ -45,8 +46,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
@@ -60,18 +63,13 @@ import com.vitorpamplona.amethyst.service.model.PeopleListEvent
 import com.vitorpamplona.amethyst.service.model.PinListEvent
 import com.vitorpamplona.amethyst.service.model.PollNoteEvent
 import com.vitorpamplona.amethyst.service.model.RelaySetEvent
-import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
-import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
-import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
-import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.note.*
 import com.vitorpamplona.amethyst.ui.note.BadgeDisplay
 import com.vitorpamplona.amethyst.ui.note.BlankNote
 import com.vitorpamplona.amethyst.ui.note.DisplayFollowingHashtagsInPost
 import com.vitorpamplona.amethyst.ui.note.DisplayPoW
 import com.vitorpamplona.amethyst.ui.note.DisplayReward
-import com.vitorpamplona.amethyst.ui.note.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.note.HiddenNote
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
@@ -84,7 +82,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.selectedNote
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.delay
 
@@ -139,16 +136,18 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
                         ) {
                             itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { index, item ->
                                 if (index == 0) {
-                                    NoteMaster(
-                                        item,
-                                        modifier = Modifier.drawReplyLevel(
-                                            item.replyLevel(),
-                                            MaterialTheme.colors.placeholderText,
-                                            if (item.idHex == noteId) MaterialTheme.colors.lessImportantLink else MaterialTheme.colors.placeholderText
-                                        ),
-                                        accountViewModel = accountViewModel,
-                                        nav = nav
-                                    )
+                                    ProvideTextStyle(TextStyle(fontSize = 16.sp, lineHeight = 1.20.em)) {
+                                        NoteMaster(
+                                            item,
+                                            modifier = Modifier.drawReplyLevel(
+                                                item.replyLevel(),
+                                                MaterialTheme.colors.placeholderText,
+                                                if (item.idHex == noteId) MaterialTheme.colors.lessImportantLink else MaterialTheme.colors.placeholderText
+                                            ),
+                                            accountViewModel = accountViewModel,
+                                            nav = nav
+                                        )
+                                    }
                                 } else {
                                     Column() {
                                         Row() {
@@ -326,7 +325,7 @@ fun NoteMaster(
             if (noteEvent is BadgeDefinitionEvent) {
                 BadgeDisplay(baseNote = note)
             } else if (noteEvent is LongTextNoteEvent) {
-                Row(modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 12.dp)) {
+                Row(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
                     Column {
                         noteEvent.image()?.let {
                             AsyncImage(
@@ -338,25 +337,23 @@ fun NoteMaster(
                                 contentScale = ContentScale.FillWidth,
                                 modifier = Modifier.fillMaxWidth()
                             )
+                            Spacer(modifier = Modifier.height(10.dp))
                         }
 
                         noteEvent.title()?.let {
                             Text(
                                 text = it,
-                                fontSize = 30.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 10.dp)
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.Light,
+                                modifier = Modifier.fillMaxWidth()
                             )
+                            Spacer(modifier = Modifier.height(10.dp))
                         }
 
                         noteEvent.summary()?.let {
                             Text(
                                 text = it,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 10.dp),
+                                modifier = Modifier.fillMaxWidth(),
                                 color = Color.Gray
                             )
                         }
@@ -404,47 +401,32 @@ fun NoteMaster(
                             accountViewModel,
                             nav
                         )
-                    } else {
-                        val eventContent = note.event?.content()
-
+                    } else if (noteEvent is PollNoteEvent) {
                         val canPreview = note.author == account.userProfile() ||
                             (note.author?.let { account.userProfile().isFollowingCached(it) } ?: true) ||
                             !noteForReports.hasAnyReports()
 
-                        if (eventContent != null) {
-                            val hasSensitiveContent = remember(note.event) { note.event?.isSensitive() ?: false }
-                            val tags = remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: ImmutableListOfLists() }
+                        RenderPoll(
+                            baseNote,
+                            false,
+                            canPreview,
+                            backgroundColor,
+                            accountViewModel,
+                            nav
+                        )
+                    } else {
+                        val canPreview = note.author == account.userProfile() ||
+                            (note.author?.let { account.userProfile().isFollowingCached(it) } ?: true) ||
+                            !noteForReports.hasAnyReports()
 
-                            SensitivityWarning(
-                                hasSensitiveContent = hasSensitiveContent,
-                                accountViewModel = accountViewModel
-                            ) {
-                                TranslatableRichTextViewer(
-                                    eventContent,
-                                    canPreview,
-                                    remember { Modifier.fillMaxWidth() },
-                                    tags,
-                                    backgroundColor,
-                                    accountViewModel,
-                                    nav
-                                )
-                            }
-
-                            val hashtags = remember {
-                                noteEvent.hashtags().toImmutableList()
-                            }
-                            DisplayUncitedHashtags(hashtags, eventContent, nav)
-
-                            if (noteEvent is PollNoteEvent) {
-                                PollNote(
-                                    note,
-                                    canPreview,
-                                    backgroundColor,
-                                    accountViewModel,
-                                    nav
-                                )
-                            }
-                        }
+                        RenderTextEvent(
+                            baseNote,
+                            false,
+                            canPreview,
+                            backgroundColor,
+                            accountViewModel,
+                            nav
+                        )
                     }
                 }
             }
