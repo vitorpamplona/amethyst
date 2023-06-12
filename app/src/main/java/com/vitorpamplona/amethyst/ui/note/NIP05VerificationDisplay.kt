@@ -14,7 +14,7 @@ import androidx.compose.material.icons.filled.Downloading
 import androidx.compose.material.icons.filled.Report
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -40,7 +40,7 @@ import kotlinx.coroutines.launch
 import java.util.Date
 
 @Composable
-fun nip05VerificationAsAState(user: UserMetadata, pubkeyHex: String): State<Boolean?> {
+fun nip05VerificationAsAState(user: UserMetadata, pubkeyHex: String): MutableState<Boolean?> {
     val nip05Verified = remember(user.nip05) {
         // starts with null if must verify or already filled in if verified in the last hour
         val default = if ((user.nip05LastVerificationTime ?: 0) > (Date().time / 1000 - 60 * 60)) { // 1hour
@@ -132,7 +132,7 @@ fun ObserveDisplayNip05Status(baseUser: User, columnModifier: Modifier = Modifie
 private fun DisplayNIP05Line(nip05: String, baseUser: User, columnModifier: Modifier = Modifier) {
     Column(modifier = columnModifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            val nip05Verified by nip05VerificationAsAState(baseUser.info!!, baseUser.pubkeyHex)
+            val nip05Verified = nip05VerificationAsAState(baseUser.info!!, baseUser.pubkeyHex)
             DisplayNIP05(nip05, nip05Verified)
         }
     }
@@ -141,7 +141,7 @@ private fun DisplayNIP05Line(nip05: String, baseUser: User, columnModifier: Modi
 @Composable
 private fun DisplayNIP05(
     nip05: String,
-    nip05Verified: Boolean?
+    nip05Verified: MutableState<Boolean?>
 ) {
     val uri = LocalUriHandler.current
     val (user, domain) = remember(nip05) {
@@ -157,7 +157,20 @@ private fun DisplayNIP05(
         )
     }
 
-    if (nip05Verified == null) {
+    NIP05VerifiedSymbol(nip05Verified)
+
+    ClickableText(
+        text = AnnotatedString(domain),
+        onClick = { runCatching { uri.openUri("https://$domain") } },
+        style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(0.52f)),
+        maxLines = 1,
+        overflow = TextOverflow.Visible
+    )
+}
+
+@Composable
+private fun NIP05VerifiedSymbol(nip05Verified: MutableState<Boolean?>) {
+    if (nip05Verified.value == null) {
         Icon(
             tint = Color.Yellow,
             imageVector = Icons.Default.Downloading,
@@ -166,7 +179,7 @@ private fun DisplayNIP05(
                 .size(14.dp)
                 .padding(top = 1.dp)
         )
-    } else if (nip05Verified == true) {
+    } else if (nip05Verified.value == true) {
         Icon(
             painter = painterResource(R.drawable.ic_verified),
             "NIP-05 Verified",
@@ -185,14 +198,6 @@ private fun DisplayNIP05(
                 .padding(top = 1.dp)
         )
     }
-
-    ClickableText(
-        text = AnnotatedString(domain),
-        onClick = { runCatching { uri.openUri("https://$domain") } },
-        style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(0.52f)),
-        maxLines = 1,
-        overflow = TextOverflow.Visible
-    )
 }
 
 @Composable
