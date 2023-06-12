@@ -26,6 +26,7 @@ import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
@@ -73,6 +74,9 @@ import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -506,10 +510,11 @@ private fun DrawAuthorInfo(
     }
 }
 
+@Immutable
 data class RelayBadgesState(
     val shouldDisplayExpandButton: Boolean,
-    val noteRelays: List<String>,
-    val noteRelaysSimple: List<String>
+    val noteRelays: ImmutableList<String>,
+    val noteRelaysSimple: ImmutableList<String>
 )
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -519,8 +524,8 @@ private fun RelayBadges(baseNote: Note) {
 
     val state: RelayBadgesState by remember(noteRelaysState) {
         val newShouldDisplayExpandButton = (noteRelaysState?.note?.relays?.size ?: 0) > 3
-        val noteRelays = noteRelaysState?.note?.relays?.toList() ?: emptyList()
-        val noteRelaysSimple = noteRelaysState?.note?.relays?.take(3)?.toList() ?: emptyList()
+        val noteRelays = noteRelaysState?.note?.relays?.toImmutableList() ?: persistentListOf()
+        val noteRelaysSimple = noteRelaysState?.note?.relays?.take(3)?.toImmutableList() ?: persistentListOf()
 
         mutableStateOf(RelayBadgesState(newShouldDisplayExpandButton, noteRelays, noteRelaysSimple))
     }
