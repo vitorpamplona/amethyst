@@ -58,4 +58,12 @@ object Nip26 {
             Hex.decode(delegator)
         )
     }
+
+    fun checkSignature(signature: String, delegationString: String, delegator: HexKey): Boolean {
+        return Secp256k1.verifySchnorr(
+            Hex.decode(signature),
+            MessageDigest.getInstance("SHA-256").digest(delegationString.toByteArray()),
+            Hex.decode(delegator)
+        )
+    }
 }

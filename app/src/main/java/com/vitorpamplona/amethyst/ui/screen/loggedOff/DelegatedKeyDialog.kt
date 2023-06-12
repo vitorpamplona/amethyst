@@ -75,6 +75,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.service.Nip26
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.navigation.QrCodeDrawer
@@ -418,25 +419,22 @@ fun SelectSignaturePage(
                 }
                 isValidSig = false
             }
-//            if (isValidSig) {
-//                try {
-//                    val sig = Hex.decode(delegation.signature)
-//                    val token = Event.sha256.digest(delegation.toString().toByteArray())
-//                    val parsed = Nip19.uriToRoute(delegation.delegator)
-//                    val pubKeyParsed = parsed?.hex?.hexToByteArray()
-//                    if (!Secp256k1.get().verifySchnorr(sig, token, pubKeyParsed!!)) {
-//                        scope.launch {
-//                            Toast.makeText(context, "Invalid signature", Toast.LENGTH_SHORT).show()
-//                        }
-//                        isValidSig = false
-//                    }
-//                } catch (e: Exception) {
-//                    scope.launch {
-//                        Toast.makeText(context, "Invalid signature", Toast.LENGTH_SHORT).show()
-//                    }
-//                    isValidSig = false
-//                }
-//            }
+            if (isValidSig) {
+                try {
+                    val parsed = Nip19.uriToRoute(delegation.delegator)
+                    if (!Nip26.checkSignature(delegation.signature, delegation.toString(), parsed?.hex!!)) {
+                        scope.launch {
+                            Toast.makeText(context, "Invalid signature", Toast.LENGTH_SHORT).show()
+                        }
+                        isValidSig = false
+                    }
+                } catch (e: Exception) {
+                    scope.launch {
+                        Toast.makeText(context, "Invalid signature", Toast.LENGTH_SHORT).show()
+                    }
+                    isValidSig = false
+                }
+            }
             if (isValidSig) {
                 onClose()
                 onSuccess(delegation)
