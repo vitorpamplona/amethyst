@@ -18,8 +18,7 @@ import java.util.regex.Pattern
 data class ResultOrError(
     val result: String?,
     val sourceLang: String?,
-    val targetLang: String?,
-    val error: Exception?
+    val targetLang: String?
 )
 
 object LanguageTranslatorService {
@@ -78,7 +77,7 @@ object LanguageTranslatorService {
                     var fixedText = task.result.replace("# [", "#[") // fixes tags that always return with a space
                     results.add(decodeDictionary(fixedText, dict))
                 }
-                ResultOrError(results.joinToString("\n"), source, target, null)
+                ResultOrError(results.joinToString("\n"), source, target)
             }
         }
     }

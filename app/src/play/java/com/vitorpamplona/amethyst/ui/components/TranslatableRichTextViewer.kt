@@ -53,7 +53,7 @@ fun TranslatableRichTextViewer(
 ) {
     Column {
         var translatedTextState by remember {
-            mutableStateOf(ResultOrError(content, null, null, null))
+            mutableStateOf(ResultOrError(content, null, null))
         }
 
         var showOriginal by remember { mutableStateOf(false) }
