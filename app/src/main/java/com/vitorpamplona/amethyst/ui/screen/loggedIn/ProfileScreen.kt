@@ -457,6 +457,11 @@ private fun ProfileHeader(
             }
         }
 
+        var delegatedUser: User? = null
+        if (accountViewModel.account.userProfile().pubkeyHex == baseUser.pubkeyHex) {
+            delegatedUser = LocalCache.getOrCreateUser(accountViewModel.account.delegatorHexKey)
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -470,7 +475,7 @@ private fun ProfileHeader(
                 val clipboardManager = LocalClipboardManager.current
 
                 UserPicture(
-                    baseUser = baseUser,
+                    baseUser = delegatedUser ?: baseUser,
                     accountViewModel = accountViewModel,
                     size = 100.dp,
                     modifier = Modifier.border(
@@ -508,7 +513,7 @@ private fun ProfileHeader(
                 }
             }
 
-            DrawAdditionalInfo(baseUser, appRecommendations, accountViewModel, nav)
+            DrawAdditionalInfo(delegatedUser ?: baseUser, appRecommendations, accountViewModel, nav)
 
             Divider(modifier = Modifier.padding(top = 6.dp))
         }

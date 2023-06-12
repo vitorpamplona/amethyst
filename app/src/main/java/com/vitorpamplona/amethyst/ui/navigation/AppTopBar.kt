@@ -334,8 +334,17 @@ private fun LoggedInUserPictureDrawer(
     onClick: () -> Unit
 ) {
     val accountUserState by accountViewModel.account.userProfile().live().metadata.observeAsState()
+    val delegatedUser = if (accountViewModel.account.delegatorHexKey.isNotBlank()) LocalCache.getOrCreateUser(accountViewModel.account.delegatorHexKey) else null
+    if (delegatedUser != null) {
+        val profileUpdatedMetadataAt = accountViewModel.account.userProfile().info?.updatedMetadataAt ?: 0
+        val delegatedUserUpdatedMetadataAt = delegatedUser.info?.updatedMetadataAt ?: 0
+        if (delegatedUserUpdatedMetadataAt > profileUpdatedMetadataAt) {
+            accountViewModel.account.userProfile().info = delegatedUser.info
+        }
+        accountViewModel.account.userProfile().liveSet?.metadata?.invalidateData()
+    }
 
-    val pubkeyHex = remember { accountUserState?.user?.pubkeyHex ?: "" }
+    val pubkeyHex = remember { delegatedUser?.pubkeyHex ?: accountUserState?.user?.pubkeyHex ?: "" }
     val profilePicture = remember(accountUserState) { ResizeImage(accountUserState?.user?.profilePicture(), 34.dp) }
 
     IconButton(

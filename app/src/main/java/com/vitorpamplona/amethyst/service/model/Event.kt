@@ -23,7 +23,8 @@ open class Event(
     val kind: Int,
     val tags: List<List<String>>,
     val content: String,
-    val sig: HexKey
+    val sig: HexKey,
+    var delegationPubKey: HexKey? = null
 ) : EventInterface {
     override fun id(): HexKey = id
 

@@ -1,5 +1,10 @@
 package com.vitorpamplona.amethyst.service
 
+import com.vitorpamplona.amethyst.model.HexKey
+import fr.acinq.secp256k1.Hex
+import fr.acinq.secp256k1.Secp256k1
+import java.security.MessageDigest
+
 object Nip26 {
     fun toTags(token: String, signature: String, hexKey: String): List<String> {
         val keys = token.split(":")
@@ -40,5 +45,17 @@ object Nip26 {
             }
         }
         return true
+    }
+
+    fun checkSignature(token: List<String>, delegatee: HexKey): Boolean {
+        val signature = token[3]
+        val delegator = token[1]
+        val condition = token[2]
+        val delegationString = "nostr:delegation:$delegatee:$condition"
+        return Secp256k1.verifySchnorr(
+            Hex.decode(signature),
+            MessageDigest.getInstance("SHA-256").digest(delegationString.toByteArray()),
+            Hex.decode(delegator)
+        )
     }
 }

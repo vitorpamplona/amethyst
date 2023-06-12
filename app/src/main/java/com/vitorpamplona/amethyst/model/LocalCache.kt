@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.model
 
 import android.util.Log
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.service.Nip26
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.nip19.Nip19
@@ -175,7 +176,7 @@ object LocalCache {
 
         if (event.createdAt > (note.createdAt() ?: 0)) {
             note.loadEvent(event, author, emptyList())
-
+            addDelegationNote(event, note, emptyList())
             refreshObservers(note)
         }
     }
@@ -217,16 +218,16 @@ object LocalCache {
             it.addReply(note)
         }
 
-        val delegation = event.tags().filter {
-            it.contains("delegation")
-        }
-        if (delegation.isNotEmpty()) {
-            val pubKey = delegation[0][1]
-            val delegatedAuthor = getOrCreateUser(pubKey)
+        addDelegationNote(event, note, replyTo)
+        refreshObservers(note)
+    }
+
+    private fun addDelegationNote(event: Event, note: Note, replyTo: List<Note>) {
+        if (event.delegationPubKey != null) {
+            val delegatedAuthor = getOrCreateUser(event.delegationPubKey!!)
             delegatedAuthor.addNote(note)
             note.loadEvent(event, delegatedAuthor, replyTo)
         }
-        refreshObservers(note)
     }
 
     fun consume(event: LongTextNoteEvent, relay: Relay?) {
@@ -254,7 +255,7 @@ object LocalCache {
             note.loadEvent(event, author, replyTo)
 
             author.addNote(note)
-
+            addDelegationNote(event, note, replyTo)
             refreshObservers(note)
         }
     }
@@ -291,7 +292,7 @@ object LocalCache {
         replyTo.forEach {
             it.addReply(note)
         }
-
+        addDelegationNote(event, note, emptyList())
         refreshObservers(note)
     }
 
@@ -303,7 +304,7 @@ object LocalCache {
 
         if (event.createdAt > (note.createdAt() ?: 0)) {
             note.loadEvent(event, author, emptyList())
-
+            addDelegationNote(event, note, emptyList())
             refreshObservers(note)
         }
     }
@@ -316,7 +317,7 @@ object LocalCache {
 
         if (event.createdAt > (note.createdAt() ?: 0)) {
             note.loadEvent(event, author, emptyList())
-
+            addDelegationNote(event, note, emptyList())
             refreshObservers(note)
         }
     }
@@ -330,7 +331,7 @@ object LocalCache {
 
         if (event.createdAt > (note.createdAt() ?: 0)) {
             note.loadEvent(event, author, emptyList())
-
+            addDelegationNote(event, note, emptyList())
             refreshObservers(note)
         }
     }
@@ -344,7 +345,7 @@ object LocalCache {
 
         if (event.createdAt > (note.createdAt() ?: 0)) {
             note.loadEvent(event, author, emptyList<Note>())
-
+            addDelegationNote(event, note, emptyList())
             refreshObservers(note)
         }
     }
@@ -361,7 +362,7 @@ object LocalCache {
 
         if (event.createdAt > (note.createdAt() ?: 0)) {
             note.loadEvent(event, author, replyTo)
-
+            addDelegationNote(event, note, replyTo)
             author.updateAcceptedBadges(note)
         }
     }
@@ -383,7 +384,7 @@ object LocalCache {
         awardDefinition.forEach {
             it.addReply(note)
         }
-
+        addDelegationNote(event, note, awardDefinition)
         refreshObservers(note)
     }
 
@@ -395,7 +396,7 @@ object LocalCache {
         if (note.event != null) return
 
         note.loadEvent(event, author, emptyList())
-
+        addDelegationNote(event, note, emptyList())
         refreshObservers(note)
     }
 
@@ -408,7 +409,7 @@ object LocalCache {
 
         if (event.createdAt > (note.createdAt() ?: 0)) {
             note.loadEvent(event, author, emptyList())
-
+            addDelegationNote(event, note, emptyList())
             refreshObservers(note)
         }
     }
@@ -532,7 +533,7 @@ object LocalCache {
         repliesTo.forEach {
             it.addBoost(note)
         }
-
+        addDelegationNote(event, note, repliesTo)
         refreshObservers(note)
     }
 
@@ -562,7 +563,7 @@ object LocalCache {
                 it.addReaction(note)
             }
         }
-
+        addDelegationNote(event, note, repliesTo)
         refreshObservers(note)
     }
 
@@ -600,7 +601,7 @@ object LocalCache {
                 it.liveSet?.reports?.invalidateData()
             }
         }
-
+        addDelegationNote(event, note, repliesTo)
         refreshObservers(note)
     }
 
@@ -613,7 +614,7 @@ object LocalCache {
         if (note.event == null) {
             oldChannel.addNote(note)
             note.loadEvent(event, author, emptyList())
-
+            addDelegationNote(event, note, emptyList())
             refreshObservers(note)
         }
 
@@ -645,7 +646,7 @@ object LocalCache {
         if (note.event == null) {
             oldChannel.addNote(note)
             note.loadEvent(event, author, emptyList())
-
+            addDelegationNote(event, note, emptyList())
             refreshObservers(note)
         }
     }
@@ -689,7 +690,7 @@ object LocalCache {
         replyTo.forEach {
             it.addReply(note)
         }
-
+        addDelegationNote(event, note, replyTo)
         refreshObservers(note)
     }
 
@@ -731,7 +732,7 @@ object LocalCache {
         mentions.forEach {
             it.addZap(zapRequest, note)
         }
-
+        addDelegationNote(event, note, repliesTo)
         refreshObservers(note)
     }
 
@@ -756,7 +757,7 @@ object LocalCache {
         mentions.forEach {
             it.addZap(note, null)
         }
-
+        addDelegationNote(event, note, repliesTo)
         refreshObservers(note)
     }
 
@@ -773,7 +774,7 @@ object LocalCache {
         if (note.event != null) return
 
         note.loadEvent(event, author, emptyList())
-
+        addDelegationNote(event, note, emptyList())
         refreshObservers(note)
     }
 
@@ -790,7 +791,7 @@ object LocalCache {
         if (note.event != null) return
 
         note.loadEvent(event, author, emptyList())
-
+        addDelegationNote(event, note, emptyList())
         refreshObservers(note)
     }
 
@@ -810,7 +811,7 @@ object LocalCache {
 
         // Adds to user profile
         author.addNote(note)
-
+        addDelegationNote(event, note, emptyList())
         refreshObservers(note)
     }
 
@@ -844,7 +845,7 @@ object LocalCache {
         val eventNoData = FileStorageEvent(event.id, event.pubKey, event.createdAt, event.tags, "", event.sig)
 
         note.loadEvent(eventNoData, author, emptyList())
-
+        addDelegationNote(eventNoData, note, emptyList())
         refreshObservers(note)
     }
 
@@ -1046,6 +1047,17 @@ object LocalCache {
                 Log.w("Event failed retest ${event.kind}", e.message ?: "")
             }
             return
+        }
+
+        val delegation = event.tags().filter {
+            it.contains("delegation")
+        }
+        if (delegation.isNotEmpty()) {
+            if (!Nip26.checkSignature(delegation[0], event.pubKey)) {
+                Log.w("Event failed retest ${event.kind}", "invalid delegation signature")
+                return
+            }
+            event.delegationPubKey = delegation[0][1]
         }
 
         try {

@@ -47,6 +47,17 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
         )
     }
 
+    fun createDelegatorAccountMetadataFilter(): TypedFilter {
+        return TypedFilter(
+            types = COMMON_FEED_TYPES,
+            filter = JsonFilter(
+                kinds = listOf(MetadataEvent.kind),
+                authors = listOf(account.delegatorHexKey),
+                limit = 1
+            )
+        )
+    }
+
     fun createAccountAcceptedAwardsFilter(): TypedFilter {
         return TypedFilter(
             types = COMMON_FEED_TYPES,
@@ -106,7 +117,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
 
     override fun updateChannelFilters() {
         // gets everthing about the user logged in
-        accountChannel.typedFilters = listOf(
+        var list = listOf(
             createAccountMetadataFilter(),
             createAccountContactListFilter(),
             createNotificationFilter(),
@@ -114,6 +125,18 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
             createAccountAcceptedAwardsFilter(),
             createAccountBookmarkListFilter()
         ).ifEmpty { null }
+        if (account.delegatorHexKey.isNotBlank()) {
+            list = listOf(
+                createAccountMetadataFilter(),
+                createAccountContactListFilter(),
+                createNotificationFilter(),
+                createAccountReportsFilter(),
+                createAccountAcceptedAwardsFilter(),
+                createAccountBookmarkListFilter(),
+                createDelegatorAccountMetadataFilter()
+            ).ifEmpty { null }
+        }
+        accountChannel.typedFilters = list
     }
 
     override fun auth(relay: Relay, challenge: String) {
