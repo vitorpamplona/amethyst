@@ -230,23 +230,7 @@ private fun DisplayUser(
     }
 
     userBase?.let {
-        val userState by it.live().metadata.observeAsState()
-        val route = remember(userState) { "User/${it.pubkeyHex}" }
-        val userDisplayName = remember(userState) { userState?.user?.toBestDisplayName() }
-        val userTags = remember(userState) { userState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists() }
-        val addedCharts = remember {
-            "${nip19.additionalChars} "
-        }
-
-        if (userDisplayName != null) {
-            CreateClickableTextWithEmoji(
-                clickablePart = userDisplayName,
-                suffix = addedCharts,
-                tags = userTags,
-                route = route,
-                nav = nav
-            )
-        }
+        RenderUserAsClickableText(it, nip19, nav)
     }
 
     if (userBase == null) {
@@ -254,6 +238,42 @@ private fun DisplayUser(
             remember {
                 "@${nip19.hex}${nip19.additionalChars} "
             }
+        )
+    }
+}
+
+@Composable
+private fun RenderUserAsClickableText(
+    baseUser: User,
+    nip19: Nip19.Return,
+    nav: (String) -> Unit
+) {
+    val userState by baseUser.live().metadata.observeAsState()
+    val route = remember { "User/${baseUser.pubkeyHex}" }
+
+    val userDisplayName by remember(userState) {
+        derivedStateOf {
+            userState?.user?.toBestDisplayName()
+        }
+    }
+
+    val userTags by remember(userState) {
+        derivedStateOf {
+            userState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists()
+        }
+    }
+
+    val addedCharts = remember(nip19) {
+        "${nip19.additionalChars} "
+    }
+
+    userDisplayName?.let {
+        CreateClickableTextWithEmoji(
+            clickablePart = it,
+            suffix = addedCharts,
+            tags = userTags,
+            route = route,
+            nav = nav
         )
     }
 }
