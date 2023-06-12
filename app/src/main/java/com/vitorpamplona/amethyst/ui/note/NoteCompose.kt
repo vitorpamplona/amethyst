@@ -634,8 +634,7 @@ private fun RenderNoteRow(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val noteEvent = remember { baseNote.event }
-    when (noteEvent) {
+    when (remember { baseNote.event }) {
         is AppDefinitionEvent -> {
             RenderAppDefinition(baseNote, accountViewModel, nav)
         }
@@ -1680,18 +1679,22 @@ private fun ReplyNoteComposition(
         }
     }
 
+    val borderColor = MaterialTheme.colors.subtleBorder
+
     NoteCompose(
         baseNote = replyingDirectlyTo,
         isQuotedNote = true,
-        modifier = Modifier
-            .padding(top = 5.dp)
-            .fillMaxWidth()
-            .clip(shape = QuoteBorder)
-            .border(
-                1.dp,
-                MaterialTheme.colors.subtleBorder,
-                QuoteBorder
-            ),
+        modifier = remember {
+            Modifier
+                .padding(top = 5.dp)
+                .fillMaxWidth()
+                .clip(shape = QuoteBorder)
+                .border(
+                    1.dp,
+                    borderColor,
+                    QuoteBorder
+                )
+        },
         unPackReply = false,
         makeItShort = true,
         parentBackgroundColor = replyBackgroundColor,
@@ -1770,13 +1773,13 @@ private fun MoreOptionsButton(
     var moreActionsExpanded by remember { mutableStateOf(false) }
 
     IconButton(
-        modifier = Modifier.size(24.dp),
+        modifier = remember { Modifier.size(24.dp) },
         onClick = { moreActionsExpanded = true }
     ) {
         Icon(
             imageVector = Icons.Default.MoreVert,
             null,
-            modifier = Modifier.size(15.dp),
+            modifier = remember { Modifier.size(15.dp) },
             tint = MaterialTheme.colors.placeholderText
         )
 
@@ -2057,9 +2060,13 @@ fun DisplayUncitedHashtags(
     eventContent: String,
     nav: (String) -> Unit
 ) {
-    if (hashtags.isNotEmpty()) {
+    val hasHashtags = remember {
+        hashtags.isNotEmpty()
+    }
+
+    if (hasHashtags) {
         FlowRow(
-            modifier = Modifier.padding(top = 5.dp)
+            modifier = remember { Modifier.padding(top = 5.dp) }
         ) {
             hashtags.forEach { hashtag ->
                 if (!eventContent.contains(hashtag, true)) {
