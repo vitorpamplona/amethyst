@@ -1,5 +1,3 @@
-This is going to be the new Privacy.MD. 
-
 # Amethyst Privacy Policy and Terms of Use
 
 ## Privacy Policy
