@@ -1,9 +1,11 @@
 package com.vitorpamplona.amethyst
 
 object OptOutFromFilters {
-    var optOutFromFilters: Boolean = false
+    var warnAboutPostsWithReports: Boolean = true
+    var filterSpamFromStrangers: Boolean = true
 
-    fun start(optOut: Boolean) {
-        optOutFromFilters = optOut
+    fun start(warnAboutReports: Boolean, filterSpam: Boolean) {
+        warnAboutPostsWithReports = warnAboutReports
+        filterSpamFromStrangers = filterSpam
     }
 }

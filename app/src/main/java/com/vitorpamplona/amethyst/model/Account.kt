@@ -68,7 +68,8 @@ class Account(
     var proxy: Proxy?,
     var proxyPort: Int,
     var showSensitiveContent: Boolean? = null,
-    var optOutFromFilters: Boolean = false
+    var warnAboutPostsWithReports: Boolean = true,
+    var filterSpamFromStrangers: Boolean = true
 ) {
     var transientHiddenUsers: Set<String> = setOf()
 
@@ -79,9 +80,13 @@ class Account(
 
     var userProfileCache: User? = null
 
-    fun updateOptOutFromFilters(value: Boolean) {
-        optOutFromFilters = value
-        OptOutFromFilters.start(optOutFromFilters)
+    fun updateOptOutOptions(warnReports: Boolean, filterSpam: Boolean) {
+        warnAboutPostsWithReports = warnReports
+        filterSpamFromStrangers = filterSpam
+        OptOutFromFilters.start(warnAboutPostsWithReports, filterSpamFromStrangers)
+        if (!filterSpamFromStrangers) {
+            transientHiddenUsers = setOf()
+        }
         live.invalidateData()
         saveable.invalidateData()
     }
@@ -1066,7 +1071,7 @@ class Account(
     }
 
     fun isAcceptable(user: User): Boolean {
-        if (optOutFromFilters) {
+        if (!warnAboutPostsWithReports) {
             return !isHidden(user) && // if user hasn't hided this author
                 user.reportsBy(userProfile()).isEmpty() // if user has not reported this post
         }
@@ -1076,7 +1081,7 @@ class Account(
     }
 
     fun isAcceptableDirect(note: Note): Boolean {
-        if (optOutFromFilters) {
+        if (!warnAboutPostsWithReports) {
             return note.reportsBy(userProfile()).isEmpty()
         }
         return note.reportsBy(userProfile()).isEmpty() && // if user has not reported this post

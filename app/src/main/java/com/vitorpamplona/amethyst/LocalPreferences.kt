@@ -61,7 +61,8 @@ private object PrefKeys {
     const val USE_PROXY = "use_proxy"
     const val PROXY_PORT = "proxy_port"
     const val SHOW_SENSITIVE_CONTENT = "show_sensitive_content"
-    const val OPT_OUT_FILTERS = "opt_out_filters"
+    const val WARN_ABOUT_REPORTS = "warn_about_reports"
+    const val FILTER_SPAM_FROM_STRANGERS = "filter_spam_from_strangers"
     val LAST_READ: (String) -> String = { route -> "last_read_route_$route" }
 }
 
@@ -218,7 +219,8 @@ object LocalPreferences {
             putBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, account.hideBlockAlertDialog)
             putBoolean(PrefKeys.USE_PROXY, account.proxy != null)
             putInt(PrefKeys.PROXY_PORT, account.proxyPort)
-            putBoolean(PrefKeys.OPT_OUT_FILTERS, account.optOutFromFilters)
+            putBoolean(PrefKeys.WARN_ABOUT_REPORTS, account.warnAboutPostsWithReports)
+            putBoolean(PrefKeys.FILTER_SPAM_FROM_STRANGERS, account.filterSpamFromStrangers)
 
             if (account.showSensitiveContent == null) {
                 remove(PrefKeys.SHOW_SENSITIVE_CONTENT)
@@ -308,7 +310,8 @@ object LocalPreferences {
             } else {
                 null
             }
-            val optOutFromFilters = getBoolean(PrefKeys.OPT_OUT_FILTERS, false)
+            val filterSpam = getBoolean(PrefKeys.FILTER_SPAM_FROM_STRANGERS, true)
+            val warnAboutReports = getBoolean(PrefKeys.WARN_ABOUT_REPORTS, true)
 
             val a = Account(
                 Persona(privKey = privKey?.hexToByteArray(), pubKey = pubKey.hexToByteArray()),
@@ -331,7 +334,8 @@ object LocalPreferences {
                 proxy,
                 proxyPort,
                 showSensitiveContent,
-                optOutFromFilters
+                warnAboutReports,
+                filterSpam
             )
 
             return a

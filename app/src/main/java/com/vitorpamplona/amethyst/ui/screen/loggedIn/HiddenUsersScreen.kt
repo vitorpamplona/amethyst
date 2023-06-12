@@ -74,19 +74,33 @@ fun HiddenUsersScreen(
         Column(modifier = Modifier.padding(start = 10.dp, end = 10.dp)) {
             val pagerState = rememberPagerState()
             val coroutineScope = rememberCoroutineScope()
-            var checked by remember { mutableStateOf(accountViewModel.account.optOutFromFilters) }
+            var warnAboutReports by remember { mutableStateOf(accountViewModel.account.warnAboutPostsWithReports) }
+            var filterSpam by remember { mutableStateOf(accountViewModel.account.filterSpamFromStrangers) }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(
-                    checked = checked,
+                    checked = warnAboutReports,
                     onCheckedChange = {
-                        checked = it
-                        accountViewModel.account.updateOptOutFromFilters(checked)
+                        warnAboutReports = it
+                        accountViewModel.account.updateOptOutOptions(warnAboutReports, filterSpam)
                         LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
                     }
                 )
 
-                Text(stringResource(R.string.opt_out_from_filters))
+                Text(stringResource(R.string.warn_when_posts_have_reports_from_your_follows))
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(
+                    checked = filterSpam,
+                    onCheckedChange = {
+                        filterSpam = it
+                        accountViewModel.account.updateOptOutOptions(warnAboutReports, filterSpam)
+                        LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
+                    }
+                )
+
+                Text(stringResource(R.string.filter_spam_from_strangers))
             }
 
             TabRow(

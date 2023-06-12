@@ -21,7 +21,7 @@ class AntiSpamFilter {
     fun isSpam(event: Event, relay: Relay?): Boolean {
         checkNotInMainThread()
 
-        if (OptOutFromFilters.optOutFromFilters) return false
+        if (!OptOutFromFilters.filterSpamFromStrangers) return false
 
         val idHex = event.id
 
