@@ -27,6 +27,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -79,7 +80,7 @@ fun NewChannelView(onClose: () -> Unit, accountViewModel: AccountViewModel, chan
                     placeholder = {
                         Text(
                             text = stringResource(R.string.my_awesome_group),
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                            color = MaterialTheme.colors.placeholderText
                         )
                     },
                     keyboardOptions = KeyboardOptions.Default.copy(
@@ -98,7 +99,7 @@ fun NewChannelView(onClose: () -> Unit, accountViewModel: AccountViewModel, chan
                     placeholder = {
                         Text(
                             text = "http://mygroup.com/logo.jpg",
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                            color = MaterialTheme.colors.placeholderText
                         )
                     }
                 )
@@ -115,7 +116,7 @@ fun NewChannelView(onClose: () -> Unit, accountViewModel: AccountViewModel, chan
                     placeholder = {
                         Text(
                             text = stringResource(R.string.about_us),
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                            color = MaterialTheme.colors.placeholderText
                         )
                     },
                     keyboardOptions = KeyboardOptions.Default.copy(

@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -35,6 +36,7 @@ import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.service.lang.ResultOrError
 import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -45,7 +47,7 @@ fun TranslatableRichTextViewer(
     canPreview: Boolean,
     modifier: Modifier = Modifier,
     tags: ImmutableListOfLists<String>,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -116,7 +118,7 @@ private fun TranslationMessage(
             .padding(top = 5.dp)
     ) {
         val clickableTextStyle =
-            SpanStyle(color = MaterialTheme.colors.primary.copy(alpha = 0.52f))
+            SpanStyle(color = MaterialTheme.colors.lessImportantLink)
 
         val annotatedTranslationString = buildAnnotatedString {
             withStyle(clickableTextStyle) {

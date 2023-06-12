@@ -64,6 +64,7 @@ import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SearchBarViewModel
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -128,7 +129,7 @@ fun JoinUserOrChannelView(searchBarViewModel: SearchBarViewModel, onClose: () ->
 
                     Text(
                         text = "",
-                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                        color = MaterialTheme.colors.placeholderText,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -270,7 +271,7 @@ private fun SearchEditTextForJoin(
             placeholder = {
                 Text(
                     text = stringResource(R.string.channel_list_user_or_group_id_demo),
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    color = MaterialTheme.colors.placeholderText
                 )
             },
             trailingIcon = {
@@ -416,7 +417,7 @@ private fun DisplayUserAboutInfo(baseUser: User) {
 
     Text(
         text = about,
-        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+        color = MaterialTheme.colors.placeholderText,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis
     )

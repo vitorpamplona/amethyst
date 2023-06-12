@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -97,6 +96,8 @@ import com.vitorpamplona.amethyst.ui.screen.RelayFeedView
 import com.vitorpamplona.amethyst.ui.screen.RelayFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -425,8 +426,6 @@ private fun ProfileHeader(
     var popupExpanded by remember { mutableStateOf(false) }
     var zoomImageDialogOpen by remember { mutableStateOf(false) }
 
-    val clipboardManager = LocalClipboardManager.current
-
     Box {
         DrawBanner(baseUser)
 
@@ -441,7 +440,7 @@ private fun ProfileHeader(
                     .size(30.dp)
                     .align(Alignment.Center),
                 onClick = { popupExpanded = true },
-                shape = RoundedCornerShape(20.dp),
+                shape = ButtonBorder,
                 colors = ButtonDefaults
                     .buttonColors(
                         backgroundColor = MaterialTheme.colors.background
@@ -449,7 +448,7 @@ private fun ProfileHeader(
                 contentPadding = PaddingValues(0.dp)
             ) {
                 Icon(
-                    tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                    tint = MaterialTheme.colors.placeholderText,
                     imageVector = Icons.Default.MoreVert,
                     contentDescription = stringResource(R.string.more_options)
                 )
@@ -468,6 +467,8 @@ private fun ProfileHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Bottom
             ) {
+                val clipboardManager = LocalClipboardManager.current
+
                 UserPicture(
                     baseUser = baseUser,
                     accountViewModel = accountViewModel,
@@ -610,7 +611,7 @@ private fun DrawAdditionalInfo(
                 CreateTextWithEmoji(
                     text = "@$it",
                     tags = tags,
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    color = MaterialTheme.colors.placeholderText
                 )
             }
         }
@@ -620,7 +621,7 @@ private fun DrawAdditionalInfo(
         Text(
             text = user.pubkeyDisplayHex(),
             modifier = Modifier.padding(top = 1.dp, bottom = 1.dp),
-            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+            color = MaterialTheme.colors.placeholderText
         )
 
         IconButton(
@@ -633,7 +634,7 @@ private fun DrawAdditionalInfo(
                 imageVector = Icons.Default.ContentCopy,
                 null,
                 modifier = Modifier.size(15.dp),
-                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                tint = MaterialTheme.colors.placeholderText
             )
         }
 
@@ -660,7 +661,7 @@ private fun DrawAdditionalInfo(
                 painter = painterResource(R.drawable.ic_qrcode),
                 null,
                 modifier = Modifier.size(15.dp),
-                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                tint = MaterialTheme.colors.placeholderText
             )
         }
     }
@@ -673,7 +674,7 @@ private fun DrawAdditionalInfo(
     if (!website.isNullOrEmpty()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
-                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                tint = MaterialTheme.colors.placeholderText,
                 imageVector = Icons.Default.Link,
                 contentDescription = stringResource(R.string.website),
                 modifier = Modifier.size(16.dp)
@@ -719,11 +720,16 @@ private fun DrawAdditionalInfo(
         Row(
             modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)
         ) {
+            val defaultBackground = MaterialTheme.colors.background
+            val background = remember {
+                mutableStateOf(defaultBackground)
+            }
+
             TranslatableRichTextViewer(
                 content = it,
                 canPreview = false,
                 tags = remember { ImmutableListOfLists(emptyList()) },
-                backgroundColor = MaterialTheme.colors.background,
+                backgroundColor = background,
                 accountViewModel = accountViewModel,
                 nav = nav
             )
@@ -1216,10 +1222,10 @@ private fun MessageButton(user: User, nav: (String) -> Unit) {
             .padding(horizontal = 3.dp)
             .width(50.dp),
         onClick = { nav("Room/${user.pubkeyHex}") },
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
-                backgroundColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                backgroundColor = MaterialTheme.colors.placeholderText
             )
     ) {
         Icon(
@@ -1246,7 +1252,7 @@ private fun EditButton(account: Account) {
             .padding(horizontal = 3.dp)
             .width(50.dp),
         onClick = { wantsToEdit = true },
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = MaterialTheme.colors.primary
@@ -1265,7 +1271,7 @@ fun UnfollowButton(onClick: () -> Unit) {
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = onClick,
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = MaterialTheme.colors.primary
@@ -1281,7 +1287,7 @@ fun FollowButton(onClick: () -> Unit, text: Int = R.string.follow) {
     Button(
         modifier = Modifier.padding(start = 3.dp),
         onClick = onClick,
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = MaterialTheme.colors.primary
@@ -1297,7 +1303,7 @@ fun ShowUserButton(onClick: () -> Unit) {
     Button(
         modifier = Modifier.padding(start = 3.dp),
         onClick = onClick,
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = MaterialTheme.colors.primary

@@ -3,7 +3,6 @@ package com.vitorpamplona.amethyst.ui.note
 import android.widget.Toast
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
@@ -32,6 +31,10 @@ import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.*
@@ -41,7 +44,7 @@ import kotlin.math.roundToInt
 fun PollNote(
     baseNote: Note,
     canPreview: Boolean,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -66,7 +69,7 @@ fun PollNote(
     baseNote: Note,
     pollViewModel: PollNoteViewModel,
     canPreview: Boolean,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -108,7 +111,7 @@ private fun OptionNote(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     canPreview: Boolean,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     nav: (String) -> Unit
 ) {
     val tags = remember(baseNote) {
@@ -123,7 +126,7 @@ private fun OptionNote(
             val color = if (poolOption.consensusThreadhold) {
                 Color.Green.copy(alpha = 0.32f)
             } else {
-                MaterialTheme.colors.primary.copy(alpha = 0.32f)
+                MaterialTheme.colors.mediumImportanceLink
             }
 
             ZapVote(
@@ -168,7 +171,7 @@ private fun RenderOptionAfterVote(
     color: Color,
     canPreview: Boolean,
     tags: ImmutableListOfLists<String>,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -179,11 +182,11 @@ private fun RenderOptionAfterVote(
     Box(
         Modifier
             .fillMaxWidth(0.75f)
-            .clip(shape = RoundedCornerShape(15.dp))
+            .clip(shape = QuoteBorder)
             .border(
                 2.dp,
                 color,
-                RoundedCornerShape(15.dp)
+                QuoteBorder
             )
     ) {
         LinearProgressIndicator(
@@ -235,18 +238,18 @@ private fun RenderOptionBeforeVote(
     description: String,
     canPreview: Boolean,
     tags: ImmutableListOfLists<String>,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
     Box(
         Modifier
             .fillMaxWidth(0.75f)
-            .clip(shape = RoundedCornerShape(15.dp))
+            .clip(shape = QuoteBorder)
             .border(
                 2.dp,
                 MaterialTheme.colors.primary,
-                RoundedCornerShape(15.dp)
+                QuoteBorder
             )
     ) {
         TranslatableRichTextViewer(
@@ -410,7 +413,7 @@ fun ZapVote(
                     imageVector = Icons.Outlined.Bolt,
                     contentDescription = stringResource(id = R.string.zaps),
                     modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    tint = MaterialTheme.colors.placeholderText
                 )
             } else {
                 Spacer(Modifier.width(3.dp))
@@ -428,7 +431,7 @@ fun ZapVote(
         Text(
             showAmount(poolOption.zappedValue),
             fontSize = 14.sp,
-            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+            color = MaterialTheme.colors.placeholderText,
             modifier = modifier
         )
     }
@@ -490,7 +493,7 @@ fun FilteredZapAmountChoicePopup(
                             onDismiss()
                         }
                     },
-                    shape = RoundedCornerShape(20.dp),
+                    shape = ButtonBorder,
                     colors = ButtonDefaults
                         .buttonColors(
                             backgroundColor = MaterialTheme.colors.primary

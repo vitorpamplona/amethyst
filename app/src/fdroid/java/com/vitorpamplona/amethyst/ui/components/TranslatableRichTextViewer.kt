@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
@@ -12,7 +13,7 @@ fun TranslatableRichTextViewer(
     canPreview: Boolean,
     modifier: Modifier = Modifier,
     tags: ImmutableListOfLists<String>,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) = ExpandableRichTextViewer(

@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -33,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.res.painterResource
@@ -54,6 +56,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
+import com.vitorpamplona.amethyst.ui.theme.overPictureBackground
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.coroutines.Dispatchers
@@ -66,35 +69,33 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
 
     var popupExpanded by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    var isNew by remember { mutableStateOf(false) }
+
+    val defaultBackgroundColor = MaterialTheme.colors.background
+    val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
+    val newItemColor = MaterialTheme.colors.newItemBackgroundColor
 
     LaunchedEffect(key1 = multiSetCard) {
         launch(Dispatchers.IO) {
-            val newIsNew = multiSetCard.maxCreatedAt > NotificationCache.load(routeForLastRead)
+            val isNew = multiSetCard.maxCreatedAt > NotificationCache.load(routeForLastRead)
 
             NotificationCache.markAsRead(routeForLastRead, multiSetCard.maxCreatedAt)
 
-            if (newIsNew != isNew) {
-                isNew = newIsNew
-            }
-        }
-    }
-
-    val primaryColor = MaterialTheme.colors.newItemBackgroundColor
-    val defaultBackgroundColor = MaterialTheme.colors.background
-
-    val backgroundColor by remember(isNew) {
-        derivedStateOf {
-            if (isNew) {
-                primaryColor.compositeOver(defaultBackgroundColor)
+            val newBackgroundColor = if (isNew) {
+                newItemColor.compositeOver(defaultBackgroundColor)
             } else {
                 defaultBackgroundColor
+            }
+
+            if (backgroundColor.value != newBackgroundColor) {
+                backgroundColor.value = newBackgroundColor
             }
         }
     }
 
     val columnModifier = Modifier
-        .background(backgroundColor)
+        .drawBehind {
+            drawRect(backgroundColor.value)
+        }
         .padding(
             start = 12.dp,
             end = 12.dp,
@@ -152,7 +153,7 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
 @Composable
 fun RenderLikeGallery(
     likeEvents: ImmutableList<Note>,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
@@ -183,7 +184,7 @@ fun RenderLikeGallery(
 @Composable
 fun RenderZapGallery(
     zapEvents: ImmutableMap<Note, Note?>,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
@@ -214,7 +215,7 @@ fun RenderZapGallery(
 @Composable
 fun RenderBoostGallery(
     boostEvents: ImmutableList<Note>,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
@@ -250,7 +251,7 @@ fun RenderBoostGallery(
 @Composable
 fun AuthorGalleryZaps(
     authorNotes: ImmutableMap<Note, Note?>,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
@@ -267,7 +268,7 @@ fun AuthorGalleryZaps(
 private fun AuthorPictureAndComment(
     zapRequest: Note,
     zapEvent: Note?,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
@@ -315,7 +316,7 @@ private fun AuthorPictureAndComment(
     comment: String?,
     amount: String?,
     route: String,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
@@ -341,10 +342,11 @@ private fun AuthorPictureAndComment(
 
             amount?.let {
                 Box(modifier = Modifier.fillMaxSize().clip(shape = CircleShape), contentAlignment = Alignment.BottomCenter) {
+                    val backgroundColor = MaterialTheme.colors.overPictureBackground
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(MaterialTheme.colors.background.copy(0.62f)),
+                            .drawBehind { drawRect(backgroundColor) },
                         contentAlignment = Alignment.BottomCenter
                     ) {
                         Text(
@@ -378,7 +380,7 @@ private fun AuthorPictureAndComment(
 @Composable
 fun AuthorGallery(
     authorNotes: ImmutableList<Note>,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
@@ -396,7 +398,7 @@ fun AuthorGallery(
 @Composable
 private fun NotePictureAndComment(
     baseNote: Note,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {

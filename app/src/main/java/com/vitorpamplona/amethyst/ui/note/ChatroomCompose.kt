@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -149,7 +150,7 @@ private fun ChannelRoomCompose(
 
                     withStyle(
                         SpanStyle(
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                            color = MaterialTheme.colors.placeholderText,
                             fontWeight = FontWeight.Normal
                         )
                     ) {

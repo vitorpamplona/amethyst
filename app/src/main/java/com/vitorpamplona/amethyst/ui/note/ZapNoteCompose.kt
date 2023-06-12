@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.ShowUserButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.UnfollowButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -225,7 +226,7 @@ fun AboutDisplay(baseAuthor: User) {
 
     Text(
         userAboutMe,
-        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+        color = MaterialTheme.colors.placeholderText,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis
     )

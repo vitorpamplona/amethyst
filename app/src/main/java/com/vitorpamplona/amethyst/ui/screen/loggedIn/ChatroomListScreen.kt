@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.ui.screen.ChatroomListFeedView
 import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListKnownFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListNewFeedViewModel
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -123,7 +124,7 @@ fun ChatroomListScreen(
                         Icon(
                             imageVector = Icons.Default.MoreVert,
                             contentDescription = null,
-                            tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                            tint = MaterialTheme.colors.placeholderText
                         )
 
                         ChatroomTabMenu(

@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material.Icon
@@ -49,7 +48,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -75,7 +73,9 @@ import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.actions.SaveToGallery
 import com.vitorpamplona.amethyst.ui.note.BlankNote
-import com.vitorpamplona.amethyst.ui.theme.Nip05
+import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.hashVerified
+import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -177,11 +177,11 @@ fun ZoomableContentView(content: ZoomableContent, images: ImmutableList<Zoomable
 
     var mainImageModifier = Modifier
         .fillMaxWidth()
-        .clip(shape = RoundedCornerShape(15.dp))
+        .clip(shape = QuoteBorder)
         .border(
             1.dp,
-            MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
-            RoundedCornerShape(15.dp)
+            MaterialTheme.colors.subtleBorder,
+            QuoteBorder
         )
 
     if (content is ZoomableUrlContent) {
@@ -572,7 +572,7 @@ private fun HashVerificationSymbol(verifiedHash: Boolean, modifier: Modifier) {
                 Icon(
                     painter = painterResource(R.drawable.ic_verified),
                     "Hash Verified",
-                    tint = Nip05.copy(0.52f).compositeOver(MaterialTheme.colors.background),
+                    tint = MaterialTheme.colors.hashVerified,
                     modifier = Modifier.size(30.dp)
                 )
             }

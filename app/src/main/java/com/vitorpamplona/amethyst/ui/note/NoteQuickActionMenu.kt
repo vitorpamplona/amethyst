@@ -45,7 +45,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -69,6 +68,7 @@ import com.vitorpamplona.amethyst.ui.components.SelectTextDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.theme.WarningColor
+import com.vitorpamplona.amethyst.ui.theme.secondaryButtonBackground
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -111,6 +111,16 @@ private fun VerticalDivider(color: Color) =
     )
 
 @Composable
+fun LongPressToQuickAction(baseNote: Note, accountViewModel: AccountViewModel, content: @Composable (() -> Unit) -> Unit) {
+    var popupExpanded by remember { mutableStateOf(false) }
+    val showPopup = remember { { popupExpanded = true } }
+
+    content(showPopup)
+
+    NoteQuickActionMenu(baseNote, popupExpanded, { popupExpanded = false }, accountViewModel)
+}
+
+@Composable
 fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, accountViewModel: AccountViewModel) {
     var showSelectTextDialog by remember(note) { mutableStateOf(false) }
     var showDeleteAlertDialog by remember(note) { mutableStateOf(false) }
@@ -127,7 +137,7 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
         val backgroundColor = if (MaterialTheme.colors.isLight) {
             MaterialTheme.colors.primary
         } else {
-            MaterialTheme.colors.primary.copy(alpha = 0.32f).compositeOver(MaterialTheme.colors.background)
+            MaterialTheme.colors.secondaryButtonBackground
         }
 
         val showToast = { stringResource: Int ->
@@ -143,7 +153,7 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
         val isOwnNote = accountViewModel.isLoggedUser(note.author)
         val isFollowingUser = !isOwnNote && accountViewModel.isFollowing(note.author)
 
-        Popup(onDismissRequest = onDismiss) {
+        Popup(onDismissRequest = onDismiss, alignment = Alignment.Center) {
             Card(
                 modifier = Modifier.shadow(elevation = 6.dp, shape = cardShape),
                 shape = cardShape,

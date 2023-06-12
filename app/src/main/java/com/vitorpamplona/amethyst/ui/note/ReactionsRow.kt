@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.CircularProgressIndicator
@@ -67,6 +66,8 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.CoroutineScope
@@ -77,17 +78,17 @@ import java.math.RoundingMode
 import kotlin.math.roundToInt
 
 @Composable
-fun ReactionsRow(baseNote: Note, showReactions: Boolean, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+fun ReactionsRow(baseNote: Note, showReactionDetail: Boolean, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    val grayTint = MaterialTheme.colors.placeholderText
 
     var wantsToSeeReactions = remember {
         mutableStateOf<Boolean>(false)
     }
 
-    Spacer(modifier = Modifier.height(8.dp))
+    Spacer(modifier = Modifier.height(7.dp))
 
     Row(verticalAlignment = CenterVertically, modifier = Modifier.padding(start = 10.dp)) {
-        if (showReactions) {
+        if (showReactionDetail) {
             Row(
                 verticalAlignment = CenterVertically,
                 modifier = Modifier
@@ -116,9 +117,11 @@ fun ReactionsRow(baseNote: Note, showReactions: Boolean, accountViewModel: Accou
         }
     }
 
-    if (showReactions && wantsToSeeReactions.value) {
+    if (showReactionDetail && wantsToSeeReactions.value) {
         ReactionDetailGallery(baseNote, nav, accountViewModel)
     }
+
+    Spacer(modifier = Modifier.height(7.dp))
 }
 
 @Composable
@@ -171,6 +174,9 @@ private fun ReactionDetailGallery(
     val boostsState by baseNote.live().boosts.observeAsState()
     val reactionsState by baseNote.live().reactions.observeAsState()
 
+    val defaultBackgroundColor = MaterialTheme.colors.background
+    val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
+
     val hasReactions by remember(zapsState, boostsState, reactionsState) {
         derivedStateOf {
             baseNote.zaps.isNotEmpty() ||
@@ -193,7 +199,7 @@ private fun ReactionDetailGallery(
                 if (hasZapEvents) {
                     RenderZapGallery(
                         zapEvents,
-                        MaterialTheme.colors.background,
+                        backgroundColor,
                         nav,
                         accountViewModel
                     )
@@ -202,7 +208,7 @@ private fun ReactionDetailGallery(
                 if (hasBoostEvents) {
                     RenderBoostGallery(
                         boostEvents,
-                        MaterialTheme.colors.background,
+                        backgroundColor,
                         nav,
                         accountViewModel
                     )
@@ -211,7 +217,7 @@ private fun ReactionDetailGallery(
                 if (hasLikeEvents) {
                     RenderLikeGallery(
                         likeEvents,
-                        MaterialTheme.colors.background,
+                        backgroundColor,
                         nav,
                         accountViewModel
                     )
@@ -267,7 +273,7 @@ fun ReplyReaction(
     grayTint: Color,
     accountViewModel: AccountViewModel,
     showCounter: Boolean = true,
-    iconSize: Dp = 20.dp,
+    iconSize: Dp = 18.dp,
     onPress: () -> Unit
 ) {
     val context = LocalContext.current
@@ -833,7 +839,7 @@ private fun BoostTypeChoicePopup(baseNote: Note, accountViewModel: AccountViewMo
                         onDismiss()
                     }
                 },
-                shape = RoundedCornerShape(20.dp),
+                shape = ButtonBorder,
                 colors = ButtonDefaults
                     .buttonColors(
                         backgroundColor = MaterialTheme.colors.primary
@@ -845,7 +851,7 @@ private fun BoostTypeChoicePopup(baseNote: Note, accountViewModel: AccountViewMo
             Button(
                 modifier = Modifier.padding(horizontal = 3.dp),
                 onClick = onQuote,
-                shape = RoundedCornerShape(20.dp),
+                shape = ButtonBorder,
                 colors = ButtonDefaults
                     .buttonColors(
                         backgroundColor = MaterialTheme.colors.primary
@@ -898,7 +904,7 @@ fun ZapAmountChoicePopup(
                             onDismiss()
                         }
                     },
-                    shape = RoundedCornerShape(20.dp),
+                    shape = ButtonBorder,
                     colors = ButtonDefaults
                         .buttonColors(
                             backgroundColor = MaterialTheme.colors.primary

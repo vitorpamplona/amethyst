@@ -21,6 +21,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -35,29 +37,33 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun ZapUserSetCompose(zapSetCard: ZapUserSetCard, isInnerNote: Boolean = false, routeForLastRead: String, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    var isNew by remember { mutableStateOf<Boolean>(false) }
+    val defaultBackgroundColor = MaterialTheme.colors.background
+    val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
+    val newItemColor = MaterialTheme.colors.newItemBackgroundColor
 
     LaunchedEffect(key1 = zapSetCard.createdAt()) {
         launch(Dispatchers.IO) {
-            val newIsNew = zapSetCard.createdAt > NotificationCache.load(routeForLastRead)
+            val isNew = zapSetCard.createdAt > NotificationCache.load(routeForLastRead)
 
             NotificationCache.markAsRead(routeForLastRead, zapSetCard.createdAt)
 
-            if (newIsNew != isNew) {
-                isNew = newIsNew
+            val newBackgroundColor = if (isNew) {
+                newItemColor.compositeOver(defaultBackgroundColor)
+            } else {
+                defaultBackgroundColor
+            }
+
+            if (backgroundColor.value != newBackgroundColor) {
+                backgroundColor.value = newBackgroundColor
             }
         }
     }
 
-    var backgroundColor = if (isNew) {
-        MaterialTheme.colors.newItemBackgroundColor.compositeOver(MaterialTheme.colors.background)
-    } else {
-        MaterialTheme.colors.background
-    }
-
     Column(
         modifier = Modifier
-            .background(backgroundColor)
+            .drawBehind {
+                drawRect(backgroundColor.value)
+            }
             .clickable {
                 nav("User/${zapSetCard.user.pubkeyHex}")
             }

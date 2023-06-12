@@ -79,6 +79,8 @@ import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.ui.screen.NostrChannelFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefreshingChatroomFeedView
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -280,7 +282,7 @@ fun DisplayReplyingToNote(
                         modifier = Modifier
                             .padding(end = 5.dp)
                             .size(30.dp),
-                        tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                        tint = MaterialTheme.colors.placeholderText
                     )
                 }
             }
@@ -317,7 +319,7 @@ fun EditFieldRow(
             placeholder = {
                 Text(
                     text = stringResource(R.string.reply_here),
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    color = MaterialTheme.colors.placeholderText
                 )
             },
             textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
@@ -333,7 +335,7 @@ fun EditFieldRow(
             leadingIcon = {
                 UploadFromGallery(
                     isUploading = channelScreenModel.isUploadingImage,
-                    tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                    tint = MaterialTheme.colors.placeholderText,
                     modifier = Modifier.padding(start = 5.dp)
                 ) {
                     val fileServer = if (isPrivate) {
@@ -417,7 +419,7 @@ fun ChannelHeader(baseChannel: Channel, accountViewModel: AccountViewModel, nav:
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             "${channel.info.about}",
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                            color = MaterialTheme.colors.placeholderText,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                             fontSize = 12.sp
@@ -478,7 +480,6 @@ private fun ChannelActionOptions(
 private fun NoteCopyButton(
     note: Channel
 ) {
-    val clipboardManager = LocalClipboardManager.current
     var popupExpanded by remember { mutableStateOf(false) }
 
     Button(
@@ -486,10 +487,10 @@ private fun NoteCopyButton(
             .padding(horizontal = 3.dp)
             .width(50.dp),
         onClick = { popupExpanded = true },
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
-                backgroundColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                backgroundColor = MaterialTheme.colors.placeholderText
             )
     ) {
         Icon(
@@ -502,6 +503,8 @@ private fun NoteCopyButton(
             expanded = popupExpanded,
             onDismissRequest = { popupExpanded = false }
         ) {
+            val clipboardManager = LocalClipboardManager.current
+
             DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString("nostr:" + note.idNote())); popupExpanded = false }) {
                 Text(stringResource(R.string.copy_channel_id_note_to_the_clipboard))
             }
@@ -524,7 +527,7 @@ private fun EditButton(accountViewModel: AccountViewModel, channel: Channel) {
             .padding(horizontal = 3.dp)
             .width(50.dp),
         onClick = { wantsToPost = true },
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = MaterialTheme.colors.primary
@@ -545,7 +548,7 @@ private fun JoinButton(accountViewModel: AccountViewModel, channel: Channel, nav
         onClick = {
             accountViewModel.account.joinChannel(channel.idHex)
         },
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = MaterialTheme.colors.primary
@@ -564,7 +567,7 @@ private fun LeaveButton(accountViewModel: AccountViewModel, channel: Channel, na
             accountViewModel.account.leaveChannel(channel.idHex)
             nav(Route.Message.route)
         },
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = MaterialTheme.colors.primary

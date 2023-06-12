@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Divider
@@ -52,6 +51,8 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import java.lang.Math.round
 
 @Composable
@@ -157,7 +158,7 @@ fun ServerConfigHeader() {
                         maxLines = 1,
                         fontSize = 14.sp,
                         modifier = Modifier.weight(1.2f),
-                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                        color = MaterialTheme.colors.placeholderText
                     )
 
                     Spacer(modifier = Modifier.size(5.dp))
@@ -167,7 +168,7 @@ fun ServerConfigHeader() {
                         maxLines = 1,
                         fontSize = 14.sp,
                         modifier = Modifier.weight(1.2f),
-                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                        color = MaterialTheme.colors.placeholderText
                     )
 
                     Spacer(modifier = Modifier.size(5.dp))
@@ -177,7 +178,7 @@ fun ServerConfigHeader() {
                         maxLines = 1,
                         fontSize = 14.sp,
                         modifier = Modifier.weight(1f),
-                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                        color = MaterialTheme.colors.placeholderText
                     )
 
                     Spacer(modifier = Modifier.size(5.dp))
@@ -187,7 +188,7 @@ fun ServerConfigHeader() {
                         maxLines = 1,
                         fontSize = 14.sp,
                         modifier = Modifier.weight(1f),
-                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                        color = MaterialTheme.colors.placeholderText
                     )
 
                     Spacer(modifier = Modifier.size(2.dp))
@@ -375,7 +376,7 @@ fun ServerConfig(
                                 maxLines = 1,
                                 fontSize = 12.sp,
                                 modifier = Modifier.weight(1.2f),
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                color = MaterialTheme.colors.placeholderText
                             )
 
                             IconButton(
@@ -403,7 +404,7 @@ fun ServerConfig(
                                 maxLines = 1,
                                 fontSize = 12.sp,
                                 modifier = Modifier.weight(1.2f),
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                color = MaterialTheme.colors.placeholderText
                             )
 
                             Icon(
@@ -420,7 +421,7 @@ fun ServerConfig(
                                 maxLines = 1,
                                 fontSize = 12.sp,
                                 modifier = Modifier.weight(1f),
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                color = MaterialTheme.colors.placeholderText
                             )
 
                             Icon(
@@ -435,7 +436,7 @@ fun ServerConfig(
                                 maxLines = 1,
                                 fontSize = 12.sp,
                                 modifier = Modifier.weight(1f),
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                color = MaterialTheme.colors.placeholderText
                             )
                         }
                     }
@@ -464,7 +465,7 @@ fun EditableServerConfig(relayToAdd: String, onNewRelay: (RelaySetupInfo) -> Uni
             placeholder = {
                 Text(
                     text = "server.com",
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                    color = MaterialTheme.colors.placeholderText,
                     maxLines = 1
                 )
             },
@@ -478,7 +479,7 @@ fun EditableServerConfig(relayToAdd: String, onNewRelay: (RelaySetupInfo) -> Uni
                 modifier = Modifier
                     .size(35.dp)
                     .padding(horizontal = 5.dp),
-                tint = if (read) Color.Green else MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                tint = if (read) Color.Green else MaterialTheme.colors.placeholderText
             )
         }
 
@@ -489,7 +490,7 @@ fun EditableServerConfig(relayToAdd: String, onNewRelay: (RelaySetupInfo) -> Uni
                 modifier = Modifier
                     .size(35.dp)
                     .padding(horizontal = 5.dp),
-                tint = if (write) Color.Green else MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                tint = if (write) Color.Green else MaterialTheme.colors.placeholderText
             )
         }
 
@@ -504,10 +505,10 @@ fun EditableServerConfig(relayToAdd: String, onNewRelay: (RelaySetupInfo) -> Uni
                     read = true
                 }
             },
-            shape = RoundedCornerShape(20.dp),
+            shape = ButtonBorder,
             colors = ButtonDefaults
                 .buttonColors(
-                    backgroundColor = if (url.isNotBlank()) MaterialTheme.colors.primary else MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    backgroundColor = if (url.isNotBlank()) MaterialTheme.colors.primary else MaterialTheme.colors.placeholderText
                 )
         ) {
             Text(text = stringResource(id = R.string.add), color = Color.White)

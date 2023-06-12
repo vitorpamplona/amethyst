@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
@@ -28,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -38,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.compositeOver
@@ -66,13 +67,15 @@ import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeMe
+import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeThem
 import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
+import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-
-val ChatBubbleShapeMe = RoundedCornerShape(15.dp, 15.dp, 3.dp, 15.dp)
-val ChatBubbleShapeThem = RoundedCornerShape(3.dp, 15.dp, 15.dp, 15.dp)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -80,7 +83,7 @@ fun ChatroomMessageCompose(
     baseNote: Note,
     routeForLastRead: String?,
     innerQuote: Boolean = false,
-    parentBackgroundColor: Color? = null,
+    parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     onWantsToReply: (Note) -> Unit
@@ -145,22 +148,30 @@ fun ChatroomMessageCompose(
                 onClick = { showHiddenNote = true }
             )
         } else {
-            val backgroundBubbleColor: Color
-            val alignment: Arrangement.Horizontal
-            val shape: Shape
+            val loggedInColors = MaterialTheme.colors.mediumImportanceLink
+            val otherColors = MaterialTheme.colors.subtleBorder
+            val defaultBackground = MaterialTheme.colors.background
 
-            if (note.author == loggedIn) {
-                backgroundBubbleColor = MaterialTheme.colors.primary.copy(alpha = 0.32f)
-                    .compositeOver(parentBackgroundColor ?: MaterialTheme.colors.background)
-
-                alignment = Arrangement.End
-                shape = ChatBubbleShapeMe
-            } else {
-                backgroundBubbleColor = MaterialTheme.colors.onSurface.copy(alpha = 0.12f)
-                    .compositeOver(parentBackgroundColor ?: MaterialTheme.colors.background)
-
-                alignment = Arrangement.Start
-                shape = ChatBubbleShapeThem
+            val backgroundBubbleColor = remember {
+                if (note.author == loggedIn) {
+                    mutableStateOf(loggedInColors.compositeOver(parentBackgroundColor?.value ?: defaultBackground))
+                } else {
+                    mutableStateOf(otherColors.compositeOver(parentBackgroundColor?.value ?: defaultBackground))
+                }
+            }
+            val alignment: Arrangement.Horizontal = remember {
+                if (note.author == loggedIn) {
+                    Arrangement.End
+                } else {
+                    Arrangement.Start
+                }
+            }
+            val shape: Shape = remember {
+                if (note.author == loggedIn) {
+                    ChatBubbleShapeMe
+                } else {
+                    ChatBubbleShapeThem
+                }
             }
 
             val scope = rememberCoroutineScope()
@@ -208,7 +219,7 @@ fun ChatroomMessageCompose(
                         }
                     ) {
                         Surface(
-                            color = backgroundBubbleColor,
+                            color = backgroundBubbleColor.value,
                             shape = shape,
                             modifier = Modifier
                                 .combinedClickable(
@@ -320,7 +331,7 @@ private fun StatusRow(
     accountViewModel: AccountViewModel,
     onWantsToReply: (Note) -> Unit
 ) {
-    val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+    val grayTint = MaterialTheme.colors.placeholderText
     val time = remember { baseNote.createdAt() ?: 0 }
 
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -354,7 +365,7 @@ fun ChatTimeAgo(time: Long) {
 
     Text(
         timeStr,
-        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+        color = MaterialTheme.colors.placeholderText,
         fontSize = 12.sp
     )
 }
@@ -363,7 +374,7 @@ fun ChatTimeAgo(time: Long) {
 private fun RenderRegularTextNote(
     note: Note,
     canPreview: Boolean,
-    backgroundBubbleColor: Color,
+    backgroundBubbleColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -537,7 +548,7 @@ private fun RelayBadges(baseNote: Note) {
                 imageVector = Icons.Default.ChevronRight,
                 null,
                 modifier = Modifier.size(15.dp),
-                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                tint = MaterialTheme.colors.placeholderText
             )
         }
     }
@@ -562,10 +573,13 @@ fun RenderRelay(dirtyUrl: String) {
             .clickable(onClick = { uri.openUri(website) })
     }
 
+    val backgroundColor = MaterialTheme.colors.background
+
     val iconModifier = remember(dirtyUrl) {
         Modifier
             .size(13.dp)
             .clip(shape = CircleShape)
+            .drawBehind { drawRect(backgroundColor) }
     }
 
     Box(
@@ -573,11 +587,11 @@ fun RenderRelay(dirtyUrl: String) {
     ) {
         RobohashFallbackAsyncImage(
             robot = iconUrl,
-            robotSize = 13.dp,
+            robotSize = remember { 13.dp },
             model = iconUrl,
             contentDescription = stringResource(id = R.string.relay_icon),
             colorFilter = RelayIconFilter,
-            modifier = iconModifier.background(MaterialTheme.colors.background)
+            modifier = iconModifier
         )
     }
 }

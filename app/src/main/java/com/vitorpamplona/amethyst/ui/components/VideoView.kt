@@ -131,14 +131,13 @@ fun VideoView(
     onDialog: ((Boolean) -> Unit)? = null
 ) {
     val lifecycleOwner = rememberUpdatedState(LocalLifecycleOwner.current)
-    val defaultVolume = remember { if (DefaultMutedSetting.value) 0f else 1f }
 
     val media = remember { MediaItem.Builder().setUri(videoUri).build() }
 
     exoPlayerData.exoPlayer.apply {
         repeatMode = Player.REPEAT_MODE_ALL
         videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
-        volume = defaultVolume
+        volume = if (DefaultMutedSetting.value) 0f else 1f
         if (videoUri.startsWith("file") == true) {
             setMediaItem(media)
         } else {

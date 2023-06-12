@@ -87,6 +87,7 @@ import com.vitorpamplona.amethyst.ui.screen.LoadingFeed
 import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.screen.rememberForeverPagerState
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -341,7 +342,7 @@ private fun VideoUserOptionAction(
             imageVector = Icons.Default.MoreVert,
             null,
             modifier = remember { Modifier.size(20.dp) },
-            tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+            tint = MaterialTheme.colors.placeholderText
         )
 
         NoteDropDownMenu(
@@ -494,8 +495,8 @@ private fun ShowProgress(postViewModel: NewMediaModel) {
             progress = postViewModel.uploadingPercentage.value,
             modifier = Modifier
                 .size(55.dp)
-                .background(MaterialTheme.colors.background)
-                .clip(CircleShape),
+                .clip(CircleShape)
+                .background(MaterialTheme.colors.background),
             strokeWidth = 5.dp
         )
         postViewModel.uploadingDescription.value?.let {

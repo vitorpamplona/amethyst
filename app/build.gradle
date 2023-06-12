@@ -13,8 +13,8 @@ android {
         applicationId "com.vitorpamplona.amethyst"
         minSdk 26
         targetSdk 33
-        versionCode 202
-        versionName "0.56.2"
+        versionCode 205
+        versionName "0.56.5"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -165,9 +165,14 @@ dependencies {
     implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
 
     // Markdown
-    implementation "com.halilibo.compose-richtext:richtext-ui:0.16.0"
-    implementation "com.halilibo.compose-richtext:richtext-ui-material:0.16.0"
-    implementation "com.halilibo.compose-richtext:richtext-commonmark:0.16.0"
+    //implementation "com.halilibo.compose-richtext:richtext-ui:0.16.0"
+    //implementation "com.halilibo.compose-richtext:richtext-ui-material:0.16.0"
+    //implementation "com.halilibo.compose-richtext:richtext-commonmark:0.16.0"
+
+    // Markdown (With fix for full-image bleeds)
+    implementation('com.github.vitorpamplona.compose-richtext:richtext-ui:main-SNAPSHOT')
+    implementation('com.github.vitorpamplona.compose-richtext:richtext-ui-material:main-SNAPSHOT')
+    implementation('com.github.vitorpamplona.compose-richtext:richtext-commonmark:main-SNAPSHOT')
 
     // Local model for language identification
     playImplementation 'com.google.mlkit:language-id:17.0.4'

@@ -21,6 +21,8 @@ import com.vitorpamplona.amethyst.model.*
 import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -69,7 +71,7 @@ private fun ReplyInformation(
                 Text(
                     stringResource(R.string.replying_to),
                     fontSize = 13.sp,
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    color = MaterialTheme.colors.placeholderText
                 )
 
                 repliesToDisplay.forEachIndexed { idx, user ->
@@ -80,13 +82,13 @@ private fun ReplyInformation(
                             Text(
                                 ", ",
                                 fontSize = 13.sp,
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                color = MaterialTheme.colors.placeholderText
                             )
                         } else if (idx < repliesToDisplay.size - 1) {
                             Text(
                                 stringResource(R.string.and),
                                 fontSize = 13.sp,
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                color = MaterialTheme.colors.placeholderText
                             )
                         }
                     } else {
@@ -94,25 +96,25 @@ private fun ReplyInformation(
                             Text(
                                 ", ",
                                 fontSize = 13.sp,
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                color = MaterialTheme.colors.placeholderText
                             )
                         } else if (idx < repliesToDisplay.size) {
                             Text(
                                 stringResource(R.string.and),
                                 fontSize = 13.sp,
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                color = MaterialTheme.colors.placeholderText
                             )
 
                             ClickableText(
                                 AnnotatedString("${sortedMentions.size - 2}"),
-                                style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(alpha = 0.52f), fontSize = 13.sp),
+                                style = LocalTextStyle.current.copy(color = MaterialTheme.colors.lessImportantLink, fontSize = 13.sp),
                                 onClick = { expanded = true }
                             )
 
                             Text(
                                 " ${stringResource(R.string.others)}",
                                 fontSize = 13.sp,
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                color = MaterialTheme.colors.placeholderText
                             )
                         }
                     }
@@ -195,12 +197,12 @@ fun ReplyInformationChannel(
         Text(
             stringResource(R.string.in_channel),
             fontSize = 13.sp,
-            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+            color = MaterialTheme.colors.placeholderText
         )
 
         ClickableText(
             text = channelName,
-            style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(alpha = 0.52f), fontSize = 13.sp),
+            style = LocalTextStyle.current.copy(color = MaterialTheme.colors.lessImportantLink, fontSize = 13.sp),
             onClick = { onChannelTagClick(channel) }
         )
 
@@ -209,7 +211,7 @@ fun ReplyInformationChannel(
                 Text(
                     stringResource(id = R.string.replying_to),
                     fontSize = 13.sp,
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    color = MaterialTheme.colors.placeholderText
                 )
 
                 mentions.forEachIndexed { idx, user ->
@@ -219,13 +221,13 @@ fun ReplyInformationChannel(
                         Text(
                             ", ",
                             fontSize = 13.sp,
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                            color = MaterialTheme.colors.placeholderText
                         )
                     } else if (idx < mentions.size - 1) {
                         Text(
                             " ${stringResource(id = R.string.add)} ",
                             fontSize = 13.sp,
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                            color = MaterialTheme.colors.placeholderText
                         )
                     }
                 }
@@ -246,7 +248,7 @@ private fun ReplyInfoMention(
         clickablePart = remember(innerUserState) { "$prefix${innerUserState?.user?.toBestDisplayName()}" },
         tags = remember(innerUserState) { innerUserState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists() },
         style = LocalTextStyle.current.copy(
-            color = MaterialTheme.colors.primary.copy(alpha = 0.52f),
+            color = MaterialTheme.colors.lessImportantLink,
             fontSize = 13.sp
         ),
         onClick = { onUserTagClick(user) }

@@ -6,13 +6,13 @@ import android.util.Patterns
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material.Icon
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.ProvideTextStyle
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -24,11 +24,15 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.halilibo.richtext.markdown.Markdown
 import com.halilibo.richtext.markdown.MarkdownParseOptions
+import com.halilibo.richtext.ui.HeadingStyle
 import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.material.MaterialRichText
 import com.halilibo.richtext.ui.resolveDefaults
@@ -43,6 +47,8 @@ import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.amethyst.ui.uriToRoute
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
@@ -83,6 +89,36 @@ fun isValidURL(url: String?): Boolean {
     }
 }
 
+internal val DefaultHeadingStyle: HeadingStyle = { level, textStyle ->
+    when (level) {
+        0 -> textStyle.copy(
+            fontSize = 30.sp,
+            fontWeight = FontWeight.Light
+        )
+        1 -> textStyle.copy(
+            fontSize = 26.sp,
+            fontWeight = FontWeight.Light
+        )
+        2 -> textStyle.copy(
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Light
+        )
+        3 -> textStyle.copy(
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold
+        )
+        4 -> textStyle.copy(
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold
+        )
+        5 -> textStyle.copy(
+            fontWeight = FontWeight.Bold
+        )
+        else -> textStyle
+    }
+}
+
+internal val DefaultParagraphSpacing: TextUnit = 12.sp
 val richTextDefaults = RichTextStyle().resolveDefaults()
 
 fun isMarkdown(content: String): Boolean {
@@ -100,7 +136,7 @@ fun RichTextViewer(
     canPreview: Boolean,
     modifier: Modifier,
     tags: ImmutableListOfLists<String>,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -129,7 +165,7 @@ private fun RenderRegular(
     content: String,
     tags: ImmutableListOfLists<String>,
     canPreview: Boolean,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -159,7 +195,7 @@ private fun RenderParagraph(
     paragraph: String,
     state: RichTextViewerState,
     canPreview: Boolean,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     tags: ImmutableListOfLists<String>
@@ -234,7 +270,7 @@ private fun RenderWord(
     word: String,
     state: RichTextViewerState,
     canPreview: Boolean,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     tags: ImmutableListOfLists<String>
@@ -288,7 +324,7 @@ private fun RenderWordWithoutPreview(
     word: String,
     state: RichTextViewerState,
     tags: ImmutableListOfLists<String>,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -321,7 +357,7 @@ private fun RenderWordWithPreview(
     word: String,
     state: RichTextViewerState,
     tags: ImmutableListOfLists<String>,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -402,8 +438,10 @@ fun RenderCustomEmoji(word: String, state: RichTextViewerState) {
 }
 
 @Composable
-private fun RenderContentAsMarkdown(content: String, backgroundColor: Color, tags: ImmutableListOfLists<String>?, nav: (String) -> Unit) {
+private fun RenderContentAsMarkdown(content: String, backgroundColor: MutableState<Color>, tags: ImmutableListOfLists<String>?, nav: (String) -> Unit) {
     val myMarkDownStyle = richTextDefaults.copy(
+        paragraphSpacing = DefaultParagraphSpacing,
+        headingStyle = DefaultHeadingStyle,
         codeBlockStyle = richTextDefaults.codeBlockStyle?.copy(
             textStyle = TextStyle(
                 fontFamily = FontFamily.Monospace,
@@ -412,16 +450,16 @@ private fun RenderContentAsMarkdown(content: String, backgroundColor: Color, tag
             modifier = Modifier
                 .padding(0.dp)
                 .fillMaxWidth()
-                .clip(shape = RoundedCornerShape(15.dp))
+                .clip(shape = QuoteBorder)
                 .border(
                     1.dp,
-                    MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
-                    RoundedCornerShape(15.dp)
+                    MaterialTheme.colors.subtleBorder,
+                    QuoteBorder
                 )
                 .background(
                     MaterialTheme.colors.onSurface
                         .copy(alpha = 0.05f)
-                        .compositeOver(backgroundColor)
+                        .compositeOver(backgroundColor.value)
                 )
         ),
         stringStyle = richTextDefaults.stringStyle?.copy(
@@ -432,7 +470,7 @@ private fun RenderContentAsMarkdown(content: String, backgroundColor: Color, tag
                 fontFamily = FontFamily.Monospace,
                 fontSize = 14.sp,
                 background = MaterialTheme.colors.onSurface.copy(alpha = 0.22f)
-                    .compositeOver(backgroundColor)
+                    .compositeOver(backgroundColor.value)
             )
         )
     )
@@ -448,15 +486,17 @@ private fun RenderContentAsMarkdown(content: String, backgroundColor: Color, tag
         Unit
     }
 
-    MaterialRichText(
-        style = myMarkDownStyle
-    ) {
-        RefreshableContent(content, tags) {
-            Markdown(
-                content = it,
-                markdownParseOptions = MarkdownParseOptions.Default,
-                onLinkClicked = onClick
-            )
+    ProvideTextStyle(TextStyle(lineHeight = 1.30.em)) {
+        MaterialRichText(
+            style = myMarkDownStyle
+        ) {
+            RefreshableContent(content, tags) {
+                Markdown(
+                    content = it,
+                    markdownParseOptions = MarkdownParseOptions.Default,
+                    onLinkClicked = onClick
+                )
+            }
         }
     }
 }
@@ -651,7 +691,7 @@ private fun returnMarkdownWithSpecialContent(content: String, tags: ImmutableLis
             if (isValidURL(word)) {
                 val removedParamsFromUrl = word.split("?")[0].lowercase()
                 if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-                    returnContent += "$word "
+                    returnContent += "![]($word) "
                 } else {
                     returnContent += "[$word]($word) "
                 }
@@ -722,7 +762,7 @@ fun startsWithNIP19Scheme(word: String): Boolean {
 data class LoadedBechLink(val baseNote: Note?, val nip19: Nip19.Return)
 
 @Composable
-fun BechLink(word: String, canPreview: Boolean, backgroundColor: Color, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun BechLink(word: String, canPreview: Boolean, backgroundColor: MutableState<Color>, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     var loadedLink by remember { mutableStateOf<LoadedBechLink?>(null) }
 
     LaunchedEffect(key1 = word) {
@@ -763,21 +803,21 @@ fun BechLink(word: String, canPreview: Boolean, backgroundColor: Color, accountV
 private fun DisplayFullNote(
     it: Note,
     accountViewModel: AccountViewModel,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     nav: (String) -> Unit,
     loadedLink: LoadedBechLink
 ) {
-    val borderColor = MaterialTheme.colors.onSurface.copy(alpha = 0.12f)
+    val borderColor = MaterialTheme.colors.subtleBorder
 
     val modifier = remember {
         Modifier
             .padding(top = 2.dp, bottom = 0.dp, start = 0.dp, end = 0.dp)
             .fillMaxWidth()
-            .clip(shape = RoundedCornerShape(15.dp))
+            .clip(shape = QuoteBorder)
             .border(
                 1.dp,
                 borderColor,
-                RoundedCornerShape(15.dp)
+                QuoteBorder
             )
     }
 
@@ -885,7 +925,7 @@ fun HashTag(word: String, nav: (String) -> Unit) {
 data class LoadedTag(val user: User?, val note: Note?, val addedChars: String)
 
 @Composable
-fun TagLink(word: String, tags: ImmutableListOfLists<String>, canPreview: Boolean, backgroundColor: Color, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun TagLink(word: String, tags: ImmutableListOfLists<String>, canPreview: Boolean, backgroundColor: MutableState<Color>, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     var loadedTag by remember { mutableStateOf<LoadedTag?>(null) }
 
     LaunchedEffect(key1 = word) {
@@ -942,7 +982,7 @@ private fun DisplayNoteFromTag(
     addedChars: String,
     canPreview: Boolean,
     accountViewModel: AccountViewModel,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     nav: (String) -> Unit
 ) {
     if (canPreview) {
@@ -952,11 +992,11 @@ private fun DisplayNoteFromTag(
             modifier = Modifier
                 .padding(top = 2.dp, bottom = 0.dp, start = 0.dp, end = 0.dp)
                 .fillMaxWidth()
-                .clip(shape = RoundedCornerShape(15.dp))
+                .clip(shape = QuoteBorder)
                 .border(
                     1.dp,
-                    MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
-                    RoundedCornerShape(15.dp)
+                    MaterialTheme.colors.subtleBorder,
+                    QuoteBorder
                 ),
             parentBackgroundColor = backgroundColor,
             isQuotedNote = true,

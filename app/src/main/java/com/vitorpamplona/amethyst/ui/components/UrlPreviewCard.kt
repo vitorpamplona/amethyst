@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
@@ -21,6 +20,8 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.previews.UrlInfoItem
+import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 
 @Composable
 fun UrlPreviewCard(
@@ -32,11 +33,11 @@ fun UrlPreviewCard(
     Row(
         modifier = Modifier
             .clickable { runCatching { uri.openUri(url) } }
-            .clip(shape = RoundedCornerShape(15.dp))
+            .clip(shape = QuoteBorder)
             .border(
                 1.dp,
-                MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
-                RoundedCornerShape(15.dp)
+                MaterialTheme.colors.subtleBorder,
+                QuoteBorder
             )
     ) {
         Column {
