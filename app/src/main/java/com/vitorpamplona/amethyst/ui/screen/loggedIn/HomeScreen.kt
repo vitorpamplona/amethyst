@@ -156,4 +156,9 @@ fun WatchAccountForHomeScreen(
 }
 
 @Immutable
-class TabItem(val resource: Int, val viewModel: FeedViewModel, val routeForLastRead: String, val scrollStateKey: String)
+class TabItem(
+    val resource: Int,
+    val viewModel: FeedViewModel,
+    val routeForLastRead: String,
+    val scrollStateKey: String
+)

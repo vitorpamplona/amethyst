@@ -81,7 +81,7 @@ import kotlin.math.roundToInt
 fun ReactionsRow(baseNote: Note, showReactionDetail: Boolean, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val grayTint = MaterialTheme.colors.placeholderText
 
-    var wantsToSeeReactions = remember {
+    val wantsToSeeReactions = remember {
         mutableStateOf<Boolean>(false)
     }
 
