@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
@@ -180,6 +179,11 @@ private fun FeedLoaded(
         Modifier
     }
 
+    val defaultModifier = remember {
+        Modifier
+            .fillMaxWidth()
+    }
+
     LazyColumn(
         contentPadding = PaddingValues(
             top = 10.dp,
@@ -188,7 +192,7 @@ private fun FeedLoaded(
         state = listState
     ) {
         itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
-            Row(Modifier.fillMaxWidth().defaultMinSize(minHeight = 75.dp)) {
+            Row(defaultModifier) {
                 NoteCompose(
                     item,
                     routeForLastRead = routeForLastRead,
