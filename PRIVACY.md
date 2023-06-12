@@ -39,7 +39,7 @@ You cannot use the Amethyst app for Android to submit Objectionable Content to r
 
 ### For versions downloaded from F-Droid
 
-We do not control the distribution of the application in F-droid. Legal matters should be resolved between the user and F-droid. 
+We do not control the distribution of the application in F-Droid. Legal matters should be resolved between the user and F-Droid. 
 
 ## Other Notes
 
