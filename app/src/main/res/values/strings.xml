@@ -412,4 +412,6 @@
     <string name="content_warning_see_warnings">Always show content warnings</string>
 
     <string name="recommended_apps">Recommends: </string>
+    <string name="filter_spam_from_strangers">Filter spam from strangers</string>
+    <string name="warn_when_posts_have_reports_from_your_follows">Warn when posts have reports from your follows</string>
 </resources>
