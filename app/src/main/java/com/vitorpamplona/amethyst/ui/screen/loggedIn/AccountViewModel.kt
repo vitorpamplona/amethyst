@@ -35,6 +35,10 @@ class AccountViewModel(val account: Account) : ViewModel() {
         return account.isWriteable()
     }
 
+    fun verifyDelegation(kind: Int): Boolean {
+        return account.verifyDelegation(kind)
+    }
+
     fun userProfile(): User {
         return account.userProfile()
     }

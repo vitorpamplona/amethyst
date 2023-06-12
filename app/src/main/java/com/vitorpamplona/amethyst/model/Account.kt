@@ -8,6 +8,7 @@ import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.OptOutFromFilters
 import com.vitorpamplona.amethyst.service.FileHeader
+import com.vitorpamplona.amethyst.service.Nip26
 import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
 import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.Client
@@ -26,6 +27,8 @@ import nostr.postr.Persona
 import nostr.postr.Utils
 import java.math.BigDecimal
 import java.net.Proxy
+import java.util.Calendar
+import java.util.Date
 import java.util.Locale
 
 val DefaultChannels = setOf(
@@ -169,6 +172,8 @@ class Account(
             // has already liked this note
             return
         }
+
+        if (!verifyDelegation(ReactionEvent.kind)) return
 
         note.event?.let {
             val event = ReactionEvent.createLike(it, loggedIn.privKey!!)
@@ -324,6 +329,7 @@ class Account(
 
     fun boost(note: Note) {
         if (!isWriteable()) return
+        if (!verifyDelegation(RepostEvent.kind)) return
 
         if (note.hasBoostedInTheLast5Minutes(userProfile())) {
             // has already bosted in the past 5mins
@@ -506,6 +512,7 @@ class Account(
         directMentions: Set<HexKey>
     ) {
         if (!isWriteable()) return
+        if (!verifyDelegation(TextNoteEvent.kind)) return
 
         val repliesToHex = replyTo?.filter { it.address() == null }?.map { it.idHex }
         val mentionsHex = mentions?.map { it.pubkeyHex }
@@ -1182,6 +1189,44 @@ class Account(
                 }
             }
         }
+    }
+
+    private fun useDelegation(): Boolean {
+        return delegatorHexKey.isNotBlank()
+    }
+
+    fun verifyDelegation(kind: Int): Boolean {
+        if (!useDelegation()) return true
+        if (!Nip26.isValidDelegation(delegationToken)) throw Exception("Invalid delegation string")
+        val params = delegationToken.split(":")[3]
+        val paramsSplit = params.split("&")
+        var kinds = listOf<Int>()
+        for (param in paramsSplit) {
+            val paramSplit = param.split(Regex("[<>=]"))
+            when (paramSplit[0]) {
+                "created_at" -> {
+                    val op = param.substring(10, 11)
+                    val currentDate = Date(Calendar.getInstance().timeInMillis)
+                    val date = Date("${paramSplit[1]}000".toLong())
+                    if (op == ">") {
+                        if (!currentDate.after(date)) {
+                            throw Exception("Delegation valid only after $date")
+                        }
+                    } else {
+                        if (!currentDate.before(date)) {
+                            throw Exception("Delegation valid only before $date")
+                        }
+                    }
+                }
+                "kind" -> {
+                    kinds = kinds + paramSplit[1].toInt()
+                }
+            }
+        }
+        if (!kinds.contains(kind)) {
+            throw Exception("Delegation not valid for the kind $kind")
+        }
+        return kinds.contains(kind)
     }
 
     init {

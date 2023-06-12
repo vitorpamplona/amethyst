@@ -63,6 +63,8 @@ import coil.request.ImageRequest
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
+import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.screen.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -447,19 +449,31 @@ fun LikeReaction(
     IconButton(
         modifier = iconButtonModifier,
         onClick = {
-            if (accountViewModel.isWriteable()) {
-                scope.launch(Dispatchers.IO) {
-                    if (accountViewModel.hasReactedTo(baseNote)) {
-                        accountViewModel.deleteReactionTo(baseNote)
-                    } else {
-                        accountViewModel.reactTo(baseNote)
+            try {
+                if (accountViewModel.isWriteable()) {
+                    accountViewModel.verifyDelegation(ReactionEvent.kind)
+
+                    scope.launch(Dispatchers.IO) {
+                        if (accountViewModel.hasReactedTo(baseNote)) {
+                            accountViewModel.deleteReactionTo(baseNote)
+                        } else {
+                            accountViewModel.reactTo(baseNote)
+                        }
+                    }
+                } else {
+                    scope.launch {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.login_with_a_private_key_to_like_posts),
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
-            } else {
+            } catch (e: Exception) {
                 scope.launch {
                     Toast.makeText(
                         context,
-                        context.getString(R.string.login_with_a_private_key_to_like_posts),
+                        e.message,
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -650,52 +664,68 @@ private fun zapClick(
     onZappingProgress: (Float) -> Unit,
     onMultipleChoices: () -> Unit
 ) {
-    if (accountViewModel.account.zapAmountChoices.isEmpty()) {
+    try {
+        val isWriteable = accountViewModel.isWriteable()
+        if (isWriteable) {
+            accountViewModel.verifyDelegation(LnZapRequestEvent.kind)
+        }
+        if (accountViewModel.account.zapAmountChoices.isEmpty()) {
+            scope.launch {
+                Toast
+                    .makeText(
+                        context,
+                        context.getString(R.string.no_zap_amount_setup_long_press_to_change),
+                        Toast.LENGTH_SHORT
+                    )
+                    .show()
+            }
+        } else if (!isWriteable) {
+            scope.launch {
+                Toast
+                    .makeText(
+                        context,
+                        context.getString(R.string.login_with_a_private_key_to_be_able_to_send_zaps),
+                        Toast.LENGTH_SHORT
+                    )
+                    .show()
+            }
+        } else if (accountViewModel.account.zapAmountChoices.size == 1) {
+            scope.launch(Dispatchers.IO) {
+                accountViewModel.zap(
+                    baseNote,
+                    accountViewModel.account.zapAmountChoices.first() * 1000,
+                    null,
+                    "",
+                    context,
+                    onError = {
+                        scope.launch {
+                            onZappingProgress(0f)
+                            Toast
+                                .makeText(context, it, Toast.LENGTH_SHORT)
+                                .show()
+                        }
+                    },
+                    onProgress = {
+                        scope.launch(Dispatchers.Main) {
+                            onZappingProgress(it)
+                        }
+                    },
+                    zapType = accountViewModel.account.defaultZapType
+                )
+            }
+        } else if (accountViewModel.account.zapAmountChoices.size > 1) {
+            onMultipleChoices()
+        }
+    } catch (e: Exception) {
         scope.launch {
             Toast
                 .makeText(
                     context,
-                    context.getString(R.string.no_zap_amount_setup_long_press_to_change),
+                    e.message,
                     Toast.LENGTH_SHORT
                 )
                 .show()
         }
-    } else if (!accountViewModel.isWriteable()) {
-        scope.launch {
-            Toast
-                .makeText(
-                    context,
-                    context.getString(R.string.login_with_a_private_key_to_be_able_to_send_zaps),
-                    Toast.LENGTH_SHORT
-                )
-                .show()
-        }
-    } else if (accountViewModel.account.zapAmountChoices.size == 1) {
-        scope.launch(Dispatchers.IO) {
-            accountViewModel.zap(
-                baseNote,
-                accountViewModel.account.zapAmountChoices.first() * 1000,
-                null,
-                "",
-                context,
-                onError = {
-                    scope.launch {
-                        onZappingProgress(0f)
-                        Toast
-                            .makeText(context, it, Toast.LENGTH_SHORT)
-                            .show()
-                    }
-                },
-                onProgress = {
-                    scope.launch(Dispatchers.Main) {
-                        onZappingProgress(it)
-                    }
-                },
-                zapType = accountViewModel.account.defaultZapType
-            )
-        }
-    } else if (accountViewModel.account.zapAmountChoices.size > 1) {
-        onMultipleChoices()
     }
 }
 

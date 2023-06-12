@@ -23,11 +23,11 @@ object Nip26 {
             return false
         }
         val params = keys[3]
+        if (!params.contains("kind")) return false
+        if (!params.contains("created_at")) return false
         val paramsSplit = params.split("&")
         if (paramsSplit.isEmpty()) return false
         for (param in paramsSplit) {
-            if (!paramsSplit.contains("kind")) return false
-            if (!paramsSplit.contains("created_at")) return false
             val paramSplit = param.split(Regex("[<>=]"))
             if (paramSplit.isEmpty()) return false
             when (paramSplit[0]) {
