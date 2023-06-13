@@ -135,10 +135,17 @@ private fun RowScope.HasNewItemsIcon(
 
     val scope = rememberCoroutineScope()
 
+    val size = remember {
+        if ("Home" == route.base) 25.dp else 23.dp
+    }
+    val iconSize = remember {
+        if ("Home" == route.base) 24.dp else 20.dp
+    }
+
     BottomIcon(
         icon = route.icon,
-        size = if ("Home" == route.base) 25.dp else 23.dp,
-        iconSize = if ("Home" == route.base) 24.dp else 20.dp,
+        size = size,
+        iconSize = iconSize,
         base = route.base,
         hasNewItems = hasNewItems,
         navEntryState = navEntryState
