@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -152,6 +153,7 @@ fun RenderCardFeed(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun FeedLoaded(
     state: CardFeedState.Loaded,
@@ -160,11 +162,6 @@ private fun FeedLoaded(
     nav: (String) -> Unit,
     routeForLastRead: String
 ) {
-    val defaultModifier = remember {
-        Modifier
-            .fillMaxWidth()
-    }
-
     LazyColumn(
         modifier = remember { Modifier.fillMaxSize() },
         contentPadding = remember {
@@ -176,6 +173,11 @@ private fun FeedLoaded(
         state = listState
     ) {
         itemsIndexed(state.feed.value, key = { _, item -> item.id() }) { _, item ->
+            val defaultModifier = remember {
+                Modifier
+                    .fillMaxWidth().animateItemPlacement()
+            }
+
             Row(defaultModifier) {
                 RenderCardItem(item, accountViewModel, nav, routeForLastRead)
             }

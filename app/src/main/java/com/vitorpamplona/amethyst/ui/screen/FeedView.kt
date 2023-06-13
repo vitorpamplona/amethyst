@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -167,6 +168,7 @@ private fun WatchScrollToTop(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun FeedLoaded(
     state: FeedState.Loaded,
@@ -179,11 +181,6 @@ private fun FeedLoaded(
         Modifier
     }
 
-    val defaultModifier = remember {
-        Modifier
-            .fillMaxWidth()
-    }
-
     LazyColumn(
         contentPadding = PaddingValues(
             top = 10.dp,
@@ -192,6 +189,11 @@ private fun FeedLoaded(
         state = listState
     ) {
         itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
+            val defaultModifier = remember {
+                Modifier
+                    .fillMaxWidth().animateItemPlacement()
+            }
+
             Row(defaultModifier) {
                 NoteCompose(
                     item,
