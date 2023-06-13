@@ -57,7 +57,10 @@ class AddBountyAmountViewModel : ViewModel() {
                 replyTo = listOfNotNull(bounty),
                 mentions = listOfNotNull(bounty?.author),
                 tags = listOf("bounty-added-reward"),
-                wantsToMarkAsSensitive = false
+                wantsToMarkAsSensitive = false,
+                replyingTo = null,
+                root = null,
+                directMentions = setOf()
             )
 
             nextAmount = TextFieldValue("")

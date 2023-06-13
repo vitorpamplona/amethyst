@@ -497,7 +497,10 @@ class Account(
         mentions: List<User>?,
         tags: List<String>? = null,
         zapReceiver: String? = null,
-        wantsToMarkAsSensitive: Boolean
+        wantsToMarkAsSensitive: Boolean,
+        replyingTo: String?,
+        root: String?,
+        directMentions: Set<HexKey>
     ) {
         if (!isWriteable()) return
 
@@ -513,6 +516,9 @@ class Account(
             extraTags = tags,
             zapReceiver = zapReceiver,
             markAsSensitive = wantsToMarkAsSensitive,
+            replyingTo = replyingTo,
+            root = root,
+            directMentions = directMentions,
             privateKey = loggedIn.privKey!!
         )
 

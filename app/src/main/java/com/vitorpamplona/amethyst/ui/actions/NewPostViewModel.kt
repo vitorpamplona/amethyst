@@ -137,7 +137,24 @@ open class NewPostViewModel() : ViewModel() {
         } else if (originalNote?.event is PrivateDmEvent) {
             account?.sendPrivateMessage(tagger.message, originalNote!!.author!!, originalNote!!, tagger.mentions, zapReceiver, wantsToMarkAsSensitive)
         } else {
-            account?.sendPost(tagger.message, tagger.replyTos, tagger.mentions, null, zapReceiver, wantsToMarkAsSensitive)
+            // adds markers
+            val rootId =
+                (originalNote?.event as? TextNoteEvent)?.root() // if it has a marker as root
+                    ?: originalNote?.replyTo?.firstOrNull { it.event != null && it.replyTo?.isEmpty() == true }?.idHex // if it has loaded events with zero replies in the reply list
+                    ?: originalNote?.replyTo?.firstOrNull()?.idHex // old rules, first item is root.
+            val replyId = originalNote?.idHex
+
+            account?.sendPost(
+                message = tagger.message,
+                replyTo = tagger.replyTos,
+                mentions = tagger.mentions,
+                tags = null,
+                zapReceiver = zapReceiver,
+                wantsToMarkAsSensitive = wantsToMarkAsSensitive,
+                replyingTo = replyId,
+                root = rootId,
+                directMentions = tagger.directMentions
+            )
         }
 
         cancel()

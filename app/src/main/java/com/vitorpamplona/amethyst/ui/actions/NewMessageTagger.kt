@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.actions
 
+import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -8,11 +9,16 @@ import com.vitorpamplona.amethyst.service.nip19.Nip19
 
 class NewMessageTagger(var channelHex: String?, var mentions: List<User>?, var replyTos: List<Note>?, var message: String) {
 
+    val directMentions = mutableSetOf<HexKey>()
+
     fun addUserToMentions(user: User) {
+        directMentions.add(user.pubkeyHex)
         mentions = if (mentions?.contains(user) == true) mentions else mentions?.plus(user) ?: listOf(user)
     }
 
     fun addNoteToReplyTos(note: Note) {
+        directMentions.add(note.idHex)
+
         note.author?.let { addUserToMentions(it) }
         replyTos = if (replyTos?.contains(note) == true) replyTos else replyTos?.plus(note) ?: listOf(note)
     }
