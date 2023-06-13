@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -35,8 +36,11 @@ fun LoadRedirectScreen(eventId: String?, navController: NavController) {
 
     val nav = remember(navController) {
         { route: String ->
-            navController.backQueue.removeLast()
-            navController.navigate(route)
+            navController.navigate(route) {
+                popUpTo(Route.Event.route) {
+                    inclusive = true
+                }
+            }
         }
     }
 
