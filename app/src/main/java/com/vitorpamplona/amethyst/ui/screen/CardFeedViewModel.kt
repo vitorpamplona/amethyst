@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.screen
 
 import android.util.Log
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
@@ -25,7 +26,6 @@ import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -132,8 +132,8 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
             }
 
         // val reactionCards = reactionsPerEvent.map { LikeSetCard(it.key, it.value) }
-        val zapsPerUser = mutableMapOf<User, MutableMap<Note, Note>>()
-        val zapsPerEvent = mutableMapOf<Note, MutableMap<Note, Note>>()
+        val zapsPerUser = mutableMapOf<User, MutableList<CombinedZap>>()
+        val zapsPerEvent = mutableMapOf<Note, MutableList<CombinedZap>>()
         notes
             .filter { it.event is LnZapEvent }
             .forEach { zapEvent ->
@@ -143,26 +143,22 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
                     if (zapRequest != null) {
                         // var newZapRequestEvent = LocalCache.checkPrivateZap(zapRequest.event as Event)
                         // zapRequest.event = newZapRequestEvent
-                        zapsPerEvent.getOrPut(zappedPost, { mutableMapOf() }).put(zapRequest, zapEvent)
+                        zapsPerEvent.getOrPut(zappedPost, { mutableListOf() }).add(CombinedZap(zapRequest, zapEvent))
                     }
                 } else {
                     val event = (zapEvent.event as LnZapEvent)
-                    val author = event.zappedAuthor().mapNotNull {
-                        LocalCache.checkGetOrCreateUser(
-                            it
-                        )
-                    }.firstOrNull()
+                    val author = event.zappedAuthor().firstNotNullOfOrNull {
+                        LocalCache.users[it] // don't create user if it doesn't exist
+                    }
                     if (author != null) {
                         val zapRequest = author.zaps.filter { it.value == zapEvent }.keys.firstOrNull()
                         if (zapRequest != null) {
-                            zapsPerUser.getOrPut(author, { mutableMapOf() })
-                                .put(zapRequest, zapEvent)
+                            zapsPerUser.getOrPut(author, { mutableListOf() })
+                                .add(CombinedZap(zapRequest, zapEvent))
                         }
                     }
                 }
             }
-
-        // val zapCards = zapsPerEvent.map { ZapSetCard(it.key, it.value) }
 
         val boostsPerEvent = mutableMapOf<Note, MutableList<Note>>()
         notes
@@ -178,9 +174,9 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
         val multiCards = allBaseNotes.map { baseNote ->
             val boostsInCard = boostsPerEvent[baseNote] ?: emptyList()
             val reactionsInCard = reactionsPerEvent[baseNote] ?: emptyList()
-            val zapsInCard = zapsPerEvent[baseNote] ?: emptyMap()
+            val zapsInCard = zapsPerEvent[baseNote] ?: emptyList()
 
-            val singleList = (boostsInCard + zapsInCard.values + reactionsInCard)
+            val singleList = (boostsInCard + zapsInCard.map { it.response } + reactionsInCard)
                 .sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
                 .reversed()
 
@@ -189,7 +185,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
                     baseNote,
                     boostsInCard.filter { it in chunk }.toImmutableList(),
                     reactionsInCard.filter { it in chunk }.toImmutableList(),
-                    zapsInCard.filter { it.value in chunk }.toImmutableMap()
+                    zapsInCard.filter { it.response in chunk }.toImmutableList()
                 )
             }
         }.flatten()
@@ -197,7 +193,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
         val userZaps = zapsPerUser.map {
             ZapUserSetCard(
                 it.key,
-                it.value.toImmutableMap()
+                it.value.toImmutableList()
             )
         }
 
@@ -345,4 +341,10 @@ fun <T> equalImmutableLists(list1: ImmutableList<T>, list2: ImmutableList<T>): B
         }
     }
     return true
+}
+
+@Immutable
+data class CombinedZap(val request: Note, val response: Note) {
+    fun createdAt() = response.createdAt()
+    fun idHex() = response.idHex
 }

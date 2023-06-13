@@ -64,12 +64,12 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
+import com.vitorpamplona.amethyst.ui.screen.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -188,7 +188,7 @@ private fun ReactionDetailGallery(
     if (hasReactions) {
         Row(verticalAlignment = CenterVertically, modifier = Modifier.padding(start = 10.dp, top = 5.dp)) {
             Column() {
-                val zapEvents by remember(zapsState) { derivedStateOf { baseNote.zaps.toImmutableMap() } }
+                val zapEvents by remember(zapsState) { derivedStateOf { baseNote.zaps.mapNotNull { it.value?.let { zapEvent -> CombinedZap(it.key, zapEvent) } }.toImmutableList() } }
                 val boostEvents by remember(boostsState) { derivedStateOf { baseNote.boosts.toImmutableList() } }
                 val likeEvents by remember(reactionsState) { derivedStateOf { baseNote.reactions.toImmutableList() } }
 
