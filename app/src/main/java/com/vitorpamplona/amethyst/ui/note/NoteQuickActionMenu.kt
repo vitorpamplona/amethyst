@@ -112,12 +112,12 @@ private fun VerticalDivider(color: Color) =
 
 @Composable
 fun LongPressToQuickAction(baseNote: Note, accountViewModel: AccountViewModel, content: @Composable (() -> Unit) -> Unit) {
-    var popupExpanded by remember { mutableStateOf(false) }
-    val showPopup = remember { { popupExpanded = true } }
+    var popupExpanded = remember { mutableStateOf(false) }
+    val showPopup = remember(popupExpanded) { { popupExpanded.value = true } }
 
     content(showPopup)
 
-    NoteQuickActionMenu(baseNote, popupExpanded, { popupExpanded = false }, accountViewModel)
+    NoteQuickActionMenu(baseNote, popupExpanded.value, { popupExpanded.value = false }, accountViewModel)
 }
 
 @Composable
