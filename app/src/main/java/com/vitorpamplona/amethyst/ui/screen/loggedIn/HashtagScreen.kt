@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -119,6 +121,7 @@ private fun HashtagActionOptions(
     accountViewModel: AccountViewModel
 ) {
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     val userState by accountViewModel.userProfile().live().follows.observeAsState()
     val isFollowingTag by remember(userState) {
@@ -128,8 +131,38 @@ private fun HashtagActionOptions(
     }
 
     if (isFollowingTag) {
-        UnfollowButton { coroutineScope.launch(Dispatchers.IO) { accountViewModel.account.unfollow(tag) } }
+        UnfollowButton {
+            coroutineScope.launch(Dispatchers.IO) {
+                try {
+                    accountViewModel.account.unfollow(tag)
+                } catch (e: Exception) {
+                    coroutineScope.launch {
+                        Toast.makeText(
+                            context,
+                            e.message,
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            }
+        }
     } else {
-        FollowButton({ coroutineScope.launch(Dispatchers.IO) { accountViewModel.account.follow(tag) } })
+        FollowButton(
+            {
+                coroutineScope.launch(Dispatchers.IO) {
+                    try {
+                        accountViewModel.account.follow(tag)
+                    } catch (e: Exception) {
+                        coroutineScope.launch {
+                            Toast.makeText(
+                                context,
+                                e.message,
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                }
+            }
+        )
     }
 }
