@@ -8,6 +8,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.UserMetadata
 import com.vitorpamplona.amethyst.model.toHexKey
+import com.vitorpamplona.amethyst.service.Nip26
 import nostr.postr.Utils
 import java.io.ByteArrayInputStream
 import java.util.Date
@@ -169,12 +170,23 @@ class MetadataEvent(
                 .readerFor(UserMetadata::class.java)
         }
 
-        fun create(contactMetaData: String, identities: List<IdentityClaim>, privateKey: ByteArray, createdAt: Long = Date().time / 1000): MetadataEvent {
+        fun create(
+            contactMetaData: String,
+            identities: List<IdentityClaim>,
+            privateKey: ByteArray,
+            createdAt: Long = Date().time / 1000,
+            delegationToken: String,
+            delegationHexKey: String,
+            delegationSignature: String
+        ): MetadataEvent {
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf<List<String>>()
 
             identities.forEach {
                 tags.add(listOf("i", it.platformIdentity(), it.proof))
+            }
+            if (delegationToken.isNotBlank()) {
+                tags.add(Nip26.toTags(delegationToken, delegationSignature, delegationHexKey))
             }
 
             val id = generateId(pubKey, createdAt, kind, tags, contactMetaData)

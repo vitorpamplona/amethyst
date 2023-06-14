@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.service.model
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
+import com.vitorpamplona.amethyst.service.Nip26
 import nostr.postr.Utils
 import java.util.Date
 
@@ -52,7 +53,10 @@ class PollNoteEvent(
             consensusThreshold: Int?,
             closedAt: Int?,
             zapReceiver: String?,
-            markAsSensitive: Boolean
+            markAsSensitive: Boolean,
+            delegationToken: String,
+            delegationHexKey: String,
+            delegationSignature: String
         ): PollNoteEvent {
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf<List<String>>()
@@ -79,7 +83,9 @@ class PollNoteEvent(
             if (markAsSensitive) {
                 tags.add(listOf("content-warning", ""))
             }
-
+            if (delegationToken.isNotBlank()) {
+                tags.add(Nip26.toTags(delegationToken, delegationSignature, delegationHexKey))
+            }
             val id = generateId(pubKey, createdAt, kind, tags, msg)
             val sig = Utils.sign(id, privateKey)
             return PollNoteEvent(id.toHexKey(), pubKey, createdAt, tags, msg, sig.toHexKey())

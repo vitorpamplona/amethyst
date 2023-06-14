@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
+import com.vitorpamplona.amethyst.service.Nip26
 import fr.acinq.secp256k1.Hex
 import nostr.postr.Utils
 import nostr.postr.toHex
@@ -78,7 +79,10 @@ class PrivateDmEvent(
             createdAt: Long = Date().time / 1000,
             publishedRecipientPubKey: ByteArray? = null,
             advertiseNip18: Boolean = true,
-            markAsSensitive: Boolean
+            markAsSensitive: Boolean,
+            delegationToken: String,
+            delegationHexKey: String,
+            delegationSignature: String
         ): PrivateDmEvent {
             val content = Utils.encrypt(
                 if (advertiseNip18) { nip18Advertisement } else { "" } + msg,
@@ -101,6 +105,9 @@ class PrivateDmEvent(
             }
             if (markAsSensitive) {
                 tags.add(listOf("content-warning", ""))
+            }
+            if (delegationToken.isNotBlank()) {
+                tags.add(Nip26.toTags(delegationToken, delegationSignature, delegationHexKey))
             }
             val id = generateId(pubKey, createdAt, kind, tags, content)
             val sig = Utils.sign(id, privateKey)

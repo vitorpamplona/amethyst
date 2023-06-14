@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
+import com.vitorpamplona.amethyst.service.Nip26
 import nostr.postr.Utils
 import java.util.Date
 
@@ -26,7 +27,14 @@ class ChannelCreateEvent(
     companion object {
         const val kind = 40
 
-        fun create(channelInfo: ChannelData?, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ChannelCreateEvent {
+        fun create(
+            channelInfo: ChannelData?,
+            privateKey: ByteArray,
+            createdAt: Long = Date().time / 1000,
+            delegationToken: String,
+            delegationHexKey: String,
+            delegationSignature: String
+        ): ChannelCreateEvent {
             val content = try {
                 if (channelInfo != null) {
                     gson.toJson(channelInfo)
@@ -39,7 +47,10 @@ class ChannelCreateEvent(
             }
 
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
-            val tags = emptyList<List<String>>()
+            var tags = emptyList<List<String>>()
+            if (delegationToken.isNotBlank()) {
+                tags = tags + listOf(Nip26.toTags(delegationToken, delegationSignature, delegationHexKey))
+            }
             val id = generateId(pubKey, createdAt, kind, tags, content)
             val sig = Utils.sign(id, privateKey)
             return ChannelCreateEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())

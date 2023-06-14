@@ -12,7 +12,10 @@ class NostrLnZapPaymentResponseDataSource(
     private val fromServiceHex: String,
     private val toUserHex: String,
     private val replyingToHex: String,
-    private val authSigningKey: ByteArray
+    private val authSigningKey: ByteArray,
+    private val delegationToken: String,
+    private val delegationHexKey: String,
+    private val delegationSignature: String
 ) : NostrDataSource("LnZapPaymentResponseFeed") {
 
     val feedTypes = setOf(FeedType.WALLET_CONNECT)
@@ -44,7 +47,14 @@ class NostrLnZapPaymentResponseDataSource(
     override fun auth(relay: Relay, challenge: String) {
         super.auth(relay, challenge)
 
-        val event = RelayAuthEvent.create(relay.url, challenge, authSigningKey)
+        val event = RelayAuthEvent.create(
+            relay.url,
+            challenge,
+            authSigningKey,
+            delegationHexKey = delegationHexKey,
+            delegationSignature = delegationSignature,
+            delegationToken = delegationToken
+        )
         Client.send(
             event,
             relay.url

@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.service.model
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
+import com.vitorpamplona.amethyst.service.Nip26
 import nostr.postr.Utils
 import java.util.Date
 
@@ -22,20 +23,45 @@ class ReactionEvent(
     companion object {
         const val kind = 7
 
-        fun createWarning(originalNote: EventInterface, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ReactionEvent {
-            return create("\u26A0\uFE0F", originalNote, privateKey, createdAt)
+        fun createWarning(
+            originalNote: EventInterface,
+            privateKey: ByteArray,
+            createdAt: Long = Date().time / 1000,
+            delegationToken: String,
+            delegationHexKey: String,
+            delegationSignature: String
+        ): ReactionEvent {
+            return create("\u26A0\uFE0F", originalNote, privateKey, createdAt, delegationToken, delegationHexKey, delegationSignature)
         }
 
-        fun createLike(originalNote: EventInterface, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ReactionEvent {
-            return create("+", originalNote, privateKey, createdAt)
+        fun createLike(
+            originalNote: EventInterface,
+            privateKey: ByteArray,
+            createdAt: Long = Date().time / 1000,
+            delegationToken: String,
+            delegationHexKey: String,
+            delegationSignature: String
+        ): ReactionEvent {
+            return create("+", originalNote, privateKey, createdAt, delegationToken, delegationHexKey, delegationSignature)
         }
 
-        fun create(content: String, originalNote: EventInterface, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ReactionEvent {
+        fun create(
+            content: String,
+            originalNote: EventInterface,
+            privateKey: ByteArray,
+            createdAt: Long = Date().time / 1000,
+            delegationToken: String,
+            delegationHexKey: String,
+            delegationSignature: String
+        ): ReactionEvent {
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
 
             var tags = listOf(listOf("e", originalNote.id()), listOf("p", originalNote.pubKey()))
             if (originalNote is AddressableEvent) {
                 tags = tags + listOf(listOf("a", originalNote.address().toTag()))
+            }
+            if (delegationToken.isNotBlank()) {
+                tags = tags + listOf(Nip26.toTags(delegationToken, delegationSignature, delegationHexKey))
             }
 
             val id = generateId(pubKey, createdAt, kind, tags, content)

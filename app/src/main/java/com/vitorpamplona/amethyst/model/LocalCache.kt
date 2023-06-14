@@ -1054,7 +1054,7 @@ object LocalCache {
         }
         if (delegation.isNotEmpty()) {
             if (!Nip26.checkSignature(delegation[0], event.pubKey)) {
-                Log.w("Event failed retest ${event.kind}", "invalid delegation signature")
+                Log.w("Delegated Event failed retest ${event.kind}", "invalid delegation signature")
                 return
             }
             event.delegationPubKey = delegation[0][1]

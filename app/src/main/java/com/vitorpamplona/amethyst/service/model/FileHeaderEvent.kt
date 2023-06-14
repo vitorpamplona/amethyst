@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.service.model
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
+import com.vitorpamplona.amethyst.service.Nip26
 import nostr.postr.Utils
 import java.util.Date
 
@@ -51,9 +52,12 @@ class FileHeaderEvent(
             torrentInfoHash: String? = null,
             encryptionKey: AESGCM? = null,
             privateKey: ByteArray,
-            createdAt: Long = Date().time / 1000
+            createdAt: Long = Date().time / 1000,
+            delegationToken: String,
+            delegationHexKey: String,
+            delegationSignature: String
         ): FileHeaderEvent {
-            val tags = listOfNotNull(
+            var tags = listOfNotNull(
                 listOf(URL, url),
                 mimeType?.let { listOf(MIME_TYPE, mimeType) },
                 hash?.let { listOf(HASH, it) },
@@ -64,6 +68,9 @@ class FileHeaderEvent(
                 torrentInfoHash?.let { listOf(TORRENT_INFOHASH, it) },
                 encryptionKey?.let { listOf(ENCRYPTION_KEY, it.key, it.nonce) }
             )
+            if (delegationToken.isNotBlank()) {
+                tags = tags + listOf(Nip26.toTags(delegationToken, delegationSignature, delegationHexKey))
+            }
 
             val content = description ?: ""
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()

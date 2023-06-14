@@ -126,13 +126,24 @@ class Account(
                 follows,
                 followsTags,
                 relays,
-                loggedIn.privKey!!
+                loggedIn.privKey!!,
+                delegationToken = delegationToken,
+                delegationHexKey = delegatorHexKey,
+                delegationSignature = delegationSignature
             )
 
             Client.send(event)
             LocalCache.consume(event)
         } else {
-            val event = ContactListEvent.create(listOf(), listOf(), relays, loggedIn.privKey!!)
+            val event = ContactListEvent.create(
+                listOf(),
+                listOf(),
+                relays,
+                loggedIn.privKey!!,
+                delegationToken = delegationToken,
+                delegationHexKey = delegatorHexKey,
+                delegationSignature = delegationSignature
+            )
 
             // Keep this local to avoid erasing a good contact list.
             // Client.send(event)
@@ -145,7 +156,14 @@ class Account(
         if (!verifyDelegation(MetadataEvent.kind)) return
 
         loggedIn.privKey?.let {
-            val event = MetadataEvent.create(toString, identities, loggedIn.privKey!!)
+            val event = MetadataEvent.create(
+                toString,
+                identities,
+                loggedIn.privKey!!,
+                delegationToken = delegationToken,
+                delegationHexKey = delegatorHexKey,
+                delegationSignature = delegationSignature
+            )
             Client.send(event)
             LocalCache.consume(event)
         }
@@ -178,7 +196,13 @@ class Account(
         if (!verifyDelegation(ReactionEvent.kind)) return
 
         note.event?.let {
-            val event = ReactionEvent.createLike(it, loggedIn.privKey!!)
+            val event = ReactionEvent.createLike(
+                it,
+                loggedIn.privKey!!,
+                delegationToken = delegationToken,
+                delegationSignature = delegationSignature,
+                delegationHexKey = delegatorHexKey
+            )
             Client.send(event)
             LocalCache.consume(event)
         }
@@ -196,7 +220,10 @@ class Account(
                 loggedIn.privKey!!,
                 pollOption,
                 message,
-                zapType
+                zapType,
+                delegationToken = delegationToken,
+                delegationSignature = delegationSignature,
+                delegationHexKey = delegatorHexKey
             )
         }
         return null
@@ -241,13 +268,23 @@ class Account(
         if (!verifyDelegation(LnZapPaymentRequestEvent.kind)) return
 
         zapPaymentRequest?.let { nip47 ->
-            val event = LnZapPaymentRequestEvent.create(bolt11, nip47.pubKeyHex, nip47.secret?.hexToByteArray() ?: loggedIn.privKey!!)
+            val event = LnZapPaymentRequestEvent.create(
+                bolt11,
+                nip47.pubKeyHex,
+                nip47.secret?.hexToByteArray() ?: loggedIn.privKey!!,
+                delegationToken = delegationToken,
+                delegationHexKey = delegatorHexKey,
+                delegationSignature = delegationSignature
+            )
 
             val wcListener = NostrLnZapPaymentResponseDataSource(
                 fromServiceHex = nip47.pubKeyHex,
                 toUserHex = event.pubKey,
                 replyingToHex = event.id,
-                authSigningKey = nip47.secret?.hexToByteArray() ?: loggedIn.privKey!!
+                authSigningKey = nip47.secret?.hexToByteArray() ?: loggedIn.privKey!!,
+                delegationToken = delegationToken,
+                delegationHexKey = delegatorHexKey,
+                delegationSignature = delegationSignature
             )
             wcListener.start()
 
@@ -278,7 +315,10 @@ class Account(
             userProfile().latestContactList?.relays()?.keys?.ifEmpty { null } ?: localRelays.map { it.url }.toSet(),
             loggedIn.privKey!!,
             message,
-            zapType
+            zapType,
+            delegationToken = delegationToken,
+            delegationSignature = delegationSignature,
+            delegationHexKey = delegatorHexKey
         )
     }
 
@@ -292,14 +332,28 @@ class Account(
 
         note.event?.let {
             if (!verifyDelegation(ReactionEvent.kind)) return
-            val event = ReactionEvent.createWarning(it, loggedIn.privKey!!)
+            val event = ReactionEvent.createWarning(
+                it,
+                loggedIn.privKey!!,
+                delegationToken = delegationToken,
+                delegationHexKey = delegatorHexKey,
+                delegationSignature = delegationSignature
+            )
             Client.send(event)
             LocalCache.consume(event)
         }
 
         note.event?.let {
             if (!verifyDelegation(ReportEvent.kind)) return
-            val event = ReportEvent.create(it, type, loggedIn.privKey!!, content = content)
+            val event = ReportEvent.create(
+                it,
+                type,
+                loggedIn.privKey!!,
+                content = content,
+                delegationToken = delegationToken,
+                delegationHexKey = delegatorHexKey,
+                delegationSignature = delegationSignature
+            )
             Client.send(event)
             LocalCache.consume(event, null)
         }
@@ -314,7 +368,14 @@ class Account(
             return
         }
 
-        val event = ReportEvent.create(user.pubkeyHex, type, loggedIn.privKey!!)
+        val event = ReportEvent.create(
+            user.pubkeyHex,
+            type,
+            loggedIn.privKey!!,
+            delegationSignature = delegationSignature,
+            delegationHexKey = delegatorHexKey,
+            delegationToken = delegationToken
+        )
         Client.send(event)
         LocalCache.consume(event, null)
     }
@@ -330,7 +391,13 @@ class Account(
         val myNotes = notes.filter { it.author == userProfile() }.map { it.idHex }
 
         if (myNotes.isNotEmpty()) {
-            val event = DeletionEvent.create(myNotes, loggedIn.privKey!!)
+            val event = DeletionEvent.create(
+                myNotes,
+                loggedIn.privKey!!,
+                delegationToken = delegationToken,
+                delegationHexKey = delegatorHexKey,
+                delegationSignature = delegationSignature
+            )
             Client.send(event)
             LocalCache.consume(event)
         }
@@ -346,7 +413,13 @@ class Account(
         }
 
         note.event?.let {
-            val event = RepostEvent.create(it, loggedIn.privKey!!)
+            val event = RepostEvent.create(
+                it,
+                loggedIn.privKey!!,
+                delegationSignature = delegationSignature,
+                delegationHexKey = delegatorHexKey,
+                delegationToken = delegationToken
+            )
             Client.send(event)
             LocalCache.consume(event)
         }
@@ -371,7 +444,10 @@ class Account(
                 followingUsers.plus(Contact(user.pubkeyHex, null)),
                 followingTags,
                 contactList.relays(),
-                loggedIn.privKey!!
+                loggedIn.privKey!!,
+                delegationToken = delegationToken,
+                delegationHexKey = delegatorHexKey,
+                delegationSignature = delegationSignature
             )
         } else {
             val relays = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) }
@@ -379,7 +455,10 @@ class Account(
                 listOf(Contact(user.pubkeyHex, null)),
                 followingTags,
                 relays,
-                loggedIn.privKey!!
+                loggedIn.privKey!!,
+                delegationToken = delegationToken,
+                delegationHexKey = delegatorHexKey,
+                delegationSignature = delegationSignature
             )
         }
 
@@ -400,7 +479,10 @@ class Account(
                 followingUsers,
                 followingTags.plus(tag),
                 contactList.relays(),
-                loggedIn.privKey!!
+                loggedIn.privKey!!,
+                delegationToken = delegationToken,
+                delegationHexKey = delegatorHexKey,
+                delegationSignature = delegationSignature
             )
         } else {
             val relays = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) }
@@ -408,7 +490,10 @@ class Account(
                 followingUsers,
                 followingTags.plus(tag),
                 relays,
-                loggedIn.privKey!!
+                loggedIn.privKey!!,
+                delegationToken = delegationToken,
+                delegationHexKey = delegatorHexKey,
+                delegationSignature = delegationSignature
             )
         }
 
@@ -429,7 +514,10 @@ class Account(
                 followingUsers.filter { it.pubKeyHex != user.pubkeyHex },
                 followingTags,
                 contactList.relays(),
-                loggedIn.privKey!!
+                loggedIn.privKey!!,
+                delegationToken = delegationToken,
+                delegationHexKey = delegatorHexKey,
+                delegationSignature = delegationSignature
             )
 
             Client.send(event)
@@ -450,7 +538,10 @@ class Account(
                 followingUsers,
                 followingTags.filter { !it.equals(tag, ignoreCase = true) },
                 contactList.relays(),
-                loggedIn.privKey!!
+                loggedIn.privKey!!,
+                delegationToken = delegationToken,
+                delegationHexKey = delegatorHexKey,
+                delegationSignature = delegationSignature
             )
 
             Client.send(event)
@@ -466,7 +557,10 @@ class Account(
         val data = FileStorageEvent.create(
             mimeType = headerInfo.mimeType ?: "",
             data = byteArray,
-            privateKey = loggedIn.privKey!!
+            privateKey = loggedIn.privKey!!,
+            delegationToken = delegationToken,
+            delegationSignature = delegationSignature,
+            delegationHexKey = delegatorHexKey
         )
 
         val signedEvent = FileStorageHeaderEvent.create(
@@ -477,7 +571,10 @@ class Account(
             dimensions = headerInfo.dim,
             blurhash = headerInfo.blurHash,
             description = headerInfo.description,
-            privateKey = loggedIn.privKey!!
+            privateKey = loggedIn.privKey!!,
+            delegationToken = delegationToken,
+            delegationSignature = delegationSignature,
+            delegationHexKey = delegatorHexKey
         )
 
         return Pair(data, signedEvent)
@@ -509,7 +606,10 @@ class Account(
             dimensions = headerInfo.dim,
             blurhash = headerInfo.blurHash,
             description = headerInfo.description,
-            privateKey = loggedIn.privKey!!
+            privateKey = loggedIn.privKey!!,
+            delegationToken = delegationToken,
+            delegationSignature = delegationSignature,
+            delegationHexKey = delegatorHexKey
         )
 
         Client.send(signedEvent)
@@ -588,7 +688,10 @@ class Account(
             consensusThreshold = consensusThreshold,
             closedAt = closedAt,
             zapReceiver = zapReceiver,
-            markAsSensitive = wantsToMarkAsSensitive
+            markAsSensitive = wantsToMarkAsSensitive,
+            delegationToken = delegationToken,
+            delegationHexKey = delegatorHexKey,
+            delegationSignature = delegationSignature
         )
         // println("Sending new PollNoteEvent: %s".format(signedEvent.toJson()))
         Client.send(signedEvent)
@@ -610,7 +713,10 @@ class Account(
             mentions = mentionsHex,
             zapReceiver = zapReceiver,
             markAsSensitive = wantsToMarkAsSensitive,
-            privateKey = loggedIn.privKey!!
+            privateKey = loggedIn.privKey!!,
+            delegationToken = delegationToken,
+            delegationHexKey = delegatorHexKey,
+            delegationSignature = delegationSignature
         )
         Client.send(signedEvent)
         LocalCache.consume(signedEvent, null)
@@ -632,7 +738,10 @@ class Account(
             zapReceiver = zapReceiver,
             markAsSensitive = wantsToMarkAsSensitive,
             privateKey = loggedIn.privKey!!,
-            advertiseNip18 = false
+            advertiseNip18 = false,
+            delegationToken = delegationToken,
+            delegationHexKey = delegatorHexKey,
+            delegationSignature = delegationSignature
         )
         Client.send(signedEvent)
         LocalCache.consume(signedEvent, null)
@@ -650,7 +759,10 @@ class Account(
 
         val event = ChannelCreateEvent.create(
             channelInfo = metadata,
-            privateKey = loggedIn.privKey!!
+            privateKey = loggedIn.privKey!!,
+            delegationToken = delegationToken,
+            delegationHexKey = delegatorHexKey,
+            delegationSignature = delegationSignature
         )
 
         Client.send(event)
@@ -676,7 +788,10 @@ class Account(
                 bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
                 bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!)?.plus(note.address) ?: listOf(note.address),
 
-                loggedIn.privKey!!
+                loggedIn.privKey!!,
+                delegationToken = delegationToken,
+                delegationHexKey = delegatorHexKey,
+                delegationSignature = delegationSignature
             )
         } else {
             BookmarkListEvent.create(
@@ -689,7 +804,10 @@ class Account(
                 bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
                 bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
 
-                loggedIn.privKey!!
+                loggedIn.privKey!!,
+                delegationToken = delegationToken,
+                delegationHexKey = delegatorHexKey,
+                delegationSignature = delegationSignature
             )
         }
 
@@ -714,7 +832,10 @@ class Account(
                 bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
                 bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
 
-                loggedIn.privKey!!
+                loggedIn.privKey!!,
+                delegationToken = delegationToken,
+                delegationHexKey = delegatorHexKey,
+                delegationSignature = delegationSignature
             )
         } else {
             BookmarkListEvent.create(
@@ -727,7 +848,10 @@ class Account(
                 bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
                 bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
 
-                loggedIn.privKey!!
+                loggedIn.privKey!!,
+                delegationToken = delegationToken,
+                delegationHexKey = delegatorHexKey,
+                delegationSignature = delegationSignature
             )
         }
 
@@ -752,7 +876,10 @@ class Account(
                 bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
                 bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!)?.minus(note.address) ?: listOf(),
 
-                loggedIn.privKey!!
+                loggedIn.privKey!!,
+                delegationToken = delegationToken,
+                delegationHexKey = delegatorHexKey,
+                delegationSignature = delegationSignature
             )
         } else {
             BookmarkListEvent.create(
@@ -765,7 +892,10 @@ class Account(
                 bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
                 bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
 
-                loggedIn.privKey!!
+                loggedIn.privKey!!,
+                delegationToken = delegationToken,
+                delegationHexKey = delegatorHexKey,
+                delegationSignature = delegationSignature
             )
         }
 
@@ -781,7 +911,14 @@ class Account(
             return null
         }
 
-        return RelayAuthEvent.create(relay.url, challenge, loggedIn.privKey!!)
+        return RelayAuthEvent.create(
+            relay.url,
+            challenge,
+            loggedIn.privKey!!,
+            delegationToken = delegationToken,
+            delegationHexKey = delegatorHexKey,
+            delegationSignature = delegationSignature
+        )
     }
 
     fun removePublicBookmark(note: Note) {
@@ -801,7 +938,10 @@ class Account(
                 bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
                 bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
 
-                loggedIn.privKey!!
+                loggedIn.privKey!!,
+                delegationSignature = delegationSignature,
+                delegationHexKey = delegatorHexKey,
+                delegationToken = delegationToken
             )
         } else {
             BookmarkListEvent.create(
@@ -814,7 +954,10 @@ class Account(
                 bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
                 bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
 
-                loggedIn.privKey!!
+                loggedIn.privKey!!,
+                delegationSignature = delegationSignature,
+                delegationHexKey = delegatorHexKey,
+                delegationToken = delegationToken
             )
         }
 
@@ -957,7 +1100,10 @@ class Account(
         val event = ChannelMetadataEvent.create(
             newChannelInfo = metadata,
             originalChannelIdHex = channel.idHex,
-            privateKey = loggedIn.privKey!!
+            privateKey = loggedIn.privKey!!,
+            delegationToken = delegationToken,
+            delegationHexKey = delegatorHexKey,
+            delegationSignature = delegationSignature
         )
 
         Client.send(event)

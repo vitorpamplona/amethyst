@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.service.model
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
+import com.vitorpamplona.amethyst.service.Nip26
 import nostr.postr.Utils
 import java.util.Date
 
@@ -35,7 +36,10 @@ class ChannelMessageEvent(
             zapReceiver: String?,
             privateKey: ByteArray,
             createdAt: Long = Date().time / 1000,
-            markAsSensitive: Boolean
+            markAsSensitive: Boolean,
+            delegationToken: String,
+            delegationHexKey: String,
+            delegationSignature: String
         ): ChannelMessageEvent {
             val content = message
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
@@ -54,7 +58,9 @@ class ChannelMessageEvent(
             if (markAsSensitive) {
                 tags.add(listOf("content-warning", ""))
             }
-
+            if (delegationToken.isNotBlank()) {
+                tags.add(Nip26.toTags(delegationToken, delegationSignature, delegationHexKey))
+            }
             val id = generateId(pubKey, createdAt, kind, tags, content)
             val sig = Utils.sign(id, privateKey)
             return ChannelMessageEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())

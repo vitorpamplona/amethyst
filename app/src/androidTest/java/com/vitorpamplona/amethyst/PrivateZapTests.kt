@@ -69,7 +69,10 @@ class PrivateZapTests {
             loggedIn,
             0,
             "",
-            LnZapEvent.ZapType.PRIVATE
+            LnZapEvent.ZapType.PRIVATE,
+            delegationSignature = "",
+            delegationHexKey = "",
+            delegationToken = ""
         )
 
         val recepientPK = privateZapRequest.zappedAuthor().firstOrNull()
@@ -119,7 +122,10 @@ class PrivateZapTests {
             loggedIn,
             null,
             "test",
-            LnZapEvent.ZapType.PRIVATE
+            LnZapEvent.ZapType.PRIVATE,
+            delegationHexKey = "",
+            delegationToken = "",
+            delegationSignature = ""
         )
 
         val recepientPK = privateZapRequest.zappedAuthor().firstOrNull()

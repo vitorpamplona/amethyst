@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
+import com.vitorpamplona.amethyst.service.Nip26
 import nostr.postr.Utils
 import java.util.Base64
 import java.util.Date
@@ -44,11 +45,17 @@ class FileStorageEvent(
             mimeType: String,
             data: ByteArray,
             privateKey: ByteArray,
-            createdAt: Long = Date().time / 1000
+            createdAt: Long = Date().time / 1000,
+            delegationToken: String,
+            delegationHexKey: String,
+            delegationSignature: String
         ): FileStorageEvent {
-            val tags = listOfNotNull(
+            var tags = listOfNotNull(
                 listOf(TYPE, mimeType)
             )
+            if (delegationToken.isNotBlank()) {
+                tags = tags + listOf(Nip26.toTags(delegationToken, delegationSignature, delegationHexKey))
+            }
 
             val content = encode(data)
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()

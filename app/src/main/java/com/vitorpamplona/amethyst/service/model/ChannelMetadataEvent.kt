@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
+import com.vitorpamplona.amethyst.service.Nip26
 import nostr.postr.Utils
 import java.util.Date
 
@@ -28,7 +29,15 @@ class ChannelMetadataEvent(
     companion object {
         const val kind = 41
 
-        fun create(newChannelInfo: ChannelCreateEvent.ChannelData?, originalChannelIdHex: String, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ChannelMetadataEvent {
+        fun create(
+            newChannelInfo: ChannelCreateEvent.ChannelData?,
+            originalChannelIdHex: String,
+            privateKey: ByteArray,
+            createdAt: Long = Date().time / 1000,
+            delegationToken: String,
+            delegationHexKey: String,
+            delegationSignature: String
+        ): ChannelMetadataEvent {
             val content =
                 if (newChannelInfo != null) {
                     gson.toJson(newChannelInfo)
@@ -37,7 +46,10 @@ class ChannelMetadataEvent(
                 }
 
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
-            val tags = listOf(listOf("e", originalChannelIdHex, "", "root"))
+            var tags = listOf(listOf("e", originalChannelIdHex, "", "root"))
+            if (delegationToken.isNotBlank()) {
+                tags = tags + listOf(Nip26.toTags(delegationToken, delegationSignature, delegationHexKey))
+            }
             val id = generateId(pubKey, createdAt, kind, tags, content)
             val sig = Utils.sign(id, privateKey)
             return ChannelMetadataEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())

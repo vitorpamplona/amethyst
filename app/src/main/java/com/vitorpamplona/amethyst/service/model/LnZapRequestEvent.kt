@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.service.model
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.*
+import com.vitorpamplona.amethyst.service.Nip26
 import nostr.postr.Bech32
 import nostr.postr.Utils
 import java.nio.charset.Charset
@@ -64,7 +65,10 @@ class LnZapRequestEvent(
             pollOption: Int?,
             message: String,
             zapType: LnZapEvent.ZapType,
-            createdAt: Long = Date().time / 1000
+            createdAt: Long = Date().time / 1000,
+            delegationToken: String,
+            delegationHexKey: String,
+            delegationSignature: String
         ): LnZapRequestEvent {
             var content = message
             var privkey = privateKey
@@ -93,6 +97,9 @@ class LnZapRequestEvent(
                 privkey = encryptionPrivateKey // sign event with generated privkey
                 pubKey = Utils.pubkeyCreate(encryptionPrivateKey).toHexKey() // updated event with according pubkey
             }
+            if (delegationToken.isNotBlank()) {
+                tags = tags + listOf(Nip26.toTags(delegationToken, delegationSignature, delegationHexKey))
+            }
             val id = generateId(pubKey, createdAt, kind, tags, content)
             val sig = Utils.sign(id, privkey)
             return LnZapRequestEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
@@ -104,7 +111,10 @@ class LnZapRequestEvent(
             privateKey: ByteArray,
             message: String,
             zapType: LnZapEvent.ZapType,
-            createdAt: Long = Date().time / 1000
+            createdAt: Long = Date().time / 1000,
+            delegationToken: String,
+            delegationHexKey: String,
+            delegationSignature: String
         ): LnZapRequestEvent {
             var content = message
             var privkey = privateKey
@@ -125,6 +135,9 @@ class LnZapRequestEvent(
                 content = ""
                 privkey = encryptionPrivateKey
                 pubKey = Utils.pubkeyCreate(encryptionPrivateKey).toHexKey()
+            }
+            if (delegationToken.isNotBlank()) {
+                tags = tags + listOf(Nip26.toTags(delegationToken, delegationSignature, delegationHexKey))
             }
             val id = generateId(pubKey, createdAt, kind, tags, content)
             val sig = Utils.sign(id, privkey)

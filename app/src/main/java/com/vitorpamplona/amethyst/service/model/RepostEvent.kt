@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.service.model
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
+import com.vitorpamplona.amethyst.service.Nip26
 import com.vitorpamplona.amethyst.service.relays.Client
 import nostr.postr.Utils
 import java.util.Date
@@ -29,7 +30,14 @@ class RepostEvent(
     companion object {
         const val kind = 6
 
-        fun create(boostedPost: EventInterface, privateKey: ByteArray, createdAt: Long = Date().time / 1000): RepostEvent {
+        fun create(
+            boostedPost: EventInterface,
+            privateKey: ByteArray,
+            createdAt: Long = Date().time / 1000,
+            delegationToken: String,
+            delegationHexKey: String,
+            delegationSignature: String
+        ): RepostEvent {
             val content = boostedPost.toJson()
 
             val replyToPost = listOf("e", boostedPost.id())
@@ -40,6 +48,10 @@ class RepostEvent(
 
             if (boostedPost is AddressableEvent) {
                 tags = tags + listOf(listOf("a", boostedPost.address().toTag()))
+            }
+
+            if (delegationToken.isNotBlank()) {
+                tags = tags + listOf(Nip26.toTags(delegationToken, delegationSignature, delegationHexKey))
             }
 
             val id = generateId(pubKey, createdAt, kind, tags, content)

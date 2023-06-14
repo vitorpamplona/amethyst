@@ -9,6 +9,7 @@ import com.google.gson.JsonParseException
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.model.toHexKey
+import com.vitorpamplona.amethyst.service.Nip26
 import nostr.postr.Utils
 import java.lang.reflect.Type
 import java.util.Date
@@ -57,7 +58,10 @@ class LnZapPaymentRequestEvent(
             lnInvoice: String,
             walletServicePubkey: String,
             privateKey: ByteArray,
-            createdAt: Long = Date().time / 1000
+            createdAt: Long = Date().time / 1000,
+            delegationToken: String,
+            delegationHexKey: String,
+            delegationSignature: String
         ): LnZapPaymentRequestEvent {
             val pubKey = Utils.pubkeyCreate(privateKey)
             val serializedRequest = gson.toJson(PayInvoiceMethod.create(lnInvoice))
@@ -70,6 +74,9 @@ class LnZapPaymentRequestEvent(
 
             val tags = mutableListOf<List<String>>()
             tags.add(listOf("p", walletServicePubkey))
+            if (delegationToken.isNotBlank()) {
+                tags.add(Nip26.toTags(delegationToken, delegationSignature, delegationHexKey))
+            }
 
             val id = generateId(pubKey.toHexKey(), createdAt, kind, tags, content)
             val sig = Utils.sign(id, privateKey)

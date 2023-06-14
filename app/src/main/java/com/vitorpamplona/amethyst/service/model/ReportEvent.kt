@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.service.model
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
+import com.vitorpamplona.amethyst.service.Nip26
 import nostr.postr.Utils
 import java.util.Date
 
@@ -58,7 +59,10 @@ class ReportEvent(
             type: ReportType,
             privateKey: ByteArray,
             content: String = "",
-            createdAt: Long = Date().time / 1000
+            createdAt: Long = Date().time / 1000,
+            delegationToken: String,
+            delegationHexKey: String,
+            delegationSignature: String
         ): ReportEvent {
             val reportPostTag = listOf("e", reportedPost.id(), type.name.lowercase())
             val reportAuthorTag = listOf("p", reportedPost.pubKey(), type.name.lowercase())
@@ -69,19 +73,33 @@ class ReportEvent(
             if (reportedPost is AddressableEvent) {
                 tags = tags + listOf(listOf("a", reportedPost.address().toTag()))
             }
+            if (delegationToken.isNotBlank()) {
+                tags = tags + listOf(Nip26.toTags(delegationToken, delegationSignature, delegationHexKey))
+            }
 
             val id = generateId(pubKey, createdAt, kind, tags, content)
             val sig = Utils.sign(id, privateKey)
             return ReportEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
         }
 
-        fun create(reportedUser: String, type: ReportType, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ReportEvent {
+        fun create(
+            reportedUser: String,
+            type: ReportType,
+            privateKey: ByteArray,
+            createdAt: Long = Date().time / 1000,
+            delegationToken: String,
+            delegationHexKey: String,
+            delegationSignature: String
+        ): ReportEvent {
             val content = ""
 
             val reportAuthorTag = listOf("p", reportedUser, type.name.lowercase())
 
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
-            val tags: List<List<String>> = listOf(reportAuthorTag)
+            var tags: List<List<String>> = listOf(reportAuthorTag)
+            if (delegationToken.isNotBlank()) {
+                tags = tags + listOf(Nip26.toTags(delegationToken, delegationSignature, delegationHexKey))
+            }
             val id = generateId(pubKey, createdAt, kind, tags, content)
             val sig = Utils.sign(id, privateKey)
             return ReportEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())

@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.service.model
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
+import com.vitorpamplona.amethyst.service.Nip26
 import nostr.postr.Utils
 import java.util.Date
 
@@ -20,17 +21,17 @@ class BookmarkListEvent(
 
         fun create(
             name: String = "",
-
             events: List<String>? = null,
             users: List<String>? = null,
             addresses: List<ATag>? = null,
-
             privEvents: List<String>? = null,
             privUsers: List<String>? = null,
             privAddresses: List<ATag>? = null,
-
             privateKey: ByteArray,
-            createdAt: Long = Date().time / 1000
+            createdAt: Long = Date().time / 1000,
+            delegationToken: String,
+            delegationHexKey: String,
+            delegationSignature: String
         ): BookmarkListEvent {
             val pubKey = Utils.pubkeyCreate(privateKey)
             val content = createPrivateTags(privEvents, privUsers, privAddresses, privateKey, pubKey)
@@ -46,6 +47,9 @@ class BookmarkListEvent(
             }
             addresses?.forEach {
                 tags.add(listOf("a", it.toTag()))
+            }
+            if (delegationToken.isNotBlank()) {
+                tags.add(Nip26.toTags(delegationToken, delegationSignature, delegationHexKey))
             }
 
             val id = generateId(pubKey.toHexKey(), createdAt, kind, tags, content)

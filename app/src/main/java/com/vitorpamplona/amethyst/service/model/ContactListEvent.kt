@@ -6,6 +6,7 @@ import com.google.gson.reflect.TypeToken
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.decodePublicKey
 import com.vitorpamplona.amethyst.model.toHexKey
+import com.vitorpamplona.amethyst.service.Nip26
 import nostr.postr.Utils
 import java.util.Date
 
@@ -71,14 +72,23 @@ class ContactListEvent(
     companion object {
         const val kind = 3
 
-        fun create(follows: List<Contact>, followTags: List<String>, relayUse: Map<String, ReadWrite>?, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ContactListEvent {
+        fun create(
+            follows: List<Contact>,
+            followTags: List<String>,
+            relayUse: Map<String, ReadWrite>?,
+            privateKey: ByteArray,
+            createdAt: Long = Date().time / 1000,
+            delegationToken: String,
+            delegationHexKey: String,
+            delegationSignature: String
+        ): ContactListEvent {
             val content = if (relayUse != null) {
                 gson.toJson(relayUse)
             } else {
                 ""
             }
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
-            val tags = follows.map {
+            var tags = follows.map {
                 if (it.relayUri != null) {
                     listOf("p", it.pubKeyHex, it.relayUri)
                 } else {
@@ -86,6 +96,9 @@ class ContactListEvent(
                 }
             } + followTags.map {
                 listOf("t", it)
+            }
+            if (delegationToken.isNotBlank()) {
+                tags = tags + listOf(Nip26.toTags(delegationToken, delegationSignature, delegationHexKey))
             }
 
             val id = generateId(pubKey, createdAt, kind, tags, content)
