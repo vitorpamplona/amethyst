@@ -171,13 +171,23 @@ fun ChatroomScreen(
         // LAST ROW
         EditFieldRow(newPostModel, isPrivate = true, accountViewModel) {
             scope.launch(Dispatchers.IO) {
-                accountViewModel.account.sendPrivateMessage(
-                    message = newPostModel.message.text,
-                    toUser = baseUser,
-                    replyingTo = replyTo.value,
-                    mentions = null,
-                    wantsToMarkAsSensitive = false
-                )
+                try {
+                    accountViewModel.account.sendPrivateMessage(
+                        message = newPostModel.message.text,
+                        toUser = baseUser,
+                        replyingTo = replyTo.value,
+                        mentions = null,
+                        wantsToMarkAsSensitive = false
+                    )
+                } catch (e: Exception) {
+                    scope.launch {
+                        Toast.makeText(
+                            context,
+                            e.message,
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
                 newPostModel.message = TextFieldValue("")
                 replyTo.value = null
                 feedViewModel.sendToTop()

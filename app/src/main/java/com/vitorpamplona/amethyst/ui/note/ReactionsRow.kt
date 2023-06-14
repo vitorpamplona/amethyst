@@ -63,8 +63,10 @@ import coil.request.ImageRequest
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.model.DeletionEvent
 import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
+import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.screen.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -356,10 +358,35 @@ fun BoostReaction(
         onClick = {
             if (accountViewModel.isWriteable()) {
                 if (accountViewModel.hasBoosted(baseNote)) {
+                    try {
+                        accountViewModel.verifyDelegation(DeletionEvent.kind)
+                    } catch (e: Exception) {
+                        scope.launch {
+                            Toast.makeText(
+                                context,
+                                e.message,
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                        return@IconButton
+                    }
+
                     scope.launch(Dispatchers.IO) {
                         accountViewModel.deleteBoostsTo(baseNote)
                     }
                 } else {
+                    try {
+                        accountViewModel.verifyDelegation(RepostEvent.kind)
+                    } catch (e: Exception) {
+                        scope.launch {
+                            Toast.makeText(
+                                context,
+                                e.message,
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                        return@IconButton
+                    }
                     wantsToBoost = true
                 }
             } else {

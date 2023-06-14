@@ -17,6 +17,7 @@ import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -37,6 +38,7 @@ import kotlinx.coroutines.withContext
 fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
     val postViewModel: NewUserMetadataViewModel = viewModel()
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         postViewModel.load(account)
@@ -74,7 +76,7 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
 
                     PostButton(
                         onPost = {
-                            postViewModel.create()
+                            postViewModel.create(context)
                             onClose()
                         },
                         true
@@ -82,7 +84,9 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                 }
 
                 Column(
-                    modifier = Modifier.padding(10.dp).verticalScroll(rememberScrollState())
+                    modifier = Modifier
+                        .padding(10.dp)
+                        .verticalScroll(rememberScrollState())
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(1f),

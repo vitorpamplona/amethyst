@@ -157,8 +157,18 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                         PostButton(
                             onPost = {
                                 scope.launch(Dispatchers.IO) {
-                                    postViewModel.sendPost()
-                                    onClose()
+                                    try {
+                                        postViewModel.sendPost()
+                                        onClose()
+                                    } catch (e: Exception) {
+                                        scope.launch {
+                                            Toast.makeText(
+                                                context,
+                                                e.message,
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    }
                                 }
                             },
                             isActive = postViewModel.canPost()

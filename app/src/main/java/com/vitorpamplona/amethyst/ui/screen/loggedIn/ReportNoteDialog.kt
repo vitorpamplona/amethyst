@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -32,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -59,6 +61,7 @@ fun ReportNoteDialog(note: Note, accountViewModel: AccountViewModel, onDismiss: 
     val reasonOptions = remember { reportTypes.map { it.second }.toImmutableList() }
     var additionalReason by remember { mutableStateOf("") }
     var selectedReason by remember { mutableStateOf(-1) }
+    val context = LocalContext.current
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -139,13 +142,23 @@ fun ReportNoteDialog(note: Note, accountViewModel: AccountViewModel, onDismiss: 
                     enabled = selectedReason in 0..reportTypes.lastIndex,
                     onClick = {
                         scope.launch(Dispatchers.IO) {
-                            accountViewModel.report(
-                                note,
-                                reportTypes[selectedReason].first,
-                                additionalReason
-                            )
-                            note.author?.let { accountViewModel.hide(it) }
-                            onDismiss()
+                            try {
+                                accountViewModel.report(
+                                    note,
+                                    reportTypes[selectedReason].first,
+                                    additionalReason
+                                )
+                                note.author?.let { accountViewModel.hide(it) }
+                                onDismiss()
+                            } catch (e: Exception) {
+                                scope.launch {
+                                    Toast.makeText(
+                                        context,
+                                        e.message,
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
                         }
                     }
                 )

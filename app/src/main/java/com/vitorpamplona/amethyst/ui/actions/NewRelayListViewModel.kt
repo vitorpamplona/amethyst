@@ -1,5 +1,7 @@
 package com.vitorpamplona.amethyst.ui.actions
 
+import android.content.Context
+import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
@@ -26,10 +28,20 @@ class NewRelayListViewModel : ViewModel() {
         clear()
     }
 
-    fun create() {
+    fun create(context: Context) {
         relays.let {
             viewModelScope.launch(Dispatchers.IO) {
-                account.saveRelayList(it.value)
+                try {
+                    account.saveRelayList(it.value)
+                } catch (e: Exception) {
+                    viewModelScope.launch {
+                        Toast.makeText(
+                            context,
+                            e.message,
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
             }
         }
 

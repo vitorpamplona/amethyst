@@ -531,6 +531,7 @@ private fun ProfileActions(
     accountViewModel: AccountViewModel
 ) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     val accountLocalUserState by accountViewModel.accountLiveData.observeAsState()
     val account = remember(accountLocalUserState) { accountLocalUserState?.account } ?: return
@@ -566,16 +567,58 @@ private fun ProfileActions(
             account.showUser(baseUser.pubkeyHex)
         }
     } else if (isLoggedInFollowingUser) {
-        UnfollowButton { scope.launch(Dispatchers.IO) { account.unfollow(baseUser) } }
+        UnfollowButton {
+            scope.launch(Dispatchers.IO) {
+                try {
+                    account.unfollow(baseUser)
+                } catch (e: Exception) {
+                    scope.launch {
+                        Toast.makeText(
+                            context,
+                            e.message,
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            }
+        }
     } else {
         if (isUserFollowingLoggedIn) {
             FollowButton(
-                { scope.launch(Dispatchers.IO) { account.follow(baseUser) } },
+                {
+                    scope.launch(Dispatchers.IO) {
+                        try {
+                            account.follow(baseUser)
+                        } catch (e: Exception) {
+                            scope.launch {
+                                Toast.makeText(
+                                    context,
+                                    e.message,
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    }
+                },
                 R.string.follow_back
             )
         } else {
             FollowButton(
-                { scope.launch(Dispatchers.IO) { account.follow(baseUser) } },
+                {
+                    scope.launch(Dispatchers.IO) {
+                        try {
+                            account.follow(baseUser)
+                        } catch (e: Exception) {
+                            scope.launch {
+                                Toast.makeText(
+                                    context,
+                                    e.message,
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    }
+                },
                 R.string.follow
             )
         }

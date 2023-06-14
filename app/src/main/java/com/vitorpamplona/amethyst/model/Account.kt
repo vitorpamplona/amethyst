@@ -115,6 +115,7 @@ class Account(
 
     fun sendNewRelayList(relays: Map<String, ContactListEvent.ReadWrite>) {
         if (!isWriteable()) return
+        if (!verifyDelegation(ContactListEvent.kind)) return
 
         val contactList = userProfile().latestContactList
         val follows = contactList?.follows() ?: emptyList()
@@ -141,6 +142,7 @@ class Account(
 
     fun sendNewUserMetadata(toString: String, identities: List<IdentityClaim>) {
         if (!isWriteable()) return
+        if (!verifyDelegation(MetadataEvent.kind)) return
 
         loggedIn.privKey?.let {
             val event = MetadataEvent.create(toString, identities, loggedIn.privKey!!)
@@ -184,6 +186,7 @@ class Account(
 
     fun createZapRequestFor(note: Note, pollOption: Int?, message: String = "", zapType: LnZapEvent.ZapType): LnZapRequestEvent? {
         if (!isWriteable()) return null
+        if (!verifyDelegation(LnZapRequestEvent.kind)) return null
 
         note.event?.let { event ->
             return LnZapRequestEvent.create(
@@ -235,6 +238,7 @@ class Account(
 
     fun sendZapPaymentRequestFor(bolt11: String, zappedNote: Note?, onResponse: (Response?) -> Unit) {
         if (!isWriteable()) return
+        if (!verifyDelegation(LnZapPaymentRequestEvent.kind)) return
 
         zapPaymentRequest?.let { nip47 ->
             val event = LnZapPaymentRequestEvent.create(bolt11, nip47.pubKeyHex, nip47.secret?.hexToByteArray() ?: loggedIn.privKey!!)
@@ -267,6 +271,7 @@ class Account(
 
     fun createZapRequestFor(userPubKeyHex: String, message: String = "", zapType: LnZapEvent.ZapType): LnZapRequestEvent? {
         if (!isWriteable()) return null
+        if (!verifyDelegation(LnZapRequestEvent.kind)) return null
 
         return LnZapRequestEvent.create(
             userPubKeyHex,
@@ -286,12 +291,14 @@ class Account(
         }
 
         note.event?.let {
+            if (!verifyDelegation(ReactionEvent.kind)) return
             val event = ReactionEvent.createWarning(it, loggedIn.privKey!!)
             Client.send(event)
             LocalCache.consume(event)
         }
 
         note.event?.let {
+            if (!verifyDelegation(ReportEvent.kind)) return
             val event = ReportEvent.create(it, type, loggedIn.privKey!!, content = content)
             Client.send(event)
             LocalCache.consume(event, null)
@@ -300,6 +307,7 @@ class Account(
 
     fun report(user: User, type: ReportEvent.ReportType) {
         if (!isWriteable()) return
+        if (!verifyDelegation(ReportEvent.kind)) return
 
         if (user.hasReport(userProfile(), type)) {
             // has already reported this note
@@ -317,6 +325,7 @@ class Account(
 
     fun delete(notes: List<Note>) {
         if (!isWriteable()) return
+        if (!verifyDelegation(DeletionEvent.kind)) return
 
         val myNotes = notes.filter { it.author == userProfile() }.map { it.idHex }
 
@@ -351,6 +360,7 @@ class Account(
 
     fun follow(user: User) {
         if (!isWriteable()) return
+        if (!verifyDelegation(ContactListEvent.kind)) return
 
         val contactList = userProfile().latestContactList
         val followingUsers = contactList?.follows() ?: emptyList()
@@ -379,6 +389,7 @@ class Account(
 
     fun follow(tag: String) {
         if (!isWriteable()) return
+        if (!verifyDelegation(ContactListEvent.kind)) return
 
         val contactList = userProfile().latestContactList
         val followingUsers = contactList?.follows() ?: emptyList()
@@ -407,6 +418,7 @@ class Account(
 
     fun unfollow(user: User) {
         if (!isWriteable()) return
+        if (!verifyDelegation(ContactListEvent.kind)) return
 
         val contactList = userProfile().latestContactList
         val followingUsers = contactList?.follows() ?: emptyList()
@@ -427,6 +439,7 @@ class Account(
 
     fun unfollow(tag: String) {
         if (!isWriteable()) return
+        if (!verifyDelegation(ContactListEvent.kind)) return
 
         val contactList = userProfile().latestContactList
         val followingUsers = contactList?.follows() ?: emptyList()
@@ -552,6 +565,7 @@ class Account(
         wantsToMarkAsSensitive: Boolean
     ) {
         if (!isWriteable()) return
+        if (!verifyDelegation(PollNoteEvent.kind)) return
 
         val repliesToHex = replyTo?.map { it.idHex }
         val mentionsHex = mentions?.map { it.pubkeyHex }
@@ -578,6 +592,7 @@ class Account(
 
     fun sendChannelMessage(message: String, toChannel: String, replyTo: List<Note>?, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean) {
         if (!isWriteable()) return
+        if (!verifyDelegation(ChannelMessageEvent.kind)) return
 
         // val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
         val repliesToHex = replyTo?.map { it.idHex }
@@ -598,6 +613,7 @@ class Account(
 
     fun sendPrivateMessage(message: String, toUser: User, replyingTo: Note? = null, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean) {
         if (!isWriteable()) return
+        if (!verifyDelegation(PrivateDmEvent.kind)) return
 
         val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
         val mentionsHex = mentions?.map { it.pubkeyHex }
@@ -619,6 +635,7 @@ class Account(
 
     fun sendCreateNewChannel(name: String, about: String, picture: String) {
         if (!isWriteable()) return
+        if (!verifyDelegation(ChannelCreateEvent.kind)) return
 
         val metadata = ChannelCreateEvent.ChannelData(
             name,
@@ -639,6 +656,7 @@ class Account(
 
     fun addPrivateBookmark(note: Note) {
         if (!isWriteable()) return
+        if (!verifyDelegation(BookmarkListEvent.kind)) return
 
         val bookmarks = userProfile().latestBookmarkList
 
@@ -676,6 +694,7 @@ class Account(
 
     fun addPublicBookmark(note: Note) {
         if (!isWriteable()) return
+        if (!verifyDelegation(BookmarkListEvent.kind)) return
 
         val bookmarks = userProfile().latestBookmarkList
 
@@ -713,6 +732,7 @@ class Account(
 
     fun removePrivateBookmark(note: Note) {
         if (!isWriteable()) return
+        if (!verifyDelegation(BookmarkListEvent.kind)) return
 
         val bookmarks = userProfile().latestBookmarkList
 
@@ -750,12 +770,18 @@ class Account(
 
     fun createAuthEvent(relay: Relay, challenge: String): RelayAuthEvent? {
         if (!isWriteable()) return null
+        try {
+            verifyDelegation(RelayAuthEvent.kind)
+        } catch (e: Exception) {
+            return null
+        }
 
         return RelayAuthEvent.create(relay.url, challenge, loggedIn.privKey!!)
     }
 
     fun removePublicBookmark(note: Note) {
         if (!isWriteable()) return
+        if (!verifyDelegation(BookmarkListEvent.kind)) return
 
         val bookmarks = userProfile().latestBookmarkList
 
@@ -915,6 +941,7 @@ class Account(
 
     fun sendChangeChannel(name: String, about: String, picture: String, channel: Channel) {
         if (!isWriteable()) return
+        if (!verifyDelegation(ChannelMetadataEvent.kind)) return
 
         val metadata = ChannelCreateEvent.ChannelData(
             name,

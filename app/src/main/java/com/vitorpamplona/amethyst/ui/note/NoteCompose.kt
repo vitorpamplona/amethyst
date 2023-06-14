@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.ui.note
 import android.content.Intent
 import android.graphics.Bitmap
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -2904,11 +2905,24 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
         val scope = rememberCoroutineScope()
 
         if (!state.isFollowingAuthor) {
-            DropdownMenuItem(onClick = {
-                accountViewModel.follow(
-                    note.author ?: return@DropdownMenuItem
-                ); onDismiss()
-            }) {
+            DropdownMenuItem(
+                onClick = {
+                    try {
+                        accountViewModel.follow(
+                            note.author ?: return@DropdownMenuItem
+                        )
+                        onDismiss()
+                    } catch (e: Exception) {
+                        scope.launch {
+                            Toast.makeText(
+                                actContext,
+                                e.message,
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                }
+            ) {
                 Text(stringResource(R.string.follow))
             }
             Divider()
@@ -2960,20 +2974,88 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
         }
         Divider()
         if (state.isPrivateBookmarkNote) {
-            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.removePrivateBookmark(note); onDismiss() } }) {
+            DropdownMenuItem(
+                onClick = {
+                    scope.launch(Dispatchers.IO) {
+                        try {
+                            accountViewModel.removePrivateBookmark(note)
+                            onDismiss()
+                        } catch (e: Exception) {
+                            scope.launch {
+                                Toast.makeText(
+                                    actContext,
+                                    e.message,
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    }
+                }
+            ) {
                 Text(stringResource(R.string.remove_from_private_bookmarks))
             }
         } else {
-            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.addPrivateBookmark(note); onDismiss() } }) {
+            DropdownMenuItem(
+                onClick = {
+                    scope.launch(Dispatchers.IO) {
+                        try {
+                            accountViewModel.addPrivateBookmark(note)
+                            onDismiss()
+                        } catch (e: Exception) {
+                            scope.launch {
+                                Toast.makeText(
+                                    actContext,
+                                    e.message,
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    }
+                }
+            ) {
                 Text(stringResource(R.string.add_to_private_bookmarks))
             }
         }
         if (state.isPublicBookmarkNote) {
-            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.removePublicBookmark(note); onDismiss() } }) {
+            DropdownMenuItem(
+                onClick = {
+                    scope.launch(Dispatchers.IO) {
+                        try {
+                            accountViewModel.removePublicBookmark(note)
+                            onDismiss()
+                        } catch (e: Exception) {
+                            scope.launch {
+                                Toast.makeText(
+                                    actContext,
+                                    e.message,
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    }
+                }
+            ) {
                 Text(stringResource(R.string.remove_from_public_bookmarks))
             }
         } else {
-            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.addPublicBookmark(note); onDismiss() } }) {
+            DropdownMenuItem(
+                onClick = {
+                    scope.launch(Dispatchers.IO) {
+                        try {
+                            accountViewModel.addPublicBookmark(note)
+                            onDismiss()
+                        } catch (e: Exception) {
+                            scope.launch {
+                                Toast.makeText(
+                                    actContext,
+                                    e.message,
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    }
+                }
+            ) {
                 Text(stringResource(R.string.add_to_public_bookmarks))
             }
         }
@@ -2983,7 +3065,24 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
         }
         Divider()
         if (state.isLoggedUser) {
-            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.delete(note); onDismiss() } }) {
+            DropdownMenuItem(
+                onClick = {
+                    scope.launch(Dispatchers.IO) {
+                        try {
+                            accountViewModel.delete(note)
+                            onDismiss()
+                        } catch (e: Exception) {
+                            scope.launch {
+                                Toast.makeText(
+                                    actContext,
+                                    e.message,
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    }
+                }
+            ) {
                 Text(stringResource(R.string.request_deletion))
             }
         } else {

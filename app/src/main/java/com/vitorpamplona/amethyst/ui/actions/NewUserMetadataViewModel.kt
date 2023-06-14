@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.actions
 
 import android.content.Context
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -73,7 +74,7 @@ class NewUserMetadataViewModel : ViewModel() {
         }
     }
 
-    fun create() {
+    fun create(context: Context) {
         // Tries to not delete any existing attribute that we do not work with.
         val latest = account.userProfile().info?.latestMetadata
         val currentJson = if (latest != null) {
@@ -123,7 +124,17 @@ class NewUserMetadataViewModel : ViewModel() {
         ObjectMapper().writeValue(writer, currentJson)
 
         viewModelScope.launch(Dispatchers.IO) {
-            account.sendNewUserMetadata(writer.buffer.toString(), newClaims)
+            try {
+                account.sendNewUserMetadata(writer.buffer.toString(), newClaims)
+            } catch (e: Exception) {
+                viewModelScope.launch {
+                    Toast.makeText(
+                        context,
+                        e.message,
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
         }
 
         clear()

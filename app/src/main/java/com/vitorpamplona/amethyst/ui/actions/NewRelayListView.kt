@@ -39,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -59,6 +60,7 @@ import java.lang.Math.round
 fun NewRelayListView(onClose: () -> Unit, accountViewModel: AccountViewModel, relayToAdd: String = "") {
     val postViewModel: NewRelayListViewModel = viewModel()
     val feedState by postViewModel.relays.collectAsState()
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         postViewModel.load(accountViewModel.account)
@@ -87,7 +89,7 @@ fun NewRelayListView(onClose: () -> Unit, accountViewModel: AccountViewModel, re
 
                     PostButton(
                         onPost = {
-                            postViewModel.create()
+                            postViewModel.create(context)
                             onClose()
                         },
                         true
@@ -427,7 +429,9 @@ fun ServerConfig(
                             Icon(
                                 imageVector = Icons.Default.DeleteSweep,
                                 null,
-                                modifier = Modifier.padding(horizontal = 5.dp).size(15.dp),
+                                modifier = Modifier
+                                    .padding(horizontal = 5.dp)
+                                    .size(15.dp),
                                 tint = if (item.spamCount > 0) Color.Yellow else Color.Green
                             )
 

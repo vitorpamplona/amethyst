@@ -231,13 +231,23 @@ fun ChannelScreen(
                     message = newPostModel.message.text
                 )
                 tagger.run()
-                accountViewModel.account.sendChannelMessage(
-                    message = tagger.message,
-                    toChannel = channel.idHex,
-                    replyTo = tagger.replyTos,
-                    mentions = tagger.mentions,
-                    wantsToMarkAsSensitive = false
-                )
+                try {
+                    accountViewModel.account.sendChannelMessage(
+                        message = tagger.message,
+                        toChannel = channel.idHex,
+                        replyTo = tagger.replyTos,
+                        mentions = tagger.mentions,
+                        wantsToMarkAsSensitive = false
+                    )
+                } catch (e: Exception) {
+                    scope.launch {
+                        Toast.makeText(
+                            context,
+                            e.message,
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
                 newPostModel.message = TextFieldValue("")
                 replyTo.value = null
                 feedViewModel.sendToTop()

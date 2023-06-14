@@ -32,6 +32,12 @@ object Nip26 {
             if (paramSplit.isEmpty()) return false
             when (paramSplit[0]) {
                 "created_at" -> {
+                    try {
+                        paramSplit[1].toLong()
+                    } catch (e: Exception) {
+                        return false
+                    }
+
                     val op = param.substring(10, 11)
                     if (op != "<" && op != ">") {
                         return false
