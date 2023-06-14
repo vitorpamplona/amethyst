@@ -841,7 +841,7 @@ fun RenderPoll(
             )
         }
 
-        var hashtags = remember { noteEvent.hashtags().toImmutableList() }
+        val hashtags = remember { noteEvent.hashtags().toImmutableList() }
         DisplayUncitedHashtags(hashtags, eventContent, nav)
     }
 }
@@ -2576,7 +2576,7 @@ private fun RelayBadges(baseNote: Note) {
         }
     }
 
-    Spacer(Modifier.height(10.dp))
+    Spacer(remember { Modifier.height(10.dp) })
 
     if (expanded) {
         VerticalRelayPanelWithFlow(lazyRelayList)
@@ -2620,29 +2620,25 @@ private fun VerticalRelayPanelWithFlow(
     }
 }
 
+val showMoreRelaysButtonIconButtonModifier = Modifier.size(24.dp)
+val showMoreRelaysButtonIconModifier = Modifier.size(15.dp)
+val showMoreRelaysButtonBoxModifer = Modifier.fillMaxWidth().height(25.dp)
+
 @Composable
 private fun ShowMoreRelaysButton(onClick: () -> Unit) {
-    val boxModifier = remember {
-        Modifier
-            .fillMaxWidth()
-            .height(25.dp)
-    }
-    val iconButtonModifier = remember { Modifier.size(24.dp) }
-    val iconModifier = remember { Modifier.size(15.dp) }
-
     Row(
-        boxModifier,
+        modifier = showMoreRelaysButtonBoxModifer,
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.Top
     ) {
         IconButton(
-            modifier = iconButtonModifier,
+            modifier = showMoreRelaysButtonIconButtonModifier,
             onClick = onClick
         ) {
             Icon(
                 imageVector = Icons.Default.ExpandMore,
                 null,
-                modifier = iconModifier,
+                modifier = showMoreRelaysButtonIconModifier,
                 tint = MaterialTheme.colors.placeholderText
             )
         }

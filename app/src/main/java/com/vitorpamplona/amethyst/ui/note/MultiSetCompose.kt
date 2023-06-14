@@ -269,7 +269,7 @@ fun AuthorGalleryZaps(
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
-    Column(modifier = Modifier.padding(start = 10.dp)) {
+    Column(modifier = remember { Modifier.padding(start = 10.dp) }) {
         FlowRow() {
             authorNotes.forEach {
                 AuthorPictureAndComment(it.request, it.response, backgroundColor, nav, accountViewModel)
@@ -320,26 +320,40 @@ private fun AuthorPictureAndComment(
         }
     }
 
-    content.let {
-        val route by remember {
-            derivedStateOf {
-                "User/${it.user?.pubkeyHex}"
-            }
-        }
-
-        it.user?.let { user ->
-            AuthorPictureAndComment(
-                author = user,
-                comment = it.comment,
-                amount = it.amount,
-                route = route,
-                backgroundColor = backgroundColor,
-                nav = nav,
-                accountViewModel = accountViewModel
-            )
+    val route by remember {
+        derivedStateOf {
+            "User/${content.user?.pubkeyHex}"
         }
     }
+
+    content.user?.let { user ->
+        AuthorPictureAndComment(
+            author = user,
+            comment = content.comment,
+            amount = content.amount,
+            route = route,
+            backgroundColor = backgroundColor,
+            nav = nav,
+            accountViewModel = accountViewModel
+        )
+    }
 }
+
+val amountBoxModifier = Modifier
+    .fillMaxSize()
+    .clip(shape = CircleShape)
+
+val textBoxModifier = Modifier.padding(start = 5.dp).fillMaxWidth()
+
+val simpleModifier = Modifier
+
+val size = 35.dp
+
+val sizedModifier = Modifier.size(size)
+
+val bottomPadding1dp = Modifier.padding(bottom = 1.dp)
+
+val commentTextSize = 12.sp
 
 @Composable
 private fun AuthorPictureAndComment(
@@ -351,8 +365,6 @@ private fun AuthorPictureAndComment(
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
-    val authorPictureModifier = remember { Modifier }
-
     val modifier = remember {
         Modifier.clickable {
             nav(route)
@@ -363,19 +375,17 @@ private fun AuthorPictureAndComment(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(modifier = remember { Modifier.size(35.dp) }, contentAlignment = Alignment.BottomCenter) {
+        Box(modifier = sizedModifier, contentAlignment = Alignment.BottomCenter) {
             FastNoteAuthorPicture(
                 author = author,
-                size = remember { 35.dp },
+                size = size,
                 accountViewModel = accountViewModel,
-                pictureModifier = authorPictureModifier
+                pictureModifier = simpleModifier
             )
 
             amount?.let {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(shape = CircleShape),
+                    modifier = amountBoxModifier,
                     contentAlignment = Alignment.BottomCenter
                 ) {
                     val backgroundColor = MaterialTheme.colors.overPictureBackground
@@ -391,8 +401,8 @@ private fun AuthorPictureAndComment(
                             text = it,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colors.secondaryVariant,
-                            fontSize = 12.sp,
-                            modifier = Modifier.padding(bottom = 1.dp)
+                            fontSize = commentTextSize,
+                            modifier = bottomPadding1dp
                         )
                     }
                 }
@@ -400,12 +410,11 @@ private fun AuthorPictureAndComment(
         }
 
         comment?.let {
-            Spacer(modifier = Modifier.width(5.dp))
             TranslatableRichTextViewer(
                 content = it,
                 canPreview = true,
                 tags = remember { ImmutableListOfLists() },
-                modifier = remember { Modifier.fillMaxWidth() },
+                modifier = textBoxModifier,
                 backgroundColor = backgroundColor,
                 accountViewModel = accountViewModel,
                 nav = nav
@@ -425,11 +434,21 @@ fun AuthorGallery(
     Column(modifier = remember { Modifier.padding(start = 10.dp) }) {
         FlowRow() {
             authorNotes.forEach { note ->
-                Box(remember { Modifier.size(35.dp) }) {
-                    NotePictureAndComment(note, backgroundColor, nav, accountViewModel)
-                }
+                BoxedAuthor(note, backgroundColor, nav, accountViewModel)
             }
         }
+    }
+}
+
+@Composable
+private fun BoxedAuthor(
+    note: Note,
+    backgroundColor: MutableState<Color>,
+    nav: (String) -> Unit,
+    accountViewModel: AccountViewModel
+) {
+    Box(sizedModifier) {
+        NotePictureAndComment(note, backgroundColor, nav, accountViewModel)
     }
 }
 
