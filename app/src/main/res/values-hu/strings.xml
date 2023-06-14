@@ -393,4 +393,6 @@
     <string name="content_warning_see_warnings">A tartalomra vonatkozó figyelmeztetéseket mindig jelenítse meg</string>
     
     <string name="recommended_apps">Ajánlottak: </string>
+    <string name="filter_spam_from_strangers">Idegenektől SPAM szűrése</string>
+    <string name="warn_when_posts_have_reports_from_your_follows">Figyelmeztessen ha a bejegyzések azok által akiket követek jelentve vannak</string>
 </resources>
