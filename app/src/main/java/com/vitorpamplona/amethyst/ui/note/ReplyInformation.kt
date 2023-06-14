@@ -225,7 +225,7 @@ fun ReplyInformationChannel(
                         )
                     } else if (idx < mentions.size - 1) {
                         Text(
-                            " ${stringResource(id = R.string.add)} ",
+                            " ${stringResource(id = R.string.and)} ",
                             fontSize = 13.sp,
                             color = MaterialTheme.colors.placeholderText
                         )
