@@ -16,7 +16,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,8 +33,11 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.components.*
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun NewMediaView(uri: Uri, onClose: () -> Unit, postViewModel: NewMediaModel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
@@ -48,8 +50,13 @@ fun NewMediaView(uri: Uri, onClose: () -> Unit, postViewModel: NewMediaModel, ac
     LaunchedEffect(uri) {
         val mediaType = resolver.getType(uri) ?: ""
         postViewModel.load(account, uri, mediaType)
-        postViewModel.imageUploadingError.collect { error ->
-            Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+
+        launch(Dispatchers.IO) {
+            postViewModel.imageUploadingError.collect { error ->
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 
@@ -117,8 +124,6 @@ fun isNIP94Server(selectedServer: ServersAvailable?): Boolean {
 
 @Composable
 fun ImageVideoPost(postViewModel: NewMediaModel, acc: Account) {
-    val scope = rememberCoroutineScope()
-
     val fileServers = listOf(
         // Triple(ServersAvailable.IMGUR_NIP_94, stringResource(id = R.string.upload_server_imgur_nip94), stringResource(id = R.string.upload_server_imgur_nip94_explainer)),
         Triple(ServersAvailable.NOSTRIMG_NIP_94, stringResource(id = R.string.upload_server_nostrimg_nip94), stringResource(id = R.string.upload_server_nostrimg_nip94_explainer)),
@@ -127,8 +132,8 @@ fun ImageVideoPost(postViewModel: NewMediaModel, acc: Account) {
         Triple(ServersAvailable.NIP95, stringResource(id = R.string.upload_server_relays_nip95), stringResource(id = R.string.upload_server_relays_nip95_explainer))
     )
 
-    val fileServerOptions = fileServers.map { it.second }
-    val fileServerExplainers = fileServers.map { it.third }
+    val fileServerOptions = remember { fileServers.map { it.second }.toImmutableList() }
+    val fileServerExplainers = remember { fileServers.map { it.third }.toImmutableList() }
     val resolver = LocalContext.current.contentResolver
 
     Row(
@@ -152,7 +157,7 @@ fun ImageVideoPost(postViewModel: NewMediaModel, acc: Account) {
             var bitmap by remember { mutableStateOf<Bitmap?>(null) }
 
             LaunchedEffect(key1 = postViewModel.galleryUri) {
-                scope.launch(Dispatchers.IO) {
+                launch(Dispatchers.IO) {
                     postViewModel.galleryUri?.let {
                         try {
                             bitmap = resolver.loadThumbnail(it, Size(1200, 1000), null)
@@ -175,7 +180,7 @@ fun ImageVideoPost(postViewModel: NewMediaModel, acc: Account) {
             }
         } else {
             postViewModel.galleryUri?.let {
-                VideoView(it)
+                VideoView(it.toString())
             }
         }
     }
@@ -217,7 +222,7 @@ fun ImageVideoPost(postViewModel: NewMediaModel, acc: Account) {
                 placeholder = {
                     Text(
                         text = stringResource(R.string.content_description_example),
-                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                        color = MaterialTheme.colors.placeholderText
                     )
                 },
                 keyboardOptions = KeyboardOptions.Default.copy(

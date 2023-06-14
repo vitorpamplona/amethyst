@@ -410,4 +410,8 @@
     <string name="content_warning_hide_all_sensitive_content">Always hide sensitive content</string>
     <string name="content_warning_show_all_sensitive_content">Always show sensitive content</string>
     <string name="content_warning_see_warnings">Always show content warnings</string>
+
+    <string name="recommended_apps">Recommends: </string>
+    <string name="filter_spam_from_strangers">Filter spam from strangers</string>
+    <string name="warn_when_posts_have_reports_from_your_follows">Warn when posts have reports from your follows</string>
 </resources>

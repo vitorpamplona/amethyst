@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.ui.dal
 
-import android.util.Log
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -10,8 +9,7 @@ import com.vitorpamplona.amethyst.ui.actions.updated
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTimedValue
 
-object ChatroomListKnownFeedFilter : AdditiveFeedFilter<Note>() {
-    lateinit var account: Account
+class ChatroomListKnownFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
 
     // returns the last Note of each user.
     override fun feed(): List<Note> {
@@ -85,7 +83,7 @@ object ChatroomListKnownFeedFilter : AdditiveFeedFilter<Note>() {
             sort(myNewList.toSet()).take(1000)
         }
 
-        Log.d("Time", "${this.javaClass.simpleName} Modified Additive Feed in $elapsed with ${feed.size} objects")
+        // Log.d("Time", "${this.javaClass.simpleName} Modified Additive Feed in $elapsed with ${feed.size} objects")
         return feed
     }
 

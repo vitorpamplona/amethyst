@@ -19,6 +19,10 @@ class TextNoteEvent(
     sig: HexKey
 ) : BaseTextNoteEvent(id, pubKey, createdAt, kind, tags, content, sig) {
 
+    fun subject() = tags.firstOrNull() { it.size > 1 && it[0] == "subject" }?.get(1)
+
+    fun root() = tags.firstOrNull() { it.size > 3 && it[3] == "root" }?.get(1)
+
     companion object {
         const val kind = 1
 
@@ -30,19 +34,44 @@ class TextNoteEvent(
             extraTags: List<String>?,
             zapReceiver: String?,
             markAsSensitive: Boolean,
+            replyingTo: String?,
+            root: String?,
+            directMentions: Set<HexKey>,
+
             privateKey: ByteArray,
             createdAt: Long = Date().time / 1000
         ): TextNoteEvent {
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf<List<String>>()
             replyTos?.forEach {
-                tags.add(listOf("e", it))
+                if (it == replyingTo) {
+                    tags.add(listOf("e", it, "", "reply"))
+                } else if (it == root) {
+                    tags.add(listOf("e", it, "", "root"))
+                } else if (it in directMentions) {
+                    tags.add(listOf("e", it, "", "mention"))
+                } else {
+                    tags.add(listOf("e", it))
+                }
             }
             mentions?.forEach {
-                tags.add(listOf("p", it))
+                if (it in directMentions) {
+                    tags.add(listOf("p", it, "", "mention"))
+                } else {
+                    tags.add(listOf("p", it))
+                }
             }
             addresses?.forEach {
-                tags.add(listOf("a", it.toTag()))
+                val aTag = it.toTag()
+                if (aTag == replyingTo) {
+                    tags.add(listOf("a", aTag, "", "reply"))
+                } else if (aTag == root) {
+                    tags.add(listOf("a", aTag, "", "root"))
+                } else if (aTag in directMentions) {
+                    tags.add(listOf("a", aTag, "", "mention"))
+                } else {
+                    tags.add(listOf("a", aTag))
+                }
             }
             findHashtags(msg).forEach {
                 tags.add(listOf("t", it))

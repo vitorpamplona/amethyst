@@ -11,12 +11,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
+import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
 fun NoteUsernameDisplay(baseNote: Note, weight: Modifier = Modifier) {
     val noteState by baseNote.live().metadata.observeAsState()
-    val author = remember(noteState) { noteState?.note?.author } ?: return
+    val author = remember(noteState) {
+        noteState?.note?.author
+    } ?: return
 
     UsernameDisplay(author, weight)
 }
@@ -27,7 +32,7 @@ fun UsernameDisplay(baseUser: User, weight: Modifier = Modifier) {
     val bestUserName = remember(userState) { userState?.user?.bestUsername() }
     val bestDisplayName = remember(userState) { userState?.user?.bestDisplayName() }
     val npubDisplay = remember { baseUser.pubkeyDisplayHex() }
-    val tags = remember(userState) { userState?.user?.info?.latestMetadata?.tags }
+    val tags = remember(userState) { userState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists() }
 
     UserNameDisplay(bestUserName, bestDisplayName, npubDisplay, tags, weight)
 }
@@ -37,7 +42,7 @@ private fun UserNameDisplay(
     bestUserName: String?,
     bestDisplayName: String?,
     npubDisplay: String,
-    tags: List<List<String>>?,
+    tags: ImmutableListOfLists<String>?,
     modifier: Modifier
 ) {
     if (bestUserName != null && bestDisplayName != null) {
@@ -47,9 +52,9 @@ private fun UserNameDisplay(
             fontWeight = FontWeight.Bold
         )
         CreateTextWithEmoji(
-            text = "@$bestUserName",
+            text = remember { "@$bestUserName" },
             tags = tags,
-            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+            color = MaterialTheme.colors.placeholderText,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = modifier
@@ -65,7 +70,7 @@ private fun UserNameDisplay(
         )
     } else if (bestUserName != null) {
         CreateTextWithEmoji(
-            text = "@$bestUserName",
+            text = remember { "@$bestUserName" },
             tags = tags,
             fontWeight = FontWeight.Bold,
             maxLines = 1,

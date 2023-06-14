@@ -6,11 +6,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -22,7 +20,8 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.previews.UrlInfoItem
-import java.net.URL
+import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 
 @Composable
 fun UrlPreviewCard(
@@ -34,34 +33,23 @@ fun UrlPreviewCard(
     Row(
         modifier = Modifier
             .clickable { runCatching { uri.openUri(url) } }
-            .clip(shape = RoundedCornerShape(15.dp))
+            .clip(shape = QuoteBorder)
             .border(
                 1.dp,
-                MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
-                RoundedCornerShape(15.dp)
+                MaterialTheme.colors.subtleBorder,
+                QuoteBorder
             )
     ) {
         Column {
-            val validatedUrl = remember(url) { URL(previewInfo.url) }
-
-            // correctly treating relative images
-            val imageUrl = remember(url) {
-                if (previewInfo.image.startsWith("/")) {
-                    URL(validatedUrl, previewInfo.image).toString()
-                } else {
-                    previewInfo.image
-                }
-            }
-
             AsyncImage(
-                model = imageUrl,
-                contentDescription = stringResource(R.string.preview_card_image_for, validatedUrl),
+                model = previewInfo.imageUrlFullPath,
+                contentDescription = stringResource(R.string.preview_card_image_for, previewInfo.url),
                 contentScale = ContentScale.FillWidth,
                 modifier = Modifier.fillMaxWidth()
             )
 
             Text(
-                text = validatedUrl.host,
+                text = previewInfo.verifiedUrl?.host ?: previewInfo.url,
                 style = MaterialTheme.typography.caption,
                 modifier = Modifier
                     .fillMaxWidth()

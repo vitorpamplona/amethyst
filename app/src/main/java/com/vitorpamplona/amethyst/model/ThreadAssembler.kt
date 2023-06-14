@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.model
 
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.ATag
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTimedValue
@@ -35,6 +36,8 @@ class ThreadAssembler {
 
     @OptIn(ExperimentalTime::class)
     fun findThreadFor(noteId: String): Set<Note> {
+        checkNotInMainThread()
+
         val (result, elapsed) = measureTimedValue {
             val note = if (noteId.contains(":")) {
                 val aTag = ATag.parse(noteId, null)

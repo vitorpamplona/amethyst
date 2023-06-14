@@ -6,7 +6,6 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.ImmutableMap
 
 @Immutable
 abstract class Card() {
@@ -33,26 +32,8 @@ class NoteCard(val note: Note) : Card() {
 }
 
 @Immutable
-class LikeSetCard(val note: Note, val likeEvents: List<Note>) : Card() {
-    val createdAt = likeEvents.maxOf { it.createdAt() ?: 0 }
-    override fun createdAt(): Long {
-        return createdAt
-    }
-    override fun id() = note.idHex + "L" + createdAt
-}
-
-@Immutable
-class ZapSetCard(val note: Note, val zapEvents: Map<Note, Note>) : Card() {
-    val createdAt = zapEvents.maxOf { it.value.createdAt() ?: 0 }
-    override fun createdAt(): Long {
-        return createdAt
-    }
-    override fun id() = note.idHex + "Z" + createdAt
-}
-
-@Immutable
-class ZapUserSetCard(val user: User, val zapEvents: ImmutableMap<Note, Note>) : Card() {
-    val createdAt = zapEvents.maxOf { it.value.createdAt() ?: 0 }
+class ZapUserSetCard(val user: User, val zapEvents: ImmutableList<CombinedZap>) : Card() {
+    val createdAt = zapEvents.maxOf { it.createdAt() ?: 0 }
     override fun createdAt(): Long {
         return createdAt
     }
@@ -60,28 +41,23 @@ class ZapUserSetCard(val user: User, val zapEvents: ImmutableMap<Note, Note>) : 
 }
 
 @Immutable
-class MultiSetCard(val note: Note, val boostEvents: ImmutableList<Note>, val likeEvents: ImmutableList<Note>, val zapEvents: ImmutableMap<Note, Note>) : Card() {
-    val createdAt = maxOf(
-        zapEvents.maxOfOrNull { it.value.createdAt() ?: 0 } ?: 0,
+class MultiSetCard(val note: Note, val boostEvents: ImmutableList<Note>, val likeEvents: ImmutableList<Note>, val zapEvents: ImmutableList<CombinedZap>) : Card() {
+    val maxCreatedAt = maxOf(
+        zapEvents.maxOfOrNull { it.createdAt() ?: 0 } ?: 0,
         likeEvents.maxOfOrNull { it.createdAt() ?: 0 } ?: 0,
         boostEvents.maxOfOrNull { it.createdAt() ?: 0 } ?: 0
     )
 
-    override fun createdAt(): Long {
-        return createdAt
-    }
-    override fun id() = note.idHex + "X" + createdAt
-}
-
-@Immutable
-class BoostSetCard(val note: Note, val boostEvents: List<Note>) : Card() {
-    val createdAt = boostEvents.maxOf { it.createdAt() ?: 0 }
+    val minCreatedAt = minOf(
+        zapEvents.minOfOrNull { it.createdAt() ?: Long.MAX_VALUE } ?: Long.MAX_VALUE,
+        likeEvents.minOfOrNull { it.createdAt() ?: Long.MAX_VALUE } ?: Long.MAX_VALUE,
+        boostEvents.minOfOrNull { it.createdAt() ?: Long.MAX_VALUE } ?: Long.MAX_VALUE
+    )
 
     override fun createdAt(): Long {
-        return createdAt
+        return maxCreatedAt
     }
-
-    override fun id() = note.idHex + "B" + createdAt
+    override fun id() = note.idHex + "X" + maxCreatedAt + "X" + minCreatedAt
 }
 
 @Immutable

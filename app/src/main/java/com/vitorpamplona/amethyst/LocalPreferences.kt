@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.compose.runtime.Immutable
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import com.vitorpamplona.amethyst.model.Account
@@ -30,6 +31,7 @@ import java.util.Locale
 private const val DEBUG_PLAINTEXT_PREFERENCES = false
 private const val DEBUG_PREFERENCES_NAME = "debug_prefs"
 
+@Immutable
 data class AccountInfo(
     val npub: String,
     val hasPrivKey: Boolean = false
@@ -59,6 +61,8 @@ private object PrefKeys {
     const val USE_PROXY = "use_proxy"
     const val PROXY_PORT = "proxy_port"
     const val SHOW_SENSITIVE_CONTENT = "show_sensitive_content"
+    const val WARN_ABOUT_REPORTS = "warn_about_reports"
+    const val FILTER_SPAM_FROM_STRANGERS = "filter_spam_from_strangers"
     val LAST_READ: (String) -> String = { route -> "last_read_route_$route" }
 }
 
@@ -215,6 +219,8 @@ object LocalPreferences {
             putBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, account.hideBlockAlertDialog)
             putBoolean(PrefKeys.USE_PROXY, account.proxy != null)
             putInt(PrefKeys.PROXY_PORT, account.proxyPort)
+            putBoolean(PrefKeys.WARN_ABOUT_REPORTS, account.warnAboutPostsWithReports)
+            putBoolean(PrefKeys.FILTER_SPAM_FROM_STRANGERS, account.filterSpamFromStrangers)
 
             if (account.showSensitiveContent == null) {
                 remove(PrefKeys.SHOW_SENSITIVE_CONTENT)
@@ -304,6 +310,8 @@ object LocalPreferences {
             } else {
                 null
             }
+            val filterSpam = getBoolean(PrefKeys.FILTER_SPAM_FROM_STRANGERS, true)
+            val warnAboutReports = getBoolean(PrefKeys.WARN_ABOUT_REPORTS, true)
 
             val a = Account(
                 Persona(privKey = privKey?.hexToByteArray(), pubKey = pubKey.hexToByteArray()),
@@ -325,7 +333,9 @@ object LocalPreferences {
                 latestContactList,
                 proxy,
                 proxyPort,
-                showSensitiveContent
+                showSensitiveContent,
+                warnAboutReports,
+                filterSpam
             )
 
             return a

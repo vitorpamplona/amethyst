@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.components
 
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -16,13 +17,12 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 class BundledUpdate(
     val delay: Long,
-    val dispatcher: CoroutineDispatcher = Dispatchers.Default,
-    val onUpdate: () -> Unit
+    val dispatcher: CoroutineDispatcher = Dispatchers.Default
 ) {
     private var onlyOneInBlock = AtomicBoolean()
     private var invalidatesAgain = false
 
-    fun invalidate(ignoreIfDoing: Boolean = false) {
+    fun invalidate(ignoreIfDoing: Boolean = false, onUpdate: suspend () -> Unit) {
         if (onlyOneInBlock.getAndSet(true)) {
             if (!ignoreIfDoing) {
                 invalidatesAgain = true
@@ -59,6 +59,8 @@ class BundledInsert<T>(
     private var queue = LinkedBlockingQueue<T>()
 
     fun invalidateList(newObject: T, onUpdate: suspend (Set<T>) -> Unit) {
+        checkNotInMainThread()
+
         queue.put(newObject)
         if (onlyOneInBlock.getAndSet(true)) {
             return

@@ -7,9 +7,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.*
 
-object NotificationFeedFilter : AdditiveFeedFilter<Note>() {
-    lateinit var account: Account
-
+class NotificationFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
     override fun feed(): List<Note> {
         return sort(innerApplyFilter(LocalCache.notes.values))
     }

@@ -1,11 +1,13 @@
 package com.vitorpamplona.amethyst.ui.note
 
+import android.content.Context
 import android.widget.Toast
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -14,7 +16,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.CircularProgressIndicator
@@ -25,11 +26,14 @@ import androidx.compose.material.ProgressIndicatorDefaults
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -60,24 +64,197 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
+import com.vitorpamplona.amethyst.ui.screen.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.math.RoundingMode
-import kotlin.math.abs
 import kotlin.math.roundToInt
 
 @Composable
-fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+fun ReactionsRow(baseNote: Note, showReactionDetail: Boolean, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    val grayTint = MaterialTheme.colors.placeholderText
 
-    var wantsToReplyTo by remember {
+    val wantsToSeeReactions = remember {
+        mutableStateOf<Boolean>(false)
+    }
+
+    Spacer(modifier = Modifier.height(7.dp))
+
+    Row(verticalAlignment = CenterVertically, modifier = Modifier.padding(start = 10.dp)) {
+        if (showReactionDetail) {
+            Row(
+                verticalAlignment = CenterVertically,
+                modifier = Modifier
+                    .width(65.dp)
+                    .padding(start = 31.dp),
+                horizontalArrangement = Arrangement.Start
+            ) {
+                ExpandButton(baseNote, wantsToSeeReactions)
+            }
+        }
+
+        Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
+            ReplyReactionWithDialog(accountViewModel, nav, baseNote, grayTint)
+        }
+        Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
+            BoostWithDialog(accountViewModel, nav, baseNote, grayTint)
+        }
+        Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
+            LikeReaction(baseNote, grayTint, accountViewModel)
+        }
+        Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
+            ZapReaction(baseNote, grayTint, accountViewModel)
+        }
+        Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
+            ViewCountReaction(baseNote.idHex, grayTint)
+        }
+    }
+
+    if (showReactionDetail && wantsToSeeReactions.value) {
+        ReactionDetailGallery(baseNote, nav, accountViewModel)
+    }
+
+    Spacer(modifier = Modifier.height(7.dp))
+}
+
+@Composable
+private fun ExpandButton(baseNote: Note, wantsToSeeReactions: MutableState<Boolean>) {
+    val zapsState by baseNote.live().zaps.observeAsState()
+    val boostsState by baseNote.live().boosts.observeAsState()
+    val reactionsState by baseNote.live().reactions.observeAsState()
+
+    val hasReactions by remember(zapsState, boostsState, reactionsState) {
+        derivedStateOf {
+            baseNote.zaps.isNotEmpty() ||
+                baseNote.boosts.isNotEmpty() ||
+                baseNote.reactions.isNotEmpty()
+        }
+    }
+
+    if (hasReactions) {
+        IconButton(
+            onClick = {
+                wantsToSeeReactions.value = !wantsToSeeReactions.value
+            },
+            modifier = Modifier.size(20.dp)
+        ) {
+            if (wantsToSeeReactions.value) {
+                Icon(
+                    imageVector = Icons.Default.ExpandLess,
+                    null,
+                    modifier = Modifier.size(22.dp),
+                    tint = MaterialTheme.colors.onSurface.copy(alpha = 0.22f)
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.ExpandMore,
+                    null,
+                    modifier = Modifier.size(22.dp),
+                    tint = MaterialTheme.colors.onSurface.copy(alpha = 0.22f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReactionDetailGallery(
+    baseNote: Note,
+    nav: (String) -> Unit,
+    accountViewModel: AccountViewModel
+) {
+    val zapsState by baseNote.live().zaps.observeAsState()
+    val boostsState by baseNote.live().boosts.observeAsState()
+    val reactionsState by baseNote.live().reactions.observeAsState()
+
+    val defaultBackgroundColor = MaterialTheme.colors.background
+    val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
+
+    val hasReactions by remember(zapsState, boostsState, reactionsState) {
+        derivedStateOf {
+            baseNote.zaps.isNotEmpty() ||
+                baseNote.boosts.isNotEmpty() ||
+                baseNote.reactions.isNotEmpty()
+        }
+    }
+
+    if (hasReactions) {
+        Row(verticalAlignment = CenterVertically, modifier = Modifier.padding(start = 10.dp, top = 5.dp)) {
+            Column() {
+                val zapEvents by remember(zapsState) { derivedStateOf { baseNote.zaps.mapNotNull { it.value?.let { zapEvent -> CombinedZap(it.key, zapEvent) } }.toImmutableList() } }
+                val boostEvents by remember(boostsState) { derivedStateOf { baseNote.boosts.toImmutableList() } }
+                val likeEvents by remember(reactionsState) { derivedStateOf { baseNote.reactions.toImmutableList() } }
+
+                val hasZapEvents by remember(zapsState) { derivedStateOf { baseNote.zaps.isNotEmpty() } }
+                val hasBoostEvents by remember(boostsState) { derivedStateOf { baseNote.boosts.isNotEmpty() } }
+                val hasLikeEvents by remember(reactionsState) { derivedStateOf { baseNote.reactions.isNotEmpty() } }
+
+                if (hasZapEvents) {
+                    RenderZapGallery(
+                        zapEvents,
+                        backgroundColor,
+                        nav,
+                        accountViewModel
+                    )
+                }
+
+                if (hasBoostEvents) {
+                    RenderBoostGallery(
+                        boostEvents,
+                        backgroundColor,
+                        nav,
+                        accountViewModel
+                    )
+                }
+
+                if (hasLikeEvents) {
+                    RenderLikeGallery(
+                        likeEvents,
+                        backgroundColor,
+                        nav,
+                        accountViewModel
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BoostWithDialog(
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+    baseNote: Note,
+    grayTint: Color
+) {
+    var wantsToQuote by remember {
         mutableStateOf<Note?>(null)
     }
 
-    var wantsToQuote by remember {
+    if (wantsToQuote != null) {
+        NewPostView({ wantsToQuote = null }, null, wantsToQuote, accountViewModel, nav)
+    }
+
+    BoostReaction(baseNote, grayTint, accountViewModel) {
+        wantsToQuote = baseNote
+    }
+}
+
+@Composable
+private fun ReplyReactionWithDialog(
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+    baseNote: Note,
+    grayTint: Color
+) {
+    var wantsToReplyTo by remember {
         mutableStateOf<Note?>(null)
     }
 
@@ -85,32 +262,8 @@ fun ReactionsRow(baseNote: Note, accountViewModel: AccountViewModel, nav: (Strin
         NewPostView({ wantsToReplyTo = null }, wantsToReplyTo, null, accountViewModel, nav)
     }
 
-    if (wantsToQuote != null) {
-        NewPostView({ wantsToQuote = null }, null, wantsToQuote, accountViewModel, nav)
-    }
-
-    Spacer(modifier = Modifier.height(8.dp))
-
-    Row(verticalAlignment = CenterVertically) {
-        Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
-            ReplyReaction(baseNote, grayTint, accountViewModel) {
-                wantsToReplyTo = baseNote
-            }
-        }
-        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
-            BoostReaction(baseNote, grayTint, accountViewModel) {
-                wantsToQuote = baseNote
-            }
-        }
-        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
-            LikeReaction(baseNote, grayTint, accountViewModel)
-        }
-        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
-            ZapReaction(baseNote, grayTint, accountViewModel)
-        }
-        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
-            ViewCountReaction(baseNote.idHex, grayTint)
-        }
+    ReplyReaction(baseNote, grayTint, accountViewModel) {
+        wantsToReplyTo = baseNote
     }
 }
 
@@ -120,7 +273,7 @@ fun ReplyReaction(
     grayTint: Color,
     accountViewModel: AccountViewModel,
     showCounter: Boolean = true,
-    iconSize: Dp = 20.dp,
+    iconSize: Dp = 18.dp,
     onPress: () -> Unit
 ) {
     val context = LocalContext.current
@@ -201,7 +354,9 @@ fun BoostReaction(
         onClick = {
             if (accountViewModel.isWriteable()) {
                 if (accountViewModel.hasBoosted(baseNote)) {
-                    accountViewModel.deleteBoostsTo(baseNote)
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.deleteBoostsTo(baseNote)
+                    }
                 } else {
                     wantsToBoost = true
                 }
@@ -293,10 +448,12 @@ fun LikeReaction(
         modifier = iconButtonModifier,
         onClick = {
             if (accountViewModel.isWriteable()) {
-                if (accountViewModel.hasReactedTo(baseNote)) {
-                    accountViewModel.deleteReactionTo(baseNote)
-                } else {
-                    accountViewModel.reactTo(baseNote)
+                scope.launch(Dispatchers.IO) {
+                    if (accountViewModel.hasReactedTo(baseNote)) {
+                        accountViewModel.deleteReactionTo(baseNote)
+                    } else {
+                        accountViewModel.reactTo(baseNote)
+                    }
                 }
             } else {
                 scope.launch {
@@ -319,9 +476,16 @@ fun LikeReaction(
 fun LikeIcon(baseNote: Note, iconSize: Dp = 20.dp, grayTint: Color, loggedIn: User) {
     val reactionsState by baseNote.live().reactions.observeAsState()
 
-    val wasReactedByLoggedIn by remember(reactionsState) {
-        derivedStateOf {
-            reactionsState?.note?.isReactedBy(loggedIn) == true
+    var wasReactedByLoggedIn by remember(reactionsState) {
+        mutableStateOf(false)
+    }
+
+    LaunchedEffect(key1 = reactionsState) {
+        launch(Dispatchers.Default) {
+            val newWasReactedByLoggedIn = reactionsState?.note?.isReactedBy(loggedIn) == true
+            if (wasReactedByLoggedIn != newWasReactedByLoggedIn) {
+                wasReactedByLoggedIn = newWasReactedByLoggedIn
+            }
         }
     }
 
@@ -350,9 +514,16 @@ fun LikeIcon(baseNote: Note, iconSize: Dp = 20.dp, grayTint: Color, loggedIn: Us
 fun LikeText(baseNote: Note, grayTint: Color) {
     val reactionsState by baseNote.live().reactions.observeAsState()
 
-    val reactionsCount by remember(reactionsState) {
-        derivedStateOf {
-            " " + showCount(reactionsState?.note?.reactions?.size)
+    var reactionsCount by remember(reactionsState) {
+        mutableStateOf("")
+    }
+
+    LaunchedEffect(key1 = reactionsState) {
+        launch(Dispatchers.Default) {
+            val newReactionsCount = " " + showCount(reactionsState?.note?.reactions?.size)
+            if (reactionsCount != newReactionsCount) {
+                reactionsCount = newReactionsCount
+            }
         }
     }
 
@@ -372,9 +543,6 @@ fun ZapReaction(
     iconSize: Dp = 20.dp,
     animationSize: Dp = 14.dp
 ) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = remember(accountState) { accountState?.account } ?: return
-
     var wantsToZap by remember { mutableStateOf(false) }
     var wantsToChangeZapAmount by remember { mutableStateOf(false) }
     var wantsToSetCustomZap by remember { mutableStateOf(false) }
@@ -393,53 +561,18 @@ fun ZapReaction(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = rememberRipple(bounded = false, radius = 24.dp),
                 onClick = {
-                    if (account.zapAmountChoices.isEmpty()) {
-                        scope.launch {
-                            Toast
-                                .makeText(
-                                    context,
-                                    context.getString(R.string.no_zap_amount_setup_long_press_to_change),
-                                    Toast.LENGTH_SHORT
-                                )
-                                .show()
+                    zapClick(
+                        baseNote,
+                        accountViewModel,
+                        scope,
+                        context,
+                        onZappingProgress = { progress: Float ->
+                            zappingProgress = progress
+                        },
+                        onMultipleChoices = {
+                            wantsToZap = true
                         }
-                    } else if (!accountViewModel.isWriteable()) {
-                        scope.launch {
-                            Toast
-                                .makeText(
-                                    context,
-                                    context.getString(R.string.login_with_a_private_key_to_be_able_to_send_zaps),
-                                    Toast.LENGTH_SHORT
-                                )
-                                .show()
-                        }
-                    } else if (account.zapAmountChoices.size == 1) {
-                        scope.launch(Dispatchers.IO) {
-                            accountViewModel.zap(
-                                baseNote,
-                                account.zapAmountChoices.first() * 1000,
-                                null,
-                                "",
-                                context,
-                                onError = {
-                                    scope.launch {
-                                        zappingProgress = 0f
-                                        Toast
-                                            .makeText(context, it, Toast.LENGTH_SHORT)
-                                            .show()
-                                    }
-                                },
-                                onProgress = {
-                                    scope.launch(Dispatchers.Main) {
-                                        zappingProgress = it
-                                    }
-                                },
-                                zapType = account.defaultZapType
-                            )
-                        }
-                    } else if (account.zapAmountChoices.size > 1) {
-                        wantsToZap = true
-                    }
+                    )
                 },
                 onLongClick = {
                     wantsToChangeZapAmount = true
@@ -476,11 +609,11 @@ fun ZapReaction(
         }
 
         if (wantsToChangeZapAmount) {
-            UpdateZapAmountDialog({ wantsToChangeZapAmount = false }, account = account)
+            UpdateZapAmountDialog({ wantsToChangeZapAmount = false }, accountViewModel = accountViewModel)
         }
 
         if (wantsToSetCustomZap) {
-            ZapCustomDialog({ wantsToSetCustomZap = false }, account = account, accountViewModel, baseNote)
+            ZapCustomDialog({ wantsToSetCustomZap = false }, accountViewModel, baseNote)
         }
 
         if (zappingProgress > 0.00001 && zappingProgress < 0.99999) {
@@ -493,7 +626,7 @@ fun ZapReaction(
 
             CircularProgressIndicator(
                 progress = animatedProgress,
-                modifier = Modifier.size(animationSize),
+                modifier = remember { Modifier.size(animationSize) },
                 strokeWidth = 2.dp
             )
         } else {
@@ -509,6 +642,63 @@ fun ZapReaction(
     ZapAmountText(baseNote, grayTint, accountViewModel)
 }
 
+private fun zapClick(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    scope: CoroutineScope,
+    context: Context,
+    onZappingProgress: (Float) -> Unit,
+    onMultipleChoices: () -> Unit
+) {
+    if (accountViewModel.account.zapAmountChoices.isEmpty()) {
+        scope.launch {
+            Toast
+                .makeText(
+                    context,
+                    context.getString(R.string.no_zap_amount_setup_long_press_to_change),
+                    Toast.LENGTH_SHORT
+                )
+                .show()
+        }
+    } else if (!accountViewModel.isWriteable()) {
+        scope.launch {
+            Toast
+                .makeText(
+                    context,
+                    context.getString(R.string.login_with_a_private_key_to_be_able_to_send_zaps),
+                    Toast.LENGTH_SHORT
+                )
+                .show()
+        }
+    } else if (accountViewModel.account.zapAmountChoices.size == 1) {
+        scope.launch(Dispatchers.IO) {
+            accountViewModel.zap(
+                baseNote,
+                accountViewModel.account.zapAmountChoices.first() * 1000,
+                null,
+                "",
+                context,
+                onError = {
+                    scope.launch {
+                        onZappingProgress(0f)
+                        Toast
+                            .makeText(context, it, Toast.LENGTH_SHORT)
+                            .show()
+                    }
+                },
+                onProgress = {
+                    scope.launch(Dispatchers.Main) {
+                        onZappingProgress(it)
+                    }
+                },
+                zapType = accountViewModel.account.defaultZapType
+            )
+        }
+    } else if (accountViewModel.account.zapAmountChoices.size > 1) {
+        onMultipleChoices()
+    }
+}
+
 @Composable
 private fun ZapIcon(
     baseNote: Note,
@@ -519,10 +709,8 @@ private fun ZapIcon(
     var wasZappedByLoggedInUser by remember { mutableStateOf(false) }
     val zapsState by baseNote.live().zaps.observeAsState()
 
-    val scope = rememberCoroutineScope()
-
     LaunchedEffect(key1 = zapsState) {
-        scope.launch(Dispatchers.IO) {
+        launch(Dispatchers.Default) {
             zapsState?.note?.let {
                 if (!wasZappedByLoggedInUser) {
                     val newWasZapped = accountViewModel.calculateIfNoteWasZappedByAccount(it)
@@ -559,17 +747,16 @@ private fun ZapAmountText(
     accountViewModel: AccountViewModel
 ) {
     val zapsState by baseNote.live().zaps.observeAsState()
-    val zappedNote = remember(zapsState) { zapsState?.note } ?: return
-
-    val scope = rememberCoroutineScope()
 
     var zapAmountTxt by remember { mutableStateOf("") }
 
     LaunchedEffect(key1 = zapsState) {
-        scope.launch(Dispatchers.IO) {
-            val newZapAmount = showAmount(accountViewModel.calculateZapAmount(zappedNote))
-            if (newZapAmount != zapAmountTxt) {
-                zapAmountTxt = newZapAmount
+        launch(Dispatchers.Default) {
+            zapsState?.note?.let {
+                val newZapAmount = showAmount(accountViewModel.calculateZapAmount(it))
+                if (newZapAmount != zapAmountTxt) {
+                    zapAmountTxt = newZapAmount
+                }
             }
         }
     }
@@ -582,7 +769,7 @@ private fun ZapAmountText(
 }
 
 @Composable
-public fun ViewCountReaction(
+fun ViewCountReaction(
     idHex: String,
     grayTint: Color,
     iconSize: Dp = 20.dp,
@@ -642,14 +829,17 @@ private fun BoostTypeChoicePopup(baseNote: Note, accountViewModel: AccountViewMo
         offset = IntOffset(0, -50),
         onDismissRequest = { onDismiss() }
     ) {
-        FlowRow() {
+        FlowRow {
+            val scope = rememberCoroutineScope()
             Button(
                 modifier = Modifier.padding(horizontal = 3.dp),
                 onClick = {
-                    accountViewModel.boost(baseNote)
-                    onDismiss()
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.boost(baseNote)
+                        onDismiss()
+                    }
                 },
-                shape = RoundedCornerShape(20.dp),
+                shape = ButtonBorder,
                 colors = ButtonDefaults
                     .buttonColors(
                         backgroundColor = MaterialTheme.colors.primary
@@ -661,7 +851,7 @@ private fun BoostTypeChoicePopup(baseNote: Note, accountViewModel: AccountViewMo
             Button(
                 modifier = Modifier.padding(horizontal = 3.dp),
                 onClick = onQuote,
-                shape = RoundedCornerShape(20.dp),
+                shape = ButtonBorder,
                 colors = ButtonDefaults
                     .buttonColors(
                         backgroundColor = MaterialTheme.colors.primary
@@ -714,7 +904,7 @@ fun ZapAmountChoicePopup(
                             onDismiss()
                         }
                     },
-                    shape = RoundedCornerShape(20.dp),
+                    shape = ButtonBorder,
                     colors = ButtonDefaults
                         .buttonColors(
                             backgroundColor = MaterialTheme.colors.primary

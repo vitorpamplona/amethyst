@@ -61,14 +61,15 @@ Or get the latest APK from the [Releases Section](https://github.com/vitorpamplo
 - [x] Push Notifications (Zaps and Messages)
 - [x] Generic Tags (NIP-12)
 - [x] Sensitive Content (NIP-36)
+- [x] View Individual Reactions (Like, Boost, Zaps, Reports) per Post
+- [x] Recommended Application Handlers (NIP-89)
+- [x] Events with a Subject (NIP-14)
 - [ ] Marketplace (NIP-15)
 - [ ] Image/Video Capture in the app
-- [ ] Local Database 
-- [ ] View Individual Reactions (Like, Boost, Zaps, Reports) per Post
+- [ ] Local Database
 - [ ] Bookmarks, Pinned Posts, Muted Events (NIP-51)
 - [ ] Relay Pages (NIP-11)
 - [ ] Proof of Work in the Phone (NIP-13, NIP-20)
-- [ ] Events with a Subject (NIP-14)
 - [ ] Workspaces
 - [ ] Expiration Support (NIP-40)
 - [ ] Infinity Scroll

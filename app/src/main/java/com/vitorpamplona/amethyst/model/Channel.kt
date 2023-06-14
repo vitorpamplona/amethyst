@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.model
 
+import androidx.compose.runtime.Stable
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleChannelDataSource
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
@@ -9,6 +10,7 @@ import fr.acinq.secp256k1.Hex
 import kotlinx.coroutines.Dispatchers
 import java.util.concurrent.ConcurrentHashMap
 
+@Stable
 class Channel(val idHex: String) {
     var creator: User? = null
     var info = ChannelCreateEvent.ChannelData(null, null, null)
@@ -31,6 +33,10 @@ class Channel(val idHex: String) {
 
     fun removeNote(note: Note) {
         notes.remove(note.idHex)
+    }
+
+    fun removeNote(noteHex: String) {
+        notes.remove(noteHex)
     }
 
     fun updateChannelInfo(creator: User, channelInfo: ChannelCreateEvent.ChannelData, updatedAt: Long) {
@@ -74,14 +80,14 @@ class Channel(val idHex: String) {
 
 class ChannelLiveData(val channel: Channel) : LiveData<ChannelState>(ChannelState(channel)) {
     // Refreshes observers in batches.
-    private val bundler = BundledUpdate(300, Dispatchers.IO) {
-        if (hasActiveObservers()) {
-            postValue(ChannelState(channel))
-        }
-    }
+    private val bundler = BundledUpdate(300, Dispatchers.IO)
 
     fun invalidateData() {
-        bundler.invalidate()
+        bundler.invalidate() {
+            if (hasActiveObservers()) {
+                postValue(ChannelState(channel))
+            }
+        }
     }
 
     override fun onActive() {

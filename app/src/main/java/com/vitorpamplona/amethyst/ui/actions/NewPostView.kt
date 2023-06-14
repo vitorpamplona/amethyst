@@ -24,13 +24,13 @@ import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CurrencyBitcoin
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.ArrowForwardIos
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -71,9 +71,17 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.UserLine
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.ui.theme.subtleBorder
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -97,8 +105,12 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
         delay(100)
         focusRequester.requestFocus()
 
-        postViewModel.imageUploadingError.collect { error ->
-            Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+        launch(Dispatchers.IO) {
+            postViewModel.imageUploadingError.collect { error ->
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 
@@ -144,8 +156,10 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
 
                         PostButton(
                             onPost = {
-                                postViewModel.sendPost()
-                                onClose()
+                                scope.launch(Dispatchers.IO) {
+                                    postViewModel.sendPost()
+                                    onClose()
+                                }
                             },
                             isActive = postViewModel.canPost()
                         )
@@ -161,7 +175,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                 .fillMaxWidth()
                                 .verticalScroll(scrollState)
                         ) {
-                            Notifying(postViewModel.mentions) {
+                            Notifying(postViewModel.mentions?.toImmutableList()) {
                                 postViewModel.removeFromReplyList(it)
                             }
 
@@ -189,7 +203,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                 placeholder = {
                                     Text(
                                         text = stringResource(R.string.what_s_on_your_mind),
-                                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                        color = MaterialTheme.colors.placeholderText
                                     )
                                 },
                                 colors = TextFieldDefaults
@@ -208,9 +222,9 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
 
                                 Button(
                                     onClick = { postViewModel.pollOptions[postViewModel.pollOptions.size] = "" },
-                                    border = BorderStroke(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.32f)),
+                                    border = BorderStroke(1.dp, MaterialTheme.colors.placeholderText),
                                     colors = ButtonDefaults.outlinedButtonColors(
-                                        contentColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                        contentColor = MaterialTheme.colors.placeholderText
                                     )
                                 ) {
                                     Image(
@@ -279,11 +293,11 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                                 modifier = Modifier
                                                     .padding(top = 4.dp)
                                                     .fillMaxWidth()
-                                                    .clip(shape = RoundedCornerShape(15.dp))
+                                                    .clip(shape = QuoteBorder)
                                                     .border(
                                                         1.dp,
-                                                        MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
-                                                        RoundedCornerShape(15.dp)
+                                                        MaterialTheme.colors.subtleBorder,
+                                                        QuoteBorder
                                                     )
                                             )
                                         } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
@@ -291,11 +305,16 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                         } else {
                                             UrlPreview(myUrlPreview, myUrlPreview)
                                         }
-                                    } else if (isBechLink(myUrlPreview)) {
+                                    } else if (startsWithNIP19Scheme(myUrlPreview)) {
+                                        val bgColor = MaterialTheme.colors.background
+                                        val backgroundColor = remember {
+                                            mutableStateOf(bgColor)
+                                        }
+
                                         BechLink(
                                             myUrlPreview,
                                             true,
-                                            MaterialTheme.colors.background,
+                                            backgroundColor,
                                             accountViewModel,
                                             nav
                                         )
@@ -319,7 +338,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                 userSuggestions,
                                 key = { _, item -> item.pubkeyHex }
                             ) { _, item ->
-                                UserLine(item, account) {
+                                UserLine(item, accountViewModel) {
                                     postViewModel.autocompleteWithUser(item)
                                 }
                             }
@@ -371,7 +390,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun Notifying(baseMentions: List<User>?, onClick: (User) -> Unit) {
+fun Notifying(baseMentions: ImmutableList<User>?, onClick: (User) -> Unit) {
     val mentions = baseMentions?.toSet()
 
     FlowRow(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 10.dp)) {
@@ -379,28 +398,30 @@ fun Notifying(baseMentions: List<User>?, onClick: (User) -> Unit) {
             Text(
                 stringResource(R.string.reply_notify),
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                color = MaterialTheme.colors.placeholderText
             )
 
             mentions.forEachIndexed { idx, user ->
                 val innerUserState by user.live().metadata.observeAsState()
-                val innerUser = innerUserState?.user
-
-                innerUser?.let { myUser ->
+                innerUserState?.user?.let { myUser ->
                     Spacer(modifier = Modifier.width(5.dp))
 
+                    val tags = remember(innerUserState) {
+                        myUser.info?.latestMetadata?.tags?.toImmutableListOfLists()
+                    }
+
                     Button(
-                        shape = RoundedCornerShape(20.dp),
+                        shape = ButtonBorder,
                         colors = ButtonDefaults.buttonColors(
-                            backgroundColor = MaterialTheme.colors.primary.copy(alpha = 0.32f)
+                            backgroundColor = MaterialTheme.colors.mediumImportanceLink
                         ),
                         onClick = {
                             onClick(myUser)
                         }
                     ) {
                         CreateTextWithEmoji(
-                            text = "✖ ${myUser.toBestDisplayName()}",
-                            tags = myUser.info?.latestMetadata?.tags,
+                            text = remember(innerUserState) { "✖ ${myUser.toBestDisplayName()}" },
+                            tags = tags,
                             color = Color.White,
                             textAlign = TextAlign.Center
                         )
@@ -533,7 +554,7 @@ private fun ForwardZapTo(
             placeholder = {
                 Text(
                     text = stringResource(R.string.zap_forward_lnAddress),
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                    color = MaterialTheme.colors.placeholderText,
                     fontSize = 14.sp
                 )
             },
@@ -608,7 +629,7 @@ fun CloseButton(onCancel: () -> Unit) {
         onClick = {
             onCancel()
         },
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = Color.Gray
@@ -632,7 +653,7 @@ fun PostButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifier = 
                 onPost()
             }
         },
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = if (isActive) MaterialTheme.colors.primary else Color.Gray
@@ -651,7 +672,7 @@ fun SaveButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifier = 
                 onPost()
             }
         },
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = if (isActive) MaterialTheme.colors.primary else Color.Gray
@@ -670,7 +691,7 @@ fun CreateButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifier 
                 onPost()
             }
         },
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = if (isActive) MaterialTheme.colors.primary else Color.Gray
@@ -689,7 +710,7 @@ fun SearchButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifier 
                 onPost()
             }
         },
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = if (isActive) MaterialTheme.colors.primary else Color.Gray
@@ -727,7 +748,6 @@ fun ImageVideoDescription(
 ) {
     val resolver = LocalContext.current.contentResolver
     val mediaType = resolver.getType(uri) ?: ""
-    val scope = rememberCoroutineScope()
 
     val isImage = mediaType.startsWith("image")
     val isVideo = mediaType.startsWith("video")
@@ -744,8 +764,8 @@ fun ImageVideoDescription(
         Triple(ServersAvailable.NIP95, stringResource(id = R.string.upload_server_relays_nip95), stringResource(id = R.string.upload_server_relays_nip95_explainer))
     )
 
-    val fileServerOptions = fileServers.map { it.second }
-    val fileServerExplainers = fileServers.map { it.third }
+    val fileServerOptions = remember { fileServers.map { it.second }.toImmutableList() }
+    val fileServerExplainers = remember { fileServers.map { it.third }.toImmutableList() }
 
     var selectedServer by remember { mutableStateOf(defaultServer) }
     var message by remember { mutableStateOf("") }
@@ -754,11 +774,11 @@ fun ImageVideoDescription(
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = 30.dp, end = 30.dp)
-            .clip(shape = RoundedCornerShape(10.dp))
+            .clip(shape = QuoteBorder)
             .border(
                 1.dp,
-                MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
-                RoundedCornerShape(15.dp)
+                MaterialTheme.colors.subtleBorder,
+                QuoteBorder
             )
     ) {
         Column(
@@ -802,7 +822,7 @@ fun ImageVideoDescription(
                         modifier = Modifier
                             .padding(end = 5.dp)
                             .size(30.dp),
-                        tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                        tint = MaterialTheme.colors.placeholderText
                     )
                 }
             }
@@ -830,7 +850,7 @@ fun ImageVideoDescription(
                     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
 
                     LaunchedEffect(key1 = uri) {
-                        scope.launch(Dispatchers.IO) {
+                        launch(Dispatchers.IO) {
                             try {
                                 bitmap = resolver.loadThumbnail(uri, Size(1200, 1000), null)
                             } catch (e: Exception) {
@@ -851,7 +871,7 @@ fun ImageVideoDescription(
                         )
                     }
                 } else {
-                    VideoView(uri)
+                    VideoView(uri.toString())
                 }
             }
 
@@ -892,7 +912,7 @@ fun ImageVideoDescription(
                         placeholder = {
                             Text(
                                 text = stringResource(R.string.content_description_example),
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                color = MaterialTheme.colors.placeholderText
                             )
                         },
                         keyboardOptions = KeyboardOptions.Default.copy(
@@ -909,7 +929,7 @@ fun ImageVideoDescription(
                 onClick = {
                     onAdd(message, selectedServer)
                 },
-                shape = RoundedCornerShape(15.dp),
+                shape = QuoteBorder,
                 colors = ButtonDefaults.buttonColors(
                     backgroundColor = MaterialTheme.colors.primary
                 )
@@ -918,4 +938,11 @@ fun ImageVideoDescription(
             }
         }
     }
+}
+
+@Stable
+data class ImmutableListOfLists<T>(val lists: List<List<T>> = emptyList())
+
+fun List<List<String>>.toImmutableListOfLists(): ImmutableListOfLists<String> {
+    return ImmutableListOfLists(this)
 }

@@ -26,6 +26,8 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.RadioButtonChecked
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -37,14 +39,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.decodePublicKey
 import com.vitorpamplona.amethyst.model.toHexKey
+import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
@@ -52,6 +58,8 @@ import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.LoginPage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Composable
 fun AccountSwitchBottomSheet(
@@ -59,11 +67,6 @@ fun AccountSwitchBottomSheet(
     accountStateViewModel: AccountStateViewModel
 ) {
     val accounts = LocalPreferences.allSavedAccounts()
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
-
-    val accountUserState by account.userProfile().live().metadata.observeAsState()
-    val accountUser = accountUserState?.user ?: return
 
     var popupExpanded by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
@@ -79,108 +82,7 @@ fun AccountSwitchBottomSheet(
             Text(stringResource(R.string.account_switch_select_account), fontWeight = FontWeight.Bold)
         }
         accounts.forEach { acc ->
-            val current = accountUser.pubkeyNpub() == acc.npub
-
-            val baseUser = try {
-                LocalCache.getOrCreateUser(decodePublicKey(acc.npub).toHexKey())
-            } catch (e: Exception) {
-                null
-            }
-
-            if (baseUser != null) {
-                val userState by baseUser.live().metadata.observeAsState()
-                val user = userState?.user ?: return
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable {
-                                accountStateViewModel.switchUser(acc.npub)
-                            },
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .padding(16.dp, 16.dp)
-                                .weight(1f),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .width(55.dp)
-                                    .padding(0.dp)
-                            ) {
-                                RobohashAsyncImageProxy(
-                                    robot = user.pubkeyHex,
-                                    model = ResizeImage(user.profilePicture(), 55.dp),
-                                    contentDescription = stringResource(R.string.profile_image),
-                                    modifier = Modifier
-                                        .width(55.dp)
-                                        .height(55.dp)
-                                        .clip(shape = CircleShape)
-                                )/*
-                                Box(
-                                    modifier = Modifier
-                                        .size(20.dp)
-                                        .align(Alignment.TopEnd)
-                                ) {
-                                    if (acc.hasPrivKey) {
-                                        Icon(
-                                            imageVector = Icons.Default.Key,
-                                            contentDescription = stringResource(R.string.account_switch_has_private_key),
-                                            modifier = Modifier.size(20.dp),
-                                            tint = MaterialTheme.colors.primary
-                                        )
-                                    } else {
-                                        Icon(
-                                            imageVector = Icons.Default.Visibility,
-                                            contentDescription = stringResource(R.string.account_switch_pubkey_only),
-                                            modifier = Modifier.size(20.dp),
-                                            tint = MaterialTheme.colors.primary
-                                        )
-                                    }
-                                }*/
-                            }
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                val npubShortHex = acc.npub.toShortenHex()
-
-                                user.bestDisplayName()?.let {
-                                    CreateTextWithEmoji(
-                                        text = it,
-                                        tags = user.info?.latestMetadata?.tags
-                                    )
-                                }
-
-                                Text(npubShortHex)
-                            }
-                            Column(modifier = Modifier.width(32.dp)) {
-                                if (current) {
-                                    Icon(
-                                        imageVector = Icons.Default.RadioButtonChecked,
-                                        contentDescription = stringResource(R.string.account_switch_active_account),
-                                        tint = MaterialTheme.colors.secondary
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    IconButton(
-                        onClick = { accountStateViewModel.logOff(acc.npub) }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Logout,
-                            contentDescription = stringResource(R.string.log_out),
-                            tint = MaterialTheme.colors.onSurface
-                        )
-                    }
-                }
-            }
+            DisplayAccount(acc, accountViewModel, accountStateViewModel)
         }
         Row(
             modifier = Modifier
@@ -220,5 +122,142 @@ fun AccountSwitchBottomSheet(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun DisplayAccount(
+    acc: AccountInfo,
+    accountViewModel: AccountViewModel,
+    accountStateViewModel: AccountStateViewModel
+) {
+    var baseUser by remember { mutableStateOf<User?>(null) }
+
+    LaunchedEffect(key1 = acc.npub) {
+        launch(Dispatchers.IO) {
+            baseUser = try {
+                LocalCache.getOrCreateUser(decodePublicKey(acc.npub).toHexKey())
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
+
+    baseUser?.let {
+        Row(
+            modifier = Modifier.fillMaxWidth().clickable {
+                accountStateViewModel.switchUser(acc.npub)
+            }.padding(16.dp, 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier.width(55.dp).padding(0.dp)
+                    ) {
+                        AccountPicture(it)
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        AccountName(acc, it)
+                    }
+                    Column(modifier = Modifier.width(32.dp)) {
+                        ActiveMarker(acc, accountViewModel)
+                    }
+                }
+            }
+
+            LogoutButton(acc, accountStateViewModel)
+        }
+    }
+}
+
+@Composable
+private fun ActiveMarker(acc: AccountInfo, accountViewModel: AccountViewModel) {
+    val isCurrentUser by remember(accountViewModel) {
+        derivedStateOf {
+            accountViewModel.account.userProfile().pubkeyNpub() == acc.npub
+        }
+    }
+
+    if (isCurrentUser) {
+        Icon(
+            imageVector = Icons.Default.RadioButtonChecked,
+            contentDescription = stringResource(R.string.account_switch_active_account),
+            tint = MaterialTheme.colors.secondary
+        )
+    }
+}
+
+@Composable
+private fun AccountPicture(user: User) {
+    val userState by user.live().metadata.observeAsState()
+    val profilePicture by remember(userState) {
+        derivedStateOf {
+            ResizeImage(userState?.user?.profilePicture(), 55.dp)
+        }
+    }
+
+    RobohashAsyncImageProxy(
+        robot = remember(user) { user.pubkeyHex },
+        model = profilePicture,
+        contentDescription = stringResource(R.string.profile_image),
+        modifier = Modifier
+            .width(55.dp)
+            .height(55.dp)
+            .clip(shape = CircleShape)
+    )
+}
+
+@Composable
+private fun AccountName(
+    acc: AccountInfo,
+    user: User
+) {
+    val userState by user.live().metadata.observeAsState()
+    val displayName by remember(userState) {
+        derivedStateOf {
+            user.bestDisplayName()
+        }
+    }
+    val tags by remember(userState) {
+        derivedStateOf {
+            user.info?.latestMetadata?.tags?.toImmutableListOfLists()
+        }
+    }
+
+    displayName?.let {
+        CreateTextWithEmoji(
+            text = it,
+            tags = tags,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+
+    Text(
+        text = remember(user) { acc.npub.toShortenHex() }
+    )
+}
+
+@Composable
+private fun LogoutButton(
+    acc: AccountInfo,
+    accountStateViewModel: AccountStateViewModel
+) {
+    IconButton(
+        onClick = { accountStateViewModel.logOff(acc.npub) }
+    ) {
+        Icon(
+            imageVector = Icons.Default.Logout,
+            contentDescription = stringResource(R.string.log_out),
+            tint = MaterialTheme.colors.onSurface
+        )
     }
 }

@@ -1,9 +1,8 @@
 package com.vitorpamplona.amethyst.model
 
 import android.util.Log
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.service.relays.Relay
@@ -13,7 +12,6 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import nostr.postr.toNpub
-import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -23,12 +21,6 @@ import java.time.format.DateTimeFormatter
 import java.util.concurrent.ConcurrentHashMap
 
 object LocalCache {
-    val metadataParser by lazy {
-        jacksonObjectMapper()
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-            .readerFor(UserMetadata::class.java)
-    }
-
     val antiSpam = AntiSpamFilter()
 
     val users = ConcurrentHashMap<HexKey, User>(5000)
@@ -40,6 +32,8 @@ object LocalCache {
         ConcurrentHashMap<HexKey, Pair<Note?, (LnZapPaymentResponseEvent) -> Unit>>(10)
 
     fun checkGetOrCreateUser(key: String): User? {
+        checkNotInMainThread()
+
         if (isValidHexNpub(key)) {
             return getOrCreateUser(key)
         }
@@ -48,6 +42,8 @@ object LocalCache {
 
     @Synchronized
     fun getOrCreateUser(key: HexKey): User {
+        // checkNotInMainThread()
+
         return users[key] ?: run {
             val answer = User(key)
             users.put(key, answer)
@@ -55,7 +51,21 @@ object LocalCache {
         }
     }
 
+    fun getUserIfExists(key: String): User? {
+        return users[key]
+    }
+
+    fun getNoteIfExists(key: String): Note? {
+        return addressables[key] ?: notes[key]
+    }
+
+    fun getChannelIfExists(key: String): Channel? {
+        return channels[key]
+    }
+
     fun checkGetOrCreateNote(key: String): Note? {
+        checkNotInMainThread()
+
         if (ATag.isATag(key)) {
             return checkGetOrCreateAddressableNote(key)
         }
@@ -67,6 +77,8 @@ object LocalCache {
 
     @Synchronized
     fun getOrCreateNote(idHex: String): Note {
+        checkNotInMainThread()
+
         return notes[idHex] ?: run {
             val answer = Note(idHex)
             notes.put(idHex, answer)
@@ -75,6 +87,8 @@ object LocalCache {
     }
 
     fun checkGetOrCreateChannel(key: String): Channel? {
+        checkNotInMainThread()
+
         if (isValidHexNpub(key)) {
             return getOrCreateChannel(key)
         }
@@ -93,6 +107,8 @@ object LocalCache {
 
     @Synchronized
     fun getOrCreateChannel(key: String): Channel {
+        checkNotInMainThread()
+
         return channels[key] ?: run {
             val answer = Channel(key)
             channels.put(key, answer)
@@ -115,33 +131,35 @@ object LocalCache {
     }
 
     @Synchronized
-    fun getOrCreateAddressableNote(key: ATag): AddressableNote {
+    fun getOrCreateAddressableNoteInternal(key: ATag): AddressableNote {
+        checkNotInMainThread()
+
         // we can't use naddr here because naddr might include relay info and
         // the preferred relay should not be part of the index.
         return addressables[key.toTag()] ?: run {
             val answer = AddressableNote(key)
-            answer.author = checkGetOrCreateUser(key.pubKeyHex)
             addressables.put(key.toTag(), answer)
             answer
         }
+    }
+
+    fun getOrCreateAddressableNote(key: ATag): AddressableNote {
+        val note = getOrCreateAddressableNoteInternal(key)
+        // Loads the user outside a Syncronized block to avoid blocking
+        if (note.author == null) {
+            note.author = checkGetOrCreateUser(key.pubKeyHex)
+        }
+        return note
     }
 
     fun consume(event: MetadataEvent) {
         // new event
         val oldUser = getOrCreateUser(event.pubKey)
         if (oldUser.info == null || event.createdAt > oldUser.info!!.updatedMetadataAt) {
-            val newUser = try {
-                metadataParser.readValue(
-                    ByteArrayInputStream(event.content.toByteArray(Charsets.UTF_8)),
-                    UserMetadata::class.java
-                )
-            } catch (e: Exception) {
-                e.printStackTrace()
-                Log.w("MT", "Content Parse Error ${e.localizedMessage} ${event.content}")
-                return
+            val newUserMetadata = event.contactMetaData()
+            if (newUserMetadata != null) {
+                oldUser.updateUserInfo(newUserMetadata, event)
             }
-
-            oldUser.updateUserInfo(newUser, event)
             // Log.d("MT", "New User Metadata ${oldUser.pubkeyDisplayHex} ${oldUser.toBestDisplayName()}")
         } else {
             // Log.d("MT","Relay sent a previous Metadata Event ${oldUser.toBestDisplayName()} ${formattedDateTime(event.createdAt)} > ${formattedDateTime(oldUser.updatedAt)}")
@@ -285,12 +303,26 @@ object LocalCache {
         val note = getOrCreateAddressableNote(event.address())
         val author = getOrCreateUser(event.pubKey)
 
-        // Already processed this event.
-        if (note.event != null) return
+        if (note.event?.id() == event.id()) return
 
-        note.loadEvent(event, author, emptyList())
+        if (event.createdAt > (note.createdAt() ?: 0)) {
+            note.loadEvent(event, author, emptyList())
 
-        refreshObservers(note)
+            refreshObservers(note)
+        }
+    }
+
+    private fun consume(event: RelaySetEvent) {
+        val note = getOrCreateAddressableNote(event.address())
+        val author = getOrCreateUser(event.pubKey)
+
+        if (note.event?.id() == event.id()) return
+
+        if (event.createdAt > (note.createdAt() ?: 0)) {
+            note.loadEvent(event, author, emptyList())
+
+            refreshObservers(note)
+        }
     }
 
     private fun consume(event: AudioTrackEvent) {
@@ -298,11 +330,13 @@ object LocalCache {
         val author = getOrCreateUser(event.pubKey)
 
         // Already processed this event.
-        if (note.event != null) return
+        if (note.event?.id() == event.id()) return
 
-        note.loadEvent(event, author, emptyList())
+        if (event.createdAt > (note.createdAt() ?: 0)) {
+            note.loadEvent(event, author, emptyList())
 
-        refreshObservers(note)
+            refreshObservers(note)
+        }
     }
 
     fun consume(event: BadgeDefinitionEvent) {
@@ -355,6 +389,32 @@ object LocalCache {
         }
 
         refreshObservers(note)
+    }
+
+    fun consume(event: AppDefinitionEvent) {
+        val note = getOrCreateAddressableNote(event.address())
+        val author = getOrCreateUser(event.pubKey)
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        note.loadEvent(event, author, emptyList())
+
+        refreshObservers(note)
+    }
+
+    fun consume(event: AppRecommendationEvent) {
+        val note = getOrCreateAddressableNote(event.address())
+        val author = getOrCreateUser(event.pubKey)
+
+        // Already processed this event.
+        if (note.event?.id() == event.id()) return
+
+        if (event.createdAt > (note.createdAt() ?: 0)) {
+            note.loadEvent(event, author, emptyList())
+
+            refreshObservers(note)
+        }
     }
 
     @Suppress("UNUSED_PARAMETER")
@@ -429,8 +489,10 @@ object LocalCache {
                     masterNote.removeReport(deleteNote)
                 }
 
-                val channel = deleteNote.channel()
-                channel?.removeNote(deleteNote)
+                deleteNote.channelHex()?.let {
+                    val channel = checkGetOrCreateChannel(it)
+                    channel?.removeNote(deleteNote)
+                }
 
                 if (deleteNote.event is PrivateDmEvent) {
                     val author = deleteNote.author
@@ -505,15 +567,6 @@ object LocalCache {
             }
         }
 
-        if (event.content == "!" || // nostr_console hide.
-            event.content == "\u26A0\uFE0F" // Warning sign
-        ) {
-            // Counts the replies
-            repliesTo.forEach {
-                it.addReport(note)
-            }
-        }
-
         refreshObservers(note)
     }
 
@@ -541,9 +594,15 @@ object LocalCache {
             mentions.forEach {
                 it.addReport(note)
             }
-        }
-        repliesTo.forEach {
-            it.addReport(note)
+        } else {
+            repliesTo.forEach {
+                it.addReport(note)
+            }
+
+            mentions.forEach {
+                // doesn't add to reports, but triggers recounts
+                it.liveSet?.reports?.invalidateData()
+            }
         }
 
         refreshObservers(note)
@@ -839,6 +898,8 @@ object LocalCache {
     }
 
     fun findUsersStartingWith(username: String): List<User> {
+        checkNotInMainThread()
+
         val key = decodePublicKeyAsHexOrNull(username)
 
         if (key != null && users[key] != null) {
@@ -853,6 +914,8 @@ object LocalCache {
     }
 
     fun findNotesStartingWith(text: String): List<Note> {
+        checkNotInMainThread()
+
         val key = try {
             Nip19.uriToRoute(text)?.hex ?: Hex.decode(text).toHexKey()
         } catch (e: Exception) {
@@ -878,6 +941,8 @@ object LocalCache {
     }
 
     fun findChannelsStartingWith(text: String): List<Channel> {
+        checkNotInMainThread()
+
         val key = try {
             Nip19.uriToRoute(text)?.hex ?: Hex.decode(text).toHexKey()
         } catch (e: Exception) {
@@ -906,6 +971,8 @@ object LocalCache {
     }
 
     fun pruneOldAndHiddenMessages(account: Account) {
+        checkNotInMainThread()
+
         channels.forEach { it ->
             val toBeRemoved = it.value.pruneOldAndHiddenMessages(account)
 
@@ -924,6 +991,8 @@ object LocalCache {
     }
 
     fun pruneHiddenMessages(account: Account) {
+        checkNotInMainThread()
+
         val toBeRemoved = account.hiddenUsers.map {
             (users[it]?.notes ?: emptySet())
         }.flatten()
@@ -951,6 +1020,8 @@ object LocalCache {
     }
 
     fun pruneContactLists(userAccount: Account) {
+        checkNotInMainThread()
+
         var removingContactList = 0
         users.values.forEach {
             if (it != userAccount.userProfile() && (it.liveSet == null || it.liveSet?.isInUse() == false) && it.latestContactList != null) {
@@ -969,11 +1040,22 @@ object LocalCache {
         live.invalidateData(newNote)
     }
 
-    fun consume(event: Event, relay: Relay?) {
-        if (!event.hasValidSignature()) return
+    fun verifyAndConsume(event: Event, relay: Relay?) {
+        checkNotInMainThread()
+
+        if (!event.hasValidSignature()) {
+            try {
+                event.checkSignature()
+            } catch (e: Exception) {
+                Log.w("Event failed retest ${event.kind}", e.message ?: "")
+            }
+            return
+        }
 
         try {
             when (event) {
+                is AppDefinitionEvent -> consume(event)
+                is AppRecommendationEvent -> consume(event)
                 is AudioTrackEvent -> consume(event)
                 is BadgeAwardEvent -> consume(event)
                 is BadgeDefinitionEvent -> consume(event)
@@ -993,7 +1075,7 @@ object LocalCache {
                 is HighlightEvent -> consume(event, relay)
                 is LnZapEvent -> {
                     event.zapRequest?.let {
-                        consume(it, relay)
+                        verifyAndConsume(it, relay)
                     }
                     consume(event)
                 }
@@ -1007,10 +1089,11 @@ object LocalCache {
                 is PeopleListEvent -> consume(event)
                 is ReactionEvent -> consume(event)
                 is RecommendRelayEvent -> consume(event)
+                is RelaySetEvent -> consume(event)
                 is ReportEvent -> consume(event, relay)
                 is RepostEvent -> {
                     event.containedPost()?.let {
-                        consume(it, relay)
+                        verifyAndConsume(it, relay)
                     }
                     consume(event)
                 }

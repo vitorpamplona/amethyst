@@ -35,10 +35,10 @@ class UserZapsTest {
         val actual = UserZaps.forProfileFeed(zaps)
 
         Assert.assertEquals(1, actual.count())
-        Assert.assertEquals(zapRequest, actual.first().first)
+        Assert.assertEquals(zapRequest, actual.first().zapRequest)
         Assert.assertEquals(
             BigDecimal(200),
-            (actual.first().second.event as LnZapEventInterface).amount()
+            (actual.first().zapEvent.event as LnZapEventInterface).amount()
         )
     }
 

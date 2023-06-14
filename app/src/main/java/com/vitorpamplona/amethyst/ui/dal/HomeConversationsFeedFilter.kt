@@ -6,9 +6,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.PollNoteEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 
-object HomeConversationsFeedFilter : AdditiveFeedFilter<Note>() {
-    lateinit var account: Account
-
+class HomeConversationsFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
     override fun feed(): List<Note> {
         return sort(innerApplyFilter(LocalCache.notes.values))
     }

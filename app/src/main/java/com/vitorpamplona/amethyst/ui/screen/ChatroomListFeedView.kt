@@ -5,6 +5,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -16,7 +19,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -25,7 +27,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.NotificationCache
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.ui.note.ChatroomCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -90,34 +91,19 @@ private fun FeedLoaded(
 ) {
     val listState = rememberLazyListState()
 
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
-    val notificationCacheState = NotificationCache.live.observeAsState()
-    val notificationCache = notificationCacheState.value ?: return
-
     LaunchedEffect(key1 = markAsRead.value) {
         if (markAsRead.value) {
             for (note in state.feed.value) {
                 note.event?.let {
-                    val channel = note.channel()
-                    val route = if (channel != null) {
-                        "Channel/${channel.idHex}"
+                    val channelHex = note.channelHex()
+                    val route = if (channelHex != null) {
+                        "Channel/$channelHex"
                     } else {
-                        val replyAuthorBase =
-                            (note.event as? PrivateDmEvent)
-                                ?.verifiedRecipientPubKey()
-                                ?.let { LocalCache.getOrCreateUser(it) }
-
-                        var userToComposeOn = note.author!!
-                        if (replyAuthorBase != null) {
-                            if (note.author == account.userProfile()) {
-                                userToComposeOn = replyAuthorBase
-                            }
-                        }
-                        "Room/${userToComposeOn.pubkeyHex}"
+                        val roomUser = (note.event as? PrivateDmEvent)?.talkingWith(accountViewModel.account.userProfile().pubkeyHex)
+                        "Room/$roomUser"
                     }
 
-                    notificationCache.cache.markAsRead(route, it.createdAt())
+                    NotificationCache.markAsRead(route, it.createdAt())
                 }
             }
             markAsRead.value = false
@@ -135,11 +121,13 @@ private fun FeedLoaded(
             state.feed.value,
             key = { index, item -> if (index == 0) index else item.idHex }
         ) { _, item ->
-            ChatroomCompose(
-                item,
-                accountViewModel = accountViewModel,
-                nav = nav
-            )
+            Row(Modifier.fillMaxWidth().defaultMinSize(minHeight = 75.dp)) {
+                ChatroomCompose(
+                    item,
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
+            }
         }
     }
 }

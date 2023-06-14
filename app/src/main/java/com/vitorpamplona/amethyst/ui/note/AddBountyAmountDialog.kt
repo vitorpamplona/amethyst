@@ -2,7 +2,6 @@ package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,14 +15,11 @@ import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -38,6 +34,8 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.PostButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 class AddBountyAmountViewModel : ViewModel() {
     private var account: Account? = null
@@ -59,7 +57,10 @@ class AddBountyAmountViewModel : ViewModel() {
                 replyTo = listOfNotNull(bounty),
                 mentions = listOfNotNull(bounty?.author),
                 tags = listOf("bounty-added-reward"),
-                wantsToMarkAsSensitive = false
+                wantsToMarkAsSensitive = false,
+                replyingTo = null,
+                root = null,
+                directMentions = setOf()
             )
 
             nextAmount = TextFieldValue("")
@@ -75,16 +76,10 @@ class AddBountyAmountViewModel : ViewModel() {
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun AddBountyAmountDialog(bounty: Note, account: Account, onClose: () -> Unit) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
+fun AddBountyAmountDialog(bounty: Note, accountViewModel: AccountViewModel, onClose: () -> Unit) {
     val postViewModel: AddBountyAmountViewModel = viewModel()
-
-    LaunchedEffect(account) {
-        postViewModel.load(account, bounty)
-    }
+    postViewModel.load(accountViewModel.account, bounty)
 
     Dialog(
         onDismissRequest = { onClose() },
@@ -133,7 +128,7 @@ fun AddBountyAmountDialog(bounty: Note, account: Account, onClose: () -> Unit) {
                         placeholder = {
                             Text(
                                 text = "10000, 50000, 5000000",
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                color = MaterialTheme.colors.placeholderText
                             )
                         },
                         singleLine = true

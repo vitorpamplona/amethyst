@@ -1,21 +1,16 @@
 package com.vitorpamplona.amethyst.service.model
 
 import android.util.Log
-import androidx.compose.runtime.Immutable
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.google.gson.Gson
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.UserMetadata
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
+import java.io.ByteArrayInputStream
 import java.util.Date
-
-@Immutable
-data class ContactMetaData(
-    val name: String,
-    val picture: String,
-    val about: String,
-    val nip05: String?
-)
 
 abstract class IdentityClaim(
     var identity: String,
@@ -145,9 +140,13 @@ class MetadataEvent(
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
     fun contactMetaData() = try {
-        gson.fromJson(content, ContactMetaData::class.java)
+        metadataParser.readValue(
+            ByteArrayInputStream(content.toByteArray(Charsets.UTF_8)),
+            UserMetadata::class.java
+        )
     } catch (e: Exception) {
-        Log.e("MetadataEvent", "Can't parse $content", e)
+        e.printStackTrace()
+        Log.w("MT", "Content Parse Error ${e.localizedMessage} $content")
         null
     }
 
@@ -164,8 +163,10 @@ class MetadataEvent(
         const val kind = 0
         val gson = Gson()
 
-        fun create(contactMetaData: ContactMetaData, identities: List<IdentityClaim>, privateKey: ByteArray, createdAt: Long = Date().time / 1000): MetadataEvent {
-            return create(gson.toJson(contactMetaData), identities, privateKey, createdAt = createdAt)
+        val metadataParser by lazy {
+            jacksonObjectMapper()
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+                .readerFor(UserMetadata::class.java)
         }
 
         fun create(contactMetaData: String, identities: List<IdentityClaim>, privateKey: ByteArray, createdAt: Long = Date().time / 1000): MetadataEvent {

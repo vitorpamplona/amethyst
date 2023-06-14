@@ -1,7 +1,9 @@
 package com.vitorpamplona.amethyst.model
 
+import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.service.relays.FeedType
 
+@Immutable
 data class RelaySetupInfo(
     val url: String,
     val read: Boolean,

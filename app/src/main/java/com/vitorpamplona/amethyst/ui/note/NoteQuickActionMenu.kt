@@ -45,7 +45,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -69,6 +68,8 @@ import com.vitorpamplona.amethyst.ui.components.SelectTextDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.theme.WarningColor
+import com.vitorpamplona.amethyst.ui.theme.secondaryButtonBackground
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 private fun lightenColor(color: Color, amount: Float): Color {
@@ -110,38 +111,49 @@ private fun VerticalDivider(color: Color) =
     )
 
 @Composable
+fun LongPressToQuickAction(baseNote: Note, accountViewModel: AccountViewModel, content: @Composable (() -> Unit) -> Unit) {
+    var popupExpanded = remember { mutableStateOf(false) }
+    val showPopup = remember(popupExpanded) { { popupExpanded.value = true } }
+
+    content(showPopup)
+
+    NoteQuickActionMenu(baseNote, popupExpanded.value, { popupExpanded.value = false }, accountViewModel)
+}
+
+@Composable
 fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, accountViewModel: AccountViewModel) {
-    val context = LocalContext.current
-    val primaryLight = lightenColor(MaterialTheme.colors.primary, 0.1f)
-    val cardShape = RoundedCornerShape(5.dp)
-    val clipboardManager = LocalClipboardManager.current
-    val scope = rememberCoroutineScope()
     var showSelectTextDialog by remember(note) { mutableStateOf(false) }
     var showDeleteAlertDialog by remember(note) { mutableStateOf(false) }
     var showBlockAlertDialog by remember(note) { mutableStateOf(false) }
     var showReportDialog by remember(note) { mutableStateOf(false) }
 
-    val backgroundColor = if (MaterialTheme.colors.isLight) {
-        MaterialTheme.colors.primary
-    } else {
-        MaterialTheme.colors.primary.copy(alpha = 0.32f).compositeOver(MaterialTheme.colors.background)
-    }
-
-    val showToast = { stringResource: Int ->
-        scope.launch {
-            Toast.makeText(
-                context,
-                context.getString(stringResource),
-                Toast.LENGTH_SHORT
-            ).show()
-        }
-    }
-
     if (popupExpanded) {
+        val context = LocalContext.current
+        val primaryLight = lightenColor(MaterialTheme.colors.primary, 0.1f)
+        val cardShape = RoundedCornerShape(5.dp)
+        val clipboardManager = LocalClipboardManager.current
+        val scope = rememberCoroutineScope()
+
+        val backgroundColor = if (MaterialTheme.colors.isLight) {
+            MaterialTheme.colors.primary
+        } else {
+            MaterialTheme.colors.secondaryButtonBackground
+        }
+
+        val showToast = { stringResource: Int ->
+            scope.launch {
+                Toast.makeText(
+                    context,
+                    context.getString(stringResource),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+
         val isOwnNote = accountViewModel.isLoggedUser(note.author)
         val isFollowingUser = !isOwnNote && accountViewModel.isFollowing(note.author)
 
-        Popup(onDismissRequest = onDismiss) {
+        Popup(onDismissRequest = onDismiss, alignment = Alignment.Center) {
             Card(
                 modifier = Modifier.shadow(elevation = 6.dp, shape = cardShape),
                 shape = cardShape,
@@ -153,25 +165,31 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
                             icon = Icons.Default.ContentCopy,
                             label = stringResource(R.string.quick_action_copy_text)
                         ) {
-                            clipboardManager.setText(
-                                AnnotatedString(
-                                    accountViewModel.decrypt(note) ?: ""
+                            scope.launch(Dispatchers.IO) {
+                                clipboardManager.setText(
+                                    AnnotatedString(
+                                        accountViewModel.decrypt(note) ?: ""
+                                    )
                                 )
-                            )
-                            showToast(R.string.copied_note_text_to_clipboard)
-                            onDismiss()
+                                showToast(R.string.copied_note_text_to_clipboard)
+                                onDismiss()
+                            }
                         }
                         VerticalDivider(primaryLight)
                         NoteQuickActionItem(Icons.Default.AlternateEmail, stringResource(R.string.quick_action_copy_user_id)) {
-                            clipboardManager.setText(AnnotatedString("nostr:${note.author?.pubkeyNpub()}"))
-                            showToast(R.string.copied_user_id_to_clipboard)
-                            onDismiss()
+                            scope.launch(Dispatchers.IO) {
+                                clipboardManager.setText(AnnotatedString("nostr:${note.author?.pubkeyNpub()}"))
+                                showToast(R.string.copied_user_id_to_clipboard)
+                                onDismiss()
+                            }
                         }
                         VerticalDivider(primaryLight)
                         NoteQuickActionItem(Icons.Default.FormatQuote, stringResource(R.string.quick_action_copy_note_id)) {
-                            clipboardManager.setText(AnnotatedString("nostr:${note.toNEvent()}"))
-                            showToast(R.string.copied_note_id_to_clipboard)
-                            onDismiss()
+                            scope.launch(Dispatchers.IO) {
+                                clipboardManager.setText(AnnotatedString("nostr:${note.toNEvent()}"))
+                                showToast(R.string.copied_note_id_to_clipboard)
+                                onDismiss()
+                            }
                         }
 
                         if (!isOwnNote) {
@@ -179,8 +197,10 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
 
                             NoteQuickActionItem(Icons.Default.Block, stringResource(R.string.quick_action_block)) {
                                 if (accountViewModel.hideBlockAlertDialog) {
-                                    note.author?.let { accountViewModel.hide(it) }
-                                    onDismiss()
+                                    scope.launch(Dispatchers.IO) {
+                                        note.author?.let { accountViewModel.hide(it) }
+                                        onDismiss()
+                                    }
                                 } else {
                                     showBlockAlertDialog = true
                                 }
@@ -197,21 +217,27 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
                         if (isOwnNote) {
                             NoteQuickActionItem(Icons.Default.Delete, stringResource(R.string.quick_action_delete)) {
                                 if (accountViewModel.hideDeleteRequestDialog) {
-                                    accountViewModel.delete(note)
-                                    onDismiss()
+                                    scope.launch(Dispatchers.IO) {
+                                        accountViewModel.delete(note)
+                                        onDismiss()
+                                    }
                                 } else {
                                     showDeleteAlertDialog = true
                                 }
                             }
                         } else if (isFollowingUser) {
                             NoteQuickActionItem(Icons.Default.PersonRemove, stringResource(R.string.quick_action_unfollow)) {
-                                accountViewModel.unfollow(note.author!!)
-                                onDismiss()
+                                scope.launch(Dispatchers.IO) {
+                                    accountViewModel.unfollow(note.author!!)
+                                    onDismiss()
+                                }
                             }
                         } else {
                             NoteQuickActionItem(Icons.Default.PersonAdd, stringResource(R.string.quick_action_follow)) {
-                                accountViewModel.follow(note.author!!)
-                                onDismiss()
+                                scope.launch(Dispatchers.IO) {
+                                    accountViewModel.follow(note.author!!)
+                                    onDismiss()
+                                }
                             }
                         }
 
@@ -220,9 +246,11 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
                             icon = ImageVector.vectorResource(id = R.drawable.relays),
                             label = stringResource(R.string.broadcast)
                         ) {
-                            accountViewModel.broadcast(note)
-                            // showSelectTextDialog = true
-                            onDismiss()
+                            scope.launch(Dispatchers.IO) {
+                                accountViewModel.broadcast(note)
+                                // showSelectTextDialog = true
+                                onDismiss()
+                            }
                         }
                         VerticalDivider(primaryLight)
                         NoteQuickActionItem(icon = Icons.Default.Share, label = stringResource(R.string.quick_action_share)) {

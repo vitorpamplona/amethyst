@@ -34,6 +34,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
+import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
@@ -87,7 +88,7 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
                             Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth().padding(top = 5.dp)) {
                                 CreateTextWithEmoji(
                                     text = user.bestDisplayName() ?: user.bestUsername() ?: "",
-                                    tags = user.info?.latestMetadata?.tags,
+                                    tags = user.info?.latestMetadata?.tags?.toImmutableListOfLists(),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 18.sp
                                 )

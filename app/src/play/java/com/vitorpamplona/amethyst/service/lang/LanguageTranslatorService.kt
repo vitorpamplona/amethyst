@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.service.lang
 
 import android.util.LruCache
+import androidx.compose.runtime.Immutable
 import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
 import com.google.mlkit.nl.languageid.LanguageIdentification
@@ -13,11 +14,11 @@ import com.linkedin.urls.detection.UrlDetector
 import com.linkedin.urls.detection.UrlDetectorOptions
 import java.util.regex.Pattern
 
-class ResultOrError(
-    var result: String?,
-    var sourceLang: String?,
-    var targetLang: String?,
-    var error: Exception?
+@Immutable
+data class ResultOrError(
+    val result: String?,
+    val sourceLang: String?,
+    val targetLang: String?
 )
 
 object LanguageTranslatorService {
@@ -27,7 +28,7 @@ object LanguageTranslatorService {
     val tagRegex = Pattern.compile("(nostr:)?@?(nsec1|npub1|nevent1|naddr1|note1|nprofile1|nrelay1)([qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)", Pattern.CASE_INSENSITIVE)
 
     private val translators =
-        object : LruCache<TranslatorOptions, Translator>(10) {
+        object : LruCache<TranslatorOptions, Translator>(20) {
             override fun create(options: TranslatorOptions): Translator {
                 return Translation.getClient(options)
             }
@@ -76,7 +77,7 @@ object LanguageTranslatorService {
                     var fixedText = task.result.replace("# [", "#[") // fixes tags that always return with a space
                     results.add(decodeDictionary(fixedText, dict))
                 }
-                ResultOrError(results.joinToString("\n"), source, target, null)
+                ResultOrError(results.joinToString("\n"), source, target)
             }
         }
     }

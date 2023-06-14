@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import java.util.*
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -122,7 +123,7 @@ fun LoginPage(
                 placeholder = {
                     Text(
                         text = stringResource(R.string.nsec_npub_hex_private_key),
-                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                        color = MaterialTheme.colors.placeholderText
                     )
                 },
                 trailingIcon = {

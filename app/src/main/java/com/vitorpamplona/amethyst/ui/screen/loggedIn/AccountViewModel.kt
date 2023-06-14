@@ -3,7 +3,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
@@ -26,8 +26,8 @@ import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.util.Locale
 
-@Immutable
-class AccountViewModel(private val account: Account) : ViewModel() {
+@Stable
+class AccountViewModel(val account: Account) : ViewModel() {
     val accountLiveData: LiveData<AccountState> = account.live.map { it }
     val accountLanguagesLiveData: LiveData<AccountState> = account.liveLanguages.map { it }
 
@@ -57,10 +57,6 @@ class AccountViewModel(private val account: Account) : ViewModel() {
 
     fun deleteBoostsTo(note: Note) {
         account.delete(account.boostsTo(note))
-    }
-
-    fun zap(note: Note, amount: Long, pollOption: Int?, message: String, context: Context, onError: (String) -> Unit, onProgress: (percent: Float) -> Unit) {
-        zap(note, amount, pollOption, message, context, onError, onProgress, account.defaultZapType)
     }
 
     fun calculateIfNoteWasZappedByAccount(zappedNote: Note): Boolean {
@@ -247,6 +243,10 @@ class AccountViewModel(private val account: Account) : ViewModel() {
 
     fun seeContentWarnings() {
         account.updateShowSensitiveContent(null)
+    }
+
+    fun defaultZapType(): LnZapEvent.ZapType {
+        return account.defaultZapType
     }
 
     class Factory(val account: Account) : ViewModelProvider.Factory {

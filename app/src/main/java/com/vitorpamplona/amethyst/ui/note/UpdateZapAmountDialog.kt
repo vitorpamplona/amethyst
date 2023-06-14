@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
@@ -65,6 +64,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
@@ -74,15 +74,17 @@ import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.SaveButton
 import com.vitorpamplona.amethyst.ui.qrcode.SimpleQrCodeScanner
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.getFragmentActivity
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope as rememberCoroutineScope
 
-class UpdateZapAmountViewModel : ViewModel() {
-    private var account: Account? = null
-
+class UpdateZapAmountViewModel(val account: Account) : ViewModel() {
     var nextAmount by mutableStateOf(TextFieldValue(""))
     var amountSet by mutableStateOf(listOf<Long>())
     var walletConnectRelay by mutableStateOf(TextFieldValue(""))
@@ -90,8 +92,7 @@ class UpdateZapAmountViewModel : ViewModel() {
     var walletConnectSecret by mutableStateOf(TextFieldValue(""))
     var selectedZapType by mutableStateOf(LnZapEvent.ZapType.PRIVATE)
 
-    fun load(account: Account) {
-        this.account = account
+    fun load() {
         this.amountSet = account.zapAmountChoices
         this.walletConnectPubkey = account.zapPaymentRequest?.pubKeyHex?.let { TextFieldValue(it) } ?: TextFieldValue("")
         this.walletConnectRelay = account.zapPaymentRequest?.relayUri?.let { TextFieldValue(it) } ?: TextFieldValue("")
@@ -185,14 +186,25 @@ class UpdateZapAmountViewModel : ViewModel() {
                 TextFieldValue(contact.secret ?: "")
         }
     }
+
+    class Factory(val account: Account) : ViewModelProvider.Factory {
+        override fun <UpdateZapAmountViewModel : ViewModel> create(modelClass: Class<UpdateZapAmountViewModel>): UpdateZapAmountViewModel {
+            return UpdateZapAmountViewModel(account) as UpdateZapAmountViewModel
+        }
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun UpdateZapAmountDialog(onClose: () -> Unit, account: Account, nip47uri: String? = null) {
+fun UpdateZapAmountDialog(onClose: () -> Unit, nip47uri: String? = null, accountViewModel: AccountViewModel) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val postViewModel: UpdateZapAmountViewModel = viewModel()
+
+    val postViewModel: UpdateZapAmountViewModel = viewModel(
+        key = accountViewModel.userProfile().pubkeyHex,
+        factory = UpdateZapAmountViewModel.Factory(accountViewModel.account)
+    )
+
     val uri = LocalUriHandler.current
 
     val zapTypes = listOf(
@@ -202,11 +214,11 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, account: Account, nip47uri: Strin
         Triple(LnZapEvent.ZapType.NONZAP, stringResource(id = R.string.zap_type_nonzap), stringResource(id = R.string.zap_type_nonzap_explainer))
     )
 
-    val zapOptions = zapTypes.map { it.second }
-    val zapOptionExplainers = zapTypes.map { it.third }
+    val zapOptions = remember { zapTypes.map { it.second }.toImmutableList() }
+    val zapOptionExplainers = remember { zapTypes.map { it.third }.toImmutableList() }
 
-    LaunchedEffect(account) {
-        postViewModel.load(account)
+    LaunchedEffect(accountViewModel) {
+        postViewModel.load()
         if (nip47uri != null) {
             try {
                 postViewModel.updateNIP47(nip47uri)
@@ -269,7 +281,7 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, account: Account, nip47uri: Strin
                                     postViewModel.amountSet.forEach { amountInSats ->
                                         Button(
                                             modifier = Modifier.padding(horizontal = 3.dp),
-                                            shape = RoundedCornerShape(20.dp),
+                                            shape = ButtonBorder,
                                             colors = ButtonDefaults.buttonColors(
                                                 backgroundColor = MaterialTheme.colors.primary
                                             ),
@@ -313,7 +325,7 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, account: Account, nip47uri: Strin
                                 placeholder = {
                                     Text(
                                         text = "100, 1000, 5000",
-                                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                        color = MaterialTheme.colors.placeholderText
                                     )
                                 },
                                 singleLine = true,
@@ -324,7 +336,7 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, account: Account, nip47uri: Strin
 
                             Button(
                                 onClick = { postViewModel.addAmount() },
-                                shape = RoundedCornerShape(20.dp),
+                                shape = ButtonBorder,
                                 colors = ButtonDefaults.buttonColors(
                                     backgroundColor = MaterialTheme.colors.primary
                                 )
@@ -341,7 +353,7 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, account: Account, nip47uri: Strin
                         ) {
                             TextSpinner(
                                 label = stringResource(id = R.string.zap_type_explainer),
-                                placeholder = zapTypes.filter { it.first == account.defaultZapType }
+                                placeholder = zapTypes.filter { it.first == accountViewModel.defaultZapType() }
                                     .first().second,
                                 options = zapOptions,
                                 explainers = zapOptionExplainers,
@@ -402,7 +414,7 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, account: Account, nip47uri: Strin
                             Text(
                                 stringResource(id = R.string.wallet_connect_service_explainer),
                                 Modifier.weight(1f),
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                                color = MaterialTheme.colors.placeholderText,
                                 fontSize = 14.sp
                             )
                         }
@@ -441,7 +453,7 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, account: Account, nip47uri: Strin
                                 placeholder = {
                                     Text(
                                         text = "npub, hex",
-                                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                        color = MaterialTheme.colors.placeholderText
                                     )
                                 },
                                 singleLine = true,
@@ -463,7 +475,7 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, account: Account, nip47uri: Strin
                                 placeholder = {
                                     Text(
                                         text = "wss://relay.server.com",
-                                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                                        color = MaterialTheme.colors.placeholderText,
                                         maxLines = 1
                                     )
                                 },
@@ -507,7 +519,7 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, account: Account, nip47uri: Strin
                                 placeholder = {
                                     Text(
                                         text = stringResource(R.string.wallet_connect_service_secret_placeholder),
-                                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                        color = MaterialTheme.colors.placeholderText
                                     )
                                 },
                                 trailingIcon = {

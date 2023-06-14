@@ -6,6 +6,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
+import com.vitorpamplona.amethyst.OptOutFromFilters
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
 import com.vitorpamplona.amethyst.service.model.*
@@ -66,7 +67,9 @@ class Account(
     var backupContactList: ContactListEvent? = null,
     var proxy: Proxy?,
     var proxyPort: Int,
-    var showSensitiveContent: Boolean? = null
+    var showSensitiveContent: Boolean? = null,
+    var warnAboutPostsWithReports: Boolean = true,
+    var filterSpamFromStrangers: Boolean = true
 ) {
     var transientHiddenUsers: Set<String> = setOf()
 
@@ -76,6 +79,17 @@ class Account(
     val saveable: AccountLiveData = AccountLiveData(this)
 
     var userProfileCache: User? = null
+
+    fun updateOptOutOptions(warnReports: Boolean, filterSpam: Boolean) {
+        warnAboutPostsWithReports = warnReports
+        filterSpamFromStrangers = filterSpam
+        OptOutFromFilters.start(warnAboutPostsWithReports, filterSpamFromStrangers)
+        if (!filterSpamFromStrangers) {
+            transientHiddenUsers = setOf()
+        }
+        live.invalidateData()
+        saveable.invalidateData()
+    }
 
     fun userProfile(): User {
         return userProfileCache ?: run {
@@ -87,10 +101,6 @@ class Account(
 
     fun followingChannels(): List<Channel> {
         return followingChannels.map { LocalCache.getOrCreateChannel(it) }
-    }
-
-    fun hiddenUsers(): List<User> {
-        return (hiddenUsers + transientHiddenUsers).map { LocalCache.getOrCreateUser(it) }
     }
 
     fun isWriteable(): Boolean {
@@ -487,7 +497,10 @@ class Account(
         mentions: List<User>?,
         tags: List<String>? = null,
         zapReceiver: String? = null,
-        wantsToMarkAsSensitive: Boolean
+        wantsToMarkAsSensitive: Boolean,
+        replyingTo: String?,
+        root: String?,
+        directMentions: Set<HexKey>
     ) {
         if (!isWriteable()) return
 
@@ -503,6 +516,9 @@ class Account(
             extraTags = tags,
             zapReceiver = zapReceiver,
             markAsSensitive = wantsToMarkAsSensitive,
+            replyingTo = replyingTo,
+            root = root,
+            directMentions = directMentions,
             privateKey = loggedIn.privKey!!
         )
 
@@ -567,16 +583,15 @@ class Account(
         LocalCache.consume(signedEvent, null)
     }
 
-    fun sendPrivateMessage(message: String, toUser: String, replyingTo: Note? = null, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean) {
+    fun sendPrivateMessage(message: String, toUser: User, replyingTo: Note? = null, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean) {
         if (!isWriteable()) return
-        val user = LocalCache.users[toUser] ?: return
 
         val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
         val mentionsHex = mentions?.map { it.pubkeyHex }
 
         val signedEvent = PrivateDmEvent.create(
-            recipientPubKey = user.pubkey(),
-            publishedRecipientPubKey = user.pubkey(),
+            recipientPubKey = toUser.pubkey(),
+            publishedRecipientPubKey = toUser.pubkey(),
             msg = message,
             replyTos = repliesToHex,
             mentions = mentionsHex,
@@ -1004,10 +1019,10 @@ class Account(
     }
 
     private fun updateContactListTo(newContactList: ContactListEvent?) {
-        if (newContactList?.unverifiedFollowKeySet().isNullOrEmpty()) return
+        if (newContactList == null || newContactList.tags.isEmpty()) return
 
         // Events might be different objects, we have to compare their ids.
-        if (backupContactList?.id != newContactList?.id) {
+        if (backupContactList?.id != newContactList.id) {
             backupContactList = newContactList
             saveable.invalidateData()
         }
@@ -1062,12 +1077,19 @@ class Account(
     }
 
     fun isAcceptable(user: User): Boolean {
+        if (!warnAboutPostsWithReports) {
+            return !isHidden(user) && // if user hasn't hided this author
+                user.reportsBy(userProfile()).isEmpty() // if user has not reported this post
+        }
         return !isHidden(user) && // if user hasn't hided this author
             user.reportsBy(userProfile()).isEmpty() && // if user has not reported this post
             user.countReportAuthorsBy(followingKeySet()) < 5
     }
 
     fun isAcceptableDirect(note: Note): Boolean {
+        if (!warnAboutPostsWithReports) {
+            return note.reportsBy(userProfile()).isEmpty()
+        }
         return note.reportsBy(userProfile()).isEmpty() && // if user has not reported this post
             note.countReportAuthorsBy(followingKeySet()) < 5 // if it has 5 reports by reliable users
     }
@@ -1135,7 +1157,9 @@ class Account(
 
         // saves contact list for the next time.
         userProfile().live().follows.observeForever {
-            updateContactListTo(userProfile().latestContactList)
+            GlobalScope.launch(Dispatchers.IO) {
+                updateContactListTo(userProfile().latestContactList)
+            }
         }
 
         // imports transient blocks due to spam.
@@ -1166,14 +1190,14 @@ class Account(
 
 class AccountLiveData(private val account: Account) : LiveData<AccountState>(AccountState(account)) {
     // Refreshes observers in batches.
-    private val bundler = BundledUpdate(300, Dispatchers.Default) {
-        if (hasActiveObservers()) {
-            refresh()
-        }
-    }
+    private val bundler = BundledUpdate(300, Dispatchers.Default)
 
     fun invalidateData() {
-        bundler.invalidate()
+        bundler.invalidate() {
+            if (hasActiveObservers()) {
+                refresh()
+            }
+        }
     }
 
     fun refresh() {

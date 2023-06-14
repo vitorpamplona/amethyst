@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,7 +26,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material.Icon
@@ -36,6 +37,7 @@ import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Report
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,7 +48,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -61,11 +62,10 @@ import androidx.compose.ui.unit.isFinite
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.net.toUri
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.AsyncImage
-import coil.compose.AsyncImagePainter
 import coil.imageLoader
-import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.BlurHashRequester
@@ -73,7 +73,11 @@ import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.actions.SaveToGallery
 import com.vitorpamplona.amethyst.ui.note.BlankNote
-import com.vitorpamplona.amethyst.ui.theme.Nip05
+import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.hashVerified
+import com.vitorpamplona.amethyst.ui.theme.subtleBorder
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -82,11 +86,13 @@ import net.engawapg.lib.zoomable.zoomable
 import java.io.File
 import java.security.MessageDigest
 
+@Immutable
 abstract class ZoomableContent(
     val description: String? = null,
     val dim: String? = null
 )
 
+@Immutable
 abstract class ZoomableUrlContent(
     val url: String,
     description: String? = null,
@@ -95,6 +101,7 @@ abstract class ZoomableUrlContent(
     val uri: String? = null
 ) : ZoomableContent(description, dim)
 
+@Immutable
 class ZoomableUrlImage(
     url: String,
     description: String? = null,
@@ -104,6 +111,7 @@ class ZoomableUrlImage(
     uri: String? = null
 ) : ZoomableUrlContent(url, description, hash, dim, uri)
 
+@Immutable
 class ZoomableUrlVideo(
     url: String,
     description: String? = null,
@@ -112,6 +120,7 @@ class ZoomableUrlVideo(
     uri: String? = null
 ) : ZoomableUrlContent(url, description, hash, dim, uri)
 
+@Immutable
 abstract class ZoomablePreloadedContent(
     val localFile: File?,
     description: String? = null,
@@ -121,6 +130,7 @@ abstract class ZoomablePreloadedContent(
     val uri: String
 ) : ZoomableContent(description, dim)
 
+@Immutable
 class ZoomableLocalImage(
     localFile: File?,
     mimeType: String? = null,
@@ -131,6 +141,7 @@ class ZoomableLocalImage(
     uri: String
 ) : ZoomablePreloadedContent(localFile, description, mimeType, isVerified, dim, uri)
 
+@Immutable
 class ZoomableLocalVideo(
     localFile: File?,
     mimeType: String? = null,
@@ -156,7 +167,7 @@ fun figureOutMimeType(fullUrl: String): ZoomableContent {
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
-fun ZoomableContentView(content: ZoomableContent, images: List<ZoomableContent> = listOf(content)) {
+fun ZoomableContentView(content: ZoomableContent, images: ImmutableList<ZoomableContent> = listOf(content).toImmutableList()) {
     val clipboardManager = LocalClipboardManager.current
 
     // store the dialog open or close state
@@ -166,11 +177,11 @@ fun ZoomableContentView(content: ZoomableContent, images: List<ZoomableContent> 
 
     var mainImageModifier = Modifier
         .fillMaxWidth()
-        .clip(shape = RoundedCornerShape(15.dp))
+        .clip(shape = QuoteBorder)
         .border(
             1.dp,
-            MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
-            RoundedCornerShape(15.dp)
+            MaterialTheme.colors.subtleBorder,
+            QuoteBorder
         )
 
     if (content is ZoomableUrlContent) {
@@ -193,7 +204,10 @@ fun ZoomableContentView(content: ZoomableContent, images: List<ZoomableContent> 
         is ZoomableUrlImage -> UrlImageView(content, mainImageModifier)
         is ZoomableUrlVideo -> VideoView(content.url, content.description) { dialogOpen = true }
         is ZoomableLocalImage -> LocalImageView(content, mainImageModifier)
-        is ZoomableLocalVideo -> VideoView(content.localFile, content.description) { dialogOpen = true }
+        is ZoomableLocalVideo ->
+            content.localFile?.let {
+                VideoView(it.toUri().toString(), content.description) { dialogOpen = true }
+            }
     }
 
     if (dialogOpen) {
@@ -201,17 +215,18 @@ fun ZoomableContentView(content: ZoomableContent, images: List<ZoomableContent> 
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun LocalImageView(
     content: ZoomableLocalImage,
     mainImageModifier: Modifier
 ) {
-    // store the dialog open or close state
-    var imageState by remember {
-        mutableStateOf<AsyncImagePainter.State?>(null)
-    }
-
     BoxWithConstraints(contentAlignment = Alignment.Center) {
+        // store the dialog open or close state
+        var imageLoadingState by remember {
+            mutableStateOf<Boolean?>(null)
+        }
+
         val myModifier = remember {
             mainImageModifier
                 .widthIn(max = maxWidth)
@@ -233,17 +248,25 @@ private fun LocalImageView(
                 contentDescription = content.description,
                 contentScale = contentScale,
                 modifier = myModifier,
-                onLoading = {
-                    imageState = it
+                onError = {
+                    if (imageLoadingState != false) {
+                        imageLoadingState = false
+                    }
                 },
                 onSuccess = {
-                    imageState = it
+                    if (imageLoadingState != true) {
+                        imageLoadingState = true
+                    }
                 }
             )
         }
 
-        if (imageState is AsyncImagePainter.State.Success) {
-            HashVerificationSymbol(content.isVerified, Modifier.align(Alignment.TopEnd))
+        if (imageLoadingState == true) {
+            if (content.isVerified != null) {
+                HashVerificationSymbol(content.isVerified, Modifier.align(Alignment.TopEnd))
+            }
+        } else if (imageLoadingState == false || content.localFile == null || !content.localFile.exists()) {
+            BlankNote()
         } else {
             if (content.blurhash != null) {
                 DisplayBlurHash(content.blurhash, content.description, contentScale, myModifier)
@@ -253,39 +276,29 @@ private fun LocalImageView(
                 }
             }
         }
-
-        if (imageState is AsyncImagePainter.State.Error || content.localFile == null || !content.localFile.exists()) {
-            BlankNote()
-        }
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun UrlImageView(
     content: ZoomableUrlImage,
     mainImageModifier: Modifier
 ) {
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
-
-    // store the dialog open or close state
-    var imageState by remember {
-        mutableStateOf<AsyncImagePainter.State?>(null)
-    }
-
-    var verifiedHash by remember {
-        mutableStateOf<Boolean?>(null)
-    }
-
-    LaunchedEffect(key1 = content.url, key2 = imageState) {
-        if (imageState is AsyncImagePainter.State.Success) {
-            scope.launch(Dispatchers.IO) {
-                verifiedHash = verifyHash(content, context)
-            }
-        }
-    }
 
     BoxWithConstraints(contentAlignment = Alignment.Center) {
+        val context = LocalContext.current
+
+        // store the dialog open or close state
+        var imageLoadingStatus by remember {
+            mutableStateOf<Boolean?>(null)
+        }
+
+        var verifiedHash by remember {
+            mutableStateOf<Boolean?>(null)
+        }
+
         val myModifier = remember {
             mainImageModifier
                 .widthIn(max = maxWidth)
@@ -306,16 +319,29 @@ private fun UrlImageView(
             contentDescription = content.description,
             contentScale = contentScale,
             modifier = myModifier,
-            onLoading = {
-                imageState = it
+            onError = {
+                if (imageLoadingStatus != false) {
+                    imageLoadingStatus = false
+                }
             },
             onSuccess = {
-                imageState = it
+                if (verifiedHash == null) {
+                    scope.launch(Dispatchers.IO) {
+                        verifiedHash = verifyHash(content, context)
+                    }
+                }
+                if (imageLoadingStatus != true) {
+                    imageLoadingStatus = true
+                }
             }
         )
 
-        if (imageState is AsyncImagePainter.State.Success) {
-            HashVerificationSymbol(verifiedHash, Modifier.align(Alignment.TopEnd))
+        if (imageLoadingStatus == true) {
+            verifiedHash?.let {
+                HashVerificationSymbol(it, Modifier.align(Alignment.TopEnd))
+            }
+        } else if (imageLoadingStatus == false) {
+            ClickableUrl(urlText = "${content.url} ", url = content.url)
         } else {
             if (content.blurhash != null) {
                 DisplayBlurHash(content.blurhash, content.description, contentScale, myModifier)
@@ -324,10 +350,6 @@ private fun UrlImageView(
                     DisplayUrlWithLoadingSymbol(content)
                 }
             }
-        }
-
-        if (imageState is AsyncImagePainter.State.Error) {
-            ClickableUrl(urlText = "${content.url} ", url = content.url)
         }
     }
 }
@@ -350,10 +372,9 @@ private fun aspectRatio(dim: String?): Float? {
 @Composable
 private fun DisplayUrlWithLoadingSymbol(content: ZoomableContent) {
     var cnt by remember { mutableStateOf<ZoomableContent?>(null) }
-    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        scope.launch(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             delay(200)
             cnt = content
         }
@@ -412,10 +433,12 @@ private fun DisplayBlurHash(
 
     val context = LocalContext.current
     AsyncImage(
-        model = BlurHashRequester.imageRequest(
-            context,
-            blurhash
-        ),
+        model = remember {
+            BlurHashRequester.imageRequest(
+                context,
+                blurhash
+            )
+        },
         contentDescription = description,
         contentScale = contentScale,
         modifier = modifier
@@ -424,7 +447,7 @@ private fun DisplayBlurHash(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ZoomableImageDialog(imageUrl: ZoomableContent, allImages: List<ZoomableContent> = listOf(imageUrl), onDismiss: () -> Unit) {
+fun ZoomableImageDialog(imageUrl: ZoomableContent, allImages: ImmutableList<ZoomableContent> = listOf(imageUrl).toImmutableList(), onDismiss: () -> Unit) {
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -489,7 +512,9 @@ fun RenderImageOrVideo(content: ZoomableContent) {
         LocalImageView(content = content, mainImageModifier = mainModifier)
     } else if (content is ZoomableLocalVideo) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize(1f)) {
-            VideoView(content.localFile, content.description)
+            content.localFile?.let {
+                VideoView(it.toUri().toString(), content.description)
+            }
         }
     }
 }
@@ -514,9 +539,7 @@ private fun verifyHash(content: ZoomableUrlContent, context: Context): Boolean? 
 }
 
 @Composable
-private fun HashVerificationSymbol(verifiedHash: Boolean?, modifier: Modifier) {
-    if (verifiedHash == null) return
-
+private fun HashVerificationSymbol(verifiedHash: Boolean, modifier: Modifier) {
     val localContext = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -549,7 +572,7 @@ private fun HashVerificationSymbol(verifiedHash: Boolean?, modifier: Modifier) {
                 Icon(
                     painter = painterResource(R.drawable.ic_verified),
                     "Hash Verified",
-                    tint = Nip05.copy(0.52f).compositeOver(MaterialTheme.colors.background),
+                    tint = MaterialTheme.colors.hashVerified,
                     modifier = Modifier.size(30.dp)
                 )
             }

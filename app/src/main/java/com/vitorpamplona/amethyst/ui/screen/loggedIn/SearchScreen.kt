@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,9 +28,10 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -42,11 +44,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
@@ -56,18 +58,22 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrGlobalDataSource
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
-import com.vitorpamplona.amethyst.ui.dal.GlobalFeedFilter
+import com.vitorpamplona.amethyst.ui.note.AboutDisplay
 import com.vitorpamplona.amethyst.ui.note.ChannelName
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
-import com.vitorpamplona.amethyst.ui.screen.FeedView
 import com.vitorpamplona.amethyst.ui.screen.NostrGlobalFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -82,25 +88,33 @@ import kotlinx.coroutines.channels.Channel as CoroutineChannel
 fun SearchScreen(
     searchFeedViewModel: NostrGlobalFeedViewModel,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-    scrollToTop: Boolean = false
+    nav: (String) -> Unit
+) {
+    val searchBarViewModel: SearchBarViewModel = viewModel(
+        key = accountViewModel.account.userProfile().pubkeyHex + "SearchBarViewModel",
+        factory = SearchBarViewModel.Factory(
+            accountViewModel.account
+        )
+    )
+
+    SearchScreen(searchFeedViewModel, searchBarViewModel, accountViewModel, nav)
+}
+
+@Composable
+fun SearchScreen(
+    searchFeedViewModel: NostrGlobalFeedViewModel,
+    searchBarViewModel: SearchBarViewModel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
 ) {
     val lifeCycleOwner = LocalLifecycleOwner.current
-    val account = accountViewModel.accountLiveData.value?.account ?: return
 
-    GlobalFeedFilter.account = account
-
-    LaunchedEffect(accountViewModel) {
-        GlobalFeedFilter.account = account
-        NostrGlobalDataSource.resetFilters()
-        searchFeedViewModel.invalidateData()
-    }
+    WatchAccountForSearchScreen(searchFeedViewModel, accountViewModel)
 
     DisposableEffect(accountViewModel) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Global Start")
-                GlobalFeedFilter.account = account
                 NostrGlobalDataSource.start()
                 NostrSearchEventOrUserDataSource.start()
                 searchFeedViewModel.invalidateData()
@@ -123,23 +137,38 @@ fun SearchScreen(
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            SearchBar(accountViewModel, nav)
-            FeedView(searchFeedViewModel, accountViewModel, nav, null, ScrollStateKeys.GLOBAL_SCREEN, scrollToTop)
+            SearchBar(searchBarViewModel, accountViewModel, nav)
+            RefresheableFeedView(searchFeedViewModel, null, accountViewModel, nav, ScrollStateKeys.GLOBAL_SCREEN)
         }
     }
 }
 
-class SearchBarViewModel : ViewModel() {
-    var account: Account? = null
+@Composable
+fun WatchAccountForSearchScreen(searchFeedViewModel: NostrGlobalFeedViewModel, accountViewModel: AccountViewModel) {
+    LaunchedEffect(accountViewModel) {
+        launch(Dispatchers.IO) {
+            NostrGlobalDataSource.resetFilters()
+            NostrSearchEventOrUserDataSource.start()
+            searchFeedViewModel.invalidateData(true)
+        }
+    }
+}
 
+@Stable
+class SearchBarViewModel(val account: Account) : ViewModel() {
     var searchValue by mutableStateOf("")
-    val searchResults = mutableStateOf<List<User>>(emptyList())
-    val searchResultsNotes = mutableStateOf<List<Note>>(emptyList())
-    val searchResultsChannels = mutableStateOf<List<Channel>>(emptyList())
-    val hashtagResults = mutableStateOf<List<String>>(emptyList())
 
-    val isTrailingIconVisible by
-    derivedStateOf {
+    private var _searchResultsUsers = MutableStateFlow<List<User>>(emptyList())
+    private var _searchResultsNotes = MutableStateFlow<List<Note>>(emptyList())
+    private var _searchResultsChannels = MutableStateFlow<List<Channel>>(emptyList())
+    private var _hashtagResults = MutableStateFlow<List<String>>(emptyList())
+
+    val searchResultsUsers = _searchResultsUsers.asStateFlow()
+    val searchResultsNotes = _searchResultsNotes.asStateFlow()
+    val searchResultsChannels = _searchResultsChannels.asStateFlow()
+    val hashtagResults = _hashtagResults.asStateFlow()
+
+    val isSearching by derivedStateOf {
         searchValue.isNotBlank()
     }
 
@@ -147,51 +176,57 @@ class SearchBarViewModel : ViewModel() {
         searchValue = newValue
     }
 
-    private fun runSearch() {
+    private suspend fun runSearch() {
         if (searchValue.isBlank()) {
-            hashtagResults.value = emptyList()
-            searchResults.value = emptyList()
-            searchResultsChannels.value = emptyList()
-            searchResultsNotes.value = emptyList()
+            _hashtagResults.value = emptyList()
+            _searchResultsUsers.value = emptyList()
+            _searchResultsChannels.value = emptyList()
+            _searchResultsNotes.value = emptyList()
             return
         }
 
-        hashtagResults.value = findHashtags(searchValue)
-        searchResults.value = LocalCache.findUsersStartingWith(searchValue).sortedWith(compareBy({ account?.isFollowing(it) }, { it.toBestDisplayName() })).reversed()
-        searchResultsNotes.value = LocalCache.findNotesStartingWith(searchValue).sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
-        searchResultsChannels.value = LocalCache.findChannelsStartingWith(searchValue)
+        _hashtagResults.emit(findHashtags(searchValue))
+        _searchResultsUsers.emit(LocalCache.findUsersStartingWith(searchValue).sortedWith(compareBy({ account.isFollowing(it) }, { it.toBestDisplayName() })).reversed())
+        _searchResultsNotes.emit(LocalCache.findNotesStartingWith(searchValue).sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed())
+        _searchResultsChannels.emit(LocalCache.findChannelsStartingWith(searchValue))
     }
 
-    fun clean() {
+    fun clear() {
         searchValue = ""
-        searchResults.value = emptyList()
-        searchResultsChannels.value = emptyList()
-        searchResultsNotes.value = emptyList()
+        _searchResultsUsers.value = emptyList()
+        _searchResultsChannels.value = emptyList()
+        _searchResultsNotes.value = emptyList()
+        _searchResultsChannels.value = emptyList()
     }
 
-    private val bundler = BundledUpdate(250, Dispatchers.IO) {
-        // adds the time to perform the refresh into this delay
-        // holding off new updates in case of heavy refresh routines.
-        runSearch()
-    }
+    private val bundler = BundledUpdate(250, Dispatchers.IO)
 
     fun invalidateData() {
-        bundler.invalidate()
+        bundler.invalidate() {
+            // adds the time to perform the refresh into this delay
+            // holding off new updates in case of heavy refresh routines.
+            runSearch()
+        }
     }
 
-    fun isSearching() = searchValue.isNotBlank()
+    fun isSearchingFun() = searchValue.isNotBlank()
+
+    class Factory(val account: Account) : ViewModelProvider.Factory {
+        override fun <SearchBarViewModel : ViewModel> create(modelClass: Class<SearchBarViewModel>): SearchBarViewModel {
+            return SearchBarViewModel(account) as SearchBarViewModel
+        }
+    }
 }
 
 @OptIn(FlowPreview::class)
 @Composable
-private fun SearchBar(accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val searchBarViewModel: SearchBarViewModel = viewModel()
-    searchBarViewModel.account = accountViewModel.accountLiveData.value?.account
-
+private fun SearchBar(
+    searchBarViewModel: SearchBarViewModel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
-
-    val onlineSearch = NostrSearchEventOrUserDataSource
 
     // Create a channel for processing search queries.
     val searchTextChanges = remember {
@@ -199,9 +234,11 @@ private fun SearchBar(accountViewModel: AccountViewModel, nav: (String) -> Unit)
     }
 
     LaunchedEffect(Unit) {
-        scope.launch(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect {
-                if (searchBarViewModel.isSearching()) {
+                checkNotInMainThread()
+
+                if (searchBarViewModel.isSearchingFun()) {
                     searchBarViewModel.invalidateData()
                 }
             }
@@ -217,13 +254,13 @@ private fun SearchBar(accountViewModel: AccountViewModel, nav: (String) -> Unit)
                 .debounce(300)
                 .collectLatest {
                     if (it.length >= 2) {
-                        onlineSearch.search(it.trim())
+                        NostrSearchEventOrUserDataSource.search(it.trim())
                     }
 
                     searchBarViewModel.invalidateData()
 
                     // makes sure to show the top of the search
-                    scope.launch(Dispatchers.Main) { listState.animateScrollToItem(0) }
+                    launch(Dispatchers.Main) { listState.animateScrollToItem(0) }
                 }
         }
     }
@@ -235,6 +272,20 @@ private fun SearchBar(accountViewModel: AccountViewModel, nav: (String) -> Unit)
     }
 
     // LAST ROW
+    SearchTextField(searchBarViewModel) {
+        scope.launch(Dispatchers.IO) {
+            searchTextChanges.trySend(it)
+        }
+    }
+
+    DisplaySearchResults(listState, searchBarViewModel, nav, accountViewModel)
+}
+
+@Composable
+private fun SearchTextField(
+    searchBarViewModel: SearchBarViewModel,
+    onTextChanges: (String) -> Unit
+) {
     Row(
         modifier = Modifier
             .padding(10.dp)
@@ -246,9 +297,7 @@ private fun SearchBar(accountViewModel: AccountViewModel, nav: (String) -> Unit)
             value = searchBarViewModel.searchValue,
             onValueChange = {
                 searchBarViewModel.updateSearchValue(it)
-                scope.launch(Dispatchers.IO) {
-                    searchTextChanges.trySend(it)
-                }
+                onTextChanges(it)
             },
             shape = RoundedCornerShape(25.dp),
             keyboardOptions = KeyboardOptions.Default.copy(
@@ -268,15 +317,15 @@ private fun SearchBar(accountViewModel: AccountViewModel, nav: (String) -> Unit)
             placeholder = {
                 Text(
                     text = stringResource(R.string.npub_hex_username),
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    color = MaterialTheme.colors.placeholderText
                 )
             },
             trailingIcon = {
-                if (searchBarViewModel.isTrailingIconVisible) {
+                if (searchBarViewModel.isSearching) {
                     IconButton(
                         onClick = {
-                            searchBarViewModel.clean()
-                            onlineSearch.clear()
+                            searchBarViewModel.clear()
+                            NostrSearchEventOrUserDataSource.clear()
                         }
                     ) {
                         Icon(
@@ -293,46 +342,77 @@ private fun SearchBar(accountViewModel: AccountViewModel, nav: (String) -> Unit)
             )
         )
     }
+}
 
-    if (searchBarViewModel.isSearching()) {
-        LazyColumn(
-            modifier = Modifier.fillMaxHeight(),
-            contentPadding = PaddingValues(
-                top = 10.dp,
-                bottom = 10.dp
-            ),
-            state = listState
-        ) {
-            itemsIndexed(searchBarViewModel.hashtagResults.value, key = { _, item -> "#" + item }) { _, item ->
-                HashtagLine(item) {
-                    nav("Hashtag/$item")
-                }
-            }
+@Composable
+private fun DisplaySearchResults(
+    listState: LazyListState,
+    searchBarViewModel: SearchBarViewModel,
+    nav: (String) -> Unit,
+    accountViewModel: AccountViewModel
+) {
+    if (!searchBarViewModel.isSearching) {
+        return
+    }
 
-            itemsIndexed(searchBarViewModel.searchResults.value, key = { _, item -> "u" + item.pubkeyHex }) { _, item ->
-                UserCompose(item, accountViewModel = accountViewModel, nav = nav)
-            }
+    val hashTags by searchBarViewModel.hashtagResults.collectAsState()
+    val users by searchBarViewModel.searchResultsUsers.collectAsState()
+    val channels by searchBarViewModel.searchResultsChannels.collectAsState()
+    val notes by searchBarViewModel.searchResultsNotes.collectAsState()
 
-            itemsIndexed(searchBarViewModel.searchResultsChannels.value, key = { _, item -> "c" + item.idHex }) { _, item ->
-                ChannelName(
-                    channelIdHex = item.idHex,
-                    channelPicture = item.profilePicture(),
-                    channelTitle = {
-                        Text(
-                            "${item.info.name}",
-                            fontWeight = FontWeight.Bold
-                        )
-                    },
-                    channelLastTime = null,
-                    channelLastContent = item.info.about,
-                    false,
-                    onClick = { nav("Channel/${item.idHex}") }
-                )
+    LazyColumn(
+        modifier = Modifier.fillMaxHeight(),
+        contentPadding = PaddingValues(
+            top = 10.dp,
+            bottom = 10.dp
+        ),
+        state = listState
+    ) {
+        itemsIndexed(
+            hashTags,
+            key = { _, item -> "#$item" }
+        ) { _, item ->
+            HashtagLine(item) {
+                nav("Hashtag/$item")
             }
+        }
 
-            itemsIndexed(searchBarViewModel.searchResultsNotes.value, key = { _, item -> "n" + item.idHex }) { _, item ->
-                NoteCompose(item, accountViewModel = accountViewModel, nav = nav)
-            }
+        itemsIndexed(
+            users,
+            key = { _, item -> "u" + item.pubkeyHex }
+        ) { _, item ->
+            UserCompose(item, accountViewModel = accountViewModel, nav = nav)
+        }
+
+        itemsIndexed(
+            channels,
+            key = { _, item -> "c" + item.idHex }
+        ) { _, item ->
+            ChannelName(
+                channelIdHex = item.idHex,
+                channelPicture = item.profilePicture(),
+                channelTitle = {
+                    Text(
+                        "${item.info.name}",
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                channelLastTime = null,
+                channelLastContent = item.info.about,
+                false,
+                onClick = { nav("Channel/${item.idHex}") }
+            )
+        }
+
+        itemsIndexed(
+            notes,
+            key = { _, item -> "n" + item.idHex }
+        ) { _, item ->
+            NoteCompose(
+                item,
+                accountViewModel = accountViewModel,
+                nav = nav
+            )
         }
     }
 }
@@ -391,7 +471,7 @@ fun HashtagLine(tag: String, onClick: () -> Unit) {
 @Composable
 fun UserLine(
     baseUser: User,
-    account: Account,
+    accountViewModel: AccountViewModel,
     onClick: () -> Unit
 ) {
     Column(
@@ -407,7 +487,7 @@ fun UserLine(
                     top = 10.dp
                 )
         ) {
-            UserPicture(baseUser, account.userProfile(), 55.dp, Modifier, null)
+            UserPicture(baseUser, 55.dp, accountViewModel, Modifier, null)
 
             Column(
                 modifier = Modifier
@@ -418,15 +498,7 @@ fun UserLine(
                     UsernameDisplay(baseUser)
                 }
 
-                val userState by baseUser.live().metadata.observeAsState()
-                val user = userState?.user ?: return
-
-                Text(
-                    user.info?.about?.take(100) ?: "",
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                AboutDisplay(baseUser)
             }
         }
 

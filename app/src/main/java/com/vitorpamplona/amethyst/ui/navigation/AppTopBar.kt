@@ -26,6 +26,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.State
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -42,8 +45,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import coil.Coil
 import com.vitorpamplona.amethyst.R
@@ -51,7 +56,6 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
@@ -65,6 +69,7 @@ import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.NostrThreadDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.PeopleListEvent
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.RelayPool
@@ -72,17 +77,44 @@ import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.RelayPoolViewModel
+import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SpinnerSelectionDialog
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @Composable
-fun AppTopBar(followLists: FollowListViewModel, navController: NavHostController, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
-    when (currentRoute(navController)?.substringBefore("?")) {
+fun AppTopBar(
+    followLists: FollowListViewModel,
+    navEntryState: State<NavBackStackEntry?>,
+    scaffoldState: ScaffoldState,
+    accountViewModel: AccountViewModel
+) {
+    val currentRoute by remember(navEntryState.value) {
+        derivedStateOf {
+            navEntryState.value?.destination?.route?.substringBefore("?")
+        }
+    }
+
+    RenderTopRouteBar(currentRoute, followLists, scaffoldState, accountViewModel)
+}
+
+@Composable
+private fun RenderTopRouteBar(
+    currentRoute: String?,
+    followLists: FollowListViewModel,
+    scaffoldState: ScaffoldState,
+    accountViewModel: AccountViewModel
+) {
+    when (currentRoute) {
         // Route.Profile.route -> TopBarWithBackButton(nav)
         Route.Home.base -> HomeTopBar(followLists, scaffoldState, accountViewModel)
         Route.Video.base -> StoriesTopBar(followLists, scaffoldState, accountViewModel)
@@ -93,27 +125,63 @@ fun AppTopBar(followLists: FollowListViewModel, navController: NavHostController
 
 @Composable
 fun StoriesTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
-    GenericTopBar(scaffoldState, accountViewModel) { account ->
-        FollowList(followLists, account.defaultStoriesFollowList, account.userProfile(), true) { listName ->
-            account.changeDefaultStoriesFollowList(listName)
+    GenericTopBar(scaffoldState, accountViewModel) { accountViewModel ->
+        val accountState by accountViewModel.accountLiveData.observeAsState()
+
+        val list by remember(accountState) {
+            derivedStateOf {
+                accountState?.account?.defaultStoriesFollowList ?: GLOBAL_FOLLOWS
+            }
+        }
+
+        FollowList(
+            followLists,
+            list,
+            true
+        ) { listName ->
+            accountViewModel.account.changeDefaultStoriesFollowList(listName)
         }
     }
 }
 
 @Composable
 fun HomeTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
-    GenericTopBar(scaffoldState, accountViewModel) { account ->
-        FollowList(followLists, account.defaultHomeFollowList, account.userProfile(), false) { listName ->
-            account.changeDefaultHomeFollowList(listName)
+    GenericTopBar(scaffoldState, accountViewModel) { accountViewModel ->
+        val accountState by accountViewModel.accountLiveData.observeAsState()
+
+        val list by remember(accountState) {
+            derivedStateOf {
+                accountState?.account?.defaultHomeFollowList ?: GLOBAL_FOLLOWS
+            }
+        }
+
+        FollowList(
+            followLists,
+            list,
+            false
+        ) { listName ->
+            accountViewModel.account.changeDefaultHomeFollowList(listName)
         }
     }
 }
 
 @Composable
 fun NotificationTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
-    GenericTopBar(scaffoldState, accountViewModel) { account ->
-        FollowList(followLists, account.defaultNotificationFollowList, account.userProfile(), true) { listName ->
-            account.changeDefaultNotificationFollowList(listName)
+    GenericTopBar(scaffoldState, accountViewModel) { accountViewModel ->
+        val accountState by accountViewModel.accountLiveData.observeAsState()
+
+        val list by remember(accountState) {
+            derivedStateOf {
+                accountState?.account?.defaultNotificationFollowList ?: GLOBAL_FOLLOWS
+            }
+        }
+
+        FollowList(
+            followLists,
+            list,
+            true
+        ) { listName ->
+            accountViewModel.account.changeDefaultNotificationFollowList(listName)
         }
     }
 }
@@ -127,14 +195,7 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel)
 
 @OptIn(coil.annotation.ExperimentalCoilApi::class)
 @Composable
-fun GenericTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel, content: @Composable (Account) -> Unit) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
-
-    val relayViewModel: RelayPoolViewModel = viewModel { RelayPoolViewModel() }
-    val connectedRelaysLiveData by relayViewModel.connectedRelaysLiveData.observeAsState()
-    val availableRelaysLiveData by relayViewModel.availableRelaysLiveData.observeAsState()
-
+fun GenericTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel, content: @Composable (AccountViewModel) -> Unit) {
     val coroutineScope = rememberCoroutineScope()
 
     var wantsToEditRelays by remember {
@@ -142,7 +203,7 @@ fun GenericTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewMod
     }
 
     if (wantsToEditRelays) {
-        NewRelayListView({ wantsToEditRelays = false }, account)
+        NewRelayListView({ wantsToEditRelays = false }, accountViewModel)
     }
 
     Column() {
@@ -163,54 +224,24 @@ fun GenericTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewMod
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
-                            content(account)
+                            content(accountViewModel)
                         }
 
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .fillMaxHeight(),
-                            horizontalAlignment = Alignment.End
-
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxHeight(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    "${connectedRelaysLiveData ?: "--"}/${availableRelaysLiveData ?: "--"}",
-                                    color = if (connectedRelaysLiveData == 0) Color.Red else MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-                                    style = MaterialTheme.typography.subtitle1,
-                                    modifier = Modifier.clickable(
-                                        onClick = {
-                                            wantsToEditRelays = true
-                                        }
-                                    )
-                                )
-                            }
-                        }
+                        RelayStatus(
+                            { wantsToEditRelays = true }
+                        )
                     }
                 }
             },
             navigationIcon = {
-                LoggedInUserPictureDrawer(account) {
+                LoggedInUserPictureDrawer(accountViewModel) {
                     coroutineScope.launch {
                         scaffoldState.drawerState.open()
                     }
                 }
             },
             actions = {
-                IconButton(
-                    onClick = { wantsToEditRelays = true },
-                    modifier = Modifier
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.relays),
-                        null,
-                        modifier = Modifier.size(24.dp),
-                        tint = Color.Unspecified
-                    )
-                }
+                RelayIcon { wantsToEditRelays = true }
             }
         )
         Divider(thickness = 0.25.dp)
@@ -218,20 +249,102 @@ fun GenericTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewMod
 }
 
 @Composable
-private fun LoggedInUserPictureDrawer(
-    account: Account,
+private fun RelayStatus(
     onClick: () -> Unit
 ) {
-    val accountUserState by account.userProfile().live().metadata.observeAsState()
-    val accountUser = accountUserState?.user ?: return
+    val relayViewModel: RelayPoolViewModel = viewModel { RelayPoolViewModel() }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight(),
+        horizontalAlignment = Alignment.End
+    ) {
+        Row(
+            modifier = Modifier.fillMaxHeight(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            RelayStatus(relayViewModel, onClick)
+        }
+    }
+}
+
+@Composable
+private fun RelayStatus(
+    relayViewModel: RelayPoolViewModel,
+    onClick: () -> Unit
+) {
+    val connectedRelaysLiveData = relayViewModel.connectedRelaysLiveData.observeAsState()
+    val availableRelaysLiveData = relayViewModel.availableRelaysLiveData.observeAsState()
+
+    val connectedRelaysText by remember(connectedRelaysLiveData, availableRelaysLiveData) {
+        derivedStateOf {
+            "${connectedRelaysLiveData.value ?: "--"}/${availableRelaysLiveData.value ?: "--"}"
+        }
+    }
+
+    val isConnected by remember(connectedRelaysLiveData) {
+        derivedStateOf {
+            (connectedRelaysLiveData.value ?: 0) > 0
+        }
+    }
+
+    RenderRelayStatus(connectedRelaysText, isConnected, onClick)
+}
+
+@Composable
+private fun RenderRelayStatus(
+    connectedRelaysText: String,
+    isConnected: Boolean,
+    onClick: () -> Unit
+) {
+    Text(
+        text = connectedRelaysText,
+        color = if (isConnected) {
+            MaterialTheme.colors.onSurface.copy(
+                alpha = 0.32f
+            )
+        } else {
+            Color.Red
+        },
+        style = MaterialTheme.typography.subtitle1,
+        modifier = Modifier.clickable(
+            onClick = onClick
+        )
+    )
+}
+
+@Composable
+private fun RelayIcon(onClick: () -> Unit) {
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.relays),
+            null,
+            modifier = Modifier.size(24.dp),
+            tint = Color.Unspecified
+        )
+    }
+}
+
+@Composable
+private fun LoggedInUserPictureDrawer(
+    accountViewModel: AccountViewModel,
+    onClick: () -> Unit
+) {
+    val accountUserState by accountViewModel.account.userProfile().live().metadata.observeAsState()
+
+    val pubkeyHex = remember { accountUserState?.user?.pubkeyHex ?: "" }
+    val profilePicture = remember(accountUserState) { ResizeImage(accountUserState?.user?.profilePicture(), 34.dp) }
 
     IconButton(
         onClick = onClick,
         modifier = Modifier
     ) {
         RobohashAsyncImageProxy(
-            robot = accountUser.pubkeyHex,
-            model = ResizeImage(accountUser.profilePicture(), 34.dp),
+            robot = pubkeyHex,
+            model = profilePicture,
             contentDescription = stringResource(id = R.string.profile_image),
             modifier = Modifier
                 .width(34.dp)
@@ -242,39 +355,37 @@ private fun LoggedInUserPictureDrawer(
 }
 
 @Composable
-fun FollowList(followListsModel: FollowListViewModel, listName: String, loggedIn: User, withGlobal: Boolean, onChange: (String) -> Unit) {
+fun FollowList(followListsModel: FollowListViewModel, listName: String, withGlobal: Boolean, onChange: (String) -> Unit) {
     val kind3Follow = Pair(KIND3_FOLLOWS, stringResource(id = R.string.follow_list_kind3follows))
     val globalFollow = Pair(GLOBAL_FOLLOWS, stringResource(id = R.string.follow_list_global))
 
     val defaultOptions = if (withGlobal) listOf(kind3Follow, globalFollow) else listOf(kind3Follow)
 
-    val followLists = remember(followListsModel.followLists) {
-        (defaultOptions + followListsModel.followLists)
+    val followLists by followListsModel.followLists.collectAsState()
+
+    val allLists = remember(followLists) {
+        (defaultOptions + followLists)
     }
 
-    val followNames = remember(followLists) {
+    val followNames by remember(followLists) {
         derivedStateOf {
-            followLists.map { it.second }
+            allLists.map { it.second }.toImmutableList()
         }
     }
 
     SimpleTextSpinner(
-        placeholder = followLists.firstOrNull { it.first == listName }?.second ?: "Select an Option",
-        options = followNames.value,
+        placeholder = allLists.firstOrNull { it.first == listName }?.second ?: "Select an Option",
+        options = followNames,
         onSelect = {
-            onChange(followLists.getOrNull(it)?.first ?: KIND3_FOLLOWS)
+            onChange(allLists.getOrNull(it)?.first ?: KIND3_FOLLOWS)
         }
     )
 }
 
-class FollowListViewModel : ViewModel() {
-    var followLists by mutableStateOf<List<Pair<String, String>>>(emptyList())
-    var account: Account? = null
-
-    fun load(account: Account?) {
-        this.account = account
-        refresh()
-    }
+@Stable
+class FollowListViewModel(val account: Account) : ViewModel() {
+    private var _followLists = MutableStateFlow<ImmutableList<Pair<String, String>>>(emptyList<Pair<String, String>>().toPersistentList())
+    val followLists = _followLists.asStateFlow()
 
     fun refresh() {
         val scope = CoroutineScope(Job() + Dispatchers.Default)
@@ -284,34 +395,35 @@ class FollowListViewModel : ViewModel() {
     }
 
     private suspend fun refreshFollows() {
-        val myAccount = account ?: return
+        checkNotInMainThread()
 
         val newFollowLists = LocalCache.addressables.mapNotNull {
             val event = (it.value.event as? PeopleListEvent)
             // Has to have an list
-            if (event != null && event.pubKey == myAccount.userProfile().pubkeyHex && (event.tags.size > 1 || event.content.length > 50)) {
+            if (event != null &&
+                event.pubKey == account.userProfile().pubkeyHex &&
+                (event.tags.size > 1 || event.content.length > 50)
+            ) {
                 Pair(event.dTag(), event.dTag())
             } else {
                 null
             }
-        }.sortedBy { it.second }
+        }.sortedBy { it.second }.toImmutableList()
 
-        withContext(Dispatchers.Main) {
-            if (followLists != newFollowLists) {
-                followLists = newFollowLists
-            }
+        if (!equalImmutableLists(_followLists.value, newFollowLists)) {
+            _followLists.emit(newFollowLists)
         }
     }
 
     var collectorJob: Job? = null
 
     init {
+        refresh()
         collectorJob = viewModelScope.launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect { newNotes ->
-                newNotes.forEach {
-                    if (it.event is PeopleListEvent) {
-                        refresh()
-                    }
+                checkNotInMainThread()
+                if (newNotes.any { it.event is PeopleListEvent }) {
+                    refresh()
                 }
             }
         }
@@ -321,13 +433,19 @@ class FollowListViewModel : ViewModel() {
         collectorJob?.cancel()
         super.onCleared()
     }
+
+    class Factory(val account: Account) : ViewModelProvider.Factory {
+        override fun <FollowListViewModel : ViewModel> create(modelClass: Class<FollowListViewModel>): FollowListViewModel {
+            return FollowListViewModel(account) as FollowListViewModel
+        }
+    }
 }
 
 @Composable
 fun SimpleTextSpinner(
     placeholder: String,
-    options: List<String>,
-    explainers: List<String>? = null,
+    options: ImmutableList<String>,
+    explainers: ImmutableList<String>? = null,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -346,7 +464,7 @@ fun SimpleTextSpinner(
                 imageVector = Icons.Default.ExpandMore,
                 null,
                 modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                tint = MaterialTheme.colors.placeholderText
             )
         }
         Box(

@@ -29,7 +29,8 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
                             ReactionEvent.kind, RepostEvent.kind, ReportEvent.kind,
                             LnZapEvent.kind, LnZapRequestEvent.kind,
                             BadgeAwardEvent.kind, BadgeDefinitionEvent.kind, BadgeProfilesEvent.kind,
-                            PollNoteEvent.kind, AudioTrackEvent.kind, PinListEvent.kind
+                            PollNoteEvent.kind, AudioTrackEvent.kind, PinListEvent.kind,
+                            PeopleListEvent.kind, BookmarkListEvent.kind
                         ),
                         tags = mapOf("a" to listOf(aTag.toTag())),
                         since = it.lastReactionsDownloadTime
@@ -113,16 +114,6 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
             TypedFilter(
                 types = COMMON_FEED_TYPES,
                 filter = JsonFilter(
-                    kinds = listOf(
-                        TextNoteEvent.kind, LongTextNoteEvent.kind, PollNoteEvent.kind,
-                        ReactionEvent.kind, RepostEvent.kind,
-                        LnZapEvent.kind, LnZapRequestEvent.kind,
-                        ChannelMessageEvent.kind, ChannelCreateEvent.kind, ChannelMetadataEvent.kind,
-                        BadgeDefinitionEvent.kind, BadgeAwardEvent.kind, BadgeProfilesEvent.kind,
-                        PrivateDmEvent.kind,
-                        FileHeaderEvent.kind, FileStorageEvent.kind, FileStorageHeaderEvent.kind,
-                        HighlightEvent.kind, AudioTrackEvent.kind, PinListEvent.kind
-                    ),
                     ids = interestedEvents.toList()
                 )
             )

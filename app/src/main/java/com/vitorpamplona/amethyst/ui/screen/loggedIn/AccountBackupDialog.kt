@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Icon
@@ -47,6 +46,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.note.authenticate
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import nostr.postr.toNsec
@@ -124,7 +124,7 @@ private fun NSecCopyButton(
                 copyNSec(context, scope, account, clipboardManager)
             }
         },
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults.buttonColors(
             backgroundColor = MaterialTheme.colors.primary
         ),

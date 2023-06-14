@@ -4,6 +4,7 @@ import android.content.ContentResolver
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
+import androidx.core.net.toFile
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.service.HttpClient
@@ -22,19 +23,24 @@ object ImageUploader {
 
     fun uploadImage(
         uri: Uri,
+        contentType: String?,
+        size: Long?,
         server: ServersAvailable,
         contentResolver: ContentResolver,
         onSuccess: (String, String?) -> Unit,
         onError: (Throwable) -> Unit
     ) {
-        val contentType = contentResolver.getType(uri)
+        val myContentType = contentType ?: contentResolver.getType(uri)
         val imageInputStream = contentResolver.openInputStream(uri)
 
-        val length = contentResolver.query(uri, null, null, null, null)?.use {
-            it.moveToFirst()
-            val sizeIndex = it.getColumnIndex(OpenableColumns.SIZE)
-            it.getLong(sizeIndex)
-        } ?: 0
+        val length = size
+            ?: contentResolver.query(uri, null, null, null, null)?.use {
+                it.moveToFirst()
+                val sizeIndex = it.getColumnIndex(OpenableColumns.SIZE)
+                it.getLong(sizeIndex)
+            } ?: kotlin.runCatching {
+            uri.toFile().length()
+        }.getOrNull() ?: 0
 
         checkNotNull(imageInputStream) {
             "Can't open the image input stream"
@@ -57,7 +63,7 @@ object ImageUploader {
             }
         }
 
-        uploadImage(imageInputStream, length, contentType, myServer, onSuccess, onError)
+        uploadImage(imageInputStream, length, myContentType, myServer, onSuccess, onError)
     }
 
     fun uploadImage(

@@ -39,7 +39,7 @@ abstract class NostrDataSource(val debugName: String) {
                     eventCounter = eventCounter + Pair(key, Counter(1))
                 }
 
-                LocalCache.consume(event, relay)
+                LocalCache.verifyAndConsume(event, relay)
             }
         }
 
@@ -103,16 +103,16 @@ abstract class NostrDataSource(val debugName: String) {
     }
 
     // Refreshes observers in batches.
-    private val bundler = BundledUpdate(300, Dispatchers.IO) {
-        // println("DataSource: ${this.javaClass.simpleName} InvalidateFilters")
-
-        // adds the time to perform the refresh into this delay
-        // holding off new updates in case of heavy refresh routines.
-        resetFiltersSuspend()
-    }
+    private val bundler = BundledUpdate(300, Dispatchers.IO)
 
     fun invalidateFilters() {
-        bundler.invalidate()
+        bundler.invalidate() {
+            // println("DataSource: ${this.javaClass.simpleName} InvalidateFilters")
+
+            // adds the time to perform the refresh into this delay
+            // holding off new updates in case of heavy refresh routines.
+            resetFiltersSuspend()
+        }
     }
 
     fun resetFilters() {
@@ -123,6 +123,8 @@ abstract class NostrDataSource(val debugName: String) {
     }
 
     fun resetFiltersSuspend() {
+        checkNotInMainThread()
+
         // saves the channels that are currently active
         val activeSubscriptions = subscriptions.values.filter { it.typedFilters != null }
         // saves the current content to only update if it changes

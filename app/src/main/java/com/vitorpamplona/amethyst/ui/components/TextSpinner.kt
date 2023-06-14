@@ -31,13 +31,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import kotlinx.collections.immutable.ImmutableList
 
 @Composable
 fun TextSpinner(
     label: String,
     placeholder: String,
-    options: List<String>,
-    explainers: List<String>? = null,
+    options: ImmutableList<String>,
+    explainers: ImmutableList<String>? = null,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -83,7 +84,12 @@ fun TextSpinner(
 }
 
 @Composable
-fun SpinnerSelectionDialog(options: List<String>, explainers: List<String>?, onDismiss: () -> Unit, onSelect: (Int) -> Unit) {
+fun SpinnerSelectionDialog(
+    options: ImmutableList<String>,
+    explainers: ImmutableList<String>?,
+    onDismiss: () -> Unit,
+    onSelect: (Int) -> Unit
+) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             border = BorderStroke(0.25.dp, Color.LightGray),

@@ -21,6 +21,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
 fun NewPollVoteValueRange(pollViewModel: NewPostViewModel) {
@@ -71,7 +72,7 @@ fun NewPollVoteValueRange(pollViewModel: NewPostViewModel) {
     )
     val colorValid = TextFieldDefaults.outlinedTextFieldColors(
         focusedBorderColor = MaterialTheme.colors.primary,
-        unfocusedBorderColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+        unfocusedBorderColor = MaterialTheme.colors.placeholderText
     )
 
     Row(
@@ -87,13 +88,13 @@ fun NewPollVoteValueRange(pollViewModel: NewPostViewModel) {
             label = {
                 Text(
                     text = stringResource(R.string.poll_zap_value_min),
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    color = MaterialTheme.colors.placeholderText
                 )
             },
             placeholder = {
                 Text(
                     text = stringResource(R.string.sats),
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    color = MaterialTheme.colors.placeholderText
                 )
             }
         )
@@ -106,13 +107,13 @@ fun NewPollVoteValueRange(pollViewModel: NewPostViewModel) {
             label = {
                 Text(
                     text = stringResource(R.string.poll_zap_value_max),
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    color = MaterialTheme.colors.placeholderText
                 )
             },
             placeholder = {
                 Text(
                     text = stringResource(R.string.sats),
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    color = MaterialTheme.colors.placeholderText
                 )
             }
         )

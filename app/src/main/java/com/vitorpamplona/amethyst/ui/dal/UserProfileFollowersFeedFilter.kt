@@ -4,18 +4,9 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 
-object UserProfileFollowersFeedFilter : FeedFilter<User>() {
-    lateinit var account: Account
-    var user: User? = null
-
-    fun loadUserProfile(accountLoggedIn: Account, user: User?) {
-        account = accountLoggedIn
-        this.user = user
-    }
+class UserProfileFollowersFeedFilter(val user: User, val account: Account) : FeedFilter<User>() {
 
     override fun feed(): List<User> {
-        return user?.let { myUser ->
-            LocalCache.users.values.filter { it.isFollowing(myUser) && account.isAcceptable(it) }
-        } ?: emptyList()
+        return LocalCache.users.values.filter { it.isFollowing(user) && !account.isHidden(it) }
     }
 }

@@ -2,10 +2,11 @@ package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Divider
@@ -17,16 +18,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import kotlinx.collections.immutable.ImmutableSet
 
 @Composable
-fun BlankNote(modifier: Modifier = Modifier, isQuote: Boolean = false, idHex: String? = null) {
+fun BlankNote(modifier: Modifier = Modifier, showDivider: Boolean = false, idHex: String? = null) {
     Column(modifier = modifier) {
-        Row(modifier = Modifier.padding(horizontal = if (!isQuote) 12.dp else 6.dp)) {
-            Column(modifier = Modifier.padding(start = if (!isQuote) 10.dp else 5.dp)) {
+        Row() {
+            Column() {
                 Row(
                     modifier = Modifier.padding(
                         start = 20.dp,
@@ -44,17 +46,27 @@ fun BlankNote(modifier: Modifier = Modifier, isQuote: Boolean = false, idHex: St
                     )
                 }
 
-                Divider(
-                    modifier = Modifier.padding(vertical = 10.dp),
-                    thickness = 0.25.dp
-                )
+                if (!showDivider) {
+                    Divider(
+                        modifier = Modifier.padding(vertical = 10.dp),
+                        thickness = 0.25.dp
+                    )
+                }
             }
         }
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun HiddenNote(reports: Set<Note>, loggedIn: User, modifier: Modifier = Modifier, isQuote: Boolean = false, nav: (String) -> Unit, onClick: () -> Unit) {
+fun HiddenNote(
+    reports: ImmutableSet<Note>,
+    accountViewModel: AccountViewModel,
+    modifier: Modifier = Modifier,
+    isQuote: Boolean = false,
+    nav: (String) -> Unit,
+    onClick: () -> Unit
+) {
     Column(modifier = modifier) {
         Row(modifier = Modifier.padding(horizontal = if (!isQuote) 12.dp else 6.dp)) {
             Column(modifier = Modifier.padding(start = if (!isQuote) 10.dp else 5.dp)) {
@@ -75,7 +87,7 @@ fun HiddenNote(reports: Set<Note>, loggedIn: User, modifier: Modifier = Modifier
                                 NoteAuthorPicture(
                                     baseNote = it,
                                     nav = nav,
-                                    userAccount = loggedIn,
+                                    accountViewModel = accountViewModel,
                                     size = 35.dp
                                 )
                             }
@@ -84,7 +96,7 @@ fun HiddenNote(reports: Set<Note>, loggedIn: User, modifier: Modifier = Modifier
                         Button(
                             modifier = Modifier.padding(top = 10.dp),
                             onClick = onClick,
-                            shape = RoundedCornerShape(20.dp),
+                            shape = ButtonBorder,
                             colors = ButtonDefaults
                                 .buttonColors(
                                     backgroundColor = MaterialTheme.colors.primary

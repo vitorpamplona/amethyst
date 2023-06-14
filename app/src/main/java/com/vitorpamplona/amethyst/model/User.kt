@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.BookmarkListEvent
 import com.vitorpamplona.amethyst.service.model.ContactListEvent
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
@@ -185,6 +186,8 @@ class User(val pubkeyHex: String) {
 
     @Synchronized
     private fun getOrCreatePrivateChatroom(user: User): Chatroom {
+        checkNotInMainThread()
+
         return privateChatrooms[user] ?: run {
             val privateChatroom = Chatroom(setOf<Note>())
             privateChatrooms = privateChatrooms + Pair(user, privateChatroom)
@@ -194,6 +197,8 @@ class User(val pubkeyHex: String) {
 
     @Synchronized
     fun addMessage(user: User, msg: Note) {
+        checkNotInMainThread()
+
         val privateChatroom = getOrCreatePrivateChatroom(user)
         if (msg !in privateChatroom.roomMessages) {
             privateChatroom.roomMessages = privateChatroom.roomMessages + msg
@@ -203,6 +208,8 @@ class User(val pubkeyHex: String) {
 
     @Synchronized
     fun removeMessage(user: User, msg: Note) {
+        checkNotInMainThread()
+
         val privateChatroom = getOrCreatePrivateChatroom(user)
         if (msg in privateChatroom.roomMessages) {
             privateChatroom.roomMessages = privateChatroom.roomMessages - msg
@@ -249,15 +256,11 @@ class User(val pubkeyHex: String) {
     }
 
     fun isFollowing(user: User): Boolean {
-        return latestContactList?.unverifiedFollowKeySet()?.toSet()?.let {
-            return user.pubkeyHex in it
-        } ?: false
+        return latestContactList?.isTaggedUser(user.pubkeyHex) ?: false
     }
 
     fun isFollowingHashtag(tag: String): Boolean {
-        return latestContactList?.unverifiedFollowTagSet()?.toSet()?.let {
-            return tag in it
-        } ?: false
+        return latestContactList?.isTaggedHash(tag) ?: false
     }
 
     fun isFollowingHashtagCached(tag: String): Boolean {
@@ -272,11 +275,17 @@ class User(val pubkeyHex: String) {
         } ?: false
     }
 
+    fun isFollowingCached(userHex: String): Boolean {
+        return latestContactList?.verifiedFollowKeySet?.let {
+            return userHex in it
+        } ?: false
+    }
+
     fun transientFollowCount(): Int? {
         return latestContactList?.unverifiedFollowKeySet()?.size
     }
 
-    fun transientFollowerCount(): Int {
+    suspend fun transientFollowerCount(): Int {
         return LocalCache.users.values.count { it.latestContactList?.isTaggedUser(pubkeyHex) ?: false }
     }
 
@@ -292,7 +301,7 @@ class User(val pubkeyHex: String) {
         return latestContactList?.verifiedFollowKeySet?.size
     }
 
-    fun cachedFollowerCount(): Int {
+    suspend fun cachedFollowerCount(): Int {
         return LocalCache.users.values.count { it.latestContactList?.isTaggedUser(pubkeyHex) ?: false }
     }
 
@@ -353,6 +362,7 @@ class UserLiveSet(u: User) {
     }
 }
 
+@Immutable
 data class RelayInfo(
     val url: String,
     var lastEvent: Long,
@@ -388,9 +398,13 @@ class UserMetadata {
     var updatedMetadataAt: Long = 0
     var latestMetadata: MetadataEvent? = null
 
+    fun anyName(): String? {
+        return display_name ?: displayName ?: name ?: username
+    }
+
     fun anyNameStartsWith(prefix: String): Boolean {
         return listOfNotNull(name, username, display_name, displayName, nip05, lud06, lud16)
-            .any { it.startsWith(prefix, true) }
+            .any { it.contains(prefix, true) }
     }
 
     fun lnAddress(): String? {
@@ -400,14 +414,14 @@ class UserMetadata {
 
 class UserLiveData(val user: User) : LiveData<UserState>(UserState(user)) {
     // Refreshes observers in batches.
-    private val bundler = BundledUpdate(300, Dispatchers.IO) {
-        if (hasActiveObservers()) {
-            postValue(UserState(user))
-        }
-    }
+    private val bundler = BundledUpdate(300, Dispatchers.IO)
 
     fun invalidateData() {
-        bundler.invalidate()
+        bundler.invalidate() {
+            if (hasActiveObservers()) {
+                postValue(UserState(user))
+            }
+        }
     }
 
     override fun onActive() {

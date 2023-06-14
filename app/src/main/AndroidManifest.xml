@@ -4,17 +4,33 @@
     <queries>
         <package android:name="org.torproject.android"/>
     </queries>
+
+    <!-- Doesn't require a camera -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
+    <!-- To connect with relays -->
     <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- To Upload media (newer devices) -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>
+
+    <!-- To Upload media (old devices) -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+
+    <!-- To read QRs that contain nostr:<NIP19> -->
     <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- To read NFCs that contain nostr:<NIP19> -->
     <uses-permission android:name="android.permission.NFC" />
 
-    <!-- Used for SDK < 29 -->
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+    <!-- To know receive notifications when the app connects/disconnects from the web -->
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+
+    <!-- Old permission to access media -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28"
         tools:ignore="ScopedStorage" />
 
     <application
@@ -30,6 +46,7 @@
         android:largeHeap="true"
         android:usesCleartextTraffic="true"
         android:hardwareAccelerated="true"
+        android:localeConfig="@xml/locales_config"
         tools:targetApi="33">
         <activity
             android:name=".ui.MainActivity"

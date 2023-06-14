@@ -48,14 +48,14 @@ object NostrSearchEventOrUserDataSource : NostrDataSource("SingleEventFeed") {
                 filter = JsonFilter(
                     kinds = listOf(MetadataEvent.kind),
                     search = mySearchString,
-                    limit = 20
+                    limit = 100
                 )
             ),
             TypedFilter(
                 types = setOf(FeedType.SEARCH),
                 filter = JsonFilter(
                     search = mySearchString,
-                    limit = 20
+                    limit = 100
                 )
             )
         )

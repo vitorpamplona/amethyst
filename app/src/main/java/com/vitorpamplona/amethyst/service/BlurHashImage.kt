@@ -20,6 +20,8 @@ class BlurHashFetcher(
 ) : Fetcher {
 
     override suspend fun fetch(): FetchResult {
+        checkNotInMainThread()
+
         val encodedHash = data.toString().removePrefix("bluehash:")
         val hash = URLDecoder.decode(encodedHash, "utf-8")
 

@@ -12,6 +12,7 @@ import coil.fetch.SourceResult
 import coil.request.ImageRequest
 import coil.request.Options
 import coil.size.Size
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import okio.Buffer
 import java.security.MessageDigest
 
@@ -20,8 +21,6 @@ private fun toHex(color: Color): String {
     val rgb = argb and 0x00FFFFFF // Mask out the alpha channel
     return String.format("#%06X", rgb)
 }
-
-private val sha256: MessageDigest = MessageDigest.getInstance("SHA-256")
 
 private fun byteMod10(byte: Byte): Int {
     val ub = byte.toUByte().toInt()
@@ -33,7 +32,7 @@ private fun bytesToRGB(b1: Byte, b2: Byte, b3: Byte): Color {
 }
 
 private fun svgString(msg: String): String {
-    val hash = sha256.digest(msg.toByteArray())
+    val hash = MessageDigest.getInstance("SHA-256").digest(msg.toByteArray())
     val hashHex = hash.joinToString(separator = "") { b -> "%02x".format(b) }
     val bgColor = bytesToRGB(hash[0], hash[1], hash[2])
     val fgColor = bytesToRGB(hash[3], hash[4], hash[5])
@@ -67,6 +66,7 @@ class HashImageFetcher(
 ) : Fetcher {
 
     override suspend fun fetch(): SourceResult {
+        checkNotInMainThread()
         val source = try {
             Buffer().apply { write(svgString(data.toString()).toByteArray()) }
         } finally {

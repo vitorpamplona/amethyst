@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.service.relays
 import android.util.Log
 import com.google.gson.JsonElement
 import com.vitorpamplona.amethyst.BuildConfig
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.EventInterface
 import com.vitorpamplona.amethyst.service.model.RelayAuthEvent
@@ -69,7 +70,10 @@ class Relay(
 
     @Synchronized
     fun requestAndWatch() {
+        checkNotInMainThread()
         requestAndWatch {
+            checkNotInMainThread()
+
             // Sends everything.
             Client.allSubscriptions().forEach {
                 sendFilter(requestId = it)
@@ -79,6 +83,7 @@ class Relay(
 
     @Synchronized
     fun requestAndWatch(onConnected: (Relay) -> Unit) {
+        checkNotInMainThread()
         if (socket != null) return
 
         try {
@@ -89,6 +94,8 @@ class Relay(
             val listener = object : WebSocketListener() {
 
                 override fun onOpen(webSocket: WebSocket, response: Response) {
+                    checkNotInMainThread()
+
                     afterEOSE = false
                     isReady = true
                     ping = response.receivedResponseAtMillis - response.sentRequestAtMillis
@@ -99,6 +106,8 @@ class Relay(
                 }
 
                 override fun onMessage(webSocket: WebSocket, text: String) {
+                    checkNotInMainThread()
+
                     eventDownloadCounterInBytes += text.bytesUsedInMemory()
 
                     try {
@@ -153,6 +162,8 @@ class Relay(
                 }
 
                 override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
+                    checkNotInMainThread()
+
                     listeners.forEach {
                         it.onRelayStateChange(
                             this@Relay,
@@ -163,6 +174,8 @@ class Relay(
                 }
 
                 override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                    checkNotInMainThread()
+
                     socket = null
                     isReady = false
                     afterEOSE = false
@@ -171,6 +184,8 @@ class Relay(
                 }
 
                 override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                    checkNotInMainThread()
+
                     errorCounter++
 
                     socket?.close(1000, "Normal close")
@@ -209,6 +224,8 @@ class Relay(
     }
 
     fun sendFilter(requestId: String) {
+        checkNotInMainThread()
+
         if (read) {
             if (isConnected()) {
                 if (isReady) {
@@ -233,6 +250,8 @@ class Relay(
     }
 
     fun sendFilterOnlyIfDisconnected() {
+        checkNotInMainThread()
+
         if (socket == null) {
             // waits 60 seconds to reconnect after disconnected.
             if (Date().time / 1000 > closingTime + 60) {
@@ -243,6 +262,8 @@ class Relay(
     }
 
     fun send(signedEvent: EventInterface) {
+        checkNotInMainThread()
+
         if (signedEvent is RelayAuthEvent) {
             val event = """["AUTH",${signedEvent.toJson()}]"""
             socket?.send(event)

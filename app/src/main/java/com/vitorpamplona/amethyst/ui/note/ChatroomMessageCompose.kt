@@ -7,6 +7,8 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,7 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
@@ -25,7 +26,9 @@ import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -36,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.compositeOver
@@ -48,14 +52,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
+import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
+import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
@@ -64,13 +68,18 @@ import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeMe
+import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeThem
 import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
+import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.ui.theme.subtleBorder
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-
-val ChatBubbleShapeMe = RoundedCornerShape(15.dp, 15.dp, 3.dp, 15.dp)
-val ChatBubbleShapeThem = RoundedCornerShape(3.dp, 15.dp, 15.dp, 15.dp)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -78,7 +87,7 @@ fun ChatroomMessageCompose(
     baseNote: Note,
     routeForLastRead: String?,
     innerQuote: Boolean = false,
-    parentBackgroundColor: Color? = null,
+    parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     onWantsToReply: (Note) -> Unit
@@ -115,7 +124,7 @@ fun ChatroomMessageCompose(
         var isAcceptableAndCanPreview by remember { mutableStateOf(Pair(true, true)) }
 
         LaunchedEffect(key1 = noteReportsState, key2 = accountState) {
-            withContext(Dispatchers.IO) {
+            launch(Dispatchers.Default) {
                 account.userProfile().let { loggedIn ->
                     val newCanPreview = note.author?.pubkeyHex == loggedIn.pubkeyHex ||
                         (note.author?.let { loggedIn.isFollowingCached(it) } ?: true) ||
@@ -131,31 +140,42 @@ fun ChatroomMessageCompose(
         }
 
         if (!isAcceptableAndCanPreview.first && !showHiddenNote) {
+            val reports = remember {
+                account.getRelevantReports(noteForReports).toImmutableSet()
+            }
             HiddenNote(
-                account.getRelevantReports(noteForReports),
-                account.userProfile(),
+                reports,
+                accountViewModel,
                 Modifier,
                 innerQuote,
                 nav,
                 onClick = { showHiddenNote = true }
             )
         } else {
-            val backgroundBubbleColor: Color
-            val alignment: Arrangement.Horizontal
-            val shape: Shape
+            val loggedInColors = MaterialTheme.colors.mediumImportanceLink
+            val otherColors = MaterialTheme.colors.subtleBorder
+            val defaultBackground = MaterialTheme.colors.background
 
-            if (note.author == loggedIn) {
-                backgroundBubbleColor = MaterialTheme.colors.primary.copy(alpha = 0.32f)
-                    .compositeOver(parentBackgroundColor ?: MaterialTheme.colors.background)
-
-                alignment = Arrangement.End
-                shape = ChatBubbleShapeMe
-            } else {
-                backgroundBubbleColor = MaterialTheme.colors.onSurface.copy(alpha = 0.12f)
-                    .compositeOver(parentBackgroundColor ?: MaterialTheme.colors.background)
-
-                alignment = Arrangement.Start
-                shape = ChatBubbleShapeThem
+            val backgroundBubbleColor = remember {
+                if (note.author == loggedIn) {
+                    mutableStateOf(loggedInColors.compositeOver(parentBackgroundColor?.value ?: defaultBackground))
+                } else {
+                    mutableStateOf(otherColors.compositeOver(parentBackgroundColor?.value ?: defaultBackground))
+                }
+            }
+            val alignment: Arrangement.Horizontal = remember {
+                if (note.author == loggedIn) {
+                    Arrangement.End
+                } else {
+                    Arrangement.Start
+                }
+            }
+            val shape: Shape = remember {
+                if (note.author == loggedIn) {
+                    ChatBubbleShapeMe
+                } else {
+                    ChatBubbleShapeThem
+                }
             }
 
             val scope = rememberCoroutineScope()
@@ -203,7 +223,7 @@ fun ChatroomMessageCompose(
                         }
                     ) {
                         Surface(
-                            color = backgroundBubbleColor,
+                            color = backgroundBubbleColor.value,
                             shape = shape,
                             modifier = Modifier
                                 .combinedClickable(
@@ -264,7 +284,6 @@ fun ChatroomMessageCompose(
                                         else -> {
                                             RenderRegularTextNote(
                                                 note,
-                                                loggedIn,
                                                 isAcceptableAndCanPreview.second,
                                                 backgroundBubbleColor,
                                                 accountViewModel,
@@ -316,7 +335,7 @@ private fun StatusRow(
     accountViewModel: AccountViewModel,
     onWantsToReply: (Note) -> Unit
 ) {
-    val grayTint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+    val grayTint = MaterialTheme.colors.placeholderText
     val time = remember { baseNote.createdAt() ?: 0 }
 
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -343,14 +362,14 @@ fun ChatTimeAgo(time: Long) {
     var timeStr by remember { mutableStateOf("") }
 
     LaunchedEffect(key1 = time) {
-        withContext(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             timeStr = timeAgoShort(time, context = context)
         }
     }
 
     Text(
         timeStr,
-        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+        color = MaterialTheme.colors.placeholderText,
         fontSize = 12.sp
     )
 }
@@ -358,18 +377,18 @@ fun ChatTimeAgo(time: Long) {
 @Composable
 private fun RenderRegularTextNote(
     note: Note,
-    loggedIn: User,
     canPreview: Boolean,
-    backgroundBubbleColor: Color,
+    backgroundBubbleColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val tags = remember { note.event?.tags() }
+    val tags = remember(note.event) { note.event?.tags()?.toImmutableListOfLists() ?: ImmutableListOfLists() }
     val eventContent = remember { accountViewModel.decrypt(note) }
     val modifier = remember { Modifier.padding(top = 5.dp) }
 
     if (eventContent != null) {
         val hasSensitiveContent = remember(note.event) { note.event?.isSensitive() ?: false }
+
         SensitivityWarning(
             hasSensitiveContent = hasSensitiveContent,
             accountViewModel = accountViewModel
@@ -418,7 +437,7 @@ private fun RenderChangeChannelMetadataNote(
 
     CreateTextWithEmoji(
         text = text,
-        tags = note.author?.info?.latestMetadata?.tags
+        tags = remember { note.author?.info?.latestMetadata?.tags?.toImmutableListOfLists() }
     )
 }
 
@@ -441,7 +460,7 @@ private fun RenderCreateChannelNote(note: Note) {
 
     CreateTextWithEmoji(
         text = text,
-        tags = note.author?.info?.latestMetadata?.tags
+        tags = remember { note.author?.info?.latestMetadata?.tags?.toImmutableListOfLists() }
     )
 }
 
@@ -457,7 +476,7 @@ private fun DrawAuthorInfo(
     val route = remember { "User/$pubkeyHex" }
     val userDisplayName = remember(userState) { userState?.user?.toBestDisplayName() }
     val userProfilePicture = remember(userState) { ResizeImage(userState?.user?.profilePicture(), 25.dp) }
-    val userTags = remember(userState) { userState?.user?.info?.latestMetadata?.tags }
+    val userTags = remember(userState) { userState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists() }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -468,17 +487,19 @@ private fun DrawAuthorInfo(
             robot = pubkeyHex,
             model = userProfilePicture,
             contentDescription = stringResource(id = R.string.profile_image),
-            modifier = Modifier
-                .width(25.dp)
-                .height(25.dp)
-                .clip(shape = CircleShape)
-                .clickable(onClick = {
-                    nav(route)
-                })
+            modifier = remember {
+                Modifier
+                    .width(25.dp)
+                    .height(25.dp)
+                    .clip(shape = CircleShape)
+                    .clickable(onClick = {
+                        nav(route)
+                    })
+            }
         )
 
         CreateClickableTextWithEmoji(
-            clickablePart = "  $userDisplayName",
+            clickablePart = remember { "  $userDisplayName" },
             suffix = "",
             tags = userTags,
             fontWeight = FontWeight.Bold,
@@ -489,20 +510,22 @@ private fun DrawAuthorInfo(
     }
 }
 
+@Immutable
 data class RelayBadgesState(
     val shouldDisplayExpandButton: Boolean,
-    val noteRelays: List<String>,
-    val noteRelaysSimple: List<String>
+    val noteRelays: ImmutableList<String>,
+    val noteRelaysSimple: ImmutableList<String>
 )
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun RelayBadges(baseNote: Note) {
     val noteRelaysState by baseNote.live().relays.observeAsState()
 
     val state: RelayBadgesState by remember(noteRelaysState) {
         val newShouldDisplayExpandButton = (noteRelaysState?.note?.relays?.size ?: 0) > 3
-        val noteRelays = noteRelaysState?.note?.relays?.toList() ?: emptyList()
-        val noteRelaysSimple = noteRelaysState?.note?.relays?.take(3)?.toList() ?: emptyList()
+        val noteRelays = noteRelaysState?.note?.relays?.toImmutableList() ?: persistentListOf()
+        val noteRelaysSimple = noteRelaysState?.note?.relays?.take(3)?.toImmutableList() ?: persistentListOf()
 
         mutableStateOf(RelayBadgesState(newShouldDisplayExpandButton, noteRelays, noteRelaysSimple))
     }
@@ -530,7 +553,7 @@ private fun RelayBadges(baseNote: Note) {
                 imageVector = Icons.Default.ChevronRight,
                 null,
                 modifier = Modifier.size(15.dp),
-                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                tint = MaterialTheme.colors.placeholderText
             )
         }
     }
@@ -555,10 +578,13 @@ fun RenderRelay(dirtyUrl: String) {
             .clickable(onClick = { uri.openUri(website) })
     }
 
+    val backgroundColor = MaterialTheme.colors.background
+
     val iconModifier = remember(dirtyUrl) {
         Modifier
             .size(13.dp)
             .clip(shape = CircleShape)
+            .drawBehind { drawRect(backgroundColor) }
     }
 
     Box(
@@ -566,11 +592,11 @@ fun RenderRelay(dirtyUrl: String) {
     ) {
         RobohashFallbackAsyncImage(
             robot = iconUrl,
-            robotSize = 13.dp,
+            robotSize = remember { 13.dp },
             model = iconUrl,
             contentDescription = stringResource(id = R.string.relay_icon),
             colorFilter = RelayIconFilter,
-            modifier = iconModifier.background(MaterialTheme.colors.background)
+            modifier = iconModifier
         )
     }
 }

@@ -18,11 +18,11 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,14 +41,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -61,119 +64,180 @@ fun ChatroomCompose(
     val noteState by baseNote.live().metadata.observeAsState()
     val note = noteState?.note
 
-    val notificationCacheState = NotificationCache.live.observeAsState()
-    val notificationCache = notificationCacheState.value ?: return
-
-    val scope = rememberCoroutineScope()
+    val channelHex by remember(noteState) {
+        derivedStateOf {
+            noteState?.note?.channelHex()
+        }
+    }
 
     if (note?.event == null) {
         BlankNote(Modifier)
-    } else if (note.channel() != null) {
-        val authorState by note.author!!.live().metadata.observeAsState()
-        val author = authorState?.user
-
-        val channelState by note.channel()!!.live.observeAsState()
-        val channel = channelState?.channel
-
-        val noteEvent = note.event
-
-        val description = if (noteEvent is ChannelCreateEvent) {
-            stringResource(R.string.channel_created)
-        } else if (noteEvent is ChannelMetadataEvent) {
-            "${stringResource(R.string.channel_information_changed_to)} "
-        } else {
-            noteEvent?.content()
-        }
-        channel?.let { chan ->
-            var hasNewMessages by remember { mutableStateOf<Boolean>(false) }
-
-            LaunchedEffect(key1 = notificationCache, key2 = note) {
-                scope.launch(Dispatchers.IO) {
-                    note.createdAt()?.let { timestamp ->
-                        hasNewMessages =
-                            timestamp > notificationCache.cache.load("Channel/${chan.idHex}")
-                    }
-                }
-            }
-
-            ChannelName(
-                channelIdHex = chan.idHex,
-                channelPicture = chan.profilePicture(),
-                channelTitle = { modifier ->
-                    Text(
-                        text = buildAnnotatedString {
-                            withStyle(
-                                SpanStyle(
-                                    fontWeight = FontWeight.Bold
-                                )
-                            ) {
-                                append(chan.info.name)
-                            }
-
-                            withStyle(
-                                SpanStyle(
-                                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-                                    fontWeight = FontWeight.Normal
-                                )
-                            ) {
-                                append(" ${stringResource(id = R.string.public_chat)}")
-                            }
-                        },
-                        fontWeight = FontWeight.Bold,
-                        modifier = modifier,
-                        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-                    )
-                },
-                channelLastTime = note.createdAt(),
-                channelLastContent = "${author?.toBestDisplayName()}: " + description,
-                hasNewMessages = hasNewMessages,
-                onClick = { nav("Channel/${chan.idHex}") }
-            )
+    } else if (channelHex != null) {
+        LoadChannel(baseChannelHex = channelHex!!) { channel ->
+            ChannelRoomCompose(note, channel, nav)
         }
     } else {
-        val replyAuthorBase =
-            (note.event as? PrivateDmEvent)
-                ?.verifiedRecipientPubKey()
-                ?.let { LocalCache.getOrCreateUser(it) }
+        val userRoomHex = remember(noteState, accountViewModel) {
+            (note.event as? PrivateDmEvent)?.talkingWith(accountViewModel.userProfile().pubkeyHex)
+        } ?: return
 
-        var userToComposeOn = note.author!!
-
-        if (replyAuthorBase != null) {
-            if (note.author == accountViewModel.userProfile()) {
-                userToComposeOn = replyAuthorBase
-            }
+        LoadUser(userRoomHex) { user ->
+            UserRoomCompose(note, user, accountViewModel, nav)
         }
+    }
+}
 
-        val noteEvent = note.event
+@Composable
+private fun ChannelRoomCompose(
+    note: Note,
+    channel: Channel,
+    nav: (String) -> Unit
+) {
+    val authorState by note.author!!.live().metadata.observeAsState()
+    val authorName = remember(authorState) {
+        authorState?.user?.toBestDisplayName()
+    }
 
-        userToComposeOn.let { user ->
-            var hasNewMessages by remember { mutableStateOf<Boolean>(false) }
+    val chanHex = remember { channel.idHex }
 
-            LaunchedEffect(key1 = notificationCache, key2 = note) {
-                scope.launch(Dispatchers.IO) {
-                    noteEvent?.let {
-                        hasNewMessages = it.createdAt() > notificationCache.cache.load(
-                            "Room/${userToComposeOn.pubkeyHex}"
+    val channelState by channel.live.observeAsState()
+    val channelPicture by remember(channelState) {
+        derivedStateOf {
+            channel.profilePicture()
+        }
+    }
+    val channelName by remember(channelState) {
+        derivedStateOf {
+            channel.info.name
+        }
+    }
+
+    val noteEvent = note.event
+
+    val route = remember(note) {
+        "Channel/$chanHex"
+    }
+
+    val description = if (noteEvent is ChannelCreateEvent) {
+        stringResource(R.string.channel_created)
+    } else if (noteEvent is ChannelMetadataEvent) {
+        "${stringResource(R.string.channel_information_changed_to)} "
+    } else {
+        noteEvent?.content()
+    }
+
+    var hasNewMessages by remember { mutableStateOf<Boolean>(false) }
+
+    WatchNotificationChanges(note, route) { newHasNewMessages ->
+        if (hasNewMessages != newHasNewMessages) {
+            hasNewMessages = newHasNewMessages
+        }
+    }
+
+    ChannelName(
+        channelIdHex = chanHex,
+        channelPicture = channelPicture,
+        channelTitle = { modifier ->
+            Text(
+                text = buildAnnotatedString {
+                    withStyle(
+                        SpanStyle(
+                            fontWeight = FontWeight.Bold
                         )
+                    ) {
+                        append(channelName)
                     }
-                }
-            }
 
-            ChannelName(
-                channelPicture = {
-                    UserPicture(
-                        userToComposeOn,
-                        accountViewModel.userProfile(),
-                        size = 55.dp
-                    )
+                    withStyle(
+                        SpanStyle(
+                            color = MaterialTheme.colors.placeholderText,
+                            fontWeight = FontWeight.Normal
+                        )
+                    ) {
+                        append(" ${stringResource(id = R.string.public_chat)}")
+                    }
                 },
-                channelTitle = { UsernameDisplay(userToComposeOn, it) },
-                channelLastTime = note.createdAt(),
-                channelLastContent = accountViewModel.decrypt(note),
-                hasNewMessages = hasNewMessages,
-                onClick = { nav("Room/${user.pubkeyHex}") }
+                fontWeight = FontWeight.Bold,
+                modifier = modifier,
+                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
             )
+        },
+        channelLastTime = remember(note) { note.createdAt() },
+        channelLastContent = remember(note) { "$authorName: $description" },
+        hasNewMessages = hasNewMessages,
+        onClick = { nav(route) }
+    )
+}
+
+@Composable
+private fun UserRoomCompose(
+    note: Note,
+    user: User,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    var hasNewMessages by remember { mutableStateOf<Boolean>(false) }
+
+    val route = remember(user) {
+        "Room/${user.pubkeyHex}"
+    }
+
+    WatchNotificationChanges(note, route) { newHasNewMessages ->
+        if (hasNewMessages != newHasNewMessages) {
+            hasNewMessages = newHasNewMessages
         }
+    }
+
+    ChannelName(
+        channelPicture = {
+            UserPicture(
+                user,
+                accountViewModel = accountViewModel,
+                size = 55.dp
+            )
+        },
+        channelTitle = { UsernameDisplay(user, it) },
+        channelLastTime = remember(note) { note.createdAt() },
+        channelLastContent = remember(note) { accountViewModel.decrypt(note) },
+        hasNewMessages = hasNewMessages,
+        onClick = { nav(route) }
+    )
+}
+
+@Composable
+private fun WatchNotificationChanges(
+    note: Note,
+    route: String,
+    onNewStatus: (Boolean) -> Unit
+) {
+    val cacheState by NotificationCache.live.observeAsState()
+
+    LaunchedEffect(key1 = note, cacheState) {
+        launch(Dispatchers.IO) {
+            note.event?.createdAt()?.let {
+                val lastTime = NotificationCache.load(route)
+                onNewStatus(it > lastTime)
+            }
+        }
+    }
+}
+
+@Composable
+fun LoadUser(baseUserHex: String, content: @Composable (User) -> Unit) {
+    var user by remember(baseUserHex) {
+        mutableStateOf<User?>(LocalCache.getUserIfExists(baseUserHex))
+    }
+
+    LaunchedEffect(key1 = baseUserHex) {
+        if (user == null) {
+            launch(Dispatchers.IO) {
+                user = LocalCache.checkGetOrCreateUser(baseUserHex)
+            }
+        }
+    }
+
+    user?.let {
+        content(it)
     }
 }
 

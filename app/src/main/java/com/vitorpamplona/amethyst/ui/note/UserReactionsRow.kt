@@ -14,10 +14,9 @@ import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -27,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.patrykandpatrick.vico.core.chart.composed.ComposedChartEntryModel
 import com.patrykandpatrick.vico.core.entry.ChartEntryModel
@@ -34,19 +34,25 @@ import com.patrykandpatrick.vico.core.entry.ChartEntryModelProducer
 import com.patrykandpatrick.vico.core.entry.composed.plus
 import com.patrykandpatrick.vico.core.entry.entryOf
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
+import com.vitorpamplona.amethyst.ui.components.BundledInsert
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.RoyalBlue
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.time.Instant
@@ -75,51 +81,74 @@ fun UserReactionsRow(
                 imageVector = Icons.Default.ExpandMore,
                 null,
                 modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                tint = MaterialTheme.colors.placeholderText
             )
         }
 
-        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
-            UserReplyReaction(model.replies[model.today()])
+        Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
+            UserReplyModel(model)
         }
 
-        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
-            UserBoostReaction(model.boosts[model.today()])
+        Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
+            UserBoostModel(model)
         }
 
-        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
-            UserLikeReaction(model.reactions[model.today()])
+        Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
+            UserReactionModel(model)
         }
 
-        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
-            UserZapReaction(model.zaps[model.today()])
+        Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
+            UserZapModel(model)
         }
     }
 }
 
+@Composable
+private fun UserZapModel(model: UserReactionsViewModel) {
+    val zaps by model.zaps.collectAsState()
+    UserZapReaction(showAmountAxis(zaps[model.today()]))
+}
+
+@Composable
+private fun UserReactionModel(model: UserReactionsViewModel) {
+    val reactions by model.reactions.collectAsState()
+    UserLikeReaction(reactions[model.today()])
+}
+
+@Composable
+private fun UserBoostModel(model: UserReactionsViewModel) {
+    val boosts by model.boosts.collectAsState()
+    UserBoostReaction(boosts[model.today()])
+}
+
+@Composable
+private fun UserReplyModel(model: UserReactionsViewModel) {
+    val replies by model.replies.collectAsState()
+    UserReplyReaction(replies[model.today()])
+}
+
 @Stable
-class UserReactionsViewModel : ViewModel() {
-    var user: User? = null
+class UserReactionsViewModel(val account: Account) : ViewModel() {
+    val user: User = account.userProfile()
 
-    var reactions by mutableStateOf<Map<String, Int>>(emptyMap())
-    var boosts by mutableStateOf<Map<String, Int>>(emptyMap())
-    var zaps by mutableStateOf<Map<String, BigDecimal>>(emptyMap())
-    var replies by mutableStateOf<Map<String, Int>>(emptyMap())
+    private var _reactions = MutableStateFlow<Map<String, Int>>(emptyMap())
+    private var _boosts = MutableStateFlow<Map<String, Int>>(emptyMap())
+    private var _zaps = MutableStateFlow<Map<String, BigDecimal>>(emptyMap())
+    private var _replies = MutableStateFlow<Map<String, Int>>(emptyMap())
 
-    var chartModel by mutableStateOf<ComposedChartEntryModel<ChartEntryModel>?>(null)
-    var axisLabels by mutableStateOf<List<String>>(emptyList())
+    private var _chartModel = MutableStateFlow<ComposedChartEntryModel<ChartEntryModel>?>(null)
+    private var _axisLabels = MutableStateFlow<List<String>>(emptyList())
+
+    val reactions = _reactions.asStateFlow()
+    val boosts = _boosts.asStateFlow()
+    val zaps = _zaps.asStateFlow()
+    val replies = _replies.asStateFlow()
+
+    val chartModel = _chartModel.asStateFlow()
+    val axisLabels = _axisLabels.asStateFlow()
 
     private var takenIntoAccount = setOf<HexKey>()
     private val sdf = DateTimeFormatter.ofPattern("yyyy-MM-dd") // SimpleDateFormat()
-
-    fun load(baseUser: User) {
-        user = baseUser
-        reactions = emptyMap()
-        boosts = emptyMap()
-        zaps = emptyMap()
-        replies = emptyMap()
-        takenIntoAccount = emptySet()
-    }
 
     fun formatDate(createAt: Long): String {
         return sdf.format(
@@ -131,8 +160,8 @@ class UserReactionsViewModel : ViewModel() {
 
     fun today() = sdf.format(LocalDateTime.now())
 
-    fun initializeSuspend() {
-        val currentUser = user?.pubkeyHex ?: return
+    private suspend fun initializeSuspend() {
+        val currentUser = user.pubkeyHex
 
         val reactions = mutableMapOf<String, Int>()
         val boosts = mutableMapOf<String, Int>()
@@ -172,21 +201,21 @@ class UserReactionsViewModel : ViewModel() {
         }
 
         this.takenIntoAccount = takenIntoAccount
-        this.reactions = reactions
-        this.replies = replies
-        this.zaps = zaps
-        this.boosts = boosts
+        this._reactions.emit(reactions)
+        this._replies.emit(replies)
+        this._zaps.emit(zaps)
+        this._boosts.emit(boosts)
 
         refreshChartModel()
     }
 
-    fun addToStatsSuspend(newNotes: Set<Note>) {
-        val currentUser = user?.pubkeyHex ?: return
+    suspend fun addToStatsSuspend(newNotes: Set<Note>) {
+        val currentUser = user.pubkeyHex
 
-        val reactions = this.reactions.toMutableMap()
-        val boosts = this.boosts.toMutableMap()
-        val zaps = this.zaps.toMutableMap()
-        val replies = this.replies.toMutableMap()
+        val reactions = this._reactions.value.toMutableMap()
+        val boosts = this._boosts.value.toMutableMap()
+        val zaps = this._zaps.value.toMutableMap()
+        val replies = this._replies.value.toMutableMap()
         val takenIntoAccount = this.takenIntoAccount.toMutableSet()
         var hasNewElements = false
 
@@ -227,16 +256,16 @@ class UserReactionsViewModel : ViewModel() {
 
         if (hasNewElements) {
             this.takenIntoAccount = takenIntoAccount
-            this.reactions = reactions
-            this.replies = replies
-            this.zaps = zaps
-            this.boosts = boosts
+            this._reactions.emit(reactions)
+            this._replies.emit(replies)
+            this._zaps.emit(zaps)
+            this._boosts.emit(boosts)
 
             refreshChartModel()
         }
     }
 
-    private fun refreshChartModel() {
+    private suspend fun refreshChartModel() {
         val day = 24 * 60 * 60L
         val now = LocalDateTime.now()
         val displayAxisFormatter = DateTimeFormatter.ofPattern("EEE")
@@ -244,35 +273,55 @@ class UserReactionsViewModel : ViewModel() {
         val dataAxisLabels = listOf(6, 5, 4, 3, 2, 1, 0).map { sdf.format(now.minusSeconds(day * it)) }
 
         val listOfCountCurves = listOf(
-            dataAxisLabels.mapIndexed { index, dateStr -> entryOf(index, replies[dateStr]?.toFloat() ?: 0f) },
-            dataAxisLabels.mapIndexed { index, dateStr -> entryOf(index, boosts[dateStr]?.toFloat() ?: 0f) },
-            dataAxisLabels.mapIndexed { index, dateStr -> entryOf(index, reactions[dateStr]?.toFloat() ?: 0f) }
+            dataAxisLabels.mapIndexed { index, dateStr -> entryOf(index, _replies.value[dateStr]?.toFloat() ?: 0f) },
+            dataAxisLabels.mapIndexed { index, dateStr -> entryOf(index, _boosts.value[dateStr]?.toFloat() ?: 0f) },
+            dataAxisLabels.mapIndexed { index, dateStr -> entryOf(index, _reactions.value[dateStr]?.toFloat() ?: 0f) }
         )
 
         val listOfValueCurves = listOf(
-            dataAxisLabels.mapIndexed { index, dateStr -> entryOf(index, zaps[dateStr]?.toFloat() ?: 0f) }
+            dataAxisLabels.mapIndexed { index, dateStr -> entryOf(index, _zaps.value[dateStr]?.toFloat() ?: 0f) }
         )
 
         val chartEntryModelProducer1 = ChartEntryModelProducer(listOfCountCurves).getModel()
         val chartEntryModelProducer2 = ChartEntryModelProducer(listOfValueCurves).getModel()
 
-        this.axisLabels = listOf(6, 5, 4, 3, 2, 1, 0).map { displayAxisFormatter.format(now.minusSeconds(day * it)) }
-        this.chartModel = chartEntryModelProducer1.plus(chartEntryModelProducer2)
+        this._axisLabels.emit(listOf(6, 5, 4, 3, 2, 1, 0).map { displayAxisFormatter.format(now.minusSeconds(day * it)) })
+        this._chartModel.emit(chartEntryModelProducer1.plus(chartEntryModelProducer2))
     }
 
     var collectorJob: Job? = null
 
     init {
-        collectorJob = viewModelScope.launch(Dispatchers.IO) {
-            LocalCache.live.newEventBundles.collect { newNotes ->
-                addToStatsSuspend(newNotes)
+        viewModelScope.launch(Dispatchers.IO) {
+            initializeSuspend()
+
+            collectorJob = viewModelScope.launch(Dispatchers.IO) {
+                LocalCache.live.newEventBundles.collect { newNotes ->
+                    checkNotInMainThread()
+
+                    invalidateInsertData(newNotes)
+                }
             }
+        }
+    }
+
+    private val bundlerInsert = BundledInsert<Set<Note>>(250, Dispatchers.IO)
+
+    fun invalidateInsertData(newItems: Set<Note>) {
+        bundlerInsert.invalidateList(newItems) {
+            addToStatsSuspend(it.flatten().toSet())
         }
     }
 
     override fun onCleared() {
         collectorJob?.cancel()
         super.onCleared()
+    }
+
+    class Factory(val account: Account) : ViewModelProvider.Factory {
+        override fun <UserReactionsViewModel : ViewModel> create(modelClass: Class<UserReactionsViewModel>): UserReactionsViewModel {
+            return UserReactionsViewModel(account) as UserReactionsViewModel
+        }
     }
 }
 
@@ -344,10 +393,8 @@ fun UserLikeReaction(
 
 @Composable
 fun UserZapReaction(
-    amount: BigDecimal?
+    amount: String
 ) {
-    val showAmounts = remember(amount) { showAmountAxis(amount) }
-
     Icon(
         imageVector = Icons.Default.Bolt,
         contentDescription = stringResource(R.string.zaps),
@@ -358,7 +405,7 @@ fun UserZapReaction(
     Spacer(modifier = Modifier.width(8.dp))
 
     Text(
-        showAmounts,
+        amount,
         fontWeight = FontWeight.Bold,
         fontSize = 18.sp
     )
