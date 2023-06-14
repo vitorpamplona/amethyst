@@ -347,7 +347,7 @@ object LocalPreferences {
                 warnAboutReports,
                 filterSpam,
                 delegationToken,
-                delegatorNPubKey,
+                delegatorHexKey,
                 delegationSignature
             )
 
