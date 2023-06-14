@@ -38,7 +38,6 @@ class TextNoteEvent(
             replyingTo: String?,
             root: String?,
             directMentions: Set<HexKey>,
-
             privateKey: ByteArray,
             createdAt: Long = Date().time / 1000,
             delegationToken: String,
