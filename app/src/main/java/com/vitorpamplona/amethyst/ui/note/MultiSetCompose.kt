@@ -145,7 +145,7 @@ private fun Galeries(
 ) {
     val zapEvents by remember { derivedStateOf { multiSetCard.zapEvents } }
     val boostEvents by remember { derivedStateOf { multiSetCard.boostEvents } }
-    val likeEvents by remember { derivedStateOf { multiSetCard.likeEvents } }
+    val likeEvents by remember { derivedStateOf { multiSetCard.likeEventsByType } }
 
     val hasZapEvents by remember { derivedStateOf { multiSetCard.zapEvents.isNotEmpty() } }
     val hasBoostEvents by remember { derivedStateOf { multiSetCard.boostEvents.isNotEmpty() } }
@@ -160,38 +160,52 @@ private fun Galeries(
     }
 
     if (hasLikeEvents) {
-        RenderLikeGallery(likeEvents, backgroundColor, nav, accountViewModel)
+        likeEvents.forEach {
+            RenderLikeGallery(it.key, it.value, backgroundColor, nav, accountViewModel)
+        }
     }
 }
 
 @Composable
 fun RenderLikeGallery(
+    reactionType: String,
     likeEvents: ImmutableList<Note>,
     backgroundColor: MutableState<Color>,
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
-    Row(remember { Modifier.fillMaxWidth() }) {
-        Box(
-            modifier = remember {
-                Modifier
-                    .width(55.dp)
-                    .padding(end = 5.dp)
-            }
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_liked),
-                null,
+    val isNotEmpty = remember(likeEvents) {
+        likeEvents.isNotEmpty()
+    }
+
+    if (isNotEmpty) {
+        Row(remember { Modifier.fillMaxWidth() }) {
+            Box(
                 modifier = remember {
                     Modifier
-                        .size(16.dp)
+                        .width(55.dp)
+                        .padding(end = 5.dp)
+                }
+            ) {
+                val modifier = remember {
+                    Modifier
                         .align(Alignment.TopEnd)
-                },
-                tint = Color.Unspecified
-            )
-        }
+                }
 
-        AuthorGallery(likeEvents, backgroundColor, nav, accountViewModel)
+                when (reactionType) {
+                    "+" -> Icon(
+                        painter = painterResource(R.drawable.ic_liked),
+                        null,
+                        modifier = remember { modifier.size(18.dp) },
+                        tint = Color.Unspecified
+                    )
+                    "-" -> Text(text = "\uD83D\uDC4E", modifier = modifier)
+                    else -> Text(text = reactionType, modifier = modifier)
+                }
+            }
+
+            AuthorGallery(likeEvents, backgroundColor, nav, accountViewModel)
+        }
     }
 }
 

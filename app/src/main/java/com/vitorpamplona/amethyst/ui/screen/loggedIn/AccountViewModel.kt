@@ -39,16 +39,25 @@ class AccountViewModel(val account: Account) : ViewModel() {
         return account.userProfile()
     }
 
-    fun reactTo(note: Note) {
-        account.reactTo(note)
+    fun reactTo(note: Note, reaction: String) {
+        account.reactTo(note, reaction)
     }
 
-    fun hasReactedTo(baseNote: Note): Boolean {
-        return account.hasReacted(baseNote)
+    fun reactToOrDelete(note: Note, reaction: String) {
+        val currentReactions = account.reactionTo(note, reaction)
+        if (currentReactions.isNotEmpty()) {
+            account.delete(currentReactions)
+        } else {
+            account.reactTo(note, reaction)
+        }
     }
 
-    fun deleteReactionTo(note: Note) {
-        account.delete(account.reactionTo(note))
+    fun hasReactedTo(baseNote: Note, reaction: String): Boolean {
+        return account.hasReacted(baseNote, reaction)
+    }
+
+    fun deleteReactionTo(note: Note, reaction: String) {
+        account.delete(account.reactionTo(note, reaction))
     }
 
     fun hasBoosted(baseNote: Note): Boolean {

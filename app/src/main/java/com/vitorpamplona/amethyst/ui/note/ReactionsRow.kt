@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -190,7 +191,7 @@ private fun ReactionDetailGallery(
             Column() {
                 val zapEvents by remember(zapsState) { derivedStateOf { baseNote.zaps.mapNotNull { it.value?.let { zapEvent -> CombinedZap(it.key, zapEvent) } }.toImmutableList() } }
                 val boostEvents by remember(boostsState) { derivedStateOf { baseNote.boosts.toImmutableList() } }
-                val likeEvents by remember(reactionsState) { derivedStateOf { baseNote.reactions.toImmutableList() } }
+                val likeEvents by remember(reactionsState) { derivedStateOf { baseNote.reactions.toImmutableMap() } }
 
                 val hasZapEvents by remember(zapsState) { derivedStateOf { baseNote.zaps.isNotEmpty() } }
                 val hasBoostEvents by remember(boostsState) { derivedStateOf { baseNote.boosts.isNotEmpty() } }
@@ -215,12 +216,16 @@ private fun ReactionDetailGallery(
                 }
 
                 if (hasLikeEvents) {
-                    RenderLikeGallery(
-                        likeEvents,
-                        backgroundColor,
-                        nav,
-                        accountViewModel
-                    )
+                    likeEvents.forEach {
+                        val reactions = remember(it.value) { it.value.toImmutableList() }
+                        RenderLikeGallery(
+                            it.key,
+                            reactions,
+                            backgroundColor,
+                            nav,
+                            accountViewModel
+                        )
+                    }
                 }
             }
         }
@@ -429,6 +434,7 @@ fun BoostText(baseNote: Note, grayTint: Color) {
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun LikeReaction(
     baseNote: Note,
@@ -444,29 +450,50 @@ fun LikeReaction(
         Modifier.size(iconSize)
     }
 
-    IconButton(
-        modifier = iconButtonModifier,
-        onClick = {
-            if (accountViewModel.isWriteable()) {
-                scope.launch(Dispatchers.IO) {
-                    if (accountViewModel.hasReactedTo(baseNote)) {
-                        accountViewModel.deleteReactionTo(baseNote)
-                    } else {
-                        accountViewModel.reactTo(baseNote)
+    var wantsToChangeReactionSymbol by remember { mutableStateOf(false) }
+    var wantsToReact by remember { mutableStateOf(false) }
+
+    Row(
+        verticalAlignment = CenterVertically,
+        modifier = iconButtonModifier.combinedClickable(
+            role = Role.Button,
+            interactionSource = remember { MutableInteractionSource() },
+            indication = rememberRipple(bounded = false, radius = 24.dp),
+            onClick = {
+                likeClick(
+                    baseNote,
+                    accountViewModel,
+                    scope,
+                    context,
+                    onMultipleChoices = {
+                        wantsToReact = true
                     }
-                }
-            } else {
-                scope.launch {
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.login_with_a_private_key_to_like_posts),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
+                )
+            },
+            onLongClick = {
+                wantsToChangeReactionSymbol = true
             }
-        }
+        )
     ) {
         LikeIcon(baseNote, heartSize, grayTint, accountViewModel.userProfile())
+
+        if (wantsToChangeReactionSymbol) {
+            UpdateReactionTypeDialog({ wantsToChangeReactionSymbol = false }, accountViewModel = accountViewModel)
+        }
+
+        if (wantsToReact) {
+            ReactionChoicePopup(
+                baseNote,
+                accountViewModel,
+                onDismiss = {
+                    wantsToReact = false
+                },
+                onChangeAmount = {
+                    wantsToReact = false
+                    wantsToChangeReactionSymbol = true
+                }
+            )
+        }
     }
 
     LikeText(baseNote, grayTint)
@@ -476,15 +503,15 @@ fun LikeReaction(
 fun LikeIcon(baseNote: Note, iconSize: Dp = 20.dp, grayTint: Color, loggedIn: User) {
     val reactionsState by baseNote.live().reactions.observeAsState()
 
-    var wasReactedByLoggedIn by remember(reactionsState) {
-        mutableStateOf(false)
+    var reactionType by remember(baseNote) {
+        mutableStateOf<String?>(null)
     }
 
     LaunchedEffect(key1 = reactionsState) {
         launch(Dispatchers.Default) {
-            val newWasReactedByLoggedIn = reactionsState?.note?.isReactedBy(loggedIn) == true
-            if (wasReactedByLoggedIn != newWasReactedByLoggedIn) {
-                wasReactedByLoggedIn = newWasReactedByLoggedIn
+            val newReactionType = reactionsState?.note?.isReactedBy(loggedIn)
+            if (reactionType != newReactionType) {
+                reactionType = newReactionType
             }
         }
     }
@@ -493,13 +520,19 @@ fun LikeIcon(baseNote: Note, iconSize: Dp = 20.dp, grayTint: Color, loggedIn: Us
         Modifier.size(iconSize)
     }
 
-    if (wasReactedByLoggedIn) {
-        Icon(
-            painter = painterResource(R.drawable.ic_liked),
-            null,
-            modifier = iconModifier,
-            tint = Color.Unspecified
-        )
+    if (reactionType != null) {
+        when (reactionType) {
+            "+" -> {
+                Icon(
+                    painter = painterResource(R.drawable.ic_liked),
+                    null,
+                    modifier = iconModifier,
+                    tint = Color.Unspecified
+                )
+            }
+            "-" -> Text(text = "\uD83D\uDC4E")
+            else -> Text(text = reactionType!!)
+        }
     } else {
         Icon(
             painter = painterResource(R.drawable.ic_like),
@@ -520,7 +553,7 @@ fun LikeText(baseNote: Note, grayTint: Color) {
 
     LaunchedEffect(key1 = reactionsState) {
         launch(Dispatchers.Default) {
-            val newReactionsCount = " " + showCount(reactionsState?.note?.reactions?.size)
+            val newReactionsCount = " " + showCount(reactionsState?.note?.countReactions())
             if (reactionsCount != newReactionsCount) {
                 reactionsCount = newReactionsCount
             }
@@ -532,6 +565,47 @@ fun LikeText(baseNote: Note, grayTint: Color) {
         fontSize = 14.sp,
         color = grayTint
     )
+}
+
+private fun likeClick(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    scope: CoroutineScope,
+    context: Context,
+    onMultipleChoices: () -> Unit
+) {
+    if (accountViewModel.account.reactionChoices.isEmpty()) {
+        scope.launch {
+            Toast
+                .makeText(
+                    context,
+                    context.getString(R.string.no_reaction_type_setup_long_press_to_change),
+                    Toast.LENGTH_SHORT
+                )
+                .show()
+        }
+    } else if (!accountViewModel.isWriteable()) {
+        scope.launch {
+            Toast
+                .makeText(
+                    context,
+                    context.getString(R.string.login_with_a_private_key_to_be_able_to_send_zaps),
+                    Toast.LENGTH_SHORT
+                )
+                .show()
+        }
+    } else if (accountViewModel.account.reactionChoices.size == 1) {
+        scope.launch(Dispatchers.IO) {
+            val reaction = accountViewModel.account.reactionChoices.first()
+            if (accountViewModel.hasReactedTo(baseNote, reaction)) {
+                accountViewModel.deleteReactionTo(baseNote, reaction)
+            } else {
+                accountViewModel.reactTo(baseNote, reaction)
+            }
+        }
+    } else if (accountViewModel.account.reactionChoices.size > 1) {
+        onMultipleChoices()
+    }
 }
 
 @Composable
@@ -858,6 +932,95 @@ private fun BoostTypeChoicePopup(baseNote: Note, accountViewModel: AccountViewMo
                     )
             ) {
                 Text(stringResource(R.string.quote), color = Color.White, textAlign = TextAlign.Center)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
+@Composable
+fun ReactionChoicePopup(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    onDismiss: () -> Unit,
+    onChangeAmount: () -> Unit
+) {
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val account = accountState?.account ?: return
+    val scope = rememberCoroutineScope()
+
+    val toRemove = remember {
+        baseNote.reactedBy(account.userProfile()).toSet()
+    }
+
+    Popup(
+        alignment = Alignment.BottomCenter,
+        offset = IntOffset(0, -50),
+        onDismissRequest = { onDismiss() }
+    ) {
+        FlowRow(horizontalArrangement = Arrangement.Center) {
+            account.reactionChoices.forEach { reactionType ->
+                Button(
+                    modifier = Modifier.padding(horizontal = 3.dp),
+                    onClick = {
+                        scope.launch(Dispatchers.IO) {
+                            accountViewModel.reactToOrDelete(
+                                baseNote,
+                                reactionType
+                            )
+                            onDismiss()
+                        }
+                    },
+                    shape = ButtonBorder,
+                    colors = ButtonDefaults
+                        .buttonColors(
+                            backgroundColor = MaterialTheme.colors.primary
+                        )
+                ) {
+                    val thisModifier = remember(reactionType) {
+                        Modifier.combinedClickable(
+                            onClick = {
+                                scope.launch(Dispatchers.IO) {
+                                    accountViewModel.reactToOrDelete(
+                                        baseNote,
+                                        reactionType
+                                    )
+                                    onDismiss()
+                                }
+                            },
+                            onLongClick = {
+                                onChangeAmount()
+                            }
+                        )
+                    }
+
+                    val removeSymbol = remember(reactionType) {
+                        if (reactionType in toRemove) {
+                            " ✖"
+                        } else {
+                            ""
+                        }
+                    }
+
+                    when (reactionType) {
+                        "+" -> {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_liked),
+                                null,
+                                modifier = remember { thisModifier.size(16.dp) },
+                                tint = Color.White
+                            )
+                            Text(text = removeSymbol, color = Color.White, textAlign = TextAlign.Center, modifier = thisModifier)
+                        }
+                        "-" -> Text(text = "\uD83D\uDC4E$removeSymbol", color = Color.White, textAlign = TextAlign.Center, modifier = thisModifier)
+                        else -> Text(
+                            "$reactionType$removeSymbol",
+                            color = Color.White,
+                            textAlign = TextAlign.Center,
+                            modifier = thisModifier
+                        )
+                    }
+                }
             }
         }
     }

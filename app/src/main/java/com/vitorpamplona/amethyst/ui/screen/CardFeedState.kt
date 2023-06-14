@@ -6,6 +6,8 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableMap
 
 @Immutable
 abstract class Card() {
@@ -41,7 +43,12 @@ class ZapUserSetCard(val user: User, val zapEvents: ImmutableList<CombinedZap>) 
 }
 
 @Immutable
-class MultiSetCard(val note: Note, val boostEvents: ImmutableList<Note>, val likeEvents: ImmutableList<Note>, val zapEvents: ImmutableList<CombinedZap>) : Card() {
+class MultiSetCard(
+    val note: Note,
+    val boostEvents: ImmutableList<Note>,
+    val likeEvents: ImmutableList<Note>,
+    val zapEvents: ImmutableList<CombinedZap>
+) : Card() {
     val maxCreatedAt = maxOf(
         zapEvents.maxOfOrNull { it.createdAt() ?: 0 } ?: 0,
         likeEvents.maxOfOrNull { it.createdAt() ?: 0 } ?: 0,
@@ -53,6 +60,10 @@ class MultiSetCard(val note: Note, val boostEvents: ImmutableList<Note>, val lik
         likeEvents.minOfOrNull { it.createdAt() ?: Long.MAX_VALUE } ?: Long.MAX_VALUE,
         boostEvents.minOfOrNull { it.createdAt() ?: Long.MAX_VALUE } ?: Long.MAX_VALUE
     )
+
+    val likeEventsByType = likeEvents.groupBy { it.event?.content() ?: "+" }.mapValues {
+        it.value.toImmutableList()
+    }.toImmutableMap()
 
     override fun createdAt(): Long {
         return maxCreatedAt

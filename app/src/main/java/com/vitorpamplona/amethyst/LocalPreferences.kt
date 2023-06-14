@@ -49,6 +49,7 @@ private object PrefKeys {
     const val LANGUAGE_PREFS = "languagePreferences"
     const val TRANSLATE_TO = "translateTo"
     const val ZAP_AMOUNTS = "zapAmounts"
+    const val REACTION_CHOICES = "reactionChoices"
     const val DEFAULT_ZAPTYPE = "defaultZapType"
     const val DEFAULT_FILE_SERVER = "defaultFileServer"
     const val DEFAULT_HOME_FOLLOW_LIST = "defaultHomeFollowList"
@@ -208,6 +209,7 @@ object LocalPreferences {
             putString(PrefKeys.LANGUAGE_PREFS, gson.toJson(account.languagePreferences))
             putString(PrefKeys.TRANSLATE_TO, account.translateTo)
             putString(PrefKeys.ZAP_AMOUNTS, gson.toJson(account.zapAmountChoices))
+            putString(PrefKeys.REACTION_CHOICES, gson.toJson(account.reactionChoices))
             putString(PrefKeys.DEFAULT_ZAPTYPE, gson.toJson(account.defaultZapType))
             putString(PrefKeys.DEFAULT_FILE_SERVER, gson.toJson(account.defaultFileServer))
             putString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, account.defaultHomeFollowList)
@@ -257,6 +259,11 @@ object LocalPreferences {
                 getString(PrefKeys.ZAP_AMOUNTS, "[]"),
                 object : TypeToken<List<Long>>() {}.type
             ) ?: listOf(500L, 1000L, 5000L)
+
+            val reactionChoices = gson.fromJson<List<String>>(
+                getString(PrefKeys.REACTION_CHOICES, "[]"),
+                object : TypeToken<List<String>>() {}.type
+            ).ifEmpty { listOf("+") } ?: listOf("+")
 
             val defaultZapType = gson.fromJson(
                 getString(PrefKeys.DEFAULT_ZAPTYPE, "PUBLIC"),
@@ -314,28 +321,29 @@ object LocalPreferences {
             val warnAboutReports = getBoolean(PrefKeys.WARN_ABOUT_REPORTS, true)
 
             val a = Account(
-                Persona(privKey = privKey?.hexToByteArray(), pubKey = pubKey.hexToByteArray()),
-                followingChannels,
-                hiddenUsers,
-                localRelays,
-                dontTranslateFrom,
-                languagePreferences,
-                translateTo,
-                zapAmountChoices,
-                defaultZapType,
-                defaultFileServer,
-                defaultHomeFollowList,
-                defaultStoriesFollowList,
-                defaultNotificationFollowList,
-                zapPaymentRequestServer,
-                hideDeleteRequestDialog,
-                hideBlockAlertDialog,
-                latestContactList,
-                proxy,
-                proxyPort,
-                showSensitiveContent,
-                warnAboutReports,
-                filterSpam
+                loggedIn = Persona(privKey = privKey?.hexToByteArray(), pubKey = pubKey.hexToByteArray()),
+                followingChannels = followingChannels,
+                hiddenUsers = hiddenUsers,
+                localRelays = localRelays,
+                dontTranslateFrom = dontTranslateFrom,
+                languagePreferences = languagePreferences,
+                translateTo = translateTo,
+                zapAmountChoices = zapAmountChoices,
+                reactionChoices = reactionChoices,
+                defaultZapType = defaultZapType,
+                defaultFileServer = defaultFileServer,
+                defaultHomeFollowList = defaultHomeFollowList,
+                defaultStoriesFollowList = defaultStoriesFollowList,
+                defaultNotificationFollowList = defaultNotificationFollowList,
+                zapPaymentRequest = zapPaymentRequestServer,
+                hideDeleteRequestDialog = hideDeleteRequestDialog,
+                hideBlockAlertDialog = hideBlockAlertDialog,
+                backupContactList = latestContactList,
+                proxy = proxy,
+                proxyPort = proxyPort,
+                showSensitiveContent = showSensitiveContent,
+                warnAboutPostsWithReports = warnAboutReports,
+                filterSpamFromStrangers = filterSpam
             )
 
             return a

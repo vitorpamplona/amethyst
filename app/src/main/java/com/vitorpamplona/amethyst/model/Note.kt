@@ -43,7 +43,7 @@ open class Note(val idHex: String) {
     // These fields are updated every time an event related to this note is received.
     var replies = setOf<Note>()
         private set
-    var reactions = setOf<Note>()
+    var reactions = mapOf<String, Set<Note>>()
         private set
     var boosts = setOf<Note>()
         private set
@@ -134,8 +134,20 @@ open class Note(val idHex: String) {
         liveSet?.boosts?.invalidateData()
     }
     fun removeReaction(note: Note) {
-        reactions = reactions - note
-        liveSet?.reactions?.invalidateData()
+        val reaction = note.event?.content() ?: "+"
+
+        if (reaction in reactions.keys && reactions[reaction]?.contains(note) == true) {
+            reactions[reaction]?.let {
+                val newList = it.minus(note)
+                if (newList.isEmpty()) {
+                    reactions = reactions.minus(reaction)
+                } else {
+                    reactions = reactions + Pair(reaction, newList)
+                }
+
+                liveSet?.reactions?.invalidateData()
+            }
+        }
     }
 
     fun removeReport(deleteNote: Note) {
@@ -203,8 +215,13 @@ open class Note(val idHex: String) {
     }
 
     fun addReaction(note: Note) {
-        if (note !in reactions) {
-            reactions = reactions + note
+        val reaction = note.event?.content() ?: "+"
+
+        if (reaction !in reactions.keys) {
+            reactions = reactions + Pair(reaction, setOf(note))
+            liveSet?.reactions?.invalidateData()
+        } else if (reactions[reaction]?.contains(note) == false) {
+            reactions = reactions + Pair(reaction, (reactions[reaction] ?: emptySet()) + note)
             liveSet?.reactions?.invalidateData()
         }
     }
@@ -243,8 +260,10 @@ open class Note(val idHex: String) {
         }
     }
 
-    fun isReactedBy(user: User): Boolean {
-        return reactions.any { it.author?.pubkeyHex == user.pubkeyHex }
+    fun isReactedBy(user: User): String? {
+        return reactions.filter {
+            it.value.any { it.author?.pubkeyHex == user.pubkeyHex }
+        }.keys.firstOrNull()
     }
 
     fun isBoostedBy(user: User): Boolean {
@@ -267,6 +286,10 @@ open class Note(val idHex: String) {
         return reportAuthorsBy(users).mapNotNull {
             reports[it]
         }.flatten()
+    }
+
+    fun countReactions(): Int {
+        return reactions.values.sumOf { it.size }
     }
 
     fun zappedAmount(privKey: ByteArray?, walletServicePubkey: ByteArray?): BigDecimal {
@@ -361,7 +384,11 @@ open class Note(val idHex: String) {
     }
 
     fun reactedBy(loggedIn: User, content: String): List<Note> {
-        return reactions.filter { it.author == loggedIn && it.event?.content() == content }
+        return reactions[content]?.filter { it.author == loggedIn && it.event?.content() == content } ?: emptyList()
+    }
+
+    fun reactedBy(loggedIn: User): List<String> {
+        return reactions.filter { it.value.any { it.author == loggedIn } }.mapNotNull { it.key }
     }
 
     fun hasBoostedInTheLast5Minutes(loggedIn: User): Boolean {

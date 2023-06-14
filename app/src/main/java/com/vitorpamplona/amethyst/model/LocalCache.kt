@@ -554,17 +554,8 @@ object LocalCache {
 
         // Log.d("RE", "New Reaction ${event.content} (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${formattedDateTime(event.createdAt)}")
 
-        if (
-            event.content == "" ||
-            event.content == "+" ||
-            event.content == "\u2764\uFE0F" || // red heart
-            event.content == "\uD83E\uDD19" || // call me hand
-            event.content == "\uD83D\uDC4D" // thumbs up
-        ) {
-            // Counts the replies
-            repliesTo.forEach {
-                it.addReaction(note)
-            }
+        repliesTo.forEach {
+            it.addReaction(note)
         }
 
         refreshObservers(note)

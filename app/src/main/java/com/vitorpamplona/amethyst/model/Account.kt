@@ -56,6 +56,7 @@ class Account(
     var languagePreferences: Map<String, String> = mapOf(),
     var translateTo: String = Locale.getDefault().language,
     var zapAmountChoices: List<Long> = listOf(500L, 1000L, 5000L),
+    var reactionChoices: List<String> = listOf("+"),
     var defaultZapType: LnZapEvent.ZapType = LnZapEvent.ZapType.PRIVATE,
     var defaultFileServer: ServersAvailable = ServersAvailable.NOSTR_BUILD,
     var defaultHomeFollowList: String = KIND3_FOLLOWS,
@@ -143,8 +144,8 @@ class Account(
         }
     }
 
-    fun reactionTo(note: Note): List<Note> {
-        return note.reactedBy(userProfile(), "+")
+    fun reactionTo(note: Note, reaction: String): List<Note> {
+        return note.reactedBy(userProfile(), reaction)
     }
 
     fun hasBoosted(note: Note): Boolean {
@@ -155,20 +156,20 @@ class Account(
         return note.boostedBy(userProfile())
     }
 
-    fun hasReacted(note: Note): Boolean {
-        return note.hasReacted(userProfile(), "+")
+    fun hasReacted(note: Note, reaction: String): Boolean {
+        return note.hasReacted(userProfile(), reaction)
     }
 
-    fun reactTo(note: Note) {
+    fun reactTo(note: Note, reaction: String) {
         if (!isWriteable()) return
 
-        if (hasReacted(note)) {
+        if (hasReacted(note, reaction)) {
             // has already liked this note
             return
         }
 
         note.event?.let {
-            val event = ReactionEvent.createLike(it, loggedIn.privKey!!)
+            val event = ReactionEvent.create(reaction, it, loggedIn.privKey!!)
             Client.send(event)
             LocalCache.consume(event)
         }
@@ -859,6 +860,12 @@ class Account(
 
     fun changeZapAmounts(newAmounts: List<Long>) {
         zapAmountChoices = newAmounts
+        live.invalidateData()
+        saveable.invalidateData()
+    }
+
+    fun changeReactionTypes(newTypes: List<String>) {
+        reactionChoices = newTypes
         live.invalidateData()
         saveable.invalidateData()
     }

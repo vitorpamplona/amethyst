@@ -414,4 +414,7 @@
     <string name="recommended_apps">Recommends: </string>
     <string name="filter_spam_from_strangers">Filter spam from strangers</string>
     <string name="warn_when_posts_have_reports_from_your_follows">Warn when posts have reports from your follows</string>
+
+    <string name="new_reaction_symbol">New Reaction Symbol</string>
+    <string name="no_reaction_type_setup_long_press_to_change">No reaction types selected. Long Press to change</string>
 </resources>
