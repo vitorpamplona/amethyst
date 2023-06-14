@@ -51,6 +51,18 @@ object LocalCache {
         }
     }
 
+    fun getUserIfExists(key: String): User? {
+        return users[key]
+    }
+
+    fun getNoteIfExists(key: String): Note? {
+        return addressables[key] ?: notes[key]
+    }
+
+    fun getChannelIfExists(key: String): Channel? {
+        return channels[key]
+    }
+
     fun checkGetOrCreateNote(key: String): Note? {
         checkNotInMainThread()
 

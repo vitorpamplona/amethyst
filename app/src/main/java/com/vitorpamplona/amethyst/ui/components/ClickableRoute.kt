@@ -90,7 +90,7 @@ private fun LoadNote(
     hex: String,
     content: @Composable (Note) -> Unit
 ) {
-    var noteBase by remember(hex) { mutableStateOf<Note?>(null) }
+    var noteBase by remember(hex) { mutableStateOf(LocalCache.getNoteIfExists(hex)) }
 
     LaunchedEffect(key1 = hex) {
         if (noteBase == null) {
@@ -184,11 +184,13 @@ private fun DisplayAddress(
     nip19: Nip19.Return,
     nav: (String) -> Unit
 ) {
-    var noteBase by remember(nip19) { mutableStateOf<Note?>(null) }
+    var noteBase by remember(nip19) { mutableStateOf(LocalCache.getNoteIfExists(nip19.hex)) }
 
     LaunchedEffect(key1 = nip19.hex) {
-        launch(Dispatchers.IO) {
-            noteBase = LocalCache.checkGetOrCreateAddressableNote(nip19.hex)
+        if (noteBase == null) {
+            launch(Dispatchers.IO) {
+                noteBase = LocalCache.checkGetOrCreateAddressableNote(nip19.hex)
+            }
         }
     }
 
@@ -221,11 +223,13 @@ private fun DisplayUser(
     nip19: Nip19.Return,
     nav: (String) -> Unit
 ) {
-    var userBase by remember(nip19) { mutableStateOf<User?>(null) }
+    var userBase by remember(nip19) { mutableStateOf(LocalCache.getUserIfExists(nip19.hex)) }
 
     LaunchedEffect(key1 = nip19.hex) {
-        launch(Dispatchers.IO) {
-            userBase = LocalCache.checkGetOrCreateUser(nip19.hex)
+        if (userBase == null) {
+            launch(Dispatchers.IO) {
+                userBase = LocalCache.checkGetOrCreateUser(nip19.hex)
+            }
         }
     }
 

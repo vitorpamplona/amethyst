@@ -225,7 +225,7 @@ private fun WatchNotificationChanges(
 @Composable
 fun LoadUser(baseUserHex: String, content: @Composable (User) -> Unit) {
     var user by remember(baseUserHex) {
-        mutableStateOf<User?>(null)
+        mutableStateOf<User?>(LocalCache.getUserIfExists(baseUserHex))
     }
 
     LaunchedEffect(key1 = baseUserHex) {

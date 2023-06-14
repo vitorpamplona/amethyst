@@ -1850,7 +1850,7 @@ private fun DrawAuthorImages(baseNote: Note, accountViewModel: AccountViewModel,
 @Composable
 fun LoadChannel(baseChannelHex: String, content: @Composable (Channel) -> Unit) {
     var channel by remember(baseChannelHex) {
-        mutableStateOf<Channel?>(null)
+        mutableStateOf<Channel?>(LocalCache.getChannelIfExists(baseChannelHex))
     }
 
     LaunchedEffect(key1 = baseChannelHex) {

@@ -548,7 +548,7 @@ private fun ObserveNIP19Event(
     it: Nip19.Return,
     onRefresh: () -> Unit
 ) {
-    var baseNote by remember(it) { mutableStateOf<Note?>(null) }
+    var baseNote by remember(it) { mutableStateOf<Note?>(LocalCache.getNoteIfExists(it.hex)) }
 
     LaunchedEffect(key1 = it.hex) {
         if (baseNote == null) {
@@ -563,13 +563,18 @@ private fun ObserveNIP19Event(
     }
 
     baseNote?.let { note ->
-        val noteState by note.live().metadata.observeAsState()
+        ObserveNote(note, onRefresh)
+    }
+}
 
-        LaunchedEffect(key1 = noteState) {
-            if (noteState?.note?.event != null) {
-                launch(Dispatchers.IO) {
-                    onRefresh()
-                }
+@Composable
+fun ObserveNote(note: Note, onRefresh: () -> Unit) {
+    val noteState by note.live().metadata.observeAsState()
+
+    LaunchedEffect(key1 = noteState) {
+        if (noteState?.note?.event != null) {
+            launch(Dispatchers.IO) {
+                onRefresh()
             }
         }
     }
@@ -580,7 +585,7 @@ private fun ObserveNIP19User(
     it: Nip19.Return,
     onRefresh: () -> Unit
 ) {
-    var baseUser by remember(it) { mutableStateOf<User?>(null) }
+    var baseUser by remember(it) { mutableStateOf<User?>(LocalCache.getUserIfExists(it.hex)) }
 
     LaunchedEffect(key1 = it.hex) {
         if (baseUser == null) {
@@ -595,13 +600,18 @@ private fun ObserveNIP19User(
     }
 
     baseUser?.let { user ->
-        val userState by user.live().metadata.observeAsState()
+        ObserveUser(user, onRefresh)
+    }
+}
 
-        LaunchedEffect(key1 = userState) {
-            if (userState?.user?.info != null) {
-                launch(Dispatchers.IO) {
-                    onRefresh()
-                }
+@Composable
+private fun ObserveUser(user: User, onRefresh: () -> Unit) {
+    val userState by user.live().metadata.observeAsState()
+
+    LaunchedEffect(key1 = userState) {
+        if (userState?.user?.info != null) {
+            launch(Dispatchers.IO) {
+                onRefresh()
             }
         }
     }
