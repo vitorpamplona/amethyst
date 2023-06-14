@@ -460,6 +460,8 @@ class Account(
 
     fun createNip95(byteArray: ByteArray, headerInfo: FileHeader): Pair<FileStorageEvent, FileStorageHeaderEvent>? {
         if (!isWriteable()) return null
+        if (!verifyDelegation(FileStorageEvent.kind)) return null
+        if (!verifyDelegation(FileStorageHeaderEvent.kind)) return null
 
         val data = FileStorageEvent.create(
             mimeType = headerInfo.mimeType ?: "",
@@ -483,6 +485,8 @@ class Account(
 
     fun sendNip95(data: FileStorageEvent, signedEvent: FileStorageHeaderEvent): Note? {
         if (!isWriteable()) return null
+        if (!verifyDelegation(FileStorageEvent.kind)) return null
+        if (!verifyDelegation(FileStorageHeaderEvent.kind)) return null
 
         Client.send(data)
         LocalCache.consume(data, null)
@@ -495,6 +499,7 @@ class Account(
 
     fun sendHeader(headerInfo: FileHeader): Note? {
         if (!isWriteable()) return null
+        if (!verifyDelegation(FileHeaderEvent.kind)) return null
 
         val signedEvent = FileHeaderEvent.create(
             url = headerInfo.url,
