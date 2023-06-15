@@ -504,14 +504,14 @@ fun LikeIcon(baseNote: Note, iconSize: Dp = 20.dp, grayTint: Color, loggedIn: Us
     val reactionsState by baseNote.live().reactions.observeAsState()
 
     var reactionType by remember(baseNote) {
-        mutableStateOf<String?>(null)
+        mutableStateOf<String>("+")
     }
 
     LaunchedEffect(key1 = reactionsState) {
         launch(Dispatchers.Default) {
             val newReactionType = reactionsState?.note?.isReactedBy(loggedIn)
             if (reactionType != newReactionType) {
-                reactionType = newReactionType
+                reactionType = newReactionType?.take(2) ?: "+"
             }
         }
     }
@@ -531,7 +531,7 @@ fun LikeIcon(baseNote: Note, iconSize: Dp = 20.dp, grayTint: Color, loggedIn: Us
                 )
             }
             "-" -> Text(text = "\uD83D\uDC4E")
-            else -> Text(text = reactionType!!)
+            else -> Text(text = reactionType)
         }
     } else {
         Icon(

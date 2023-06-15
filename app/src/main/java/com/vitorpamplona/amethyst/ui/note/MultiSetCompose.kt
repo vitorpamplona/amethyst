@@ -178,6 +178,12 @@ fun RenderLikeGallery(
         likeEvents.isNotEmpty()
     }
 
+    val shortReaction by remember {
+        derivedStateOf {
+            reactionType.take(2)
+        }
+    }
+
     if (isNotEmpty) {
         Row(remember { Modifier.fillMaxWidth() }) {
             Box(
@@ -192,7 +198,7 @@ fun RenderLikeGallery(
                         .align(Alignment.TopEnd)
                 }
 
-                when (reactionType) {
+                when (shortReaction) {
                     "+" -> Icon(
                         painter = painterResource(R.drawable.ic_liked),
                         null,
@@ -200,7 +206,7 @@ fun RenderLikeGallery(
                         tint = Color.Unspecified
                     )
                     "-" -> Text(text = "\uD83D\uDC4E", modifier = modifier)
-                    else -> Text(text = reactionType, modifier = modifier)
+                    else -> Text(text = shortReaction, modifier = modifier)
                 }
             }
 

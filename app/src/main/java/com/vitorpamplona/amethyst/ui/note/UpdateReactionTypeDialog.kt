@@ -64,7 +64,7 @@ class UpdateReactionTypeViewModel(val account: Account) : ViewModel() {
     }
 
     fun addChoice() {
-        val newValue = nextChoice.text.trim()
+        val newValue = nextChoice.text.trim().take(2)
         reactionSet = reactionSet + newValue
 
         nextChoice = TextFieldValue("")
