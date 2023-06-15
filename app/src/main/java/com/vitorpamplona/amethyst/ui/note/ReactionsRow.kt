@@ -54,6 +54,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
@@ -441,7 +442,8 @@ fun LikeReaction(
     grayTint: Color,
     accountViewModel: AccountViewModel,
     iconSize: Dp = 20.dp,
-    heartSize: Dp = 16.dp
+    heartSize: Dp = 16.dp,
+    iconFontSize: TextUnit = 14.sp
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -455,6 +457,7 @@ fun LikeReaction(
 
     Row(
         verticalAlignment = CenterVertically,
+        horizontalArrangement = Arrangement.Center,
         modifier = iconButtonModifier.combinedClickable(
             role = Role.Button,
             interactionSource = remember { MutableInteractionSource() },
@@ -475,7 +478,7 @@ fun LikeReaction(
             }
         )
     ) {
-        LikeIcon(baseNote, heartSize, grayTint, accountViewModel.userProfile())
+        LikeIcon(baseNote, iconFontSize, heartSize, grayTint, accountViewModel.userProfile())
 
         if (wantsToChangeReactionSymbol) {
             UpdateReactionTypeDialog({ wantsToChangeReactionSymbol = false }, accountViewModel = accountViewModel)
@@ -500,7 +503,13 @@ fun LikeReaction(
 }
 
 @Composable
-fun LikeIcon(baseNote: Note, iconSize: Dp = 20.dp, grayTint: Color, loggedIn: User) {
+fun LikeIcon(
+    baseNote: Note,
+    iconFontSize: TextUnit = 14.sp,
+    iconSize: Dp = 20.dp,
+    grayTint: Color,
+    loggedIn: User
+) {
     val reactionsState by baseNote.live().reactions.observeAsState()
 
     var reactionType by remember(baseNote) {
@@ -530,8 +539,8 @@ fun LikeIcon(baseNote: Note, iconSize: Dp = 20.dp, grayTint: Color, loggedIn: Us
                     tint = Color.Unspecified
                 )
             }
-            "-" -> Text(text = "\uD83D\uDC4E")
-            else -> Text(text = reactionType!!)
+            "-" -> Text(text = "\uD83D\uDC4E", fontSize = iconFontSize)
+            else -> Text(text = reactionType!!, fontSize = iconFontSize)
         }
     } else {
         Icon(
