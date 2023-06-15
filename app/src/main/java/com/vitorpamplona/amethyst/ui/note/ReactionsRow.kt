@@ -511,7 +511,7 @@ fun LikeIcon(baseNote: Note, iconSize: Dp = 20.dp, grayTint: Color, loggedIn: Us
         launch(Dispatchers.Default) {
             val newReactionType = reactionsState?.note?.isReactedBy(loggedIn)
             if (reactionType != newReactionType) {
-                reactionType = newReactionType?.take(2) ?: "+"
+                reactionType = newReactionType?.take(2)
             }
         }
     }
