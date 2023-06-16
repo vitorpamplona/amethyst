@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeMe
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeThem
 import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
@@ -498,15 +499,22 @@ private fun DrawAuthorInfo(
             }
         )
 
-        CreateClickableTextWithEmoji(
-            clickablePart = remember { "  $userDisplayName" },
-            suffix = "",
-            tags = userTags,
-            fontWeight = FontWeight.Bold,
-            overrideColor = MaterialTheme.colors.onBackground,
-            route = route,
-            nav = nav
-        )
+        userDisplayName?.let {
+            Spacer(modifier = StdHorzSpacer)
+
+            CreateClickableTextWithEmoji(
+                clickablePart = it,
+                suffix = "",
+                tags = userTags,
+                fontWeight = FontWeight.Bold,
+                overrideColor = MaterialTheme.colors.onBackground,
+                route = route,
+                nav = nav
+            )
+
+            Spacer(modifier = StdHorzSpacer)
+            DrawPlayName(it)
+        }
     }
 }
 
