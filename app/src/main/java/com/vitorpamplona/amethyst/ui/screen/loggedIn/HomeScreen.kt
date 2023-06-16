@@ -138,19 +138,13 @@ fun WatchAccountForHomeScreen(
     accountViewModel: AccountViewModel
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
+    val followState by accountViewModel.account.userProfile().live().follows.observeAsState()
 
-    var firstTime by remember(accountViewModel) { mutableStateOf(true) }
-
-    LaunchedEffect(accountViewModel, accountState?.account?.defaultHomeFollowList) {
-        // Only invalidate when things change. Not in the first run
-        if (firstTime) {
-            firstTime = false
-        } else {
-            launch(Dispatchers.IO) {
-                NostrHomeDataSource.invalidateFilters()
-                homeFeedViewModel.invalidateDataAndSendToTop(true)
-                repliesFeedViewModel.invalidateDataAndSendToTop(true)
-            }
+    LaunchedEffect(accountViewModel, accountState?.account?.defaultHomeFollowList, followState) {
+        launch(Dispatchers.IO) {
+            NostrHomeDataSource.invalidateFilters()
+            homeFeedViewModel.invalidateDataAndSendToTop(true)
+            repliesFeedViewModel.invalidateDataAndSendToTop(true)
         }
     }
 }
