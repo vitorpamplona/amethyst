@@ -385,9 +385,11 @@ private fun FollowersTabHeader(baseUser: User) {
     val userState by baseUser.live().followers.observeAsState()
     var followerCount by remember { mutableStateOf("--") }
 
+    val text = stringResource(R.string.followers)
+
     LaunchedEffect(key1 = userState) {
         launch(Dispatchers.IO) {
-            val newFollower = userState?.user?.transientFollowerCount()?.toString() ?: "--"
+            val newFollower = (userState?.user?.transientFollowerCount()?.toString() ?: "--") + " " + text
 
             if (followerCount != newFollower) {
                 followerCount = newFollower
@@ -395,7 +397,7 @@ private fun FollowersTabHeader(baseUser: User) {
         }
     }
 
-    Text(text = "$followerCount ${stringResource(id = R.string.followers)}")
+    Text(text = followerCount)
 }
 
 @Composable
@@ -403,9 +405,11 @@ private fun FollowTabHeader(baseUser: User) {
     val userState by baseUser.live().follows.observeAsState()
     var followCount by remember { mutableStateOf("--") }
 
+    val text = stringResource(R.string.follows)
+
     LaunchedEffect(key1 = userState) {
         launch(Dispatchers.IO) {
-            val newFollow = userState?.user?.transientFollowCount()?.toString() ?: "--"
+            val newFollow = (userState?.user?.transientFollowCount()?.toString() ?: "--") + " " + text
 
             if (followCount != newFollow) {
                 followCount = newFollow
@@ -413,7 +417,7 @@ private fun FollowTabHeader(baseUser: User) {
         }
     }
 
-    Text(text = "$followCount ${stringResource(R.string.follows)}")
+    Text(text = followCount)
 }
 
 @Composable

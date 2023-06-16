@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountBackupDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
+import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -229,39 +230,57 @@ fun ProfileContent(
 
 @Composable
 private fun FollowingAndFollowerCounts(baseAccountUser: User) {
-    val accountUserFollowsState by baseAccountUser.live().follows.observeAsState()
-    val accountUserFollowersState by baseAccountUser.live().followers.observeAsState()
-
     var followingCount by remember { mutableStateOf("--") }
     var followerCount by remember { mutableStateOf("--") }
 
-    LaunchedEffect(key1 = accountUserFollowsState, key2 = accountUserFollowersState) {
-        launch(Dispatchers.IO) {
-            val newFollowing = accountUserFollowsState?.user?.cachedFollowCount()?.toString() ?: "--"
-            val newFollower = accountUserFollowersState?.user?.cachedFollowerCount()?.toString() ?: "--"
-
-            if (followingCount != newFollowing) {
-                followingCount = newFollowing
-            }
-            if (followerCount != newFollower) {
-                followerCount = newFollower
-            }
+    WatchFollow(baseAccountUser = baseAccountUser) { newFollowing ->
+        if (followingCount != newFollowing) {
+            followingCount = newFollowing
         }
     }
 
-    Row() {
-        Text(
-            text = followingCount,
-            fontWeight = FontWeight.Bold
-        )
-        Text(stringResource(R.string.following))
+    WatchFollower(baseAccountUser = baseAccountUser) { newFollower ->
+        if (followerCount != newFollower) {
+            followerCount = newFollower
+        }
     }
-    Row(modifier = Modifier.padding(start = 10.dp)) {
-        Text(
-            text = followerCount,
-            fontWeight = FontWeight.Bold
-        )
-        Text(stringResource(R.string.followers))
+
+    Text(
+        text = followingCount,
+        fontWeight = FontWeight.Bold
+    )
+
+    Text(stringResource(R.string.following))
+
+    Spacer(modifier = DoubleHorzSpacer)
+
+    Text(
+        text = followerCount,
+        fontWeight = FontWeight.Bold
+    )
+
+    Text(stringResource(R.string.followers))
+}
+
+@Composable
+fun WatchFollow(baseAccountUser: User, onReady: (String) -> Unit) {
+    val accountUserFollowsState by baseAccountUser.live().follows.observeAsState()
+
+    LaunchedEffect(key1 = accountUserFollowsState) {
+        launch(Dispatchers.IO) {
+            onReady(accountUserFollowsState?.user?.cachedFollowCount()?.toString() ?: "--")
+        }
+    }
+}
+
+@Composable
+fun WatchFollower(baseAccountUser: User, onReady: (String) -> Unit) {
+    val accountUserFollowersState by baseAccountUser.live().followers.observeAsState()
+
+    LaunchedEffect(key1 = accountUserFollowersState) {
+        launch(Dispatchers.IO) {
+            onReady(accountUserFollowersState?.user?.cachedFollowerCount()?.toString() ?: "--")
+        }
     }
 }
 
