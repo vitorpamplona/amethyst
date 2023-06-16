@@ -29,11 +29,16 @@ class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>()
         return collection
             .asSequence()
             .filter { it ->
-                (it.event is TextNoteEvent || it.event is RepostEvent || it.event is LongTextNoteEvent || it.event is PollNoteEvent || it.event is HighlightEvent || it.event is AudioTrackEvent) &&
-                    (it.author?.pubkeyHex in followingKeySet || (it.event?.isTaggedHashes(followingTagSet) ?: false)) &&
+                val noteEvent = it.event
+                (noteEvent is TextNoteEvent || noteEvent is RepostEvent || noteEvent is LongTextNoteEvent || noteEvent is PollNoteEvent || noteEvent is HighlightEvent || noteEvent is AudioTrackEvent) &&
+                    (it.author?.pubkeyHex in followingKeySet || (noteEvent.isTaggedHashes(followingTagSet))) &&
                     // && account.isAcceptable(it)  // This filter follows only. No need to check if acceptable
                     it.author?.let { !account.isHidden(it.pubkeyHex) } ?: true &&
-                    it.isNewThread()
+                    it.isNewThread() &&
+                    (
+                        noteEvent !is RepostEvent || // not a repost
+                            (it.replyTo?.lastOrNull()?.author?.pubkeyHex !in followingKeySet) // or a repost of by a non-follower's post (likely not seen yet)
+                        ) // || (noteEvent.createdAt > (it.replyTo?.lastOrNull()?.createdAt() ?: 0) + 60*60*1000 )) //
             }
             .toSet()
     }
