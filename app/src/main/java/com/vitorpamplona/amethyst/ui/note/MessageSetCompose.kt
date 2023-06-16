@@ -29,7 +29,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.ui.screen.MessageSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
@@ -101,13 +100,9 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, 
             MessageIcon()
 
             Column(modifier = remember { Modifier.padding(start = 10.dp) }) {
-                val routeForLastRead = remember(baseNote) {
-                    "Room/${(baseNote.event as? PrivateDmEvent)?.talkingWith(loggedIn.pubkeyHex)}"
-                }
-
                 NoteCompose(
                     baseNote = baseNote,
-                    routeForLastRead = routeForLastRead,
+                    routeForLastRead = null,
                     isBoostedNote = true,
                     addMarginTop = false,
                     parentBackgroundColor = null,
