@@ -1,16 +1,28 @@
 package com.vitorpamplona.amethyst.ui.note
 
+import android.content.Context
+import android.util.Log
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.LifecycleOwner
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.tts.TextToSpeechHelper
 import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
@@ -45,6 +57,9 @@ private fun UserNameDisplay(
     tags: ImmutableListOfLists<String>?,
     modifier: Modifier
 ) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
     if (bestUserName != null && bestDisplayName != null) {
         CreateTextWithEmoji(
             text = bestDisplayName,
@@ -59,6 +74,17 @@ private fun UserNameDisplay(
             overflow = TextOverflow.Ellipsis,
             modifier = modifier
         )
+        IconButton(
+            onClick = { speak(bestDisplayName, context, lifecycleOwner) },
+            modifier = Modifier.size(20.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.PlayCircle,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colors.placeholderText
+            )
+        }
     } else if (bestDisplayName != null) {
         CreateTextWithEmoji(
             text = bestDisplayName,
@@ -68,6 +94,17 @@ private fun UserNameDisplay(
             overflow = TextOverflow.Ellipsis,
             modifier = modifier
         )
+        IconButton(
+            onClick = { speak(bestDisplayName, context, lifecycleOwner) },
+            modifier = Modifier.size(20.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.PlayCircle,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colors.placeholderText
+            )
+        }
     } else if (bestUserName != null) {
         CreateTextWithEmoji(
             text = remember { "@$bestUserName" },
@@ -77,6 +114,17 @@ private fun UserNameDisplay(
             overflow = TextOverflow.Ellipsis,
             modifier = modifier
         )
+        IconButton(
+            onClick = { speak(bestUserName, context, lifecycleOwner) },
+            modifier = Modifier.size(20.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.PlayCircle,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colors.placeholderText
+            )
+        }
     } else {
         Text(
             npubDisplay,
@@ -86,4 +134,22 @@ private fun UserNameDisplay(
             modifier = modifier
         )
     }
+}
+
+private fun speak(
+    message: String,
+    context: Context,
+    owner: LifecycleOwner
+) {
+    TextToSpeechHelper
+        .getInstance(context)
+        .registerLifecycle(owner)
+        .speak(message)
+        .highlight()
+        .onDone {
+            Log.d("TextToSpeak", "speak: done")
+        }
+        .onError {
+            Log.d("TextToSpeak", "speak error: $it")
+        }
 }
