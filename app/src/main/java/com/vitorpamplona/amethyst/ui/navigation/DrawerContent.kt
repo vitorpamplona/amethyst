@@ -230,14 +230,15 @@ fun ProfileContent(
 @Composable
 private fun FollowingAndFollowerCounts(baseAccountUser: User) {
     val accountUserFollowsState by baseAccountUser.live().follows.observeAsState()
+    val accountUserFollowersState by baseAccountUser.live().followers.observeAsState()
 
     var followingCount by remember { mutableStateOf("--") }
     var followerCount by remember { mutableStateOf("--") }
 
-    LaunchedEffect(key1 = accountUserFollowsState) {
+    LaunchedEffect(key1 = accountUserFollowsState, key2 = accountUserFollowersState) {
         launch(Dispatchers.IO) {
             val newFollowing = accountUserFollowsState?.user?.cachedFollowCount()?.toString() ?: "--"
-            val newFollower = accountUserFollowsState?.user?.cachedFollowerCount()?.toString() ?: "--"
+            val newFollower = accountUserFollowersState?.user?.cachedFollowerCount()?.toString() ?: "--"
 
             if (followingCount != newFollowing) {
                 followingCount = newFollowing

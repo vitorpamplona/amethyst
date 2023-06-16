@@ -299,7 +299,7 @@ fun ProfileScreen(
                             0 -> TabNotesNewThreads(accountViewModel, nav)
                             1 -> TabNotesConversations(accountViewModel, nav)
                             2 -> TabFollows(baseUser, followsFeedViewModel, accountViewModel, nav)
-                            3 -> TabFollows(baseUser, followersFeedViewModel, accountViewModel, nav)
+                            3 -> TabFollowers(baseUser, followersFeedViewModel, accountViewModel, nav)
                             4 -> TabReceivedZaps(baseUser, zapFeedViewModel, accountViewModel, nav)
                             5 -> TabBookmarks(baseUser, accountViewModel, nav)
                             6 -> TabReports(baseUser, accountViewModel, nav)
@@ -382,7 +382,7 @@ private fun ZapTabHeader(baseUser: User) {
 
 @Composable
 private fun FollowersTabHeader(baseUser: User) {
-    val userState by baseUser.live().follows.observeAsState()
+    val userState by baseUser.live().followers.observeAsState()
     var followerCount by remember { mutableStateOf("--") }
 
     LaunchedEffect(key1 = userState) {
@@ -531,6 +531,7 @@ private fun ProfileActions(
     val account = remember(accountLocalUserState) { accountLocalUserState?.account } ?: return
 
     val accountUserState by accountViewModel.account.userProfile().live().follows.observeAsState()
+    val baseUserState by baseUser.live().follows.observeAsState()
 
     val accountUser = remember(accountUserState) { accountUserState?.user } ?: return
 
@@ -546,7 +547,7 @@ private fun ProfileActions(
         }
     }
 
-    val isUserFollowingLoggedIn by remember(accountUserState, accountLocalUserState) {
+    val isUserFollowingLoggedIn by remember(baseUserState, accountLocalUserState) {
         derivedStateOf {
             baseUser.isFollowing(accountUser)
         }
@@ -1118,11 +1119,36 @@ fun TabFollows(baseUser: User, feedViewModel: UserFeedViewModel, accountViewMode
 }
 
 @Composable
+fun TabFollowers(baseUser: User, feedViewModel: UserFeedViewModel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    WatchFollowerChanges(baseUser, feedViewModel)
+
+    Column(Modifier.fillMaxHeight()) {
+        Column(
+            modifier = Modifier.padding(vertical = 0.dp)
+        ) {
+            RefreshingFeedUserFeedView(feedViewModel, accountViewModel, nav, enablePullRefresh = false)
+        }
+    }
+}
+
+@Composable
 private fun WatchFollowChanges(
     baseUser: User,
     feedViewModel: UserFeedViewModel
 ) {
     val userState by baseUser.live().follows.observeAsState()
+
+    LaunchedEffect(userState) {
+        feedViewModel.invalidateData()
+    }
+}
+
+@Composable
+private fun WatchFollowerChanges(
+    baseUser: User,
+    feedViewModel: UserFeedViewModel
+) {
+    val userState by baseUser.live().followers.observeAsState()
 
     LaunchedEffect(userState) {
         feedViewModel.invalidateData()

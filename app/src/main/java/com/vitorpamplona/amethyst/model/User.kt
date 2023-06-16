@@ -96,10 +96,10 @@ class User(val pubkeyHex: String) {
         // Update Followers of the past user list
         // Update Followers of the new contact list
         (oldContactListEvent)?.unverifiedFollowKeySet()?.forEach {
-            LocalCache.users[it]?.liveSet?.follows?.invalidateData()
+            LocalCache.users[it]?.liveSet?.followers?.invalidateData()
         }
         (latestContactList)?.unverifiedFollowKeySet()?.forEach {
-            LocalCache.users[it]?.liveSet?.follows?.invalidateData()
+            LocalCache.users[it]?.liveSet?.followers?.invalidateData()
         }
 
         liveSet?.relays?.invalidateData()
@@ -340,6 +340,7 @@ class User(val pubkeyHex: String) {
 class UserLiveSet(u: User) {
     // UI Observers line up here.
     val follows: UserLiveData = UserLiveData(u)
+    val followers: UserLiveData = UserLiveData(u)
     val reports: UserLiveData = UserLiveData(u)
     val messages: UserLiveData = UserLiveData(u)
     val relays: UserLiveData = UserLiveData(u)
@@ -351,6 +352,7 @@ class UserLiveSet(u: User) {
 
     fun isInUse(): Boolean {
         return follows.hasObservers() ||
+            followers.hasObservers() ||
             reports.hasObservers() ||
             messages.hasObservers() ||
             relays.hasObservers() ||
