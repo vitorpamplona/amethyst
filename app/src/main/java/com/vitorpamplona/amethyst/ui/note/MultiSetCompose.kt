@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.ui.screen.MultiSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.overPictureBackground
 import kotlinx.collections.immutable.ImmutableList
@@ -367,9 +368,7 @@ val textBoxModifier = Modifier.padding(start = 5.dp).fillMaxWidth()
 
 val simpleModifier = Modifier
 
-val size = 35.dp
-
-val sizedModifier = Modifier.size(size)
+val sizedModifier = Modifier.size(Size35dp)
 
 val bottomPadding1dp = Modifier.padding(bottom = 1.dp)
 
@@ -398,7 +397,7 @@ private fun AuthorPictureAndComment(
         Box(modifier = sizedModifier, contentAlignment = Alignment.BottomCenter) {
             FastNoteAuthorPicture(
                 author = author,
-                size = size,
+                size = Size35dp,
                 accountViewModel = accountViewModel,
                 pictureModifier = simpleModifier
             )

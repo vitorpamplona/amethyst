@@ -12,7 +12,7 @@ class UserProfileAppRecommendationsFeedFilter(val user: User) : FeedFilter<Note>
         }.mapNotNull {
             (it.event as? AppRecommendationEvent)?.recommendations()
         }.flatten()
-            .mapNotNull {
+            .map {
                 LocalCache.getOrCreateAddressableNote(it)
             }.toSet().toList()
 

@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
+import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import java.util.*
 
@@ -275,7 +276,7 @@ fun LoginPage(
                             }
                         }
                     },
-                    shape = RoundedCornerShape(35.dp),
+                    shape = RoundedCornerShape(Size35dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp),

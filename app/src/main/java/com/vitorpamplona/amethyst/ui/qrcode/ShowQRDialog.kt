@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.qrcode.NIP19QrCodeScanner
+import com.vitorpamplona.amethyst.ui.theme.Size35dp
 
 @Composable
 fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
@@ -99,7 +100,7 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
                             horizontalArrangement = Arrangement.Center,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 35.dp)
+                                .padding(horizontal = Size35dp)
                         ) {
                             QrCodeDrawer("nostr:${user.pubkeyNpub()}")
                         }
@@ -112,7 +113,7 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
                         ) {
                             Button(
                                 onClick = { presenting = false },
-                                shape = RoundedCornerShape(35.dp),
+                                shape = RoundedCornerShape(Size35dp),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(50.dp),

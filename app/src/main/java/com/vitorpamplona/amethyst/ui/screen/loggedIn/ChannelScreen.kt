@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.ui.screen.NostrChannelFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -396,11 +397,11 @@ fun ChannelHeader(baseChannel: Channel, accountViewModel: AccountViewModel, nav:
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RobohashAsyncImageProxy(
                     robot = channel.idHex,
-                    model = ResizeImage(channel.profilePicture(), 35.dp),
+                    model = ResizeImage(channel.profilePicture(), Size35dp),
                     contentDescription = context.getString(R.string.profile_image),
                     modifier = Modifier
-                        .width(35.dp)
-                        .height(35.dp)
+                        .width(Size35dp)
+                        .height(Size35dp)
                         .clip(shape = CircleShape)
                 )
 
@@ -429,7 +430,7 @@ fun ChannelHeader(baseChannel: Channel, accountViewModel: AccountViewModel, nav:
 
                 Row(
                     modifier = Modifier
-                        .height(35.dp)
+                        .height(Size35dp)
                         .padding(bottom = 3.dp)
                 ) {
                     ChannelActionOptions(channel, accountViewModel, nav)

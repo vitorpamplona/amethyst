@@ -142,6 +142,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Following
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -947,7 +948,7 @@ fun RenderAppDefinition(
 
                     Row(
                         modifier = Modifier
-                            .height(35.dp)
+                            .height(Size35dp)
                             .padding(bottom = 3.dp)
                     ) {
                     }
@@ -1354,7 +1355,7 @@ private fun RenderBadgeAward(
         awardees.take(100).forEach { user ->
             Row(
                 modifier = Modifier
-                    .size(size = 35.dp)
+                    .size(size = Size35dp)
                     .clickable {
                         nav("User/${user.pubkeyHex}")
                     },
@@ -1363,7 +1364,7 @@ private fun RenderBadgeAward(
                 UserPicture(
                     baseUser = user,
                     accountViewModel = accountViewModel,
-                    size = 35.dp
+                    size = Size35dp
                 )
             }
         }

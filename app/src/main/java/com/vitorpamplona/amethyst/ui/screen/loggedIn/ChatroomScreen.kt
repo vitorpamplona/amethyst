@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefreshingChatroomFeedView
+import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -198,7 +199,7 @@ fun ChatroomHeader(baseUser: User, accountViewModel: AccountViewModel, nav: (Str
                 UserPicture(
                     baseUser = baseUser,
                     accountViewModel = accountViewModel,
-                    size = 35.dp
+                    size = Size35dp
                 )
 
                 Column(modifier = Modifier.padding(start = 10.dp)) {

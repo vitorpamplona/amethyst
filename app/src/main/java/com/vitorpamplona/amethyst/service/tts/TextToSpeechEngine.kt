@@ -73,7 +73,6 @@ class TextToSpeechEngine private constructor() {
                 )
                 speak(message)
             } else {
-                Log.d("AAA", "initTTS: $it")
                 onErrorListener?.invoke(getErrorText(it))
             }
         }

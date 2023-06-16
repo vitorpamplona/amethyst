@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import java.lang.Math.round
 
@@ -477,7 +478,7 @@ fun EditableServerConfig(relayToAdd: String, onNewRelay: (RelaySetupInfo) -> Uni
                 imageVector = Icons.Default.Download,
                 null,
                 modifier = Modifier
-                    .size(35.dp)
+                    .size(Size35dp)
                     .padding(horizontal = 5.dp),
                 tint = if (read) Color.Green else MaterialTheme.colors.placeholderText
             )
@@ -488,7 +489,7 @@ fun EditableServerConfig(relayToAdd: String, onNewRelay: (RelaySetupInfo) -> Uni
                 imageVector = Icons.Default.Upload,
                 null,
                 modifier = Modifier
-                    .size(35.dp)
+                    .size(Size35dp)
                     .padding(horizontal = 5.dp),
                 tint = if (write) Color.Green else MaterialTheme.colors.placeholderText
             )
