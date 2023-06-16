@@ -9,7 +9,6 @@ package com.vitorpamplona.amethyst.service.tts
 import android.content.Context
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
-import android.util.Log
 import java.util.Locale
 
 const val DEF_SPEECH_AND_PITCH = 0.8f

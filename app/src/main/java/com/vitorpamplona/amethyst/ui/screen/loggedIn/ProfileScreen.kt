@@ -96,12 +96,11 @@ import com.vitorpamplona.amethyst.ui.screen.RefreshingFeedUserFeedView
 import com.vitorpamplona.amethyst.ui.screen.RelayFeedView
 import com.vitorpamplona.amethyst.ui.screen.RelayFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
-import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -289,7 +288,7 @@ fun ProfileScreen(
                             followersFeedViewModel,
                             zapFeedViewModel,
                             accountViewModel,
-                            nav,
+                            nav
                         )
                     }
                 }
@@ -324,7 +323,7 @@ private fun CreateAndRenderPages(
 @Composable
 private fun CreateAndRenderTabs(
     baseUser: User,
-    pagerState: PagerState,
+    pagerState: PagerState
 ) {
     val coroutineScope = rememberCoroutineScope()
 
