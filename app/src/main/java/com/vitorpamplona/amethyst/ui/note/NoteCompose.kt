@@ -82,7 +82,6 @@ import androidx.core.graphics.get
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.request.SuccessResult
-import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -424,11 +423,11 @@ private fun CheckNewAndRenderNote(
     LaunchedEffect(key1 = routeForLastRead, key2 = parentBackgroundColor?.value) {
         launch(Dispatchers.IO) {
             routeForLastRead?.let {
-                val lastTime = NotificationCache.load(it)
+                val lastTime = accountViewModel.account.loadLastRead(it)
 
                 val createdAt = baseNote.createdAt()
                 if (createdAt != null) {
-                    NotificationCache.markAsRead(it, createdAt)
+                    accountViewModel.account.markAsRead(it, createdAt)
 
                     val isNew = createdAt > lastTime
 

@@ -52,7 +52,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
@@ -184,11 +183,11 @@ fun ChatroomMessageCompose(
             LaunchedEffect(key1 = routeForLastRead) {
                 routeForLastRead?.let {
                     scope.launch(Dispatchers.IO) {
-                        val lastTime = NotificationCache.load(it)
+                        val lastTime = accountViewModel.account.loadLastRead(it)
 
                         val createdAt = note.createdAt()
                         if (createdAt != null) {
-                            NotificationCache.markAsRead(it, createdAt)
+                            accountViewModel.account.markAsRead(it, createdAt)
                         }
                     }
                 }

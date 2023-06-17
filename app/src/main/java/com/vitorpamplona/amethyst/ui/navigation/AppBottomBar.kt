@@ -39,7 +39,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavBackStackEntry
-import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
@@ -165,12 +164,11 @@ fun WatchPossibleNotificationChanges(
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = remember(accountState) { accountState?.account } ?: return
 
-    val notifState by NotificationCache.live.observeAsState()
-    val notif = remember(notifState) { notifState?.cache } ?: return
+    val notifState by accountViewModel.accountLastReadLiveData.observeAsState()
 
     LaunchedEffect(key1 = notifState, key2 = accountState) {
         launch(Dispatchers.IO) {
-            onChange(route.hasNewItems(account, notif, emptySet()))
+            onChange(route.hasNewItems(account, emptySet()))
         }
     }
 
@@ -178,7 +176,7 @@ fun WatchPossibleNotificationChanges(
         launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect {
                 launch(Dispatchers.IO) {
-                    onChange(route.hasNewItems(account, notif, it))
+                    onChange(route.hasNewItems(account, it))
                 }
             }
         }

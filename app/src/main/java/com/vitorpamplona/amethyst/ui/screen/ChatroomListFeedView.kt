@@ -26,7 +26,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.ui.note.ChatroomCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -103,7 +102,7 @@ private fun FeedLoaded(
                         "Room/$roomUser"
                     }
 
-                    NotificationCache.markAsRead(route, it.createdAt())
+                    accountViewModel.account.markAsRead(route, it.createdAt())
                 }
             }
             markAsRead.value = false

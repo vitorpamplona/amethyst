@@ -64,6 +64,7 @@ private object PrefKeys {
     const val SHOW_SENSITIVE_CONTENT = "show_sensitive_content"
     const val WARN_ABOUT_REPORTS = "warn_about_reports"
     const val FILTER_SPAM_FROM_STRANGERS = "filter_spam_from_strangers"
+    const val LAST_READ_PER_ROUTE = "last_read_route_per_route"
     val LAST_READ: (String) -> String = { route -> "last_read_route_$route" }
 }
 
@@ -223,6 +224,7 @@ object LocalPreferences {
             putInt(PrefKeys.PROXY_PORT, account.proxyPort)
             putBoolean(PrefKeys.WARN_ABOUT_REPORTS, account.warnAboutPostsWithReports)
             putBoolean(PrefKeys.FILTER_SPAM_FROM_STRANGERS, account.filterSpamFromStrangers)
+            putString(PrefKeys.LAST_READ_PER_ROUTE, gson.toJson(account.lastReadPerRoute))
 
             if (account.showSensitiveContent == null) {
                 remove(PrefKeys.SHOW_SENSITIVE_CONTENT)
@@ -320,6 +322,18 @@ object LocalPreferences {
             val filterSpam = getBoolean(PrefKeys.FILTER_SPAM_FROM_STRANGERS, true)
             val warnAboutReports = getBoolean(PrefKeys.WARN_ABOUT_REPORTS, true)
 
+            val lastReadPerRoute = try {
+                getString(PrefKeys.LAST_READ_PER_ROUTE, null)?.let {
+                    gson.fromJson(
+                        it,
+                        object : TypeToken<Map<String, Long>>() {}.type
+                    ) as Map<String, Long>
+                } ?: mapOf()
+            } catch (e: Throwable) {
+                e.printStackTrace()
+                mapOf()
+            }
+
             val a = Account(
                 loggedIn = Persona(privKey = privKey?.hexToByteArray(), pubKey = pubKey.hexToByteArray()),
                 followingChannels = followingChannels,
@@ -343,22 +357,11 @@ object LocalPreferences {
                 proxyPort = proxyPort,
                 showSensitiveContent = showSensitiveContent,
                 warnAboutPostsWithReports = warnAboutReports,
-                filterSpamFromStrangers = filterSpam
+                filterSpamFromStrangers = filterSpam,
+                lastReadPerRoute = lastReadPerRoute
             )
 
             return a
-        }
-    }
-
-    fun saveLastRead(route: String, timestampInSecs: Long) {
-        encryptedPreferences(currentAccount()).edit().apply {
-            putLong(PrefKeys.LAST_READ(route), timestampInSecs)
-        }.apply()
-    }
-
-    fun loadLastRead(route: String): Long {
-        encryptedPreferences(currentAccount()).run {
-            return getLong(PrefKeys.LAST_READ(route), 0)
         }
     }
 

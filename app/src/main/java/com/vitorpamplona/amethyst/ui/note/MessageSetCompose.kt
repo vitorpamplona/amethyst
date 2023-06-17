@@ -27,7 +27,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.screen.MessageSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -53,9 +52,9 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, 
 
     LaunchedEffect(key1 = messageSetCard) {
         scope.launch(Dispatchers.IO) {
-            val isNew = messageSetCard.createdAt() > NotificationCache.load(routeForLastRead)
+            val isNew = messageSetCard.createdAt() > accountViewModel.account.loadLastRead(routeForLastRead)
 
-            NotificationCache.markAsRead(routeForLastRead, messageSetCard.createdAt())
+            accountViewModel.account.markAsRead(routeForLastRead, messageSetCard.createdAt())
 
             val newBackgroundColor = if (isNew) {
                 newItemColor.compositeOver(defaultBackgroundColor)

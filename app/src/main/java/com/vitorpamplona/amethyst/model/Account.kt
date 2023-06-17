@@ -70,13 +70,15 @@ class Account(
     var proxyPort: Int,
     var showSensitiveContent: Boolean? = null,
     var warnAboutPostsWithReports: Boolean = true,
-    var filterSpamFromStrangers: Boolean = true
+    var filterSpamFromStrangers: Boolean = true,
+    var lastReadPerRoute: Map<String, Long> = mapOf<String, Long>()
 ) {
     var transientHiddenUsers: Set<String> = setOf()
 
     // Observers line up here.
     val live: AccountLiveData = AccountLiveData(this)
     val liveLanguages: AccountLiveData = AccountLiveData(this)
+    val liveLastRead: AccountLiveData = AccountLiveData(this)
     val saveable: AccountLiveData = AccountLiveData(this)
 
     var userProfileCache: User? = null
@@ -1152,6 +1154,19 @@ class Account(
         showSensitiveContent = show
         saveable.invalidateData()
         live.invalidateData()
+    }
+
+    fun markAsRead(route: String, timestampInSecs: Long) {
+        val lastTime = lastReadPerRoute[route]
+        if (lastTime == null || timestampInSecs > lastTime) {
+            lastReadPerRoute = lastReadPerRoute + Pair(route, timestampInSecs)
+            saveable.invalidateData()
+            liveLastRead.invalidateData()
+        }
+    }
+
+    fun loadLastRead(route: String): Long {
+        return lastReadPerRoute[route] ?: 0
     }
 
     fun registerObservers() {

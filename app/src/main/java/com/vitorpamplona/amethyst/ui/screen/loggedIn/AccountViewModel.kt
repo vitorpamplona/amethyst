@@ -30,6 +30,7 @@ import java.util.Locale
 class AccountViewModel(val account: Account) : ViewModel() {
     val accountLiveData: LiveData<AccountState> = account.live.map { it }
     val accountLanguagesLiveData: LiveData<AccountState> = account.liveLanguages.map { it }
+    val accountLastReadLiveData: LiveData<AccountState> = account.liveLastRead.map { it }
 
     fun isWriteable(): Boolean {
         return account.isWriteable()

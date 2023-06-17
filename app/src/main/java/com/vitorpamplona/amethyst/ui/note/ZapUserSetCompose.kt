@@ -26,7 +26,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.screen.ZapUserSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -43,9 +42,9 @@ fun ZapUserSetCompose(zapSetCard: ZapUserSetCard, isInnerNote: Boolean = false, 
 
     LaunchedEffect(key1 = zapSetCard.createdAt()) {
         launch(Dispatchers.IO) {
-            val isNew = zapSetCard.createdAt > NotificationCache.load(routeForLastRead)
+            val isNew = zapSetCard.createdAt > accountViewModel.account.loadLastRead(routeForLastRead)
 
-            NotificationCache.markAsRead(routeForLastRead, zapSetCard.createdAt)
+            accountViewModel.account.markAsRead(routeForLastRead, zapSetCard.createdAt)
 
             val newBackgroundColor = if (isNew) {
                 newItemColor.compositeOver(defaultBackgroundColor)

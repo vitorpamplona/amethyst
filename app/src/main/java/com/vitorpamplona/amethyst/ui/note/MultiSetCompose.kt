@@ -43,7 +43,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -79,9 +78,9 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
 
     LaunchedEffect(key1 = multiSetCard) {
         launch(Dispatchers.IO) {
-            val isNew = multiSetCard.maxCreatedAt > NotificationCache.load(routeForLastRead)
+            val isNew = multiSetCard.maxCreatedAt > accountViewModel.account.loadLastRead(routeForLastRead)
 
-            NotificationCache.markAsRead(routeForLastRead, multiSetCard.maxCreatedAt)
+            accountViewModel.account.markAsRead(routeForLastRead, multiSetCard.maxCreatedAt)
 
             val newBackgroundColor = if (isNew) {
                 newItemColor.compositeOver(defaultBackgroundColor)

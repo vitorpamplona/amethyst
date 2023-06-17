@@ -39,7 +39,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -74,7 +73,7 @@ fun ChatroomCompose(
         BlankNote(Modifier)
     } else if (channelHex != null) {
         LoadChannel(baseChannelHex = channelHex!!) { channel ->
-            ChannelRoomCompose(note, channel, nav)
+            ChannelRoomCompose(note, channel, accountViewModel, nav)
         }
     } else {
         val userRoomHex = remember(noteState, accountViewModel) {
@@ -91,6 +90,7 @@ fun ChatroomCompose(
 private fun ChannelRoomCompose(
     note: Note,
     channel: Channel,
+    accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
     val authorState by note.author!!.live().metadata.observeAsState()
@@ -128,7 +128,7 @@ private fun ChannelRoomCompose(
 
     var hasNewMessages by remember { mutableStateOf<Boolean>(false) }
 
-    WatchNotificationChanges(note, route) { newHasNewMessages ->
+    WatchNotificationChanges(note, route, accountViewModel) { newHasNewMessages ->
         if (hasNewMessages != newHasNewMessages) {
             hasNewMessages = newHasNewMessages
         }
@@ -182,7 +182,7 @@ private fun UserRoomCompose(
         "Room/${user.pubkeyHex}"
     }
 
-    WatchNotificationChanges(note, route) { newHasNewMessages ->
+    WatchNotificationChanges(note, route, accountViewModel) { newHasNewMessages ->
         if (hasNewMessages != newHasNewMessages) {
             hasNewMessages = newHasNewMessages
         }
@@ -208,14 +208,15 @@ private fun UserRoomCompose(
 private fun WatchNotificationChanges(
     note: Note,
     route: String,
+    accountViewModel: AccountViewModel,
     onNewStatus: (Boolean) -> Unit
 ) {
-    val cacheState by NotificationCache.live.observeAsState()
+    val cacheState by accountViewModel.accountLastReadLiveData.observeAsState()
 
     LaunchedEffect(key1 = note, cacheState) {
         launch(Dispatchers.IO) {
             note.event?.createdAt()?.let {
-                val lastTime = NotificationCache.load(route)
+                val lastTime = accountViewModel.account.loadLastRead(route)
                 onNewStatus(it > lastTime)
             }
         }
