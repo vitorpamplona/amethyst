@@ -53,6 +53,7 @@ import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
+import com.google.android.exoplayer2.source.hls.HlsMediaSource
 import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
 import com.google.android.exoplayer2.ui.StyledPlayerView
 import com.vitorpamplona.amethyst.VideoCache
@@ -101,6 +102,7 @@ fun VideoView(
     onDialog: ((Boolean) -> Unit)? = null
 ) {
     var exoPlayerData by remember { mutableStateOf<VideoPlayer?>(null) }
+    val defaultToStart by remember { mutableStateOf(DefaultMutedSetting.value) }
     val context = LocalContext.current
 
     LaunchedEffect(key1 = videoUri) {
@@ -112,7 +114,7 @@ fun VideoView(
     }
 
     exoPlayerData?.let {
-        VideoView(videoUri, description, it, thumb, onDialog)
+        VideoView(videoUri, description, it, defaultToStart, thumb, onDialog)
     }
 
     DisposableEffect(Unit) {
@@ -127,6 +129,7 @@ fun VideoView(
     videoUri: String,
     description: String? = null,
     exoPlayerData: VideoPlayer,
+    defaultToStart: Boolean = false,
     thumb: VideoThumb? = null,
     onDialog: ((Boolean) -> Unit)? = null
 ) {
@@ -137,9 +140,15 @@ fun VideoView(
     exoPlayerData.exoPlayer.apply {
         repeatMode = Player.REPEAT_MODE_ALL
         videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
-        volume = if (DefaultMutedSetting.value) 0f else 1f
-        if (videoUri.startsWith("file") == true) {
+        volume = if (defaultToStart) 0f else 1f
+        if (videoUri.startsWith("file")) {
             setMediaItem(media)
+        } else if (videoUri.endsWith("m3u8")) {
+            setMediaSource(
+                HlsMediaSource.Factory(VideoCache.get()).createMediaSource(
+                    media
+                )
+            )
         } else {
             setMediaSource(
                 ProgressiveMediaSource.Factory(VideoCache.get()).createMediaSource(

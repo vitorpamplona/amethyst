@@ -195,24 +195,16 @@ object MessagesLatestItem : LatestItem() {
         account: Account,
         newNotes: Set<Note>
     ): Boolean {
-        println("AAA Hey")
-
         // Checks if the current newest item is still unread.
         // If so, there is no need to check anything else
         if (isNew(getNewestItem(account), account)) {
-            println("AAA Enter ${getNewestItem(account)?.author?.toBestDisplayName()}")
-
             return true
         }
 
         clearNewestItem(account)
 
-        println("AAA Hey 2")
-
         // gets the newest of the unread items
         val newestItem = updateNewestItem(newNotes, account, ChatroomListKnownFeedFilter(account))
-
-        println("AAA ${newestItem?.author?.toBestDisplayName()} ${isNew(newestItem, account)}")
 
         return isNew(newestItem, account)
     }
