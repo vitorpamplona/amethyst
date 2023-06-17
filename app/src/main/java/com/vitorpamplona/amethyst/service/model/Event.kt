@@ -246,6 +246,7 @@ open class Event(
             FileStorageEvent.kind -> FileStorageEvent(id, pubKey, createdAt, tags, content, sig)
             FileStorageHeaderEvent.kind -> FileStorageHeaderEvent(id, pubKey, createdAt, tags, content, sig)
             HighlightEvent.kind -> HighlightEvent(id, pubKey, createdAt, tags, content, sig)
+            LiveActivitiesEvent.kind -> LiveActivitiesEvent(id, pubKey, createdAt, tags, content, sig)
             LnZapEvent.kind -> LnZapEvent(id, pubKey, createdAt, tags, content, sig)
             LnZapPaymentRequestEvent.kind -> LnZapPaymentRequestEvent(id, pubKey, createdAt, tags, content, sig)
             LnZapPaymentResponseEvent.kind -> LnZapPaymentResponseEvent(id, pubKey, createdAt, tags, content, sig)

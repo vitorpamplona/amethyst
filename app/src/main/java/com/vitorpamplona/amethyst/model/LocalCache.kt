@@ -179,8 +179,13 @@ object LocalCache {
     }
 
     fun consume(event: PeopleListEvent) {
+        val version = getOrCreateNote(event.id)
         val note = getOrCreateAddressableNote(event.address())
         val author = getOrCreateUser(event.pubKey)
+
+        if (version.event == null) {
+            version.loadEvent(event, author, emptyList())
+        }
 
         // Already processed this event.
         if (note.event?.id() == event.id()) return
@@ -234,8 +239,13 @@ object LocalCache {
     }
 
     fun consume(event: LongTextNoteEvent, relay: Relay?) {
+        val version = getOrCreateNote(event.id)
         val note = getOrCreateAddressableNote(event.address())
         val author = getOrCreateUser(event.pubKey)
+
+        if (version.event == null) {
+            version.loadEvent(event, author, emptyList())
+        }
 
         if (relay != null) {
             author.addRelayBeingUsed(relay, event.createdAt)
@@ -299,9 +309,32 @@ object LocalCache {
         refreshObservers(note)
     }
 
-    private fun consume(event: PinListEvent) {
+    private fun consume(event: LiveActivitiesEvent, relay: Relay?) {
+        val version = getOrCreateNote(event.id)
         val note = getOrCreateAddressableNote(event.address())
         val author = getOrCreateUser(event.pubKey)
+
+        if (version.event == null) {
+            version.loadEvent(event, author, emptyList())
+        }
+
+        if (note.event?.id() == event.id()) return
+
+        if (event.createdAt > (note.createdAt() ?: 0)) {
+            note.loadEvent(event, author, emptyList())
+
+            refreshObservers(note)
+        }
+    }
+
+    private fun consume(event: PinListEvent) {
+        val version = getOrCreateNote(event.id)
+        val note = getOrCreateAddressableNote(event.address())
+        val author = getOrCreateUser(event.pubKey)
+
+        if (version.event == null) {
+            version.loadEvent(event, author, emptyList())
+        }
 
         if (note.event?.id() == event.id()) return
 
@@ -313,8 +346,13 @@ object LocalCache {
     }
 
     private fun consume(event: RelaySetEvent) {
+        val version = getOrCreateNote(event.id)
         val note = getOrCreateAddressableNote(event.address())
         val author = getOrCreateUser(event.pubKey)
+
+        if (version.event == null) {
+            version.loadEvent(event, author, emptyList())
+        }
 
         if (note.event?.id() == event.id()) return
 
@@ -326,8 +364,13 @@ object LocalCache {
     }
 
     private fun consume(event: AudioTrackEvent) {
+        val version = getOrCreateNote(event.id)
         val note = getOrCreateAddressableNote(event.address())
         val author = getOrCreateUser(event.pubKey)
+
+        if (version.event == null) {
+            version.loadEvent(event, author, emptyList())
+        }
 
         // Already processed this event.
         if (note.event?.id() == event.id()) return
@@ -340,8 +383,13 @@ object LocalCache {
     }
 
     fun consume(event: BadgeDefinitionEvent) {
+        val version = getOrCreateNote(event.id)
         val note = getOrCreateAddressableNote(event.address())
         val author = getOrCreateUser(event.pubKey)
+
+        if (version.event == null) {
+            version.loadEvent(event, author, emptyList())
+        }
 
         // Already processed this event.
         if (note.event?.id() == event.id()) return
@@ -354,8 +402,13 @@ object LocalCache {
     }
 
     fun consume(event: BadgeProfilesEvent) {
+        val version = getOrCreateNote(event.id)
         val note = getOrCreateAddressableNote(event.address())
         val author = getOrCreateUser(event.pubKey)
+
+        if (version.event == null) {
+            version.loadEvent(event, author, emptyList())
+        }
 
         // Already processed this event.
         if (note.event?.id() == event.id()) return
@@ -392,20 +445,32 @@ object LocalCache {
     }
 
     fun consume(event: AppDefinitionEvent) {
+        val version = getOrCreateNote(event.id)
         val note = getOrCreateAddressableNote(event.address())
         val author = getOrCreateUser(event.pubKey)
+
+        if (version.event == null) {
+            version.loadEvent(event, author, emptyList())
+        }
 
         // Already processed this event.
         if (note.event != null) return
 
-        note.loadEvent(event, author, emptyList())
+        if (event.createdAt > (note.createdAt() ?: 0)) {
+            note.loadEvent(event, author, emptyList())
 
-        refreshObservers(note)
+            refreshObservers(note)
+        }
     }
 
     fun consume(event: AppRecommendationEvent) {
+        val version = getOrCreateNote(event.id)
         val note = getOrCreateAddressableNote(event.address())
         val author = getOrCreateUser(event.pubKey)
+
+        if (version.event == null) {
+            version.loadEvent(event, author, emptyList())
+        }
 
         // Already processed this event.
         if (note.event?.id() == event.id()) return
@@ -1064,6 +1129,7 @@ object LocalCache {
                 is FileStorageEvent -> consume(event, relay)
                 is FileStorageHeaderEvent -> consume(event, relay)
                 is HighlightEvent -> consume(event, relay)
+                is LiveActivitiesEvent -> consume(event, relay)
                 is LnZapEvent -> {
                     event.zapRequest?.let {
                         verifyAndConsume(it, relay)

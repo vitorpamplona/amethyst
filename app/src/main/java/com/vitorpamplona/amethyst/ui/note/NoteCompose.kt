@@ -99,6 +99,7 @@ import com.vitorpamplona.amethyst.service.model.EventInterface
 import com.vitorpamplona.amethyst.service.model.FileHeaderEvent
 import com.vitorpamplona.amethyst.service.model.FileStorageHeaderEvent
 import com.vitorpamplona.amethyst.service.model.HighlightEvent
+import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.Participant
 import com.vitorpamplona.amethyst.service.model.PeopleListEvent
@@ -673,6 +674,10 @@ private fun RenderNoteRow(
 
         is PinListEvent -> {
             RenderPinListEvent(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
+        is LiveActivitiesEvent -> {
+            RenderLiveActivityEvent(baseNote, accountViewModel, nav)
         }
 
         is PrivateDmEvent -> {
@@ -2456,6 +2461,80 @@ fun AudioTrackHeader(noteEvent: AudioTrackEvent, accountViewModel: AccountViewMo
                             videoUri = media,
                             noteEvent.subject()
                         )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun RenderLiveActivityEvent(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    val noteEvent = baseNote.event as? LiveActivitiesEvent ?: return
+
+    val media = remember { noteEvent.streaming() }
+    val cover = remember { noteEvent.image() }
+    val subject = remember { noteEvent.title() }
+    val content = remember { noteEvent.summary() }
+    val participants = remember { noteEvent.participants() }
+
+    var participantUsers by remember { mutableStateOf<List<Pair<Participant, User>>>(emptyList()) }
+
+    LaunchedEffect(key1 = participants) {
+        launch(Dispatchers.IO) {
+            participantUsers = participants.mapNotNull { part ->
+                LocalCache.checkGetOrCreateUser(part.key)?.let { Pair(part, it) }
+            }
+        }
+    }
+
+    Row(modifier = Modifier.padding(top = 5.dp)) {
+        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Row() {
+                subject?.let {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)) {
+                        Text(
+                            text = it,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 3,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
+
+            participantUsers.forEach {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .padding(top = 5.dp, start = 10.dp, end = 10.dp)
+                        .clickable {
+                            nav("User/${it.second.pubkeyHex}")
+                        }
+                ) {
+                    UserPicture(it.second, 25.dp, accountViewModel)
+                    Spacer(Modifier.width(5.dp))
+                    UsernameDisplay(it.second, Modifier.weight(1f))
+                    Spacer(Modifier.width(5.dp))
+                    it.first.role?.let {
+                        Text(
+                            text = it.capitalize(Locale.ROOT),
+                            color = MaterialTheme.colors.placeholderText,
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
+
+            media?.let { media ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(10.dp)
+                ) {
+                    VideoView(
+                        videoUri = media,
+                        description = subject
+                    )
                 }
             }
         }
