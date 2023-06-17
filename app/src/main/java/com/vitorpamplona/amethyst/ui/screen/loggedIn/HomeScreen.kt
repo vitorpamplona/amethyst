@@ -140,11 +140,19 @@ fun WatchAccountForHomeScreen(
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val followState by accountViewModel.account.userProfile().live().follows.observeAsState()
 
-    LaunchedEffect(accountViewModel, accountState?.account?.defaultHomeFollowList, followState) {
+    LaunchedEffect(accountViewModel, accountState?.account?.defaultHomeFollowList) {
         launch(Dispatchers.IO) {
             NostrHomeDataSource.invalidateFilters()
             homeFeedViewModel.invalidateDataAndSendToTop(true)
             repliesFeedViewModel.invalidateDataAndSendToTop(true)
+        }
+    }
+
+    LaunchedEffect(followState) {
+        launch(Dispatchers.IO) {
+            NostrHomeDataSource.invalidateFilters()
+            homeFeedViewModel.invalidateData(true)
+            repliesFeedViewModel.invalidateData(true)
         }
     }
 }
