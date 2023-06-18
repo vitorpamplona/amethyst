@@ -54,6 +54,10 @@ open class Event(
             (it.size > 1 && it[0] == "t" && it[1].equals("nude", true))
     }
 
+    override fun zapraiserAmount() = tags.firstOrNull() {
+        (it.size > 1 && it[0].equals("zapraiser", true))
+    }?.get(1)?.toLongOrNull()
+
     override fun zapAddress() = tags.firstOrNull { it.size > 1 && it[0] == "zap" }?.get(1)
 
     fun taggedAddresses() = tags.filter { it.size > 1 && it[0] == "a" }.mapNotNull {

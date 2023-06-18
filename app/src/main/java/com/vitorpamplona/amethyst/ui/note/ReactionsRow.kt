@@ -7,11 +7,13 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -21,6 +23,7 @@ import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
+import androidx.compose.material.LinearProgressIndicator
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.ProgressIndicatorDefaults
 import androidx.compose.material.Text
@@ -69,6 +72,7 @@ import com.vitorpamplona.amethyst.ui.screen.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
@@ -85,6 +89,10 @@ fun ReactionsRow(baseNote: Note, showReactionDetail: Boolean, accountViewModel: 
 
     val wantsToSeeReactions = remember {
         mutableStateOf<Boolean>(false)
+    }
+
+    val zapraiserAmount = remember {
+        baseNote.event?.zapraiserAmount()
     }
 
     Spacer(modifier = Modifier.height(7.dp))
@@ -119,11 +127,88 @@ fun ReactionsRow(baseNote: Note, showReactionDetail: Boolean, accountViewModel: 
         }
     }
 
+    if (zapraiserAmount != null) {
+        Spacer(modifier = Modifier.height(4.dp))
+        Row(
+            verticalAlignment = CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = if (showReactionDetail) 75.dp else 0.dp),
+            horizontalArrangement = Arrangement.Start
+        ) {
+            RenderZapRaiser(baseNote, zapraiserAmount, wantsToSeeReactions.value, accountViewModel)
+        }
+    }
+
     if (showReactionDetail && wantsToSeeReactions.value) {
         ReactionDetailGallery(baseNote, nav, accountViewModel)
     }
 
     Spacer(modifier = Modifier.height(7.dp))
+}
+
+@Composable
+fun RenderZapRaiser(baseNote: Note, zapraiserAmount: Long, details: Boolean, accountViewModel: AccountViewModel) {
+    val zapsState by baseNote.live().zaps.observeAsState()
+
+    var zapraiserProgress by remember { mutableStateOf(0F) }
+    var zapraiserLeft by remember { mutableStateOf("$zapraiserAmount") }
+
+    LaunchedEffect(key1 = zapsState) {
+        launch(Dispatchers.Default) {
+            zapsState?.note?.let {
+                val newZapAmount = accountViewModel.calculateZapAmount(it)
+                var percentage = newZapAmount.div(zapraiserAmount.toBigDecimal()).toFloat()
+
+                if (percentage > 1) {
+                    percentage = 1f
+                }
+
+                if (Math.abs(zapraiserProgress - percentage) > 0.001) {
+                    zapraiserProgress = percentage
+                    if (percentage > 0.99) {
+                        zapraiserLeft = "0"
+                    } else {
+                        zapraiserLeft = showAmount((zapraiserAmount * (1 - percentage)).toBigDecimal())
+                    }
+                }
+            }
+        }
+    }
+
+    val color = if (zapraiserProgress > 0.99) {
+        Color.Green.copy(alpha = 0.32f)
+    } else {
+        MaterialTheme.colors.mediumImportanceLink
+    }
+
+    Box(
+        Modifier.padding(end = 10.dp).fillMaxWidth()
+    ) {
+        LinearProgressIndicator(
+            modifier = Modifier.matchParentSize(),
+            color = color,
+            progress = zapraiserProgress
+        )
+
+        Row(
+            verticalAlignment = CenterVertically,
+            modifier = Modifier.padding(2.dp)
+        ) {
+            if (details) {
+                val totalPercentage = remember(zapraiserProgress) {
+                    "${(zapraiserProgress * 100).roundToInt()}%"
+                }
+
+                Text(
+                    text = stringResource(id = R.string.sats_to_complete, totalPercentage, zapraiserLeft),
+                    modifier = Modifier.padding(start = 5.dp, end = 5.dp, top = 2.dp, bottom = 2.dp),
+                    color = MaterialTheme.colors.placeholderText,
+                    fontSize = 14.sp
+                )
+            }
+        }
+    }
 }
 
 @Composable

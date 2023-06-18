@@ -54,6 +54,9 @@ private val LightPlaceholderText = LightColorPalette.onSurface.copy(alpha = 0.32
 private val DarkSubtleBorder = DarkColorPalette.onSurface.copy(alpha = 0.12f)
 private val LightSubtleBorder = LightColorPalette.onSurface.copy(alpha = 0.12f)
 
+private val DarkZapraiserBackground = BitcoinOrange.copy(0.52f).compositeOver(DarkColorPalette.background)
+private val LightZapraiserBackground = BitcoinOrange.copy(0.52f).compositeOver(LightColorPalette.background)
+
 private val DarkImageVerifier = Nip05.copy(0.52f).compositeOver(DarkColorPalette.background)
 private val LightImageVerifier = Nip05.copy(0.52f).compositeOver(LightColorPalette.background)
 
@@ -74,6 +77,9 @@ val Colors.secondaryButtonBackground: Color
 
 val Colors.lessImportantLink: Color
     get() = if (isLight) LightLessImportantLink else DarkLessImportantLink
+
+val Colors.zapraiserBackground: Color
+    get() = if (isLight) LightZapraiserBackground else DarkZapraiserBackground
 
 val Colors.mediumImportanceLink: Color
     get() = if (isLight) LightMediumImportantLink else DarkMediumImportantLink

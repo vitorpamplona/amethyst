@@ -13,6 +13,7 @@ val Shapes = Shapes(
     large = RoundedCornerShape(0.dp)
 )
 
+val SmallBorder = RoundedCornerShape(7.dp)
 val QuoteBorder = RoundedCornerShape(15.dp)
 val ButtonBorder = RoundedCornerShape(20.dp)
 

@@ -34,6 +34,7 @@ class TextNoteEvent(
             extraTags: List<String>?,
             zapReceiver: String?,
             markAsSensitive: Boolean,
+            zapRaiserAmount: Long?,
             replyingTo: String?,
             root: String?,
             directMentions: Set<HexKey>,
@@ -88,6 +89,9 @@ class TextNoteEvent(
             }
             if (markAsSensitive) {
                 tags.add(listOf("content-warning", ""))
+            }
+            zapRaiserAmount?.let {
+                tags.add(listOf("zapraiser", "$it"))
             }
 
             val id = generateId(pubKey, createdAt, kind, tags, msg)

@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CurrencyBitcoin
+import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.outlined.ArrowForwardIos
@@ -279,6 +280,17 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                 }
                             }
 
+                            if (lud16 != null && postViewModel.wantsZapraiser) {
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 5.dp)) {
+                                    ZapRaiserRequest(
+                                        stringResource(id = R.string.zapraiser),
+                                        onSuccess = {
+                                            postViewModel.zapRaiserAmount = it
+                                        }
+                                    )
+                                }
+                            }
+
                             val myUrlPreview = postViewModel.urlPreview
                             if (myUrlPreview != null) {
                                 Row(modifier = Modifier.padding(top = 5.dp)) {
@@ -374,6 +386,12 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                             }
                         }
 
+                        if (postViewModel.canAddZapRaiser) {
+                            AddZapraiserButton(postViewModel.wantsZapraiser) {
+                                postViewModel.wantsZapraiser = !postViewModel.wantsZapraiser
+                            }
+                        }
+
                         MarkAsSensitive(postViewModel) {
                             postViewModel.wantsToMarkAsSensitive = !postViewModel.wantsToMarkAsSensitive
                         }
@@ -456,6 +474,56 @@ private fun AddPollButton(
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colors.onBackground
             )
+        }
+    }
+}
+
+@Composable
+private fun AddZapraiserButton(
+    isLnInvoiceActive: Boolean,
+    onClick: () -> Unit
+) {
+    IconButton(
+        onClick = {
+            onClick()
+        }
+    ) {
+        Box(
+            Modifier
+                .height(20.dp)
+                .width(25.dp)
+        ) {
+            if (!isLnInvoiceActive) {
+                Icon(
+                    imageVector = Icons.Default.ShowChart,
+                    null,
+                    modifier = Modifier.size(20.dp).align(Alignment.TopStart),
+                    tint = MaterialTheme.colors.onBackground
+                )
+                Icon(
+                    imageVector = Icons.Default.Bolt,
+                    contentDescription = stringResource(R.string.zaps),
+                    modifier = Modifier
+                        .size(13.dp)
+                        .align(Alignment.BottomEnd),
+                    tint = MaterialTheme.colors.onBackground
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.ShowChart,
+                    null,
+                    modifier = Modifier.size(20.dp).align(Alignment.TopStart),
+                    tint = BitcoinOrange
+                )
+                Icon(
+                    imageVector = Icons.Default.Bolt,
+                    contentDescription = stringResource(R.string.zaps),
+                    modifier = Modifier
+                        .size(13.dp)
+                        .align(Alignment.BottomEnd),
+                    tint = BitcoinOrange
+                )
+            }
         }
     }
 }

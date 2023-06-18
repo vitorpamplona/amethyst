@@ -2706,7 +2706,9 @@ private fun VerticalRelayPanelWithFlow(
 
 val showMoreRelaysButtonIconButtonModifier = Modifier.size(24.dp)
 val showMoreRelaysButtonIconModifier = Modifier.size(15.dp)
-val showMoreRelaysButtonBoxModifer = Modifier.fillMaxWidth().height(25.dp)
+val showMoreRelaysButtonBoxModifer = Modifier
+    .fillMaxWidth()
+    .height(25.dp)
 
 @Composable
 private fun ShowMoreRelaysButton(onClick: () -> Unit) {
