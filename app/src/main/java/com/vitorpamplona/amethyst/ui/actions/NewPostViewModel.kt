@@ -77,7 +77,7 @@ open class NewPostViewModel() : ViewModel() {
     // ZapRaiser
     var canAddZapRaiser by mutableStateOf(false)
     var wantsZapraiser by mutableStateOf(false)
-    var zapRaiserAmount by mutableStateOf(0L)
+    var zapRaiserAmount by mutableStateOf<Long?>(null)
 
     open fun load(account: Account, replyingTo: Note?, quote: Note?) {
         originalNote = replyingTo
@@ -117,6 +117,7 @@ open class NewPostViewModel() : ViewModel() {
         wantsForwardZapTo = false
         wantsToMarkAsSensitive = false
         wantsZapraiser = false
+        zapRaiserAmount = null
         forwardZapTo = null
         forwardZapToEditting = TextFieldValue("")
 
@@ -137,12 +138,14 @@ open class NewPostViewModel() : ViewModel() {
             null
         }
 
+        val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount else null
+
         if (wantsPoll) {
-            account?.sendPoll(tagger.message, tagger.replyTos, tagger.mentions, pollOptions, valueMaximum, valueMinimum, consensusThreshold, closedAt, zapReceiver, wantsToMarkAsSensitive, zapRaiserAmount)
+            account?.sendPoll(tagger.message, tagger.replyTos, tagger.mentions, pollOptions, valueMaximum, valueMinimum, consensusThreshold, closedAt, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount)
         } else if (originalNote?.channelHex() != null) {
-            account?.sendChannelMessage(tagger.message, tagger.channelHex!!, tagger.replyTos, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, zapRaiserAmount)
+            account?.sendChannelMessage(tagger.message, tagger.channelHex!!, tagger.replyTos, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount)
         } else if (originalNote?.event is PrivateDmEvent) {
-            account?.sendPrivateMessage(tagger.message, originalNote!!.author!!, originalNote!!, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, zapRaiserAmount)
+            account?.sendPrivateMessage(tagger.message, originalNote!!.author!!, originalNote!!, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount)
         } else {
             // adds markers
             val rootId =
@@ -158,7 +161,7 @@ open class NewPostViewModel() : ViewModel() {
                 tags = null,
                 zapReceiver = zapReceiver,
                 wantsToMarkAsSensitive = wantsToMarkAsSensitive,
-                zapRaiserAmount = zapRaiserAmount,
+                zapRaiserAmount = localZapRaiserAmount,
                 replyingTo = replyId,
                 root = rootId,
                 directMentions = tagger.directMentions
@@ -237,6 +240,7 @@ open class NewPostViewModel() : ViewModel() {
 
         wantsInvoice = false
         wantsZapraiser = false
+        zapRaiserAmount = null
 
         wantsForwardZapTo = false
         wantsToMarkAsSensitive = false
@@ -342,8 +346,7 @@ open class NewPostViewModel() : ViewModel() {
     }
 
     fun canPost(): Boolean {
-        return message.text.isNotBlank() && !isUploadingImage && !wantsInvoice
-        (!wantsPoll || pollOptions.values.all { it.isNotEmpty() }) && contentToAddUrl == null
+        return message.text.isNotBlank() && !isUploadingImage && !wantsInvoice && (!wantsZapraiser || zapRaiserAmount != null) && (!wantsPoll || pollOptions.values.all { it.isNotEmpty() }) && contentToAddUrl == null
     }
 
     fun includePollHashtagInMessage(include: Boolean, hashtag: String) {

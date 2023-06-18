@@ -127,7 +127,7 @@ fun ReactionsRow(baseNote: Note, showReactionDetail: Boolean, accountViewModel: 
         }
     }
 
-    if (zapraiserAmount != null) {
+    if (zapraiserAmount != null && zapraiserAmount > 0) {
         Spacer(modifier = Modifier.height(4.dp))
         Row(
             verticalAlignment = CenterVertically,

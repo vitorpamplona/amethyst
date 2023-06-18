@@ -284,9 +284,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 5.dp)) {
                                     ZapRaiserRequest(
                                         stringResource(id = R.string.zapraiser),
-                                        onSuccess = {
-                                            postViewModel.zapRaiserAmount = it
-                                        }
+                                        postViewModel
                                     )
                                 }
                             }

@@ -26,12 +26,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
 fun ZapRaiserRequest(
     titleText: String? = null,
-    onSuccess: (Long) -> Unit
+    newPostViewModel: NewPostViewModel
 ) {
     Column(
         modifier = Modifier
@@ -70,20 +71,21 @@ fun ZapRaiserRequest(
                 modifier = Modifier.padding(vertical = 10.dp)
             )
 
-            var amount by remember { mutableStateOf(10000L) }
-
             OutlinedTextField(
                 label = { Text(text = stringResource(R.string.zapraiser_target_amount_in_sats)) },
                 modifier = Modifier.fillMaxWidth(),
-                value = amount.toString(),
+                value = if (newPostViewModel.zapRaiserAmount != null) {
+                    newPostViewModel.zapRaiserAmount.toString()
+                } else {
+                    ""
+                },
                 onValueChange = {
                     runCatching {
                         if (it.isEmpty()) {
-                            amount = 0
+                            newPostViewModel.zapRaiserAmount = null
                         } else {
-                            amount = it.toLong()
+                            newPostViewModel.zapRaiserAmount = it.toLongOrNull()
                         }
-                        onSuccess(amount)
                     }
                 },
                 placeholder = {
