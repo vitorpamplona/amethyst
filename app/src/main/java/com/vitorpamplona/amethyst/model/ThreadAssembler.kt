@@ -2,6 +2,8 @@ package com.vitorpamplona.amethyst.model
 
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.ATag
+import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
+import com.vitorpamplona.amethyst.service.model.RepostEvent
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTimedValue
 
@@ -9,6 +11,8 @@ class ThreadAssembler {
 
     private fun searchRoot(note: Note, testedNotes: MutableSet<Note> = mutableSetOf()): Note? {
         if (note.replyTo == null || note.replyTo?.isEmpty() == true) return note
+
+        if (note.event is RepostEvent || note.event is GenericRepostEvent) return note
 
         testedNotes.add(note)
 

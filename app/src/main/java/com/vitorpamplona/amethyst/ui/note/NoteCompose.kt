@@ -98,6 +98,7 @@ import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.EventInterface
 import com.vitorpamplona.amethyst.service.model.FileHeaderEvent
 import com.vitorpamplona.amethyst.service.model.FileStorageHeaderEvent
+import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
 import com.vitorpamplona.amethyst.service.model.HighlightEvent
 import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
@@ -520,7 +521,7 @@ private fun RenderNoteWithReactions(
 
     val showSecondRow by remember {
         derivedStateOf {
-            baseNote.event !is RepostEvent && !isBoostedNote && !isQuotedNote
+            baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent && !isBoostedNote && !isQuotedNote
         }
     }
 
@@ -554,7 +555,7 @@ private fun RenderNoteWithReactions(
             )
         }
 
-        if (!makeItShort && baseNote.event !is RepostEvent) {
+        if (!makeItShort && baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent) {
             ReactionsRow(
                 baseNote = baseNote,
                 showReactionDetail = notBoostedNorQuote,
@@ -562,7 +563,7 @@ private fun RenderNoteWithReactions(
                 nav = nav
             )
         } else {
-            if (!isBoostedNote && baseNote.event !is RepostEvent) {
+            if (!isBoostedNote && baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent) {
                 Spacer(modifier = Modifier.height(10.dp))
             }
         }
@@ -645,6 +646,10 @@ private fun RenderNoteRow(
         }
 
         is RepostEvent -> {
+            RenderRepost(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
+        is GenericRepostEvent -> {
             RenderRepost(baseNote, backgroundColor, accountViewModel, nav)
         }
 
@@ -1421,7 +1426,7 @@ private fun RenderReaction(
 }
 
 @Composable
-private fun RenderRepost(
+fun RenderRepost(
     note: Note,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
@@ -1754,7 +1759,7 @@ private fun FirstUserInfoRow(
             NoteUsernameDisplay(baseNote, remember { Modifier.weight(1f) })
         }
 
-        if (eventNote is RepostEvent) {
+        if (eventNote is RepostEvent || eventNote is GenericRepostEvent) {
             Text(
                 "  ${stringResource(id = R.string.boosted)}",
                 fontWeight = FontWeight.Bold,
@@ -1828,7 +1833,7 @@ private fun DrawAuthorImages(baseNote: Note, accountViewModel: AccountViewModel,
         Box(modifier = modifier, contentAlignment = Alignment.BottomEnd) {
             NoteAuthorPicture(baseNote, nav, accountViewModel, 55.dp)
 
-            if (baseNote.event is RepostEvent) {
+            if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
                 RepostNoteAuthorPicture(baseNote, accountViewModel, nav)
             }
 
@@ -1839,7 +1844,7 @@ private fun DrawAuthorImages(baseNote: Note, accountViewModel: AccountViewModel,
             }
         }
 
-        if (baseNote.event is RepostEvent) {
+        if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
             val baseReply = remember {
                 baseNote.replyTo?.lastOrNull()
             }

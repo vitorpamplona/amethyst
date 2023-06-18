@@ -8,7 +8,7 @@ import nostr.postr.Utils
 import java.util.Date
 
 @Immutable
-class RepostEvent(
+class GenericRepostEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
@@ -27,9 +27,9 @@ class RepostEvent(
     }
 
     companion object {
-        const val kind = 6
+        const val kind = 16
 
-        fun create(boostedPost: EventInterface, privateKey: ByteArray, createdAt: Long = Date().time / 1000): RepostEvent {
+        fun create(boostedPost: EventInterface, privateKey: ByteArray, createdAt: Long = Date().time / 1000): GenericRepostEvent {
             val content = boostedPost.toJson()
 
             val replyToPost = listOf("e", boostedPost.id())
@@ -42,9 +42,11 @@ class RepostEvent(
                 tags = tags + listOf(listOf("a", boostedPost.address().toTag()))
             }
 
+            tags = tags + listOf(listOf("k", "${boostedPost.kind()}"))
+
             val id = generateId(pubKey, createdAt, kind, tags, content)
             val sig = Utils.sign(id, privateKey)
-            return RepostEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
+            return GenericRepostEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
         }
     }
 }

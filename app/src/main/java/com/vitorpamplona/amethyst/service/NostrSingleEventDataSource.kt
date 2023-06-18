@@ -26,7 +26,7 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
                     filter = JsonFilter(
                         kinds = listOf(
                             TextNoteEvent.kind, LongTextNoteEvent.kind,
-                            ReactionEvent.kind, RepostEvent.kind, ReportEvent.kind,
+                            ReactionEvent.kind, RepostEvent.kind, GenericRepostEvent.kind, ReportEvent.kind,
                             LnZapEvent.kind, LnZapRequestEvent.kind,
                             BadgeAwardEvent.kind, BadgeDefinitionEvent.kind, BadgeProfilesEvent.kind,
                             PollNoteEvent.kind, AudioTrackEvent.kind, PinListEvent.kind,
@@ -77,6 +77,7 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
                         LongTextNoteEvent.kind,
                         ReactionEvent.kind,
                         RepostEvent.kind,
+                        GenericRepostEvent.kind,
                         ReportEvent.kind,
                         LnZapEvent.kind,
                         LnZapRequestEvent.kind,

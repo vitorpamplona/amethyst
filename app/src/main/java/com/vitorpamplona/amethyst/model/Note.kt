@@ -10,6 +10,7 @@ import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.service.relays.EOSETime
 import com.vitorpamplona.amethyst.service.relays.Relay
+import com.vitorpamplona.amethyst.ui.actions.updated
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import fr.acinq.secp256k1.Hex
@@ -96,7 +97,7 @@ open class Note(val idHex: String) {
      */
     fun replyLevelSignature(cachedSignatures: MutableMap<Note, String> = mutableMapOf()): String {
         val replyTo = replyTo
-        if (replyTo == null || replyTo.isEmpty()) {
+        if (event is RepostEvent || event is GenericRepostEvent || replyTo == null || replyTo.isEmpty()) {
             return "/" + formattedDateTime(createdAt() ?: 0) + ";"
         }
 
@@ -109,7 +110,7 @@ open class Note(val idHex: String) {
 
     fun replyLevel(cachedLevels: MutableMap<Note, Int> = mutableMapOf()): Int {
         val replyTo = replyTo
-        if (replyTo == null || replyTo.isEmpty()) {
+        if (event is RepostEvent || event is GenericRepostEvent || replyTo == null || replyTo.isEmpty()) {
             return 0
         }
 
@@ -372,7 +373,7 @@ open class Note(val idHex: String) {
     }
 
     fun isNewThread(): Boolean {
-        return event is RepostEvent || replyTo == null || replyTo?.size == 0
+        return event is RepostEvent || event is GenericRepostEvent || replyTo == null || replyTo?.size == 0
     }
 
     fun hasZapped(loggedIn: User): Boolean {
@@ -398,6 +399,42 @@ open class Note(val idHex: String) {
 
     fun boostedBy(loggedIn: User): List<Note> {
         return boosts.filter { it.author == loggedIn }
+    }
+
+    fun moveAllReferencesTo(note: AddressableNote) {
+        // migrates these comments to a new version
+        replies.forEach {
+            note.addReply(it)
+            it.replyTo = it.replyTo?.updated(this, note)
+        }
+        reactions.forEach {
+            it.value.forEach {
+                note.addReaction(it)
+                it.replyTo = it.replyTo?.updated(this, note)
+            }
+        }
+        boosts.forEach {
+            note.addBoost(it)
+            it.replyTo = it.replyTo?.updated(this, note)
+        }
+        reports.forEach {
+            it.value.forEach {
+                note.addReport(it)
+                it.replyTo = it.replyTo?.updated(this, note)
+            }
+        }
+        zaps.forEach {
+            note.addZap(it.key, it.value)
+            it.key.replyTo = it.key.replyTo?.updated(this, note)
+            it.value?.replyTo = it.value?.replyTo?.updated(this, note)
+        }
+
+        replyTo = null
+        replies = emptySet()
+        reactions = emptyMap()
+        boosts = emptySet()
+        reports = emptyMap()
+        zaps = emptyMap()
     }
 
     var liveSet: NoteLiveSet? = null

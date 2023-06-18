@@ -88,6 +88,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                 PollNoteEvent.kind,
                 ReactionEvent.kind,
                 RepostEvent.kind,
+                GenericRepostEvent.kind,
                 ReportEvent.kind,
                 LnZapEvent.kind,
                 LnZapPaymentResponseEvent.kind,

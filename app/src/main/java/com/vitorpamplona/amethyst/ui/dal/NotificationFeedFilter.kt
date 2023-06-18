@@ -61,7 +61,7 @@ class NotificationFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() 
             return note.replyTo?.lastOrNull()?.author?.pubkeyHex == authorHex
         }
 
-        if (event is RepostEvent) {
+        if (event is RepostEvent || event is GenericRepostEvent) {
             return note.replyTo?.lastOrNull()?.author?.pubkeyHex == authorHex
         }
 

@@ -15,6 +15,7 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
+import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
@@ -162,7 +163,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
 
         val boostsPerEvent = mutableMapOf<Note, MutableList<Note>>()
         notes
-            .filter { it.event is RepostEvent }
+            .filter { it.event is RepostEvent || it.event is GenericRepostEvent }
             .forEach {
                 val boostedPost = it.replyTo?.lastOrNull() { it.event !is ChannelMetadataEvent && it.event !is ChannelCreateEvent }
                 if (boostedPost != null) {
@@ -197,7 +198,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
             )
         }
 
-        val textNoteCards = notes.filter { it.event !is ReactionEvent && it.event !is RepostEvent && it.event !is LnZapEvent }.map {
+        val textNoteCards = notes.filter { it.event !is ReactionEvent && it.event !is RepostEvent && it.event !is GenericRepostEvent && it.event !is LnZapEvent }.map {
             if (it.event is PrivateDmEvent) {
                 MessageSetCard(it)
             } else if (it.event is BadgeAwardEvent) {

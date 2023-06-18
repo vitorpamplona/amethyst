@@ -331,9 +331,15 @@ class Account(
         }
 
         note.event?.let {
-            val event = RepostEvent.create(it, loggedIn.privKey!!)
-            Client.send(event)
-            LocalCache.consume(event)
+            if (it.kind() == 1) {
+                val event = RepostEvent.create(it, loggedIn.privKey!!)
+                Client.send(event)
+                LocalCache.consume(event)
+            } else {
+                val event = GenericRepostEvent.create(it, loggedIn.privKey!!)
+                Client.send(event)
+                LocalCache.consume(event)
+            }
         }
     }
 
@@ -1111,7 +1117,7 @@ class Account(
         return note.author?.let { isAcceptable(it) } ?: true && // if user hasn't hided this author
             isAcceptableDirect(note) &&
             (
-                note.event !is RepostEvent ||
+                (note.event !is RepostEvent && note.event !is GenericRepostEvent) ||
                     (note.replyTo?.firstOrNull { isAcceptableDirect(it) } != null)
                 ) // is not a reaction about a blocked post
     }
@@ -1119,7 +1125,7 @@ class Account(
     fun getRelevantReports(note: Note): Set<Note> {
         val followsPlusMe = userProfile().latestContactList?.verifiedFollowKeySetAndMe ?: emptySet()
 
-        val innerReports = if (note.event is RepostEvent) {
+        val innerReports = if (note.event is RepostEvent || note.event is GenericRepostEvent) {
             note.replyTo?.map { getRelevantReports(it) }?.flatten() ?: emptyList()
         } else {
             emptyList()

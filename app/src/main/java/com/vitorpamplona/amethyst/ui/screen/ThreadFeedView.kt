@@ -57,12 +57,14 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.AppDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
 import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
+import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
 import com.vitorpamplona.amethyst.service.model.HighlightEvent
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.PeopleListEvent
 import com.vitorpamplona.amethyst.service.model.PinListEvent
 import com.vitorpamplona.amethyst.service.model.PollNoteEvent
 import com.vitorpamplona.amethyst.service.model.RelaySetEvent
+import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.note.*
 import com.vitorpamplona.amethyst.ui.note.BadgeDisplay
@@ -401,6 +403,8 @@ fun NoteMaster(
                             accountViewModel,
                             nav
                         )
+                    } else if (noteEvent is RepostEvent || noteEvent is GenericRepostEvent) {
+                        RenderRepost(baseNote, backgroundColor, accountViewModel, nav)
                     } else if (noteEvent is PollNoteEvent) {
                         val canPreview = note.author == account.userProfile() ||
                             (note.author?.let { account.userProfile().isFollowingCached(it) } ?: true) ||

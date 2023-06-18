@@ -70,7 +70,14 @@ object LocalCache {
             return checkGetOrCreateAddressableNote(key)
         }
         if (isValidHexNpub(key)) {
-            return getOrCreateNote(key)
+            val note = getOrCreateNote(key)
+            val noteEvent = note.event
+            if (noteEvent is AddressableEvent) {
+                // upgrade to the latest
+                return checkGetOrCreateAddressableNote(noteEvent.address().toTag())
+            } else {
+                return note
+            }
         }
         return null
     }
@@ -185,6 +192,7 @@ object LocalCache {
 
         if (version.event == null) {
             version.loadEvent(event, author, emptyList())
+            version.moveAllReferencesTo(note)
         }
 
         // Already processed this event.
@@ -245,6 +253,7 @@ object LocalCache {
 
         if (version.event == null) {
             version.loadEvent(event, author, emptyList())
+            version.moveAllReferencesTo(note)
         }
 
         if (relay != null) {
@@ -316,6 +325,7 @@ object LocalCache {
 
         if (version.event == null) {
             version.loadEvent(event, author, emptyList())
+            version.moveAllReferencesTo(note)
         }
 
         if (note.event?.id() == event.id()) return
@@ -334,6 +344,7 @@ object LocalCache {
 
         if (version.event == null) {
             version.loadEvent(event, author, emptyList())
+            version.moveAllReferencesTo(note)
         }
 
         if (note.event?.id() == event.id()) return
@@ -352,6 +363,7 @@ object LocalCache {
 
         if (version.event == null) {
             version.loadEvent(event, author, emptyList())
+            version.moveAllReferencesTo(note)
         }
 
         if (note.event?.id() == event.id()) return
@@ -370,6 +382,7 @@ object LocalCache {
 
         if (version.event == null) {
             version.loadEvent(event, author, emptyList())
+            version.moveAllReferencesTo(note)
         }
 
         // Already processed this event.
@@ -389,6 +402,7 @@ object LocalCache {
 
         if (version.event == null) {
             version.loadEvent(event, author, emptyList())
+            version.moveAllReferencesTo(note)
         }
 
         // Already processed this event.
@@ -408,6 +422,7 @@ object LocalCache {
 
         if (version.event == null) {
             version.loadEvent(event, author, emptyList())
+            version.moveAllReferencesTo(note)
         }
 
         // Already processed this event.
@@ -451,6 +466,7 @@ object LocalCache {
 
         if (version.event == null) {
             version.loadEvent(event, author, emptyList())
+            version.moveAllReferencesTo(note)
         }
 
         // Already processed this event.
@@ -470,6 +486,7 @@ object LocalCache {
 
         if (version.event == null) {
             version.loadEvent(event, author, emptyList())
+            version.moveAllReferencesTo(note)
         }
 
         // Already processed this event.
@@ -581,6 +598,31 @@ object LocalCache {
     }
 
     fun consume(event: RepostEvent) {
+        val note = getOrCreateNote(event.id)
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        // Log.d("TN", "New Boost (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${formattedDateTime(event.createdAt)}")
+
+        val author = getOrCreateUser(event.pubKey)
+        val repliesTo = event.boostedPost().mapNotNull { checkGetOrCreateNote(it) } +
+            event.taggedAddresses().mapNotNull { getOrCreateAddressableNote(it) }
+
+        note.loadEvent(event, author, repliesTo)
+
+        // Prepares user's profile view.
+        author.addNote(note)
+
+        // Counts the replies
+        repliesTo.forEach {
+            it.addBoost(note)
+        }
+
+        refreshObservers(note)
+    }
+
+    fun consume(event: GenericRepostEvent) {
         val note = getOrCreateNote(event.id)
 
         // Already processed this event.
@@ -1149,6 +1191,12 @@ object LocalCache {
                 is RelaySetEvent -> consume(event)
                 is ReportEvent -> consume(event, relay)
                 is RepostEvent -> {
+                    event.containedPost()?.let {
+                        verifyAndConsume(it, relay)
+                    }
+                    consume(event)
+                }
+                is GenericRepostEvent -> {
                     event.containedPost()?.let {
                         verifyAndConsume(it, relay)
                     }
