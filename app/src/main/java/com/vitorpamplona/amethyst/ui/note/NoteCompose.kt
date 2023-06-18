@@ -2706,9 +2706,7 @@ private fun VerticalRelayPanelWithFlow(
 
 val showMoreRelaysButtonIconButtonModifier = Modifier.size(24.dp)
 val showMoreRelaysButtonIconModifier = Modifier.size(15.dp)
-val showMoreRelaysButtonBoxModifer = Modifier
-    .fillMaxWidth()
-    .height(25.dp)
+val showMoreRelaysButtonBoxModifer = Modifier.fillMaxWidth().height(25.dp)
 
 @Composable
 private fun ShowMoreRelaysButton(onClick: () -> Unit) {
@@ -2879,7 +2877,7 @@ fun UserPicture(
 
 @Composable
 private fun ObserveAndDisplayFollowingMark(userHex: String, iconSize: Dp, accountViewModel: AccountViewModel) {
-    val accountFollowsState by accountViewModel.account.userProfile().live().follows.observeAsState()
+    val accountFollowsState by accountViewModel.userFollows.observeAsState()
 
     var showFollowingMark by remember { mutableStateOf(false) }
 

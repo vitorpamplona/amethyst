@@ -222,27 +222,32 @@ fun RenderZapGallery(
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
-    Row(remember { Modifier.fillMaxWidth() }) {
-        Box(
-            modifier = remember {
-                Modifier
-                    .width(55.dp)
-                    .padding(0.dp)
-            }
-        ) {
-            Icon(
-                imageVector = Icons.Default.Bolt,
-                contentDescription = "Zaps",
-                tint = BitcoinOrange,
-                modifier = remember {
-                    Modifier
-                        .size(25.dp)
-                        .align(Alignment.TopEnd)
-                }
-            )
-        }
+    Row(Modifier.fillMaxWidth()) {
+        ZapIcon()
 
         AuthorGalleryZaps(zapEvents, backgroundColor, nav, accountViewModel)
+    }
+}
+
+@Composable
+private fun ZapIcon() {
+    Box(
+        modifier = remember {
+            Modifier
+                .width(55.dp)
+                .padding(0.dp)
+        }
+    ) {
+        Icon(
+            imageVector = Icons.Default.Bolt,
+            contentDescription = "Zaps",
+            tint = BitcoinOrange,
+            modifier = remember {
+                Modifier
+                    .size(25.dp)
+                    .align(Alignment.TopEnd)
+            }
+        )
     }
 }
 
@@ -313,7 +318,7 @@ private fun AuthorPictureAndComment(
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
-    var content by remember {
+    val content = remember {
         mutableStateOf(
             ZapAmountCommentNotification(
                 user = zapRequest.author,
@@ -330,28 +335,24 @@ private fun AuthorPictureAndComment(
                 val amount = (zapEvent?.event as? LnZapEvent)?.amount
                 if (decryptedContent != null) {
                     val newAuthor = LocalCache.getOrCreateUser(decryptedContent.pubKey)
-                    content = ZapAmountCommentNotification(newAuthor, decryptedContent.content.ifBlank { null }, showAmountAxis(amount))
+                    content.value = ZapAmountCommentNotification(newAuthor, decryptedContent.content.ifBlank { null }, showAmountAxis(amount))
                 } else {
                     if (!zapRequest.event?.content().isNullOrBlank() || amount != null) {
-                        content = ZapAmountCommentNotification(zapRequest.author, zapRequest.event?.content()?.ifBlank { null }, showAmountAxis(amount))
+                        content.value = ZapAmountCommentNotification(zapRequest.author, zapRequest.event?.content()?.ifBlank { null }, showAmountAxis(amount))
                     }
                 }
             }
         }
     }
 
-    val route by remember {
-        derivedStateOf {
-            "User/${content.user?.pubkeyHex}"
-        }
-    }
-
-    content.user?.let { user ->
+    Row(
+        modifier = Modifier.clickable {
+            nav("User/${content.value.user?.pubkeyHex}")
+        },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         AuthorPictureAndComment(
-            author = user,
-            comment = content.comment,
-            amount = content.amount,
-            route = route,
+            authorComment = content,
             backgroundColor = backgroundColor,
             nav = nav,
             accountViewModel = accountViewModel
@@ -375,69 +376,76 @@ val commentTextSize = 12.sp
 
 @Composable
 private fun AuthorPictureAndComment(
-    author: User,
-    comment: String?,
-    amount: String?,
-    route: String,
+    authorComment: MutableState<ZapAmountCommentNotification>,
     backgroundColor: MutableState<Color>,
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
-    val modifier = remember {
-        Modifier.clickable {
-            nav(route)
-        }
+    Box(modifier = sizedModifier, contentAlignment = Alignment.BottomCenter) {
+        DisplayPicture(authorComment, accountViewModel)
+        DisplayAmount(authorComment)
     }
 
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(modifier = sizedModifier, contentAlignment = Alignment.BottomCenter) {
-            FastNoteAuthorPicture(
-                author = author,
-                size = Size35dp,
-                accountViewModel = accountViewModel,
-                pictureModifier = simpleModifier
-            )
+    DisplayComment(authorComment, backgroundColor, nav, accountViewModel)
+}
 
-            amount?.let {
-                Box(
-                    modifier = amountBoxModifier,
-                    contentAlignment = Alignment.BottomCenter
-                ) {
-                    val backgroundColor = MaterialTheme.colors.overPictureBackground
-                    Box(
-                        modifier = remember {
-                            Modifier
-                                .fillMaxWidth()
-                                .drawBehind { drawRect(backgroundColor) }
-                        },
-                        contentAlignment = Alignment.BottomCenter
-                    ) {
-                        Text(
-                            text = it,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colors.secondaryVariant,
-                            fontSize = commentTextSize,
-                            modifier = bottomPadding1dp
-                        )
-                    }
-                }
+@Composable
+fun DisplayPicture(authorComment: MutableState<ZapAmountCommentNotification>, accountViewModel: AccountViewModel) {
+    authorComment.value.user?.let {
+        FastNoteAuthorPicture(
+            author = it,
+            size = Size35dp,
+            accountViewModel = accountViewModel,
+            pictureModifier = simpleModifier
+        )
+    }
+}
+
+@Composable
+fun DisplayAmount(authorComment: MutableState<ZapAmountCommentNotification>) {
+    authorComment.value.amount?.let {
+        Box(
+            modifier = amountBoxModifier,
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            val backgroundColor = MaterialTheme.colors.overPictureBackground
+            Box(
+                modifier = remember {
+                    Modifier
+                        .fillMaxWidth()
+                        .drawBehind { drawRect(backgroundColor) }
+                },
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                Text(
+                    text = it,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colors.secondaryVariant,
+                    fontSize = commentTextSize,
+                    modifier = bottomPadding1dp
+                )
             }
         }
+    }
+}
 
-        comment?.let {
-            TranslatableRichTextViewer(
-                content = it,
-                canPreview = true,
-                tags = remember { ImmutableListOfLists() },
-                modifier = textBoxModifier,
-                backgroundColor = backgroundColor,
-                accountViewModel = accountViewModel,
-                nav = nav
-            )
-        }
+@Composable
+fun DisplayComment(
+    authorComment: MutableState<ZapAmountCommentNotification>,
+    backgroundColor: MutableState<Color>,
+    nav: (String) -> Unit,
+    accountViewModel: AccountViewModel
+) {
+    authorComment.value.comment?.let {
+        TranslatableRichTextViewer(
+            content = it,
+            canPreview = true,
+            tags = remember { ImmutableListOfLists() },
+            modifier = textBoxModifier,
+            backgroundColor = backgroundColor,
+            accountViewModel = accountViewModel,
+            nav = nav
+        )
     }
 }
 
@@ -477,19 +485,28 @@ private fun NotePictureAndComment(
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
-    val author by remember(baseNote) {
-        derivedStateOf {
-            baseNote.author
+    val author = remember(baseNote) {
+        mutableStateOf(
+            ZapAmountCommentNotification(
+                user = baseNote.author,
+                comment = null,
+                amount = null
+            )
+        )
+    }
+
+    val modifier = remember(baseNote) {
+        Modifier.clickable {
+            nav("User/${baseNote.author?.pubkeyHex}")
         }
     }
 
-    val route by remember(baseNote) {
-        derivedStateOf {
-            "User/${baseNote.author?.pubkeyHex}"
-        }
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AuthorPictureAndComment(authorComment = author, backgroundColor, nav, accountViewModel)
     }
-
-    author?.let { AuthorPictureAndComment(it, null, null, route, backgroundColor, nav, accountViewModel) }
 }
 
 @Composable

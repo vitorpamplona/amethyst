@@ -15,6 +15,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountState
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
@@ -31,6 +32,8 @@ class AccountViewModel(val account: Account) : ViewModel() {
     val accountLiveData: LiveData<AccountState> = account.live.map { it }
     val accountLanguagesLiveData: LiveData<AccountState> = account.liveLanguages.map { it }
     val accountLastReadLiveData: LiveData<AccountState> = account.liveLastRead.map { it }
+
+    val userFollows: LiveData<UserState> = account.userProfile().live().follows.map { it }
 
     fun isWriteable(): Boolean {
         return account.isWriteable()

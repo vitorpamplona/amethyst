@@ -13,8 +13,6 @@ import okhttp3.Request
 import okhttp3.Response
 
 class Nip05Verifier() {
-    val client = HttpClient.getHttpClient()
-
     fun assembleUrl(nip05address: String): String? {
         val parts = nip05address.trim().split("@")
 
@@ -49,7 +47,7 @@ class Nip05Verifier() {
                     .url(url)
                     .build()
 
-                client.newCall(request).enqueue(object : Callback {
+                HttpClient.getHttpClient().newCall(request).enqueue(object : Callback {
                     override fun onResponse(call: Call, response: Response) {
                         response.use {
                             if (it.isSuccessful) {
