@@ -13,8 +13,8 @@ android {
         applicationId "com.vitorpamplona.amethyst"
         minSdk 26
         targetSdk 33
-        versionCode 215
-        versionName "0.60.2"
+        versionCode 216
+        versionName "0.61.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
