@@ -8,6 +8,10 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.*
 
 class NotificationFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
+    override fun feedKey(): String {
+        return account.userProfile().pubkeyHex + "-" + account.defaultNotificationFollowList
+    }
+
     override fun feed(): List<Note> {
         return sort(innerApplyFilter(LocalCache.notes.values))
     }

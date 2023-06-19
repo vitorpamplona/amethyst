@@ -7,6 +7,10 @@ import com.vitorpamplona.amethyst.service.model.*
 
 class GlobalFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
 
+    override fun feedKey(): String {
+        return account.userProfile().pubkeyHex
+    }
+
     override fun feed(): List<Note> {
         val notes = innerApplyFilter(LocalCache.notes.values)
         val longFormNotes = innerApplyFilter(LocalCache.addressables.values)

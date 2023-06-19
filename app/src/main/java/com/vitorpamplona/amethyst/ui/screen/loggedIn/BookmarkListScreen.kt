@@ -73,8 +73,18 @@ fun BookmarkListScreen(accountViewModel: AccountViewModel, nav: (String) -> Unit
                 }
                 HorizontalPager(pageCount = 2, state = pagerState) { page ->
                     when (page) {
-                        0 -> RefresheableFeedView(privateFeedViewModel, null, accountViewModel, nav)
-                        1 -> RefresheableFeedView(publicFeedViewModel, null, accountViewModel, nav)
+                        0 -> RefresheableFeedView(
+                            privateFeedViewModel,
+                            null,
+                            accountViewModel = accountViewModel,
+                            nav = nav
+                        )
+                        1 -> RefresheableFeedView(
+                            publicFeedViewModel,
+                            null,
+                            accountViewModel = accountViewModel,
+                            nav = nav
+                        )
                     }
                 }
             }

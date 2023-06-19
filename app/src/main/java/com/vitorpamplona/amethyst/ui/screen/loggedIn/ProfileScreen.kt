@@ -1130,7 +1130,13 @@ fun TabNotesNewThreads(accountViewModel: AccountViewModel, nav: (String) -> Unit
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            RefresheableFeedView(feedViewModel, null, accountViewModel, nav, enablePullRefresh = false)
+            RefresheableFeedView(
+                feedViewModel,
+                null,
+                enablePullRefresh = false,
+                accountViewModel = accountViewModel,
+                nav = nav
+            )
         }
     }
 }
@@ -1147,7 +1153,13 @@ fun TabNotesConversations(accountViewModel: AccountViewModel, nav: (String) -> U
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            RefresheableFeedView(feedViewModel, null, accountViewModel, nav, enablePullRefresh = false)
+            RefresheableFeedView(
+                feedViewModel,
+                null,
+                enablePullRefresh = false,
+                accountViewModel = accountViewModel,
+                nav = nav
+            )
         }
     }
 }
@@ -1164,7 +1176,13 @@ fun TabBookmarks(baseUser: User, accountViewModel: AccountViewModel, nav: (Strin
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            RefresheableFeedView(feedViewModel, null, accountViewModel, nav, enablePullRefresh = false)
+            RefresheableFeedView(
+                feedViewModel,
+                null,
+                enablePullRefresh = false,
+                accountViewModel = accountViewModel,
+                nav = nav
+            )
         }
     }
 }
@@ -1246,7 +1264,13 @@ fun TabReports(baseUser: User, accountViewModel: AccountViewModel, nav: (String)
 
     Column(Modifier.fillMaxHeight()) {
         Column() {
-            RefresheableFeedView(feedViewModel, null, accountViewModel, nav, enablePullRefresh = false)
+            RefresheableFeedView(
+                feedViewModel,
+                null,
+                enablePullRefresh = false,
+                accountViewModel = accountViewModel,
+                nav = nav
+            )
         }
     }
 }

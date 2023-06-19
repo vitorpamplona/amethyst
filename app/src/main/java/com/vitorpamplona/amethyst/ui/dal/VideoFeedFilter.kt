@@ -7,6 +7,10 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.*
 
 class VideoFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
+    override fun feedKey(): String {
+        return account.userProfile().pubkeyHex + "-" + account.defaultStoriesFollowList
+    }
+
     override fun feed(): List<Note> {
         val notes = innerApplyFilter(LocalCache.notes.values)
 

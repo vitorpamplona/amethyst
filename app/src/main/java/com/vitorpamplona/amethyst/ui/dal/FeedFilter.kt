@@ -18,6 +18,11 @@ abstract class FeedFilter<T> {
         return feed.take(1000)
     }
 
+    /**
+     * Returns a string that serves as the key to invalidate the list if it changes.
+     */
+    abstract fun feedKey(): String
+
     abstract fun feed(): List<T>
 }
 

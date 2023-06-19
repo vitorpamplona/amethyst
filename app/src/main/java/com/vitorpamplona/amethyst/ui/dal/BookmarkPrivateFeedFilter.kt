@@ -7,6 +7,10 @@ import com.vitorpamplona.amethyst.model.Note
 object BookmarkPrivateFeedFilter : FeedFilter<Note>() {
     lateinit var account: Account
 
+    override fun feedKey(): String {
+        return account.userProfile().latestBookmarkList?.id ?: ""
+    }
+
     override fun feed(): List<Note> {
         val privKey = account.loggedIn.privKey ?: return emptyList()
 

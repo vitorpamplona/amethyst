@@ -7,6 +7,11 @@ import com.vitorpamplona.amethyst.service.model.PollNoteEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 
 class HomeConversationsFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
+
+    override fun feedKey(): String {
+        return account.userProfile().pubkeyHex + "-" + account.defaultHomeFollowList
+    }
+
     override fun feed(): List<Note> {
         return sort(innerApplyFilter(LocalCache.notes.values))
     }

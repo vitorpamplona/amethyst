@@ -60,50 +60,9 @@ fun AppNavigation(
     }
 
     NavHost(navController, startDestination = Route.Home.route) {
-        Route.Video.let { route ->
-            composable(route.route, route.arguments, content = {
-                val scrollToTop = it.arguments?.getBoolean("scrollToTop") ?: false
-
-                if (scrollToTop) {
-                    videoFeedViewModel.sendToTop()
-                    it.arguments?.remove("scrollToTop")
-                }
-
-                VideoScreen(
-                    videoFeedView = videoFeedViewModel,
-                    accountViewModel = accountViewModel,
-                    nav = nav
-                )
-            })
-        }
-
-        Route.Search.let { route ->
-            composable(route.route, route.arguments, content = {
-                val scrollToTop = it.arguments?.getBoolean("scrollToTop") ?: false
-
-                if (scrollToTop) {
-                    searchFeedViewModel.sendToTop()
-                    it.arguments?.remove("scrollToTop")
-                }
-
-                SearchScreen(
-                    searchFeedViewModel = searchFeedViewModel,
-                    accountViewModel = accountViewModel,
-                    nav = nav
-                )
-            })
-        }
-
         Route.Home.let { route ->
             composable(route.route, route.arguments, content = { it ->
-                val scrollToTop = it.arguments?.getBoolean("scrollToTop") ?: false
                 val nip47 = it.arguments?.getString("nip47")
-
-                if (scrollToTop) {
-                    homeFeedViewModel.sendToTop()
-                    repliesFeedViewModel.sendToTop()
-                    it.arguments?.remove("scrollToTop")
-                }
 
                 HomeScreen(
                     homeFeedViewModel = homeFeedViewModel,
@@ -124,25 +83,6 @@ fun AppNavigation(
             })
         }
 
-        Route.Notification.let { route ->
-            composable(route.route, route.arguments, content = {
-                val scrollToTop = it.arguments?.getBoolean("scrollToTop") ?: false
-
-                if (scrollToTop) {
-                    notifFeedViewModel.clear()
-                    notifFeedViewModel.invalidateDataAndSendToTop()
-                    it.arguments?.remove("scrollToTop")
-                }
-
-                NotificationScreen(
-                    notifFeedViewModel = notifFeedViewModel,
-                    userReactionsStatsModel = userReactionsStatsModel,
-                    accountViewModel = accountViewModel,
-                    nav = nav
-                )
-            })
-        }
-
         composable(
             Route.Message.route,
             content = {
@@ -154,6 +94,37 @@ fun AppNavigation(
                 )
             }
         )
+
+        Route.Video.let { route ->
+            composable(route.route, route.arguments, content = {
+                VideoScreen(
+                    videoFeedView = videoFeedViewModel,
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
+            })
+        }
+
+        Route.Search.let { route ->
+            composable(route.route, route.arguments, content = {
+                SearchScreen(
+                    searchFeedViewModel = searchFeedViewModel,
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
+            })
+        }
+
+        Route.Notification.let { route ->
+            composable(route.route, route.arguments, content = {
+                NotificationScreen(
+                    notifFeedViewModel = notifFeedViewModel,
+                    userReactionsStatsModel = userReactionsStatsModel,
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
+            })
+        }
 
         composable(Route.BlockedUsers.route, content = { HiddenUsersScreen(accountViewModel, nav) })
         composable(Route.Bookmarks.route, content = { BookmarkListScreen(accountViewModel, nav) })

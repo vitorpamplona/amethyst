@@ -127,7 +127,12 @@ fun VideoScreen(
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            SaveableFeedState(videoFeedView, accountViewModel, nav, ScrollStateKeys.VIDEO_SCREEN)
+            SaveableFeedState(
+                videoFeedView = videoFeedView,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                scrollStateKey = ScrollStateKeys.VIDEO_SCREEN
+            )
         }
     }
 }
@@ -135,17 +140,10 @@ fun VideoScreen(
 @Composable
 fun WatchAccountForVideoScreen(videoFeedView: NostrVideoFeedViewModel, accountViewModel: AccountViewModel) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = remember(accountState) { accountState?.account } ?: return
 
-    var firstTime by remember(accountViewModel) { mutableStateOf(true) }
-
-    LaunchedEffect(accountViewModel, account.defaultStoriesFollowList) {
-        if (firstTime) {
-            firstTime = false
-        } else {
-            NostrVideoDataSource.resetFilters()
-            videoFeedView.invalidateDataAndSendToTop(true)
-        }
+    LaunchedEffect(accountViewModel, accountState?.account?.defaultStoriesFollowList) {
+        NostrVideoDataSource.resetFilters()
+        videoFeedView.checkKeysInvalidateDataAndSendToTop()
     }
 }
 
@@ -155,7 +153,6 @@ private fun SaveableFeedState(
     videoFeedView: NostrVideoFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
-    routeForLastRead: String?,
     scrollStateKey: String? = null
 ) {
     val pagerState = if (scrollStateKey != null) {

@@ -12,6 +12,10 @@ import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 
 class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
+    override fun feedKey(): String {
+        return account.userProfile().pubkeyHex + "-" + account.defaultHomeFollowList
+    }
+
     override fun feed(): List<Note> {
         val notes = innerApplyFilter(LocalCache.notes.values)
         val longFormNotes = innerApplyFilter(LocalCache.addressables.values)

@@ -33,31 +33,27 @@ sealed class Route(
         get() = route.substringBefore("?")
 
     object Home : Route(
-        route = "Home?scrollToTop={scrollToTop}&nip47={nip47}",
+        route = "Home?nip47={nip47}",
         icon = R.drawable.ic_home,
         arguments = listOf(
-            navArgument("scrollToTop") { type = NavType.BoolType; defaultValue = false },
             navArgument("nip47") { type = NavType.StringType; nullable = true; defaultValue = null }
         ).toImmutableList(),
         hasNewItems = { accountViewModel, newNotes -> HomeLatestItem.hasNewItems(accountViewModel, newNotes) }
     )
 
     object Search : Route(
-        route = "Search?scrollToTop={scrollToTop}",
-        icon = R.drawable.ic_globe,
-        arguments = listOf(navArgument("scrollToTop") { type = NavType.BoolType; defaultValue = false }).toImmutableList()
+        route = "Search",
+        icon = R.drawable.ic_globe
     )
 
     object Video : Route(
-        route = "Video?scrollToTop={scrollToTop}",
-        icon = R.drawable.ic_video,
-        arguments = listOf(navArgument("scrollToTop") { type = NavType.BoolType; defaultValue = false }).toImmutableList()
+        route = "Video",
+        icon = R.drawable.ic_video
     )
 
     object Notification : Route(
-        route = "Notification?scrollToTop={scrollToTop}",
+        route = "Notification",
         icon = R.drawable.ic_notifications,
-        arguments = listOf(navArgument("scrollToTop") { type = NavType.BoolType; defaultValue = false }).toImmutableList(),
         hasNewItems = { accountViewModel, newNotes -> NotificationLatestItem.hasNewItems(accountViewModel, newNotes) }
     )
 

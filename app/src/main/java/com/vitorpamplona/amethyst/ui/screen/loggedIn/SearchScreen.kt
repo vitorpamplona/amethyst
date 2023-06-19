@@ -138,7 +138,13 @@ fun SearchScreen(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
             SearchBar(searchBarViewModel, accountViewModel, nav)
-            RefresheableFeedView(searchFeedViewModel, null, accountViewModel, nav, ScrollStateKeys.GLOBAL_SCREEN)
+            RefresheableFeedView(
+                searchFeedViewModel,
+                null,
+                scrollStateKey = ScrollStateKeys.GLOBAL_SCREEN,
+                accountViewModel = accountViewModel,
+                nav = nav
+            )
         }
     }
 }

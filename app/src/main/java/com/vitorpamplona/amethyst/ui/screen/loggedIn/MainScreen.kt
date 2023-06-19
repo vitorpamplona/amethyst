@@ -73,23 +73,6 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
         }
     }
 
-    val navBottomRow = remember(navController) {
-        { route: Route, selected: Boolean ->
-            if (!selected) {
-                navController.navigate(route.base) {
-                    popUpTo(Route.Home.route)
-                    launchSingleTop = true
-                }
-            } else {
-                val newRoute = route.route.replace("{scrollToTop}", "true")
-                navController.navigate(newRoute) {
-                    popUpTo(Route.Home.route)
-                    launchSingleTop = true
-                }
-            }
-        }
-    }
-
     val followLists: FollowListViewModel = viewModel(
         key = accountViewModel.userProfile().pubkeyHex + "FollowListViewModel",
         factory = FollowListViewModel.Factory(accountViewModel.account)
@@ -135,6 +118,41 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
         key = accountViewModel.userProfile().pubkeyHex + "NostrChatroomListNewFeedViewModel",
         factory = NostrChatroomListNewFeedViewModel.Factory(accountViewModel.account)
     )
+
+    val navBottomRow = remember(navController) {
+        { route: Route, selected: Boolean ->
+            if (!selected) {
+                navController.navigate(route.base) {
+                    popUpTo(Route.Home.route)
+                    launchSingleTop = true
+                }
+            } else {
+                // deals with scroll to top here to avoid passing as parameter
+                // and having to deal with all recompositions with scroll to top true
+                when (route.base) {
+                    Route.Home.base -> {
+                        homeFeedViewModel.sendToTop()
+                        repliesFeedViewModel.sendToTop()
+                    }
+                    Route.Search.base -> {
+                        searchFeedViewModel.sendToTop()
+                    }
+                    Route.Video.base -> {
+                        videoFeedViewModel.sendToTop()
+                    }
+                    Route.Notification.base -> {
+                        notifFeedViewModel.clear()
+                        notifFeedViewModel.sendToTop()
+                    }
+                }
+
+                navController.navigate(route.route) {
+                    popUpTo(route.route)
+                    launchSingleTop = true
+                }
+            }
+        }
+    }
 
     ModalBottomSheetLayout(
         sheetState = sheetState,

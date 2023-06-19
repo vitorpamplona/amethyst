@@ -123,10 +123,10 @@ private fun HomePages(
     HorizontalPager(pageCount = 2, state = pagerState) { page ->
         RefresheableFeedView(
             viewModel = tabs[page].viewModel,
-            accountViewModel = accountViewModel,
-            nav = nav,
             routeForLastRead = tabs[page].routeForLastRead,
-            scrollStateKey = tabs[page].scrollStateKey
+            scrollStateKey = tabs[page].scrollStateKey,
+            accountViewModel = accountViewModel,
+            nav = nav
         )
     }
 }
@@ -143,16 +143,14 @@ fun WatchAccountForHomeScreen(
     LaunchedEffect(accountViewModel, accountState?.account?.defaultHomeFollowList) {
         launch(Dispatchers.IO) {
             NostrHomeDataSource.invalidateFilters()
-            homeFeedViewModel.invalidateDataAndSendToTop(true)
-            repliesFeedViewModel.invalidateDataAndSendToTop(true)
+            homeFeedViewModel.checkKeysInvalidateDataAndSendToTop()
+            repliesFeedViewModel.checkKeysInvalidateDataAndSendToTop()
         }
     }
 
     LaunchedEffect(followState) {
         launch(Dispatchers.IO) {
             NostrHomeDataSource.invalidateFilters()
-            homeFeedViewModel.invalidateData(true)
-            repliesFeedViewModel.invalidateData(true)
         }
     }
 }

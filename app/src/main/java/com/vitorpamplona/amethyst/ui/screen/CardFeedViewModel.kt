@@ -56,6 +56,8 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
     val scrollToTop = _scrollToTop.asStateFlow()
     var scrolltoTopPending = false
 
+    private var lastFeedKey: String? = null
+
     fun sendToTop() {
         if (scrolltoTopPending) return
 
@@ -84,6 +86,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
         checkNotInMainThread()
 
         val notes = localFilter.feed()
+        lastFeedKey = localFilter.feedKey()
 
         val thisAccount = (localFilter as? NotificationFeedFilter)?.account
         val lastNotesCopy = if (thisAccount == lastAccount) lastNotes else null
@@ -233,6 +236,8 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
         val lastNotesCopy = if (thisAccount == lastAccount) lastNotes else null
 
         if (lastNotesCopy != null && localFilter is AdditiveFeedFilter && oldNotesState is CardFeedState.Loaded) {
+            lastFeedKey = localFilter.feedKey()
+
             val filteredNewList = localFilter.applyFilter(newItems)
 
             if (filteredNewList.isEmpty()) return
@@ -279,15 +284,18 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
     }
 
     @OptIn(ExperimentalTime::class)
-    fun invalidateDataAndSendToTop(ignoreIfDoing: Boolean = false) {
-        bundler.invalidate(ignoreIfDoing) {
-            // adds the time to perform the refresh into this delay
-            // holding off new updates in case of heavy refresh routines.
-            val (value, elapsed) = measureTimedValue {
-                refreshSuspended()
-                sendToTop()
+    fun checkKeysInvalidateDataAndSendToTop() {
+        if (lastFeedKey != localFilter.feedKey()) {
+            clear()
+            bundler.invalidate(false) {
+                // adds the time to perform the refresh into this delay
+                // holding off new updates in case of heavy refresh routines.
+                val (value, elapsed) = measureTimedValue {
+                    refreshSuspended()
+                    sendToTop()
+                }
+                Log.d("Time", "${this.javaClass.simpleName} Card update $elapsed")
             }
-            Log.d("Time", "${this.javaClass.simpleName} Card update $elapsed")
         }
     }
 

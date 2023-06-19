@@ -138,6 +138,8 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), I
     val scrollToTop = _scrollToTop.asStateFlow()
     var scrolltoTopPending = false
 
+    private var lastFeedKey: String? = null
+
     fun sendToTop() {
         if (scrolltoTopPending) return
 
@@ -151,10 +153,6 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), I
         scrolltoTopPending = false
     }
 
-    fun newListFromDataSource(): ImmutableList<Note> {
-        return localFilter.loadTop().toImmutableList()
-    }
-
     private fun refresh() {
         val scope = CoroutineScope(Job() + Dispatchers.Default)
         scope.launch {
@@ -165,7 +163,8 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), I
     fun refreshSuspended() {
         checkNotInMainThread()
 
-        val notes = newListFromDataSource()
+        val notes = localFilter.loadTop().toImmutableList()
+        lastFeedKey = localFilter.feedKey()
 
         val oldNotesState = _feedContent.value
         if (oldNotesState is FeedState.Loaded) {
@@ -197,11 +196,13 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), I
         if (localFilter is AdditiveFeedFilter) {
             if (oldNotesState is FeedState.Loaded) {
                 val newList = localFilter.updateListWith(oldNotesState.feed.value, newItems.toSet()).toImmutableList()
+                lastFeedKey = localFilter.feedKey()
                 if (!equalImmutableLists(newList, oldNotesState.feed.value)) {
                     updateFeed(newList)
                 }
             } else if (oldNotesState is FeedState.Empty) {
                 val newList = localFilter.updateListWith(emptyList(), newItems.toSet()).toImmutableList()
+                lastFeedKey = localFilter.feedKey()
                 if (newList.isNotEmpty()) {
                     updateFeed(newList)
                 }
@@ -226,12 +227,14 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), I
         }
     }
 
-    fun invalidateDataAndSendToTop(ignoreIfDoing: Boolean = false) {
-        bundler.invalidate(ignoreIfDoing) {
-            // adds the time to perform the refresh into this delay
-            // holding off new updates in case of heavy refresh routines.
-            refreshSuspended()
-            sendToTop()
+    fun checkKeysInvalidateDataAndSendToTop() {
+        if (lastFeedKey != localFilter.feedKey()) {
+            bundler.invalidate(false) {
+                // adds the time to perform the refresh into this delay
+                // holding off new updates in case of heavy refresh routines.
+                refreshSuspended()
+                sendToTop()
+            }
         }
     }
 

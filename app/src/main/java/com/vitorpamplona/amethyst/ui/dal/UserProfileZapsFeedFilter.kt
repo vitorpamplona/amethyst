@@ -5,6 +5,11 @@ import com.vitorpamplona.amethyst.service.model.zaps.UserZaps
 import com.vitorpamplona.amethyst.ui.screen.ZapReqResponse
 
 class UserProfileZapsFeedFilter(val user: User) : FeedFilter<ZapReqResponse>() {
+
+    override fun feedKey(): String {
+        return user.pubkeyHex
+    }
+
     override fun feed(): List<ZapReqResponse> {
         return UserZaps.forProfileFeed(user.zaps)
     }

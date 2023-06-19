@@ -11,6 +11,10 @@ import kotlin.time.measureTimedValue
 
 class ChatroomListKnownFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
 
+    override fun feedKey(): String {
+        return account.userProfile().pubkeyHex
+    }
+
     // returns the last Note of each user.
     override fun feed(): List<Note> {
         val me = account.userProfile()

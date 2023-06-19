@@ -40,14 +40,13 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 fun RefresheableFeedView(
     viewModel: FeedViewModel,
     routeForLastRead: String?,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-
+    enablePullRefresh: Boolean = true,
     scrollStateKey: String? = null,
-    enablePullRefresh: Boolean = true
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
 ) {
     RefresheableView(viewModel, enablePullRefresh) {
-        SaveableFeedState(viewModel, accountViewModel, nav, routeForLastRead, scrollStateKey)
+        SaveableFeedState(viewModel, routeForLastRead, scrollStateKey, accountViewModel, nav)
     }
 }
 
@@ -82,10 +81,10 @@ fun RefresheableView(
 @Composable
 private fun SaveableFeedState(
     viewModel: FeedViewModel,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
     routeForLastRead: String?,
-    scrollStateKey: String? = null
+    scrollStateKey: String? = null,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
 ) {
     SaveableFeedState(viewModel, scrollStateKey) { listState ->
         RenderFeed(viewModel, accountViewModel, listState, nav, routeForLastRead)

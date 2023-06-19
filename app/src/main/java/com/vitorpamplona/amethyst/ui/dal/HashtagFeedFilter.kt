@@ -12,6 +12,10 @@ object HashtagFeedFilter : AdditiveFeedFilter<Note>() {
     lateinit var account: Account
     var tag: String? = null
 
+    override fun feedKey(): String {
+        return account.userProfile().pubkeyHex + "-" + tag
+    }
+
     fun loadHashtag(account: Account, tag: String?) {
         this.account = account
         this.tag = tag

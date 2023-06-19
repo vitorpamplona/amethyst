@@ -5,6 +5,11 @@ import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.Note
 
 class ChannelFeedFilter(val channel: Channel, val account: Account) : AdditiveFeedFilter<Note>() {
+
+    override fun feedKey(): String {
+        return channel.idHex
+    }
+
     // returns the last Note of each user.
     override fun feed(): List<Note> {
         return channel.notes
