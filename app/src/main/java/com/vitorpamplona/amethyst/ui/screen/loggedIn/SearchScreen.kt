@@ -399,12 +399,12 @@ private fun DisplaySearchResults(
                 channelPicture = item.profilePicture(),
                 channelTitle = {
                     Text(
-                        "${item.info.name}",
+                        "${item.toBestDisplayName()}",
                         fontWeight = FontWeight.Bold
                     )
                 },
                 channelLastTime = null,
-                channelLastContent = item.info.about,
+                channelLastContent = item.summary(),
                 false,
                 onClick = { nav("Channel/${item.idHex}") }
             )

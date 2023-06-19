@@ -64,8 +64,10 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
@@ -75,6 +77,7 @@ import com.vitorpamplona.amethyst.ui.actions.ServersAvailable
 import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
 import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
+import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.ui.screen.NostrChannelFeedViewModel
@@ -232,13 +235,23 @@ fun ChannelScreen(
                     message = newPostModel.message.text
                 )
                 tagger.run()
-                accountViewModel.account.sendChannelMessage(
-                    message = tagger.message,
-                    toChannel = channel.idHex,
-                    replyTo = tagger.replyTos,
-                    mentions = tagger.mentions,
-                    wantsToMarkAsSensitive = false
-                )
+                if (channel is PublicChatChannel) {
+                    accountViewModel.account.sendChannelMessage(
+                        message = tagger.message,
+                        toChannel = channel.idHex,
+                        replyTo = tagger.replyTos,
+                        mentions = tagger.mentions,
+                        wantsToMarkAsSensitive = false
+                    )
+                } else if (channel is LiveActivitiesChannel) {
+                    accountViewModel.account.sendLiveMessage(
+                        message = tagger.message,
+                        toChannel = channel.address,
+                        replyTo = tagger.replyTos,
+                        mentions = tagger.mentions,
+                        wantsToMarkAsSensitive = false
+                    )
+                }
                 newPostModel.message = TextFieldValue("")
                 replyTo.value = null
                 feedViewModel.sendToTop()
@@ -412,14 +425,14 @@ fun ChannelHeader(baseChannel: Channel, accountViewModel: AccountViewModel, nav:
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            "${channel.info.name}",
+                            channel.toBestDisplayName(),
                             fontWeight = FontWeight.Bold
                         )
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            "${channel.info.about}",
+                            "${channel.summary()}",
                             color = MaterialTheme.colors.placeholderText,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
@@ -433,7 +446,26 @@ fun ChannelHeader(baseChannel: Channel, accountViewModel: AccountViewModel, nav:
                         .height(Size35dp)
                         .padding(bottom = 3.dp)
                 ) {
-                    ChannelActionOptions(channel, accountViewModel, nav)
+                    if (channel is PublicChatChannel) {
+                        ChannelActionOptions(channel, accountViewModel, nav)
+                    }
+                }
+            }
+        }
+
+        if (channel is LiveActivitiesChannel) {
+            val streamingUrl by remember(channelState) {
+                derivedStateOf {
+                    channel.info?.streaming()
+                }
+            }
+
+            if (streamingUrl != null) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 5.dp)) {
+                    VideoView(
+                        videoUri = streamingUrl!!,
+                        description = null
+                    )
                 }
             }
         }
@@ -447,7 +479,7 @@ fun ChannelHeader(baseChannel: Channel, accountViewModel: AccountViewModel, nav:
 
 @Composable
 private fun ChannelActionOptions(
-    channel: Channel,
+    channel: PublicChatChannel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -514,7 +546,7 @@ private fun NoteCopyButton(
 }
 
 @Composable
-private fun EditButton(accountViewModel: AccountViewModel, channel: Channel) {
+private fun EditButton(accountViewModel: AccountViewModel, channel: PublicChatChannel) {
     var wantsToPost by remember {
         mutableStateOf(false)
     }

@@ -4,6 +4,7 @@ import android.util.Log
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.*
+import com.vitorpamplona.amethyst.service.model.ATag.Companion.isATag
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.BundledInsert
@@ -97,7 +98,15 @@ object LocalCache {
         checkNotInMainThread()
 
         if (isValidHexNpub(key)) {
-            return getOrCreateChannel(key)
+            return getOrCreateChannel(key) {
+                PublicChatChannel(key)
+            }
+        }
+        val aTag = ATag.parse(key, null)
+        if (aTag != null) {
+            return getOrCreateChannel(aTag.toTag()) {
+                LiveActivitiesChannel(aTag)
+            }
         }
         return null
     }
@@ -113,11 +122,11 @@ object LocalCache {
     }
 
     @Synchronized
-    fun getOrCreateChannel(key: String): Channel {
+    fun getOrCreateChannel(key: String, channelFactory: (String) -> Channel): Channel {
         checkNotInMainThread()
 
         return channels[key] ?: run {
-            val answer = Channel(key)
+            val answer = channelFactory(key)
             channels.put(key, answer)
             answer
         }
@@ -332,6 +341,11 @@ object LocalCache {
 
         if (event.createdAt > (note.createdAt() ?: 0)) {
             note.loadEvent(event, author, emptyList())
+
+            val channel = getOrCreateChannel(note.idHex) {
+                LiveActivitiesChannel(note.address)
+            } as? LiveActivitiesChannel
+            channel?.updateChannelInfo(author, event, event.createdAt)
 
             refreshObservers(note)
         }
@@ -572,8 +586,11 @@ object LocalCache {
                 }
 
                 deleteNote.channelHex()?.let {
-                    val channel = checkGetOrCreateChannel(it)
-                    channel?.removeNote(deleteNote)
+                    channels[it]?.removeNote(deleteNote)
+                }
+
+                (deleteNote.event as? LiveActivitiesChatMessageEvent)?.activity()?.let {
+                    channels[it.toTag()]?.removeNote(deleteNote)
                 }
 
                 if (deleteNote.event is PrivateDmEvent) {
@@ -708,7 +725,9 @@ object LocalCache {
 
     fun consume(event: ChannelCreateEvent) {
         // Log.d("MT", "New Event ${event.content} ${event.id.toHex()}")
-        val oldChannel = getOrCreateChannel(event.id)
+        val oldChannel = getOrCreateChannel(event.id) {
+            PublicChatChannel(it)
+        }
         val author = getOrCreateUser(event.pubKey)
 
         val note = getOrCreateNote(event.id)
@@ -723,7 +742,9 @@ object LocalCache {
             return // older data, does nothing
         }
         if (oldChannel.creator == null || oldChannel.creator == author) {
-            oldChannel.updateChannelInfo(author, event.channelInfo(), event.createdAt)
+            if (oldChannel is PublicChatChannel) {
+                oldChannel.updateChannelInfo(author, event.channelInfo(), event.createdAt)
+            }
         }
     }
 
@@ -734,10 +755,13 @@ object LocalCache {
 
         // new event
         val oldChannel = checkGetOrCreateChannel(channelId) ?: return
+
         val author = getOrCreateUser(event.pubKey)
         if (event.createdAt > oldChannel.updatedMetadataAt) {
             if (oldChannel.creator == null || oldChannel.creator == author) {
-                oldChannel.updateChannelInfo(author, event.channelInfo(), event.createdAt)
+                if (oldChannel is PublicChatChannel) {
+                    oldChannel.updateChannelInfo(author, event.channelInfo(), event.createdAt)
+                }
             }
         } else {
             // Log.d("MT","Relay sent a previous Metadata Event ${oldUser.toBestDisplayName()} ${formattedDateTime(event.createdAt)} > ${formattedDateTime(oldUser.updatedAt)}")
@@ -786,6 +810,49 @@ object LocalCache {
         note.loadEvent(event, author, replyTo)
 
         // Log.d("CM", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${note.event?.content()} ${formattedDateTime(event.createdAt)}")
+
+        // Counts the replies
+        replyTo.forEach {
+            it.addReply(note)
+        }
+
+        refreshObservers(note)
+    }
+
+    fun consume(event: LiveActivitiesChatMessageEvent, relay: Relay?) {
+        val activityId = event.activity() ?: return
+
+        val channel = getOrCreateChannel(activityId.toTag()) {
+            LiveActivitiesChannel(activityId)
+        }
+
+        val note = getOrCreateNote(event.id)
+        channel.addNote(note)
+
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        if (antiSpam.isSpam(event, relay)) {
+            relay?.let {
+                it.spamCounter++
+            }
+            return
+        }
+
+        val replyTo = event.tagsWithoutCitations()
+            .filter { it != event.activity()?.toTag() }
+            .mapNotNull { checkGetOrCreateNote(it) }
+
+        note.loadEvent(event, author, replyTo)
+
+        Log.d("CM", "AAA REPLY TO ${event.content} ${event.taggedEvents()}")
 
         // Counts the replies
         replyTo.forEach {
@@ -1084,7 +1151,7 @@ object LocalCache {
                 }
             }
 
-            println("PRUNE: ${toBeRemoved.size} messages removed from ${it.value.info.name}")
+            println("PRUNE: ${toBeRemoved.size} messages removed from ${it.value.toBestDisplayName()}")
         }
     }
 
@@ -1172,6 +1239,7 @@ object LocalCache {
                 is FileStorageHeaderEvent -> consume(event, relay)
                 is HighlightEvent -> consume(event, relay)
                 is LiveActivitiesEvent -> consume(event, relay)
+                is LiveActivitiesChatMessageEvent -> consume(event, relay)
                 is LnZapEvent -> {
                     event.zapRequest?.let {
                         verifyAndConsume(it, relay)

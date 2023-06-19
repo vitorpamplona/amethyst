@@ -190,7 +190,7 @@ fun ReplyInformationChannel(
     val channel = channelState?.channel ?: return
 
     val channelName = remember(channelState) {
-        AnnotatedString("${channel.info.name} ")
+        AnnotatedString("${channel.toBestDisplayName()} ")
     }
 
     FlowRow() {

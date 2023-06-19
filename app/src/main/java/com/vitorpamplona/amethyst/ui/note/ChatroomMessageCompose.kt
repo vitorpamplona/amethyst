@@ -55,8 +55,8 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
+import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
@@ -244,7 +244,7 @@ fun ChatroomMessageCompose(
                                         bubbleSize = it
                                     }
                             ) {
-                                if ((innerQuote || note.author != loggedIn) && noteEvent is ChannelMessageEvent) {
+                                if ((innerQuote || note.author != loggedIn) && noteEvent !is PrivateDmEvent) {
                                     DrawAuthorInfo(
                                         baseNote,
                                         alignment,
@@ -255,6 +255,7 @@ fun ChatroomMessageCompose(
                                 }
 
                                 val replyTo = note.replyTo
+                                println("AAA replyTo ${replyTo?.lastOrNull()}")
                                 if (!innerQuote && !replyTo.isNullOrEmpty()) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         replyTo.lastOrNull()?.let { note ->

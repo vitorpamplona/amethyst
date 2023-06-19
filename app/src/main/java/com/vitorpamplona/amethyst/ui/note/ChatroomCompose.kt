@@ -108,7 +108,7 @@ private fun ChannelRoomCompose(
     }
     val channelName by remember(channelState) {
         derivedStateOf {
-            channel.info.name
+            channel.toBestDisplayName()
         }
     }
 

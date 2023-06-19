@@ -4,17 +4,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.model.PublicChatChannel
 
 class NewChannelViewModel : ViewModel() {
     private var account: Account? = null
-    private var originalChannel: Channel? = null
+    private var originalChannel: PublicChatChannel? = null
 
     val channelName = mutableStateOf(TextFieldValue())
     val channelPicture = mutableStateOf(TextFieldValue())
     val channelDescription = mutableStateOf(TextFieldValue())
 
-    fun load(account: Account, channel: Channel?) {
+    fun load(account: Account, channel: PublicChatChannel?) {
         this.account = account
         if (channel != null) {
             originalChannel = channel

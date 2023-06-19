@@ -100,6 +100,7 @@ import com.vitorpamplona.amethyst.service.model.FileHeaderEvent
 import com.vitorpamplona.amethyst.service.model.FileStorageHeaderEvent
 import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
 import com.vitorpamplona.amethyst.service.model.HighlightEvent
+import com.vitorpamplona.amethyst.service.model.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.Participant
@@ -735,6 +736,10 @@ fun routeFor(note: Note, loggedIn: User): String? {
     val noteEvent = note.event
 
     if (noteEvent is ChannelMessageEvent || noteEvent is ChannelCreateEvent || noteEvent is ChannelMetadataEvent) {
+        note.channelHex()?.let {
+            return "Channel/$it"
+        }
+    } else if (noteEvent is LiveActivitiesEvent || noteEvent is LiveActivitiesChatMessageEvent) {
         note.channelHex()?.let {
             return "Channel/$it"
         }

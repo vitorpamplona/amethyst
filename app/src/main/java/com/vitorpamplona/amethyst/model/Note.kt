@@ -73,6 +73,8 @@ open class Note(val idHex: String) {
         return (event as? ChannelMessageEvent)?.channel()
             ?: (event as? ChannelMetadataEvent)?.channel()
             ?: (event as? ChannelCreateEvent)?.id
+            ?: (event as? LiveActivitiesChatMessageEvent)?.activity()?.toTag()
+            ?: (event as? LiveActivitiesEvent)?.address()?.toTag()
     }
 
     open fun address(): ATag? = null
