@@ -64,6 +64,8 @@ Or get the latest APK from the [Releases Section](https://github.com/vitorpamplo
 - [x] View Individual Reactions (Like, Boost, Zaps, Reports) per Post
 - [x] Recommended Application Handlers (NIP-89)
 - [x] Events with a Subject (NIP-14)
+- [x] Generic Reposts (kind:16)
+- [x] Live Activities (NIP-102)
 - [ ] Marketplace (NIP-15)
 - [ ] Image/Video Capture in the app
 - [ ] Local Database
