@@ -80,7 +80,6 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
         )
     }
 
-
     fun createAccountLastPostsListFilter(): TypedFilter {
         return TypedFilter(
             types = COMMON_FEED_TYPES,
