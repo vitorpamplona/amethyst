@@ -1,5 +1,8 @@
 package com.vitorpamplona.amethyst.ui.actions
 
+import android.widget.Toast
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -35,10 +38,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -54,6 +59,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.coroutines.launch
 import java.lang.Math.round
 
 @Composable
@@ -203,6 +209,7 @@ fun ServerConfigHeader() {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ServerConfig(
     item: RelaySetupInfo,
@@ -217,6 +224,8 @@ fun ServerConfig(
 
     onDelete: (RelaySetupInfo) -> Unit
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     Column(Modifier.fillMaxWidth()) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -252,15 +261,28 @@ fun ServerConfig(
                     Column(Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             IconButton(
-                                modifier = Modifier.size(30.dp),
-                                onClick = { onToggleFollows(item) }
+                                modifier = Modifier
+                                    .size(30.dp),
+                                onClick = { }
                             ) {
                                 Icon(
                                     painterResource(R.drawable.ic_home),
                                     stringResource(R.string.home_feed),
                                     modifier = Modifier
                                         .padding(end = 5.dp)
-                                        .size(15.dp),
+                                        .size(15.dp)
+                                        .combinedClickable(
+                                            onClick = { onToggleFollows(item) },
+                                            onLongClick = {
+                                                scope.launch {
+                                                    Toast.makeText(
+                                                        context,
+                                                        context.getString(R.string.home_feed),
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
+                                                }
+                                            }
+                                        ),
                                     tint = if (item.feedTypes.contains(FeedType.FOLLOWS)) {
                                         Color.Green
                                     } else {
@@ -272,14 +294,26 @@ fun ServerConfig(
                             }
                             IconButton(
                                 modifier = Modifier.size(30.dp),
-                                onClick = { onTogglePrivateDMs(item) }
+                                onClick = { }
                             ) {
                                 Icon(
                                     painterResource(R.drawable.ic_dm),
                                     stringResource(R.string.private_message_feed),
                                     modifier = Modifier
                                         .padding(horizontal = 5.dp)
-                                        .size(15.dp),
+                                        .size(15.dp)
+                                        .combinedClickable(
+                                            onClick = { onTogglePrivateDMs(item) },
+                                            onLongClick = {
+                                                scope.launch {
+                                                    Toast.makeText(
+                                                        context,
+                                                        context.getString(R.string.private_message_feed),
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
+                                                }
+                                            }
+                                        ),
                                     tint = if (item.feedTypes.contains(FeedType.PRIVATE_DMS)) {
                                         Color.Green
                                     } else {
@@ -291,14 +325,26 @@ fun ServerConfig(
                             }
                             IconButton(
                                 modifier = Modifier.size(30.dp),
-                                onClick = { onTogglePublicChats(item) }
+                                onClick = { }
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Groups,
                                     stringResource(R.string.public_chat_feed),
                                     modifier = Modifier
                                         .padding(horizontal = 5.dp)
-                                        .size(15.dp),
+                                        .size(15.dp)
+                                        .combinedClickable(
+                                            onClick = { onTogglePublicChats(item) },
+                                            onLongClick = {
+                                                scope.launch {
+                                                    Toast.makeText(
+                                                        context,
+                                                        context.getString(R.string.public_chat_feed),
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
+                                                }
+                                            }
+                                        ),
                                     tint = if (item.feedTypes.contains(FeedType.PUBLIC_CHATS)) {
                                         Color.Green
                                     } else {
@@ -310,14 +356,26 @@ fun ServerConfig(
                             }
                             IconButton(
                                 modifier = Modifier.size(30.dp),
-                                onClick = { onToggleGlobal(item) }
+                                onClick = { }
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Public,
                                     stringResource(R.string.global_feed),
                                     modifier = Modifier
                                         .padding(horizontal = 5.dp)
-                                        .size(15.dp),
+                                        .size(15.dp)
+                                        .combinedClickable(
+                                            onClick = { onToggleGlobal(item) },
+                                            onLongClick = {
+                                                scope.launch {
+                                                    Toast.makeText(
+                                                        context,
+                                                        context.getString(R.string.global_feed),
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
+                                                }
+                                            }
+                                        ),
                                     tint = if (item.feedTypes.contains(FeedType.GLOBAL)) {
                                         Color.Green
                                     } else {
@@ -337,7 +395,19 @@ fun ServerConfig(
                                     stringResource(R.string.search_feed),
                                     modifier = Modifier
                                         .padding(horizontal = 5.dp)
-                                        .size(15.dp),
+                                        .size(15.dp)
+                                        .combinedClickable(
+                                            onClick = { onToggleSearch(item) },
+                                            onLongClick = {
+                                                scope.launch {
+                                                    Toast.makeText(
+                                                        context,
+                                                        context.getString(R.string.search_feed),
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
+                                                }
+                                            }
+                                        ),
                                     tint = if (item.feedTypes.contains(FeedType.SEARCH)) {
                                         Color.Green
                                     } else {
@@ -354,14 +424,26 @@ fun ServerConfig(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             IconButton(
                                 modifier = Modifier.size(30.dp),
-                                onClick = { onToggleDownload(item) }
+                                onClick = { }
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Download,
-                                    null,
+                                    stringResource(R.string.read_from_relay),
                                     modifier = Modifier
                                         .padding(horizontal = 5.dp)
-                                        .size(15.dp),
+                                        .size(15.dp)
+                                        .combinedClickable(
+                                            onClick = { onToggleDownload(item) },
+                                            onLongClick = {
+                                                scope.launch {
+                                                    Toast.makeText(
+                                                        context,
+                                                        context.getString(R.string.read_from_relay),
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
+                                                }
+                                            }
+                                        ),
                                     tint = if (item.read) {
                                         Color.Green
                                     } else {
@@ -382,14 +464,26 @@ fun ServerConfig(
 
                             IconButton(
                                 modifier = Modifier.size(30.dp),
-                                onClick = { onToggleUpload(item) }
+                                onClick = { }
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Upload,
-                                    null,
+                                    stringResource(R.string.write_to_relay),
                                     modifier = Modifier
                                         .padding(horizontal = 5.dp)
-                                        .size(15.dp),
+                                        .size(15.dp)
+                                        .combinedClickable(
+                                            onClick = { onToggleUpload(item) },
+                                            onLongClick = {
+                                                scope.launch {
+                                                    Toast.makeText(
+                                                        context,
+                                                        context.getString(R.string.write_to_relay),
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
+                                                }
+                                            }
+                                        ),
                                     tint = if (item.write) {
                                         Color.Green
                                     } else {
@@ -410,10 +504,22 @@ fun ServerConfig(
 
                             Icon(
                                 imageVector = Icons.Default.SyncProblem,
-                                null,
+                                stringResource(R.string.errors),
                                 modifier = Modifier
                                     .padding(horizontal = 5.dp)
-                                    .size(15.dp),
+                                    .size(15.dp)
+                                    .combinedClickable(
+                                        onClick = { },
+                                        onLongClick = {
+                                            scope.launch {
+                                                Toast.makeText(
+                                                    context,
+                                                    context.getString(R.string.errors),
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            }
+                                        }
+                                    ),
                                 tint = if (item.errorCount > 0) Color.Yellow else Color.Green
                             )
 
@@ -427,8 +533,22 @@ fun ServerConfig(
 
                             Icon(
                                 imageVector = Icons.Default.DeleteSweep,
-                                null,
-                                modifier = Modifier.padding(horizontal = 5.dp).size(15.dp),
+                                stringResource(R.string.spam),
+                                modifier = Modifier
+                                    .padding(horizontal = 5.dp)
+                                    .size(15.dp)
+                                    .combinedClickable(
+                                        onClick = { },
+                                        onLongClick = {
+                                            scope.launch {
+                                                Toast.makeText(
+                                                    context,
+                                                    context.getString(R.string.spam),
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            }
+                                        }
+                                    ),
                                 tint = if (item.spamCount > 0) Color.Yellow else Color.Green
                             )
 
