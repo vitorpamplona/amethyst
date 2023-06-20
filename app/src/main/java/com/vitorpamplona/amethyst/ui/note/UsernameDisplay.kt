@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.note
 
 import android.content.Context
 import android.util.Log
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
@@ -25,6 +26,7 @@ import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.theme.StdButtonSizeModifier
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
@@ -70,6 +72,7 @@ private fun UserNameDisplay(
             overflow = TextOverflow.Ellipsis,
             modifier = modifier
         )
+        Spacer(StdHorzSpacer)
         DrawPlayName(bestDisplayName)
     } else if (bestDisplayName != null) {
         CreateTextWithEmoji(
@@ -80,6 +83,7 @@ private fun UserNameDisplay(
             overflow = TextOverflow.Ellipsis,
             modifier = modifier
         )
+        Spacer(StdHorzSpacer)
         DrawPlayName(bestDisplayName)
     } else if (bestUserName != null) {
         CreateTextWithEmoji(
@@ -90,6 +94,7 @@ private fun UserNameDisplay(
             overflow = TextOverflow.Ellipsis,
             modifier = modifier
         )
+        Spacer(StdHorzSpacer)
         DrawPlayName(bestUserName)
     } else {
         Text(
