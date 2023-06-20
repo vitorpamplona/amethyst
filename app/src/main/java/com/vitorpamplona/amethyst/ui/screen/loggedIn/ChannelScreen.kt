@@ -80,7 +80,6 @@ import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
-import com.vitorpamplona.amethyst.ui.note.LikeIcon
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.screen.NostrChannelFeedViewModel
@@ -535,7 +534,7 @@ private fun LiveChannelActionOptions(
     }
 
     if (isMe) {
-        //EditButton(accountViewModel, channel)
+        // EditButton(accountViewModel, channel)
     } else {
         LocalCache.addressables[channel.idHex]?.let {
             LikeReaction(it, MaterialTheme.colors.onSurface, accountViewModel)
