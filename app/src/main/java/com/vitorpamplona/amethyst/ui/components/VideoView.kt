@@ -52,11 +52,14 @@ import com.google.android.exoplayer2.C
 import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.Player
+import com.google.android.exoplayer2.ext.okhttp.OkHttpDataSource
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.source.hls.HlsMediaSource
 import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
 import com.google.android.exoplayer2.ui.StyledPlayerView
+import com.google.android.exoplayer2.upstream.DataSource
 import com.vitorpamplona.amethyst.VideoCache
+import com.vitorpamplona.amethyst.service.HttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -144,8 +147,10 @@ fun VideoView(
         if (videoUri.startsWith("file")) {
             setMediaItem(media)
         } else if (videoUri.endsWith("m3u8")) {
+            // Should not use cache.
+            val dataSourceFactory: DataSource.Factory = OkHttpDataSource.Factory(HttpClient.getHttpClient())
             setMediaSource(
-                HlsMediaSource.Factory(VideoCache.get()).createMediaSource(
+                HlsMediaSource.Factory(dataSourceFactory).createMediaSource(
                     media
                 )
             )
