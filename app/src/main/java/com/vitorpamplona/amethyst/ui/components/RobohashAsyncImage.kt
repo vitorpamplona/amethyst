@@ -10,12 +10,10 @@ import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
-import coil.size.Size
 import java.util.Date
 
 @Composable
@@ -33,18 +31,9 @@ fun RobohashAsyncImage(
     filterQuality: FilterQuality = DrawScope.DefaultFilterQuality
 ) {
     val context = LocalContext.current
-    val size = with(LocalDensity.current) {
-        remember {
-            robotSize.roundToPx()
-        }
-    }
 
-    val imageRequest = remember(robotSize, robot) {
-        Robohash.imageRequest(
-            context,
-            robot,
-            Size(size, size)
-        )
+    val imageRequest = remember(robot) {
+        Robohash.imageRequest(context, robot)
     }
 
     AsyncImage(
@@ -92,15 +81,9 @@ fun RobohashFallbackAsyncImage(
         )
     } else {
         val context = LocalContext.current
-        val painter = with(LocalDensity.current) {
-            rememberAsyncImagePainter(
-                model = Robohash.imageRequest(
-                    context,
-                    robot,
-                    Size(robotSize.roundToPx(), robotSize.roundToPx())
-                )
-            )
-        }
+        val painter = rememberAsyncImagePainter(
+            model = Robohash.imageRequest(context, robot)
+        )
 
         AsyncImage(
             model = model,

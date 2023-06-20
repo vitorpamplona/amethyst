@@ -70,6 +70,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeMe
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeThem
 import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
+import com.vitorpamplona.amethyst.ui.theme.Size13dp
+import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -359,13 +361,7 @@ private fun StatusRow(
 fun ChatTimeAgo(time: Long) {
     val context = LocalContext.current
 
-    var timeStr by remember { mutableStateOf("") }
-
-    LaunchedEffect(key1 = time) {
-        launch(Dispatchers.IO) {
-            timeStr = timeAgoShort(time, context = context)
-        }
-    }
+    val timeStr = remember { timeAgoShort(time, context = context) }
 
     Text(
         timeStr,
@@ -553,13 +549,13 @@ private fun RelayBadges(baseNote: Note) {
 
     if (state.shouldDisplayExpandButton && !expanded) {
         IconButton(
-            modifier = Modifier.then(Modifier.size(15.dp)),
+            modifier = Size15Modifier,
             onClick = { expanded = true }
         ) {
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 null,
-                modifier = Modifier.size(15.dp),
+                modifier = Size15Modifier,
                 tint = MaterialTheme.colors.placeholderText
             )
         }
@@ -599,7 +595,7 @@ fun RenderRelay(dirtyUrl: String) {
     ) {
         RobohashFallbackAsyncImage(
             robot = iconUrl,
-            robotSize = remember { 13.dp },
+            robotSize = Size13dp,
             model = iconUrl,
             contentDescription = stringResource(id = R.string.relay_icon),
             colorFilter = RelayIconFilter,

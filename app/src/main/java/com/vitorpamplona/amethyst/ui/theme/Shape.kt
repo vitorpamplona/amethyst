@@ -26,5 +26,8 @@ val StdHorzSpacer = Modifier.width(5.dp)
 val DoubleHorzSpacer = Modifier.width(10.dp)
 
 val Size35dp = 35.dp
+val Size13dp = 13.dp
 
 val StdPadding = Modifier.padding(10.dp)
+
+val Size15Modifier = Modifier.size(15.dp)
