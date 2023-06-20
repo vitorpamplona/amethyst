@@ -141,8 +141,7 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
                         videoFeedViewModel.sendToTop()
                     }
                     Route.Notification.base -> {
-                        notifFeedViewModel.clear()
-                        notifFeedViewModel.sendToTop()
+                        notifFeedViewModel.invalidateDataAndSendToTop()
                     }
                 }
 

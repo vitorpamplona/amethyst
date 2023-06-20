@@ -284,6 +284,20 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
     }
 
     @OptIn(ExperimentalTime::class)
+    fun invalidateDataAndSendToTop() {
+        clear()
+        bundler.invalidate(false) {
+            // adds the time to perform the refresh into this delay
+            // holding off new updates in case of heavy refresh routines.
+            val (value, elapsed) = measureTimedValue {
+                refreshSuspended()
+                sendToTop()
+            }
+            Log.d("Time", "${this.javaClass.simpleName} Card update $elapsed")
+        }
+    }
+
+    @OptIn(ExperimentalTime::class)
     fun checkKeysInvalidateDataAndSendToTop() {
         if (lastFeedKey != localFilter.feedKey()) {
             clear()
