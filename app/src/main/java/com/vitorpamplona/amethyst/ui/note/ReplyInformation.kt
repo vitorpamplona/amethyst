@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
@@ -21,6 +22,7 @@ import com.vitorpamplona.amethyst.model.*
 import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.ImmutableList
@@ -135,11 +137,16 @@ fun ReplyInformationChannel(
 
     LaunchedEffect(Unit) {
         launch(Dispatchers.IO) {
-            sortedMentions = mentions
+            val newSortedMentions = mentions
                 .mapNotNull { LocalCache.checkGetOrCreateUser(it) }
                 .toSet()
                 .sortedBy { accountViewModel.account.isFollowing(it) }
                 .toImmutableList()
+                .ifEmpty { null }
+
+            if (newSortedMentions != sortedMentions) {
+                sortedMentions = newSortedMentions
+            }
         }
     }
 
@@ -151,6 +158,7 @@ fun ReplyInformationChannel(
                 nav("User/${it.pubkeyHex}")
             }
         )
+        Spacer(modifier = StdVertSpacer)
     }
 }
 

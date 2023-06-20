@@ -378,7 +378,7 @@ fun NoteMaster(
             ) {
                 Column() {
                     if ((noteEvent is ChannelCreateEvent || noteEvent is ChannelMetadataEvent) && note.channelHex() != null) {
-                        ChannelHeader(channelHex = note.channelHex()!!, showVideo = true, accountViewModel = accountViewModel, nav = nav)
+                        ChannelHeader(channelHex = note.channelHex()!!, showVideo = true, showBottomDiviser = false, accountViewModel = accountViewModel, nav = nav)
                     } else if (noteEvent is FileHeaderEvent) {
                         FileHeaderDisplay(baseNote)
                     } else if (noteEvent is FileStorageHeaderEvent) {

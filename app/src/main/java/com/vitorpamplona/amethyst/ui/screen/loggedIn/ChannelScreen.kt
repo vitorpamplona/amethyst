@@ -209,6 +209,7 @@ fun ChannelScreen(
         ChannelHeader(
             baseChannel = channel,
             showVideo = true,
+            showBottomDiviser = true,
             accountViewModel = accountViewModel,
             nav = nav
         )
@@ -480,6 +481,7 @@ fun MyTextField(
 fun ChannelHeader(
     channelHex: String,
     showVideo: Boolean,
+    showBottomDiviser: Boolean,
     modifier: Modifier = StdPadding,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -497,6 +499,7 @@ fun ChannelHeader(
         ChannelHeader(
             it,
             showVideo,
+            showBottomDiviser,
             modifier,
             accountViewModel,
             nav
@@ -508,6 +511,7 @@ fun ChannelHeader(
 fun ChannelHeader(
     baseChannel: Channel,
     showVideo: Boolean,
+    showBottomDiviser: Boolean,
     modifier: Modifier = StdPadding,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -559,7 +563,9 @@ fun ChannelHeader(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             channel.toBestDisplayName(),
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
 
@@ -589,10 +595,11 @@ fun ChannelHeader(
             }
         }
 
-        Divider(
-            modifier = Modifier.padding(start = 12.dp, end = 12.dp),
-            thickness = 0.25.dp
-        )
+        if (showBottomDiviser) {
+            Divider(
+                thickness = 0.25.dp
+            )
+        }
     }
 }
 

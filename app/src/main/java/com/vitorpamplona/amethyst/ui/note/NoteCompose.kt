@@ -333,7 +333,7 @@ fun LoadedNoteCompose(
 }
 
 @Composable
-private fun WatchForReports(
+fun WatchForReports(
     note: Note,
     accountViewModel: AccountViewModel,
     onChange: (Boolean, Boolean, Set<Note>) -> Unit
@@ -380,7 +380,7 @@ fun NormalNote(
     val channelHex = remember { baseNote.channelHex() }
 
     if ((noteEvent is ChannelCreateEvent || noteEvent is ChannelMetadataEvent) && channelHex != null) {
-        ChannelHeader(channelHex = channelHex, showVideo = !makeItShort, accountViewModel = accountViewModel, nav = nav)
+        ChannelHeader(channelHex = channelHex, showVideo = !makeItShort, showBottomDiviser = true, accountViewModel = accountViewModel, nav = nav)
     } else if (noteEvent is BadgeDefinitionEvent) {
         BadgeDisplay(baseNote = baseNote)
     } else if (noteEvent is FileHeaderEvent) {
@@ -1668,7 +1668,8 @@ private fun ReplyRow(
             ChannelHeader(
                 channelHex = channelHex,
                 showVideo = false,
-                modifier = remember { Modifier.padding(vertical = 10.dp) },
+                showBottomDiviser = false,
+                modifier = remember { Modifier.padding(vertical = 5.dp) },
                 accountViewModel = accountViewModel,
                 nav = nav
             )
@@ -1677,7 +1678,6 @@ private fun ReplyRow(
             val mentions = remember { (note.event as? BaseTextNoteEvent)?.mentions()?.toImmutableList() ?: persistentListOf() }
 
             ReplyInformationChannel(replies, mentions, accountViewModel, nav)
-            Spacer(modifier = Modifier.height(5.dp))
         }
     }
 }
