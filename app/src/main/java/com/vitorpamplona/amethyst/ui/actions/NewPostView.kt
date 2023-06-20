@@ -723,7 +723,8 @@ fun PostButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifier = 
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = if (isActive) MaterialTheme.colors.primary else Color.Gray
-            )
+            ),
+        contentPadding = PaddingValues(0.dp)
     ) {
         Text(text = stringResource(R.string.post), color = Color.White)
     }

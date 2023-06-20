@@ -115,12 +115,18 @@ private fun RenderTopRouteBar(
     accountViewModel: AccountViewModel
 ) {
     when (currentRoute) {
+        Route.Channel.base -> NoTopBar()
+        Route.Room.base -> NoTopBar()
         // Route.Profile.route -> TopBarWithBackButton(nav)
         Route.Home.base -> HomeTopBar(followLists, scaffoldState, accountViewModel)
         Route.Video.base -> StoriesTopBar(followLists, scaffoldState, accountViewModel)
         Route.Notification.base -> NotificationTopBar(followLists, scaffoldState, accountViewModel)
         else -> MainTopBar(scaffoldState, accountViewModel)
     }
+}
+
+@Composable
+fun NoTopBar() {
 }
 
 @Composable
@@ -206,7 +212,7 @@ fun GenericTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewMod
         NewRelayListView({ wantsToEditRelays = false }, accountViewModel)
     }
 
-    Column() {
+    Column(modifier = Modifier.height(50.dp)) {
         TopAppBar(
             elevation = 0.dp,
             backgroundColor = MaterialTheme.colors.surface,

@@ -101,7 +101,7 @@ private fun RenderBottomMenu(
     navEntryState: State<NavBackStackEntry?>,
     nav: (Route, Boolean) -> Unit
 ) {
-    Column() {
+    Column(modifier = Modifier.height(50.dp)) {
         Divider(
             thickness = 0.25.dp
         )
