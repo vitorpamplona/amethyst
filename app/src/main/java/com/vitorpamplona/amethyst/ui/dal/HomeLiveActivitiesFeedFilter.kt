@@ -49,6 +49,8 @@ class HomeLiveActivitiesFeedFilter(val account: Account) : AdditiveFeedFilter<No
             .toSet()
     }
 
+    override fun limit() = 2
+
     override fun sort(collection: Set<Note>): List<Note> {
         return collection.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
     }

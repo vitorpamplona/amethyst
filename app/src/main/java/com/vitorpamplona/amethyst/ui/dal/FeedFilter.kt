@@ -15,8 +15,10 @@ abstract class FeedFilter<T> {
         }
 
         Log.d("Time", "${this.javaClass.simpleName} Full Feed in $elapsed with ${feed.size} objects")
-        return feed.take(1000)
+        return feed.take(limit())
     }
+
+    open fun limit() = 1000
 
     /**
      * Returns a string that serves as the key to invalidate the list if it changes.
@@ -38,7 +40,7 @@ abstract class AdditiveFeedFilter<T> : FeedFilter<T>() {
             val newItemsToBeAdded = applyFilter(newItems)
             if (newItemsToBeAdded.isNotEmpty()) {
                 val newList = oldList.toSet() + newItemsToBeAdded
-                sort(newList).take(1000)
+                sort(newList).take(limit())
             } else {
                 oldList
             }
