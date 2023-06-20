@@ -80,6 +80,9 @@ import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
+import com.vitorpamplona.amethyst.ui.note.LikeIcon
+import com.vitorpamplona.amethyst.ui.note.LikeReaction
+import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.screen.NostrChannelFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
@@ -449,6 +452,9 @@ fun ChannelHeader(baseChannel: Channel, accountViewModel: AccountViewModel, nav:
                     if (channel is PublicChatChannel) {
                         ChannelActionOptions(channel, accountViewModel, nav)
                     }
+                    if (channel is LiveActivitiesChannel) {
+                        LiveChannelActionOptions(channel, accountViewModel, nav)
+                    }
                 }
             }
         }
@@ -506,6 +512,36 @@ private fun ChannelActionOptions(
         LeaveButton(accountViewModel, channel, nav)
     } else {
         JoinButton(accountViewModel, channel, nav)
+    }
+}
+
+@Composable
+private fun LiveChannelActionOptions(
+    channel: LiveActivitiesChannel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    val isMe by remember(accountViewModel) {
+        derivedStateOf {
+            channel.creator == accountViewModel.account.userProfile()
+        }
+    }
+
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val isFollowing by remember(accountState) {
+        derivedStateOf {
+            accountState?.account?.followingChannels?.contains(channel.idHex) ?: false
+        }
+    }
+
+    if (isMe) {
+        //EditButton(accountViewModel, channel)
+    } else {
+        LocalCache.addressables[channel.idHex]?.let {
+            LikeReaction(it, MaterialTheme.colors.onSurface, accountViewModel)
+            Spacer(modifier = Modifier.width(5.dp))
+            ZapReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
+        }
     }
 }
 
