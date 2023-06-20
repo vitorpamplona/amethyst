@@ -5,6 +5,8 @@ import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
 import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
 import com.vitorpamplona.amethyst.service.model.HighlightEvent
+import com.vitorpamplona.amethyst.service.model.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.PinListEvent
 import com.vitorpamplona.amethyst.service.model.PollNoteEvent
@@ -68,7 +70,9 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
                     PollNoteEvent.kind,
                     HighlightEvent.kind,
                     AudioTrackEvent.kind,
-                    PinListEvent.kind
+                    PinListEvent.kind,
+                    LiveActivitiesChatMessageEvent.kind,
+                    LiveActivitiesEvent.kind
                 ),
                 authors = followSet,
                 limit = 400,

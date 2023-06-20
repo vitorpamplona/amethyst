@@ -53,6 +53,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
@@ -98,6 +99,9 @@ import com.vitorpamplona.amethyst.ui.screen.NostrChannelFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
+import com.vitorpamplona.amethyst.ui.theme.SmallBorder
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -203,8 +207,9 @@ fun ChannelScreen(
 
     Column(Modifier.fillMaxHeight()) {
         ChannelHeader(
-            channel,
-            accountViewModel,
+            baseChannel = channel,
+            showVideo = true,
+            accountViewModel = accountViewModel,
             nav = nav
         )
 
@@ -472,8 +477,14 @@ fun MyTextField(
 }
 
 @Composable
-fun ChannelHeader(channelHex: String, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    var baseChannel by remember { mutableStateOf<Channel?>(null) }
+fun ChannelHeader(
+    channelHex: String,
+    showVideo: Boolean,
+    modifier: Modifier = StdPadding,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    var baseChannel by remember { mutableStateOf<Channel?>(LocalCache.channels[channelHex]) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(key1 = channelHex) {
@@ -483,12 +494,24 @@ fun ChannelHeader(channelHex: String, accountViewModel: AccountViewModel, nav: (
     }
 
     baseChannel?.let {
-        ChannelHeader(it, accountViewModel, nav)
+        ChannelHeader(
+            it,
+            showVideo,
+            modifier,
+            accountViewModel,
+            nav
+        )
     }
 }
 
 @Composable
-fun ChannelHeader(baseChannel: Channel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun ChannelHeader(
+    baseChannel: Channel,
+    showVideo: Boolean,
+    modifier: Modifier = StdPadding,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
     val channelState by baseChannel.live.observeAsState()
     val channel = remember(channelState) { channelState?.channel } ?: return
 
@@ -506,7 +529,7 @@ fun ChannelHeader(baseChannel: Channel, accountViewModel: AccountViewModel, nav:
                 }
             }
 
-            if (streamingUrl != null) {
+            if (streamingUrl != null && showVideo) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     VideoView(
                         videoUri = streamingUrl!!,
@@ -516,7 +539,7 @@ fun ChannelHeader(baseChannel: Channel, accountViewModel: AccountViewModel, nav:
             }
         }
 
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column(modifier = modifier) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RobohashAsyncImageProxy(
                     robot = channel.idHex,
@@ -624,12 +647,31 @@ private fun LiveChannelActionOptions(
         }
     }
 
+    val status by remember {
+        derivedStateOf {
+            channel.info?.status()
+        }
+    }
+
     if (isMe) {
         // EditButton(accountViewModel, channel)
     } else {
         LocalCache.addressables[channel.idHex]?.let {
+            if (status == "live") {
+                Text(
+                    text = "LIVE",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .clip(SmallBorder)
+                        .drawBehind { drawRect(Color.Red) }
+                        .padding(horizontal = 5.dp)
+                )
+                Spacer(modifier = StdHorzSpacer)
+            }
+
             LikeReaction(it, MaterialTheme.colors.onSurface, accountViewModel)
-            Spacer(modifier = Modifier.width(5.dp))
+            Spacer(modifier = StdHorzSpacer)
             ZapReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
         }
     }

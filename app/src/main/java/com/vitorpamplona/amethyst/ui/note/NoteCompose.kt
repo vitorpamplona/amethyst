@@ -92,6 +92,7 @@ import com.vitorpamplona.amethyst.service.model.AppDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
 import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
 import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
+import com.vitorpamplona.amethyst.service.model.BaseTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
@@ -379,7 +380,7 @@ fun NormalNote(
     val channelHex = remember { baseNote.channelHex() }
 
     if ((noteEvent is ChannelCreateEvent || noteEvent is ChannelMetadataEvent) && channelHex != null) {
-        ChannelHeader(channelHex = channelHex, accountViewModel = accountViewModel, nav = nav)
+        ChannelHeader(channelHex = channelHex, showVideo = !makeItShort, accountViewModel = accountViewModel, nav = nav)
     } else if (noteEvent is BadgeDefinitionEvent) {
         BadgeDisplay(baseNote = baseNote)
     } else if (noteEvent is FileHeaderEvent) {
@@ -1648,7 +1649,8 @@ private fun ReplyRow(
 
     val showChannelReply by remember {
         derivedStateOf {
-            noteEvent is ChannelMessageEvent && (note.replyTo != null || noteEvent.hasAnyTaggedUser())
+            (noteEvent is ChannelMessageEvent && (note.replyTo != null || noteEvent.hasAnyTaggedUser())) ||
+                (noteEvent is LiveActivitiesChatMessageEvent && (note.replyTo != null || noteEvent.hasAnyTaggedUser()))
         }
     }
 
@@ -1663,10 +1665,18 @@ private fun ReplyRow(
     } else if (showChannelReply) {
         val channelHex = note.channelHex()
         channelHex?.let {
-            val replies = remember { note.replyTo?.toImmutableList() }
-            val mentions = remember { (note.event as? ChannelMessageEvent)?.mentions()?.toImmutableList() ?: persistentListOf() }
+            ChannelHeader(
+                channelHex = channelHex,
+                showVideo = false,
+                modifier = remember { Modifier.padding(vertical = 10.dp) },
+                accountViewModel = accountViewModel,
+                nav = nav
+            )
 
-            ReplyInformationChannel(replies, mentions, it, accountViewModel, nav)
+            val replies = remember { note.replyTo?.toImmutableList() }
+            val mentions = remember { (note.event as? BaseTextNoteEvent)?.mentions()?.toImmutableList() ?: persistentListOf() }
+
+            ReplyInformationChannel(replies, mentions, accountViewModel, nav)
             Spacer(modifier = Modifier.height(5.dp))
         }
     }

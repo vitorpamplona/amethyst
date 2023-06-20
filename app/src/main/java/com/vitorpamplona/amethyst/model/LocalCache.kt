@@ -852,8 +852,6 @@ object LocalCache {
 
         note.loadEvent(event, author, replyTo)
 
-        Log.d("CM", "AAA REPLY TO ${event.content} ${event.taggedEvents()}")
-
         // Counts the replies
         replyTo.forEach {
             it.addReply(note)

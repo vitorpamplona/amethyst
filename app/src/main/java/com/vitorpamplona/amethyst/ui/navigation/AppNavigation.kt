@@ -13,6 +13,7 @@ import com.vitorpamplona.amethyst.ui.note.UserReactionsViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListKnownFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListNewFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrGlobalFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedLiveActivitiesViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
@@ -38,6 +39,7 @@ import kotlinx.coroutines.launch
 fun AppNavigation(
     homeFeedViewModel: NostrHomeFeedViewModel,
     repliesFeedViewModel: NostrHomeRepliesFeedViewModel,
+    liveActivitiesViewModel: NostrHomeFeedLiveActivitiesViewModel,
     knownFeedViewModel: NostrChatroomListKnownFeedViewModel,
     newFeedViewModel: NostrChatroomListNewFeedViewModel,
     searchFeedViewModel: NostrGlobalFeedViewModel,
@@ -67,6 +69,7 @@ fun AppNavigation(
                 HomeScreen(
                     homeFeedViewModel = homeFeedViewModel,
                     repliesFeedViewModel = repliesFeedViewModel,
+                    liveActivitiesViewModel = liveActivitiesViewModel,
                     accountViewModel = accountViewModel,
                     nav = nav,
                     nip47 = nip47

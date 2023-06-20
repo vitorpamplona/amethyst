@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListKnownFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListNewFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrGlobalFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedLiveActivitiesViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
@@ -87,6 +88,11 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
     val repliesFeedViewModel: NostrHomeRepliesFeedViewModel = viewModel(
         key = accountViewModel.userProfile().pubkeyHex + "NostrHomeRepliesFeedViewModel",
         factory = NostrHomeRepliesFeedViewModel.Factory(accountViewModel.account)
+    )
+
+    val liveActivitiesViewModel: NostrHomeFeedLiveActivitiesViewModel = viewModel(
+        key = accountViewModel.userProfile().pubkeyHex + "NostrHomeLiveActivitiesFeedViewModel",
+        factory = NostrHomeFeedLiveActivitiesViewModel.Factory(accountViewModel.account)
     )
 
     val searchFeedViewModel: NostrGlobalFeedViewModel = viewModel(
@@ -184,6 +190,7 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
                 AppNavigation(
                     homeFeedViewModel,
                     repliesFeedViewModel,
+                    liveActivitiesViewModel,
                     knownFeedViewModel,
                     newFeedViewModel,
                     searchFeedViewModel,

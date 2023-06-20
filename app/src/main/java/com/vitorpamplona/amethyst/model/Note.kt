@@ -375,7 +375,14 @@ open class Note(val idHex: String) {
     }
 
     fun isNewThread(): Boolean {
-        return event is RepostEvent || event is GenericRepostEvent || replyTo == null || replyTo?.size == 0
+        return (
+            event is RepostEvent ||
+                event is GenericRepostEvent ||
+                replyTo == null ||
+                replyTo?.size == 0
+            ) &&
+            event !is ChannelMessageEvent &&
+            event !is LiveActivitiesChatMessageEvent
     }
 
     fun hasZapped(loggedIn: User): Boolean {

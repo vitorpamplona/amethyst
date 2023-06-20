@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.theme
 
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,3 +26,5 @@ val StdHorzSpacer = Modifier.width(5.dp)
 val DoubleHorzSpacer = Modifier.width(10.dp)
 
 val Size35dp = 35.dp
+
+val StdPadding = Modifier.padding(10.dp)

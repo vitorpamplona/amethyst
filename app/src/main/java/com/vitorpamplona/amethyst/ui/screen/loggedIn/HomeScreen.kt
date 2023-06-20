@@ -1,9 +1,15 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.material.MaterialTheme
@@ -14,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -30,7 +37,9 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountDialog
+import com.vitorpamplona.amethyst.ui.screen.FeedState
 import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedLiveActivitiesViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.PagerStateKeys
@@ -47,6 +56,7 @@ import kotlinx.coroutines.launch
 fun HomeScreen(
     homeFeedViewModel: NostrHomeFeedViewModel,
     repliesFeedViewModel: NostrHomeRepliesFeedViewModel,
+    liveActivitiesViewModel: NostrHomeFeedLiveActivitiesViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     nip47: String? = null
@@ -88,7 +98,7 @@ fun HomeScreen(
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            HomePages(pagerState, tabs, accountViewModel, nav)
+            HomePages(pagerState, tabs, liveActivitiesViewModel, accountViewModel, nav)
         }
     }
 }
@@ -98,6 +108,7 @@ fun HomeScreen(
 private fun HomePages(
     pagerState: PagerState,
     tabs: ImmutableList<TabItem>,
+    liveActivitiesViewModel: NostrHomeFeedLiveActivitiesViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -120,6 +131,12 @@ private fun HomePages(
         }
     }
 
+    LiveActivities(
+        liveActivitiesViewModel = liveActivitiesViewModel,
+        accountViewModel = accountViewModel,
+        nav = nav
+    )
+
     HorizontalPager(pageCount = 2, state = pagerState) { page ->
         RefresheableFeedView(
             viewModel = tabs[page].viewModel,
@@ -128,6 +145,60 @@ private fun HomePages(
             accountViewModel = accountViewModel,
             nav = nav
         )
+    }
+}
+
+@Composable
+fun LiveActivities(
+    liveActivitiesViewModel: NostrHomeFeedLiveActivitiesViewModel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    val feedState by liveActivitiesViewModel.feedContent.collectAsState()
+
+    Crossfade(
+        targetState = feedState,
+        animationSpec = tween(durationMillis = 100)
+    ) { state ->
+        when (state) {
+            is FeedState.Loaded -> {
+                FeedLoaded(
+                    state,
+                    accountViewModel,
+                    nav
+                )
+            }
+
+            else -> {
+            }
+        }
+    }
+}
+
+@Composable
+private fun FeedLoaded(
+    state: FeedState.Loaded,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    val listState = rememberLazyListState()
+
+    LazyColumn(
+        contentPadding = PaddingValues(
+            top = 10.dp,
+            bottom = 10.dp
+        ),
+        state = listState
+    ) {
+        itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
+            ChannelHeader(
+                channelHex = item.idHex,
+                showVideo = false,
+                modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
+                accountViewModel = accountViewModel,
+                nav = nav
+            )
+        }
     }
 }
 

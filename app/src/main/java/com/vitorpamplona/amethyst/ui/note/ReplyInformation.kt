@@ -128,7 +128,6 @@ private fun ReplyInformation(
 fun ReplyInformationChannel(
     replyTo: ImmutableList<Note>?,
     mentions: ImmutableList<String>,
-    channelHex: String,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -145,35 +144,14 @@ fun ReplyInformationChannel(
     }
 
     if (sortedMentions != null) {
-        LoadChannel(channelHex) { channel ->
-            ReplyInformationChannel(
-                replyTo,
-                sortedMentions,
-                channel,
-                onUserTagClick = {
-                    nav("User/${it.pubkeyHex}")
-                },
-                onChannelTagClick = {
-                    nav("Channel/${it.idHex}")
-                }
-            )
-        }
+        ReplyInformationChannel(
+            replyTo,
+            sortedMentions,
+            onUserTagClick = {
+                nav("User/${it.pubkeyHex}")
+            }
+        )
     }
-}
-
-@Composable
-fun ReplyInformationChannel(replyTo: ImmutableList<Note>?, mentions: ImmutableList<User>?, channel: Channel, nav: (String) -> Unit) {
-    ReplyInformationChannel(
-        replyTo,
-        mentions,
-        channel,
-        onUserTagClick = {
-            nav("User/${it.pubkeyHex}")
-        },
-        onChannelTagClick = {
-            nav("Channel/${it.idHex}")
-        }
-    )
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -181,31 +159,10 @@ fun ReplyInformationChannel(replyTo: ImmutableList<Note>?, mentions: ImmutableLi
 fun ReplyInformationChannel(
     replyTo: ImmutableList<Note>?,
     mentions: ImmutableList<User>?,
-    baseChannel: Channel,
     prefix: String = "",
-    onUserTagClick: (User) -> Unit,
-    onChannelTagClick: (Channel) -> Unit
+    onUserTagClick: (User) -> Unit
 ) {
-    val channelState by baseChannel.live.observeAsState()
-    val channel = channelState?.channel ?: return
-
-    val channelName = remember(channelState) {
-        AnnotatedString("${channel.toBestDisplayName()} ")
-    }
-
     FlowRow() {
-        Text(
-            stringResource(R.string.in_channel),
-            fontSize = 13.sp,
-            color = MaterialTheme.colors.placeholderText
-        )
-
-        ClickableText(
-            text = channelName,
-            style = LocalTextStyle.current.copy(color = MaterialTheme.colors.lessImportantLink, fontSize = 13.sp),
-            onClick = { onChannelTagClick(channel) }
-        )
-
         if (mentions != null && mentions.isNotEmpty()) {
             if (replyTo != null && replyTo.isNotEmpty()) {
                 Text(

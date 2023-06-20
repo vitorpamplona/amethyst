@@ -255,7 +255,6 @@ fun ChatroomMessageCompose(
                                 }
 
                                 val replyTo = note.replyTo
-                                println("AAA replyTo ${replyTo?.lastOrNull()}")
                                 if (!innerQuote && !replyTo.isNullOrEmpty()) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         replyTo.lastOrNull()?.let { note ->
