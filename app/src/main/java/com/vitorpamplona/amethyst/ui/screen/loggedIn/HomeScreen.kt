@@ -34,7 +34,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
+import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent
+import com.vitorpamplona.amethyst.ui.dal.checkIfOnline
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountDialog
 import com.vitorpamplona.amethyst.ui.screen.FeedState
@@ -65,7 +68,7 @@ fun HomeScreen(
 
     val pagerState = rememberForeverPagerState(key = PagerStateKeys.HOME_SCREEN)
 
-    WatchAccountForHomeScreen(homeFeedViewModel, repliesFeedViewModel, accountViewModel)
+    WatchAccountForHomeScreen(homeFeedViewModel, repliesFeedViewModel, liveActivitiesViewModel, accountViewModel)
 
     if (wantsToAddNip47 != null) {
         UpdateZapAmountDialog({ wantsToAddNip47 = null }, wantsToAddNip47, accountViewModel)
@@ -190,15 +193,33 @@ private fun FeedLoaded(
         state = listState
     ) {
         itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
-            ChannelHeader(
-                channelHex = item.idHex,
-                showVideo = false,
-                showBottomDiviser = true,
-                modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
-                accountViewModel = accountViewModel,
-                nav = nav
-            )
+            CheckIfOnline(item) {
+                ChannelHeader(
+                    channelHex = item.idHex,
+                    showVideo = false,
+                    showBottomDiviser = true,
+                    modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
+            }
         }
+    }
+}
+
+@Composable
+fun CheckIfOnline(note: Note, whenOnline: @Composable () -> Unit) {
+    val noteState by note.live().metadata.observeAsState()
+    var online by remember { mutableStateOf(false) }
+
+    LaunchedEffect(key1 = noteState) {
+        launch(Dispatchers.IO) {
+            online = checkIfOnline((note.event as? LiveActivitiesEvent)?.streaming())
+        }
+    }
+
+    if (online) {
+        whenOnline()
     }
 }
 
@@ -206,22 +227,18 @@ private fun FeedLoaded(
 fun WatchAccountForHomeScreen(
     homeFeedViewModel: NostrHomeFeedViewModel,
     repliesFeedViewModel: NostrHomeRepliesFeedViewModel,
+    liveActivitiesViewModel: NostrHomeFeedLiveActivitiesViewModel,
     accountViewModel: AccountViewModel
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val followState by accountViewModel.account.userProfile().live().follows.observeAsState()
 
-    LaunchedEffect(accountViewModel, accountState?.account?.defaultHomeFollowList) {
+    LaunchedEffect(accountViewModel, accountState?.account?.defaultHomeFollowList, followState) {
         launch(Dispatchers.IO) {
             NostrHomeDataSource.invalidateFilters()
             homeFeedViewModel.checkKeysInvalidateDataAndSendToTop()
             repliesFeedViewModel.checkKeysInvalidateDataAndSendToTop()
-        }
-    }
-
-    LaunchedEffect(followState) {
-        launch(Dispatchers.IO) {
-            NostrHomeDataSource.invalidateFilters()
+            liveActivitiesViewModel.checkKeysInvalidateDataAndSendToTop()
         }
     }
 }

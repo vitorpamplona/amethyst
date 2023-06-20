@@ -13,7 +13,10 @@ import java.util.Date
 
 class HomeLiveActivitiesFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String {
-        return account.userProfile().pubkeyHex + "-" + account.defaultHomeFollowList
+        val followingKeySet = account.selectedUsersFollowList(account.defaultHomeFollowList)?.size ?: 0
+        val followingTagSet = account.selectedTagsFollowList(account.defaultHomeFollowList)?.size ?: 0
+
+        return account.userProfile().pubkeyHex + "-" + account.defaultHomeFollowList + "-" + followingKeySet + "-" + followingTagSet
     }
 
     override fun feed(): List<Note> {
