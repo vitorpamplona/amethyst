@@ -198,7 +198,7 @@ private fun FeedLoaded(
                     channelHex = item.idHex,
                     showVideo = false,
                     showBottomDiviser = true,
-                    modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
+                    modifier = Modifier.padding(start = 10.dp, end = 10.dp, top = 5.dp, bottom = 5.dp),
                     accountViewModel = accountViewModel,
                     nav = nav
                 )
