@@ -408,6 +408,23 @@ fun ChannelHeader(baseChannel: Channel, accountViewModel: AccountViewModel, nav:
             nav("Channel/${baseChannel.idHex}")
         }
     ) {
+        if (channel is LiveActivitiesChannel) {
+            val streamingUrl by remember(channelState) {
+                derivedStateOf {
+                    channel.info?.streaming()
+                }
+            }
+
+            if (streamingUrl != null) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    VideoView(
+                        videoUri = streamingUrl!!,
+                        description = null
+                    )
+                }
+            }
+        }
+
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RobohashAsyncImageProxy(
@@ -454,23 +471,6 @@ fun ChannelHeader(baseChannel: Channel, accountViewModel: AccountViewModel, nav:
                     if (channel is LiveActivitiesChannel) {
                         LiveChannelActionOptions(channel, accountViewModel, nav)
                     }
-                }
-            }
-        }
-
-        if (channel is LiveActivitiesChannel) {
-            val streamingUrl by remember(channelState) {
-                derivedStateOf {
-                    channel.info?.streaming()
-                }
-            }
-
-            if (streamingUrl != null) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 5.dp)) {
-                    VideoView(
-                        videoUri = streamingUrl!!,
-                        description = null
-                    )
                 }
             }
         }
