@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -534,7 +535,7 @@ fun ChannelHeader(
             }
 
             if (streamingUrl != null && showVideo) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.heightIn(max = 300.dp)) {
                     VideoView(
                         videoUri = streamingUrl!!,
                         description = null
@@ -558,7 +559,8 @@ fun ChannelHeader(
                 Column(
                     modifier = Modifier
                         .padding(start = 10.dp)
-                        .weight(1f)
+                        .weight(1f),
+                    verticalArrangement = Arrangement.Center
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
@@ -569,21 +571,28 @@ fun ChannelHeader(
                         )
                     }
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            "${channel.summary()}",
-                            color = MaterialTheme.colors.placeholderText,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            fontSize = 12.sp
-                        )
+                    val summary = remember(channelState) {
+                        channel.summary()?.ifBlank { null }
+                    }
+
+                    if (summary != null) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = summary,
+                                color = MaterialTheme.colors.placeholderText,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                fontSize = 12.sp
+                            )
+                        }
                     }
                 }
 
                 Row(
                     modifier = Modifier
                         .height(Size35dp)
-                        .padding(bottom = 3.dp)
+                        .padding(bottom = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (channel is PublicChatChannel) {
                         ChannelActionOptions(channel, accountViewModel, nav)
