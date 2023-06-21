@@ -173,7 +173,7 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
                 AppBottomBar(accountViewModel, navState, navBottomRow)
             },
             topBar = {
-                AppTopBar(followLists, navState, scaffoldState, accountViewModel)
+                AppTopBar(followLists, navState, scaffoldState, accountViewModel, nav = nav)
             },
             drawerContent = {
                 DrawerContent(nav, scaffoldState, sheetState, accountViewModel)

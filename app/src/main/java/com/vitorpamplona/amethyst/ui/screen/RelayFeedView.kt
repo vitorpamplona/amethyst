@@ -98,6 +98,7 @@ class RelayFeedViewModel : ViewModel() {
 fun RelayFeedView(
     viewModel: RelayFeedViewModel,
     accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
     enablePullRefresh: Boolean = true
 ) {
     val feedState by viewModel.feedContent.collectAsState()
@@ -107,7 +108,7 @@ fun RelayFeedView(
     }
 
     if (wantsToAddRelay.isNotEmpty()) {
-        NewRelayListView({ wantsToAddRelay = "" }, accountViewModel, wantsToAddRelay)
+        NewRelayListView({ wantsToAddRelay = "" }, accountViewModel, wantsToAddRelay, nav = nav)
     }
 
     var refreshing by remember { mutableStateOf(false) }
