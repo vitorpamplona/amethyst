@@ -502,35 +502,49 @@ private fun StatusRow(
     onWantsToReply: (Note) -> Unit
 ) {
     val grayTint = MaterialTheme.colors.placeholderText
-    val time = remember { baseNote.createdAt() ?: 0 }
 
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        ChatTimeAgo(time)
-        RelayBadges(baseNote)
-        Spacer(modifier = DoubleHorzSpacer)
+    Column() {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            ChatTimeAgo(baseNote)
+            RelayBadges(baseNote)
+            Spacer(modifier = DoubleHorzSpacer)
+        }
     }
 
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        LikeReaction(baseNote, grayTint, accountViewModel)
-        Spacer(modifier = StdHorzSpacer)
-        ZapReaction(baseNote, grayTint, accountViewModel)
-        Spacer(modifier = StdHorzSpacer)
-        ReplyReaction(baseNote, grayTint, accountViewModel, showCounter = false, iconSize = Size16dp) {
-            onWantsToReply(baseNote)
+    Column() {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            LikeReaction(baseNote, grayTint, accountViewModel)
+            Spacer(modifier = StdHorzSpacer)
+            ZapReaction(baseNote, grayTint, accountViewModel)
+            Spacer(modifier = StdHorzSpacer)
+            ReplyReaction(
+                baseNote,
+                grayTint,
+                accountViewModel,
+                showCounter = false,
+                iconSize = Size16dp
+            ) {
+                onWantsToReply(baseNote)
+            }
         }
     }
 }
 
 @Composable
-fun ChatTimeAgo(time: Long) {
+fun ChatTimeAgo(baseNote: Note) {
     val context = LocalContext.current
 
-    val timeStr = remember { timeAgoShort(time, context = context) }
+    val timeStr by remember(baseNote) {
+        derivedStateOf {
+            timeAgoShort(baseNote.createdAt() ?: 0, context = context)
+        }
+    }
 
     Text(
-        timeStr,
+        text = timeStr,
         color = MaterialTheme.colors.placeholderText,
-        fontSize = 12.sp
+        fontSize = 12.sp,
+        maxLines = 1
     )
 }
 

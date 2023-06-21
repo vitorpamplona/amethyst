@@ -62,7 +62,8 @@ private fun UserNameDisplay(
         CreateTextWithEmoji(
             text = bestDisplayName,
             tags = tags,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            maxLines = 1
         )
         CreateTextWithEmoji(
             text = remember { "@$bestUserName" },

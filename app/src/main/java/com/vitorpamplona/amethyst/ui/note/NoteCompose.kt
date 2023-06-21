@@ -159,7 +159,6 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import nostr.postr.toNpub
 import java.io.File
 import java.math.BigDecimal
@@ -1282,8 +1281,14 @@ fun DisplayPeopleList(
         members.take(3)
     }
 
+    val name by remember {
+        derivedStateOf {
+            "#${noteEvent.dTag()}"
+        }
+    }
+
     Text(
-        text = "#${noteEvent.dTag()}",
+        text = name,
         fontWeight = FontWeight.Bold,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
@@ -1385,7 +1390,7 @@ private fun RenderBadgeAward(
         }
 
         if (awardees.size > 100) {
-            Text(" and ${awardees.size - 100} others")
+            Text(" and ${awardees.size - 100} others", maxLines = 1)
         }
     }
 
@@ -1427,7 +1432,8 @@ private fun RenderReaction(
         if (note.event?.content() == "+") "❤" else note.event?.content() ?: ""
 
     Text(
-        text = refactorReactionText
+        text = refactorReactionText,
+        maxLines = 1
     )
 }
 
@@ -1778,7 +1784,8 @@ private fun FirstUserInfoRow(
             Text(
                 "  ${stringResource(id = R.string.boosted)}",
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colors.placeholderText
+                color = MaterialTheme.colors.placeholderText,
+                maxLines = 1
             )
         } else {
             DisplayFollowingHashtagsInPost(eventNote, accountViewModel, nav)
@@ -1832,7 +1839,7 @@ fun TimeAgo(time: Long) {
     }
 
     Text(
-        timeStr,
+        text = timeStr,
         color = MaterialTheme.colors.placeholderText,
         maxLines = 1
     )
@@ -1990,51 +1997,75 @@ fun DisplayHighlight(
         nav
     )
 
-    var userBase by remember { mutableStateOf<User?>(null) }
+    authorHex?.let {
+        DisplayQuoteAuthor(authorHex, url, nav)
+    }
+}
 
-    LaunchedEffect(Unit) {
-        withContext(Dispatchers.IO) {
-            if (authorHex != null) {
+@Composable
+@OptIn(ExperimentalLayoutApi::class)
+private fun DisplayQuoteAuthor(
+    authorHex: String,
+    url: String?,
+    nav: (String) -> Unit
+) {
+    var userBase by remember { mutableStateOf<User?>(LocalCache.getUserIfExists(authorHex)) }
+
+    if (userBase == null) {
+        LaunchedEffect(Unit) {
+            launch(Dispatchers.IO) {
                 userBase = LocalCache.checkGetOrCreateUser(authorHex)
             }
         }
     }
 
-    FlowRow() {
-        authorHex?.let { authorHex ->
-            userBase?.let { userBase ->
-                val userState by userBase.live().metadata.observeAsState()
-                val route = remember { "User/${userBase.pubkeyHex}" }
-                val userDisplayName = remember(userState) { userState?.user?.toBestDisplayName() }
-                val userTags = remember(userState) { userState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists() }
-
-                if (userDisplayName != null) {
-                    CreateClickableTextWithEmoji(
-                        clickablePart = userDisplayName,
-                        suffix = " ",
-                        tags = userTags,
-                        route = route,
-                        nav = nav
-                    )
-                }
-            }
+    Row() {
+        userBase?.let { userBase ->
+            LoadAndDisplayUser(userBase, nav)
         }
 
         url?.let { url ->
-            val validatedUrl = remember {
-                try {
-                    URL(url)
-                } catch (e: Exception) {
-                    Log.w("Note Compose", "Invalid URI: $url")
-                    null
-                }
-            }
-
-            validatedUrl?.host?.let { host ->
-                Text("on ")
-                ClickableUrl(urlText = host, url = url)
-            }
+            LoadAndDisplayUrl(url)
         }
+    }
+}
+
+@Composable
+private fun LoadAndDisplayUrl(url: String) {
+    val validatedUrl = remember {
+        try {
+            URL(url)
+        } catch (e: Exception) {
+            Log.w("Note Compose", "Invalid URI: $url")
+            null
+        }
+    }
+
+    validatedUrl?.host?.let { host ->
+        Text(remember { "on " }, maxLines = 1)
+        ClickableUrl(urlText = host, url = url)
+    }
+}
+
+@Composable
+private fun LoadAndDisplayUser(
+    userBase: User,
+    nav: (String) -> Unit
+) {
+    val userState by userBase.live().metadata.observeAsState()
+    val route = remember { "User/${userBase.pubkeyHex}" }
+    val userDisplayName = remember(userState) { userState?.user?.toBestDisplayName() }
+    val userTags =
+        remember(userState) { userState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists() }
+
+    if (userDisplayName != null) {
+        CreateClickableTextWithEmoji(
+            clickablePart = userDisplayName,
+            suffix = " ",
+            tags = userTags,
+            route = route,
+            nav = nav
+        )
     }
 }
 
@@ -2071,7 +2102,8 @@ fun DisplayFollowingHashtagsInPost(
                         color = MaterialTheme.colors.primary.copy(
                             alpha = 0.52f
                         )
-                    )
+                    ),
+                    maxLines = 1
                 )
             }
         }
@@ -2120,7 +2152,8 @@ fun DisplayPoW(
             alpha = 0.52f
         ),
         fontSize = 14.sp,
-        fontWeight = FontWeight.Bold
+        fontWeight = FontWeight.Bold,
+        maxLines = 1
     )
 }
 
@@ -2214,7 +2247,8 @@ private fun RenderPledgeAmount(
 
     Text(
         text = reward,
-        color = MaterialTheme.colors.placeholderText
+        color = MaterialTheme.colors.placeholderText,
+        maxLines = 1
     )
 }
 
@@ -2421,7 +2455,7 @@ fun AudioTrackHeader(noteEvent: AudioTrackEvent, accountViewModel: AccountViewMo
     var participantUsers by remember { mutableStateOf<List<Pair<Participant, User>>>(emptyList()) }
 
     LaunchedEffect(key1 = participants) {
-        withContext(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             participantUsers = participants.mapNotNull { part -> LocalCache.checkGetOrCreateUser(part.key)?.let { Pair(part, it) } }
         }
     }
@@ -2925,7 +2959,7 @@ private fun FollowingIcon(iconSize: Dp) {
         val myIconBackgroundModifier = remember {
             Modifier
                 .clip(CircleShape)
-                .fillMaxSize(0.6f)
+                .size(iconSize.times(0.6f))
                 .drawBehind { drawRect(backgroundColor) }
         }
 

@@ -656,41 +656,45 @@ private fun LiveChannelActionOptions(
         }
     }
 
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val isFollowing by remember(accountState) {
+    val isLive by remember(channel) {
         derivedStateOf {
-            accountState?.account?.followingChannels?.contains(channel.idHex) ?: false
-        }
-    }
-
-    val status by remember {
-        derivedStateOf {
-            channel.info?.status()
+            channel.info?.status() == "live"
         }
     }
 
     if (isMe) {
         // EditButton(accountViewModel, channel)
     } else {
-        LocalCache.addressables[channel.idHex]?.let {
-            if (status == "live") {
-                Text(
-                    text = "LIVE",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier
-                        .clip(SmallBorder)
-                        .drawBehind { drawRect(Color.Red) }
-                        .padding(horizontal = 5.dp)
-                )
+        val note = remember(channel.idHex) {
+            LocalCache.getNoteIfExists(channel.idHex)
+        }
+
+        note?.let {
+            if (isLive) {
+                LiveFlag()
                 Spacer(modifier = StdHorzSpacer)
             }
 
-            LikeReaction(it, MaterialTheme.colors.onSurface, accountViewModel)
+            LikeReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
             Spacer(modifier = StdHorzSpacer)
             ZapReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
         }
     }
+}
+
+@Composable
+private fun LiveFlag() {
+    Text(
+        text = "LIVE",
+        color = Color.White,
+        fontWeight = FontWeight.Bold,
+        modifier = remember {
+            Modifier
+                .clip(SmallBorder)
+                .drawBehind { drawRect(Color.Red) }
+                .padding(horizontal = 5.dp)
+        }
+    )
 }
 
 @Composable
