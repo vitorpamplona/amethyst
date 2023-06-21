@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.actions
 
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -53,17 +54,25 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.RelayInformation
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
+import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.launch
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.Request
+import okhttp3.Response
 import java.lang.Math.round
 
 @Composable
-fun NewRelayListView(onClose: () -> Unit, accountViewModel: AccountViewModel, relayToAdd: String = "") {
+fun NewRelayListView(onClose: () -> Unit, accountViewModel: AccountViewModel, relayToAdd: String = "", nav: (String) -> Unit) {
     val postViewModel: NewRelayListViewModel = viewModel()
     val feedState by postViewModel.relays.collectAsState()
 
@@ -125,7 +134,9 @@ fun NewRelayListView(onClose: () -> Unit, accountViewModel: AccountViewModel, re
                                 onToggleGlobal = { postViewModel.toggleGlobal(it) },
                                 onToggleSearch = { postViewModel.toggleSearch(it) },
 
-                                onDelete = { postViewModel.deleteRelay(it) }
+                                onDelete = { postViewModel.deleteRelay(it) },
+                                accountViewModel = accountViewModel,
+                                nav = nav
                             )
                         }
                     }
@@ -222,10 +233,31 @@ fun ServerConfig(
     onToggleGlobal: (RelaySetupInfo) -> Unit,
     onToggleSearch: (RelaySetupInfo) -> Unit,
 
-    onDelete: (RelaySetupInfo) -> Unit
+    onDelete: (RelaySetupInfo) -> Unit,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    var relayInfo: RelayInformation? by remember { mutableStateOf(null) }
+
+    if (relayInfo != null) {
+        val user = LocalCache.getOrCreateUser(relayInfo!!.pubkey ?: "")
+        NostrUserProfileDataSource.loadUserProfile(user)
+        NostrUserProfileDataSource.start()
+        RelayInformationDialog(
+            onClose = {
+                relayInfo = null
+                NostrUserProfileDataSource.loadUserProfile(null)
+                NostrUserProfileDataSource.stop()
+            },
+            relayInfo = relayInfo!!,
+            user,
+            accountViewModel,
+            nav
+        )
+    }
+
     Column(Modifier.fillMaxWidth()) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -251,7 +283,52 @@ fun ServerConfig(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = item.url.removePrefix("wss://"),
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable {
+                                val client = HttpClient.getHttpClient()
+                                val url = item.url
+                                    .replace("wss://", "https://")
+                                    .replace("ws://", "http://")
+                                val request: Request = Request
+                                    .Builder()
+                                    .header("Accept", "application/nostr+json")
+                                    .url(url)
+                                    .build()
+                                client
+                                    .newCall(request)
+                                    .enqueue(object : Callback {
+                                        override fun onResponse(call: Call, response: Response) {
+                                            response.use {
+                                                if (it.isSuccessful) {
+                                                    relayInfo =
+                                                        RelayInformation.fromJson(it.body.string())
+                                                } else {
+                                                    scope.launch {
+                                                        Toast
+                                                            .makeText(
+                                                                context,
+                                                                context.getString(R.string.an_error_ocurred_trying_to_get_relay_information),
+                                                                Toast.LENGTH_SHORT
+                                                            ).show()
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        override fun onFailure(call: Call, e: java.io.IOException) {
+                                            e.printStackTrace()
+                                            scope.launch {
+                                                Toast
+                                                    .makeText(
+                                                        context,
+                                                        context.getString(R.string.an_error_ocurred_trying_to_get_relay_information),
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
+                                            }
+                                        }
+                                    })
+                            },
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -275,11 +352,13 @@ fun ServerConfig(
                                             onClick = { onToggleFollows(item) },
                                             onLongClick = {
                                                 scope.launch {
-                                                    Toast.makeText(
-                                                        context,
-                                                        context.getString(R.string.home_feed),
-                                                        Toast.LENGTH_SHORT
-                                                    ).show()
+                                                    Toast
+                                                        .makeText(
+                                                            context,
+                                                            context.getString(R.string.home_feed),
+                                                            Toast.LENGTH_SHORT
+                                                        )
+                                                        .show()
                                                 }
                                             }
                                         ),
@@ -306,11 +385,13 @@ fun ServerConfig(
                                             onClick = { onTogglePrivateDMs(item) },
                                             onLongClick = {
                                                 scope.launch {
-                                                    Toast.makeText(
-                                                        context,
-                                                        context.getString(R.string.private_message_feed),
-                                                        Toast.LENGTH_SHORT
-                                                    ).show()
+                                                    Toast
+                                                        .makeText(
+                                                            context,
+                                                            context.getString(R.string.private_message_feed),
+                                                            Toast.LENGTH_SHORT
+                                                        )
+                                                        .show()
                                                 }
                                             }
                                         ),
@@ -337,11 +418,13 @@ fun ServerConfig(
                                             onClick = { onTogglePublicChats(item) },
                                             onLongClick = {
                                                 scope.launch {
-                                                    Toast.makeText(
-                                                        context,
-                                                        context.getString(R.string.public_chat_feed),
-                                                        Toast.LENGTH_SHORT
-                                                    ).show()
+                                                    Toast
+                                                        .makeText(
+                                                            context,
+                                                            context.getString(R.string.public_chat_feed),
+                                                            Toast.LENGTH_SHORT
+                                                        )
+                                                        .show()
                                                 }
                                             }
                                         ),
@@ -368,11 +451,13 @@ fun ServerConfig(
                                             onClick = { onToggleGlobal(item) },
                                             onLongClick = {
                                                 scope.launch {
-                                                    Toast.makeText(
-                                                        context,
-                                                        context.getString(R.string.global_feed),
-                                                        Toast.LENGTH_SHORT
-                                                    ).show()
+                                                    Toast
+                                                        .makeText(
+                                                            context,
+                                                            context.getString(R.string.global_feed),
+                                                            Toast.LENGTH_SHORT
+                                                        )
+                                                        .show()
                                                 }
                                             }
                                         ),
@@ -400,11 +485,13 @@ fun ServerConfig(
                                             onClick = { onToggleSearch(item) },
                                             onLongClick = {
                                                 scope.launch {
-                                                    Toast.makeText(
-                                                        context,
-                                                        context.getString(R.string.search_feed),
-                                                        Toast.LENGTH_SHORT
-                                                    ).show()
+                                                    Toast
+                                                        .makeText(
+                                                            context,
+                                                            context.getString(R.string.search_feed),
+                                                            Toast.LENGTH_SHORT
+                                                        )
+                                                        .show()
                                                 }
                                             }
                                         ),
@@ -436,11 +523,13 @@ fun ServerConfig(
                                             onClick = { onToggleDownload(item) },
                                             onLongClick = {
                                                 scope.launch {
-                                                    Toast.makeText(
-                                                        context,
-                                                        context.getString(R.string.read_from_relay),
-                                                        Toast.LENGTH_SHORT
-                                                    ).show()
+                                                    Toast
+                                                        .makeText(
+                                                            context,
+                                                            context.getString(R.string.read_from_relay),
+                                                            Toast.LENGTH_SHORT
+                                                        )
+                                                        .show()
                                                 }
                                             }
                                         ),
@@ -476,11 +565,13 @@ fun ServerConfig(
                                             onClick = { onToggleUpload(item) },
                                             onLongClick = {
                                                 scope.launch {
-                                                    Toast.makeText(
-                                                        context,
-                                                        context.getString(R.string.write_to_relay),
-                                                        Toast.LENGTH_SHORT
-                                                    ).show()
+                                                    Toast
+                                                        .makeText(
+                                                            context,
+                                                            context.getString(R.string.write_to_relay),
+                                                            Toast.LENGTH_SHORT
+                                                        )
+                                                        .show()
                                                 }
                                             }
                                         ),
@@ -512,11 +603,13 @@ fun ServerConfig(
                                         onClick = { },
                                         onLongClick = {
                                             scope.launch {
-                                                Toast.makeText(
-                                                    context,
-                                                    context.getString(R.string.errors),
-                                                    Toast.LENGTH_SHORT
-                                                ).show()
+                                                Toast
+                                                    .makeText(
+                                                        context,
+                                                        context.getString(R.string.errors),
+                                                        Toast.LENGTH_SHORT
+                                                    )
+                                                    .show()
                                             }
                                         }
                                     ),
@@ -541,11 +634,13 @@ fun ServerConfig(
                                         onClick = { },
                                         onLongClick = {
                                             scope.launch {
-                                                Toast.makeText(
-                                                    context,
-                                                    context.getString(R.string.spam),
-                                                    Toast.LENGTH_SHORT
-                                                ).show()
+                                                Toast
+                                                    .makeText(
+                                                        context,
+                                                        context.getString(R.string.spam),
+                                                        Toast.LENGTH_SHORT
+                                                    )
+                                                    .show()
                                             }
                                         }
                                     ),

@@ -316,7 +316,7 @@ private fun CreateAndRenderPages(
         4 -> TabReceivedZaps(baseUser, zapFeedViewModel, accountViewModel, nav)
         5 -> TabBookmarks(baseUser, accountViewModel, nav)
         6 -> TabReports(baseUser, accountViewModel, nav)
-        7 -> TabRelays(baseUser, accountViewModel)
+        7 -> TabRelays(baseUser, accountViewModel, nav)
     }
 }
 
@@ -783,7 +783,7 @@ private fun DrawAdditionalInfo(
 }
 
 @Composable
-private fun DisplayLNAddress(
+fun DisplayLNAddress(
     lud16: String?,
     userHex: String,
     account: Account
@@ -1294,7 +1294,7 @@ private fun WatchReportsAndUpdateFeed(
 }
 
 @Composable
-fun TabRelays(user: User, accountViewModel: AccountViewModel) {
+fun TabRelays(user: User, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val feedViewModel: RelayFeedViewModel = viewModel()
 
     val lifeCycleOwner = LocalLifecycleOwner.current
@@ -1323,7 +1323,7 @@ fun TabRelays(user: User, accountViewModel: AccountViewModel) {
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            RelayFeedView(feedViewModel, accountViewModel, enablePullRefresh = false)
+            RelayFeedView(feedViewModel, accountViewModel, enablePullRefresh = false, nav = nav)
         }
     }
 }

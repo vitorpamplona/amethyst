@@ -1199,7 +1199,7 @@ fun DisplayRelaySet(
                     )
 
                     Column(modifier = Modifier.padding(start = 10.dp)) {
-                        RelayOptionsAction(relay, accountViewModel)
+                        RelayOptionsAction(relay, accountViewModel, nav)
                     }
                 }
             }
@@ -1234,7 +1234,8 @@ fun DisplayRelaySet(
 @Composable
 private fun RelayOptionsAction(
     relay: String,
-    accountViewModel: AccountViewModel
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
 ) {
     val userStateRelayInfo by accountViewModel.account.userProfile().live().relayInfo.observeAsState()
     val isCurrentlyOnTheUsersList by remember(userStateRelayInfo) {
@@ -1248,7 +1249,7 @@ private fun RelayOptionsAction(
     }
 
     if (wantsToAddRelay.isNotEmpty()) {
-        NewRelayListView({ wantsToAddRelay = "" }, accountViewModel, wantsToAddRelay)
+        NewRelayListView({ wantsToAddRelay = "" }, accountViewModel, wantsToAddRelay, nav = nav)
     }
 
     if (isCurrentlyOnTheUsersList) {

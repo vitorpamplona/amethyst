@@ -425,4 +425,27 @@
     <string name="sats_to_complete">Zapraiser at %1$s. %2$s sats to goal</string>
     <string name="read_from_relay">Read from Relay</string>
     <string name="write_to_relay">Write to Relay</string>
+    <string name="an_error_ocurred_trying_to_get_relay_information">An error ocurred trying to get relay information</string>
+    <string name="owner">Owner</string>
+    <string name="version">Version</string>
+    <string name="software">Software</string>
+    <string name="contact">Contact</string>
+    <string name="supports">Supports</string>
+    <string name="admission_fees">Admission Fees</string>
+    <string name="payments_url">Payments url</string>
+    <string name="limitations">Limitations</string>
+    <string name="countries">Countries</string>
+    <string name="languages">Languages</string>
+    <string name="tags">Tags</string>
+    <string name="posting_policy">Posting policy</string>
+    <string name="message_length">Message length</string>
+    <string name="subscriptions">Subscriptions</string>
+    <string name="filters">Filters</string>
+    <string name="subscription_id_length">Subscription id length</string>
+    <string name="minimum_prefix">Minimum prefix</string>
+    <string name="maximum_event_tags">Maximum event tags</string>
+    <string name="content_length">Content length</string>
+    <string name="minimum_pow">Minimum PoW</string>
+    <string name="auth">Auth</string>
+    <string name="payment">Payment</string>
 </resources>
