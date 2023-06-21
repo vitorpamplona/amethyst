@@ -308,10 +308,9 @@ fun ServerConfig(
                                                         Toast
                                                             .makeText(
                                                                 context,
-                                                                "An error ocurred trying to get relay information",
+                                                                context.getString(R.string.an_error_ocurred_trying_to_get_relay_information),
                                                                 Toast.LENGTH_SHORT
-                                                            )
-                                                            .show()
+                                                            ).show()
                                                     }
                                                 }
                                             }
@@ -323,10 +322,9 @@ fun ServerConfig(
                                                 Toast
                                                     .makeText(
                                                         context,
-                                                        "An error ocurred trying to get relay information",
+                                                        context.getString(R.string.an_error_ocurred_trying_to_get_relay_information),
                                                         Toast.LENGTH_SHORT
-                                                    )
-                                                    .show()
+                                                    ).show()
                                             }
                                         }
                                     })

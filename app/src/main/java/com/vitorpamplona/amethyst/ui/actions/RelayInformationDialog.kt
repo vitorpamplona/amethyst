@@ -35,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -118,7 +119,7 @@ fun RelayInformationDialog(onClose: () -> Unit, relayInfo: RelayInformation, bas
 
                 SectionContent(relayInfo.description ?: "")
 
-                Section("Owner")
+                Section(stringResource(R.string.owner))
 
                 Row {
                     UserPicture(
@@ -237,7 +238,7 @@ fun RelayInformationDialog(onClose: () -> Unit, relayInfo: RelayInformation, bas
                     }
                 }
 
-                Section("Software")
+                Section(stringResource(R.string.software))
 
                 val url = (relayInfo.software ?: "").replace("git+", "")
                 Box(modifier = Modifier.padding(start = 10.dp)) {
@@ -247,17 +248,17 @@ fun RelayInformationDialog(onClose: () -> Unit, relayInfo: RelayInformation, bas
                     )
                 }
 
-                Section("Version")
+                Section(stringResource(R.string.version))
 
                 SectionContent(relayInfo.version ?: "")
 
-                Section("Contact")
+                Section(stringResource(R.string.contact))
 
                 Box(modifier = Modifier.padding(start = 10.dp)) {
                     ClickableEmail(relayInfo.contact ?: "")
                 }
 
-                Section("Supports")
+                Section(stringResource(R.string.supports))
 
                 FlowRow {
                     relayInfo.supported_nips?.forEach { item ->
@@ -283,7 +284,7 @@ fun RelayInformationDialog(onClose: () -> Unit, relayInfo: RelayInformation, bas
 
                 relayInfo.fees?.admission?.let {
                     if (it.isNotEmpty()) {
-                        Section("Admission Fees")
+                        Section(stringResource(R.string.admission_fees))
 
                         it.forEach { item ->
                             SectionContent("${item.amount?.div(1000) ?: 0} sats")
@@ -292,7 +293,7 @@ fun RelayInformationDialog(onClose: () -> Unit, relayInfo: RelayInformation, bas
                 }
 
                 relayInfo.payments_url?.let {
-                    Section("Payments url")
+                    Section(stringResource(R.string.payments_url))
 
                     Box(modifier = Modifier.padding(start = 10.dp)) {
                         ClickableUrl(
@@ -303,24 +304,28 @@ fun RelayInformationDialog(onClose: () -> Unit, relayInfo: RelayInformation, bas
                 }
 
                 relayInfo.limitation?.let {
-                    Section("Limitations")
+                    Section(stringResource(R.string.limitations))
+                    val authRequired = it.auth_required ?: false
+                    val authRequiredText = if (authRequired) stringResource(R.string.yes) else stringResource(R.string.no)
+                    val paymentRequired = it.payment_required ?: false
+                    val paymentRequiredText = if (paymentRequired) stringResource(R.string.yes) else stringResource(R.string.no)
 
                     Column {
-                        SectionContent("Message length: ${it.max_message_length ?: 0}")
-                        SectionContent("Subscriptions: ${it.max_subscriptions ?: 0}")
-                        SectionContent("Filters: ${it.max_subscriptions ?: 0}")
-                        SectionContent("Subscription id length: ${it.max_subid_length ?: 0}")
-                        SectionContent("Minimum prefix: ${it.min_prefix ?: 0}")
-                        SectionContent("Maximum event tags: ${it.max_event_tags ?: 0}")
-                        SectionContent("Content length: ${it.max_content_length ?: 0}")
-                        SectionContent("Minimum PoW: ${it.min_pow_difficulty ?: 0}")
-                        SectionContent("Auth: ${it.auth_required ?: false}")
-                        SectionContent("Payment: ${it.payment_required ?: false}")
+                        SectionContent("${stringResource(R.string.message_length)}: ${it.max_message_length ?: 0}")
+                        SectionContent("${stringResource(R.string.subscriptions)}: ${it.max_subscriptions ?: 0}")
+                        SectionContent("${stringResource(R.string.filters)}: ${it.max_subscriptions ?: 0}")
+                        SectionContent("${stringResource(R.string.subscription_id_length)}: ${it.max_subid_length ?: 0}")
+                        SectionContent("${stringResource(R.string.minimum_prefix)}: ${it.min_prefix ?: 0}")
+                        SectionContent("${stringResource(R.string.maximum_event_tags)}: ${it.max_event_tags ?: 0}")
+                        SectionContent("${stringResource(R.string.content_length)}: ${it.max_content_length ?: 0}")
+                        SectionContent("${stringResource(R.string.minimum_pow)}: ${it.min_pow_difficulty ?: 0}")
+                        SectionContent("${stringResource(R.string.auth)}: $authRequiredText")
+                        SectionContent("${stringResource(R.string.payment)}: $paymentRequiredText")
                     }
                 }
 
                 relayInfo.relay_countries?.let {
-                    Section("Countries")
+                    Section(stringResource(R.string.countries))
 
                     FlowRow {
                         it.forEach { item ->
@@ -330,7 +335,7 @@ fun RelayInformationDialog(onClose: () -> Unit, relayInfo: RelayInformation, bas
                 }
 
                 relayInfo.language_tags?.let {
-                    Section("Languages")
+                    Section(stringResource(R.string.languages))
 
                     FlowRow {
                         it.forEach { item ->
@@ -340,7 +345,7 @@ fun RelayInformationDialog(onClose: () -> Unit, relayInfo: RelayInformation, bas
                 }
 
                 relayInfo.tags?.let {
-                    Section("Tags")
+                    Section(stringResource(R.string.tags))
 
                     FlowRow {
                         it.forEach { item ->
@@ -350,7 +355,7 @@ fun RelayInformationDialog(onClose: () -> Unit, relayInfo: RelayInformation, bas
                 }
 
                 relayInfo.posting_policy?.let {
-                    Section("Posting policy")
+                    Section(stringResource(R.string.posting_policy))
 
                     Box(Modifier.padding(10.dp)) {
                         ClickableUrl(
