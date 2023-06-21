@@ -61,10 +61,12 @@ fun RefresheableView(
     val refresh = { refreshing = true; viewModel.invalidateData(); refreshing = false }
     val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = refresh)
 
-    val modifier = if (enablePullRefresh) {
-        Modifier.pullRefresh(pullRefreshState)
-    } else {
-        Modifier
+    val modifier = remember {
+        if (enablePullRefresh) {
+            Modifier.pullRefresh(pullRefreshState)
+        } else {
+            Modifier
+        }
     }
 
     Box(modifier) {
@@ -73,7 +75,13 @@ fun RefresheableView(
         }
 
         if (enablePullRefresh) {
-            PullRefreshIndicator(refreshing, pullRefreshState, Modifier.align(Alignment.TopCenter))
+            PullRefreshIndicator(
+                refreshing = refreshing,
+                state = pullRefreshState,
+                modifier = remember {
+                    Modifier.align(Alignment.TopCenter)
+                }
+            )
         }
     }
 }

@@ -62,7 +62,6 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
-import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountBackupDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -127,7 +126,7 @@ fun ProfileContent(
     val profilePubHex = remember(accountUserState) { accountUserState?.user?.pubkeyHex } ?: return
 
     val profileBanner = remember(accountUserState) { accountUserState?.user?.info?.banner?.ifBlank { null } }
-    val profilePicture = remember(accountUserState) { accountUserState?.user?.profilePicture()?.ifBlank { null }?.let { ResizeImage(it, 100.dp) } }
+    val profilePicture = remember(accountUserState) { accountUserState?.user?.profilePicture() }
     val bestUserName = remember(accountUserState) { accountUserState?.user?.bestUsername() }
     val bestDisplayName = remember(accountUserState) { accountUserState?.user?.bestDisplayName() }
     val tags = remember(accountUserState) { accountUserState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists() }

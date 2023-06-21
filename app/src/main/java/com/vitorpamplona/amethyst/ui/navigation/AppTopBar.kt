@@ -74,7 +74,6 @@ import com.vitorpamplona.amethyst.service.model.PeopleListEvent
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
-import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.RelayPoolViewModel
 import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
@@ -342,7 +341,7 @@ private fun LoggedInUserPictureDrawer(
     val accountUserState by accountViewModel.account.userProfile().live().metadata.observeAsState()
 
     val pubkeyHex = remember { accountUserState?.user?.pubkeyHex ?: "" }
-    val profilePicture = remember(accountUserState) { ResizeImage(accountUserState?.user?.profilePicture(), 34.dp) }
+    val profilePicture = remember(accountUserState) { accountUserState?.user?.profilePicture() }
 
     IconButton(
         onClick = onClick,

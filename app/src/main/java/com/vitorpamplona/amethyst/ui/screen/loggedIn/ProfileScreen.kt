@@ -25,6 +25,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -1040,39 +1041,45 @@ private fun WatchAndRenderBadgeImage(
 ) {
     val noteState by baseNote.live().metadata.observeAsState()
     val eventId = remember(noteState) { noteState?.note?.idHex } ?: return
-    val image = remember(noteState) {
-        val event = noteState?.note?.event as? BadgeDefinitionEvent
-        event?.thumb()?.ifBlank { null } ?: event?.image()?.ifBlank { null }
+    val image by remember(noteState) {
+        derivedStateOf {
+            val event = noteState?.note?.event as? BadgeDefinitionEvent
+            event?.thumb()?.ifBlank { null } ?: event?.image()?.ifBlank { null }
+        }
     }
+
+    val bgColor = MaterialTheme.colors.background
 
     if (image == null) {
         RobohashAsyncImage(
             robot = "authornotfound",
-            robotSize = size,
             contentDescription = stringResource(R.string.unknown_author),
-            modifier = pictureModifier
-                .width(size)
-                .height(size)
-                .background(MaterialTheme.colors.background)
+            modifier = remember {
+                pictureModifier
+                    .width(size)
+                    .height(size)
+                    .drawBehind { drawRect(bgColor) }
+            }
         )
     } else {
         RobohashFallbackAsyncImage(
             robot = eventId,
-            robotSize = size,
-            model = image,
+            model = image!!,
             contentDescription = stringResource(id = R.string.profile_image),
-            modifier = pictureModifier
-                .width(size)
-                .height(size)
-                .clip(shape = CircleShape)
-                .background(MaterialTheme.colors.background)
-                .run {
-                    if (onClick != null) {
-                        this.clickable(onClick = { onClick(eventId) })
-                    } else {
-                        this
+            modifier = remember {
+                pictureModifier
+                    .width(size)
+                    .height(size)
+                    .clip(shape = CircleShape)
+                    .drawBehind { drawRect(bgColor) }
+                    .run {
+                        if (onClick != null) {
+                            this.clickable(onClick = { onClick(eventId) })
+                        } else {
+                            this
+                        }
                     }
-                }
+            }
 
         )
     }

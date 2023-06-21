@@ -10,6 +10,7 @@ import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
@@ -42,10 +43,26 @@ fun NoteUsernameDisplay(baseNote: Note, weight: Modifier = Modifier) {
 @Composable
 fun UsernameDisplay(baseUser: User, weight: Modifier = Modifier) {
     val userState by baseUser.live().metadata.observeAsState()
-    val bestUserName = remember(userState) { userState?.user?.bestUsername() }
-    val bestDisplayName = remember(userState) { userState?.user?.bestDisplayName() }
-    val npubDisplay = remember { baseUser.pubkeyDisplayHex() }
-    val tags = remember(userState) { userState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists() }
+    val bestUserName by remember(userState) {
+        derivedStateOf {
+            userState?.user?.bestUsername()
+        }
+    }
+    val bestDisplayName by remember(userState) {
+        derivedStateOf {
+            userState?.user?.bestDisplayName()
+        }
+    }
+    val npubDisplay by remember {
+        derivedStateOf {
+            baseUser.pubkeyDisplayHex()
+        }
+    }
+    val tags by remember(userState) {
+        derivedStateOf {
+            userState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists()
+        }
+    }
 
     UserNameDisplay(bestUserName, bestDisplayName, npubDisplay, tags, weight)
 }
@@ -58,56 +75,69 @@ private fun UserNameDisplay(
     tags: ImmutableListOfLists<String>?,
     modifier: Modifier
 ) {
-    if (bestUserName != null && bestDisplayName != null) {
-        CreateTextWithEmoji(
-            text = bestDisplayName,
-            tags = tags,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1
-        )
-        if (bestDisplayName != bestUserName) {
-            CreateTextWithEmoji(
-                text = remember { "@$bestUserName" },
-                tags = tags,
-                color = MaterialTheme.colors.placeholderText,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = modifier
-            )
-        }
-        Spacer(StdHorzSpacer)
-        DrawPlayName(bestDisplayName)
+    if (bestUserName != null && bestDisplayName != null && bestDisplayName != bestUserName) {
+        UserAndUsernameDisplay(bestDisplayName, tags, bestUserName, modifier)
     } else if (bestDisplayName != null) {
-        CreateTextWithEmoji(
-            text = bestDisplayName,
-            tags = tags,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = modifier
-        )
-        Spacer(StdHorzSpacer)
-        DrawPlayName(bestDisplayName)
+        UserDisplay(bestDisplayName, tags, modifier)
     } else if (bestUserName != null) {
-        CreateTextWithEmoji(
-            text = bestUserName,
-            tags = tags,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = modifier
-        )
-        Spacer(StdHorzSpacer)
-        DrawPlayName(bestUserName)
+        UserDisplay(bestUserName, tags, modifier)
     } else {
-        Text(
-            text = npubDisplay,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = modifier
-        )
+        NPubDisplay(npubDisplay, modifier)
     }
+}
+
+@Composable
+private fun NPubDisplay(npubDisplay: String, modifier: Modifier) {
+    Text(
+        text = npubDisplay,
+        fontWeight = FontWeight.Bold,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun UserDisplay(
+    bestDisplayName: String,
+    tags: ImmutableListOfLists<String>?,
+    modifier: Modifier
+) {
+    CreateTextWithEmoji(
+        text = bestDisplayName,
+        tags = tags,
+        fontWeight = FontWeight.Bold,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier
+    )
+    Spacer(StdHorzSpacer)
+    DrawPlayName(bestDisplayName)
+}
+
+@Composable
+private fun UserAndUsernameDisplay(
+    bestDisplayName: String,
+    tags: ImmutableListOfLists<String>?,
+    bestUserName: String,
+    modifier: Modifier
+) {
+    CreateTextWithEmoji(
+        text = bestDisplayName,
+        tags = tags,
+        fontWeight = FontWeight.Bold,
+        maxLines = 1
+    )
+    CreateTextWithEmoji(
+        text = remember { "@$bestUserName" },
+        tags = tags,
+        color = MaterialTheme.colors.placeholderText,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier
+    )
+    Spacer(StdHorzSpacer)
+    DrawPlayName(bestDisplayName)
 }
 
 @Composable

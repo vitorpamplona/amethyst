@@ -60,7 +60,6 @@ import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
-import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
@@ -70,7 +69,6 @@ import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeMe
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeThem
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
-import com.vitorpamplona.amethyst.ui.theme.Size13dp
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
@@ -730,7 +728,7 @@ private fun WatchAndDisplayUser(
 
     val userProfilePicture by remember(userState) {
         derivedStateOf {
-            ResizeImage(userState?.user?.profilePicture(), Size25dp)
+            userState?.user?.profilePicture()
         }
     }
 
@@ -750,7 +748,7 @@ private fun WatchAndDisplayUser(
 @Composable
 private fun UserIcon(
     pubkeyHex: String,
-    userProfilePicture: ResizeImage,
+    userProfilePicture: String?,
     nav: (String) -> Unit,
     route: String
 ) {
@@ -875,7 +873,6 @@ fun RenderRelay(dirtyUrl: String) {
     ) {
         RobohashFallbackAsyncImage(
             robot = iconUrl,
-            robotSize = Size13dp,
             model = iconUrl,
             contentDescription = stringResource(id = R.string.relay_icon),
             colorFilter = RelayIconFilter,

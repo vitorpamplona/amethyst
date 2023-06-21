@@ -122,7 +122,6 @@ import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.LoadThumbAndThenVideoView
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
-import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
@@ -143,6 +142,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Following
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
@@ -1925,7 +1925,7 @@ private fun ChannelNotePicture(baseChannel: Channel) {
     }
 
     val model = remember(channelState) {
-        ResizeImage(channel.profilePicture(), 30.dp)
+        channel.profilePicture()
     }
 
     Box(boxModifier) {
@@ -2710,7 +2710,7 @@ private fun RelayBadges(baseNote: Note) {
         }
     }
 
-    Spacer(remember { Modifier.height(10.dp) })
+    Spacer(DoubleVertSpacer)
 
     if (expanded) {
         VerticalRelayPanelWithFlow(lazyRelayList)
@@ -2819,7 +2819,6 @@ fun NoteAuthorPicture(
 
         RobohashAsyncImage(
             robot = "authornotfound",
-            robotSize = size,
             contentDescription = stringResource(R.string.unknown_author),
             modifier = nullModifier
         )
@@ -2836,8 +2835,14 @@ fun UserPicture(
     size: Dp,
     pictureModifier: Modifier = Modifier
 ) {
+    val route by remember {
+        derivedStateOf {
+            "User/${user.pubkeyHex}"
+        }
+    }
+
     UserPicture(user, size, accountViewModel, pictureModifier) {
-        nav("User/${it.pubkeyHex}")
+        nav(route)
     }
 }
 
@@ -2914,9 +2919,7 @@ fun UserPicture(
     Box(myBoxModifier, contentAlignment = TopEnd) {
         RobohashAsyncImageProxy(
             robot = userHex,
-            model = remember(userPicture) {
-                ResizeImage(userPicture, size)
-            },
+            model = userPicture,
             contentDescription = stringResource(id = R.string.profile_image),
             modifier = myImageModifier
         )

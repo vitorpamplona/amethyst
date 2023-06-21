@@ -26,12 +26,13 @@ val StdButtonSizeModifier = Modifier.size(20.dp)
 val StdHorzSpacer = Modifier.width(5.dp)
 val StdVertSpacer = Modifier.height(5.dp)
 val DoubleHorzSpacer = Modifier.width(10.dp)
-val DoubleVertSpacer = Modifier.width(10.dp)
+val DoubleVertSpacer = Modifier.height(10.dp)
 
 val Size13dp = 13.dp
 val Size16dp = 16.dp
 val Size25dp = 25.dp
 val Size35dp = 35.dp
+val Size55dp = 55.dp
 
 val StdPadding = Modifier.padding(10.dp)
 

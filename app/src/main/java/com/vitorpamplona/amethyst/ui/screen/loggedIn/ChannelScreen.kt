@@ -89,7 +89,6 @@ import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.PostButton
 import com.vitorpamplona.amethyst.ui.actions.ServersAvailable
 import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
-import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.navigation.Route
@@ -549,7 +548,7 @@ fun ChannelHeader(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RobohashAsyncImageProxy(
                     robot = channel.idHex,
-                    model = ResizeImage(channel.profilePicture(), Size35dp),
+                    model = channel.profilePicture(),
                     contentDescription = context.getString(R.string.profile_image),
                     modifier = Modifier
                         .width(Size35dp)
