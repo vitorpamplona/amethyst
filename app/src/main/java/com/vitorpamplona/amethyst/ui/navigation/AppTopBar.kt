@@ -132,8 +132,8 @@ fun NoTopBar() {
 }
 
 @Composable
-fun StoriesTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
-    GenericTopBar(scaffoldState, accountViewModel) { accountViewModel ->
+fun StoriesTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    GenericTopBar(scaffoldState, accountViewModel, nav) { accountViewModel ->
         val accountState by accountViewModel.accountLiveData.observeAsState()
 
         val list by remember(accountState) {
