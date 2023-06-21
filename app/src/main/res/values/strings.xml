@@ -430,7 +430,7 @@
     <string name="version">Version</string>
     <string name="software">Software</string>
     <string name="contact">Contact</string>
-    <string name="supports">Supports</string>
+    <string name="supports">Supported NIPs</string>
     <string name="admission_fees">Admission Fees</string>
     <string name="payments_url">Payments url</string>
     <string name="limitations">Limitations</string>

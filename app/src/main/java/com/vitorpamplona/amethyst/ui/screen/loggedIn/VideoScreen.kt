@@ -319,7 +319,7 @@ private fun RenderVideoOrPicture(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(top = 2.dp)
             ) {
-                RelayBadges(baseNote = note)
+                RelayBadges(baseNote = note, accountViewModel, nav)
             }
         }
     }
@@ -354,7 +354,7 @@ private fun VideoUserOptionAction(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun RelayBadges(baseNote: Note) {
+private fun RelayBadges(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val noteRelaysState by baseNote.live().relays.observeAsState()
     val noteRelays = remember(noteRelaysState) {
         noteRelaysState?.note?.relays ?: emptySet()
@@ -362,7 +362,7 @@ private fun RelayBadges(baseNote: Note) {
 
     FlowRow() {
         noteRelays.forEach { dirtyUrl ->
-            RenderRelay(dirtyUrl)
+            RenderRelay(dirtyUrl, accountViewModel, nav)
         }
     }
 }

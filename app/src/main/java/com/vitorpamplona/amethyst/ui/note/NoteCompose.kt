@@ -1872,10 +1872,10 @@ private fun DrawAuthorImages(baseNote: Note, accountViewModel: AccountViewModel,
                 baseNote.replyTo?.lastOrNull()
             }
             baseReply?.let {
-                RelayBadges(it)
+                RelayBadges(it, accountViewModel, nav)
             }
         } else {
-            RelayBadges(baseNote)
+            RelayBadges(baseNote, accountViewModel, nav)
         }
     }
 }
@@ -2691,7 +2691,7 @@ private fun CreateImageHeader(
 }
 
 @Composable
-private fun RelayBadges(baseNote: Note) {
+private fun RelayBadges(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     var showShowMore by remember { mutableStateOf(false) }
 
@@ -2714,9 +2714,9 @@ private fun RelayBadges(baseNote: Note) {
     Spacer(DoubleVertSpacer)
 
     if (expanded) {
-        VerticalRelayPanelWithFlow(lazyRelayList)
+        VerticalRelayPanelWithFlow(lazyRelayList, accountViewModel, nav)
     } else {
-        VerticalRelayPanelWithFlow(shortRelayList)
+        VerticalRelayPanelWithFlow(shortRelayList, accountViewModel, nav)
     }
 
     if (showShowMore && !expanded) {
@@ -2745,12 +2745,14 @@ private fun WatchRelayLists(baseNote: Note, onListChanges: (ImmutableList<String
 @Composable
 @Stable
 private fun VerticalRelayPanelWithFlow(
-    relays: ImmutableList<String>
+    relays: ImmutableList<String>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
 ) {
     // FlowRow Seems to be a lot faster than LazyVerticalGrid
     FlowRow() {
         relays.forEach { url ->
-            RenderRelay(url)
+            RenderRelay(url, accountViewModel, nav)
         }
     }
 }

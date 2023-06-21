@@ -65,12 +65,12 @@ Or get the latest APK from the [Releases Section](https://github.com/vitorpamplo
 - [x] Recommended Application Handlers (NIP-89)
 - [x] Events with a Subject (NIP-14)
 - [x] Generic Reposts (kind:16)
-- [x] Live Activities (NIP-102)
+- [x] Live Activities & Live Chats (NIP-102)
+- [x] Relay Pages (NIP-11)
 - [ ] Marketplace (NIP-15)
 - [ ] Image/Video Capture in the app
 - [ ] Local Database
 - [ ] Bookmarks, Pinned Posts, Muted Events (NIP-51)
-- [ ] Relay Pages (NIP-11)
 - [ ] Proof of Work in the Phone (NIP-13, NIP-20)
 - [ ] Workspaces
 - [ ] Expiration Support (NIP-40)

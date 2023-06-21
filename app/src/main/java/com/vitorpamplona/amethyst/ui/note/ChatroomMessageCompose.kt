@@ -33,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,7 +45,6 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
@@ -52,11 +52,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.RelayInformation
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
+import com.vitorpamplona.amethyst.ui.actions.RelayInformationDialog
+import com.vitorpamplona.amethyst.ui.actions.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
@@ -433,6 +436,7 @@ private fun MessageBubbleLines(
         StatusRow(
             baseNote = baseNote,
             accountViewModel = accountViewModel,
+            nav = nav,
             onWantsToReply = onWantsToReply
         )
     }
@@ -545,12 +549,13 @@ private fun ConstrainedStatusRow(
 private fun StatusRow(
     baseNote: Note,
     accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
     onWantsToReply: (Note) -> Unit
 ) {
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
             ChatTimeAgo(baseNote)
-            RelayBadges(baseNote)
+            RelayBadges(baseNote, accountViewModel, nav = nav)
             Spacer(modifier = DoubleHorzSpacer)
         }
     }
@@ -800,7 +805,7 @@ data class RelayBadgesState(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun RelayBadges(baseNote: Note) {
+private fun RelayBadges(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val noteRelaysState by baseNote.live().relays.observeAsState()
 
     val state: RelayBadgesState by remember(noteRelaysState) {
@@ -821,7 +826,7 @@ private fun RelayBadges(baseNote: Note) {
 
     FlowRow(Modifier.padding(start = 10.dp)) {
         relaysToDisplay.forEach {
-            RenderRelay(it)
+            RenderRelay(it, accountViewModel, nav)
         }
     }
 
@@ -841,22 +846,37 @@ private fun RelayBadges(baseNote: Note) {
 }
 
 @Composable
-fun RenderRelay(dirtyUrl: String) {
-    val uri = LocalUriHandler.current
-    val website = remember(dirtyUrl) {
-        val cleanUrl = dirtyUrl.trim().removePrefix("wss://").removePrefix("ws://").removeSuffix("/")
-        "https://$cleanUrl"
-    }
+fun RenderRelay(dirtyUrl: String, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val iconUrl = remember(dirtyUrl) {
         val cleanUrl = dirtyUrl.trim().removePrefix("wss://").removePrefix("ws://").removeSuffix("/")
         "https://$cleanUrl/favicon.ico"
     }
 
+    var relayInfo: RelayInformation? by remember { mutableStateOf(null) }
+
+    if (relayInfo != null) {
+        RelayInformationDialog(
+            onClose = {
+                relayInfo = null
+            },
+            relayInfo = relayInfo!!,
+            accountViewModel,
+            nav
+        )
+    }
+
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
     val clickableModifier = remember(dirtyUrl) {
         Modifier
             .padding(1.dp)
             .size(15.dp)
-            .clickable(onClick = { uri.openUri(website) })
+            .clickable(onClick = {
+                loadRelayInfo(dirtyUrl, context, scope) {
+                    relayInfo = it
+                }
+            })
     }
 
     val backgroundColor = MaterialTheme.colors.background

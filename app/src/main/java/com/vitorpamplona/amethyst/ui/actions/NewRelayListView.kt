@@ -54,21 +54,14 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.RelayInformation
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
-import com.vitorpamplona.amethyst.service.HttpClient
-import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.launch
-import okhttp3.Call
-import okhttp3.Callback
-import okhttp3.Request
-import okhttp3.Response
 import java.lang.Math.round
 
 @Composable
@@ -242,17 +235,11 @@ fun ServerConfig(
     var relayInfo: RelayInformation? by remember { mutableStateOf(null) }
 
     if (relayInfo != null) {
-        val user = LocalCache.getOrCreateUser(relayInfo!!.pubkey ?: "")
-        NostrUserProfileDataSource.loadUserProfile(user)
-        NostrUserProfileDataSource.start()
         RelayInformationDialog(
             onClose = {
                 relayInfo = null
-                NostrUserProfileDataSource.loadUserProfile(null)
-                NostrUserProfileDataSource.stop()
             },
             relayInfo = relayInfo!!,
-            user,
             accountViewModel,
             nav
         )
@@ -286,48 +273,9 @@ fun ServerConfig(
                         modifier = Modifier
                             .weight(1f)
                             .clickable {
-                                val client = HttpClient.getHttpClient()
-                                val url = item.url
-                                    .replace("wss://", "https://")
-                                    .replace("ws://", "http://")
-                                val request: Request = Request
-                                    .Builder()
-                                    .header("Accept", "application/nostr+json")
-                                    .url(url)
-                                    .build()
-                                client
-                                    .newCall(request)
-                                    .enqueue(object : Callback {
-                                        override fun onResponse(call: Call, response: Response) {
-                                            response.use {
-                                                if (it.isSuccessful) {
-                                                    relayInfo =
-                                                        RelayInformation.fromJson(it.body.string())
-                                                } else {
-                                                    scope.launch {
-                                                        Toast
-                                                            .makeText(
-                                                                context,
-                                                                context.getString(R.string.an_error_ocurred_trying_to_get_relay_information),
-                                                                Toast.LENGTH_SHORT
-                                                            ).show()
-                                                    }
-                                                }
-                                            }
-                                        }
-
-                                        override fun onFailure(call: Call, e: java.io.IOException) {
-                                            e.printStackTrace()
-                                            scope.launch {
-                                                Toast
-                                                    .makeText(
-                                                        context,
-                                                        context.getString(R.string.an_error_ocurred_trying_to_get_relay_information),
-                                                        Toast.LENGTH_SHORT
-                                                    ).show()
-                                            }
-                                        }
-                                    })
+                                loadRelayInfo(item.url, context, scope) {
+                                    relayInfo = it
+                                }
                             },
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
