@@ -24,7 +24,7 @@ class RelayInformation(
     val tags: List<String>?,
     val posting_policy: String?,
     val payments_url: String?,
-    val fees: RelayInformationFees?,
+    val fees: RelayInformationFees?
 ) {
     companion object {
         val gson: Gson = GsonBuilder()
@@ -82,7 +82,7 @@ private class RelayInformationFeeSerializer : JsonSerializer<RelayInformationFee
 class RelayInformationFees(
     val admission: List<RelayInformationFee>?,
     val subscription: List<RelayInformationFee>?,
-    val publication: List<RelayInformationFee>?,
+    val publication: List<RelayInformationFee>?
 ) {
     companion object {
         val gson: Gson = GsonBuilder()
