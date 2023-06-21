@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
@@ -72,6 +73,7 @@ import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
 import com.vitorpamplona.amethyst.ui.theme.Size13dp
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size16dp
+import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
@@ -261,11 +263,11 @@ fun NormalChatNote(
         }
     }
 
-    LaunchedEffect(key1 = routeForLastRead) {
-        routeForLastRead?.let {
+    if (routeForLastRead != null) {
+        LaunchedEffect(key1 = routeForLastRead) {
             val createdAt = note.createdAt()
             if (createdAt != null) {
-                accountViewModel.account.markAsRead(it, createdAt)
+                accountViewModel.account.markAsRead(routeForLastRead, createdAt)
             }
         }
     }
@@ -369,43 +371,72 @@ private fun RenderBubble(
     }
 
     Column(modifier = bubbleModifier) {
-        if (drawAuthorInfo) {
-            DrawAuthorInfo(
-                baseNote,
-                alignment,
-                nav
-            )
-        } else {
-            Spacer(modifier = StdVertSpacer)
-        }
+        MessageBubbleLines(
+            drawAuthorInfo,
+            baseNote,
+            alignment,
+            nav,
+            innerQuote,
+            backgroundBubbleColor,
+            accountViewModel,
+            onWantsToReply,
+            canPreview,
+            bubbleSize,
+            availableBubbleSize
+        )
+    }
+}
 
-        RenderReplyRow(
-            note = baseNote,
-            innerQuote = innerQuote,
-            backgroundBubbleColor = backgroundBubbleColor,
+@Composable
+private fun MessageBubbleLines(
+    drawAuthorInfo: Boolean,
+    baseNote: Note,
+    alignment: Arrangement.Horizontal,
+    nav: (String) -> Unit,
+    innerQuote: Boolean,
+    backgroundBubbleColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    onWantsToReply: (Note) -> Unit,
+    canPreview: Boolean,
+    bubbleSize: MutableState<IntSize>,
+    availableBubbleSize: MutableState<IntSize>
+) {
+    if (drawAuthorInfo) {
+        DrawAuthorInfo(
+            baseNote,
+            alignment,
+            nav
+        )
+    } else {
+        Spacer(modifier = StdVertSpacer)
+    }
+
+    RenderReplyRow(
+        note = baseNote,
+        innerQuote = innerQuote,
+        backgroundBubbleColor = backgroundBubbleColor,
+        accountViewModel = accountViewModel,
+        nav = nav,
+        onWantsToReply = onWantsToReply
+    )
+
+    NoteRow(
+        note = baseNote,
+        canPreview = canPreview,
+        backgroundBubbleColor = backgroundBubbleColor,
+        accountViewModel = accountViewModel,
+        nav = nav
+    )
+
+    ConstrainedStatusRow(
+        bubbleSize = bubbleSize,
+        availableBubbleSize = availableBubbleSize
+    ) {
+        StatusRow(
+            baseNote = baseNote,
             accountViewModel = accountViewModel,
-            nav = nav,
             onWantsToReply = onWantsToReply
         )
-
-        NoteRow(
-            note = baseNote,
-            canPreview = canPreview,
-            backgroundBubbleColor = backgroundBubbleColor,
-            accountViewModel = accountViewModel,
-            nav = nav
-        )
-
-        ConstrainedStatusRow(
-            bubbleSize = bubbleSize,
-            availableBubbleSize = availableBubbleSize
-        ) {
-            StatusRow(
-                baseNote = baseNote,
-                accountViewModel = accountViewModel,
-                onWantsToReply = onWantsToReply
-            )
-        }
     }
 }
 
@@ -418,24 +449,41 @@ private fun RenderReplyRow(
     nav: (String) -> Unit,
     onWantsToReply: (Note) -> Unit
 ) {
-    val replyTo by remember {
+    val hasReply by remember {
         derivedStateOf {
-            note.replyTo?.lastOrNull()
+            innerQuote && note.replyTo?.lastOrNull() != null
         }
     }
-    if (!innerQuote && replyTo != null) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            replyTo?.let { note ->
-                ChatroomMessageCompose(
-                    note,
-                    null,
-                    innerQuote = true,
-                    parentBackgroundColor = backgroundBubbleColor,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                    onWantsToReply = onWantsToReply
-                )
+
+    if (hasReply) {
+        RenderReply(note, backgroundBubbleColor, accountViewModel, nav, onWantsToReply)
+    }
+}
+
+@Composable
+private fun RenderReply(
+    note: Note,
+    backgroundBubbleColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+    onWantsToReply: (Note) -> Unit
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        val replyTo by remember {
+            derivedStateOf {
+                note.replyTo?.lastOrNull()
             }
+        }
+        replyTo?.let { note ->
+            ChatroomMessageCompose(
+                note,
+                null,
+                innerQuote = true,
+                parentBackgroundColor = backgroundBubbleColor,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                onWantsToReply = onWantsToReply
+            )
         }
     }
 }
@@ -501,9 +549,7 @@ private fun StatusRow(
     accountViewModel: AccountViewModel,
     onWantsToReply: (Note) -> Unit
 ) {
-    val grayTint = MaterialTheme.colors.placeholderText
-
-    Column() {
+    Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
             ChatTimeAgo(baseNote)
             RelayBadges(baseNote)
@@ -511,16 +557,16 @@ private fun StatusRow(
         }
     }
 
-    Column() {
+    Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            LikeReaction(baseNote, grayTint, accountViewModel)
+            LikeReaction(baseNote, MaterialTheme.colors.placeholderText, accountViewModel)
             Spacer(modifier = StdHorzSpacer)
-            ZapReaction(baseNote, grayTint, accountViewModel)
+            ZapReaction(baseNote, MaterialTheme.colors.placeholderText, accountViewModel)
             Spacer(modifier = StdHorzSpacer)
             ReplyReaction(
-                baseNote,
-                grayTint,
-                accountViewModel,
+                baseNote = baseNote,
+                grayTint = MaterialTheme.colors.placeholderText,
+                accountViewModel = accountViewModel,
                 showCounter = false,
                 iconSize = Size16dp
             ) {
@@ -644,51 +690,107 @@ private fun DrawAuthorInfo(
     alignment: Arrangement.Horizontal,
     nav: (String) -> Unit
 ) {
-    val userState by baseNote.author!!.live().metadata.observeAsState()
-
-    val pubkeyHex = remember { baseNote.author?.pubkeyHex } ?: return
-    val route = remember { "User/$pubkeyHex" }
-    val userDisplayName = remember(userState) { userState?.user?.toBestDisplayName() }
-    val userProfilePicture = remember(userState) { ResizeImage(userState?.user?.profilePicture(), 25.dp) }
-    val userTags = remember(userState) { userState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists() }
-
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = alignment,
         modifier = Modifier.padding(top = 5.dp)
     ) {
-        RobohashAsyncImageProxy(
-            robot = pubkeyHex,
-            model = userProfilePicture,
-            contentDescription = stringResource(id = R.string.profile_image),
-            modifier = remember {
-                Modifier
-                    .width(25.dp)
-                    .height(25.dp)
-                    .clip(shape = CircleShape)
-                    .clickable(onClick = {
-                        nav(route)
-                    })
-            }
-        )
+        DisplayAndWatchNoteAuthor(baseNote, nav)
+    }
+}
 
-        userDisplayName?.let {
-            Spacer(modifier = StdHorzSpacer)
+@Composable
+private fun DisplayAndWatchNoteAuthor(
+    baseNote: Note,
+    nav: (String) -> Unit
+) {
+    val author = remember {
+        baseNote.author
+    }
+    author?.let {
+        WatchAndDisplayUser(it, nav)
+    }
+}
 
-            CreateClickableTextWithEmoji(
-                clickablePart = it,
-                suffix = "",
-                tags = userTags,
-                fontWeight = FontWeight.Bold,
-                overrideColor = MaterialTheme.colors.onBackground,
-                route = route,
-                nav = nav
-            )
+@Composable
+private fun WatchAndDisplayUser(
+    author: User,
+    nav: (String) -> Unit
+) {
+    val pubkeyHex = remember { author.pubkeyHex }
+    val route = remember { "User/${author.pubkeyHex}" }
 
-            Spacer(modifier = StdHorzSpacer)
-            DrawPlayName(it)
+    val userState by author.live().metadata.observeAsState()
+
+    val userDisplayName by remember(userState) {
+        derivedStateOf {
+            userState?.user?.toBestDisplayName()
         }
     }
+
+    val userProfilePicture by remember(userState) {
+        derivedStateOf {
+            ResizeImage(userState?.user?.profilePicture(), Size25dp)
+        }
+    }
+
+    val userTags by remember(userState) {
+        derivedStateOf {
+            userState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists()
+        }
+    }
+
+    UserIcon(pubkeyHex, userProfilePicture, nav, route)
+
+    userDisplayName?.let {
+        DisplayMessageUsername(it, userTags, route, nav)
+    }
+}
+
+@Composable
+private fun UserIcon(
+    pubkeyHex: String,
+    userProfilePicture: ResizeImage,
+    nav: (String) -> Unit,
+    route: String
+) {
+    RobohashAsyncImageProxy(
+        robot = pubkeyHex,
+        model = userProfilePicture,
+        contentDescription = stringResource(id = R.string.profile_image),
+        modifier = remember {
+            Modifier
+                .width(Size25dp)
+                .height(Size25dp)
+                .clip(shape = CircleShape)
+                .clickable(onClick = {
+                    nav(route)
+                })
+        }
+    )
+}
+
+@Composable
+private fun DisplayMessageUsername(
+    userDisplayName: String,
+    userTags: ImmutableListOfLists<String>?,
+    route: String,
+    nav: (String) -> Unit
+) {
+    Spacer(modifier = StdHorzSpacer)
+    CreateClickableTextWithEmoji(
+        clickablePart = userDisplayName,
+        suffix = "",
+        maxLines = 1,
+        tags = userTags,
+        fontWeight = FontWeight.Bold,
+        overrideColor = MaterialTheme.colors.onBackground, // we do not want clickable names in purple here.
+        route = route,
+        nav = nav
+    )
+
+    Spacer(modifier = StdHorzSpacer)
+    DrawPlayName(userDisplayName)
 }
 
 @Immutable

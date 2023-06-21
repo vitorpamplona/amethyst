@@ -2062,9 +2062,10 @@ private fun LoadAndDisplayUser(
         CreateClickableTextWithEmoji(
             clickablePart = userDisplayName,
             suffix = " ",
-            tags = userTags,
+            maxLines = 1,
             route = route,
-            nav = nav
+            nav = nav,
+            tags = userTags
         )
     }
 }

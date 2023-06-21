@@ -99,6 +99,7 @@ import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.screen.NostrChannelFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
@@ -236,7 +237,7 @@ fun ChannelScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = DoubleVertSpacer)
 
         replyTo.value?.let {
             DisplayReplyingToNote(it, accountViewModel, nav) {

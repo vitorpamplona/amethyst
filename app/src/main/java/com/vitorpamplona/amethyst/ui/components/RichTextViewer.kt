@@ -1041,8 +1041,9 @@ private fun DisplayUserFromTag(
     CreateClickableTextWithEmoji(
         clickablePart = displayName,
         suffix = remember { "$addedChars " },
-        tags = userTags,
+        maxLines = 1,
         route = route,
-        nav = nav
+        nav = nav,
+        tags = userTags
     )
 }

@@ -65,14 +65,16 @@ private fun UserNameDisplay(
             fontWeight = FontWeight.Bold,
             maxLines = 1
         )
-        CreateTextWithEmoji(
-            text = remember { "@$bestUserName" },
-            tags = tags,
-            color = MaterialTheme.colors.placeholderText,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = modifier
-        )
+        if (bestDisplayName != bestUserName) {
+            CreateTextWithEmoji(
+                text = remember { "@$bestUserName" },
+                tags = tags,
+                color = MaterialTheme.colors.placeholderText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = modifier
+            )
+        }
         Spacer(StdHorzSpacer)
         DrawPlayName(bestDisplayName)
     } else if (bestDisplayName != null) {
@@ -88,7 +90,7 @@ private fun UserNameDisplay(
         DrawPlayName(bestDisplayName)
     } else if (bestUserName != null) {
         CreateTextWithEmoji(
-            text = remember { "@$bestUserName" },
+            text = bestUserName,
             tags = tags,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
@@ -99,7 +101,7 @@ private fun UserNameDisplay(
         DrawPlayName(bestUserName)
     } else {
         Text(
-            npubDisplay,
+            text = npubDisplay,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -113,8 +115,15 @@ fun DrawPlayName(name: String) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
+    DrawPlayNameIcon {
+        speak(name, context, lifecycleOwner)
+    }
+}
+
+@Composable
+fun DrawPlayNameIcon(onClick: () -> Unit) {
     IconButton(
-        onClick = { speak(name, context, lifecycleOwner) },
+        onClick = onClick,
         modifier = StdButtonSizeModifier
     ) {
         Icon(
