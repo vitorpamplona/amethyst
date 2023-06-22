@@ -34,6 +34,7 @@ class AccountViewModel(val account: Account) : ViewModel() {
     val accountLastReadLiveData: LiveData<AccountState> = account.liveLastRead.map { it }
 
     val userFollows: LiveData<UserState> = account.userProfile().live().follows.map { it }
+    val userRelays: LiveData<UserState> = account.userProfile().live().relays.map { it }
 
     fun isWriteable(): Boolean {
         return account.isWriteable()

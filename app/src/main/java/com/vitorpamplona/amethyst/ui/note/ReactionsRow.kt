@@ -883,13 +883,11 @@ fun ZapReaction(
         if (zappingProgress > 0.00001 && zappingProgress < 0.99999) {
             Spacer(Modifier.width(3.dp))
 
-            val animatedProgress = animateFloatAsState(
-                targetValue = zappingProgress,
-                animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec
-            ).value
-
             CircularProgressIndicator(
-                progress = animatedProgress,
+                progress = animateFloatAsState(
+                    targetValue = zappingProgress,
+                    animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec
+                ).value,
                 modifier = remember { Modifier.size(animationSize) },
                 strokeWidth = 2.dp
             )

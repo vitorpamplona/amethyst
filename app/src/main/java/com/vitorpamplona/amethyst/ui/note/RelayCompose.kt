@@ -11,8 +11,10 @@ import androidx.compose.material.Divider
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -37,9 +39,6 @@ fun RelayCompose(
     onAddRelay: () -> Unit,
     onRemoveRelay: () -> Unit
 ) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
-
     val context = LocalContext.current
 
     Column() {
@@ -60,8 +59,14 @@ fun RelayCompose(
                         overflow = TextOverflow.Ellipsis
                     )
 
+                    val lastTime by remember(relay.lastEvent) {
+                        derivedStateOf {
+                            timeAgo(relay.lastEvent, context = context)
+                        }
+                    }
+
                     Text(
-                        timeAgo(relay.lastEvent, context = context),
+                        text = lastTime,
                         maxLines = 1
                     )
                 }
@@ -75,11 +80,7 @@ fun RelayCompose(
             }
 
             Column(modifier = Modifier.padding(start = 10.dp)) {
-                if (account.activeRelays()?.none { it.url == relay.url } == true) {
-                    AddRelayButton { onAddRelay() }
-                } else {
-                    RemoveRelayButton { onRemoveRelay() }
-                }
+                RelayOptions(accountViewModel, relay, onAddRelay, onRemoveRelay)
             }
         }
 
@@ -87,6 +88,26 @@ fun RelayCompose(
             modifier = Modifier.padding(top = 10.dp),
             thickness = 0.25.dp
         )
+    }
+}
+
+@Composable
+private fun RelayOptions(
+    accountViewModel: AccountViewModel,
+    relay: RelayInfo,
+    onAddRelay: () -> Unit,
+    onRemoveRelay: () -> Unit
+) {
+    val userState by accountViewModel.userRelays.observeAsState()
+
+    val isNotUsingRelay = remember(userState) {
+        accountViewModel.account.activeRelays()?.none { it.url == relay.url } == true
+    }
+
+    if (isNotUsingRelay) {
+        AddRelayButton(onAddRelay)
+    } else {
+        RemoveRelayButton(onRemoveRelay)
     }
 }
 
