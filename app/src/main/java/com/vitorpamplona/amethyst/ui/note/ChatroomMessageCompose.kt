@@ -610,10 +610,8 @@ private fun RenderRegularTextNote(
     val modifier = remember { Modifier.padding(top = 5.dp) }
 
     if (eventContent != null) {
-        val hasSensitiveContent = remember(note.event) { note.event?.isSensitive() ?: false }
-
         SensitivityWarning(
-            hasSensitiveContent = hasSensitiveContent,
+            note = note,
             accountViewModel = accountViewModel
         ) {
             TranslatableRichTextViewer(

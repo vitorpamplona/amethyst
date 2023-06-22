@@ -817,10 +817,8 @@ fun RenderTextEvent(
                 overflow = TextOverflow.Ellipsis
             )
         } else {
-            val hasSensitiveContent = remember(note.event) { note.event?.isSensitive() ?: false }
-
             SensitivityWarning(
-                hasSensitiveContent = hasSensitiveContent,
+                note = note,
                 accountViewModel = accountViewModel
             ) {
                 val modifier = remember(note) { Modifier.fillMaxWidth() }
@@ -863,12 +861,10 @@ fun RenderPoll(
             overflow = TextOverflow.Ellipsis
         )
     } else {
-        val hasSensitiveContent = remember(note.event) { note.event?.isSensitive() ?: false }
-
         val tags = remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: ImmutableListOfLists() }
 
         SensitivityWarning(
-            hasSensitiveContent = hasSensitiveContent,
+            note = note,
             accountViewModel = accountViewModel
         ) {
             TranslatableRichTextViewer(
@@ -1119,9 +1115,8 @@ private fun RenderPrivateMessage(
                     overflow = TextOverflow.Ellipsis
                 )
             } else {
-                val hasSensitiveContent = remember(note.event) { note.event?.isSensitive() ?: false }
                 SensitivityWarning(
-                    hasSensitiveContent = hasSensitiveContent,
+                    note = note,
                     accountViewModel = accountViewModel
                 ) {
                     TranslatableRichTextViewer(

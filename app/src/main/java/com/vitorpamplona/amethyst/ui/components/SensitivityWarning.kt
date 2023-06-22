@@ -33,19 +33,34 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 
 @Composable
 fun SensitivityWarning(
-    hasSensitiveContent: Boolean,
+    note: Note,
+    accountViewModel: AccountViewModel,
+    content: @Composable () -> Unit
+) {
+    val hasSensitiveContent = remember(note.event) { note.event?.isSensitive() ?: false }
+
+    if (hasSensitiveContent) {
+        SensitivityWarning(accountViewModel, content)
+    } else {
+        content()
+    }
+}
+
+@Composable
+fun SensitivityWarning(
     accountViewModel: AccountViewModel,
     content: @Composable () -> Unit
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
 
     var showContentWarningNote by remember(accountState) {
-        mutableStateOf(accountState?.account?.showSensitiveContent != true && hasSensitiveContent)
+        mutableStateOf(accountState?.account?.showSensitiveContent != true)
     }
 
     if (showContentWarningNote) {
