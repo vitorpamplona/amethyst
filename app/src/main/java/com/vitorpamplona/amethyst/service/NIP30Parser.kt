@@ -6,6 +6,8 @@ class NIP30Parser {
     val customEmojiPattern: Pattern = Pattern.compile("\\:([A-Za-z0-9_\\-]+)\\:", Pattern.CASE_INSENSITIVE)
 
     fun buildArray(input: String): List<String> {
+        checkNotInMainThread()
+
         val matcher = customEmojiPattern.matcher(input)
         val list = mutableListOf<String>()
         while (matcher.find()) {
