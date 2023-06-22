@@ -113,8 +113,8 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, nav: (Str
 
     var userBase by remember { mutableStateOf<User?>(LocalCache.getUserIfExists(userId)) }
 
-    LaunchedEffect(userId) {
-        if (userBase == null) {
+    if (userBase == null) {
+        LaunchedEffect(userId) {
             // waits to resolve.
             withContext(Dispatchers.IO) {
                 val newUserBase = LocalCache.checkGetOrCreateUser(userId)

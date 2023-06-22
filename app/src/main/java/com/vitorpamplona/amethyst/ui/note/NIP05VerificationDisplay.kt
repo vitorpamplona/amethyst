@@ -52,8 +52,8 @@ fun nip05VerificationAsAState(user: UserMetadata, pubkeyHex: String): MutableSta
         mutableStateOf(default)
     }
 
-    LaunchedEffect(key1 = user.nip05) {
-        if (nip05Verified.value == null) {
+    if (nip05Verified.value == null) {
+        LaunchedEffect(key1 = user.nip05) {
             launch(Dispatchers.IO) {
                 user.nip05?.ifBlank { null }?.let { nip05 ->
                     Nip05Verifier().verifyNip05(

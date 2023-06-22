@@ -512,8 +512,8 @@ private fun ObserveNIP19Event(
 ) {
     var baseNote by remember(it) { mutableStateOf<Note?>(LocalCache.getNoteIfExists(it.hex)) }
 
-    LaunchedEffect(key1 = it.hex) {
-        if (baseNote == null) {
+    if (baseNote == null) {
+        LaunchedEffect(key1 = it.hex) {
             launch(Dispatchers.IO) {
                 if (it.type == Nip19.Type.NOTE || it.type == Nip19.Type.EVENT || it.type == Nip19.Type.ADDRESS) {
                     LocalCache.checkGetOrCreateNote(it.hex)?.let { note ->
@@ -549,8 +549,8 @@ private fun ObserveNIP19User(
 ) {
     var baseUser by remember(it) { mutableStateOf<User?>(LocalCache.getUserIfExists(it.hex)) }
 
-    LaunchedEffect(key1 = it.hex) {
-        if (baseUser == null) {
+    if (baseUser == null) {
+        LaunchedEffect(key1 = it.hex) {
             launch(Dispatchers.IO) {
                 if (it.type == Nip19.Type.USER) {
                     LocalCache.checkGetOrCreateUser(it.hex)?.let { user ->

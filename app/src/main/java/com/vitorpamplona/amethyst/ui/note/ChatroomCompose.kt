@@ -244,8 +244,8 @@ fun LoadUser(baseUserHex: String, content: @Composable (User) -> Unit) {
         mutableStateOf<User?>(LocalCache.getUserIfExists(baseUserHex))
     }
 
-    LaunchedEffect(key1 = baseUserHex) {
-        if (user == null) {
+    if (user == null) {
+        LaunchedEffect(key1 = baseUserHex) {
             launch(Dispatchers.IO) {
                 user = LocalCache.checkGetOrCreateUser(baseUserHex)
             }

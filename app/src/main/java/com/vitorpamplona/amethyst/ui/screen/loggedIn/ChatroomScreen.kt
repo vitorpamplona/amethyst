@@ -49,13 +49,15 @@ fun ChatroomScreen(
 ) {
     if (userId == null) return
 
-    var userRoom by remember { mutableStateOf<User?>(null) }
+    var userRoom by remember(userId) { mutableStateOf<User?>(null) }
 
-    LaunchedEffect(userId) {
-        launch(Dispatchers.IO) {
-            val newUser = LocalCache.checkGetOrCreateUser(userId)
-            if (newUser != userRoom) {
-                userRoom = newUser
+    if (userRoom == null) {
+        LaunchedEffect(userId) {
+            launch(Dispatchers.IO) {
+                val newUser = LocalCache.checkGetOrCreateUser(userId)
+                if (newUser != userRoom) {
+                    userRoom = newUser
+                }
             }
         }
     }

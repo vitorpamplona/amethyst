@@ -90,7 +90,10 @@ import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.selectedNote
 import kotlinx.collections.immutable.toImmutableSet
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
@@ -120,17 +123,21 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
                     is FeedState.Loaded -> {
                         refreshing = false
                         LaunchedEffect(noteId) {
-                            // waits to load the thread to scroll to item.
-                            delay(100)
-                            val noteForPosition = state.feed.value.filter { it.idHex == noteId }.firstOrNull()
-                            var position = state.feed.value.indexOf(noteForPosition)
+                            launch(Dispatchers.IO) {
+                                // waits to load the thread to scroll to item.
+                                delay(100)
+                                val noteForPosition = state.feed.value.filter { it.idHex == noteId }.firstOrNull()
+                                var position = state.feed.value.indexOf(noteForPosition)
 
-                            if (position >= 0) {
-                                if (position >= 1 && position < state.feed.value.size - 1) {
-                                    position-- // show the replying note
+                                if (position >= 0) {
+                                    if (position >= 1 && position < state.feed.value.size - 1) {
+                                        position-- // show the replying note
+                                    }
+
+                                    withContext(Dispatchers.Main) {
+                                        listState.animateScrollToItem(position)
+                                    }
                                 }
-
-                                listState.animateScrollToItem(position)
                             }
                         }
 

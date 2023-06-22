@@ -130,14 +130,16 @@ fun DisplayAccount(
     accountViewModel: AccountViewModel,
     accountStateViewModel: AccountStateViewModel
 ) {
-    var baseUser by remember { mutableStateOf<User?>(null) }
+    var baseUser by remember { mutableStateOf<User?>(LocalCache.getUserIfExists(decodePublicKey(acc.npub).toHexKey())) }
 
-    LaunchedEffect(key1 = acc.npub) {
-        launch(Dispatchers.IO) {
-            baseUser = try {
-                LocalCache.getOrCreateUser(decodePublicKey(acc.npub).toHexKey())
-            } catch (e: Exception) {
-                null
+    if (baseUser == null) {
+        LaunchedEffect(key1 = acc.npub) {
+            launch(Dispatchers.IO) {
+                baseUser = try {
+                    LocalCache.getOrCreateUser(decodePublicKey(acc.npub).toHexKey())
+                } catch (e: Exception) {
+                    null
+                }
             }
         }
     }

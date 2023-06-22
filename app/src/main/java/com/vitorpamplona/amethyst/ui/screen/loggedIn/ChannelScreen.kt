@@ -519,9 +519,11 @@ fun ChannelHeader(
     var baseChannel by remember { mutableStateOf<Channel?>(LocalCache.channels[channelHex]) }
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(key1 = channelHex) {
-        scope.launch(Dispatchers.IO) {
-            baseChannel = LocalCache.checkGetOrCreateChannel(channelHex)
+    if (baseChannel == null) {
+        LaunchedEffect(key1 = channelHex) {
+            scope.launch(Dispatchers.IO) {
+                baseChannel = LocalCache.checkGetOrCreateChannel(channelHex)
+            }
         }
     }
 

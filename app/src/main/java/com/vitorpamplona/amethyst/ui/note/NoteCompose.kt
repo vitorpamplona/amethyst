@@ -1939,8 +1939,8 @@ fun LoadChannel(baseChannelHex: String, content: @Composable (Channel) -> Unit) 
         mutableStateOf<Channel?>(LocalCache.getChannelIfExists(baseChannelHex))
     }
 
-    LaunchedEffect(key1 = baseChannelHex) {
-        if (channel == null) {
+    if (channel == null) {
+        LaunchedEffect(key1 = baseChannelHex) {
             launch(Dispatchers.IO) {
                 channel = LocalCache.checkGetOrCreateChannel(baseChannelHex)
             }
@@ -2061,8 +2061,8 @@ private fun DisplayQuoteAuthor(
 ) {
     var userBase by remember { mutableStateOf<User?>(LocalCache.getUserIfExists(authorHex)) }
 
-    if (userBase == null) {
-        LaunchedEffect(Unit) {
+    LaunchedEffect(Unit) {
+        if (userBase == null) {
             launch(Dispatchers.IO) {
                 userBase = LocalCache.checkGetOrCreateUser(authorHex)
             }
@@ -2416,8 +2416,8 @@ fun FileHeaderDisplay(note: Note) {
 
     var content by remember { mutableStateOf<ZoomableContent?>(null) }
 
-    LaunchedEffect(key1 = event.id) {
-        if (content == null) {
+    if (content == null) {
+        LaunchedEffect(key1 = event.id) {
             launch(Dispatchers.IO) {
                 val blurHash = event.blurhash()
                 val hash = event.hash()
@@ -2447,9 +2447,11 @@ fun FileStorageHeaderDisplay(baseNote: Note) {
 
     var fileNote by remember { mutableStateOf<Note?>(null) }
 
-    LaunchedEffect(key1 = eventHeader.id) {
-        launch(Dispatchers.IO) {
-            fileNote = eventHeader.dataEventId()?.let { LocalCache.checkGetOrCreateNote(it) }
+    if (fileNote == null) {
+        LaunchedEffect(key1 = eventHeader.id) {
+            launch(Dispatchers.IO) {
+                fileNote = eventHeader.dataEventId()?.let { LocalCache.checkGetOrCreateNote(it) }
+            }
         }
     }
 
@@ -2459,8 +2461,8 @@ fun FileStorageHeaderDisplay(baseNote: Note) {
 
         var content by remember { mutableStateOf<ZoomableContent?>(null) }
 
-        LaunchedEffect(key1 = eventHeader.id, key2 = noteState, key3 = note?.event) {
-            if (content == null) {
+        if (content == null) {
+            LaunchedEffect(key1 = eventHeader.id, key2 = noteState, key3 = note?.event) {
                 launch(Dispatchers.IO) {
                     val uri = "nostr:" + baseNote.toNEvent()
                     val localDir = note?.idHex?.let { File(File(appContext.externalCacheDir, "NIP95"), it) }

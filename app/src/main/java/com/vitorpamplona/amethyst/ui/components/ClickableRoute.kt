@@ -92,8 +92,8 @@ private fun LoadNote(
 ) {
     var noteBase by remember(hex) { mutableStateOf(LocalCache.getNoteIfExists(hex)) }
 
-    LaunchedEffect(key1 = hex) {
-        if (noteBase == null) {
+    if (noteBase == null) {
+        LaunchedEffect(key1 = hex) {
             launch(Dispatchers.IO) {
                 noteBase = LocalCache.checkGetOrCreateNote(hex)
             }
@@ -186,8 +186,8 @@ private fun DisplayAddress(
 ) {
     var noteBase by remember(nip19) { mutableStateOf(LocalCache.getNoteIfExists(nip19.hex)) }
 
-    LaunchedEffect(key1 = nip19.hex) {
-        if (noteBase == null) {
+    if (noteBase == null) {
+        LaunchedEffect(key1 = nip19.hex) {
             launch(Dispatchers.IO) {
                 noteBase = LocalCache.checkGetOrCreateAddressableNote(nip19.hex)
             }
@@ -225,8 +225,8 @@ private fun DisplayUser(
 ) {
     var userBase by remember(nip19) { mutableStateOf(LocalCache.getUserIfExists(nip19.hex)) }
 
-    LaunchedEffect(key1 = nip19.hex) {
-        if (userBase == null) {
+    if (userBase == null) {
+        LaunchedEffect(key1 = nip19.hex) {
             launch(Dispatchers.IO) {
                 userBase = LocalCache.checkGetOrCreateUser(nip19.hex)
             }
@@ -396,8 +396,8 @@ fun CreateTextWithEmoji(
 ) {
     var emojiList by remember(text) { mutableStateOf<ImmutableList<Renderable>>(persistentListOf()) }
 
-    LaunchedEffect(key1 = text) {
-        if (emojis.isNotEmpty()) {
+    if (emojis.isNotEmpty()) {
+        LaunchedEffect(key1 = text) {
             launch(Dispatchers.Default) {
                 val newEmojiList = assembleAnnotatedList(text, emojis)
                 if (newEmojiList.isNotEmpty()) {

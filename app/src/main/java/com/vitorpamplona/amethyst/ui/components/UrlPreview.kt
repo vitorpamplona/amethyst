@@ -21,8 +21,8 @@ fun UrlPreview(url: String, urlText: String) {
     }
 
     // Doesn't use a viewModel because of viewModel reusing issues (too many UrlPreview are created).
-    LaunchedEffect(url) {
-        if (urlPreviewState == UrlPreviewState.Loading) {
+    if (urlPreviewState == UrlPreviewState.Loading) {
+        LaunchedEffect(url) {
             launch(Dispatchers.IO) {
                 UrlCachedPreviewer.previewInfo(url) {
                     urlPreviewState = it
