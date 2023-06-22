@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.components
 
 import android.content.Context
 import android.net.Uri
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import coil.ImageLoader
@@ -31,6 +32,8 @@ private fun bytesToRGB(b1: Byte, b2: Byte, b3: Byte): Color {
 }
 
 private fun svgString(msg: String): String {
+    checkNotInMainThread()
+
     val hash = MessageDigest.getInstance("SHA-256").digest(msg.toByteArray())
     val hashHex = hash.joinToString(separator = "") { b -> "%02x".format(b) }
     val bgColor = bytesToRGB(hash[0], hash[1], hash[2])
@@ -93,6 +96,7 @@ object Robohash {
     }
 }
 
+@Immutable
 private data class Part(val style: String, val paths: String)
 
 private const val background = """<polyline class="cls-bg" points="150.3 7.4 55.1 97.9 55.1 203.1 150.3 293.6 245.9 203.1 245.9 97.9 150.3 7.4"/>"""

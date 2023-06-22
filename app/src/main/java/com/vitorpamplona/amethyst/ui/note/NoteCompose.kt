@@ -405,8 +405,7 @@ fun NormalNote(
             channelNote = baseNote,
             showVideo = !makeItShort,
             showBottomDiviser = true,
-            accountViewModel =
-            accountViewModel,
+            accountViewModel = accountViewModel,
             nav = nav
         )
     } else if (noteEvent is BadgeDefinitionEvent) {
