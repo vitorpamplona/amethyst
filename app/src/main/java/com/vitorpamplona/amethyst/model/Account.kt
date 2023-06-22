@@ -1222,8 +1222,7 @@ class Account(
             GlobalScope.launch(Dispatchers.IO) {
                 it.cache.spamMessages.snapshot().values.forEach {
                     if (it.pubkeyHex !in transientHiddenUsers && it.duplicatedMessages.size >= 5) {
-                        val userToBlock = LocalCache.getOrCreateUser(it.pubkeyHex)
-                        if (userToBlock != userProfile() && userToBlock.pubkeyHex !in followingKeySet()) {
+                        if (it.pubkeyHex != userProfile().pubkeyHex && it.pubkeyHex !in followingKeySet()) {
                             transientHiddenUsers = transientHiddenUsers + it.pubkeyHex
                             live.invalidateData()
                         }
