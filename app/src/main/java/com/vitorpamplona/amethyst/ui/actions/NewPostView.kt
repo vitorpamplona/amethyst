@@ -73,6 +73,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.UserLine
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -621,7 +622,7 @@ private fun ForwardZapTo(
                 Text(
                     text = stringResource(R.string.zap_forward_lnAddress),
                     color = MaterialTheme.colors.placeholderText,
-                    fontSize = 14.sp
+                    fontSize = Font14SP
                 )
             },
             colors = TextFieldDefaults

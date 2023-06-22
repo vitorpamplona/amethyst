@@ -288,7 +288,7 @@ fun NoteMaster(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         NoteUsernameDisplay(baseNote, Modifier.weight(1f))
 
-                        DisplayFollowingHashtagsInPost(noteEvent, accountViewModel, nav)
+                        DisplayFollowingHashtagsInPost(baseNote, accountViewModel, nav)
 
                         Text(
                             timeAgo(note.createdAt(), context = context),

@@ -3,7 +3,6 @@ package com.vitorpamplona.amethyst.ui.components
 import android.util.Log
 import android.util.LruCache
 import android.util.Patterns
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.ClickableText
@@ -19,16 +18,13 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.*
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.halilibo.richtext.markdown.Markdown
 import com.halilibo.richtext.markdown.MarkdownParseOptions
@@ -47,7 +43,9 @@ import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.MarkdownTextStyle
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.markdownStyle
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.amethyst.ui.uriToRoute
 import kotlinx.collections.immutable.ImmutableList
@@ -439,42 +437,6 @@ fun RenderCustomEmoji(word: String, state: RichTextViewerState) {
 
 @Composable
 private fun RenderContentAsMarkdown(content: String, backgroundColor: MutableState<Color>, tags: ImmutableListOfLists<String>?, nav: (String) -> Unit) {
-    val myMarkDownStyle = richTextDefaults.copy(
-        paragraphSpacing = DefaultParagraphSpacing,
-        headingStyle = DefaultHeadingStyle,
-        codeBlockStyle = richTextDefaults.codeBlockStyle?.copy(
-            textStyle = TextStyle(
-                fontFamily = FontFamily.Monospace,
-                fontSize = 14.sp
-            ),
-            modifier = Modifier
-                .padding(0.dp)
-                .fillMaxWidth()
-                .clip(shape = QuoteBorder)
-                .border(
-                    1.dp,
-                    MaterialTheme.colors.subtleBorder,
-                    QuoteBorder
-                )
-                .background(
-                    MaterialTheme.colors.onSurface
-                        .copy(alpha = 0.05f)
-                        .compositeOver(backgroundColor.value)
-                )
-        ),
-        stringStyle = richTextDefaults.stringStyle?.copy(
-            linkStyle = SpanStyle(
-                color = MaterialTheme.colors.primary
-            ),
-            codeStyle = SpanStyle(
-                fontFamily = FontFamily.Monospace,
-                fontSize = 14.sp,
-                background = MaterialTheme.colors.onSurface.copy(alpha = 0.22f)
-                    .compositeOver(backgroundColor.value)
-            )
-        )
-    )
-
     val uri = LocalUriHandler.current
     val onClick = { link: String ->
         val route = uriToRoute(link)
@@ -486,9 +448,9 @@ private fun RenderContentAsMarkdown(content: String, backgroundColor: MutableSta
         Unit
     }
 
-    ProvideTextStyle(TextStyle(lineHeight = 1.30.em)) {
+    ProvideTextStyle(MarkdownTextStyle) {
         MaterialRichText(
-            style = myMarkDownStyle
+            style = MaterialTheme.colors.markdownStyle
         ) {
             RefreshableContent(content, tags) {
                 Markdown(

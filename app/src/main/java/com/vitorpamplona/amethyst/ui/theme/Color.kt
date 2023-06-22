@@ -16,6 +16,8 @@ val Nip05 = Color(0xFF01BAFF)
 val FollowsFollow = Color.Yellow
 val NIP05Verified = Color.Blue
 
+val DarkerGreen = Color.Green.copy(alpha = 0.32f)
+
 val WarningColor = Color(0xFFC62828)
 
 val RelayIconFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0.5f) })

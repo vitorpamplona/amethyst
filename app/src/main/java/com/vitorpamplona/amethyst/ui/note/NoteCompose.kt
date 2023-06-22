@@ -96,7 +96,6 @@ import com.vitorpamplona.amethyst.service.model.BaseTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
-import com.vitorpamplona.amethyst.service.model.EventInterface
 import com.vitorpamplona.amethyst.service.model.FileHeaderEvent
 import com.vitorpamplona.amethyst.service.model.FileStorageHeaderEvent
 import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
@@ -142,14 +141,28 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.ui.theme.DiviserThickness
+import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Following
+import com.vitorpamplona.amethyst.ui.theme.Font14SP
+import com.vitorpamplona.amethyst.ui.theme.HalfPadding
+import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.Size25dp
+import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size30dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
+import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size55dp
+import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
+import com.vitorpamplona.amethyst.ui.theme.WidthAuthorPictureModifier
+import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyBackground
+import com.vitorpamplona.amethyst.ui.theme.repostProfileBorder
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
@@ -181,9 +194,13 @@ fun NoteCompose(
     nav: (String) -> Unit
 ) {
     val noteState by baseNote.live().metadata.observeAsState()
-    val noteEvent = remember(noteState) { noteState?.note?.event }
+    val missingEvent by remember(noteState) {
+        derivedStateOf {
+            noteState?.note?.event == null
+        }
+    }
 
-    if (noteEvent == null) {
+    if (missingEvent) {
         LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
             BlankNote(
                 remember {
@@ -337,12 +354,12 @@ fun WatchForReports(
     accountViewModel: AccountViewModel,
     onChange: (Boolean, Boolean, Set<Note>) -> Unit
 ) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val userFollowsState by accountViewModel.userFollows.observeAsState()
     val noteReportsState by note.live().reports.observeAsState()
 
-    LaunchedEffect(key1 = noteReportsState, key2 = accountState) {
+    LaunchedEffect(key1 = noteReportsState, key2 = userFollowsState) {
         launch(Dispatchers.Default) {
-            accountState?.account?.let { loggedIn ->
+            accountViewModel.account.let { loggedIn ->
                 val newCanPreview = note.author?.pubkeyHex == loggedIn.userProfile().pubkeyHex ||
                     (note.author?.let { loggedIn.userProfile().isFollowingCached(it) } ?: true) ||
                     noteReportsState?.note?.hasAnyReports() != true
@@ -376,10 +393,22 @@ fun NormalNote(
     nav: (String) -> Unit
 ) {
     val noteEvent = remember { baseNote.event }
-    val channelHex = remember { baseNote.channelHex() }
 
-    if ((noteEvent is ChannelCreateEvent || noteEvent is ChannelMetadataEvent) && channelHex != null) {
-        ChannelHeader(channelHex = channelHex, showVideo = !makeItShort, showBottomDiviser = true, accountViewModel = accountViewModel, nav = nav)
+    val isChannelHeader by remember {
+        derivedStateOf {
+            (baseNote.event is ChannelCreateEvent || baseNote.event is ChannelMetadataEvent) && baseNote.channelHex() != null
+        }
+    }
+
+    if (isChannelHeader) {
+        ChannelHeader(
+            channelNote = baseNote,
+            showVideo = !makeItShort,
+            showBottomDiviser = true,
+            accountViewModel =
+            accountViewModel,
+            nav = nav
+        )
     } else if (noteEvent is BadgeDefinitionEvent) {
         BadgeDisplay(baseNote = baseNote)
     } else if (noteEvent is FileHeaderEvent) {
@@ -387,20 +416,23 @@ fun NormalNote(
     } else if (noteEvent is FileStorageHeaderEvent) {
         FileStorageHeaderDisplay(baseNote)
     } else {
-        CheckNewAndRenderNote(
-            baseNote,
-            routeForLastRead,
-            modifier,
-            isBoostedNote,
-            isQuotedNote,
-            unPackReply,
-            makeItShort,
-            addMarginTop,
-            canPreview,
-            parentBackgroundColor,
-            accountViewModel,
-            nav
-        )
+        LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
+            CheckNewAndRenderNote(
+                baseNote,
+                routeForLastRead,
+                modifier,
+                isBoostedNote,
+                isQuotedNote,
+                unPackReply,
+                makeItShort,
+                addMarginTop,
+                canPreview,
+                parentBackgroundColor,
+                accountViewModel,
+                showPopup,
+                nav
+            )
+        }
     }
 }
 
@@ -417,6 +449,7 @@ private fun CheckNewAndRenderNote(
     canPreview: Boolean = true,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
+    showPopup: () -> Unit,
     nav: (String) -> Unit
 ) {
     val newItemColor = MaterialTheme.colors.newItemBackgroundColor
@@ -464,22 +497,20 @@ private fun CheckNewAndRenderNote(
         }
     }
 
-    LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
-        RenderNoteWithReactions(
-            modifier = updatedModifier,
-            backgroundColor = backgroundColor,
-            baseNote = baseNote,
-            isBoostedNote = isBoostedNote,
-            isQuotedNote = isQuotedNote,
-            addMarginTop = addMarginTop,
-            unPackReply = unPackReply,
-            makeItShort = makeItShort,
-            canPreview = canPreview,
-            accountViewModel = accountViewModel,
-            showPopup = showPopup,
-            nav = nav
-        )
-    }
+    RenderNoteWithReactions(
+        modifier = updatedModifier,
+        backgroundColor = backgroundColor,
+        baseNote = baseNote,
+        isBoostedNote = isBoostedNote,
+        isQuotedNote = isQuotedNote,
+        addMarginTop = addMarginTop,
+        unPackReply = unPackReply,
+        makeItShort = makeItShort,
+        canPreview = canPreview,
+        accountViewModel = accountViewModel,
+        showPopup = showPopup,
+        nav = nav
+    )
 }
 
 @Composable
@@ -539,8 +570,8 @@ private fun RenderNoteWithReactions(
             }
         ) {
             if (notBoostedNorQuote) {
-                DrawAuthorImages(baseNote, accountViewModel, nav)
-                Spacer(modifier = Modifier.width(10.dp))
+                AuthorAndRelayInformation(baseNote, accountViewModel, nav)
+                Spacer(modifier = DoubleHorzSpacer)
             }
 
             NoteBody(
@@ -556,22 +587,25 @@ private fun RenderNoteWithReactions(
             )
         }
 
-        if (!makeItShort && baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent) {
-            ReactionsRow(
-                baseNote = baseNote,
-                showReactionDetail = notBoostedNorQuote,
-                accountViewModel = accountViewModel,
-                nav = nav
-            )
-        } else {
-            if (!isBoostedNote && baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent) {
-                Spacer(modifier = Modifier.height(10.dp))
+        val isRepost = remember { baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent }
+        if (!isRepost) {
+            if (!makeItShort) {
+                ReactionsRow(
+                    baseNote = baseNote,
+                    showReactionDetail = notBoostedNorQuote,
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
+            } else {
+                if (!isBoostedNote) {
+                    Spacer(modifier = DoubleVertSpacer)
+                }
             }
         }
 
         if (!isQuotedNote && !isBoostedNote) {
             Divider(
-                thickness = 0.25.dp
+                thickness = DiviserThickness
             )
         }
     }
@@ -605,7 +639,7 @@ private fun NoteBody(
             )
         }
 
-        Spacer(modifier = Modifier.height(2.dp))
+        Spacer(modifier = HalfVertSpacer)
 
         if (!makeItShort) {
             ReplyRow(
@@ -1766,36 +1800,38 @@ private fun FirstUserInfoRow(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val eventNote = remember { baseNote.event } ?: return
-    val time = remember { baseNote.createdAt() } ?: return
-    val padding = remember {
-        Modifier.padding(horizontal = 5.dp)
-    }
+    val isRepost = remember { baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent }
 
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(verticalAlignment = CenterVertically) {
         if (showAuthorPicture) {
-            NoteAuthorPicture(baseNote, nav, accountViewModel, remember { 25.dp })
-            Spacer(padding)
+            NoteAuthorPicture(baseNote, nav, accountViewModel, Size25dp)
+            Spacer(HalfPadding)
             NoteUsernameDisplay(baseNote, remember { Modifier.weight(1f) })
         } else {
             NoteUsernameDisplay(baseNote, remember { Modifier.weight(1f) })
         }
 
-        if (eventNote is RepostEvent || eventNote is GenericRepostEvent) {
-            Text(
-                "  ${stringResource(id = R.string.boosted)}",
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colors.placeholderText,
-                maxLines = 1
-            )
+        if (isRepost) {
+            BoostedMark()
         } else {
-            DisplayFollowingHashtagsInPost(eventNote, accountViewModel, nav)
+            DisplayFollowingHashtagsInPost(baseNote, accountViewModel, nav)
         }
 
-        TimeAgo(time)
+        TimeAgo(baseNote)
 
         MoreOptionsButton(baseNote, accountViewModel)
     }
+}
+
+@Composable
+private fun BoostedMark() {
+    Text(
+        stringResource(id = R.string.boosted),
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colors.placeholderText,
+        maxLines = 1,
+        modifier = StdStartPadding
+    )
 }
 
 @Composable
@@ -1826,18 +1862,15 @@ private fun MoreOptionsButton(
 }
 
 @Composable
+fun TimeAgo(note: Note) {
+    val time = remember { note.createdAt() } ?: return
+    TimeAgo(time)
+}
+
+@Composable
 fun TimeAgo(time: Long) {
     val context = LocalContext.current
-    var timeStr by remember { mutableStateOf("") }
-
-    LaunchedEffect(key1 = time) {
-        launch(Dispatchers.IO) {
-            val newTimeStr = timeAgo(time, context = context)
-            if (newTimeStr != timeStr) {
-                timeStr = newTimeStr
-            }
-        }
-    }
+    val timeStr by remember { mutableStateOf(timeAgo(time, context = context)) }
 
     Text(
         text = timeStr,
@@ -1847,35 +1880,60 @@ fun TimeAgo(time: Long) {
 }
 
 @Composable
-private fun DrawAuthorImages(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val baseChannelHex = remember { baseNote.channelHex() }
-    val modifier = remember { Modifier.width(55.dp) }
-
-    Column(modifier) {
+private fun AuthorAndRelayInformation(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    Column(WidthAuthorPictureModifier) {
         // Draws the boosted picture outside the boosted card.
-        Box(modifier = modifier, contentAlignment = Alignment.BottomEnd) {
-            NoteAuthorPicture(baseNote, nav, accountViewModel, 55.dp)
-
-            if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
-                RepostNoteAuthorPicture(baseNote, accountViewModel, nav)
-            }
-
-            if (baseNote.event is ChannelMessageEvent && baseChannelHex != null) {
-                LoadChannel(baseChannelHex) { channel ->
-                    ChannelNotePicture(channel)
-                }
-            }
+        Box(modifier = Size55Modifier, contentAlignment = Alignment.BottomEnd) {
+            RenderAuthorImages(baseNote, nav, accountViewModel)
         }
 
-        if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
-            val baseReply = remember {
+        BadgeBox(baseNote, accountViewModel, nav)
+    }
+}
+
+@Composable
+private fun BadgeBox(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    val isRepost = remember { baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent }
+
+    if (isRepost) {
+        val baseReply by remember {
+            derivedStateOf {
                 baseNote.replyTo?.lastOrNull()
             }
-            baseReply?.let {
-                RelayBadges(it, accountViewModel, nav)
+        }
+        baseReply?.let {
+            RelayBadges(it, accountViewModel, nav)
+        }
+    } else {
+        RelayBadges(baseNote, accountViewModel, nav)
+    }
+}
+
+@Composable
+private fun RenderAuthorImages(
+    baseNote: Note,
+    nav: (String) -> Unit,
+    accountViewModel: AccountViewModel
+) {
+    val isRepost = remember { baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent }
+    val isChannel = remember { baseNote.event is ChannelMessageEvent && baseNote.channelHex() != null }
+
+    NoteAuthorPicture(baseNote, nav, accountViewModel, Size55dp)
+
+    if (isRepost) {
+        RepostNoteAuthorPicture(baseNote, accountViewModel, nav)
+    }
+
+    if (isChannel) {
+        val baseChannelHex = remember { baseNote.channelHex() }
+        if (baseChannelHex != null) {
+            LoadChannel(baseChannelHex) { channel ->
+                ChannelNotePicture(channel)
             }
-        } else {
-            RelayBadges(baseNote, accountViewModel, nav)
         }
     }
 }
@@ -1945,24 +2003,20 @@ private fun RepostNoteAuthorPicture(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val baseRepost = remember { baseNote.replyTo?.lastOrNull() }
-
-    val modifier = remember {
-        Modifier.size(30.dp)
+    val baseRepost by remember {
+        derivedStateOf {
+            baseNote.replyTo?.lastOrNull()
+        }
     }
 
     baseRepost?.let {
-        Box(modifier) {
+        Box(Size30Modifier) {
             NoteAuthorPicture(
                 baseNote = it,
                 nav = nav,
                 accountViewModel = accountViewModel,
-                size = remember { 30.dp },
-                pictureModifier = Modifier.border(
-                    2.dp,
-                    MaterialTheme.colors.background,
-                    CircleShape
-                )
+                size = Size30dp,
+                pictureModifier = MaterialTheme.colors.repostProfileBorder
             )
         }
     }
@@ -2073,10 +2127,12 @@ private fun LoadAndDisplayUser(
 
 @Composable
 fun DisplayFollowingHashtagsInPost(
-    noteEvent: EventInterface,
+    baseNote: Note,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
+    val noteEvent = remember { baseNote.event } ?: return
+
     val accountState by accountViewModel.accountLiveData.observeAsState()
     var firstTag by remember { mutableStateOf<String?>(null) }
 
@@ -2148,12 +2204,14 @@ fun DisplayUncitedHashtags(
 fun DisplayPoW(
     pow: Int
 ) {
+    val powStr = remember(pow) {
+        "PoW-$pow"
+    }
+
     Text(
-        "PoW-$pow",
-        color = MaterialTheme.colors.primary.copy(
-            alpha = 0.52f
-        ),
-        fontSize = 14.sp,
+        powStr,
+        color = MaterialTheme.colors.lessImportantLink,
+        fontSize = Font14SP,
         fontWeight = FontWeight.Bold,
         maxLines = 1
     )
@@ -2673,19 +2731,23 @@ private fun CreateImageHeader(
             painter = painterResource(R.drawable.profile_banner),
             contentDescription = stringResource(R.string.profile_banner),
             contentScale = ContentScale.FillWidth,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(150.dp)
+            modifier = remember {
+                Modifier
+                    .fillMaxWidth()
+                    .height(150.dp)
+            }
         )
 
         Box(
-            Modifier
-                .width(75.dp)
-                .height(75.dp)
-                .padding(10.dp)
-                .align(Alignment.BottomStart)
+            remember {
+                Modifier
+                    .width(75.dp)
+                    .height(75.dp)
+                    .padding(10.dp)
+                    .align(Alignment.BottomStart)
+            }
         ) {
-            NoteAuthorPicture(baseNote = note, accountViewModel = accountViewModel, size = 55.dp)
+            NoteAuthorPicture(baseNote = note, accountViewModel = accountViewModel, size = Size55dp)
         }
     }
 }

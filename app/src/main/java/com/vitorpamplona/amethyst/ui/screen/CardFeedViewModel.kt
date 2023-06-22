@@ -101,7 +101,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
                 val updatedCards = (oldNotesState.feed.value + newCards)
                     .sortedWith(compareBy({ it.createdAt() }, { it.id() }))
                     .reversed()
-                    .take(1000)
+                    .take(localFilter.limit())
                     .toImmutableList()
 
                 if (!equalImmutableLists(oldNotesState.feed.value, updatedCards)) {
@@ -115,7 +115,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
             val cards = convertToCard(notes)
                 .sortedWith(compareBy({ it.createdAt() }, { it.id() }))
                 .reversed()
-                .take(1000)
+                .take(localFilter.limit())
                 .toImmutableList()
 
             updateFeed(cards)
@@ -255,7 +255,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
                 val updatedCards = (oldNotesState.feed.value + newCards)
                     .sortedWith(compareBy({ it.createdAt() }, { it.id() }))
                     .reversed()
-                    .take(1000)
+                    .take(localFilter.limit())
                     .toImmutableList()
 
                 if (!equalImmutableLists(oldNotesState.feed.value, updatedCards)) {

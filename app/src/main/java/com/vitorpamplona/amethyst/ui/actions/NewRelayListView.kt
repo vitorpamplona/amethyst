@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.launch
@@ -167,7 +168,7 @@ fun ServerConfigHeader() {
                     Text(
                         text = stringResource(R.string.bytes),
                         maxLines = 1,
-                        fontSize = 14.sp,
+                        fontSize = Font14SP,
                         modifier = Modifier.weight(1.2f),
                         color = MaterialTheme.colors.placeholderText
                     )
@@ -177,7 +178,7 @@ fun ServerConfigHeader() {
                     Text(
                         text = stringResource(id = R.string.bytes),
                         maxLines = 1,
-                        fontSize = 14.sp,
+                        fontSize = Font14SP,
                         modifier = Modifier.weight(1.2f),
                         color = MaterialTheme.colors.placeholderText
                     )
@@ -187,7 +188,7 @@ fun ServerConfigHeader() {
                     Text(
                         text = stringResource(R.string.errors),
                         maxLines = 1,
-                        fontSize = 14.sp,
+                        fontSize = Font14SP,
                         modifier = Modifier.weight(1f),
                         color = MaterialTheme.colors.placeholderText
                     )
@@ -197,7 +198,7 @@ fun ServerConfigHeader() {
                     Text(
                         text = stringResource(R.string.spam),
                         maxLines = 1,
-                        fontSize = 14.sp,
+                        fontSize = Font14SP,
                         modifier = Modifier.weight(1f),
                         color = MaterialTheme.colors.placeholderText
                     )

@@ -20,7 +20,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
@@ -32,6 +31,7 @@ import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -428,9 +428,12 @@ fun ZapVote(
 
     // only show tallies after a user has zapped note
     if (!pollViewModel.canZap()) {
+        val amountStr = remember(poolOption.zappedValue) {
+            showAmount(poolOption.zappedValue)
+        }
         Text(
-            showAmount(poolOption.zappedValue),
-            fontSize = 14.sp,
+            text = amountStr,
+            fontSize = Font14SP,
             color = MaterialTheme.colors.placeholderText,
             modifier = modifier
         )

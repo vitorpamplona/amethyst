@@ -35,11 +35,11 @@ import androidx.compose.ui.text.input.*
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
+import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import java.util.*
@@ -305,7 +305,7 @@ fun LoginPage(
                 }
             },
             style = TextStyle(
-                fontSize = 14.sp,
+                fontSize = Font14SP,
                 textDecoration = TextDecoration.Underline,
                 color = MaterialTheme.colors.primary,
                 textAlign = TextAlign.Center

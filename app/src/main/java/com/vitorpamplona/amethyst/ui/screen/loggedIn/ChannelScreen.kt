@@ -364,14 +364,18 @@ fun EditFieldRow(
                         onSendNewMessage()
                     },
                     isActive = channelScreenModel.message.text.isNotBlank() && !channelScreenModel.isUploadingImage,
-                    modifier = Modifier.height(32.dp).padding(end = 10.dp)
+                    modifier = Modifier
+                        .height(32.dp)
+                        .padding(end = 10.dp)
                 )
             },
             leadingIcon = {
                 UploadFromGallery(
                     isUploading = channelScreenModel.isUploadingImage,
                     tint = MaterialTheme.colors.placeholderText,
-                    modifier = Modifier.height(32.dp).padding(start = 2.dp)
+                    modifier = Modifier
+                        .height(32.dp)
+                        .padding(start = 2.dp)
                 ) {
                     val fileServer = if (isPrivate) {
                         // TODO: Make private servers
@@ -476,6 +480,31 @@ fun MyTextField(
             }
         )
         )
+}
+
+@Composable
+fun ChannelHeader(
+    channelNote: Note,
+    showVideo: Boolean,
+    showBottomDiviser: Boolean,
+    modifier: Modifier = StdPadding,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    val channelHex by remember {
+        derivedStateOf {
+            channelNote.channelHex()
+        }
+    }
+    channelHex?.let {
+        ChannelHeader(
+            channelHex = it,
+            showVideo = showVideo,
+            showBottomDiviser = showBottomDiviser,
+            accountViewModel = accountViewModel,
+            nav = nav
+        )
+    }
 }
 
 @Composable

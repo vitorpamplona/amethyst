@@ -144,8 +144,10 @@ class User(val pubkeyHex: String) {
     }
 
     fun updateAcceptedBadges(note: AddressableNote) {
-        acceptedBadges = note
-        liveSet?.badges?.invalidateData()
+        if (acceptedBadges?.idHex != note.idHex) {
+            acceptedBadges = note
+            liveSet?.badges?.invalidateData()
+        }
     }
 
     fun addZap(zapRequest: Note, zap: Note?) {

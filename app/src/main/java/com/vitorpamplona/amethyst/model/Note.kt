@@ -490,9 +490,9 @@ class NoteLiveData(val note: Note) : LiveData<NoteState>(NoteState(note)) {
 
     fun invalidateData() {
         bundler.invalidate() {
-            // if (hasObservers()) {
-            postValue(NoteState(note))
-            // }
+            if (hasActiveObservers()) {
+                postValue(NoteState(note))
+            }
         }
     }
 

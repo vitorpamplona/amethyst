@@ -17,8 +17,8 @@ class RepostEvent(
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
 
-    fun boostedPost() = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
-    fun originalAuthor() = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
+    fun boostedPost() = taggedEvents()
+    fun originalAuthor() = taggedUsers()
 
     fun containedPost() = try {
         fromJson(content, Client.lenient)

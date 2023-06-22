@@ -60,7 +60,6 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.ViewModel
@@ -78,6 +77,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.getFragmentActivity
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
@@ -415,7 +415,7 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, nip47uri: String? = null, account
                                 stringResource(id = R.string.wallet_connect_service_explainer),
                                 Modifier.weight(1f),
                                 color = MaterialTheme.colors.placeholderText,
-                                fontSize = 14.sp
+                                fontSize = Font14SP
                             )
                         }
 
