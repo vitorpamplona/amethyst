@@ -989,20 +989,26 @@ private fun DisplayUserFromTag(
     addedChars: String,
     nav: (String) -> Unit
 ) {
-    val innerUserState by baseUser.live().metadata.observeAsState()
-    val displayName = remember(innerUserState) {
-        innerUserState?.user?.toBestDisplayName() ?: ""
-    }
-    val route = remember(innerUserState) {
+    val route = remember {
         "User/${baseUser.pubkeyHex}"
     }
-    val userTags = remember(innerUserState) {
-        innerUserState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists()
+    val suffix = remember { "$addedChars " }
+
+    val innerUserState by baseUser.live().metadata.observeAsState()
+    val displayName by remember(innerUserState) {
+        derivedStateOf {
+            innerUserState?.user?.toBestDisplayName() ?: ""
+        }
+    }
+    val userTags by remember(innerUserState) {
+        derivedStateOf {
+            innerUserState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists()
+        }
     }
 
     CreateClickableTextWithEmoji(
         clickablePart = displayName,
-        suffix = remember { "$addedChars " },
+        suffix = suffix,
         maxLines = 1,
         route = route,
         nav = nav,
