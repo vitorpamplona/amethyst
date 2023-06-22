@@ -5,7 +5,6 @@ import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -73,9 +72,8 @@ import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.actions.SaveToGallery
 import com.vitorpamplona.amethyst.ui.note.BlankNote
-import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.hashVerified
-import com.vitorpamplona.amethyst.ui.theme.subtleBorder
+import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -175,14 +173,7 @@ fun ZoomableContentView(content: ZoomableContent, images: ImmutableList<Zoomable
         mutableStateOf(false)
     }
 
-    var mainImageModifier = Modifier
-        .fillMaxWidth()
-        .clip(shape = QuoteBorder)
-        .border(
-            1.dp,
-            MaterialTheme.colors.subtleBorder,
-            QuoteBorder
-        )
+    var mainImageModifier = MaterialTheme.colors.imageModifier
 
     if (content is ZoomableUrlContent) {
         mainImageModifier = mainImageModifier.combinedClickable(

@@ -96,6 +96,24 @@ val RepostPictureBorderLight = Modifier.border(
     CircleShape
 )
 
+val DarkImageModifier = Modifier
+    .fillMaxWidth()
+    .clip(shape = QuoteBorder)
+    .border(
+        1.dp,
+        DarkSubtleBorder,
+        QuoteBorder
+    )
+
+val LightImageModifier = Modifier
+    .fillMaxWidth()
+    .clip(shape = QuoteBorder)
+    .border(
+        1.dp,
+        LightSubtleBorder,
+        QuoteBorder
+    )
+
 val MarkDownStyleOnDark = richTextDefaults.copy(
     paragraphSpacing = DefaultParagraphSpacing,
     headingStyle = DefaultHeadingStyle,
@@ -208,6 +226,9 @@ val Colors.markdownStyle: RichTextStyle
 
 val Colors.repostProfileBorder: Modifier
     get() = if (isLight) RepostPictureBorderLight else RepostPictureBorderDark
+
+val Colors.imageModifier: Modifier
+    get() = if (isLight) LightImageModifier else DarkImageModifier
 
 @Composable
 fun AmethystTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
