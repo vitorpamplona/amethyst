@@ -55,28 +55,32 @@ class LightningAddressResolver() {
             return
         }
 
-        withContext(Dispatchers.IO) {
-            val request: Request = Request.Builder()
-                .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
-                .url(url)
-                .build()
+        try {
+            withContext(Dispatchers.IO) {
+                val request: Request = Request.Builder()
+                    .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
+                    .url(url)
+                    .build()
 
-            client.newCall(request).enqueue(object : Callback {
-                override fun onResponse(call: Call, response: Response) {
-                    response.use {
-                        if (it.isSuccessful) {
-                            onSuccess(it.body.string())
-                        } else {
-                            onError("Could not resolve $lnaddress. Error: ${it.code}. Check if the server up and if the lightning address $lnaddress is correct")
+                client.newCall(request).enqueue(object : Callback {
+                    override fun onResponse(call: Call, response: Response) {
+                        response.use {
+                            if (it.isSuccessful) {
+                                onSuccess(it.body.string())
+                            } else {
+                                onError("Could not resolve $lnaddress. Error: ${it.code}. Check if the server up and if the lightning address $lnaddress is correct")
+                            }
                         }
                     }
-                }
 
-                override fun onFailure(call: Call, e: java.io.IOException) {
-                    onError("Could not resolve $url. Check if the server up and if the lightning address $lnaddress is correct")
-                    e.printStackTrace()
-                }
-            })
+                    override fun onFailure(call: Call, e: java.io.IOException) {
+                        onError("Could not resolve $url. Check if the server up and if the lightning address $lnaddress is correct")
+                        e.printStackTrace()
+                    }
+                })
+            }
+        } catch (e: Exception) {
+            onError("Could not resolve $url. Check if the server up and if the lightning address $lnaddress is correct")
         }
     }
 
