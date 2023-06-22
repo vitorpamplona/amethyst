@@ -329,6 +329,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
     var collectorJob: Job? = null
 
     init {
+        Log.d("Init", "${this.javaClass.simpleName}")
         collectorJob = viewModelScope.launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect { newNotes ->
                 checkNotInMainThread()

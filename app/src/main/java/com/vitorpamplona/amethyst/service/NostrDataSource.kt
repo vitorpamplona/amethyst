@@ -70,6 +70,7 @@ abstract class NostrDataSource(val debugName: String) {
     }
 
     init {
+        Log.d("Init", "${this.javaClass.simpleName} Subscribe")
         Client.subscribe(clientListener)
     }
 

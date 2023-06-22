@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.note
 
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -293,6 +294,7 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
     var collectorJob: Job? = null
 
     init {
+        Log.d("Init", "User Reactions Row")
         viewModelScope.launch(Dispatchers.IO) {
             initializeSuspend()
 

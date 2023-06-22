@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen
 
+import android.util.Log
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
@@ -104,6 +105,7 @@ open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel(), In
     var collectorJob: Job? = null
 
     init {
+        Log.d("Init", "${this.javaClass.simpleName}")
         collectorJob = viewModelScope.launch(Dispatchers.IO) {
             checkNotInMainThread()
 

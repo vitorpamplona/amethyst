@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.screen
 
 import android.content.Context
+import android.util.Log
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.LocalPreferences
@@ -29,6 +30,7 @@ class AccountStateViewModel(val context: Context) : ViewModel() {
     val accountContent = _accountContent.asStateFlow()
 
     init {
+        Log.d("Init", "AccountStateViewModel")
         // pulls account from storage.
 
         // Keeps it in the the UI thread to void blinking the login page.

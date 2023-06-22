@@ -1233,6 +1233,7 @@ class Account(
     }
 
     init {
+        Log.d("Init", "Account")
         backupContactList?.let {
             println("Loading saved contacts ${it.toJson()}")
             if (userProfile().latestContactList == null) {

@@ -7,6 +7,7 @@
 package com.vitorpamplona.amethyst.service.tts
 
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
@@ -33,6 +34,7 @@ class TextToSpeechHelper private constructor(private val context: WeakReference<
     private var customActionForDestroy: (() -> Unit)? = null
 
     init {
+        Log.d("Init", "Init TTS")
         initTTS()
     }
 

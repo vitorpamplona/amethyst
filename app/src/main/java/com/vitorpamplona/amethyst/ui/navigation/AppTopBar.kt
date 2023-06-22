@@ -425,6 +425,7 @@ class FollowListViewModel(val account: Account) : ViewModel() {
     var collectorJob: Job? = null
 
     init {
+        Log.d("Init", "App Top Bar")
         refresh()
         collectorJob = viewModelScope.launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect { newNotes ->
