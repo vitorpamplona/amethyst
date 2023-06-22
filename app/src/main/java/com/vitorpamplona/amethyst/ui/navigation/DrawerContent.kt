@@ -121,7 +121,6 @@ fun ProfileContent(
     val coroutineScope = rememberCoroutineScope()
 
     val accountUserState by baseAccountUser.live().metadata.observeAsState()
-    val accountUser = remember(accountUserState) { accountUserState?.user } ?: return
 
     val profilePubHex = remember(accountUserState) { accountUserState?.user?.pubkeyHex } ?: return
 
