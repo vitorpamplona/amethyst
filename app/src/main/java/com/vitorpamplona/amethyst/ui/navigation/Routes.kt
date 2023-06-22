@@ -13,6 +13,7 @@ import androidx.navigation.navArgument
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ChatroomListKnownFeedFilter
@@ -165,6 +166,8 @@ object HomeLatestItem : LatestItem() {
         account: Account,
         newNotes: Set<Note>
     ): Boolean {
+        checkNotInMainThread()
+
         val lastTime = account.loadLastRead("HomeFollows")
 
         val newestItem = updateNewestItem(newNotes, account, HomeNewThreadFeedFilter(account))
@@ -178,6 +181,8 @@ object NotificationLatestItem : LatestItem() {
         account: Account,
         newNotes: Set<Note>
     ): Boolean {
+        checkNotInMainThread()
+
         val lastTime = account.loadLastRead("Notification")
 
         val newestItem = updateNewestItem(newNotes, account, NotificationFeedFilter(account))
@@ -191,6 +196,8 @@ object MessagesLatestItem : LatestItem() {
         account: Account,
         newNotes: Set<Note>
     ): Boolean {
+        checkNotInMainThread()
+
         // Checks if the current newest item is still unread.
         // If so, there is no need to check anything else
         if (isNew(getNewestItem(account), account)) {
