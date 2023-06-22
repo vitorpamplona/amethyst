@@ -67,4 +67,4 @@ val WidthAuthorPictureModifier = Modifier.width(55.dp)
 
 val DiviserThickness = 0.25.dp
 
-val ReactionRowHeight = Modifier.padding(start = 22.dp).padding(start = 10.dp)
+val ReactionRowHeight = Modifier.padding(start = 10.dp)
