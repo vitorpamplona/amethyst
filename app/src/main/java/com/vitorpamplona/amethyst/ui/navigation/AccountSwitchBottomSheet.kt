@@ -8,11 +8,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
@@ -35,7 +33,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -43,6 +40,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
@@ -57,6 +55,7 @@ import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.LoginPage
+import com.vitorpamplona.amethyst.ui.theme.AccountPictureModifier
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -146,9 +145,12 @@ fun DisplayAccount(
 
     baseUser?.let {
         Row(
-            modifier = Modifier.fillMaxWidth().clickable {
-                accountStateViewModel.switchUser(acc.npub)
-            }.padding(16.dp, 16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable {
+                    accountStateViewModel.switchUser(acc.npub)
+                }
+                .padding(16.dp, 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(
@@ -160,7 +162,9 @@ fun DisplayAccount(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
-                        modifier = Modifier.width(55.dp).padding(0.dp)
+                        modifier = Modifier
+                            .width(55.dp)
+                            .padding(0.dp)
                     ) {
                         AccountPicture(it)
                     }
@@ -198,21 +202,15 @@ private fun ActiveMarker(acc: AccountInfo, accountViewModel: AccountViewModel) {
 
 @Composable
 private fun AccountPicture(user: User) {
-    val userState by user.live().metadata.observeAsState()
-    val profilePicture by remember(userState) {
-        derivedStateOf {
-            userState?.user?.profilePicture()
-        }
-    }
+    val profilePicture by user.live().metadata.map {
+        it.user.profilePicture()
+    }.observeAsState()
 
     RobohashAsyncImageProxy(
         robot = remember(user) { user.pubkeyHex },
         model = profilePicture,
         contentDescription = stringResource(R.string.profile_image),
-        modifier = Modifier
-            .width(55.dp)
-            .height(55.dp)
-            .clip(shape = CircleShape)
+        modifier = AccountPictureModifier
     )
 }
 
@@ -221,17 +219,13 @@ private fun AccountName(
     acc: AccountInfo,
     user: User
 ) {
-    val userState by user.live().metadata.observeAsState()
-    val displayName by remember(userState) {
-        derivedStateOf {
-            user.bestDisplayName()
-        }
-    }
-    val tags by remember(userState) {
-        derivedStateOf {
-            user.info?.latestMetadata?.tags?.toImmutableListOfLists()
-        }
-    }
+    val displayName by user.live().metadata.map {
+        user.bestDisplayName()
+    }.observeAsState()
+
+    val tags by user.live().metadata.map {
+        user.info?.latestMetadata?.tags?.toImmutableListOfLists()
+    }.observeAsState()
 
     displayName?.let {
         CreateTextWithEmoji(

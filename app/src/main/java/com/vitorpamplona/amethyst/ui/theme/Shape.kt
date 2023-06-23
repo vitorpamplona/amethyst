@@ -6,9 +6,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Shapes
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 
 val Shapes = Shapes(
@@ -75,3 +77,5 @@ val DiviserThickness = 0.25.dp
 val ReactionRowHeight = Modifier.height(24.dp).padding(start = 10.dp)
 
 val Height4dpModifier = Modifier.height(4.dp)
+
+val AccountPictureModifier = Modifier.width(55.dp).height(55.dp).clip(shape = CircleShape)
