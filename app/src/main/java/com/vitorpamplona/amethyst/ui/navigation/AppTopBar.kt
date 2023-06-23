@@ -46,6 +46,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
@@ -133,13 +134,9 @@ fun NoTopBar() {
 @Composable
 fun StoriesTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     GenericTopBar(scaffoldState, accountViewModel, nav) { accountViewModel ->
-        val accountState by accountViewModel.accountLiveData.observeAsState()
-
-        val list by remember(accountState) {
-            derivedStateOf {
-                accountState?.account?.defaultStoriesFollowList ?: GLOBAL_FOLLOWS
-            }
-        }
+        val list by accountViewModel.accountLiveData.map {
+            it.account.defaultStoriesFollowList
+        }.observeAsState(GLOBAL_FOLLOWS)
 
         FollowList(
             followLists,
@@ -154,13 +151,9 @@ fun StoriesTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState
 @Composable
 fun HomeTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     GenericTopBar(scaffoldState, accountViewModel, nav) { accountViewModel ->
-        val accountState by accountViewModel.accountLiveData.observeAsState()
-
-        val list by remember(accountState) {
-            derivedStateOf {
-                accountState?.account?.defaultHomeFollowList ?: GLOBAL_FOLLOWS
-            }
-        }
+        val list by accountViewModel.accountLiveData.map {
+            it.account.defaultHomeFollowList
+        }.observeAsState(KIND3_FOLLOWS)
 
         FollowList(
             followLists,
@@ -175,13 +168,9 @@ fun HomeTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, a
 @Composable
 fun NotificationTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     GenericTopBar(scaffoldState, accountViewModel, nav) { accountViewModel ->
-        val accountState by accountViewModel.accountLiveData.observeAsState()
-
-        val list by remember(accountState) {
-            derivedStateOf {
-                accountState?.account?.defaultNotificationFollowList ?: GLOBAL_FOLLOWS
-            }
-        }
+        val list by accountViewModel.accountLiveData.map {
+            it.account.defaultNotificationFollowList
+        }.observeAsState(GLOBAL_FOLLOWS)
 
         FollowList(
             followLists,
