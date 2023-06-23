@@ -19,7 +19,9 @@ Or get the latest APK from the [Releases Section](https://github.com/vitorpamplo
 - [x] Home Feed
 - [x] Notifications Feed
 - [x] Global Feed
-- [x] Reactions (likes NIP-25, boost, reply)
+- [x] Replies and mentions (NIP-10)
+- [x] Reactions (NIP-25)
+- [x] Reposts (NIP-18)
 - [x] Image/Video/Url/LnInvoice Previews
 - [x] View Threads
 - [x] Private Messages (NIP-04)
@@ -56,6 +58,7 @@ Or get the latest APK from the [Releases Section](https://github.com/vitorpamplo
 - [x] Relay Authentication (NIP-42)
 - [x] Content stored in relays themselves (NIP-95)
 - [x] Custom Emoji (NIP-30)
+- [x] Zap Forwarding (NIP-57)
 - [x] Text Note References (NIP-27)
 - [x] Audio Tracks (zapstr.live) (NIP-TBD)
 - [x] Push Notifications (Zaps and Messages)
@@ -68,6 +71,7 @@ Or get the latest APK from the [Releases Section](https://github.com/vitorpamplo
 - [x] Live Activities & Live Chats (NIP-102)
 - [x] Relay Pages (NIP-11)
 - [x] HTTP Auth (NIP-98)
+- [x] Zapraiser (NIP-TBD)
 - [ ] Marketplace (NIP-15)
 - [ ] Image/Video Capture in the app
 - [ ] Local Database
