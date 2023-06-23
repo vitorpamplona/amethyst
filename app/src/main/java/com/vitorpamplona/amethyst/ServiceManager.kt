@@ -23,6 +23,7 @@ import com.vitorpamplona.amethyst.service.NostrThreadDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.NostrVideoDataSource
 import com.vitorpamplona.amethyst.service.relays.Client
+import com.vitorpamplona.amethyst.ui.actions.ImageUploader
 
 object ServiceManager {
     private var account: Account? = null
@@ -66,6 +67,7 @@ object ServiceManager {
             NostrHomeDataSource.account = myAccount
             NostrChatroomListDataSource.account = myAccount
             NostrVideoDataSource.account = myAccount
+            ImageUploader.account = myAccount
 
             // Notification Elements
             NostrHomeDataSource.start()

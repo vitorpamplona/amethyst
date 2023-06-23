@@ -338,6 +338,9 @@
     <string name="upload_server_nostrfilesdev">nostrfiles.dev - trusted</string>
     <string name="upload_server_nostrfilesdev_explainer">Nostrfiles.dev can modify the file</string>
 
+    <string name="upload_server_nostrcheckme">nostrcheck.me - trusted</string>
+    <string name="upload_server_nostrcheckme_explainer">nostrcheck.me can modify the file</string>
+
 
     <string name="upload_server_imgur_nip94">Verifiable Imgur (NIP-94)</string>
     <string name="upload_server_imgur_nip94_explainer">Checks if Imgur modified the file. New NIP: other clients might not see it</string>
@@ -350,6 +353,11 @@
 
     <string name="upload_server_nostrfilesdev_nip94">Verifiable Nostrfiles.dev (NIP-94)</string>
     <string name="upload_server_nostrfilesdev_nip94_explainer">Checks if Nostrfiles.dev modified the file. New NIP: other clients might not see it</string>
+
+    <string name="upload_server_nostrcheckme_nip94">Verifiable Nostrcheck.me (NIP-94)</string>
+    <string name="upload_server_nostrcheckme_nip94_explainer">Checks if Nostrcheck.me modified the file. New NIP: other clients might not see it</string>
+
+
 
 
     <string name="upload_server_relays_nip95">Your relays (NIP-95)</string>

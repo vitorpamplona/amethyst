@@ -383,9 +383,11 @@ fun EditFieldRow(
                             ServersAvailable.NOSTR_BUILD -> ServersAvailable.NOSTR_BUILD
                             ServersAvailable.NOSTRIMG -> ServersAvailable.NOSTRIMG
                             ServersAvailable.NOSTRFILES_DEV -> ServersAvailable.NOSTRFILES_DEV
+                            ServersAvailable.NOSTRCHECK_ME -> ServersAvailable.NOSTRCHECK_ME
                             ServersAvailable.NOSTR_BUILD_NIP_94 -> ServersAvailable.NOSTR_BUILD
                             ServersAvailable.NOSTRIMG_NIP_94 -> ServersAvailable.NOSTRIMG
                             ServersAvailable.NOSTRFILES_DEV_NIP_94 -> ServersAvailable.NOSTRFILES_DEV
+                            ServersAvailable.NOSTRCHECK_ME_NIP_94 -> ServersAvailable.NOSTRCHECK_ME
                             ServersAvailable.NIP95 -> ServersAvailable.NOSTR_BUILD
                         }
                     } else {
