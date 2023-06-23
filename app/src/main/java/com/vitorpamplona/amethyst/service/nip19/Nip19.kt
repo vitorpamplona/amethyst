@@ -67,7 +67,7 @@ object Nip19 {
             }
             parsed?.copy(additionalChars = additionalChars ?: "")
         } catch (e: Throwable) {
-            Log.e("NIP19 Parser", "Issue trying to Decode NIP19 $key: ${e.message}", e)
+            Log.w("NIP19 Parser", "Issue trying to Decode NIP19 $key: ${e.message}", e)
             null
         }
     }

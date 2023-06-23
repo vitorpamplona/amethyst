@@ -113,6 +113,8 @@ object LocalCache {
     }
 
     private fun isValidHexNpub(key: String): Boolean {
+        if (key.contains(":")) return false
+
         return try {
             Hex.decode(key).toNpub()
             true
