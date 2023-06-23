@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.actions
 
+import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
@@ -29,6 +30,7 @@ import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Paid
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SyncProblem
@@ -62,6 +64,7 @@ import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.lang.Math.round
 
@@ -69,9 +72,16 @@ import java.lang.Math.round
 fun NewRelayListView(onClose: () -> Unit, accountViewModel: AccountViewModel, relayToAdd: String = "", nav: (String) -> Unit) {
     val postViewModel: NewRelayListViewModel = viewModel()
     val feedState by postViewModel.relays.collectAsState()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         postViewModel.load(accountViewModel.account)
+        postViewModel.relays.value.forEach { item ->
+            loadRelayInfo(item.url, context, scope) {
+                postViewModel.togglePaidRelay(item, it.limitation?.payment_required ?: false)
+            }
+        }
     }
 
     Dialog(
@@ -117,6 +127,7 @@ fun NewRelayListView(onClose: () -> Unit, accountViewModel: AccountViewModel, re
                             if (index == 0) {
                                 ServerConfigHeader()
                             }
+
                             ServerConfig(
                                 item,
                                 onToggleDownload = { postViewModel.toggleDownload(it) },
@@ -130,7 +141,9 @@ fun NewRelayListView(onClose: () -> Unit, accountViewModel: AccountViewModel, re
 
                                 onDelete = { postViewModel.deleteRelay(it) },
                                 accountViewModel = accountViewModel,
-                                nav = nav
+                                nav = nav,
+                                scope = scope,
+                                context = context
                             )
                         }
                     }
@@ -229,10 +242,10 @@ fun ServerConfig(
 
     onDelete: (RelaySetupInfo) -> Unit,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
+    nav: (String) -> Unit,
+    context: Context,
+    scope: CoroutineScope
 ) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     var relayInfo: RelayInformation? by remember { mutableStateOf(null) }
 
     if (relayInfo != null) {
@@ -269,6 +282,20 @@ fun ServerConfig(
 
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Paid,
+                        null,
+                        modifier = Modifier
+                            .padding(end = 5.dp)
+                            .size(15.dp),
+                        tint = if (item.paidRelay) {
+                            Color.Green
+                        } else {
+                            MaterialTheme.colors.onSurface.copy(
+                                alpha = 0.32f
+                            )
+                        }
+                    )
                     Text(
                         text = item.url.removePrefix("wss://"),
                         modifier = Modifier

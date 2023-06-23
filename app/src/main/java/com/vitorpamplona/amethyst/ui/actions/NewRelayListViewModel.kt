@@ -136,6 +136,12 @@ class NewRelayListViewModel : ViewModel() {
             it.updated(relay, relay.copy(feedTypes = newTypes))
         }
     }
+
+    fun togglePaidRelay(relay: RelaySetupInfo, paid: Boolean) {
+        _relays.update {
+            it.updated(relay, relay.copy(paidRelay = paid))
+        }
+    }
 }
 
 fun <T> Iterable<T>.updated(old: T, new: T): List<T> = map { if (it == old) new else it }

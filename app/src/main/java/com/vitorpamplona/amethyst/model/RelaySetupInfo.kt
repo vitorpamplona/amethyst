@@ -12,5 +12,6 @@ data class RelaySetupInfo(
     val downloadCountInBytes: Int = 0,
     val uploadCountInBytes: Int = 0,
     val spamCount: Int = 0,
-    val feedTypes: Set<FeedType>
+    val feedTypes: Set<FeedType>,
+    val paidRelay: Boolean = false
 )
