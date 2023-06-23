@@ -989,9 +989,7 @@ private fun DisplayUserFromTag(
     addedChars: String,
     nav: (String) -> Unit
 ) {
-    val route = remember {
-        "User/${baseUser.pubkeyHex}"
-    }
+    val route = remember { "User/${baseUser.pubkeyHex}" }
     val suffix = remember { "$addedChars " }
 
     val innerUserState by baseUser.live().metadata.observeAsState()
