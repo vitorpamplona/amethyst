@@ -282,22 +282,19 @@ fun ServerConfig(
 
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Paid,
-                        null,
-                        modifier = Modifier
-                            .padding(end = 5.dp)
-                            .size(15.dp),
-                        tint = if (item.paidRelay) {
-                            Color.Green
-                        } else {
-                            MaterialTheme.colors.onSurface.copy(
-                                alpha = 0.32f
-                            )
-                        }
-                    )
+                    if (item.paidRelay) {
+                        Icon(
+                            imageVector = Icons.Default.Paid,
+                            null,
+                            modifier = Modifier
+                                .padding(end = 5.dp)
+                                .size(14.dp),
+                            tint = Color.Green
+                        )
+                    }
+
                     Text(
-                        text = item.url.removePrefix("wss://"),
+                        text = item.url.removePrefix("wss://").removeSuffix("/"),
                         modifier = Modifier
                             .weight(1f)
                             .clickable {
