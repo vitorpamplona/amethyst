@@ -247,7 +247,11 @@ class NostrCheckMeServer : FileServer() {
             val body = response.body?.string()
             val tree = jacksonObjectMapper().readTree(body)
             isCompleted = tree?.get("status")?.asText() == "completed"
-            // Maybe add some wait time here
+            try {
+                Thread.sleep(500)
+            } catch (e: InterruptedException) {
+                e.printStackTrace()
+            }
         }
         return url
     }
