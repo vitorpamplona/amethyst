@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.actions
 
 import android.content.Context
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -305,9 +306,10 @@ fun loadRelayInfo(
             object : Callback {
                 override fun onResponse(call: Call, response: Response) {
                     response.use {
+                        val body = it.body.string()
                         try {
                             if (it.isSuccessful) {
-                                onInfo(RelayInformation.fromJson(it.body.string()))
+                                onInfo(RelayInformation.fromJson(body))
                             } else {
                                 scope.launch {
                                     Toast
@@ -319,6 +321,7 @@ fun loadRelayInfo(
                                 }
                             }
                         } catch (e: Exception) {
+                            Log.e("RelayInfoFail", "Resulting Message from Relay in not parseable: $body", e)
                             scope.launch {
                                 Toast
                                     .makeText(
@@ -332,7 +335,7 @@ fun loadRelayInfo(
                 }
 
                 override fun onFailure(call: Call, e: IOException) {
-                    e.printStackTrace()
+                    Log.e("RelayInfoFail", "Resulting Message from Relay in not parseable", e)
                     scope.launch {
                         Toast
                             .makeText(
