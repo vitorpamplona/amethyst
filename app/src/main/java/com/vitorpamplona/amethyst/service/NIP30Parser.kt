@@ -20,7 +20,7 @@ class NIP30Parser {
 
         val regularChars = input.split(customEmojiPattern.toRegex())
 
-        var finalList = mutableListOf<String>()
+        val finalList = mutableListOf<String>()
         var index = 0
         for (e in regularChars) {
             finalList.add(e)
