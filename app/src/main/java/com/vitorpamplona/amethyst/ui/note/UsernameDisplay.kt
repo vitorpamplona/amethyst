@@ -20,6 +20,8 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.distinctUntilChanged
+import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.tts.TextToSpeechHelper
@@ -32,12 +34,13 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
 fun NoteUsernameDisplay(baseNote: Note, weight: Modifier = Modifier) {
-    val noteState by baseNote.live().metadata.observeAsState()
-    val author = remember(noteState) {
-        noteState?.note?.author
-    } ?: return
+    val authorState by baseNote.live().metadata.map {
+        it.note.author
+    }.distinctUntilChanged().observeAsState()
 
-    UsernameDisplay(author, weight)
+    authorState?.let {
+        UsernameDisplay(it, weight)
+    }
 }
 
 @Composable

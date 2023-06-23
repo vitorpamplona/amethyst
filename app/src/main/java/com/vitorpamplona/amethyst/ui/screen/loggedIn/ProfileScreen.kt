@@ -81,7 +81,7 @@ import com.vitorpamplona.amethyst.ui.dal.UserProfileConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
 import com.vitorpamplona.amethyst.ui.navigation.ShowQRDialog
-import com.vitorpamplona.amethyst.ui.note.UserPicture
+import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.screen.FeedState
 import com.vitorpamplona.amethyst.ui.screen.LnZapFeedView
 import com.vitorpamplona.amethyst.ui.screen.NostrUserAppRecommendationsFeedViewModel
@@ -511,7 +511,7 @@ private fun ProfileHeader(
             ) {
                 val clipboardManager = LocalClipboardManager.current
 
-                UserPicture(
+                ClickableUserPicture(
                     baseUser = baseUser,
                     accountViewModel = accountViewModel,
                     size = 100.dp,

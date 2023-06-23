@@ -517,6 +517,22 @@ fun FastNoteAuthorPicture(
     pictureModifier: Modifier = Modifier,
     accountViewModel: AccountViewModel
 ) {
+    val myBoxModifier = remember {
+        Modifier.size(size)
+    }
+
+    Box(myBoxModifier, contentAlignment = Alignment.TopEnd) {
+        WatchMetadataAndRenderPictureWithFollwingMark(author, size, pictureModifier, accountViewModel)
+    }
+}
+
+@Composable
+private fun WatchMetadataAndRenderPictureWithFollwingMark(
+    author: User,
+    size: Dp,
+    pictureModifier: Modifier,
+    accountViewModel: AccountViewModel
+) {
     var profilePicture by remember {
         mutableStateOf(author.info?.picture)
     }
@@ -531,7 +547,7 @@ fun FastNoteAuthorPicture(
         }
     }
 
-    UserPicture(
+    PictureAndFollowingMark(
         userHex = authorPubKey,
         userPicture = profilePicture,
         size = size,

@@ -195,10 +195,12 @@ private fun FeedLoaded(
         itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
             CheckIfOnline(item) {
                 ChannelHeader(
-                    channelHex = item.idHex,
+                    channelHex = remember { item.idHex },
                     showVideo = false,
                     showBottomDiviser = true,
-                    modifier = Modifier.padding(start = 10.dp, end = 10.dp, top = 5.dp, bottom = 5.dp),
+                    modifier = remember {
+                        Modifier.padding(start = 10.dp, end = 10.dp, top = 5.dp, bottom = 5.dp)
+                    },
                     accountViewModel = accountViewModel,
                     nav = nav
                 )

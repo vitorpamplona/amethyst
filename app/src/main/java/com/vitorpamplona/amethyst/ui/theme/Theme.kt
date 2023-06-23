@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
@@ -65,6 +66,12 @@ private val LightGrayText = LightColorPalette.onSurface.copy(alpha = 0.52f)
 
 private val DarkPlaceholderText = DarkColorPalette.onSurface.copy(alpha = 0.32f)
 private val LightPlaceholderText = LightColorPalette.onSurface.copy(alpha = 0.32f)
+
+private val DarkPlaceholderTextColorFilter = ColorFilter.tint(DarkPlaceholderText)
+private val LightPlaceholderTextColorFilter = ColorFilter.tint(LightPlaceholderText)
+
+private val DarkOnBackgroundColorFilter = ColorFilter.tint(DarkColorPalette.onBackground)
+private val LightOnBackgroundColorFilter = ColorFilter.tint(LightColorPalette.onBackground)
 
 private val DarkSubtleButton = DarkColorPalette.onSurface.copy(alpha = 0.22f)
 private val LightSubtleButton = LightColorPalette.onSurface.copy(alpha = 0.22f)
@@ -205,6 +212,12 @@ val Colors.veryImportantLink: Color
 
 val Colors.placeholderText: Color
     get() = if (isLight) LightPlaceholderText else DarkPlaceholderText
+
+val Colors.placeholderTextColorFilter: ColorFilter
+    get() = if (isLight) LightPlaceholderTextColorFilter else DarkPlaceholderTextColorFilter
+
+val Colors.onBackgroundColorFilter: ColorFilter
+    get() = if (isLight) LightOnBackgroundColorFilter else DarkOnBackgroundColorFilter
 
 val Colors.grayText: Color
     get() = if (isLight) LightGrayText else DarkGrayText

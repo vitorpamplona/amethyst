@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.ui.note
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +25,7 @@ import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
@@ -46,6 +48,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -72,7 +75,9 @@ import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeMe
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeThem
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
+import com.vitorpamplona.amethyst.ui.theme.Size13dp
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size15dp
 import com.vitorpamplona.amethyst.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
@@ -845,9 +850,11 @@ private fun RelayBadges(baseNote: Note, accountViewModel: AccountViewModel, nav:
 
 @Composable
 fun RenderRelay(dirtyUrl: String, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val iconUrl = remember(dirtyUrl) {
-        val cleanUrl = dirtyUrl.trim().removePrefix("wss://").removePrefix("ws://").removeSuffix("/")
-        "https://$cleanUrl/favicon.ico"
+    val iconUrl by remember(dirtyUrl) {
+        derivedStateOf {
+            val cleanUrl = dirtyUrl.trim().removePrefix("wss://").removePrefix("ws://").removeSuffix("/")
+            "https://$cleanUrl/favicon.ico"
+        }
     }
 
     var relayInfo: RelayInformation? by remember { mutableStateOf(null) }
@@ -865,36 +872,48 @@ fun RenderRelay(dirtyUrl: String, accountViewModel: AccountViewModel, nav: (Stri
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val interactionSource = remember { MutableInteractionSource() }
+    val ripple = rememberRipple(bounded = false, radius = Size15dp)
 
     val clickableModifier = remember(dirtyUrl) {
         Modifier
             .padding(1.dp)
-            .size(15.dp)
-            .clickable(onClick = {
-                loadRelayInfo(dirtyUrl, context, scope) {
-                    relayInfo = it
+            .size(Size15dp)
+            .clickable(
+                role = Role.Button,
+                interactionSource = interactionSource,
+                indication = ripple,
+                onClick = {
+                    loadRelayInfo(dirtyUrl, context, scope) {
+                        relayInfo = it
+                    }
                 }
-            })
-    }
-
-    val backgroundColor = MaterialTheme.colors.background
-
-    val iconModifier = remember(dirtyUrl) {
-        Modifier
-            .size(13.dp)
-            .clip(shape = CircleShape)
-            .drawBehind { drawRect(backgroundColor) }
+            )
     }
 
     Box(
         modifier = clickableModifier
     ) {
-        RobohashFallbackAsyncImage(
-            robot = iconUrl,
-            model = iconUrl,
-            contentDescription = stringResource(id = R.string.relay_icon),
-            colorFilter = RelayIconFilter,
-            modifier = iconModifier
-        )
+        RenderRelayIcon(iconUrl)
     }
+}
+
+@Composable
+private fun RenderRelayIcon(iconUrl: String) {
+    val backgroundColor = MaterialTheme.colors.background
+
+    val iconModifier = remember {
+        Modifier
+            .size(Size13dp)
+            .clip(shape = CircleShape)
+            .drawBehind { drawRect(backgroundColor) }
+    }
+
+    RobohashFallbackAsyncImage(
+        robot = iconUrl,
+        model = iconUrl,
+        contentDescription = stringResource(id = R.string.relay_icon),
+        colorFilter = RelayIconFilter,
+        modifier = iconModifier
+    )
 }

@@ -33,6 +33,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -60,7 +61,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.note.ChannelName
-import com.vitorpamplona.amethyst.ui.note.UserPicture
+import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SearchBarViewModel
@@ -347,6 +348,10 @@ private fun RenderChannel(
     item: com.vitorpamplona.amethyst.model.Channel,
     onClick: () -> Unit
 ) {
+    val hasNewMessages = remember {
+        mutableStateOf(false)
+    }
+
     ChannelName(
         channelIdHex = item.idHex,
         channelPicture = item.profilePicture(),
@@ -358,7 +363,7 @@ private fun RenderChannel(
         },
         channelLastTime = null,
         channelLastContent = item.summary(),
-        false,
+        hasNewMessages,
         onClick = onClick
     )
 }
@@ -384,7 +389,7 @@ fun UserComposeForChat(
                 ),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            UserPicture(baseUser, 55.dp, accountViewModel)
+            ClickableUserPicture(baseUser, 55.dp, accountViewModel)
 
             Column(
                 modifier = Modifier

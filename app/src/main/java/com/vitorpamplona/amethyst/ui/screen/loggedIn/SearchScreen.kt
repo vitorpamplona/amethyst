@@ -62,9 +62,9 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.AboutDisplay
 import com.vitorpamplona.amethyst.ui.note.ChannelName
+import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.UserCompose
-import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.NostrGlobalFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
@@ -366,6 +366,10 @@ private fun DisplaySearchResults(
     val channels by searchBarViewModel.searchResultsChannels.collectAsState()
     val notes by searchBarViewModel.searchResultsNotes.collectAsState()
 
+    val hasNewMessages = remember {
+        mutableStateOf(false)
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxHeight(),
         contentPadding = PaddingValues(
@@ -405,7 +409,7 @@ private fun DisplaySearchResults(
                 },
                 channelLastTime = null,
                 channelLastContent = item.summary(),
-                false,
+                hasNewMessages = hasNewMessages,
                 onClick = { nav("Channel/${item.idHex}") }
             )
         }
@@ -493,7 +497,7 @@ fun UserLine(
                     top = 10.dp
                 )
         ) {
-            UserPicture(baseUser, 55.dp, accountViewModel, Modifier, null)
+            ClickableUserPicture(baseUser, 55.dp, accountViewModel, Modifier, null)
 
             Column(
                 modifier = Modifier

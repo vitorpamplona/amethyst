@@ -34,9 +34,9 @@ class ChatroomListKnownFeedFilter(val account: Account) : AdditiveFeedFilter<Not
 
         val publicChannels = account.followingChannels().map { it ->
             it.notes.values
-                .filter { account.isAcceptable(it) }
+                .filter { account.isAcceptable(it) && it.event != null }
                 .sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
-                .lastOrNull { it.event != null }
+                .lastOrNull()
         }
 
         return (privateMessages + publicChannels)

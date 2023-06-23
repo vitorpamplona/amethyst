@@ -13,7 +13,6 @@ import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
-import java.util.Date
 
 @Composable
 fun RobohashAsyncImage(
@@ -48,8 +47,6 @@ fun RobohashAsyncImage(
     )
 }
 
-var imageErrors = mapOf<String, Long>()
-
 @Composable
 fun RobohashFallbackAsyncImage(
     robot: String,
@@ -62,42 +59,24 @@ fun RobohashFallbackAsyncImage(
     colorFilter: ColorFilter? = null,
     filterQuality: FilterQuality = DrawScope.DefaultFilterQuality
 ) {
-    val errorCache = remember(imageErrors) { imageErrors[model] }
+    val context = LocalContext.current
+    val painter = rememberAsyncImagePainter(
+        model = Robohash.imageRequest(context, robot)
+    )
 
-    if (errorCache != null && (Date().time / 1000) - errorCache < (60 * 5)) {
-        RobohashAsyncImage(
-            robot = robot,
-            contentDescription = contentDescription,
-            modifier = modifier,
-            alignment = alignment,
-            contentScale = contentScale,
-            alpha = alpha,
-            colorFilter = colorFilter,
-            filterQuality = filterQuality
-        )
-    } else {
-        val context = LocalContext.current
-        val painter = rememberAsyncImagePainter(
-            model = Robohash.imageRequest(context, robot)
-        )
-
-        AsyncImage(
-            model = model,
-            contentDescription = contentDescription,
-            modifier = modifier,
-            placeholder = painter,
-            fallback = painter,
-            error = painter,
-            alignment = alignment,
-            contentScale = contentScale,
-            alpha = alpha,
-            colorFilter = colorFilter,
-            filterQuality = filterQuality,
-            onError = {
-                imageErrors = imageErrors + Pair(model, Date().time / 1000)
-            }
-        )
-    }
+    AsyncImage(
+        model = model,
+        contentDescription = contentDescription,
+        modifier = modifier,
+        placeholder = painter,
+        fallback = painter,
+        error = painter,
+        alignment = alignment,
+        contentScale = contentScale,
+        alpha = alpha,
+        colorFilter = colorFilter,
+        filterQuality = filterQuality
+    )
 }
 
 @Composable

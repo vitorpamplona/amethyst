@@ -36,8 +36,11 @@ val DoubleVertSpacer = Modifier.height(10.dp)
 
 val HalfDoubleVertSpacer = Modifier.height(7.dp)
 
+val Size0dp = 0.dp
 val Size13dp = 13.dp
+val Size15dp = 15.dp
 val Size16dp = 16.dp
+val Size17dp = 17.dp
 val Size18dp = 18.dp
 val Size19dp = 19.dp
 val Size20dp = 20.dp
@@ -46,7 +49,9 @@ val Size25dp = 25.dp
 val Size30dp = 30.dp
 val Size35dp = 35.dp
 val Size55dp = 55.dp
+val Size75dp = 75.dp
 
+val HalfStartPadding = Modifier.padding(start = 5.dp)
 val StdStartPadding = Modifier.padding(start = 10.dp)
 
 val HalfPadding = Modifier.padding(5.dp)
@@ -67,4 +72,6 @@ val WidthAuthorPictureModifier = Modifier.width(55.dp)
 
 val DiviserThickness = 0.25.dp
 
-val ReactionRowHeight = Modifier.padding(start = 10.dp)
+val ReactionRowHeight = Modifier.height(24.dp).padding(start = 10.dp)
+
+val Height4dpModifier = Modifier.height(4.dp)

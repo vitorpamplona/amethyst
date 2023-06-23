@@ -18,6 +18,7 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -41,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -62,31 +64,65 @@ fun ChatroomCompose(
     nav: (String) -> Unit
 ) {
     val noteState by baseNote.live().metadata.observeAsState()
-    val note = noteState?.note
 
-    val channelHex by remember(noteState) {
-        derivedStateOf {
-            noteState?.note?.channelHex()
-        }
-    }
     val isBlank = remember(noteState) {
-        note?.event == null
+        noteState?.note?.event == null
     }
 
     if (isBlank) {
         BlankNote(Modifier)
-    } else if (channelHex != null) {
-        LoadChannel(baseChannelHex = channelHex!!) { channel ->
-            ChannelRoomCompose(baseNote, channel, accountViewModel, nav)
-        }
     } else {
-        val userRoomHex = remember(noteState, accountViewModel) {
-            (baseNote.event as? PrivateDmEvent)?.talkingWith(accountViewModel.userProfile().pubkeyHex)
-        } ?: return
+        ChatroomComposeChannelOrUser(baseNote, accountViewModel, nav)
+    }
+}
 
-        LoadUser(userRoomHex) { user ->
+@Composable
+fun ChatroomComposeChannelOrUser(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    val channelHex by remember {
+        derivedStateOf {
+            baseNote.channelHex()
+        }
+    }
+
+    if (channelHex != null) {
+        ChatroomChannel(channelHex, baseNote, accountViewModel, nav)
+    } else {
+        ChatroomDirectMessage(baseNote, accountViewModel, nav)
+    }
+}
+
+@Composable
+private fun ChatroomDirectMessage(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    val userRoomHex by remember {
+        derivedStateOf {
+            (baseNote.event as? PrivateDmEvent)?.talkingWith(accountViewModel.userProfile().pubkeyHex)
+        }
+    }
+
+    userRoomHex?.let {
+        LoadUser(it) { user ->
             UserRoomCompose(baseNote, user, accountViewModel, nav)
         }
+    }
+}
+
+@Composable
+private fun ChatroomChannel(
+    channelHex: HexKey?,
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    LoadChannel(baseChannelHex = channelHex!!) { channel ->
+        ChannelRoomCompose(baseNote, channel, accountViewModel, nav)
     }
 }
 
@@ -130,11 +166,11 @@ private fun ChannelRoomCompose(
         noteEvent?.content()
     }
 
-    var hasNewMessages by remember { mutableStateOf<Boolean>(false) }
+    var hasNewMessages = remember { mutableStateOf<Boolean>(false) }
 
     WatchNotificationChanges(note, route, accountViewModel) { newHasNewMessages ->
-        if (hasNewMessages != newHasNewMessages) {
-            hasNewMessages = newHasNewMessages
+        if (hasNewMessages.value != newHasNewMessages) {
+            hasNewMessages.value = newHasNewMessages
         }
     }
 
@@ -191,21 +227,21 @@ private fun UserRoomCompose(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    var hasNewMessages by remember { mutableStateOf<Boolean>(false) }
+    var hasNewMessages = remember { mutableStateOf<Boolean>(false) }
 
     val route = remember(user) {
         "Room/${user.pubkeyHex}"
     }
 
     WatchNotificationChanges(note, route, accountViewModel) { newHasNewMessages ->
-        if (hasNewMessages != newHasNewMessages) {
-            hasNewMessages = newHasNewMessages
+        if (hasNewMessages.value != newHasNewMessages) {
+            hasNewMessages.value = newHasNewMessages
         }
     }
 
     ChannelName(
         channelPicture = {
-            UserPicture(
+            NonClickableUserPicture(
                 baseUser = user,
                 accountViewModel = accountViewModel,
                 size = Size55dp
@@ -264,7 +300,7 @@ fun ChannelName(
     channelTitle: @Composable (Modifier) -> Unit,
     channelLastTime: Long?,
     channelLastContent: String?,
-    hasNewMessages: Boolean,
+    hasNewMessages: MutableState<Boolean>,
     onClick: () -> Unit
 ) {
     ChannelName(
@@ -295,17 +331,19 @@ fun ChannelName(
     channelTitle: @Composable (Modifier) -> Unit,
     channelLastTime: Long?,
     channelLastContent: String?,
-    hasNewMessages: Boolean,
+    hasNewMessages: MutableState<Boolean>,
     onClick: () -> Unit
 ) {
     Column(modifier = remember { Modifier.clickable(onClick = onClick) }) {
         Row(
             modifier = remember { Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp) }
         ) {
-            channelPicture()
+            Column(remember { Modifier.width(Size55dp) }) {
+                channelPicture()
+            }
 
             Column(
-                modifier = remember { Modifier.padding(start = 10.dp) },
+                modifier = remember { Modifier.padding(start = 10.dp).fillMaxWidth() },
                 verticalArrangement = Arrangement.SpaceAround
             ) {
                 FirstRow(channelTitle, channelLastTime)
@@ -321,7 +359,7 @@ fun ChannelName(
 }
 
 @Composable
-private fun SecondRow(channelLastContent: String?, hasNewMessages: Boolean) {
+private fun SecondRow(channelLastContent: String?, hasNewMessages: MutableState<Boolean>) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -333,7 +371,7 @@ private fun SecondRow(channelLastContent: String?, hasNewMessages: Boolean) {
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
-                modifier = Modifier.weight(1f)
+                modifier = remember { Modifier.weight(1f) }
             )
         } else {
             Text(
@@ -341,11 +379,11 @@ private fun SecondRow(channelLastContent: String?, hasNewMessages: Boolean) {
                 color = MaterialTheme.colors.grayText,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
+                modifier = remember { Modifier.weight(1f) }
             )
         }
 
-        if (hasNewMessages) {
+        if (hasNewMessages.value) {
             NewItemsBubble()
         }
     }
