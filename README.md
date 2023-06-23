@@ -67,6 +67,7 @@ Or get the latest APK from the [Releases Section](https://github.com/vitorpamplo
 - [x] Generic Reposts (kind:16)
 - [x] Live Activities & Live Chats (NIP-102)
 - [x] Relay Pages (NIP-11)
+- [x] HTTP Auth (NIP-98)
 - [ ] Marketplace (NIP-15)
 - [ ] Image/Video Capture in the app
 - [ ] Local Database
