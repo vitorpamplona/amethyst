@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedOff
 
 import android.content.Context
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -272,6 +273,7 @@ fun LoginPage(
                             try {
                                 accountViewModel.startUI(key.value.text, useProxy.value, proxyPort.value.toInt())
                             } catch (e: Exception) {
+                                Log.e("Login", "Could not sign in", e)
                                 errorMessage = context.getString(R.string.invalid_key)
                             }
                         }
