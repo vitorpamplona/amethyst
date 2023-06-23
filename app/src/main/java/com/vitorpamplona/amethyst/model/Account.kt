@@ -24,7 +24,6 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import nostr.postr.Persona
 import nostr.postr.Utils
-import retrofit2.http.HTTP
 import java.math.BigDecimal
 import java.net.Proxy
 import java.util.Locale

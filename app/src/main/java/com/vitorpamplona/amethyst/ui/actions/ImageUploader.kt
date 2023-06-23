@@ -8,17 +8,13 @@ import androidx.core.net.toFile
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.HttpClient
-import com.vitorpamplona.amethyst.service.model.Event
-import com.vitorpamplona.amethyst.service.model.HTTPAuthorizationEvent
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okio.BufferedSink
 import okio.IOException
 import okio.source
 import java.io.InputStream
-import java.security.MessageDigest
 import java.util.Base64
 
 val charPool: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
