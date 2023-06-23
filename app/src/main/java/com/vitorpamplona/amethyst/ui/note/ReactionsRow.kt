@@ -65,6 +65,7 @@ import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.firstFullChar
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.screen.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -677,7 +678,7 @@ fun LikeIcon(
 
     LaunchedEffect(key1 = reactionsState) {
         launch(Dispatchers.Default) {
-            val newReactionType = reactionsState?.note?.isReactedBy(accountViewModel.userProfile())?.take(2)
+            val newReactionType = reactionsState?.note?.isReactedBy(accountViewModel.userProfile())?.firstFullChar()
             if (reactionType != newReactionType) {
                 reactionType = newReactionType
             }

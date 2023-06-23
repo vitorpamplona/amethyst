@@ -45,6 +45,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.firstFullChar
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.SaveButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -64,7 +65,7 @@ class UpdateReactionTypeViewModel(val account: Account) : ViewModel() {
     }
 
     fun addChoice() {
-        val newValue = nextChoice.text.trim().take(2)
+        val newValue = nextChoice.text.trim().firstFullChar()
         reactionSet = reactionSet + newValue
 
         nextChoice = TextFieldValue("")

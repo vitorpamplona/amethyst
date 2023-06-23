@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserMetadata
+import com.vitorpamplona.amethyst.service.firstFullChar
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
 import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
@@ -180,7 +181,7 @@ fun RenderLikeGallery(
 
     val shortReaction by remember {
         derivedStateOf {
-            reactionType.take(2)
+            reactionType.firstFullChar()
         }
     }
 
