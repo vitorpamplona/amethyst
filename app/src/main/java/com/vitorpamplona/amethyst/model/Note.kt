@@ -30,7 +30,14 @@ class AddressableNote(val address: ATag) : Note(address.toTag()) {
     override fun toNEvent() = address.toNAddr()
     override fun idDisplayNote() = idNote().toShortenHex()
     override fun address() = address
-    override fun createdAt() = (event as? LongTextNoteEvent)?.publishedAt() ?: event?.createdAt()
+    override fun createdAt(): Long? {
+        if (event == null) return null
+
+        val publishedAt = (event as? LongTextNoteEvent)?.publishedAt() ?: Long.MAX_VALUE
+        val lastCreatedAt = event?.createdAt() ?: Long.MAX_VALUE
+
+        return minOf(publishedAt, lastCreatedAt)
+    }
 }
 
 @Stable

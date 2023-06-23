@@ -24,7 +24,7 @@ class LongTextNoteEvent(
     fun summary() = tags.filter { it.firstOrNull() == "summary" }.mapNotNull { it.getOrNull(1) }.firstOrNull()
 
     fun publishedAt() = try {
-        tags.filter { it.firstOrNull() == "published_at" }.mapNotNull { it.getOrNull(1) }.firstOrNull()?.toLong()
+        tags.firstOrNull { it.size > 1 && it[0] == "published_at" }?.get(1)?.toLongOrNull()
     } catch (_: Exception) {
         null
     }
