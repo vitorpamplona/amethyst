@@ -797,11 +797,13 @@ enum class ServersAvailable {
     NOSTR_BUILD,
     NOSTRIMG,
     NOSTRFILES_DEV,
+    NOSTRCHECK_ME,
 
     // IMGUR_NIP_94,
     NOSTRIMG_NIP_94,
     NOSTR_BUILD_NIP_94,
     NOSTRFILES_DEV_NIP_94,
+    NOSTRCHECK_ME_NIP_94,
     NIP95
 }
 
@@ -824,10 +826,12 @@ fun ImageVideoDescription(
         Triple(ServersAvailable.NOSTRIMG, stringResource(id = R.string.upload_server_nostrimg), stringResource(id = R.string.upload_server_nostrimg_explainer)),
         Triple(ServersAvailable.NOSTR_BUILD, stringResource(id = R.string.upload_server_nostrbuild), stringResource(id = R.string.upload_server_nostrbuild_explainer)),
         Triple(ServersAvailable.NOSTRFILES_DEV, stringResource(id = R.string.upload_server_nostrfilesdev), stringResource(id = R.string.upload_server_nostrfilesdev_explainer)),
+        Triple(ServersAvailable.NOSTRCHECK_ME, stringResource(id = R.string.upload_server_nostrcheckme), stringResource(id = R.string.upload_server_nostrcheckme_explainer)),
         // Triple(ServersAvailable.IMGUR_NIP_94, stringResource(id = R.string.upload_server_imgur_nip94), stringResource(id = R.string.upload_server_imgur_nip94_explainer)),
         Triple(ServersAvailable.NOSTRIMG_NIP_94, stringResource(id = R.string.upload_server_nostrimg_nip94), stringResource(id = R.string.upload_server_nostrimg_nip94_explainer)),
         Triple(ServersAvailable.NOSTR_BUILD_NIP_94, stringResource(id = R.string.upload_server_nostrbuild_nip94), stringResource(id = R.string.upload_server_nostrbuild_nip94_explainer)),
         Triple(ServersAvailable.NOSTRFILES_DEV_NIP_94, stringResource(id = R.string.upload_server_nostrfilesdev_nip94), stringResource(id = R.string.upload_server_nostrfilesdev_nip94_explainer)),
+        Triple(ServersAvailable.NOSTRCHECK_ME_NIP_94, stringResource(id = R.string.upload_server_nostrcheckme_nip94), stringResource(id = R.string.upload_server_nostrcheckme_nip94_explainer)),
         Triple(ServersAvailable.NIP95, stringResource(id = R.string.upload_server_relays_nip95), stringResource(id = R.string.upload_server_relays_nip95_explainer))
     )
 
