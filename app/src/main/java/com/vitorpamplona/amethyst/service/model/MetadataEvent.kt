@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.service.model
 
 import android.util.Log
+import androidx.compose.runtime.Stable
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.google.gson.Gson
@@ -12,9 +13,10 @@ import nostr.postr.Utils
 import java.io.ByteArrayInputStream
 import java.util.Date
 
+@Stable
 abstract class IdentityClaim(
-    var identity: String,
-    var proof: String
+    val identity: String,
+    val proof: String
 ) {
     abstract fun toProofUrl(): String
     abstract fun toIcon(): Int

@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.service.model
 
 import android.util.Log
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import com.google.gson.reflect.TypeToken
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.decodePublicKey
@@ -12,6 +13,7 @@ import java.util.Date
 @Immutable
 data class Contact(val pubKeyHex: String, val relayUri: String?)
 
+@Stable
 class ContactListEvent(
     id: HexKey,
     pubKey: HexKey,

@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.ui.components
 import android.content.Context
 import android.net.Uri
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import coil.ImageLoader
@@ -61,6 +62,7 @@ private fun svgString(msg: String): String {
 </svg>"""
 }
 
+@Stable
 class HashImageFetcher(
     private val context: Context,
     private val data: Uri

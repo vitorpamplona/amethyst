@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.model
 
 import android.util.Log
 import android.util.LruCache
+import androidx.compose.runtime.Stable
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.OptOutFromFilters
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
@@ -65,6 +66,7 @@ class AntiSpamFilter {
     val liveSpam: AntiSpamLiveData = AntiSpamLiveData(this)
 }
 
+@Stable
 class AntiSpamLiveData(val cache: AntiSpamFilter) : LiveData<AntiSpamState>(AntiSpamState(cache)) {
 
     // Refreshes observers in batches.

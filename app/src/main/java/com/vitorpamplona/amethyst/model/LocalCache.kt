@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.model
 
 import android.util.Log
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.*
@@ -1280,6 +1281,7 @@ object LocalCache {
     }
 }
 
+@Stable
 class LocalCacheLiveData {
     private val _newEventBundles = MutableSharedFlow<Set<Note>>()
     val newEventBundles = _newEventBundles.asSharedFlow() // read-only public view

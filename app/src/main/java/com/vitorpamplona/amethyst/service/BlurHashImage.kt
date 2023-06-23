@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.service
 
 import android.content.Context
 import android.net.Uri
+import androidx.compose.runtime.Stable
 import androidx.core.graphics.drawable.toDrawable
 import coil.ImageLoader
 import coil.decode.DataSource
@@ -14,6 +15,7 @@ import java.net.URLDecoder
 import java.net.URLEncoder
 import kotlin.math.roundToInt
 
+@Stable
 class BlurHashFetcher(
     private val options: Options,
     private val data: Uri

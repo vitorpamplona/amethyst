@@ -33,7 +33,7 @@ class PublicChatChannel(idHex: String) : Channel(idHex) {
     }
 
     override fun profilePicture(): String? {
-        if (info.picture.isNullOrBlank()) info.picture = null
+        if (info.picture.isNullOrBlank()) return null
         return info.picture ?: super.profilePicture()
     }
 

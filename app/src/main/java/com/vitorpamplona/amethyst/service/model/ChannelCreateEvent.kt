@@ -46,5 +46,6 @@ class ChannelCreateEvent(
         }
     }
 
-    data class ChannelData(var name: String?, var about: String?, var picture: String?)
+    @Immutable
+    data class ChannelData(val name: String?, val about: String?, val picture: String?)
 }

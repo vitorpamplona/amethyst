@@ -9,6 +9,7 @@ import androidx.compose.material.Divider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -189,6 +190,7 @@ fun SummaryBar(model: UserReactionsViewModel) {
     )
 }
 
+@Stable
 class LabelValueFormatter(val axisLabels: List<String>) : AxisValueFormatter<AxisPosition.Horizontal.Bottom> {
     override fun formatValue(
         value: Float,
@@ -198,6 +200,7 @@ class LabelValueFormatter(val axisLabels: List<String>) : AxisValueFormatter<Axi
     }
 }
 
+@Stable
 class CountAxisValueFormatter() : AxisValueFormatter<AxisPosition.Vertical.Start> {
     override fun formatValue(
         value: Float,
@@ -207,6 +210,7 @@ class CountAxisValueFormatter() : AxisValueFormatter<AxisPosition.Vertical.Start
     }
 }
 
+@Stable
 class AmountAxisValueFormatter() : AxisValueFormatter<AxisPosition.Vertical.End> {
     override fun formatValue(
         value: Float,
