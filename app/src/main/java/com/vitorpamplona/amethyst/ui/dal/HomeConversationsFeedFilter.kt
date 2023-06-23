@@ -26,6 +26,8 @@ class HomeConversationsFeedFilter(val account: Account) : AdditiveFeedFilter<Not
         val followingKeySet = account.selectedUsersFollowList(account.defaultHomeFollowList) ?: emptySet()
         val followingTagSet = account.selectedTagsFollowList(account.defaultHomeFollowList) ?: emptySet()
 
+        val now = System.currentTimeMillis() / 1000
+
         return collection
             .asSequence()
             .filter {
@@ -33,6 +35,7 @@ class HomeConversationsFeedFilter(val account: Account) : AdditiveFeedFilter<Not
                     (it.author?.pubkeyHex in followingKeySet || (it.event?.isTaggedHashes(followingTagSet) ?: false)) &&
                     // && account.isAcceptable(it)  // This filter follows only. No need to check if acceptable
                     it.author?.let { !account.isHidden(it) } ?: true &&
+                    ((it.event?.createdAt() ?: 0) < now) &&
                     !it.isNewThread()
             }
             .toSet()
