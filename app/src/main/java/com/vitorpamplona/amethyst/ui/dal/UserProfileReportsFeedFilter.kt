@@ -8,6 +8,10 @@ import com.vitorpamplona.amethyst.service.model.ReportEvent
 object UserProfileReportsFeedFilter : FeedFilter<Note>() {
     var user: User? = null
 
+    override fun feedKey(): String {
+        return user?.pubkeyHex ?: ""
+    }
+
     fun loadUserProfile(user: User?) {
         this.user = user
     }

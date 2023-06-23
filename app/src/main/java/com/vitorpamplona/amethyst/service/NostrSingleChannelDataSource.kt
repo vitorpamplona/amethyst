@@ -1,6 +1,8 @@
 package com.vitorpamplona.amethyst.service
 
+import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
@@ -30,8 +32,8 @@ object NostrSingleChannelDataSource : NostrDataSource("SingleChannelFeed") {
 
     fun createLoadEventsIfNotLoadedFilter(): TypedFilter? {
         val directEventsToLoad = channelsToWatch
-            .map { LocalCache.getOrCreateChannel(it) }
-            .filter { it.notes.isEmpty() }
+            .mapNotNull { LocalCache.checkGetOrCreateChannel(it) }
+            .filter { it.notes.isEmpty() && it is PublicChatChannel }
 
         val interestedEvents = (directEventsToLoad).map { it.idHex }.toSet()
 
@@ -49,13 +51,43 @@ object NostrSingleChannelDataSource : NostrDataSource("SingleChannelFeed") {
         )
     }
 
+    fun createLoadStreamingIfNotLoadedFilter(): List<TypedFilter>? {
+        val directEventsToLoad = channelsToWatch
+            .mapNotNull { LocalCache.checkGetOrCreateChannel(it) }
+            .filterIsInstance<LiveActivitiesChannel>()
+            .filter { it.info == null }
+
+        val interestedEvents = (directEventsToLoad).map { it.idHex }.toSet()
+
+        if (interestedEvents.isEmpty()) {
+            return null
+        }
+
+        // downloads linked events to this event.
+        return directEventsToLoad.map {
+            it.address().let { aTag ->
+                TypedFilter(
+                    types = COMMON_FEED_TYPES,
+                    filter = JsonFilter(
+                        kinds = listOf(aTag.kind),
+                        tags = mapOf("d" to listOf(aTag.dTag)),
+                        authors = listOf(aTag.pubKeyHex.substring(0, 8))
+                    )
+                )
+            }
+        }
+    }
+
     val singleChannelChannel = requestNewChannel()
 
     override fun updateChannelFilters() {
         val reactions = createRepliesAndReactionsFilter()
         val missing = createLoadEventsIfNotLoadedFilter()
+        val missingStreaming = createLoadStreamingIfNotLoadedFilter()
 
-        singleChannelChannel.typedFilters = listOfNotNull(reactions, missing).ifEmpty { null }
+        singleChannelChannel.typedFilters = (
+            (listOfNotNull(reactions, missing)) + (missingStreaming ?: emptyList())
+            ).ifEmpty { null }
     }
 
     fun add(eventId: String) {

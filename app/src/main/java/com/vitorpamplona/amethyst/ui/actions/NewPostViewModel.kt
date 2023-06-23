@@ -16,6 +16,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.*
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
+import com.vitorpamplona.amethyst.service.model.AddressableEvent
 import com.vitorpamplona.amethyst.service.model.BaseTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
@@ -74,6 +75,11 @@ open class NewPostViewModel() : ViewModel() {
     // NSFW, Sensitive
     var wantsToMarkAsSensitive by mutableStateOf(false)
 
+    // ZapRaiser
+    var canAddZapRaiser by mutableStateOf(false)
+    var wantsZapraiser by mutableStateOf(false)
+    var zapRaiserAmount by mutableStateOf<Long?>(null)
+
     open fun load(account: Account, replyingTo: Note?, quote: Note?) {
         originalNote = replyingTo
         replyingTo?.let { replyNote ->
@@ -105,11 +111,14 @@ open class NewPostViewModel() : ViewModel() {
         }
 
         canAddInvoice = account.userProfile().info?.lnAddress() != null
+        canAddZapRaiser = account.userProfile().info?.lnAddress() != null
         canUsePoll = originalNote?.event !is PrivateDmEvent && originalNote?.channelHex() == null
         contentToAddUrl = null
 
         wantsForwardZapTo = false
         wantsToMarkAsSensitive = false
+        wantsZapraiser = false
+        zapRaiserAmount = null
         forwardZapTo = null
         forwardZapToEditting = TextFieldValue("")
 
@@ -130,12 +139,18 @@ open class NewPostViewModel() : ViewModel() {
             null
         }
 
+        val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount else null
+
         if (wantsPoll) {
-            account?.sendPoll(tagger.message, tagger.replyTos, tagger.mentions, pollOptions, valueMaximum, valueMinimum, consensusThreshold, closedAt, zapReceiver, wantsToMarkAsSensitive)
+            account?.sendPoll(tagger.message, tagger.replyTos, tagger.mentions, pollOptions, valueMaximum, valueMinimum, consensusThreshold, closedAt, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount)
         } else if (originalNote?.channelHex() != null) {
-            account?.sendChannelMessage(tagger.message, tagger.channelHex!!, tagger.replyTos, tagger.mentions, zapReceiver, wantsToMarkAsSensitive)
+            if (originalNote is AddressableEvent && originalNote?.address() != null) {
+                account?.sendLiveMessage(tagger.message, originalNote?.address()!!, tagger.replyTos, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount)
+            } else {
+                account?.sendChannelMessage(tagger.message, tagger.channelHex!!, tagger.replyTos, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount)
+            }
         } else if (originalNote?.event is PrivateDmEvent) {
-            account?.sendPrivateMessage(tagger.message, originalNote!!.author!!, originalNote!!, tagger.mentions, zapReceiver, wantsToMarkAsSensitive)
+            account?.sendPrivateMessage(tagger.message, originalNote!!.author!!, originalNote!!, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount)
         } else {
             // adds markers
             val rootId =
@@ -151,6 +166,7 @@ open class NewPostViewModel() : ViewModel() {
                 tags = null,
                 zapReceiver = zapReceiver,
                 wantsToMarkAsSensitive = wantsToMarkAsSensitive,
+                zapRaiserAmount = localZapRaiserAmount,
                 replyingTo = replyId,
                 root = rootId,
                 directMentions = tagger.directMentions
@@ -228,6 +244,8 @@ open class NewPostViewModel() : ViewModel() {
         closedAt = null
 
         wantsInvoice = false
+        wantsZapraiser = false
+        zapRaiserAmount = null
 
         wantsForwardZapTo = false
         wantsToMarkAsSensitive = false
@@ -333,8 +351,7 @@ open class NewPostViewModel() : ViewModel() {
     }
 
     fun canPost(): Boolean {
-        return message.text.isNotBlank() && !isUploadingImage && !wantsInvoice &&
-            (!wantsPoll || pollOptions.values.all { it.isNotEmpty() }) && contentToAddUrl == null
+        return message.text.isNotBlank() && !isUploadingImage && !wantsInvoice && (!wantsZapraiser || zapRaiserAmount != null) && (!wantsPoll || pollOptions.values.all { it.isNotEmpty() }) && contentToAddUrl == null
     }
 
     fun includePollHashtagInMessage(include: Boolean, hashtag: String) {

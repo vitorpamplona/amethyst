@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
@@ -21,6 +22,7 @@ import com.vitorpamplona.amethyst.model.*
 import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.ImmutableList
@@ -128,7 +130,6 @@ private fun ReplyInformation(
 fun ReplyInformationChannel(
     replyTo: ImmutableList<Note>?,
     mentions: ImmutableList<String>,
-    channelHex: String,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -136,44 +137,29 @@ fun ReplyInformationChannel(
 
     LaunchedEffect(Unit) {
         launch(Dispatchers.IO) {
-            sortedMentions = mentions
+            val newSortedMentions = mentions
                 .mapNotNull { LocalCache.checkGetOrCreateUser(it) }
                 .toSet()
                 .sortedBy { accountViewModel.account.isFollowing(it) }
                 .toImmutableList()
+                .ifEmpty { null }
+
+            if (newSortedMentions != sortedMentions) {
+                sortedMentions = newSortedMentions
+            }
         }
     }
 
     if (sortedMentions != null) {
-        LoadChannel(channelHex) { channel ->
-            ReplyInformationChannel(
-                replyTo,
-                sortedMentions,
-                channel,
-                onUserTagClick = {
-                    nav("User/${it.pubkeyHex}")
-                },
-                onChannelTagClick = {
-                    nav("Channel/${it.idHex}")
-                }
-            )
-        }
+        ReplyInformationChannel(
+            replyTo,
+            sortedMentions,
+            onUserTagClick = {
+                nav("User/${it.pubkeyHex}")
+            }
+        )
+        Spacer(modifier = StdVertSpacer)
     }
-}
-
-@Composable
-fun ReplyInformationChannel(replyTo: ImmutableList<Note>?, mentions: ImmutableList<User>?, channel: Channel, nav: (String) -> Unit) {
-    ReplyInformationChannel(
-        replyTo,
-        mentions,
-        channel,
-        onUserTagClick = {
-            nav("User/${it.pubkeyHex}")
-        },
-        onChannelTagClick = {
-            nav("Channel/${it.idHex}")
-        }
-    )
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -181,31 +167,10 @@ fun ReplyInformationChannel(replyTo: ImmutableList<Note>?, mentions: ImmutableLi
 fun ReplyInformationChannel(
     replyTo: ImmutableList<Note>?,
     mentions: ImmutableList<User>?,
-    baseChannel: Channel,
     prefix: String = "",
-    onUserTagClick: (User) -> Unit,
-    onChannelTagClick: (Channel) -> Unit
+    onUserTagClick: (User) -> Unit
 ) {
-    val channelState by baseChannel.live.observeAsState()
-    val channel = channelState?.channel ?: return
-
-    val channelName = remember(channelState) {
-        AnnotatedString("${channel.info.name} ")
-    }
-
     FlowRow() {
-        Text(
-            stringResource(R.string.in_channel),
-            fontSize = 13.sp,
-            color = MaterialTheme.colors.placeholderText
-        )
-
-        ClickableText(
-            text = channelName,
-            style = LocalTextStyle.current.copy(color = MaterialTheme.colors.lessImportantLink, fontSize = 13.sp),
-            onClick = { onChannelTagClick(channel) }
-        )
-
         if (mentions != null && mentions.isNotEmpty()) {
             if (replyTo != null && replyTo.isNotEmpty()) {
                 Text(

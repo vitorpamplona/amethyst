@@ -13,6 +13,7 @@ import com.vitorpamplona.amethyst.ui.note.UserReactionsViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListKnownFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListNewFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrGlobalFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedLiveActivitiesViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
@@ -38,6 +39,7 @@ import kotlinx.coroutines.launch
 fun AppNavigation(
     homeFeedViewModel: NostrHomeFeedViewModel,
     repliesFeedViewModel: NostrHomeRepliesFeedViewModel,
+    liveActivitiesViewModel: NostrHomeFeedLiveActivitiesViewModel,
     knownFeedViewModel: NostrChatroomListKnownFeedViewModel,
     newFeedViewModel: NostrChatroomListNewFeedViewModel,
     searchFeedViewModel: NostrGlobalFeedViewModel,
@@ -60,54 +62,14 @@ fun AppNavigation(
     }
 
     NavHost(navController, startDestination = Route.Home.route) {
-        Route.Video.let { route ->
-            composable(route.route, route.arguments, content = {
-                val scrollToTop = it.arguments?.getBoolean("scrollToTop") ?: false
-
-                if (scrollToTop) {
-                    videoFeedViewModel.sendToTop()
-                    it.arguments?.remove("scrollToTop")
-                }
-
-                VideoScreen(
-                    videoFeedView = videoFeedViewModel,
-                    accountViewModel = accountViewModel,
-                    nav = nav
-                )
-            })
-        }
-
-        Route.Search.let { route ->
-            composable(route.route, route.arguments, content = {
-                val scrollToTop = it.arguments?.getBoolean("scrollToTop") ?: false
-
-                if (scrollToTop) {
-                    searchFeedViewModel.sendToTop()
-                    it.arguments?.remove("scrollToTop")
-                }
-
-                SearchScreen(
-                    searchFeedViewModel = searchFeedViewModel,
-                    accountViewModel = accountViewModel,
-                    nav = nav
-                )
-            })
-        }
-
         Route.Home.let { route ->
             composable(route.route, route.arguments, content = { it ->
-                val scrollToTop = it.arguments?.getBoolean("scrollToTop") ?: false
                 val nip47 = it.arguments?.getString("nip47")
-
-                if (scrollToTop) {
-                    homeFeedViewModel.sendToTop()
-                    repliesFeedViewModel.sendToTop()
-                    it.arguments?.remove("scrollToTop")
-                }
 
                 HomeScreen(
                     homeFeedViewModel = homeFeedViewModel,
                     repliesFeedViewModel = repliesFeedViewModel,
+                    liveActivitiesViewModel = liveActivitiesViewModel,
                     accountViewModel = accountViewModel,
                     nav = nav,
                     nip47 = nip47
@@ -124,25 +86,6 @@ fun AppNavigation(
             })
         }
 
-        Route.Notification.let { route ->
-            composable(route.route, route.arguments, content = {
-                val scrollToTop = it.arguments?.getBoolean("scrollToTop") ?: false
-
-                if (scrollToTop) {
-                    notifFeedViewModel.clear()
-                    notifFeedViewModel.invalidateDataAndSendToTop()
-                    it.arguments?.remove("scrollToTop")
-                }
-
-                NotificationScreen(
-                    notifFeedViewModel = notifFeedViewModel,
-                    userReactionsStatsModel = userReactionsStatsModel,
-                    accountViewModel = accountViewModel,
-                    nav = nav
-                )
-            })
-        }
-
         composable(
             Route.Message.route,
             content = {
@@ -154,6 +97,37 @@ fun AppNavigation(
                 )
             }
         )
+
+        Route.Video.let { route ->
+            composable(route.route, route.arguments, content = {
+                VideoScreen(
+                    videoFeedView = videoFeedViewModel,
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
+            })
+        }
+
+        Route.Search.let { route ->
+            composable(route.route, route.arguments, content = {
+                SearchScreen(
+                    searchFeedViewModel = searchFeedViewModel,
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
+            })
+        }
+
+        Route.Notification.let { route ->
+            composable(route.route, route.arguments, content = {
+                NotificationScreen(
+                    notifFeedViewModel = notifFeedViewModel,
+                    userReactionsStatsModel = userReactionsStatsModel,
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
+            })
+        }
 
         composable(Route.BlockedUsers.route, content = { HiddenUsersScreen(accountViewModel, nav) })
         composable(Route.Bookmarks.route, content = { BookmarkListScreen(accountViewModel, nav) })

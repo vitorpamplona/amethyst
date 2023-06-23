@@ -22,6 +22,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import kotlinx.collections.immutable.ImmutableSet
 
 @Composable
@@ -88,7 +89,7 @@ fun HiddenNote(
                                     baseNote = it,
                                     nav = nav,
                                     accountViewModel = accountViewModel,
-                                    size = 35.dp
+                                    size = Size35dp
                                 )
                             }
                         }

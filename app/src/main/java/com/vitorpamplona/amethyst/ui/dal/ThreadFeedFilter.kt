@@ -7,6 +7,10 @@ import com.vitorpamplona.amethyst.model.ThreadAssembler
 @Immutable
 class ThreadFeedFilter(val noteId: String) : FeedFilter<Note>() {
 
+    override fun feedKey(): String {
+        return noteId
+    }
+
     override fun feed(): List<Note> {
         val cachedSignatures: MutableMap<Note, String> = mutableMapOf()
         val eventsToWatch = ThreadAssembler().findThreadFor(noteId) ?: emptySet()

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Divider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -16,12 +17,15 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 @Composable
 fun UserCompose(
     baseUser: User,
-    overallModifier: Modifier = Modifier
-        .padding(
-            start = 12.dp,
-            end = 12.dp,
-            top = 10.dp
-        ),
+    overallModifier: Modifier = remember {
+        Modifier
+            .padding(
+                start = 12.dp,
+                end = 12.dp,
+                top = 10.dp
+            )
+    },
+    showDiviser: Boolean = true,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -50,9 +54,11 @@ fun UserCompose(
             }
         }
 
-        Divider(
-            modifier = Modifier.padding(top = 10.dp),
-            thickness = 0.25.dp
-        )
+        if (showDiviser) {
+            Divider(
+                modifier = Modifier.padding(top = 10.dp),
+                thickness = 0.25.dp
+            )
+        }
     }
 }

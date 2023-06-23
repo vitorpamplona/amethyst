@@ -9,6 +9,7 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.ClickableText
@@ -24,6 +25,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -97,6 +99,7 @@ import com.vitorpamplona.amethyst.ui.screen.RelayFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -108,13 +111,16 @@ import java.math.BigDecimal
 fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     if (userId == null) return
 
-    var userBase by remember { mutableStateOf<User?>(null) }
+    var userBase by remember { mutableStateOf<User?>(LocalCache.getUserIfExists(userId)) }
 
     LaunchedEffect(userId) {
-        withContext(Dispatchers.IO) {
-            val newUserBase = LocalCache.checkGetOrCreateUser(userId)
-            if (newUserBase != userBase) {
-                userBase = newUserBase
+        if (userBase == null) {
+            // waits to resolve.
+            withContext(Dispatchers.IO) {
+                val newUserBase = LocalCache.checkGetOrCreateUser(userId)
+                if (newUserBase != userBase) {
+                    userBase = newUserBase
+                }
             }
         }
     }
@@ -257,7 +263,7 @@ fun ProfileScreen(
                     })
                     .fillMaxHeight()
             ) {
-                Column(modifier = Modifier.padding()) {
+                Column() {
                     ProfileHeader(baseUser, appRecommendations, nav, accountViewModel)
                     ScrollableTabRow(
                         backgroundColor = MaterialTheme.colors.background,
@@ -267,26 +273,7 @@ fun ProfileScreen(
                             tabsSize = it
                         }
                     ) {
-                        val tabs = listOf<@Composable() (() -> Unit)?>(
-                            { Text(text = stringResource(R.string.notes)) },
-                            { Text(text = stringResource(R.string.replies)) },
-                            { FollowTabHeader(baseUser) },
-                            { FollowersTabHeader(baseUser) },
-                            { ZapTabHeader(baseUser) },
-                            { BookmarkTabHeader(baseUser) },
-                            { ReportsTabHeader(baseUser) },
-                            { RelaysTabHeader(baseUser) }
-                        )
-
-                        tabs.forEachIndexed { index, function ->
-                            Tab(
-                                selected = pagerState.currentPage == index,
-                                onClick = {
-                                    coroutineScope.launch { pagerState.animateScrollToPage(index) }
-                                },
-                                text = function
-                            )
-                        }
+                        CreateAndRenderTabs(baseUser, pagerState)
                     }
                     HorizontalPager(
                         pageCount = 8,
@@ -295,20 +282,71 @@ fun ProfileScreen(
                             Modifier.height((columnSize.height - tabsSize.height).toDp())
                         }
                     ) { page ->
-                        when (page) {
-                            0 -> TabNotesNewThreads(accountViewModel, nav)
-                            1 -> TabNotesConversations(accountViewModel, nav)
-                            2 -> TabFollows(baseUser, followsFeedViewModel, accountViewModel, nav)
-                            3 -> TabFollows(baseUser, followersFeedViewModel, accountViewModel, nav)
-                            4 -> TabReceivedZaps(baseUser, zapFeedViewModel, accountViewModel, nav)
-                            5 -> TabBookmarks(baseUser, accountViewModel, nav)
-                            6 -> TabReports(baseUser, accountViewModel, nav)
-                            7 -> TabRelays(baseUser, accountViewModel)
-                        }
+                        CreateAndRenderPages(
+                            page,
+                            baseUser,
+                            followsFeedViewModel,
+                            followersFeedViewModel,
+                            zapFeedViewModel,
+                            accountViewModel,
+                            nav
+                        )
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun CreateAndRenderPages(
+    page: Int,
+    baseUser: User,
+    followsFeedViewModel: NostrUserProfileFollowsUserFeedViewModel,
+    followersFeedViewModel: NostrUserProfileFollowersUserFeedViewModel,
+    zapFeedViewModel: NostrUserProfileZapsFeedViewModel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    when (page) {
+        0 -> TabNotesNewThreads(accountViewModel, nav)
+        1 -> TabNotesConversations(accountViewModel, nav)
+        2 -> TabFollows(baseUser, followsFeedViewModel, accountViewModel, nav)
+        3 -> TabFollowers(baseUser, followersFeedViewModel, accountViewModel, nav)
+        4 -> TabReceivedZaps(baseUser, zapFeedViewModel, accountViewModel, nav)
+        5 -> TabBookmarks(baseUser, accountViewModel, nav)
+        6 -> TabReports(baseUser, accountViewModel, nav)
+        7 -> TabRelays(baseUser, accountViewModel, nav)
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun CreateAndRenderTabs(
+    baseUser: User,
+    pagerState: PagerState
+) {
+    val coroutineScope = rememberCoroutineScope()
+
+    val tabs = listOf<@Composable() (() -> Unit)?>(
+        { Text(text = stringResource(R.string.notes)) },
+        { Text(text = stringResource(R.string.replies)) },
+        { FollowTabHeader(baseUser) },
+        { FollowersTabHeader(baseUser) },
+        { ZapTabHeader(baseUser) },
+        { BookmarkTabHeader(baseUser) },
+        { ReportsTabHeader(baseUser) },
+        { RelaysTabHeader(baseUser) }
+    )
+
+    tabs.forEachIndexed { index, function ->
+        Tab(
+            selected = pagerState.currentPage == index,
+            onClick = {
+                coroutineScope.launch { pagerState.animateScrollToPage(index) }
+            },
+            text = function
+        )
     }
 }
 
@@ -382,12 +420,14 @@ private fun ZapTabHeader(baseUser: User) {
 
 @Composable
 private fun FollowersTabHeader(baseUser: User) {
-    val userState by baseUser.live().follows.observeAsState()
+    val userState by baseUser.live().followers.observeAsState()
     var followerCount by remember { mutableStateOf("--") }
+
+    val text = stringResource(R.string.followers)
 
     LaunchedEffect(key1 = userState) {
         launch(Dispatchers.IO) {
-            val newFollower = userState?.user?.transientFollowerCount()?.toString() ?: "--"
+            val newFollower = (userState?.user?.transientFollowerCount()?.toString() ?: "--") + " " + text
 
             if (followerCount != newFollower) {
                 followerCount = newFollower
@@ -395,7 +435,7 @@ private fun FollowersTabHeader(baseUser: User) {
         }
     }
 
-    Text(text = "$followerCount ${stringResource(id = R.string.followers)}")
+    Text(text = followerCount)
 }
 
 @Composable
@@ -403,9 +443,11 @@ private fun FollowTabHeader(baseUser: User) {
     val userState by baseUser.live().follows.observeAsState()
     var followCount by remember { mutableStateOf("--") }
 
+    val text = stringResource(R.string.follows)
+
     LaunchedEffect(key1 = userState) {
         launch(Dispatchers.IO) {
-            val newFollow = userState?.user?.transientFollowCount()?.toString() ?: "--"
+            val newFollow = (userState?.user?.transientFollowCount()?.toString() ?: "--") + " " + text
 
             if (followCount != newFollow) {
                 followCount = newFollow
@@ -413,7 +455,7 @@ private fun FollowTabHeader(baseUser: User) {
         }
     }
 
-    Text(text = "$followCount ${stringResource(R.string.follows)}")
+    Text(text = followCount)
 }
 
 @Composable
@@ -496,7 +538,7 @@ private fun ProfileHeader(
 
                 Row(
                     modifier = Modifier
-                        .height(35.dp)
+                        .height(Size35dp)
                         .padding(bottom = 3.dp)
                 ) {
                     MessageButton(baseUser, nav)
@@ -531,6 +573,7 @@ private fun ProfileActions(
     val account = remember(accountLocalUserState) { accountLocalUserState?.account } ?: return
 
     val accountUserState by accountViewModel.account.userProfile().live().follows.observeAsState()
+    val baseUserState by baseUser.live().follows.observeAsState()
 
     val accountUser = remember(accountUserState) { accountUserState?.user } ?: return
 
@@ -546,7 +589,7 @@ private fun ProfileActions(
         }
     }
 
-    val isUserFollowingLoggedIn by remember(accountUserState, accountLocalUserState) {
+    val isUserFollowingLoggedIn by remember(baseUserState, accountLocalUserState) {
         derivedStateOf {
             baseUser.isFollowing(accountUser)
         }
@@ -740,7 +783,7 @@ private fun DrawAdditionalInfo(
 }
 
 @Composable
-private fun DisplayLNAddress(
+fun DisplayLNAddress(
     lud16: String?,
     userHex: String,
     account: Account
@@ -874,7 +917,7 @@ private fun WatchApp(baseApp: Note, nav: (String) -> Unit) {
         Box(
             remember {
                 Modifier
-                    .size(35.dp)
+                    .size(Size35dp)
                     .clickable {
                         nav("Note/${baseApp.idHex}")
                     }
@@ -885,7 +928,7 @@ private fun WatchApp(baseApp: Note, nav: (String) -> Unit) {
                 contentDescription = null,
                 modifier = remember {
                     Modifier
-                        .size(35.dp)
+                        .size(Size35dp)
                         .clip(shape = CircleShape)
                 }
             )
@@ -926,26 +969,36 @@ private fun DisplayBadges(
 @Composable
 private fun LoadAndRenderBadge(badgeAwardEventHex: String, nav: (String) -> Unit) {
     var baseNote by remember {
-        mutableStateOf<Note?>(null)
+        mutableStateOf<Note?>(LocalCache.getNoteIfExists(badgeAwardEventHex))
     }
 
     LaunchedEffect(key1 = badgeAwardEventHex) {
-        launch(Dispatchers.IO) {
-            baseNote = LocalCache.getOrCreateNote(badgeAwardEventHex)
+        if (baseNote == null) {
+            launch(Dispatchers.IO) {
+                baseNote = LocalCache.getOrCreateNote(badgeAwardEventHex)
+            }
         }
     }
 
     baseNote?.let {
-        val badgeAwardState by it.live().metadata.observeAsState()
-        val baseBadgeDefinition by remember(badgeAwardState) {
-            derivedStateOf {
-                badgeAwardState?.note?.replyTo?.firstOrNull()
-            }
-        }
+        ObserveAndRenderBadge(it, nav)
+    }
+}
 
-        baseBadgeDefinition?.let {
-            BadgeThumb(it, nav, 35.dp)
+@Composable
+private fun ObserveAndRenderBadge(
+    it: Note,
+    nav: (String) -> Unit
+) {
+    val badgeAwardState by it.live().metadata.observeAsState()
+    val baseBadgeDefinition by remember(badgeAwardState) {
+        derivedStateOf {
+            badgeAwardState?.note?.replyTo?.firstOrNull()
         }
+    }
+
+    baseBadgeDefinition?.let {
+        BadgeThumb(it, nav, Size35dp)
     }
 }
 
@@ -975,41 +1028,60 @@ fun BadgeThumb(
                 .height(size)
         }
     ) {
-        val noteState by baseNote.live().metadata.observeAsState()
-        val event = remember(noteState) { noteState?.note?.event as? BadgeDefinitionEvent } ?: return
-        val image = remember(noteState) { event.thumb()?.ifBlank { null } ?: event.image()?.ifBlank { null } }
+        WatchAndRenderBadgeImage(baseNote, size, pictureModifier, onClick)
+    }
+}
 
-        if (image == null) {
-            RobohashAsyncImage(
-                robot = "authornotfound",
-                robotSize = size,
-                contentDescription = stringResource(R.string.unknown_author),
-                modifier = pictureModifier
+@Composable
+private fun WatchAndRenderBadgeImage(
+    baseNote: Note,
+    size: Dp,
+    pictureModifier: Modifier,
+    onClick: ((String) -> Unit)?
+) {
+    val noteState by baseNote.live().metadata.observeAsState()
+    val eventId = remember(noteState) { noteState?.note?.idHex } ?: return
+    val image by remember(noteState) {
+        derivedStateOf {
+            val event = noteState?.note?.event as? BadgeDefinitionEvent
+            event?.thumb()?.ifBlank { null } ?: event?.image()?.ifBlank { null }
+        }
+    }
+
+    val bgColor = MaterialTheme.colors.background
+
+    if (image == null) {
+        RobohashAsyncImage(
+            robot = "authornotfound",
+            contentDescription = stringResource(R.string.unknown_author),
+            modifier = remember {
+                pictureModifier
                     .width(size)
                     .height(size)
-                    .background(MaterialTheme.colors.background)
-            )
-        } else {
-            RobohashFallbackAsyncImage(
-                robot = event.id,
-                robotSize = size,
-                model = image,
-                contentDescription = stringResource(id = R.string.profile_image),
-                modifier = pictureModifier
+                    .drawBehind { drawRect(bgColor) }
+            }
+        )
+    } else {
+        RobohashFallbackAsyncImage(
+            robot = eventId,
+            model = image!!,
+            contentDescription = stringResource(id = R.string.profile_image),
+            modifier = remember {
+                pictureModifier
                     .width(size)
                     .height(size)
                     .clip(shape = CircleShape)
-                    .background(MaterialTheme.colors.background)
+                    .drawBehind { drawRect(bgColor) }
                     .run {
                         if (onClick != null) {
-                            this.clickable(onClick = { onClick(event.id) })
+                            this.clickable(onClick = { onClick(eventId) })
                         } else {
                             this
                         }
                     }
+            }
 
-            )
-        }
+        )
     }
 }
 
@@ -1065,7 +1137,13 @@ fun TabNotesNewThreads(accountViewModel: AccountViewModel, nav: (String) -> Unit
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            RefresheableFeedView(feedViewModel, null, accountViewModel, nav, enablePullRefresh = false)
+            RefresheableFeedView(
+                feedViewModel,
+                null,
+                enablePullRefresh = false,
+                accountViewModel = accountViewModel,
+                nav = nav
+            )
         }
     }
 }
@@ -1082,7 +1160,13 @@ fun TabNotesConversations(accountViewModel: AccountViewModel, nav: (String) -> U
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            RefresheableFeedView(feedViewModel, null, accountViewModel, nav, enablePullRefresh = false)
+            RefresheableFeedView(
+                feedViewModel,
+                null,
+                enablePullRefresh = false,
+                accountViewModel = accountViewModel,
+                nav = nav
+            )
         }
     }
 }
@@ -1099,7 +1183,13 @@ fun TabBookmarks(baseUser: User, accountViewModel: AccountViewModel, nav: (Strin
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            RefresheableFeedView(feedViewModel, null, accountViewModel, nav, enablePullRefresh = false)
+            RefresheableFeedView(
+                feedViewModel,
+                null,
+                enablePullRefresh = false,
+                accountViewModel = accountViewModel,
+                nav = nav
+            )
         }
     }
 }
@@ -1109,9 +1199,18 @@ fun TabFollows(baseUser: User, feedViewModel: UserFeedViewModel, accountViewMode
     WatchFollowChanges(baseUser, feedViewModel)
 
     Column(Modifier.fillMaxHeight()) {
-        Column(
-            modifier = Modifier.padding(vertical = 0.dp)
-        ) {
+        Column() {
+            RefreshingFeedUserFeedView(feedViewModel, accountViewModel, nav, enablePullRefresh = false)
+        }
+    }
+}
+
+@Composable
+fun TabFollowers(baseUser: User, feedViewModel: UserFeedViewModel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    WatchFollowerChanges(baseUser, feedViewModel)
+
+    Column(Modifier.fillMaxHeight()) {
+        Column() {
             RefreshingFeedUserFeedView(feedViewModel, accountViewModel, nav, enablePullRefresh = false)
         }
     }
@@ -1130,13 +1229,23 @@ private fun WatchFollowChanges(
 }
 
 @Composable
+private fun WatchFollowerChanges(
+    baseUser: User,
+    feedViewModel: UserFeedViewModel
+) {
+    val userState by baseUser.live().followers.observeAsState()
+
+    LaunchedEffect(userState) {
+        feedViewModel.invalidateData()
+    }
+}
+
+@Composable
 fun TabReceivedZaps(baseUser: User, zapFeedViewModel: NostrUserProfileZapsFeedViewModel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     WatchZapsAndUpdateFeed(baseUser, zapFeedViewModel)
 
     Column(Modifier.fillMaxHeight()) {
-        Column(
-            modifier = Modifier.padding(vertical = 0.dp)
-        ) {
+        Column() {
             LnZapFeedView(zapFeedViewModel, accountViewModel, nav)
         }
     }
@@ -1161,10 +1270,14 @@ fun TabReports(baseUser: User, accountViewModel: AccountViewModel, nav: (String)
     WatchReportsAndUpdateFeed(baseUser, feedViewModel)
 
     Column(Modifier.fillMaxHeight()) {
-        Column(
-            modifier = Modifier.padding(vertical = 0.dp)
-        ) {
-            RefresheableFeedView(feedViewModel, null, accountViewModel, nav, enablePullRefresh = false)
+        Column() {
+            RefresheableFeedView(
+                feedViewModel,
+                null,
+                enablePullRefresh = false,
+                accountViewModel = accountViewModel,
+                nav = nav
+            )
         }
     }
 }
@@ -1181,7 +1294,7 @@ private fun WatchReportsAndUpdateFeed(
 }
 
 @Composable
-fun TabRelays(user: User, accountViewModel: AccountViewModel) {
+fun TabRelays(user: User, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val feedViewModel: RelayFeedViewModel = viewModel()
 
     val lifeCycleOwner = LocalLifecycleOwner.current
@@ -1210,7 +1323,7 @@ fun TabRelays(user: User, accountViewModel: AccountViewModel) {
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            RelayFeedView(feedViewModel, accountViewModel, enablePullRefresh = false)
+            RelayFeedView(feedViewModel, accountViewModel, enablePullRefresh = false, nav = nav)
         }
     }
 }
@@ -1316,16 +1429,16 @@ fun ShowUserButton(onClick: () -> Unit) {
 
 @Composable
 fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () -> Unit, accountViewModel: AccountViewModel) {
-    val clipboardManager = LocalClipboardManager.current
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
-
-    val scope = rememberCoroutineScope()
-
     DropdownMenu(
         expanded = popupExpanded,
         onDismissRequest = onDismiss
     ) {
+        val clipboardManager = LocalClipboardManager.current
+        val accountState by accountViewModel.accountLiveData.observeAsState()
+        val account = accountState?.account!!
+
+        val scope = rememberCoroutineScope()
+
         DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(user.pubkeyNpub())); onDismiss() }) {
             Text(stringResource(R.string.copy_user_id))
         }

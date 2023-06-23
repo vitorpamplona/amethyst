@@ -39,7 +39,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -48,9 +47,10 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
-import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.Size55dp
+import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -69,20 +69,23 @@ fun ChatroomCompose(
             noteState?.note?.channelHex()
         }
     }
+    val isBlank = remember(noteState) {
+        note?.event == null
+    }
 
-    if (note?.event == null) {
+    if (isBlank) {
         BlankNote(Modifier)
     } else if (channelHex != null) {
         LoadChannel(baseChannelHex = channelHex!!) { channel ->
-            ChannelRoomCompose(note, channel, nav)
+            ChannelRoomCompose(baseNote, channel, accountViewModel, nav)
         }
     } else {
         val userRoomHex = remember(noteState, accountViewModel) {
-            (note.event as? PrivateDmEvent)?.talkingWith(accountViewModel.userProfile().pubkeyHex)
+            (baseNote.event as? PrivateDmEvent)?.talkingWith(accountViewModel.userProfile().pubkeyHex)
         } ?: return
 
         LoadUser(userRoomHex) { user ->
-            UserRoomCompose(note, user, accountViewModel, nav)
+            UserRoomCompose(baseNote, user, accountViewModel, nav)
         }
     }
 }
@@ -91,6 +94,7 @@ fun ChatroomCompose(
 private fun ChannelRoomCompose(
     note: Note,
     channel: Channel,
+    accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
     val authorState by note.author!!.live().metadata.observeAsState()
@@ -108,7 +112,7 @@ private fun ChannelRoomCompose(
     }
     val channelName by remember(channelState) {
         derivedStateOf {
-            channel.info.name
+            channel.toBestDisplayName()
         }
     }
 
@@ -128,7 +132,7 @@ private fun ChannelRoomCompose(
 
     var hasNewMessages by remember { mutableStateOf<Boolean>(false) }
 
-    WatchNotificationChanges(note, route) { newHasNewMessages ->
+    WatchNotificationChanges(note, route, accountViewModel) { newHasNewMessages ->
         if (hasNewMessages != newHasNewMessages) {
             hasNewMessages = newHasNewMessages
         }
@@ -138,34 +142,45 @@ private fun ChannelRoomCompose(
         channelIdHex = chanHex,
         channelPicture = channelPicture,
         channelTitle = { modifier ->
-            Text(
-                text = buildAnnotatedString {
-                    withStyle(
-                        SpanStyle(
-                            fontWeight = FontWeight.Bold
-                        )
-                    ) {
-                        append(channelName)
-                    }
-
-                    withStyle(
-                        SpanStyle(
-                            color = MaterialTheme.colors.placeholderText,
-                            fontWeight = FontWeight.Normal
-                        )
-                    ) {
-                        append(" ${stringResource(id = R.string.public_chat)}")
-                    }
-                },
-                fontWeight = FontWeight.Bold,
-                modifier = modifier,
-                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-            )
+            ChannelTitleWithBoostInfo(channelName, modifier)
         },
         channelLastTime = remember(note) { note.createdAt() },
         channelLastContent = remember(note) { "$authorName: $description" },
         hasNewMessages = hasNewMessages,
         onClick = { nav(route) }
+    )
+}
+
+@Composable
+private fun ChannelTitleWithBoostInfo(channelName: String, modifier: Modifier) {
+    val boosted = stringResource(id = R.string.public_chat)
+    val placeHolderColor = MaterialTheme.colors.placeholderText
+    val channelNameAndBoostInfo = remember {
+        buildAnnotatedString {
+            withStyle(
+                SpanStyle(
+                    fontWeight = FontWeight.Bold
+                )
+            ) {
+                append(channelName)
+            }
+
+            withStyle(
+                SpanStyle(
+                    color = placeHolderColor,
+                    fontWeight = FontWeight.Normal
+                )
+            ) {
+                append(" $boosted")
+            }
+        }
+    }
+
+    Text(
+        text = channelNameAndBoostInfo,
+        fontWeight = FontWeight.Bold,
+        modifier = modifier,
+        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
     )
 }
 
@@ -182,7 +197,7 @@ private fun UserRoomCompose(
         "Room/${user.pubkeyHex}"
     }
 
-    WatchNotificationChanges(note, route) { newHasNewMessages ->
+    WatchNotificationChanges(note, route, accountViewModel) { newHasNewMessages ->
         if (hasNewMessages != newHasNewMessages) {
             hasNewMessages = newHasNewMessages
         }
@@ -191,9 +206,9 @@ private fun UserRoomCompose(
     ChannelName(
         channelPicture = {
             UserPicture(
-                user,
+                baseUser = user,
                 accountViewModel = accountViewModel,
-                size = 55.dp
+                size = Size55dp
             )
         },
         channelTitle = { UsernameDisplay(user, it) },
@@ -208,14 +223,15 @@ private fun UserRoomCompose(
 private fun WatchNotificationChanges(
     note: Note,
     route: String,
+    accountViewModel: AccountViewModel,
     onNewStatus: (Boolean) -> Unit
 ) {
-    val cacheState by NotificationCache.live.observeAsState()
+    val cacheState by accountViewModel.accountLastReadLiveData.observeAsState()
 
     LaunchedEffect(key1 = note, cacheState) {
         launch(Dispatchers.IO) {
             note.event?.createdAt()?.let {
-                val lastTime = NotificationCache.load(route)
+                val lastTime = accountViewModel.account.loadLastRead(route)
                 onNewStatus(it > lastTime)
             }
         }
@@ -255,12 +271,14 @@ fun ChannelName(
         channelPicture = {
             RobohashAsyncImageProxy(
                 robot = channelIdHex,
-                model = ResizeImage(channelPicture, 55.dp),
+                model = channelPicture,
                 contentDescription = stringResource(R.string.channel_image),
-                modifier = Modifier
-                    .width(55.dp)
-                    .height(55.dp)
-                    .clip(shape = CircleShape)
+                modifier = remember {
+                    Modifier
+                        .width(Size55dp)
+                        .height(Size55dp)
+                        .clip(shape = CircleShape)
+                }
             )
         },
         channelTitle,
@@ -280,65 +298,82 @@ fun ChannelName(
     hasNewMessages: Boolean,
     onClick: () -> Unit
 ) {
-    val context = LocalContext.current
-    Column(modifier = Modifier.clickable(onClick = onClick)) {
+    Column(modifier = remember { Modifier.clickable(onClick = onClick) }) {
         Row(
-            modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp)
+            modifier = remember { Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp) }
         ) {
             channelPicture()
 
             Column(
-                modifier = Modifier.padding(start = 10.dp),
+                modifier = remember { Modifier.padding(start = 10.dp) },
                 verticalArrangement = Arrangement.SpaceAround
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(bottom = 4.dp)
-                ) {
-                    channelTitle(Modifier.weight(1f))
-
-                    channelLastTime?.let {
-                        Text(
-                            timeAgo(channelLastTime, context),
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.52f)
-                        )
-                    }
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (channelLastContent != null) {
-                        Text(
-                            channelLastContent,
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.52f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
-                            modifier = Modifier.weight(1f)
-                        )
-                    } else {
-                        Text(
-                            stringResource(R.string.referenced_event_not_found),
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.52f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-
-                    if (hasNewMessages) {
-                        NewItemsBubble()
-                    }
-                }
+                FirstRow(channelTitle, channelLastTime)
+                SecondRow(channelLastContent, hasNewMessages)
             }
         }
 
         Divider(
-            modifier = Modifier.padding(top = 10.dp),
+            modifier = remember { Modifier.padding(top = 10.dp) },
             thickness = 0.25.dp
         )
+    }
+}
+
+@Composable
+private fun SecondRow(channelLastContent: String?, hasNewMessages: Boolean) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (channelLastContent != null) {
+            Text(
+                channelLastContent,
+                color = MaterialTheme.colors.grayText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+                modifier = Modifier.weight(1f)
+            )
+        } else {
+            Text(
+                stringResource(R.string.referenced_event_not_found),
+                color = MaterialTheme.colors.grayText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        if (hasNewMessages) {
+            NewItemsBubble()
+        }
+    }
+}
+
+@Composable
+private fun FirstRow(
+    channelTitle: @Composable (Modifier) -> Unit,
+    channelLastTime: Long?
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = remember { Modifier.padding(bottom = 4.dp) }
+    ) {
+        channelTitle(
+            remember {
+                Modifier.weight(1f)
+            }
+        )
+
+        channelLastTime?.let {
+            val context = LocalContext.current
+            val timeAgo = remember(channelLastTime) { timeAgo(channelLastTime, context) }
+            Text(
+                timeAgo,
+                color = MaterialTheme.colors.grayText
+            )
+        }
     }
 }
 

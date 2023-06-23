@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
@@ -178,9 +179,9 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
                         reactions[netDate] = (reactions[netDate] ?: 0) + 1
                         takenIntoAccount.add(noteEvent.id())
                     }
-                } else if (noteEvent is RepostEvent) {
-                    if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
-                        val netDate = formatDate(noteEvent.createdAt)
+                } else if (noteEvent is RepostEvent || noteEvent is GenericRepostEvent) {
+                    if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey() != currentUser) {
+                        val netDate = formatDate(noteEvent.createdAt())
                         boosts[netDate] = (boosts[netDate] ?: 0) + 1
                         takenIntoAccount.add(noteEvent.id())
                     }
@@ -229,9 +230,9 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
                         takenIntoAccount.add(noteEvent.id())
                         hasNewElements = true
                     }
-                } else if (noteEvent is RepostEvent) {
-                    if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
-                        val netDate = formatDate(noteEvent.createdAt)
+                } else if (noteEvent is RepostEvent || noteEvent is GenericRepostEvent) {
+                    if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey() != currentUser) {
+                        val netDate = formatDate(noteEvent.createdAt())
                         boosts[netDate] = (boosts[netDate] ?: 0) + 1
                         takenIntoAccount.add(noteEvent.id())
                         hasNewElements = true

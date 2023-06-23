@@ -57,12 +57,18 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.AppDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
 import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
+import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
+import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
+import com.vitorpamplona.amethyst.service.model.FileHeaderEvent
+import com.vitorpamplona.amethyst.service.model.FileStorageHeaderEvent
+import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
 import com.vitorpamplona.amethyst.service.model.HighlightEvent
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.PeopleListEvent
 import com.vitorpamplona.amethyst.service.model.PinListEvent
 import com.vitorpamplona.amethyst.service.model.PollNoteEvent
 import com.vitorpamplona.amethyst.service.model.RelaySetEvent
+import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.note.*
 import com.vitorpamplona.amethyst.ui.note.BadgeDisplay
@@ -79,6 +85,7 @@ import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.selectedNote
@@ -370,7 +377,13 @@ fun NoteMaster(
                     )
             ) {
                 Column() {
-                    if (noteEvent is PeopleListEvent) {
+                    if ((noteEvent is ChannelCreateEvent || noteEvent is ChannelMetadataEvent) && note.channelHex() != null) {
+                        ChannelHeader(channelHex = note.channelHex()!!, showVideo = true, showBottomDiviser = false, accountViewModel = accountViewModel, nav = nav)
+                    } else if (noteEvent is FileHeaderEvent) {
+                        FileHeaderDisplay(baseNote)
+                    } else if (noteEvent is FileStorageHeaderEvent) {
+                        FileStorageHeaderDisplay(baseNote)
+                    } else if (noteEvent is PeopleListEvent) {
                         DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
                     } else if (noteEvent is AudioTrackEvent) {
                         AudioTrackHeader(noteEvent, accountViewModel, nav)
@@ -401,6 +414,8 @@ fun NoteMaster(
                             accountViewModel,
                             nav
                         )
+                    } else if (noteEvent is RepostEvent || noteEvent is GenericRepostEvent) {
+                        RenderRepost(baseNote, backgroundColor, accountViewModel, nav)
                     } else if (noteEvent is PollNoteEvent) {
                         val canPreview = note.author == account.userProfile() ||
                             (note.author?.let { account.userProfile().isFollowingCached(it) } ?: true) ||

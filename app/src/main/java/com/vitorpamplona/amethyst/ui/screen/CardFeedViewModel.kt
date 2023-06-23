@@ -15,6 +15,7 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
+import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
@@ -55,6 +56,8 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
     val scrollToTop = _scrollToTop.asStateFlow()
     var scrolltoTopPending = false
 
+    private var lastFeedKey: String? = null
+
     fun sendToTop() {
         if (scrolltoTopPending) return
 
@@ -83,6 +86,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
         checkNotInMainThread()
 
         val notes = localFilter.feed()
+        lastFeedKey = localFilter.feedKey()
 
         val thisAccount = (localFilter as? NotificationFeedFilter)?.account
         val lastNotesCopy = if (thisAccount == lastAccount) lastNotes else null
@@ -162,7 +166,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
 
         val boostsPerEvent = mutableMapOf<Note, MutableList<Note>>()
         notes
-            .filter { it.event is RepostEvent }
+            .filter { it.event is RepostEvent || it.event is GenericRepostEvent }
             .forEach {
                 val boostedPost = it.replyTo?.lastOrNull() { it.event !is ChannelMetadataEvent && it.event !is ChannelCreateEvent }
                 if (boostedPost != null) {
@@ -197,7 +201,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
             )
         }
 
-        val textNoteCards = notes.filter { it.event !is ReactionEvent && it.event !is RepostEvent && it.event !is LnZapEvent }.map {
+        val textNoteCards = notes.filter { it.event !is ReactionEvent && it.event !is RepostEvent && it.event !is GenericRepostEvent && it.event !is LnZapEvent }.map {
             if (it.event is PrivateDmEvent) {
                 MessageSetCard(it)
             } else if (it.event is BadgeAwardEvent) {
@@ -232,6 +236,8 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
         val lastNotesCopy = if (thisAccount == lastAccount) lastNotes else null
 
         if (lastNotesCopy != null && localFilter is AdditiveFeedFilter && oldNotesState is CardFeedState.Loaded) {
+            lastFeedKey = localFilter.feedKey()
+
             val filteredNewList = localFilter.applyFilter(newItems)
 
             if (filteredNewList.isEmpty()) return
@@ -278,8 +284,9 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
     }
 
     @OptIn(ExperimentalTime::class)
-    fun invalidateDataAndSendToTop(ignoreIfDoing: Boolean = false) {
-        bundler.invalidate(ignoreIfDoing) {
+    fun invalidateDataAndSendToTop() {
+        clear()
+        bundler.invalidate(false) {
             // adds the time to perform the refresh into this delay
             // holding off new updates in case of heavy refresh routines.
             val (value, elapsed) = measureTimedValue {
@@ -287,6 +294,22 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
                 sendToTop()
             }
             Log.d("Time", "${this.javaClass.simpleName} Card update $elapsed")
+        }
+    }
+
+    @OptIn(ExperimentalTime::class)
+    fun checkKeysInvalidateDataAndSendToTop() {
+        if (lastFeedKey != localFilter.feedKey()) {
+            clear()
+            bundler.invalidate(false) {
+                // adds the time to perform the refresh into this delay
+                // holding off new updates in case of heavy refresh routines.
+                val (value, elapsed) = measureTimedValue {
+                    refreshSuspended()
+                    sendToTop()
+                }
+                Log.d("Time", "${this.javaClass.simpleName} Card update $elapsed")
+            }
         }
     }
 

@@ -33,7 +33,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.screen.BadgeCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -62,9 +61,9 @@ fun BadgeCompose(likeSetCard: BadgeCard, isInnerNote: Boolean = false, routeForL
 
         LaunchedEffect(key1 = likeSetCard) {
             scope.launch(Dispatchers.IO) {
-                val isNew = likeSetCard.createdAt() > NotificationCache.load(routeForLastRead)
+                val isNew = likeSetCard.createdAt() > accountViewModel.account.loadLastRead(routeForLastRead)
 
-                NotificationCache.markAsRead(routeForLastRead, likeSetCard.createdAt())
+                accountViewModel.account.markAsRead(routeForLastRead, likeSetCard.createdAt())
 
                 val newBackgroundColor = if (isNew) {
                     newItemColor.compositeOver(defaultBackgroundColor)

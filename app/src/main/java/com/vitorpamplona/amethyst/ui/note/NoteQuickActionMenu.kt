@@ -332,23 +332,30 @@ fun NoteQuickActionItem(icon: ImageVector, label: String, onClick: () -> Unit) {
 }
 
 @Composable
-fun DeleteAlertDialog(note: Note, accountViewModel: AccountViewModel, onDismiss: () -> Unit) =
+fun DeleteAlertDialog(note: Note, accountViewModel: AccountViewModel, onDismiss: () -> Unit) {
+    val scope = rememberCoroutineScope()
+
     QuickActionAlertDialog(
         title = stringResource(R.string.quick_action_request_deletion_alert_title),
         textContent = stringResource(R.string.quick_action_request_deletion_alert_body),
         buttonIcon = Icons.Default.Delete,
         buttonText = stringResource(R.string.quick_action_delete_dialog_btn),
         onClickDoOnce = {
-            accountViewModel.delete(note)
+            scope.launch(Dispatchers.IO) {
+                accountViewModel.delete(note)
+            }
             onDismiss()
         },
         onClickDontShowAgain = {
-            accountViewModel.delete(note)
-            accountViewModel.dontShowDeleteRequestDialog()
+            scope.launch(Dispatchers.IO) {
+                accountViewModel.delete(note)
+                accountViewModel.dontShowDeleteRequestDialog()
+            }
             onDismiss()
         },
         onDismiss = onDismiss
     )
+}
 
 @Composable
 private fun BlockAlertDialog(note: Note, accountViewModel: AccountViewModel, onDismiss: () -> Unit) =
@@ -394,7 +401,9 @@ private fun QuickActionAlertDialog(
         },
         buttons = {
             Row(
-                modifier = Modifier.padding(all = 8.dp).fillMaxWidth(),
+                modifier = Modifier
+                    .padding(all = 8.dp)
+                    .fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 TextButton(onClick = onClickDontShowAgain) {

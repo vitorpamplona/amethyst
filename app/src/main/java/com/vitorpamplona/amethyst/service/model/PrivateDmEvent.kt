@@ -78,7 +78,8 @@ class PrivateDmEvent(
             createdAt: Long = Date().time / 1000,
             publishedRecipientPubKey: ByteArray? = null,
             advertiseNip18: Boolean = true,
-            markAsSensitive: Boolean
+            markAsSensitive: Boolean,
+            zapRaiserAmount: Long?
         ): PrivateDmEvent {
             val content = Utils.encrypt(
                 if (advertiseNip18) { nip18Advertisement } else { "" } + msg,
@@ -101,6 +102,9 @@ class PrivateDmEvent(
             }
             if (markAsSensitive) {
                 tags.add(listOf("content-warning", ""))
+            }
+            zapRaiserAmount?.let {
+                tags.add(listOf("zapraiser", "$it"))
             }
             val id = generateId(pubKey, createdAt, kind, tags, content)
             val sig = Utils.sign(id, privateKey)

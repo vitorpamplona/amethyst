@@ -52,7 +52,8 @@ class PollNoteEvent(
             consensusThreshold: Int?,
             closedAt: Int?,
             zapReceiver: String?,
-            markAsSensitive: Boolean
+            markAsSensitive: Boolean,
+            zapRaiserAmount: Long?
         ): PollNoteEvent {
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf<List<String>>()
@@ -78,6 +79,9 @@ class PollNoteEvent(
             }
             if (markAsSensitive) {
                 tags.add(listOf("content-warning", ""))
+            }
+            zapRaiserAmount?.let {
+                tags.add(listOf("zapraiser", "$it"))
             }
 
             val id = generateId(pubKey, createdAt, kind, tags, msg)

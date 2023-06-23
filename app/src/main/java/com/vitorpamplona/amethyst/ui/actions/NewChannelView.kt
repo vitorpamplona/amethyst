@@ -25,14 +25,14 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Composable
-fun NewChannelView(onClose: () -> Unit, accountViewModel: AccountViewModel, channel: Channel? = null) {
+fun NewChannelView(onClose: () -> Unit, accountViewModel: AccountViewModel, channel: PublicChatChannel? = null) {
     val postViewModel: NewChannelViewModel = viewModel()
     postViewModel.load(accountViewModel.account, channel)
 

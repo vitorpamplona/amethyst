@@ -8,6 +8,10 @@ import com.vitorpamplona.amethyst.service.model.PeopleListEvent
 object PeopleListFeedFilter : FeedFilter<Note>() {
     lateinit var account: Account
 
+    override fun feedKey(): String {
+        return account.userProfile().pubkeyHex
+    }
+
     override fun feed(): List<Note> {
         val privKey = account.loggedIn.privKey ?: return emptyList()
 

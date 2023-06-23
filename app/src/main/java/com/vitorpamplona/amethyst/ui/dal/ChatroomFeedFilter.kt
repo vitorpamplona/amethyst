@@ -6,6 +6,10 @@ import com.vitorpamplona.amethyst.model.User
 
 class ChatroomFeedFilter(val withUser: User, val account: Account) : AdditiveFeedFilter<Note>() {
     // returns the last Note of each user.
+    override fun feedKey(): String {
+        return withUser.pubkeyHex
+    }
+
     override fun feed(): List<Note> {
         val messages = account
             .userProfile()

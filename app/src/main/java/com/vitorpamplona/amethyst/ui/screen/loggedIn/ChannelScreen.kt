@@ -2,33 +2,41 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.widget.Toast
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Divider
 import androidx.compose.material.DropdownMenu
 import androidx.compose.material.DropdownMenuItem
+import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
-import androidx.compose.material.TextField
+import androidx.compose.material.TextFieldColors
 import androidx.compose.material.TextFieldDefaults
+import androidx.compose.material.TextFieldDefaults.indicatorLine
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.EditNote
@@ -46,15 +54,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -64,8 +78,10 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
@@ -73,13 +89,20 @@ import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.PostButton
 import com.vitorpamplona.amethyst.ui.actions.ServersAvailable
 import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
-import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
+import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
+import com.vitorpamplona.amethyst.ui.note.LikeReaction
+import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.screen.NostrChannelFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.Size35dp
+import com.vitorpamplona.amethyst.ui.theme.SmallBorder
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -185,8 +208,10 @@ fun ChannelScreen(
 
     Column(Modifier.fillMaxHeight()) {
         ChannelHeader(
-            channel,
-            accountViewModel,
+            baseChannel = channel,
+            showVideo = true,
+            showBottomDiviser = true,
+            accountViewModel = accountViewModel,
             nav = nav
         )
 
@@ -211,7 +236,7 @@ fun ChannelScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = DoubleVertSpacer)
 
         replyTo.value?.let {
             DisplayReplyingToNote(it, accountViewModel, nav) {
@@ -231,13 +256,23 @@ fun ChannelScreen(
                     message = newPostModel.message.text
                 )
                 tagger.run()
-                accountViewModel.account.sendChannelMessage(
-                    message = tagger.message,
-                    toChannel = channel.idHex,
-                    replyTo = tagger.replyTos,
-                    mentions = tagger.mentions,
-                    wantsToMarkAsSensitive = false
-                )
+                if (channel is PublicChatChannel) {
+                    accountViewModel.account.sendChannelMessage(
+                        message = tagger.message,
+                        toChannel = channel.idHex,
+                        replyTo = tagger.replyTos,
+                        mentions = tagger.mentions,
+                        wantsToMarkAsSensitive = false
+                    )
+                } else if (channel is LiveActivitiesChannel) {
+                    accountViewModel.account.sendLiveMessage(
+                        message = tagger.message,
+                        toChannel = channel.address,
+                        replyTo = tagger.replyTos,
+                        mentions = tagger.mentions,
+                        wantsToMarkAsSensitive = false
+                    )
+                }
                 newPostModel.message = TextFieldValue("")
                 replyTo.value = null
                 feedViewModel.sendToTop()
@@ -306,7 +341,7 @@ fun EditFieldRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        TextField(
+        MyTextField(
             value = channelScreenModel.message,
             onValueChange = {
                 channelScreenModel.updateMessage(it)
@@ -329,14 +364,14 @@ fun EditFieldRow(
                         onSendNewMessage()
                     },
                     isActive = channelScreenModel.message.text.isNotBlank() && !channelScreenModel.isUploadingImage,
-                    modifier = Modifier.padding(end = 10.dp)
+                    modifier = Modifier.height(32.dp).padding(end = 10.dp)
                 )
             },
             leadingIcon = {
                 UploadFromGallery(
                     isUploading = channelScreenModel.isUploadingImage,
                     tint = MaterialTheme.colors.placeholderText,
-                    modifier = Modifier.padding(start = 5.dp)
+                    modifier = Modifier.height(32.dp).padding(start = 2.dp)
                 ) {
                     val fileServer = if (isPrivate) {
                         // TODO: Make private servers
@@ -365,8 +400,94 @@ fun EditFieldRow(
 }
 
 @Composable
-fun ChannelHeader(channelHex: String, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    var baseChannel by remember { mutableStateOf<Channel?>(null) }
+fun MyTextField(
+    value: TextFieldValue,
+    onValueChange: (TextFieldValue) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    readOnly: Boolean = false,
+    textStyle: TextStyle = LocalTextStyle.current,
+    label: @Composable (() -> Unit)? = null,
+    placeholder: @Composable (() -> Unit)? = null,
+    leadingIcon: @Composable (() -> Unit)? = null,
+    trailingIcon: @Composable (() -> Unit)? = null,
+    isError: Boolean = false,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    keyboardActions: KeyboardActions = KeyboardActions(),
+    singleLine: Boolean = false,
+    maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
+    minLines: Int = 1,
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    shape: Shape = TextFieldDefaults.TextFieldShape,
+    colors: TextFieldColors = TextFieldDefaults.textFieldColors()
+) {
+    // If color is not provided via the text style, use content color as a default
+    val textColor = textStyle.color.takeOrElse {
+        colors.textColor(enabled).value
+    }
+    val mergedTextStyle = textStyle.merge(TextStyle(color = textColor))
+
+    @OptIn(ExperimentalMaterialApi::class)
+    (
+        BasicTextField(
+            value = value,
+            modifier = modifier
+                .background(colors.backgroundColor(enabled).value, shape)
+                .indicatorLine(enabled, isError, interactionSource, colors)
+                .defaultMinSize(
+                    minWidth = TextFieldDefaults.MinWidth,
+                    minHeight = 36.dp
+                ),
+            onValueChange = onValueChange,
+            enabled = enabled,
+            readOnly = readOnly,
+            textStyle = mergedTextStyle,
+            cursorBrush = SolidColor(colors.cursorColor(isError).value),
+            visualTransformation = visualTransformation,
+            keyboardOptions = keyboardOptions,
+            keyboardActions = keyboardActions,
+            interactionSource = interactionSource,
+            singleLine = singleLine,
+            maxLines = maxLines,
+            minLines = minLines,
+            decorationBox = @Composable { innerTextField ->
+                // places leading icon, text field with label and placeholder, trailing icon
+                TextFieldDefaults.TextFieldDecorationBox(
+                    value = value.text,
+                    visualTransformation = visualTransformation,
+                    innerTextField = innerTextField,
+                    placeholder = placeholder,
+                    label = label,
+                    leadingIcon = leadingIcon,
+                    trailingIcon = trailingIcon,
+                    singleLine = singleLine,
+                    enabled = enabled,
+                    isError = isError,
+                    interactionSource = interactionSource,
+                    colors = colors,
+                    contentPadding = TextFieldDefaults.textFieldWithoutLabelPadding(
+                        top = 12.dp,
+                        bottom = 12.dp,
+                        start = 10.dp,
+                        end = 10.dp
+                    )
+                )
+            }
+        )
+        )
+}
+
+@Composable
+fun ChannelHeader(
+    channelHex: String,
+    showVideo: Boolean,
+    showBottomDiviser: Boolean,
+    modifier: Modifier = StdPadding,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    var baseChannel by remember { mutableStateOf<Channel?>(LocalCache.channels[channelHex]) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(key1 = channelHex) {
@@ -376,12 +497,26 @@ fun ChannelHeader(channelHex: String, accountViewModel: AccountViewModel, nav: (
     }
 
     baseChannel?.let {
-        ChannelHeader(it, accountViewModel, nav)
+        ChannelHeader(
+            it,
+            showVideo,
+            showBottomDiviser,
+            modifier,
+            accountViewModel,
+            nav
+        )
     }
 }
 
 @Composable
-fun ChannelHeader(baseChannel: Channel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun ChannelHeader(
+    baseChannel: Channel,
+    showVideo: Boolean,
+    showBottomDiviser: Boolean,
+    modifier: Modifier = StdPadding,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
     val channelState by baseChannel.live.observeAsState()
     val channel = remember(channelState) { channelState?.channel } ?: return
 
@@ -392,61 +527,94 @@ fun ChannelHeader(baseChannel: Channel, accountViewModel: AccountViewModel, nav:
             nav("Channel/${baseChannel.idHex}")
         }
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        if (channel is LiveActivitiesChannel) {
+            val streamingUrl by remember(channelState) {
+                derivedStateOf {
+                    channel.info?.streaming()
+                }
+            }
+
+            if (streamingUrl != null && showVideo) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.heightIn(max = 300.dp)) {
+                    VideoView(
+                        videoUri = streamingUrl!!,
+                        description = null
+                    )
+                }
+            }
+        }
+
+        Column(modifier = modifier) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RobohashAsyncImageProxy(
                     robot = channel.idHex,
-                    model = ResizeImage(channel.profilePicture(), 35.dp),
+                    model = channel.profilePicture(),
                     contentDescription = context.getString(R.string.profile_image),
                     modifier = Modifier
-                        .width(35.dp)
-                        .height(35.dp)
+                        .width(Size35dp)
+                        .height(Size35dp)
                         .clip(shape = CircleShape)
                 )
 
                 Column(
                     modifier = Modifier
                         .padding(start = 10.dp)
-                        .weight(1f)
+                        .weight(1f),
+                    verticalArrangement = Arrangement.Center
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            "${channel.info.name}",
-                            fontWeight = FontWeight.Bold
+                            channel.toBestDisplayName(),
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            "${channel.info.about}",
-                            color = MaterialTheme.colors.placeholderText,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            fontSize = 12.sp
-                        )
+                    val summary = remember(channelState) {
+                        channel.summary()?.ifBlank { null }
+                    }
+
+                    if (summary != null) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = summary,
+                                color = MaterialTheme.colors.placeholderText,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                fontSize = 12.sp
+                            )
+                        }
                     }
                 }
 
                 Row(
                     modifier = Modifier
-                        .height(35.dp)
-                        .padding(bottom = 3.dp)
+                        .height(Size35dp)
+                        .padding(bottom = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    ChannelActionOptions(channel, accountViewModel, nav)
+                    if (channel is PublicChatChannel) {
+                        ChannelActionOptions(channel, accountViewModel, nav)
+                    }
+                    if (channel is LiveActivitiesChannel) {
+                        LiveChannelActionOptions(channel, accountViewModel, nav)
+                    }
                 }
             }
         }
 
-        Divider(
-            modifier = Modifier.padding(start = 12.dp, end = 12.dp),
-            thickness = 0.25.dp
-        )
+        if (showBottomDiviser) {
+            Divider(
+                thickness = 0.25.dp
+            )
+        }
     }
 }
 
 @Composable
 private fun ChannelActionOptions(
-    channel: Channel,
+    channel: PublicChatChannel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -474,6 +642,59 @@ private fun ChannelActionOptions(
     } else {
         JoinButton(accountViewModel, channel, nav)
     }
+}
+
+@Composable
+private fun LiveChannelActionOptions(
+    channel: LiveActivitiesChannel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    val isMe by remember(accountViewModel) {
+        derivedStateOf {
+            channel.creator == accountViewModel.account.userProfile()
+        }
+    }
+
+    val isLive by remember(channel) {
+        derivedStateOf {
+            channel.info?.status() == "live"
+        }
+    }
+
+    if (isMe) {
+        // EditButton(accountViewModel, channel)
+    } else {
+        val note = remember(channel.idHex) {
+            LocalCache.getNoteIfExists(channel.idHex)
+        }
+
+        note?.let {
+            if (isLive) {
+                LiveFlag()
+                Spacer(modifier = StdHorzSpacer)
+            }
+
+            LikeReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
+            Spacer(modifier = StdHorzSpacer)
+            ZapReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
+        }
+    }
+}
+
+@Composable
+private fun LiveFlag() {
+    Text(
+        text = "LIVE",
+        color = Color.White,
+        fontWeight = FontWeight.Bold,
+        modifier = remember {
+            Modifier
+                .clip(SmallBorder)
+                .drawBehind { drawRect(Color.Red) }
+                .padding(horizontal = 5.dp)
+        }
+    )
 }
 
 @Composable
@@ -513,7 +734,7 @@ private fun NoteCopyButton(
 }
 
 @Composable
-private fun EditButton(accountViewModel: AccountViewModel, channel: Channel) {
+private fun EditButton(accountViewModel: AccountViewModel, channel: PublicChatChannel) {
     var wantsToPost by remember {
         mutableStateOf(false)
     }

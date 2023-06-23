@@ -73,7 +73,12 @@ fun HashtagScreen(tag: String?, accountViewModel: AccountViewModel, nav: (String
                 modifier = Modifier.padding(vertical = 0.dp)
             ) {
                 HashtagHeader(tag, accountViewModel)
-                RefresheableFeedView(feedViewModel, null, accountViewModel, nav)
+                RefresheableFeedView(
+                    feedViewModel,
+                    null,
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
             }
         }
     }

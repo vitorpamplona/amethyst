@@ -52,7 +52,6 @@ import com.vitorpamplona.amethyst.model.decodePublicKey
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
-import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
@@ -200,7 +199,7 @@ private fun AccountPicture(user: User) {
     val userState by user.live().metadata.observeAsState()
     val profilePicture by remember(userState) {
         derivedStateOf {
-            ResizeImage(userState?.user?.profilePicture(), 55.dp)
+            userState?.user?.profilePicture()
         }
     }
 

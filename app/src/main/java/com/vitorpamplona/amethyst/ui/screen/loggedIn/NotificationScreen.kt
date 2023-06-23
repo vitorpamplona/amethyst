@@ -102,16 +102,9 @@ fun WatchAccountForNotifications(
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
 
-    var firstTime by remember(accountViewModel) { mutableStateOf(true) }
-
     LaunchedEffect(accountViewModel, accountState?.account?.defaultNotificationFollowList) {
-        if (firstTime) {
-            firstTime = false
-        } else {
-            NostrAccountDataSource.invalidateFilters()
-            notifFeedViewModel.clear()
-            notifFeedViewModel.invalidateDataAndSendToTop(true)
-        }
+        NostrAccountDataSource.invalidateFilters()
+        notifFeedViewModel.checkKeysInvalidateDataAndSendToTop()
     }
 }
 

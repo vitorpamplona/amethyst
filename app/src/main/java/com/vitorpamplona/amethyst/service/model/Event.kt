@@ -54,6 +54,10 @@ open class Event(
             (it.size > 1 && it[0] == "t" && it[1].equals("nude", true))
     }
 
+    override fun zapraiserAmount() = tags.firstOrNull() {
+        (it.size > 1 && it[0].equals("zapraiser", true))
+    }?.get(1)?.toLongOrNull()
+
     override fun zapAddress() = tags.firstOrNull { it.size > 1 && it[0] == "zap" }?.get(1)
 
     fun taggedAddresses() = tags.filter { it.size > 1 && it[0] == "a" }.mapNotNull {
@@ -245,7 +249,10 @@ open class Event(
             FileHeaderEvent.kind -> FileHeaderEvent(id, pubKey, createdAt, tags, content, sig)
             FileStorageEvent.kind -> FileStorageEvent(id, pubKey, createdAt, tags, content, sig)
             FileStorageHeaderEvent.kind -> FileStorageHeaderEvent(id, pubKey, createdAt, tags, content, sig)
+            GenericRepostEvent.kind -> GenericRepostEvent(id, pubKey, createdAt, tags, content, sig)
             HighlightEvent.kind -> HighlightEvent(id, pubKey, createdAt, tags, content, sig)
+            LiveActivitiesEvent.kind -> LiveActivitiesEvent(id, pubKey, createdAt, tags, content, sig)
+            LiveActivitiesChatMessageEvent.kind -> LiveActivitiesChatMessageEvent(id, pubKey, createdAt, tags, content, sig)
             LnZapEvent.kind -> LnZapEvent(id, pubKey, createdAt, tags, content, sig)
             LnZapPaymentRequestEvent.kind -> LnZapPaymentRequestEvent(id, pubKey, createdAt, tags, content, sig)
             LnZapPaymentResponseEvent.kind -> LnZapPaymentResponseEvent(id, pubKey, createdAt, tags, content, sig)

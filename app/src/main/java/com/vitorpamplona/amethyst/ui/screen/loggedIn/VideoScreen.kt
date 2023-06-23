@@ -87,6 +87,7 @@ import com.vitorpamplona.amethyst.ui.screen.LoadingFeed
 import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.screen.rememberForeverPagerState
+import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -126,7 +127,12 @@ fun VideoScreen(
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            SaveableFeedState(videoFeedView, accountViewModel, nav, ScrollStateKeys.VIDEO_SCREEN)
+            SaveableFeedState(
+                videoFeedView = videoFeedView,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                scrollStateKey = ScrollStateKeys.VIDEO_SCREEN
+            )
         }
     }
 }
@@ -134,17 +140,10 @@ fun VideoScreen(
 @Composable
 fun WatchAccountForVideoScreen(videoFeedView: NostrVideoFeedViewModel, accountViewModel: AccountViewModel) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = remember(accountState) { accountState?.account } ?: return
 
-    var firstTime by remember(accountViewModel) { mutableStateOf(true) }
-
-    LaunchedEffect(accountViewModel, account.defaultStoriesFollowList) {
-        if (firstTime) {
-            firstTime = false
-        } else {
-            NostrVideoDataSource.resetFilters()
-            videoFeedView.invalidateDataAndSendToTop(true)
-        }
+    LaunchedEffect(accountViewModel, accountState?.account?.defaultStoriesFollowList) {
+        NostrVideoDataSource.resetFilters()
+        videoFeedView.checkKeysInvalidateDataAndSendToTop()
     }
 }
 
@@ -154,7 +153,6 @@ private fun SaveableFeedState(
     videoFeedView: NostrVideoFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
-    routeForLastRead: String?,
     scrollStateKey: String? = null
 ) {
     val pagerState = if (scrollStateKey != null) {
@@ -321,7 +319,7 @@ private fun RenderVideoOrPicture(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(top = 2.dp)
             ) {
-                RelayBadges(baseNote = note)
+                RelayBadges(baseNote = note, accountViewModel, nav)
             }
         }
     }
@@ -356,7 +354,7 @@ private fun VideoUserOptionAction(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun RelayBadges(baseNote: Note) {
+private fun RelayBadges(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val noteRelaysState by baseNote.live().relays.observeAsState()
     val noteRelays = remember(noteRelaysState) {
         noteRelaysState?.note?.relays ?: emptySet()
@@ -364,7 +362,7 @@ private fun RelayBadges(baseNote: Note) {
 
     FlowRow() {
         noteRelays.forEach { dirtyUrl ->
-            RenderRelay(dirtyUrl)
+            RenderRelay(dirtyUrl, accountViewModel, nav)
         }
     }
 }
@@ -397,8 +395,8 @@ fun ReactionsColumn(baseNote: Note, accountViewModel: AccountViewModel, nav: (St
         BoostReaction(baseNote, accountViewModel, iconSize = 40.dp) {
             wantsToQuote = baseNote
         }*/
-        LikeReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, accountViewModel, iconSize = 40.dp, heartSize = 35.dp)
-        ZapReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, accountViewModel, iconSize = 40.dp, animationSize = 35.dp)
+        LikeReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, accountViewModel, iconSize = 40.dp, heartSize = Size35dp, 28.sp)
+        ZapReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, accountViewModel, iconSize = 40.dp, animationSize = Size35dp)
         ViewCountReaction(baseNote.idHex, grayTint = MaterialTheme.colors.onBackground, iconSize = 40.dp, barChartSize = 39.dp)
     }
 }

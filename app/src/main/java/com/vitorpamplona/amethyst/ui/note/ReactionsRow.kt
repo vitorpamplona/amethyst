@@ -7,11 +7,13 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -21,6 +23,7 @@ import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
+import androidx.compose.material.LinearProgressIndicator
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.ProgressIndicatorDefaults
 import androidx.compose.material.Text
@@ -54,6 +57,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
@@ -68,8 +72,10 @@ import com.vitorpamplona.amethyst.ui.screen.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -83,6 +89,10 @@ fun ReactionsRow(baseNote: Note, showReactionDetail: Boolean, accountViewModel: 
 
     val wantsToSeeReactions = remember {
         mutableStateOf<Boolean>(false)
+    }
+
+    val zapraiserAmount = remember {
+        baseNote.event?.zapraiserAmount()
     }
 
     Spacer(modifier = Modifier.height(7.dp))
@@ -117,11 +127,88 @@ fun ReactionsRow(baseNote: Note, showReactionDetail: Boolean, accountViewModel: 
         }
     }
 
+    if (zapraiserAmount != null && zapraiserAmount > 0) {
+        Spacer(modifier = Modifier.height(4.dp))
+        Row(
+            verticalAlignment = CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = if (showReactionDetail) 75.dp else 0.dp),
+            horizontalArrangement = Arrangement.Start
+        ) {
+            RenderZapRaiser(baseNote, zapraiserAmount, wantsToSeeReactions.value, accountViewModel)
+        }
+    }
+
     if (showReactionDetail && wantsToSeeReactions.value) {
         ReactionDetailGallery(baseNote, nav, accountViewModel)
     }
 
     Spacer(modifier = Modifier.height(7.dp))
+}
+
+@Composable
+fun RenderZapRaiser(baseNote: Note, zapraiserAmount: Long, details: Boolean, accountViewModel: AccountViewModel) {
+    val zapsState by baseNote.live().zaps.observeAsState()
+
+    var zapraiserProgress by remember { mutableStateOf(0F) }
+    var zapraiserLeft by remember { mutableStateOf("$zapraiserAmount") }
+
+    LaunchedEffect(key1 = zapsState) {
+        launch(Dispatchers.Default) {
+            zapsState?.note?.let {
+                val newZapAmount = accountViewModel.calculateZapAmount(it)
+                var percentage = newZapAmount.div(zapraiserAmount.toBigDecimal()).toFloat()
+
+                if (percentage > 1) {
+                    percentage = 1f
+                }
+
+                if (Math.abs(zapraiserProgress - percentage) > 0.001) {
+                    zapraiserProgress = percentage
+                    if (percentage > 0.99) {
+                        zapraiserLeft = "0"
+                    } else {
+                        zapraiserLeft = showAmount((zapraiserAmount * (1 - percentage)).toBigDecimal())
+                    }
+                }
+            }
+        }
+    }
+
+    val color = if (zapraiserProgress > 0.99) {
+        Color.Green.copy(alpha = 0.32f)
+    } else {
+        MaterialTheme.colors.mediumImportanceLink
+    }
+
+    Box(
+        Modifier.padding(end = 10.dp).fillMaxWidth()
+    ) {
+        LinearProgressIndicator(
+            modifier = Modifier.matchParentSize(),
+            color = color,
+            progress = zapraiserProgress
+        )
+
+        Row(
+            verticalAlignment = CenterVertically,
+            modifier = Modifier.padding(2.dp)
+        ) {
+            if (details) {
+                val totalPercentage = remember(zapraiserProgress) {
+                    "${(zapraiserProgress * 100).roundToInt()}%"
+                }
+
+                Text(
+                    text = stringResource(id = R.string.sats_to_complete, totalPercentage, zapraiserLeft),
+                    modifier = Modifier.padding(start = 5.dp, end = 5.dp, top = 2.dp, bottom = 2.dp),
+                    color = MaterialTheme.colors.placeholderText,
+                    fontSize = 14.sp
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -190,7 +277,7 @@ private fun ReactionDetailGallery(
             Column() {
                 val zapEvents by remember(zapsState) { derivedStateOf { baseNote.zaps.mapNotNull { it.value?.let { zapEvent -> CombinedZap(it.key, zapEvent) } }.toImmutableList() } }
                 val boostEvents by remember(boostsState) { derivedStateOf { baseNote.boosts.toImmutableList() } }
-                val likeEvents by remember(reactionsState) { derivedStateOf { baseNote.reactions.toImmutableList() } }
+                val likeEvents by remember(reactionsState) { derivedStateOf { baseNote.reactions.toImmutableMap() } }
 
                 val hasZapEvents by remember(zapsState) { derivedStateOf { baseNote.zaps.isNotEmpty() } }
                 val hasBoostEvents by remember(boostsState) { derivedStateOf { baseNote.boosts.isNotEmpty() } }
@@ -215,12 +302,16 @@ private fun ReactionDetailGallery(
                 }
 
                 if (hasLikeEvents) {
-                    RenderLikeGallery(
-                        likeEvents,
-                        backgroundColor,
-                        nav,
-                        accountViewModel
-                    )
+                    likeEvents.forEach {
+                        val reactions = remember(it.value) { it.value.toImmutableList() }
+                        RenderLikeGallery(
+                            it.key,
+                            reactions,
+                            backgroundColor,
+                            nav,
+                            accountViewModel
+                        )
+                    }
                 }
             }
         }
@@ -429,13 +520,15 @@ fun BoostText(baseNote: Note, grayTint: Color) {
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun LikeReaction(
     baseNote: Note,
     grayTint: Color,
     accountViewModel: AccountViewModel,
     iconSize: Dp = 20.dp,
-    heartSize: Dp = 16.dp
+    heartSize: Dp = 16.dp,
+    iconFontSize: TextUnit = 14.sp
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -444,47 +537,75 @@ fun LikeReaction(
         Modifier.size(iconSize)
     }
 
-    IconButton(
-        modifier = iconButtonModifier,
-        onClick = {
-            if (accountViewModel.isWriteable()) {
-                scope.launch(Dispatchers.IO) {
-                    if (accountViewModel.hasReactedTo(baseNote)) {
-                        accountViewModel.deleteReactionTo(baseNote)
-                    } else {
-                        accountViewModel.reactTo(baseNote)
+    var wantsToChangeReactionSymbol by remember { mutableStateOf(false) }
+    var wantsToReact by remember { mutableStateOf(false) }
+
+    Row(
+        verticalAlignment = CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+        modifier = iconButtonModifier.combinedClickable(
+            role = Role.Button,
+            interactionSource = remember { MutableInteractionSource() },
+            indication = rememberRipple(bounded = false, radius = 24.dp),
+            onClick = {
+                likeClick(
+                    baseNote,
+                    accountViewModel,
+                    scope,
+                    context,
+                    onMultipleChoices = {
+                        wantsToReact = true
                     }
-                }
-            } else {
-                scope.launch {
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.login_with_a_private_key_to_like_posts),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
+                )
+            },
+            onLongClick = {
+                wantsToChangeReactionSymbol = true
             }
-        }
+        )
     ) {
-        LikeIcon(baseNote, heartSize, grayTint, accountViewModel.userProfile())
+        LikeIcon(baseNote, iconFontSize, heartSize, grayTint, accountViewModel.userProfile())
+
+        if (wantsToChangeReactionSymbol) {
+            UpdateReactionTypeDialog({ wantsToChangeReactionSymbol = false }, accountViewModel = accountViewModel)
+        }
+
+        if (wantsToReact) {
+            ReactionChoicePopup(
+                baseNote,
+                accountViewModel,
+                onDismiss = {
+                    wantsToReact = false
+                },
+                onChangeAmount = {
+                    wantsToReact = false
+                    wantsToChangeReactionSymbol = true
+                }
+            )
+        }
     }
 
     LikeText(baseNote, grayTint)
 }
 
 @Composable
-fun LikeIcon(baseNote: Note, iconSize: Dp = 20.dp, grayTint: Color, loggedIn: User) {
+fun LikeIcon(
+    baseNote: Note,
+    iconFontSize: TextUnit = 14.sp,
+    iconSize: Dp = 20.dp,
+    grayTint: Color,
+    loggedIn: User
+) {
     val reactionsState by baseNote.live().reactions.observeAsState()
 
-    var wasReactedByLoggedIn by remember(reactionsState) {
-        mutableStateOf(false)
+    var reactionType by remember(baseNote) {
+        mutableStateOf<String?>(null)
     }
 
     LaunchedEffect(key1 = reactionsState) {
         launch(Dispatchers.Default) {
-            val newWasReactedByLoggedIn = reactionsState?.note?.isReactedBy(loggedIn) == true
-            if (wasReactedByLoggedIn != newWasReactedByLoggedIn) {
-                wasReactedByLoggedIn = newWasReactedByLoggedIn
+            val newReactionType = reactionsState?.note?.isReactedBy(loggedIn)
+            if (reactionType != newReactionType) {
+                reactionType = newReactionType?.take(2)
             }
         }
     }
@@ -493,13 +614,19 @@ fun LikeIcon(baseNote: Note, iconSize: Dp = 20.dp, grayTint: Color, loggedIn: Us
         Modifier.size(iconSize)
     }
 
-    if (wasReactedByLoggedIn) {
-        Icon(
-            painter = painterResource(R.drawable.ic_liked),
-            null,
-            modifier = iconModifier,
-            tint = Color.Unspecified
-        )
+    if (reactionType != null) {
+        when (reactionType) {
+            "+" -> {
+                Icon(
+                    painter = painterResource(R.drawable.ic_liked),
+                    null,
+                    modifier = iconModifier,
+                    tint = Color.Unspecified
+                )
+            }
+            "-" -> Text(text = "\uD83D\uDC4E", fontSize = iconFontSize)
+            else -> Text(text = reactionType!!, fontSize = iconFontSize)
+        }
     } else {
         Icon(
             painter = painterResource(R.drawable.ic_like),
@@ -520,7 +647,7 @@ fun LikeText(baseNote: Note, grayTint: Color) {
 
     LaunchedEffect(key1 = reactionsState) {
         launch(Dispatchers.Default) {
-            val newReactionsCount = " " + showCount(reactionsState?.note?.reactions?.size)
+            val newReactionsCount = " " + showCount(reactionsState?.note?.countReactions())
             if (reactionsCount != newReactionsCount) {
                 reactionsCount = newReactionsCount
             }
@@ -532,6 +659,47 @@ fun LikeText(baseNote: Note, grayTint: Color) {
         fontSize = 14.sp,
         color = grayTint
     )
+}
+
+private fun likeClick(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    scope: CoroutineScope,
+    context: Context,
+    onMultipleChoices: () -> Unit
+) {
+    if (accountViewModel.account.reactionChoices.isEmpty()) {
+        scope.launch {
+            Toast
+                .makeText(
+                    context,
+                    context.getString(R.string.no_reaction_type_setup_long_press_to_change),
+                    Toast.LENGTH_SHORT
+                )
+                .show()
+        }
+    } else if (!accountViewModel.isWriteable()) {
+        scope.launch {
+            Toast
+                .makeText(
+                    context,
+                    context.getString(R.string.login_with_a_private_key_to_be_able_to_send_zaps),
+                    Toast.LENGTH_SHORT
+                )
+                .show()
+        }
+    } else if (accountViewModel.account.reactionChoices.size == 1) {
+        scope.launch(Dispatchers.IO) {
+            val reaction = accountViewModel.account.reactionChoices.first()
+            if (accountViewModel.hasReactedTo(baseNote, reaction)) {
+                accountViewModel.deleteReactionTo(baseNote, reaction)
+            } else {
+                accountViewModel.reactTo(baseNote, reaction)
+            }
+        }
+    } else if (accountViewModel.account.reactionChoices.size > 1) {
+        onMultipleChoices()
+    }
 }
 
 @Composable
@@ -858,6 +1026,95 @@ private fun BoostTypeChoicePopup(baseNote: Note, accountViewModel: AccountViewMo
                     )
             ) {
                 Text(stringResource(R.string.quote), color = Color.White, textAlign = TextAlign.Center)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
+@Composable
+fun ReactionChoicePopup(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    onDismiss: () -> Unit,
+    onChangeAmount: () -> Unit
+) {
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val account = accountState?.account ?: return
+    val scope = rememberCoroutineScope()
+
+    val toRemove = remember {
+        baseNote.reactedBy(account.userProfile()).toSet()
+    }
+
+    Popup(
+        alignment = Alignment.BottomCenter,
+        offset = IntOffset(0, -50),
+        onDismissRequest = { onDismiss() }
+    ) {
+        FlowRow(horizontalArrangement = Arrangement.Center) {
+            account.reactionChoices.forEach { reactionType ->
+                Button(
+                    modifier = Modifier.padding(horizontal = 3.dp),
+                    onClick = {
+                        scope.launch(Dispatchers.IO) {
+                            accountViewModel.reactToOrDelete(
+                                baseNote,
+                                reactionType
+                            )
+                            onDismiss()
+                        }
+                    },
+                    shape = ButtonBorder,
+                    colors = ButtonDefaults
+                        .buttonColors(
+                            backgroundColor = MaterialTheme.colors.primary
+                        )
+                ) {
+                    val thisModifier = remember(reactionType) {
+                        Modifier.combinedClickable(
+                            onClick = {
+                                scope.launch(Dispatchers.IO) {
+                                    accountViewModel.reactToOrDelete(
+                                        baseNote,
+                                        reactionType
+                                    )
+                                    onDismiss()
+                                }
+                            },
+                            onLongClick = {
+                                onChangeAmount()
+                            }
+                        )
+                    }
+
+                    val removeSymbol = remember(reactionType) {
+                        if (reactionType in toRemove) {
+                            " ✖"
+                        } else {
+                            ""
+                        }
+                    }
+
+                    when (reactionType) {
+                        "+" -> {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_liked),
+                                null,
+                                modifier = remember { thisModifier.size(16.dp) },
+                                tint = Color.White
+                            )
+                            Text(text = removeSymbol, color = Color.White, textAlign = TextAlign.Center, modifier = thisModifier)
+                        }
+                        "-" -> Text(text = "\uD83D\uDC4E$removeSymbol", color = Color.White, textAlign = TextAlign.Center, modifier = thisModifier)
+                        else -> Text(
+                            "$reactionType$removeSymbol",
+                            color = Color.White,
+                            textAlign = TextAlign.Center,
+                            modifier = thisModifier
+                        )
+                    }
+                }
             }
         }
     }

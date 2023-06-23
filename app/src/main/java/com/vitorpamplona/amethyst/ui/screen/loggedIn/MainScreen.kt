@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListKnownFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListNewFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrGlobalFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedLiveActivitiesViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
@@ -73,23 +74,6 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
         }
     }
 
-    val navBottomRow = remember(navController) {
-        { route: Route, selected: Boolean ->
-            if (!selected) {
-                navController.navigate(route.base) {
-                    popUpTo(Route.Home.route)
-                    launchSingleTop = true
-                }
-            } else {
-                val newRoute = route.route.replace("{scrollToTop}", "true")
-                navController.navigate(newRoute) {
-                    popUpTo(Route.Home.route)
-                    launchSingleTop = true
-                }
-            }
-        }
-    }
-
     val followLists: FollowListViewModel = viewModel(
         key = accountViewModel.userProfile().pubkeyHex + "FollowListViewModel",
         factory = FollowListViewModel.Factory(accountViewModel.account)
@@ -104,6 +88,11 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
     val repliesFeedViewModel: NostrHomeRepliesFeedViewModel = viewModel(
         key = accountViewModel.userProfile().pubkeyHex + "NostrHomeRepliesFeedViewModel",
         factory = NostrHomeRepliesFeedViewModel.Factory(accountViewModel.account)
+    )
+
+    val liveActivitiesViewModel: NostrHomeFeedLiveActivitiesViewModel = viewModel(
+        key = accountViewModel.userProfile().pubkeyHex + "NostrHomeLiveActivitiesFeedViewModel",
+        factory = NostrHomeFeedLiveActivitiesViewModel.Factory(accountViewModel.account)
     )
 
     val searchFeedViewModel: NostrGlobalFeedViewModel = viewModel(
@@ -136,6 +125,40 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
         factory = NostrChatroomListNewFeedViewModel.Factory(accountViewModel.account)
     )
 
+    val navBottomRow = remember(navController) {
+        { route: Route, selected: Boolean ->
+            if (!selected) {
+                navController.navigate(route.base) {
+                    popUpTo(Route.Home.route)
+                    launchSingleTop = true
+                }
+            } else {
+                // deals with scroll to top here to avoid passing as parameter
+                // and having to deal with all recompositions with scroll to top true
+                when (route.base) {
+                    Route.Home.base -> {
+                        homeFeedViewModel.sendToTop()
+                        repliesFeedViewModel.sendToTop()
+                    }
+                    Route.Search.base -> {
+                        searchFeedViewModel.sendToTop()
+                    }
+                    Route.Video.base -> {
+                        videoFeedViewModel.sendToTop()
+                    }
+                    Route.Notification.base -> {
+                        notifFeedViewModel.invalidateDataAndSendToTop()
+                    }
+                }
+
+                navController.navigate(route.route) {
+                    popUpTo(route.route)
+                    launchSingleTop = true
+                }
+            }
+        }
+    }
+
     ModalBottomSheetLayout(
         sheetState = sheetState,
         sheetContent = {
@@ -150,7 +173,7 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
                 AppBottomBar(accountViewModel, navState, navBottomRow)
             },
             topBar = {
-                AppTopBar(followLists, navState, scaffoldState, accountViewModel)
+                AppTopBar(followLists, navState, scaffoldState, accountViewModel, nav = nav)
             },
             drawerContent = {
                 DrawerContent(nav, scaffoldState, sheetState, accountViewModel)
@@ -167,6 +190,7 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
                 AppNavigation(
                     homeFeedViewModel,
                     repliesFeedViewModel,
+                    liveActivitiesViewModel,
                     knownFeedViewModel,
                     newFeedViewModel,
                     searchFeedViewModel,

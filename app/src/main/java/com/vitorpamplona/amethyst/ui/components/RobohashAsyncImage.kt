@@ -10,18 +10,14 @@ import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.Dp
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
-import coil.size.Size
 import java.util.Date
 
 @Composable
 fun RobohashAsyncImage(
     robot: String,
-    robotSize: Dp,
     modifier: Modifier = Modifier,
     contentDescription: String? = null,
     transform: (AsyncImagePainter.State) -> AsyncImagePainter.State = AsyncImagePainter.DefaultTransform,
@@ -33,18 +29,9 @@ fun RobohashAsyncImage(
     filterQuality: FilterQuality = DrawScope.DefaultFilterQuality
 ) {
     val context = LocalContext.current
-    val size = with(LocalDensity.current) {
-        remember {
-            robotSize.roundToPx()
-        }
-    }
 
-    val imageRequest = remember(robotSize, robot) {
-        Robohash.imageRequest(
-            context,
-            robot,
-            Size(size, size)
-        )
+    val imageRequest = remember(robot) {
+        Robohash.imageRequest(context, robot)
     }
 
     AsyncImage(
@@ -66,7 +53,6 @@ var imageErrors = mapOf<String, Long>()
 @Composable
 fun RobohashFallbackAsyncImage(
     robot: String,
-    robotSize: Dp,
     model: String,
     contentDescription: String?,
     modifier: Modifier = Modifier,
@@ -81,7 +67,6 @@ fun RobohashFallbackAsyncImage(
     if (errorCache != null && (Date().time / 1000) - errorCache < (60 * 5)) {
         RobohashAsyncImage(
             robot = robot,
-            robotSize = robotSize,
             contentDescription = contentDescription,
             modifier = modifier,
             alignment = alignment,
@@ -92,15 +77,9 @@ fun RobohashFallbackAsyncImage(
         )
     } else {
         val context = LocalContext.current
-        val painter = with(LocalDensity.current) {
-            rememberAsyncImagePainter(
-                model = Robohash.imageRequest(
-                    context,
-                    robot,
-                    Size(robotSize.roundToPx(), robotSize.roundToPx())
-                )
-            )
-        }
+        val painter = rememberAsyncImagePainter(
+            model = Robohash.imageRequest(context, robot)
+        )
 
         AsyncImage(
             model = model,
@@ -124,7 +103,7 @@ fun RobohashFallbackAsyncImage(
 @Composable
 fun RobohashAsyncImageProxy(
     robot: String,
-    model: ResizeImage,
+    model: String?,
     contentDescription: String?,
     modifier: Modifier = Modifier,
     alignment: Alignment = Alignment.Center,
@@ -133,12 +112,9 @@ fun RobohashAsyncImageProxy(
     colorFilter: ColorFilter? = null,
     filterQuality: FilterQuality = DrawScope.DefaultFilterQuality
 ) {
-    val proxy = remember(model) { model.proxyUrl() }
-
-    if (proxy == null) {
+    if (model == null) {
         RobohashAsyncImage(
             robot = robot,
-            robotSize = model.size,
             contentDescription = contentDescription,
             modifier = modifier,
             alignment = alignment,
@@ -150,8 +126,7 @@ fun RobohashAsyncImageProxy(
     } else {
         RobohashFallbackAsyncImage(
             robot = robot,
-            robotSize = model.size,
-            model = proxy,
+            model = model,
             contentDescription = contentDescription,
             modifier = modifier,
             alignment = alignment,

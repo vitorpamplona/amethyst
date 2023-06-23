@@ -38,4 +38,5 @@ interface EventInterface {
 
     fun zapAddress(): String?
     fun isSensitive(): Boolean
+    fun zapraiserAmount(): Long?
 }

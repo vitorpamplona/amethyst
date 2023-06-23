@@ -74,7 +74,6 @@ import com.vitorpamplona.amethyst.service.model.PeopleListEvent
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
-import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.RelayPoolViewModel
 import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
@@ -96,7 +95,8 @@ fun AppTopBar(
     followLists: FollowListViewModel,
     navEntryState: State<NavBackStackEntry?>,
     scaffoldState: ScaffoldState,
-    accountViewModel: AccountViewModel
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
 ) {
     val currentRoute by remember(navEntryState.value) {
         derivedStateOf {
@@ -104,7 +104,7 @@ fun AppTopBar(
         }
     }
 
-    RenderTopRouteBar(currentRoute, followLists, scaffoldState, accountViewModel)
+    RenderTopRouteBar(currentRoute, followLists, scaffoldState, accountViewModel, nav)
 }
 
 @Composable
@@ -112,20 +112,27 @@ private fun RenderTopRouteBar(
     currentRoute: String?,
     followLists: FollowListViewModel,
     scaffoldState: ScaffoldState,
-    accountViewModel: AccountViewModel
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
 ) {
     when (currentRoute) {
+        Route.Channel.base -> NoTopBar()
+        Route.Room.base -> NoTopBar()
         // Route.Profile.route -> TopBarWithBackButton(nav)
-        Route.Home.base -> HomeTopBar(followLists, scaffoldState, accountViewModel)
-        Route.Video.base -> StoriesTopBar(followLists, scaffoldState, accountViewModel)
-        Route.Notification.base -> NotificationTopBar(followLists, scaffoldState, accountViewModel)
-        else -> MainTopBar(scaffoldState, accountViewModel)
+        Route.Home.base -> HomeTopBar(followLists, scaffoldState, accountViewModel, nav)
+        Route.Video.base -> StoriesTopBar(followLists, scaffoldState, accountViewModel, nav)
+        Route.Notification.base -> NotificationTopBar(followLists, scaffoldState, accountViewModel, nav)
+        else -> MainTopBar(scaffoldState, accountViewModel, nav)
     }
 }
 
 @Composable
-fun StoriesTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
-    GenericTopBar(scaffoldState, accountViewModel) { accountViewModel ->
+fun NoTopBar() {
+}
+
+@Composable
+fun StoriesTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    GenericTopBar(scaffoldState, accountViewModel, nav) { accountViewModel ->
         val accountState by accountViewModel.accountLiveData.observeAsState()
 
         val list by remember(accountState) {
@@ -145,8 +152,8 @@ fun StoriesTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState
 }
 
 @Composable
-fun HomeTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
-    GenericTopBar(scaffoldState, accountViewModel) { accountViewModel ->
+fun HomeTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    GenericTopBar(scaffoldState, accountViewModel, nav) { accountViewModel ->
         val accountState by accountViewModel.accountLiveData.observeAsState()
 
         val list by remember(accountState) {
@@ -166,8 +173,8 @@ fun HomeTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, a
 }
 
 @Composable
-fun NotificationTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
-    GenericTopBar(scaffoldState, accountViewModel) { accountViewModel ->
+fun NotificationTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    GenericTopBar(scaffoldState, accountViewModel, nav) { accountViewModel ->
         val accountState by accountViewModel.accountLiveData.observeAsState()
 
         val list by remember(accountState) {
@@ -187,15 +194,15 @@ fun NotificationTopBar(followLists: FollowListViewModel, scaffoldState: Scaffold
 }
 
 @Composable
-fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel) {
-    GenericTopBar(scaffoldState, accountViewModel) {
+fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    GenericTopBar(scaffoldState, accountViewModel, nav) {
         AmethystIcon()
     }
 }
 
 @OptIn(coil.annotation.ExperimentalCoilApi::class)
 @Composable
-fun GenericTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel, content: @Composable (AccountViewModel) -> Unit) {
+fun GenericTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel, nav: (String) -> Unit, content: @Composable (AccountViewModel) -> Unit) {
     val coroutineScope = rememberCoroutineScope()
 
     var wantsToEditRelays by remember {
@@ -203,10 +210,10 @@ fun GenericTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewMod
     }
 
     if (wantsToEditRelays) {
-        NewRelayListView({ wantsToEditRelays = false }, accountViewModel)
+        NewRelayListView({ wantsToEditRelays = false }, accountViewModel, nav = nav)
     }
 
-    Column() {
+    Column(modifier = Modifier.height(50.dp)) {
         TopAppBar(
             elevation = 0.dp,
             backgroundColor = MaterialTheme.colors.surface,
@@ -336,7 +343,7 @@ private fun LoggedInUserPictureDrawer(
     val accountUserState by accountViewModel.account.userProfile().live().metadata.observeAsState()
 
     val pubkeyHex = remember { accountUserState?.user?.pubkeyHex ?: "" }
-    val profilePicture = remember(accountUserState) { ResizeImage(accountUserState?.user?.profilePicture(), 34.dp) }
+    val profilePicture = remember(accountUserState) { accountUserState?.user?.profilePicture() }
 
     IconButton(
         onClick = onClick,

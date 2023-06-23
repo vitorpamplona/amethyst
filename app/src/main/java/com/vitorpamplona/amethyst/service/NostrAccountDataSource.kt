@@ -80,6 +80,16 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
         )
     }
 
+    fun createAccountLastPostsListFilter(): TypedFilter {
+        return TypedFilter(
+            types = COMMON_FEED_TYPES,
+            filter = JsonFilter(
+                authors = listOf(account.userProfile().pubkeyHex),
+                limit = 400
+            )
+        )
+    }
+
     fun createNotificationFilter() = TypedFilter(
         types = COMMON_FEED_TYPES,
         filter = JsonFilter(
@@ -88,6 +98,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                 PollNoteEvent.kind,
                 ReactionEvent.kind,
                 RepostEvent.kind,
+                GenericRepostEvent.kind,
                 ReportEvent.kind,
                 LnZapEvent.kind,
                 LnZapPaymentResponseEvent.kind,
@@ -112,7 +123,8 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
             createNotificationFilter(),
             createAccountReportsFilter(),
             createAccountAcceptedAwardsFilter(),
-            createAccountBookmarkListFilter()
+            createAccountBookmarkListFilter(),
+            createAccountLastPostsListFilter()
         ).ifEmpty { null }
     }
 

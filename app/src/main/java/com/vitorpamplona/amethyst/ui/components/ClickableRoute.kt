@@ -275,9 +275,10 @@ private fun RenderUserAsClickableText(
         CreateClickableTextWithEmoji(
             clickablePart = it,
             suffix = addedCharts,
-            tags = userTags,
+            maxLines = 1,
             route = route,
-            nav = nav
+            nav = nav,
+            tags = userTags
         )
     }
 }
@@ -286,24 +287,38 @@ private fun RenderUserAsClickableText(
 fun CreateClickableText(
     clickablePart: String,
     suffix: String,
+    maxLines: Int = Int.MAX_VALUE,
     overrideColor: Color? = null,
     fontWeight: FontWeight = FontWeight.Normal,
     route: String,
     nav: (String) -> Unit
 ) {
-    ClickableText(
-        text = buildAnnotatedString {
-            withStyle(
-                LocalTextStyle.current.copy(color = overrideColor ?: MaterialTheme.colors.primary, fontWeight = fontWeight).toSpanStyle()
-            ) {
+    val currentStyle = LocalTextStyle.current
+    val primaryColor = MaterialTheme.colors.primary
+    val onBackgroundColor = MaterialTheme.colors.onBackground
+
+    val clickablePartStyle = remember(primaryColor, overrideColor) {
+        currentStyle.copy(color = overrideColor ?: primaryColor, fontWeight = fontWeight).toSpanStyle()
+    }
+
+    val nonClickablePartStyle = remember(onBackgroundColor, overrideColor) {
+        currentStyle.copy(color = overrideColor ?: onBackgroundColor, fontWeight = fontWeight).toSpanStyle()
+    }
+
+    val text = remember(clickablePartStyle, nonClickablePartStyle, clickablePart, suffix) {
+        buildAnnotatedString {
+            withStyle(clickablePartStyle) {
                 append(clickablePart)
             }
-            withStyle(
-                LocalTextStyle.current.copy(color = overrideColor ?: MaterialTheme.colors.onBackground, fontWeight = fontWeight).toSpanStyle()
-            ) {
+            withStyle(nonClickablePartStyle) {
                 append(suffix)
             }
-        },
+        }
+    }
+
+    ClickableText(
+        text = text,
+        maxLines = maxLines,
         onClick = { nav(route) }
     )
 }
@@ -410,14 +425,17 @@ fun CreateTextWithEmoji(
             modifier = modifier
         )
     } else {
-        val style = LocalTextStyle.current.merge(
-            TextStyle(
-                color = textColor,
-                textAlign = textAlign,
-                fontWeight = fontWeight,
-                fontSize = fontSize
-            )
-        ).toSpanStyle()
+        val currentStyle = LocalTextStyle.current
+        val style = remember(currentStyle) {
+            currentStyle.merge(
+                TextStyle(
+                    color = textColor,
+                    textAlign = textAlign,
+                    fontWeight = fontWeight,
+                    fontSize = fontSize
+                )
+            ).toSpanStyle()
+        }
 
         InLineIconRenderer(emojiList, style, maxLines, overflow, modifier)
     }
@@ -426,6 +444,7 @@ fun CreateTextWithEmoji(
 @Composable
 fun CreateClickableTextWithEmoji(
     clickablePart: String,
+    maxLines: Int = Int.MAX_VALUE,
     tags: ImmutableListOfLists<String>?,
     style: TextStyle,
     onClick: (Int) -> Unit
@@ -448,29 +467,37 @@ fun CreateClickableTextWithEmoji(
 
     if (emojiList.isEmpty()) {
         ClickableText(
-            AnnotatedString(clickablePart),
+            text = AnnotatedString(clickablePart),
             style = style,
+            maxLines = maxLines,
             onClick = onClick
         )
     } else {
-        ClickableInLineIconRenderer(emojiList, style.toSpanStyle()) {
+        ClickableInLineIconRenderer(emojiList, maxLines, style.toSpanStyle()) {
             onClick(it)
         }
     }
 }
 
+@Immutable
+data class DoubleEmojiList(
+    val part1: ImmutableList<Renderable>,
+    val part2: ImmutableList<Renderable>
+)
+
 @Composable
 fun CreateClickableTextWithEmoji(
     clickablePart: String,
     suffix: String,
-    tags: ImmutableListOfLists<String>?,
+    maxLines: Int = Int.MAX_VALUE,
     overrideColor: Color? = null,
     fontWeight: FontWeight = FontWeight.Normal,
     route: String,
-    nav: (String) -> Unit
+    nav: (String) -> Unit,
+    tags: ImmutableListOfLists<String>?
 ) {
     var emojiLists by remember(clickablePart) {
-        mutableStateOf<Pair<ImmutableList<Renderable>, ImmutableList<Renderable>>?>(null)
+        mutableStateOf<DoubleEmojiList?>(null)
     }
 
     LaunchedEffect(key1 = clickablePart) {
@@ -483,20 +510,28 @@ fun CreateClickableTextWithEmoji(
                 val newEmojiList2 = assembleAnnotatedList(suffix, emojis)
 
                 if (newEmojiList1.isNotEmpty() || newEmojiList2.isNotEmpty()) {
-                    emojiLists = Pair(newEmojiList1.toImmutableList(), newEmojiList2.toImmutableList())
+                    emojiLists = DoubleEmojiList(newEmojiList1.toImmutableList(), newEmojiList2.toImmutableList())
                 }
             }
         }
     }
 
     if (emojiLists == null) {
-        CreateClickableText(clickablePart, suffix, overrideColor, fontWeight, route, nav)
+        CreateClickableText(clickablePart, suffix, maxLines, overrideColor, fontWeight, route, nav)
     } else {
-        ClickableInLineIconRenderer(emojiLists!!.first, LocalTextStyle.current.copy(color = overrideColor ?: MaterialTheme.colors.primary, fontWeight = fontWeight).toSpanStyle()) {
+        ClickableInLineIconRenderer(
+            emojiLists!!.part1,
+            maxLines,
+            LocalTextStyle.current.copy(color = overrideColor ?: MaterialTheme.colors.primary, fontWeight = fontWeight).toSpanStyle()
+        ) {
             nav(route)
         }
 
-        InLineIconRenderer(emojiLists!!.second, LocalTextStyle.current.copy(color = overrideColor ?: MaterialTheme.colors.onBackground, fontWeight = fontWeight).toSpanStyle())
+        InLineIconRenderer(
+            emojiLists!!.part2,
+            LocalTextStyle.current.copy(color = overrideColor ?: MaterialTheme.colors.onBackground, fontWeight = fontWeight).toSpanStyle(),
+            maxLines
+        )
     }
 }
 
@@ -521,7 +556,12 @@ class TextType(val text: String) : Renderable()
 class ImageUrlType(val url: String) : Renderable()
 
 @Composable
-fun ClickableInLineIconRenderer(wordsInOrder: ImmutableList<Renderable>, style: SpanStyle, onClick: (Int) -> Unit) {
+fun ClickableInLineIconRenderer(
+    wordsInOrder: ImmutableList<Renderable>,
+    maxLines: Int = Int.MAX_VALUE,
+    style: SpanStyle,
+    onClick: (Int) -> Unit
+) {
     val inlineContent = wordsInOrder.mapIndexedNotNull { idx, value ->
         if (value is ImageUrlType) {
             Pair(
@@ -574,6 +614,7 @@ fun ClickableInLineIconRenderer(wordsInOrder: ImmutableList<Renderable>, style: 
         text = annotatedText,
         modifier = pressIndicator,
         inlineContent = inlineContent,
+        maxLines = maxLines,
         onTextLayout = {
             layoutResult.value = it
         }

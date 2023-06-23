@@ -82,7 +82,6 @@ import androidx.core.graphics.get
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.request.SuccessResult
-import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -93,13 +92,17 @@ import com.vitorpamplona.amethyst.service.model.AppDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
 import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
 import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
+import com.vitorpamplona.amethyst.service.model.BaseTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.EventInterface
 import com.vitorpamplona.amethyst.service.model.FileHeaderEvent
 import com.vitorpamplona.amethyst.service.model.FileStorageHeaderEvent
+import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
 import com.vitorpamplona.amethyst.service.model.HighlightEvent
+import com.vitorpamplona.amethyst.service.model.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.Participant
 import com.vitorpamplona.amethyst.service.model.PeopleListEvent
@@ -119,7 +122,6 @@ import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.LoadThumbAndThenVideoView
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
-import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
@@ -140,8 +142,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Following
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -155,7 +159,6 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import nostr.postr.toNpub
 import java.io.File
 import java.math.BigDecimal
@@ -329,7 +332,7 @@ fun LoadedNoteCompose(
 }
 
 @Composable
-private fun WatchForReports(
+fun WatchForReports(
     note: Note,
     accountViewModel: AccountViewModel,
     onChange: (Boolean, Boolean, Set<Note>) -> Unit
@@ -376,7 +379,7 @@ fun NormalNote(
     val channelHex = remember { baseNote.channelHex() }
 
     if ((noteEvent is ChannelCreateEvent || noteEvent is ChannelMetadataEvent) && channelHex != null) {
-        ChannelHeader(channelHex = channelHex, accountViewModel = accountViewModel, nav = nav)
+        ChannelHeader(channelHex = channelHex, showVideo = !makeItShort, showBottomDiviser = true, accountViewModel = accountViewModel, nav = nav)
     } else if (noteEvent is BadgeDefinitionEvent) {
         BadgeDisplay(baseNote = baseNote)
     } else if (noteEvent is FileHeaderEvent) {
@@ -423,11 +426,11 @@ private fun CheckNewAndRenderNote(
     LaunchedEffect(key1 = routeForLastRead, key2 = parentBackgroundColor?.value) {
         launch(Dispatchers.IO) {
             routeForLastRead?.let {
-                val lastTime = NotificationCache.load(it)
+                val lastTime = accountViewModel.account.loadLastRead(it)
 
                 val createdAt = baseNote.createdAt()
                 if (createdAt != null) {
-                    NotificationCache.markAsRead(it, createdAt)
+                    accountViewModel.account.markAsRead(it, createdAt)
 
                     val isNew = createdAt > lastTime
 
@@ -519,7 +522,7 @@ private fun RenderNoteWithReactions(
 
     val showSecondRow by remember {
         derivedStateOf {
-            baseNote.event !is RepostEvent && !isBoostedNote && !isQuotedNote
+            baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent && !isBoostedNote && !isQuotedNote
         }
     }
 
@@ -553,7 +556,7 @@ private fun RenderNoteWithReactions(
             )
         }
 
-        if (!makeItShort && baseNote.event !is RepostEvent) {
+        if (!makeItShort && baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent) {
             ReactionsRow(
                 baseNote = baseNote,
                 showReactionDetail = notBoostedNorQuote,
@@ -561,7 +564,7 @@ private fun RenderNoteWithReactions(
                 nav = nav
             )
         } else {
-            if (!isBoostedNote && baseNote.event !is RepostEvent) {
+            if (!isBoostedNote && baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent) {
                 Spacer(modifier = Modifier.height(10.dp))
             }
         }
@@ -647,6 +650,10 @@ private fun RenderNoteRow(
             RenderRepost(baseNote, backgroundColor, accountViewModel, nav)
         }
 
+        is GenericRepostEvent -> {
+            RenderRepost(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
         is ReportEvent -> {
             RenderReport(baseNote, backgroundColor, accountViewModel, nav)
         }
@@ -673,6 +680,10 @@ private fun RenderNoteRow(
 
         is PinListEvent -> {
             RenderPinListEvent(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
+        is LiveActivitiesEvent -> {
+            RenderLiveActivityEvent(baseNote, accountViewModel, nav)
         }
 
         is PrivateDmEvent -> {
@@ -725,6 +736,10 @@ fun routeFor(note: Note, loggedIn: User): String? {
     val noteEvent = note.event
 
     if (noteEvent is ChannelMessageEvent || noteEvent is ChannelCreateEvent || noteEvent is ChannelMetadataEvent) {
+        note.channelHex()?.let {
+            return "Channel/$it"
+        }
+    } else if (noteEvent is LiveActivitiesEvent || noteEvent is LiveActivitiesChatMessageEvent) {
         note.channelHex()?.let {
             return "Channel/$it"
         }
@@ -947,7 +962,7 @@ fun RenderAppDefinition(
 
                     Row(
                         modifier = Modifier
-                            .height(35.dp)
+                            .height(Size35dp)
                             .padding(bottom = 3.dp)
                     ) {
                     }
@@ -1184,7 +1199,7 @@ fun DisplayRelaySet(
                     )
 
                     Column(modifier = Modifier.padding(start = 10.dp)) {
-                        RelayOptionsAction(relay, accountViewModel)
+                        RelayOptionsAction(relay, accountViewModel, nav)
                     }
                 }
             }
@@ -1219,7 +1234,8 @@ fun DisplayRelaySet(
 @Composable
 private fun RelayOptionsAction(
     relay: String,
-    accountViewModel: AccountViewModel
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
 ) {
     val userStateRelayInfo by accountViewModel.account.userProfile().live().relayInfo.observeAsState()
     val isCurrentlyOnTheUsersList by remember(userStateRelayInfo) {
@@ -1233,7 +1249,7 @@ private fun RelayOptionsAction(
     }
 
     if (wantsToAddRelay.isNotEmpty()) {
-        NewRelayListView({ wantsToAddRelay = "" }, accountViewModel, wantsToAddRelay)
+        NewRelayListView({ wantsToAddRelay = "" }, accountViewModel, wantsToAddRelay, nav = nav)
     }
 
     if (isCurrentlyOnTheUsersList) {
@@ -1266,8 +1282,14 @@ fun DisplayPeopleList(
         members.take(3)
     }
 
+    val name by remember {
+        derivedStateOf {
+            "#${noteEvent.dTag()}"
+        }
+    }
+
     Text(
-        text = "#${noteEvent.dTag()}",
+        text = name,
         fontWeight = FontWeight.Bold,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
@@ -1354,7 +1376,7 @@ private fun RenderBadgeAward(
         awardees.take(100).forEach { user ->
             Row(
                 modifier = Modifier
-                    .size(size = 35.dp)
+                    .size(size = Size35dp)
                     .clickable {
                         nav("User/${user.pubkeyHex}")
                     },
@@ -1363,13 +1385,13 @@ private fun RenderBadgeAward(
                 UserPicture(
                     baseUser = user,
                     accountViewModel = accountViewModel,
-                    size = 35.dp
+                    size = Size35dp
                 )
             }
         }
 
         if (awardees.size > 100) {
-            Text(" and ${awardees.size - 100} others")
+            Text(" and ${awardees.size - 100} others", maxLines = 1)
         }
     }
 
@@ -1411,12 +1433,13 @@ private fun RenderReaction(
         if (note.event?.content() == "+") "❤" else note.event?.content() ?: ""
 
     Text(
-        text = refactorReactionText
+        text = refactorReactionText,
+        maxLines = 1
     )
 }
 
 @Composable
-private fun RenderRepost(
+fun RenderRepost(
     note: Note,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
@@ -1633,7 +1656,8 @@ private fun ReplyRow(
 
     val showChannelReply by remember {
         derivedStateOf {
-            noteEvent is ChannelMessageEvent && (note.replyTo != null || noteEvent.hasAnyTaggedUser())
+            (noteEvent is ChannelMessageEvent && (note.replyTo != null || noteEvent.hasAnyTaggedUser())) ||
+                (noteEvent is LiveActivitiesChatMessageEvent && (note.replyTo != null || noteEvent.hasAnyTaggedUser()))
         }
     }
 
@@ -1648,11 +1672,19 @@ private fun ReplyRow(
     } else if (showChannelReply) {
         val channelHex = note.channelHex()
         channelHex?.let {
-            val replies = remember { note.replyTo?.toImmutableList() }
-            val mentions = remember { (note.event as? ChannelMessageEvent)?.mentions()?.toImmutableList() ?: persistentListOf() }
+            ChannelHeader(
+                channelHex = channelHex,
+                showVideo = false,
+                showBottomDiviser = false,
+                modifier = remember { Modifier.padding(vertical = 5.dp) },
+                accountViewModel = accountViewModel,
+                nav = nav
+            )
 
-            ReplyInformationChannel(replies, mentions, it, accountViewModel, nav)
-            Spacer(modifier = Modifier.height(5.dp))
+            val replies = remember { note.replyTo?.toImmutableList() }
+            val mentions = remember { (note.event as? BaseTextNoteEvent)?.mentions()?.toImmutableList() ?: persistentListOf() }
+
+            ReplyInformationChannel(replies, mentions, accountViewModel, nav)
         }
     }
 }
@@ -1749,11 +1781,12 @@ private fun FirstUserInfoRow(
             NoteUsernameDisplay(baseNote, remember { Modifier.weight(1f) })
         }
 
-        if (eventNote is RepostEvent) {
+        if (eventNote is RepostEvent || eventNote is GenericRepostEvent) {
             Text(
                 "  ${stringResource(id = R.string.boosted)}",
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colors.placeholderText
+                color = MaterialTheme.colors.placeholderText,
+                maxLines = 1
             )
         } else {
             DisplayFollowingHashtagsInPost(eventNote, accountViewModel, nav)
@@ -1807,7 +1840,7 @@ fun TimeAgo(time: Long) {
     }
 
     Text(
-        timeStr,
+        text = timeStr,
         color = MaterialTheme.colors.placeholderText,
         maxLines = 1
     )
@@ -1823,7 +1856,7 @@ private fun DrawAuthorImages(baseNote: Note, accountViewModel: AccountViewModel,
         Box(modifier = modifier, contentAlignment = Alignment.BottomEnd) {
             NoteAuthorPicture(baseNote, nav, accountViewModel, 55.dp)
 
-            if (baseNote.event is RepostEvent) {
+            if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
                 RepostNoteAuthorPicture(baseNote, accountViewModel, nav)
             }
 
@@ -1834,15 +1867,15 @@ private fun DrawAuthorImages(baseNote: Note, accountViewModel: AccountViewModel,
             }
         }
 
-        if (baseNote.event is RepostEvent) {
+        if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
             val baseReply = remember {
                 baseNote.replyTo?.lastOrNull()
             }
             baseReply?.let {
-                RelayBadges(it)
+                RelayBadges(it, accountViewModel, nav)
             }
         } else {
-            RelayBadges(baseNote)
+            RelayBadges(baseNote, accountViewModel, nav)
         }
     }
 }
@@ -1893,7 +1926,7 @@ private fun ChannelNotePicture(baseChannel: Channel) {
     }
 
     val model = remember(channelState) {
-        ResizeImage(channel.profilePicture(), 30.dp)
+        channel.profilePicture()
     }
 
     Box(boxModifier) {
@@ -1965,51 +1998,76 @@ fun DisplayHighlight(
         nav
     )
 
-    var userBase by remember { mutableStateOf<User?>(null) }
+    authorHex?.let {
+        DisplayQuoteAuthor(authorHex, url, nav)
+    }
+}
 
-    LaunchedEffect(Unit) {
-        withContext(Dispatchers.IO) {
-            if (authorHex != null) {
+@Composable
+@OptIn(ExperimentalLayoutApi::class)
+private fun DisplayQuoteAuthor(
+    authorHex: String,
+    url: String?,
+    nav: (String) -> Unit
+) {
+    var userBase by remember { mutableStateOf<User?>(LocalCache.getUserIfExists(authorHex)) }
+
+    if (userBase == null) {
+        LaunchedEffect(Unit) {
+            launch(Dispatchers.IO) {
                 userBase = LocalCache.checkGetOrCreateUser(authorHex)
             }
         }
     }
 
-    FlowRow() {
-        authorHex?.let { authorHex ->
-            userBase?.let { userBase ->
-                val userState by userBase.live().metadata.observeAsState()
-                val route = remember { "User/${userBase.pubkeyHex}" }
-                val userDisplayName = remember(userState) { userState?.user?.toBestDisplayName() }
-                val userTags = remember(userState) { userState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists() }
-
-                if (userDisplayName != null) {
-                    CreateClickableTextWithEmoji(
-                        clickablePart = userDisplayName,
-                        suffix = " ",
-                        tags = userTags,
-                        route = route,
-                        nav = nav
-                    )
-                }
-            }
+    Row() {
+        userBase?.let { userBase ->
+            LoadAndDisplayUser(userBase, nav)
         }
 
         url?.let { url ->
-            val validatedUrl = remember {
-                try {
-                    URL(url)
-                } catch (e: Exception) {
-                    Log.w("Note Compose", "Invalid URI: $url")
-                    null
-                }
-            }
-
-            validatedUrl?.host?.let { host ->
-                Text("on ")
-                ClickableUrl(urlText = host, url = url)
-            }
+            LoadAndDisplayUrl(url)
         }
+    }
+}
+
+@Composable
+private fun LoadAndDisplayUrl(url: String) {
+    val validatedUrl = remember {
+        try {
+            URL(url)
+        } catch (e: Exception) {
+            Log.w("Note Compose", "Invalid URI: $url")
+            null
+        }
+    }
+
+    validatedUrl?.host?.let { host ->
+        Text(remember { "on " }, maxLines = 1)
+        ClickableUrl(urlText = host, url = url)
+    }
+}
+
+@Composable
+private fun LoadAndDisplayUser(
+    userBase: User,
+    nav: (String) -> Unit
+) {
+    val userState by userBase.live().metadata.observeAsState()
+    val route = remember { "User/${userBase.pubkeyHex}" }
+    val userDisplayName = remember(userState) { userState?.user?.toBestDisplayName() }
+    val userTags =
+        remember(userState) { userState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists() }
+
+    if (userDisplayName != null) {
+        CreateClickableTextWithEmoji(
+            clickablePart = userDisplayName,
+            suffix = " ",
+            maxLines = 1,
+            route = route,
+            nav = nav,
+            tags = userTags
+        )
     }
 }
 
@@ -2046,7 +2104,8 @@ fun DisplayFollowingHashtagsInPost(
                         color = MaterialTheme.colors.primary.copy(
                             alpha = 0.52f
                         )
-                    )
+                    ),
+                    maxLines = 1
                 )
             }
         }
@@ -2095,7 +2154,8 @@ fun DisplayPoW(
             alpha = 0.52f
         ),
         fontSize = 14.sp,
-        fontWeight = FontWeight.Bold
+        fontWeight = FontWeight.Bold,
+        maxLines = 1
     )
 }
 
@@ -2189,7 +2249,8 @@ private fun RenderPledgeAmount(
 
     Text(
         text = reward,
-        color = MaterialTheme.colors.placeholderText
+        color = MaterialTheme.colors.placeholderText,
+        maxLines = 1
     )
 }
 
@@ -2396,7 +2457,7 @@ fun AudioTrackHeader(noteEvent: AudioTrackEvent, accountViewModel: AccountViewMo
     var participantUsers by remember { mutableStateOf<List<Pair<Participant, User>>>(emptyList()) }
 
     LaunchedEffect(key1 = participants) {
-        withContext(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             participantUsers = participants.mapNotNull { part -> LocalCache.checkGetOrCreateUser(part.key)?.let { Pair(part, it) } }
         }
     }
@@ -2456,6 +2517,80 @@ fun AudioTrackHeader(noteEvent: AudioTrackEvent, accountViewModel: AccountViewMo
                             videoUri = media,
                             noteEvent.subject()
                         )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun RenderLiveActivityEvent(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    val noteEvent = baseNote.event as? LiveActivitiesEvent ?: return
+
+    val media = remember { noteEvent.streaming() }
+    val cover = remember { noteEvent.image() }
+    val subject = remember { noteEvent.title() }
+    val content = remember { noteEvent.summary() }
+    val participants = remember { noteEvent.participants() }
+
+    var participantUsers by remember { mutableStateOf<List<Pair<Participant, User>>>(emptyList()) }
+
+    LaunchedEffect(key1 = participants) {
+        launch(Dispatchers.IO) {
+            participantUsers = participants.mapNotNull { part ->
+                LocalCache.checkGetOrCreateUser(part.key)?.let { Pair(part, it) }
+            }
+        }
+    }
+
+    Row(modifier = Modifier.padding(top = 5.dp)) {
+        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Row() {
+                subject?.let {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)) {
+                        Text(
+                            text = it,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 3,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
+
+            participantUsers.forEach {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .padding(top = 5.dp, start = 10.dp, end = 10.dp)
+                        .clickable {
+                            nav("User/${it.second.pubkeyHex}")
+                        }
+                ) {
+                    UserPicture(it.second, 25.dp, accountViewModel)
+                    Spacer(Modifier.width(5.dp))
+                    UsernameDisplay(it.second, Modifier.weight(1f))
+                    Spacer(Modifier.width(5.dp))
+                    it.first.role?.let {
+                        Text(
+                            text = it.capitalize(Locale.ROOT),
+                            color = MaterialTheme.colors.placeholderText,
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
+
+            media?.let { media ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(10.dp)
+                ) {
+                    VideoView(
+                        videoUri = media,
+                        description = subject
+                    )
                 }
             }
         }
@@ -2556,7 +2691,7 @@ private fun CreateImageHeader(
 }
 
 @Composable
-private fun RelayBadges(baseNote: Note) {
+private fun RelayBadges(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     var showShowMore by remember { mutableStateOf(false) }
 
@@ -2576,12 +2711,12 @@ private fun RelayBadges(baseNote: Note) {
         }
     }
 
-    Spacer(remember { Modifier.height(10.dp) })
+    Spacer(DoubleVertSpacer)
 
     if (expanded) {
-        VerticalRelayPanelWithFlow(lazyRelayList)
+        VerticalRelayPanelWithFlow(lazyRelayList, accountViewModel, nav)
     } else {
-        VerticalRelayPanelWithFlow(shortRelayList)
+        VerticalRelayPanelWithFlow(shortRelayList, accountViewModel, nav)
     }
 
     if (showShowMore && !expanded) {
@@ -2610,12 +2745,14 @@ private fun WatchRelayLists(baseNote: Note, onListChanges: (ImmutableList<String
 @Composable
 @Stable
 private fun VerticalRelayPanelWithFlow(
-    relays: ImmutableList<String>
+    relays: ImmutableList<String>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
 ) {
     // FlowRow Seems to be a lot faster than LazyVerticalGrid
     FlowRow() {
         relays.forEach { url ->
-            RenderRelay(url)
+            RenderRelay(url, accountViewModel, nav)
         }
     }
 }
@@ -2685,7 +2822,6 @@ fun NoteAuthorPicture(
 
         RobohashAsyncImage(
             robot = "authornotfound",
-            robotSize = size,
             contentDescription = stringResource(R.string.unknown_author),
             modifier = nullModifier
         )
@@ -2702,8 +2838,14 @@ fun UserPicture(
     size: Dp,
     pictureModifier: Modifier = Modifier
 ) {
+    val route by remember {
+        derivedStateOf {
+            "User/${user.pubkeyHex}"
+        }
+    }
+
     UserPicture(user, size, accountViewModel, pictureModifier) {
-        nav("User/${it.pubkeyHex}")
+        nav(route)
     }
 }
 
@@ -2780,9 +2922,7 @@ fun UserPicture(
     Box(myBoxModifier, contentAlignment = TopEnd) {
         RobohashAsyncImageProxy(
             robot = userHex,
-            model = remember(userPicture) {
-                ResizeImage(userPicture, size)
-            },
+            model = userPicture,
             contentDescription = stringResource(id = R.string.profile_image),
             modifier = myImageModifier
         )
@@ -2793,7 +2933,7 @@ fun UserPicture(
 
 @Composable
 private fun ObserveAndDisplayFollowingMark(userHex: String, iconSize: Dp, accountViewModel: AccountViewModel) {
-    val accountFollowsState by accountViewModel.account.userProfile().live().follows.observeAsState()
+    val accountFollowsState by accountViewModel.userFollows.observeAsState()
 
     var showFollowingMark by remember { mutableStateOf(false) }
 
@@ -2826,7 +2966,7 @@ private fun FollowingIcon(iconSize: Dp) {
         val myIconBackgroundModifier = remember {
             Modifier
                 .clip(CircleShape)
-                .fillMaxSize(0.6f)
+                .size(iconSize.times(0.6f))
                 .drawBehind { drawRect(backgroundColor) }
         }
 

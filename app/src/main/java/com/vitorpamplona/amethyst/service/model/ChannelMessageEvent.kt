@@ -35,7 +35,8 @@ class ChannelMessageEvent(
             zapReceiver: String?,
             privateKey: ByteArray,
             createdAt: Long = Date().time / 1000,
-            markAsSensitive: Boolean
+            markAsSensitive: Boolean,
+            zapRaiserAmount: Long?
         ): ChannelMessageEvent {
             val content = message
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
@@ -53,6 +54,9 @@ class ChannelMessageEvent(
             }
             if (markAsSensitive) {
                 tags.add(listOf("content-warning", ""))
+            }
+            zapRaiserAmount?.let {
+                tags.add(listOf("zapraiser", "$it"))
             }
 
             val id = generateId(pubKey, createdAt, kind, tags, content)

@@ -36,7 +36,7 @@ class RepostEvent(
             val replyToAuthor = listOf("p", boostedPost.pubKey())
 
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
-            var tags: List<List<String>> = boostedPost.tags().plus(listOf(replyToPost, replyToAuthor))
+            var tags: List<List<String>> = listOf(replyToPost, replyToAuthor)
 
             if (boostedPost is AddressableEvent) {
                 tags = tags + listOf(listOf("a", boostedPost.address().toTag()))

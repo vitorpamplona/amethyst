@@ -12,6 +12,10 @@ object UserProfileNewThreadFeedFilter : FeedFilter<Note>() {
     var account: Account? = null
     var user: User? = null
 
+    override fun feedKey(): String {
+        return account?.userProfile()?.pubkeyHex + "-" + user?.pubkeyHex
+    }
+
     fun loadUserProfile(accountLoggedIn: Account, user: User) {
         account = accountLoggedIn
         this.user = user
