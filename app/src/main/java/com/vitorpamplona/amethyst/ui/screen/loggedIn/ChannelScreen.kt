@@ -517,11 +517,10 @@ fun ChannelHeader(
     nav: (String) -> Unit
 ) {
     var baseChannel by remember { mutableStateOf<Channel?>(LocalCache.channels[channelHex]) }
-    val scope = rememberCoroutineScope()
 
     if (baseChannel == null) {
         LaunchedEffect(key1 = channelHex) {
-            scope.launch(Dispatchers.IO) {
+            launch(Dispatchers.IO) {
                 baseChannel = LocalCache.checkGetOrCreateChannel(channelHex)
             }
         }
@@ -548,30 +547,26 @@ fun ChannelHeader(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val channelState by baseChannel.live.observeAsState()
-    val channel = remember(channelState) { channelState?.channel } ?: return
-
-    val context = LocalContext.current.applicationContext
-
     Column(
-        Modifier.clickable {
+        Modifier.fillMaxWidth().clickable {
             nav("Channel/${baseChannel.idHex}")
         }
     ) {
-        if (channel is LiveActivitiesChannel) {
-            val streamingUrl by remember(channelState) {
-                derivedStateOf {
-                    channel.info?.streaming()
-                }
-            }
+        val channelState by baseChannel.live.observeAsState()
+        val channel = remember(channelState) { channelState?.channel } ?: return
 
-            if (streamingUrl != null && showVideo) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.heightIn(max = 300.dp)) {
-                    VideoView(
-                        videoUri = streamingUrl!!,
-                        description = null
-                    )
-                }
+        val streamingUrl by remember(channelState) {
+            derivedStateOf {
+                (channel as? LiveActivitiesChannel)?.info?.streaming()
+            }
+        }
+
+        if (streamingUrl != null && showVideo) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = remember { Modifier.heightIn(max = 300.dp) }) {
+                VideoView(
+                    videoUri = streamingUrl!!,
+                    description = null
+                )
             }
         }
 
@@ -580,7 +575,7 @@ fun ChannelHeader(
                 RobohashAsyncImageProxy(
                     robot = channel.idHex,
                     model = channel.profilePicture(),
-                    contentDescription = context.getString(R.string.profile_image),
+                    contentDescription = stringResource(R.string.profile_image),
                     modifier = Modifier
                         .width(Size35dp)
                         .height(Size35dp)
@@ -681,35 +676,25 @@ private fun LiveChannelActionOptions(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val isMe by remember(accountViewModel) {
-        derivedStateOf {
-            channel.creator == accountViewModel.account.userProfile()
-        }
-    }
-
     val isLive by remember(channel) {
         derivedStateOf {
             channel.info?.status() == "live"
         }
     }
 
-    if (isMe) {
-        // EditButton(accountViewModel, channel)
-    } else {
-        val note = remember(channel.idHex) {
-            LocalCache.getNoteIfExists(channel.idHex)
-        }
+    val note = remember(channel.idHex) {
+        LocalCache.getNoteIfExists(channel.idHex)
+    }
 
-        note?.let {
-            if (isLive) {
-                LiveFlag()
-                Spacer(modifier = StdHorzSpacer)
-            }
-
-            LikeReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
+    note?.let {
+        if (isLive) {
+            LiveFlag()
             Spacer(modifier = StdHorzSpacer)
-            ZapReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
         }
+
+        LikeReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
+        Spacer(modifier = StdHorzSpacer)
+        ZapReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
     }
 }
 
