@@ -11,6 +11,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.model.Event
+import com.vitorpamplona.amethyst.service.model.HTTPAuthorizationEvent
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okio.BufferedSink
@@ -142,13 +143,7 @@ object ImageUploader {
     }
 
     fun NIP98Header(url: String, method: String, body: String): String {
-        var hash = ""
-        if (body != "") {
-            val sha256 = MessageDigest.getInstance("SHA-256")
-            hash = sha256.digest(body.toByteArray()).toHexKey()
-        }
-        var tags = listOf(listOf("u", url), listOf("method", method), listOf("payload", hash))
-        var noteJson = (Event.create(account.loggedIn.privKey!!, 27235, tags, "")).toJson()
+        val noteJson = account.createHTTPAuthorization(url, method, body)?.toJson() ?: ""
         val encodedNIP98Event: String = Base64.getEncoder().encodeToString(noteJson.toByteArray())
         return "Nostr " + encodedNIP98Event
     }

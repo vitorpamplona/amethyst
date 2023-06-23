@@ -24,6 +24,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import nostr.postr.Persona
 import nostr.postr.Utils
+import retrofit2.http.HTTP
 import java.math.BigDecimal
 import java.net.Proxy
 import java.util.Locale
@@ -320,6 +321,12 @@ class Account(
             Client.send(event)
             LocalCache.consume(event)
         }
+    }
+
+    fun createHTTPAuthorization(url: String, method: String, body: String? = null): HTTPAuthorizationEvent? {
+        if (!isWriteable()) return null
+
+        return HTTPAuthorizationEvent.create(url, method, body, loggedIn.privKey!!)
     }
 
     fun boost(note: Note) {
