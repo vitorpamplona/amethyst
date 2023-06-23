@@ -305,14 +305,25 @@ fun loadRelayInfo(
             object : Callback {
                 override fun onResponse(call: Call, response: Response) {
                     response.use {
-                        if (it.isSuccessful) {
-                            onInfo(RelayInformation.fromJson(it.body.string()))
-                        } else {
+                        try {
+                            if (it.isSuccessful) {
+                                onInfo(RelayInformation.fromJson(it.body.string()))
+                            } else {
+                                scope.launch {
+                                    Toast
+                                        .makeText(
+                                            context,
+                                            context.getString(R.string.an_error_ocurred_trying_to_get_relay_information, dirtyUrl),
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                }
+                            }
+                        } catch (e: Exception) {
                             scope.launch {
                                 Toast
                                     .makeText(
                                         context,
-                                        context.getString(R.string.an_error_ocurred_trying_to_get_relay_information),
+                                        context.getString(R.string.an_error_ocurred_trying_to_get_relay_information, dirtyUrl),
                                         Toast.LENGTH_SHORT
                                     ).show()
                             }
@@ -326,7 +337,7 @@ fun loadRelayInfo(
                         Toast
                             .makeText(
                                 context,
-                                context.getString(R.string.an_error_ocurred_trying_to_get_relay_information),
+                                context.getString(R.string.an_error_ocurred_trying_to_get_relay_information, dirtyUrl),
                                 Toast.LENGTH_SHORT
                             ).show()
                     }
