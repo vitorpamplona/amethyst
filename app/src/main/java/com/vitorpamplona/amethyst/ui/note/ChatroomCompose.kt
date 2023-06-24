@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
@@ -355,7 +356,7 @@ fun ChannelName(
                 channelPicture()
             }
 
-            Spacer(modifier = StdHorzSpacer)
+            Spacer(modifier = DoubleHorzSpacer)
 
             Column(
                 modifier = Modifier.fillMaxWidth(),
