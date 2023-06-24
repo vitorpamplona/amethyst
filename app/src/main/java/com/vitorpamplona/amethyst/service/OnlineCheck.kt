@@ -2,7 +2,7 @@ package com.vitorpamplona.amethyst.service
 
 import android.util.Log
 import android.util.LruCache
-import com.google.errorprone.annotations.Immutable
+import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.BuildConfig
 import okhttp3.Request
 
