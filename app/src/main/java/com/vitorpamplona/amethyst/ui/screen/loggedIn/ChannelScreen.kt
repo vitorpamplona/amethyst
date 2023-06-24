@@ -94,6 +94,7 @@ import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
+import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.screen.NostrChannelFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefreshingChatroomFeedView
@@ -518,7 +519,7 @@ fun ChannelHeader(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    var baseChannel by remember { mutableStateOf<Channel?>(LocalCache.channels[channelHex]) }
+    var baseChannel by remember { mutableStateOf(LocalCache.channels[channelHex]) }
 
     if (baseChannel == null) {
         LaunchedEffect(key1 = channelHex) {
@@ -550,9 +551,11 @@ fun ChannelHeader(
     nav: (String) -> Unit
 ) {
     Column(
-        Modifier.fillMaxWidth().clickable {
-            nav("Channel/${baseChannel.idHex}")
-        }
+        Modifier
+            .fillMaxWidth()
+            .clickable {
+                nav("Channel/${baseChannel.idHex}")
+            }
     ) {
         val channelState by baseChannel.live.observeAsState()
         val channel = remember(channelState) { channelState?.channel } ?: return
@@ -574,6 +577,15 @@ fun ChannelHeader(
 
         Column(modifier = modifier) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                channel.creator?.let {
+                    UserPicture(
+                        user = it,
+                        size = Size35dp,
+                        accountViewModel = accountViewModel,
+                        nav = nav
+                    )
+                }
+
                 RobohashAsyncImageProxy(
                     robot = channel.idHex,
                     model = channel.profilePicture(),
@@ -581,6 +593,7 @@ fun ChannelHeader(
                     modifier = Modifier
                         .width(Size35dp)
                         .height(Size35dp)
+                        .padding(start = 10.dp)
                         .clip(shape = CircleShape)
                 )
 
@@ -592,7 +605,7 @@ fun ChannelHeader(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            channel.toBestDisplayName(),
+                            channel.toBestDisplayName() + channel.idHex.split(":")[2],
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis

@@ -104,7 +104,6 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 
 @Composable
@@ -116,7 +115,7 @@ fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, nav: (Str
     if (userBase == null) {
         LaunchedEffect(userId) {
             // waits to resolve.
-            withContext(Dispatchers.IO) {
+            launch(Dispatchers.IO) {
                 val newUserBase = LocalCache.checkGetOrCreateUser(userId)
                 if (newUserBase != userBase) {
                     userBase = newUserBase

@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Divider
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,7 +38,7 @@ fun UserCompose(
             modifier = overallModifier,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            UserPicture(baseUser, nav, accountViewModel, 55.dp)
+            UserPicture(baseUser, 55.dp, accountViewModel = accountViewModel, nav = nav)
 
             Column(modifier = Modifier.padding(start = 10.dp).weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {

@@ -106,7 +106,7 @@ private fun RenderZapNote(
         },
         verticalAlignment = Alignment.CenterVertically
     ) {
-        UserPicture(baseAuthor, nav, accountViewModel, 55.dp)
+        UserPicture(baseAuthor, 55.dp, accountViewModel = accountViewModel, nav = nav)
 
         Column(
             modifier = remember {

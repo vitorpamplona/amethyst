@@ -2935,10 +2935,10 @@ private fun DisplayBlankAuthor(size: Dp, modifier: Modifier) {
 @Composable
 fun UserPicture(
     user: User,
-    nav: (String) -> Unit,
-    accountViewModel: AccountViewModel,
     size: Dp,
-    pictureModifier: Modifier = Modifier
+    pictureModifier: Modifier = remember { Modifier },
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
 ) {
     val route by remember {
         derivedStateOf {
@@ -2946,9 +2946,19 @@ fun UserPicture(
         }
     }
 
-    ClickableUserPicture(user, size, accountViewModel, pictureModifier) {
-        nav(route)
-    }
+    val scope = rememberCoroutineScope()
+
+    ClickableUserPicture(
+        baseUser = user,
+        size = size,
+        accountViewModel = accountViewModel,
+        modifier = pictureModifier,
+        onClick = {
+            scope.launch {
+                nav(route)
+            }
+        }
+    )
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -2991,7 +3001,7 @@ fun ClickableUserPicture(
     }
 
     Box(modifier = myModifier, contentAlignment = TopEnd) {
-        UserPicture(baseUser, size, accountViewModel, modifier)
+        BaseUserPicture(baseUser, size, accountViewModel, modifier)
     }
 }
 
@@ -3007,12 +3017,12 @@ fun NonClickableUserPicture(
     }
 
     Box(myBoxModifier, contentAlignment = TopEnd) {
-        UserPicture(baseUser, size, accountViewModel, modifier)
+        BaseUserPicture(baseUser, size, accountViewModel, modifier)
     }
 }
 
 @Composable
-fun UserPicture(
+fun BaseUserPicture(
     baseUser: User,
     size: Dp,
     accountViewModel: AccountViewModel,
