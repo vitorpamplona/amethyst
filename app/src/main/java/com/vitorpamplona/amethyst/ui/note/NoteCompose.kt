@@ -3155,8 +3155,10 @@ fun PictureAndFollowingMark(
 @Composable
 private fun ObserveAndDisplayFollowingMark(userHex: String, iconSize: Dp, accountViewModel: AccountViewModel) {
     val showFollowingMark by accountViewModel.userFollows.map {
-        it.user.isFollowingCached(userHex) == true || (userHex == accountViewModel.account.userProfile().pubkeyHex)
-    }.observeAsState(true)
+        it.user.isFollowingCached(userHex) || (userHex == accountViewModel.account.userProfile().pubkeyHex)
+    }.observeAsState(
+        accountViewModel.account.userProfile().isFollowingCached(userHex) || (userHex == accountViewModel.account.userProfile().pubkeyHex)
+    )
 
     if (showFollowingMark) {
         FollowingIcon(iconSize)
