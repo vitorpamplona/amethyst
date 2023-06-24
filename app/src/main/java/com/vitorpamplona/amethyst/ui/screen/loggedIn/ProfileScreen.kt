@@ -76,9 +76,6 @@ import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
 import com.vitorpamplona.amethyst.ui.components.figureOutMimeType
-import com.vitorpamplona.amethyst.ui.dal.UserProfileBookmarksFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.UserProfileConversationsFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.UserProfileNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
 import com.vitorpamplona.amethyst.ui.navigation.ShowQRDialog
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
@@ -165,33 +162,66 @@ fun PrepareViewModels(baseUser: User, accountViewModel: AccountViewModel, nav: (
         )
     )
 
+    val threadsViewModel: NostrUserProfileNewThreadsFeedViewModel = viewModel(
+        key = baseUser.pubkeyHex + "UserProfileNewThreadsFeedViewModel",
+        factory = NostrUserProfileNewThreadsFeedViewModel.Factory(
+            baseUser,
+            accountViewModel.account
+        )
+    )
+
+    val repliesViewModel: NostrUserProfileConversationsFeedViewModel = viewModel(
+        key = baseUser.pubkeyHex + "UserProfileConversationsFeedViewModel",
+        factory = NostrUserProfileConversationsFeedViewModel.Factory(
+            baseUser,
+            accountViewModel.account
+        )
+    )
+
+    val bookmarksFeedViewModel: NostrUserProfileBookmarksFeedViewModel = viewModel(
+        key = baseUser.pubkeyHex + "UserProfileBookmarksFeedViewModel",
+        factory = NostrUserProfileBookmarksFeedViewModel.Factory(
+            baseUser,
+            accountViewModel.account
+        )
+    )
+
+    val reportsFeedViewModel: NostrUserProfileReportFeedViewModel = viewModel(
+        key = baseUser.pubkeyHex + "UserProfileReportFeedViewModel",
+        factory = NostrUserProfileReportFeedViewModel.Factory(
+            baseUser
+        )
+    )
+
     ProfileScreen(
         baseUser = baseUser,
+        threadsViewModel,
+        repliesViewModel,
         followsFeedViewModel,
         followersFeedViewModel,
         appRecommendations,
         zapFeedViewModel,
+        bookmarksFeedViewModel,
+        reportsFeedViewModel,
         accountViewModel = accountViewModel,
         nav = nav
     )
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ProfileScreen(
     baseUser: User,
+    threadsViewModel: NostrUserProfileNewThreadsFeedViewModel,
+    repliesViewModel: NostrUserProfileConversationsFeedViewModel,
     followsFeedViewModel: NostrUserProfileFollowsUserFeedViewModel,
     followersFeedViewModel: NostrUserProfileFollowersUserFeedViewModel,
     appRecommendations: NostrUserAppRecommendationsFeedViewModel,
     zapFeedViewModel: NostrUserProfileZapsFeedViewModel,
+    bookmarksFeedViewModel: NostrUserProfileBookmarksFeedViewModel,
+    reportsFeedViewModel: NostrUserProfileReportFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    UserProfileNewThreadFeedFilter.loadUserProfile(accountViewModel.account, baseUser)
-    UserProfileConversationsFeedFilter.loadUserProfile(accountViewModel.account, baseUser)
-    UserProfileReportsFeedFilter.loadUserProfile(baseUser)
-    UserProfileBookmarksFeedFilter.loadUserProfile(accountViewModel.account, baseUser)
-
     NostrUserProfileDataSource.loadUserProfile(baseUser)
 
     val lifeCycleOwner = LocalLifecycleOwner.current
@@ -223,16 +253,42 @@ fun ProfileScreen(
         }
     }
 
-    var columnSize by remember { mutableStateOf(IntSize.Zero) }
-    var tabsSize by remember { mutableStateOf(IntSize.Zero) }
+    RenderSurface(
+        baseUser,
+        threadsViewModel,
+        repliesViewModel,
+        appRecommendations,
+        followsFeedViewModel,
+        followersFeedViewModel,
+        zapFeedViewModel,
+        bookmarksFeedViewModel,
+        reportsFeedViewModel,
+        accountViewModel,
+        nav
+    )
+}
 
+@Composable
+@OptIn(ExperimentalFoundationApi::class)
+private fun RenderSurface(
+    baseUser: User,
+    threadsViewModel: NostrUserProfileNewThreadsFeedViewModel,
+    repliesViewModel: NostrUserProfileConversationsFeedViewModel,
+    appRecommendations: NostrUserAppRecommendationsFeedViewModel,
+    followsFeedViewModel: NostrUserProfileFollowsUserFeedViewModel,
+    followersFeedViewModel: NostrUserProfileFollowersUserFeedViewModel,
+    zapFeedViewModel: NostrUserProfileZapsFeedViewModel,
+    bookmarksFeedViewModel: NostrUserProfileBookmarksFeedViewModel,
+    reportsFeedViewModel: NostrUserProfileReportFeedViewModel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = MaterialTheme.colors.background
     ) {
-        val pagerState = rememberPagerState()
-        val coroutineScope = rememberCoroutineScope()
-        val scrollState = rememberScrollState()
+        var columnSize by remember { mutableStateOf(IntSize.Zero) }
+        var tabsSize by remember { mutableStateOf(IntSize.Zero) }
 
         Column(
             modifier = Modifier
@@ -241,58 +297,110 @@ fun ProfileScreen(
                     columnSize = it
                 }
         ) {
-            Box(
-                modifier = Modifier
-                    .verticalScroll(scrollState)
-                    .nestedScroll(object : NestedScrollConnection {
-                        override fun onPreScroll(
-                            available: Offset,
-                            source: NestedScrollSource
-                        ): Offset {
-                            // When scrolling vertically, scroll the container first.
-                            return if (available.y < 0 && scrollState.canScrollForward) {
-                                coroutineScope.launch {
-                                    scrollState.scrollBy(-available.y)
-                                }
-                                Offset(0f, available.y)
-                            } else {
-                                Offset.Zero
-                            }
-                        }
-                    })
-                    .fillMaxHeight()
-            ) {
-                Column() {
-                    ProfileHeader(baseUser, appRecommendations, nav, accountViewModel)
-                    ScrollableTabRow(
-                        backgroundColor = MaterialTheme.colors.background,
-                        selectedTabIndex = pagerState.currentPage,
-                        edgePadding = 8.dp,
-                        modifier = Modifier.onSizeChanged {
-                            tabsSize = it
-                        }
-                    ) {
-                        CreateAndRenderTabs(baseUser, pagerState)
-                    }
-                    HorizontalPager(
-                        pageCount = 8,
-                        state = pagerState,
-                        modifier = with(LocalDensity.current) {
-                            Modifier.height((columnSize.height - tabsSize.height).toDp())
-                        }
-                    ) { page ->
-                        CreateAndRenderPages(
-                            page,
-                            baseUser,
-                            followsFeedViewModel,
-                            followersFeedViewModel,
-                            zapFeedViewModel,
-                            accountViewModel,
-                            nav
-                        )
-                    }
+            val pagerState = rememberPagerState()
+            val coroutineScope = rememberCoroutineScope()
+            val scrollState = rememberScrollState()
+
+            val tabRowModifier = remember {
+                Modifier.onSizeChanged {
+                    tabsSize = it
                 }
             }
+
+            val pagerModifier = with(LocalDensity.current) {
+                Modifier.height((columnSize.height - tabsSize.height).toDp())
+            }
+
+            Box(
+                modifier = remember {
+                    Modifier
+                        .verticalScroll(scrollState)
+                        .nestedScroll(object : NestedScrollConnection {
+                            override fun onPreScroll(
+                                available: Offset,
+                                source: NestedScrollSource
+                            ): Offset {
+                                // When scrolling vertically, scroll the container first.
+                                return if (available.y < 0 && scrollState.canScrollForward) {
+                                    coroutineScope.launch {
+                                        scrollState.scrollBy(-available.y)
+                                    }
+                                    Offset(0f, available.y)
+                                } else {
+                                    Offset.Zero
+                                }
+                            }
+                        })
+                        .fillMaxHeight()
+                }
+            ) {
+                RenderScreen(
+                    baseUser,
+                    pagerState,
+                    tabRowModifier,
+                    pagerModifier,
+                    threadsViewModel,
+                    repliesViewModel,
+                    appRecommendations,
+                    followsFeedViewModel,
+                    followersFeedViewModel,
+                    zapFeedViewModel,
+                    bookmarksFeedViewModel,
+                    reportsFeedViewModel,
+                    accountViewModel,
+                    nav
+                )
+            }
+        }
+    }
+}
+
+@Composable
+@OptIn(ExperimentalFoundationApi::class)
+private fun RenderScreen(
+    baseUser: User,
+    pagerState: PagerState,
+    tabRowModifier: Modifier,
+    pagerModifier: Modifier,
+    threadsViewModel: NostrUserProfileNewThreadsFeedViewModel,
+    repliesViewModel: NostrUserProfileConversationsFeedViewModel,
+    appRecommendations: NostrUserAppRecommendationsFeedViewModel,
+    followsFeedViewModel: NostrUserProfileFollowsUserFeedViewModel,
+    followersFeedViewModel: NostrUserProfileFollowersUserFeedViewModel,
+    zapFeedViewModel: NostrUserProfileZapsFeedViewModel,
+    bookmarksFeedViewModel: NostrUserProfileBookmarksFeedViewModel,
+    reportsFeedViewModel: NostrUserProfileReportFeedViewModel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    Column() {
+        ProfileHeader(baseUser, appRecommendations, nav, accountViewModel)
+        ScrollableTabRow(
+            backgroundColor = MaterialTheme.colors.background,
+            selectedTabIndex = pagerState.currentPage,
+            edgePadding = 8.dp,
+            modifier = tabRowModifier
+        ) {
+            CreateAndRenderTabs(baseUser, pagerState)
+        }
+        HorizontalPager(
+            pageCount = 8,
+            state = pagerState,
+            modifier = pagerModifier
+        ) { page ->
+            CreateAndRenderPages(
+                page,
+                baseUser,
+                threadsViewModel,
+                repliesViewModel,
+                followsFeedViewModel,
+                followersFeedViewModel,
+                zapFeedViewModel,
+                bookmarksFeedViewModel,
+                reportsFeedViewModel,
+                accountViewModel,
+                nav
+            )
         }
     }
 }
@@ -301,20 +409,24 @@ fun ProfileScreen(
 private fun CreateAndRenderPages(
     page: Int,
     baseUser: User,
+    threadsViewModel: NostrUserProfileNewThreadsFeedViewModel,
+    repliesViewModel: NostrUserProfileConversationsFeedViewModel,
     followsFeedViewModel: NostrUserProfileFollowsUserFeedViewModel,
     followersFeedViewModel: NostrUserProfileFollowersUserFeedViewModel,
     zapFeedViewModel: NostrUserProfileZapsFeedViewModel,
+    bookmarksFeedViewModel: NostrUserProfileBookmarksFeedViewModel,
+    reportsFeedViewModel: NostrUserProfileReportFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
     when (page) {
-        0 -> TabNotesNewThreads(accountViewModel, nav)
-        1 -> TabNotesConversations(accountViewModel, nav)
+        0 -> TabNotesNewThreads(threadsViewModel, accountViewModel, nav)
+        1 -> TabNotesConversations(repliesViewModel, accountViewModel, nav)
         2 -> TabFollows(baseUser, followsFeedViewModel, accountViewModel, nav)
         3 -> TabFollowers(baseUser, followersFeedViewModel, accountViewModel, nav)
         4 -> TabReceivedZaps(baseUser, zapFeedViewModel, accountViewModel, nav)
-        5 -> TabBookmarks(baseUser, accountViewModel, nav)
-        6 -> TabReports(baseUser, accountViewModel, nav)
+        5 -> TabBookmarks(bookmarksFeedViewModel, accountViewModel, nav)
+        6 -> TabReports(baseUser, reportsFeedViewModel, accountViewModel, nav)
         7 -> TabRelays(baseUser, accountViewModel, nav)
     }
 }
@@ -367,8 +479,7 @@ private fun ReportsTabHeader(baseUser: User) {
 
     LaunchedEffect(key1 = userState) {
         launch(Dispatchers.IO) {
-            UserProfileReportsFeedFilter.user = baseUser
-            val newSize = UserProfileReportsFeedFilter.feed().size
+            val newSize = UserProfileReportsFeedFilter(baseUser).feed().size
 
             if (newSize != userReports) {
                 userReports = newSize
@@ -1125,9 +1236,7 @@ public fun DrawBanner(baseUser: User) {
 }
 
 @Composable
-fun TabNotesNewThreads(accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val feedViewModel: NostrUserProfileNewThreadsFeedViewModel = viewModel()
-
+fun TabNotesNewThreads(feedViewModel: NostrUserProfileNewThreadsFeedViewModel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     LaunchedEffect(Unit) {
         feedViewModel.invalidateData()
     }
@@ -1148,9 +1257,7 @@ fun TabNotesNewThreads(accountViewModel: AccountViewModel, nav: (String) -> Unit
 }
 
 @Composable
-fun TabNotesConversations(accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val feedViewModel: NostrUserProfileConversationsFeedViewModel = viewModel()
-
+fun TabNotesConversations(feedViewModel: NostrUserProfileConversationsFeedViewModel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     LaunchedEffect(Unit) {
         feedViewModel.invalidateData()
     }
@@ -1171,9 +1278,7 @@ fun TabNotesConversations(accountViewModel: AccountViewModel, nav: (String) -> U
 }
 
 @Composable
-fun TabBookmarks(baseUser: User, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val feedViewModel: NostrUserProfileBookmarksFeedViewModel = viewModel()
-
+fun TabBookmarks(feedViewModel: NostrUserProfileBookmarksFeedViewModel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     LaunchedEffect(Unit) {
         feedViewModel.invalidateData()
     }
@@ -1263,9 +1368,7 @@ private fun WatchZapsAndUpdateFeed(
 }
 
 @Composable
-fun TabReports(baseUser: User, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val feedViewModel: NostrUserProfileReportFeedViewModel = viewModel()
-
+fun TabReports(baseUser: User, feedViewModel: NostrUserProfileReportFeedViewModel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     WatchReportsAndUpdateFeed(baseUser, feedViewModel)
 
     Column(Modifier.fillMaxHeight()) {

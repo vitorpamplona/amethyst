@@ -81,11 +81,38 @@ class NostrThreadFeedViewModel(val noteId: String) : FeedViewModel(ThreadFeedFil
     }
 }
 
+class NostrUserProfileNewThreadsFeedViewModel(val user: User, val account: Account) : FeedViewModel(UserProfileNewThreadFeedFilter(user, account)) {
+    class Factory(val user: User, val account: Account) : ViewModelProvider.Factory {
+        override fun <NostrUserProfileNewThreadsFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileNewThreadsFeedViewModel>): NostrUserProfileNewThreadsFeedViewModel {
+            return NostrUserProfileNewThreadsFeedViewModel(user, account) as NostrUserProfileNewThreadsFeedViewModel
+        }
+    }
+}
+class NostrUserProfileConversationsFeedViewModel(val user: User, val account: Account) : FeedViewModel(UserProfileConversationsFeedFilter(user, account)) {
+    class Factory(val user: User, val account: Account) : ViewModelProvider.Factory {
+        override fun <NostrUserProfileConversationsFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileConversationsFeedViewModel>): NostrUserProfileConversationsFeedViewModel {
+            return NostrUserProfileConversationsFeedViewModel(user, account) as NostrUserProfileConversationsFeedViewModel
+        }
+    }
+}
+
 class NostrHashtagFeedViewModel : FeedViewModel(HashtagFeedFilter)
-class NostrUserProfileNewThreadsFeedViewModel : FeedViewModel(UserProfileNewThreadFeedFilter)
-class NostrUserProfileConversationsFeedViewModel : FeedViewModel(UserProfileConversationsFeedFilter)
-class NostrUserProfileReportFeedViewModel : FeedViewModel(UserProfileReportsFeedFilter)
-class NostrUserProfileBookmarksFeedViewModel : FeedViewModel(UserProfileBookmarksFeedFilter)
+
+class NostrUserProfileReportFeedViewModel(val user: User) : FeedViewModel(UserProfileReportsFeedFilter(user)) {
+    class Factory(val user: User) : ViewModelProvider.Factory {
+        override fun <NostrUserProfileReportFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileReportFeedViewModel>): NostrUserProfileReportFeedViewModel {
+            return NostrUserProfileReportFeedViewModel(user) as NostrUserProfileReportFeedViewModel
+        }
+    }
+}
+class NostrUserProfileBookmarksFeedViewModel(val user: User, val account: Account) : FeedViewModel(UserProfileBookmarksFeedFilter(user, account)) {
+    class Factory(val user: User, val account: Account) : ViewModelProvider.Factory {
+        override fun <NostrUserProfileBookmarksFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileBookmarksFeedViewModel>): NostrUserProfileBookmarksFeedViewModel {
+            return NostrUserProfileBookmarksFeedViewModel(user, account) as NostrUserProfileBookmarksFeedViewModel
+        }
+    }
+}
+
 class NostrChatroomListKnownFeedViewModel(val account: Account) : FeedViewModel(ChatroomListKnownFeedFilter(account)) {
     class Factory(val account: Account) : ViewModelProvider.Factory {
         override fun <NostrChatroomListKnownFeedViewModel : ViewModel> create(modelClass: Class<NostrChatroomListKnownFeedViewModel>): NostrChatroomListKnownFeedViewModel {
