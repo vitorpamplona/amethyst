@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.ui.note
 import android.content.Intent
 import android.graphics.Bitmap
 import android.util.Log
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -92,6 +93,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserMetadata
+import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.model.AppDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
 import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
@@ -143,7 +145,9 @@ import com.vitorpamplona.amethyst.ui.components.imageExtensions
 import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.LiveFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.ScheduledFlag
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.DiviserThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
@@ -2611,64 +2615,110 @@ fun AudioTrackHeader(noteEvent: AudioTrackEvent, accountViewModel: AccountViewMo
 
 @Composable
 fun RenderLiveActivityEvent(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    Row(modifier = Modifier.padding(top = 5.dp)) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            RenderLiveActivityEventInner(baseNote = baseNote, accountViewModel, nav)
+        }
+    }
+}
+
+@Composable
+fun RenderLiveActivityEventInner(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val noteEvent = baseNote.event as? LiveActivitiesEvent ?: return
 
-    val media = remember { noteEvent.streaming() }
-    val cover = remember { noteEvent.image() }
-    val subject = remember { noteEvent.title() }
-    val content = remember { noteEvent.summary() }
-    val participants = remember { noteEvent.participants() }
+    val eventUpdates by baseNote.live().metadata.observeAsState()
 
-    var participantUsers by remember { mutableStateOf<List<Pair<Participant, User>>>(emptyList()) }
+    val media = remember(eventUpdates) { noteEvent.streaming() }
+    val cover = remember(eventUpdates) { noteEvent.image() }
+    val subject = remember(eventUpdates) { noteEvent.title() }
+    val content = remember(eventUpdates) { noteEvent.summary() }
+    val participants = remember(eventUpdates) { noteEvent.participants() }
+    val status = remember(eventUpdates) { noteEvent.status() }
 
-    LaunchedEffect(key1 = participants) {
+    var isOnline by remember { mutableStateOf(false) }
+
+    LaunchedEffect(key1 = media) {
         launch(Dispatchers.IO) {
-            participantUsers = participants.mapNotNull { part ->
-                LocalCache.checkGetOrCreateUser(part.key)?.let { Pair(part, it) }
+            isOnline = OnlineChecker.isOnline(media)
+        }
+    }
+
+    Row(
+        verticalAlignment = CenterVertically,
+        modifier = Modifier
+            .padding(vertical = 5.dp)
+            .fillMaxWidth()
+    ) {
+        subject?.let {
+            Text(
+                text = it,
+                fontWeight = FontWeight.Bold,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        Crossfade(targetState = status) {
+            when (it) {
+                "live" -> {
+                    if (isOnline) {
+                        LiveFlag()
+                    }
+                }
+                "planned" -> {
+                    ScheduledFlag()
+                }
             }
         }
     }
 
-    Row(modifier = Modifier.padding(top = 5.dp)) {
-        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Row() {
-                subject?.let {
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)) {
-                        Text(
-                            text = it,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 3,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                }
-            }
+    var participantUsers by remember {
+        mutableStateOf<ImmutableList<Pair<Participant, User>>>(
+            persistentListOf()
+        )
+    }
 
-            participantUsers.forEach {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .padding(top = 5.dp, start = 10.dp, end = 10.dp)
-                        .clickable {
-                            nav("User/${it.second.pubkeyHex}")
-                        }
-                ) {
-                    ClickableUserPicture(it.second, 25.dp, accountViewModel)
-                    Spacer(Modifier.width(5.dp))
-                    UsernameDisplay(it.second, Modifier.weight(1f))
-                    Spacer(Modifier.width(5.dp))
-                    it.first.role?.let {
-                        Text(
-                            text = it.capitalize(Locale.ROOT),
-                            color = MaterialTheme.colors.placeholderText,
-                            maxLines = 1
-                        )
-                    }
-                }
-            }
+    LaunchedEffect(key1 = eventUpdates) {
+        launch(Dispatchers.IO) {
+            val newParticipantUsers = participants.mapNotNull { part ->
+                LocalCache.checkGetOrCreateUser(part.key)?.let { Pair(part, it) }
+            }.toImmutableList()
 
-            media?.let { media ->
+            if (!equalImmutableLists(newParticipantUsers, participantUsers)) {
+                participantUsers = newParticipantUsers
+            }
+        }
+    }
+
+    participantUsers.forEach {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .padding(top = 5.dp, start = 10.dp, end = 10.dp)
+                .clickable {
+                    nav("User/${it.second.pubkeyHex}")
+                }
+        ) {
+            ClickableUserPicture(it.second, 25.dp, accountViewModel)
+            Spacer(Modifier.width(5.dp))
+            UsernameDisplay(it.second, Modifier.weight(1f))
+            Spacer(Modifier.width(5.dp))
+            it.first.role?.let {
+                Text(
+                    text = it.capitalize(Locale.ROOT),
+                    color = MaterialTheme.colors.placeholderText,
+                    maxLines = 1
+                )
+            }
+        }
+    }
+
+    media?.let { media ->
+        if (status == "live") {
+            if (isOnline) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(10.dp)
@@ -2678,6 +2728,32 @@ fun RenderLiveActivityEvent(baseNote: Note, accountViewModel: AccountViewModel, 
                         description = subject
                     )
                 }
+            } else {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .padding(10.dp)
+                        .height(100.dp)
+                ) {
+                    Text(
+                        text = stringResource(id = R.string.live_stream_is_offline),
+                        color = MaterialTheme.colors.onBackground,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        } else if (status == "ended") {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .padding(10.dp)
+                    .height(100.dp)
+            ) {
+                Text(
+                    text = stringResource(id = R.string.live_stream_has_ended),
+                    color = MaterialTheme.colors.onBackground,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }

@@ -714,15 +714,60 @@ private fun LiveChannelActionOptions(
 }
 
 @Composable
-private fun LiveFlag() {
+fun LiveFlag() {
     Text(
-        text = "LIVE",
+        text = stringResource(id = R.string.live_stream_live_tag),
         color = Color.White,
         fontWeight = FontWeight.Bold,
         modifier = remember {
             Modifier
                 .clip(SmallBorder)
                 .drawBehind { drawRect(Color.Red) }
+                .padding(horizontal = 5.dp)
+        }
+    )
+}
+
+@Composable
+fun EndedFlag() {
+    Text(
+        text = stringResource(id = R.string.live_stream_ended_tag),
+        color = Color.White,
+        fontWeight = FontWeight.Bold,
+        modifier = remember {
+            Modifier
+                .clip(SmallBorder)
+                .drawBehind { drawRect(Color.Black) }
+                .padding(horizontal = 5.dp)
+        }
+    )
+}
+
+@Composable
+fun OfflineFlag() {
+    Text(
+        text = stringResource(id = R.string.live_stream_offline_tag),
+        color = Color.White,
+        fontWeight = FontWeight.Bold,
+        modifier = remember {
+            Modifier
+                .clip(SmallBorder)
+                .drawBehind { drawRect(Color.Black) }
+                .padding(horizontal = 5.dp)
+        }
+    )
+}
+
+@Composable
+fun ScheduledFlag() {
+    Text(
+        text = stringResource(id = R.string.live_stream_planned_tag),
+        color = Color.White,
+        fontWeight = FontWeight.Bold,
+        modifier = remember {
+            Modifier
+                .clip(SmallBorder)
+                .drawBehind { drawRect(Color.Black) }
                 .padding(horizontal = 5.dp)
         }
     )

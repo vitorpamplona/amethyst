@@ -36,8 +36,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
+import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent
-import com.vitorpamplona.amethyst.ui.dal.checkIfOnline
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountDialog
 import com.vitorpamplona.amethyst.ui.screen.FeedState
@@ -76,6 +76,8 @@ fun HomeScreen(
 
     val lifeCycleOwner = LocalLifecycleOwner.current
     DisposableEffect(accountViewModel) {
+        liveActivitiesViewModel.invalidateData(true)
+
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 NostrHomeDataSource.invalidateFilters()
@@ -193,7 +195,7 @@ private fun FeedLoaded(
         state = listState
     ) {
         itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
-            CheckIfOnline(item) {
+            CheckIfLiveActivityIsOnline(item) {
                 ChannelHeader(
                     channelHex = remember { item.idHex },
                     showVideo = false,
@@ -210,13 +212,13 @@ private fun FeedLoaded(
 }
 
 @Composable
-fun CheckIfOnline(note: Note, whenOnline: @Composable () -> Unit) {
+fun CheckIfLiveActivityIsOnline(note: Note, whenOnline: @Composable () -> Unit) {
     val noteState by note.live().metadata.observeAsState()
     var online by remember { mutableStateOf(false) }
 
     LaunchedEffect(key1 = noteState) {
         launch(Dispatchers.IO) {
-            online = checkIfOnline((note.event as? LiveActivitiesEvent)?.streaming())
+            online = OnlineChecker.isOnline((note.event as? LiveActivitiesEvent)?.streaming())
         }
     }
 
