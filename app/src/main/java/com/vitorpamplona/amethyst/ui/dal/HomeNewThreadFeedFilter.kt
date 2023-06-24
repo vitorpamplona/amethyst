@@ -32,7 +32,7 @@ class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>()
         val followingKeySet = account.selectedUsersFollowList(account.defaultHomeFollowList) ?: emptySet()
         val followingTagSet = account.selectedTagsFollowList(account.defaultHomeFollowList) ?: emptySet()
 
-        val now = Date().time / 1000
+        val oneMinuteInTheFuture = Date().time / 1000 + (1 * 60) // one minute in the future.
         val oneHr = 60 * 60
 
         return collection
@@ -43,7 +43,7 @@ class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>()
                     (it.author?.pubkeyHex in followingKeySet || (noteEvent.isTaggedHashes(followingTagSet))) &&
                     // && account.isAcceptable(it)  // This filter follows only. No need to check if acceptable
                     it.author?.let { !account.isHidden(it.pubkeyHex) } ?: true &&
-                    ((it.event?.createdAt() ?: 0) < now) &&
+                    ((it.event?.createdAt() ?: 0) < oneMinuteInTheFuture) &&
                     it.isNewThread() &&
                     (
                         (noteEvent !is RepostEvent && noteEvent !is GenericRepostEvent) || // not a repost
