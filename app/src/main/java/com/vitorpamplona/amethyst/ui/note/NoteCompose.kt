@@ -203,7 +203,7 @@ fun NoteCompose(
 ) {
     val isBlank by baseNote.live().metadata.map {
         it.note.event == null
-    }.observeAsState(true)
+    }.observeAsState(baseNote.event == null)
 
     if (isBlank) {
         LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
@@ -3154,21 +3154,9 @@ fun PictureAndFollowingMark(
 
 @Composable
 private fun ObserveAndDisplayFollowingMark(userHex: String, iconSize: Dp, accountViewModel: AccountViewModel) {
-    val accountFollowsState by accountViewModel.userFollows.observeAsState()
-
-    var showFollowingMark by remember { mutableStateOf(false) }
-
-    LaunchedEffect(key1 = accountFollowsState) {
-        launch(Dispatchers.Default) {
-            val newShowFollowingMark =
-                accountFollowsState?.user?.isFollowingCached(userHex) == true ||
-                    (userHex == accountViewModel.account.userProfile().pubkeyHex)
-
-            if (newShowFollowingMark != showFollowingMark) {
-                showFollowingMark = newShowFollowingMark
-            }
-        }
-    }
+    val showFollowingMark by accountViewModel.userFollows.map {
+        it.user.isFollowingCached(userHex) == true || (userHex == accountViewModel.account.userProfile().pubkeyHex)
+    }.observeAsState(true)
 
     if (showFollowingMark) {
         FollowingIcon(iconSize)

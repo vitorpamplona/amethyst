@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -40,6 +41,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.HexKey
@@ -51,7 +53,9 @@ import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
@@ -63,11 +67,9 @@ fun ChatroomCompose(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val noteState by baseNote.live().metadata.observeAsState()
-
-    val isBlank = remember(noteState) {
-        noteState?.note?.event == null
-    }
+    val isBlank by baseNote.live().metadata.map {
+        it.note.event == null
+    }.observeAsState(baseNote.event == null)
 
     if (isBlank) {
         BlankNote(Modifier)
@@ -227,12 +229,23 @@ private fun UserRoomCompose(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    var hasNewMessages = remember { mutableStateOf<Boolean>(false) }
+    val hasNewMessages = remember { mutableStateOf<Boolean>(false) }
 
     val route = remember(user) {
         "Room/${user.pubkeyHex}"
     }
 
+    val createAt by remember(note) {
+        derivedStateOf {
+            note.createdAt()
+        }
+    }
+
+    val content by remember(note) {
+        derivedStateOf {
+            accountViewModel.decrypt(note)
+        }
+    }
     WatchNotificationChanges(note, route, accountViewModel) { newHasNewMessages ->
         if (hasNewMessages.value != newHasNewMessages) {
             hasNewMessages.value = newHasNewMessages
@@ -248,8 +261,8 @@ private fun UserRoomCompose(
             )
         },
         channelTitle = { UsernameDisplay(user, it) },
-        channelLastTime = remember(note) { note.createdAt() },
-        channelLastContent = remember(note) { accountViewModel.decrypt(note) },
+        channelLastTime = createAt,
+        channelLastContent = content,
         hasNewMessages = hasNewMessages,
         onClick = { nav(route) }
     )
@@ -338,16 +351,28 @@ fun ChannelName(
         Row(
             modifier = remember { Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp) }
         ) {
-            Column(remember { Modifier.width(Size55dp) }) {
+            Column(Size55Modifier) {
                 channelPicture()
             }
 
+            Spacer(modifier = StdHorzSpacer)
+
             Column(
-                modifier = remember { Modifier.padding(start = 10.dp).fillMaxWidth() },
+                modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.SpaceAround
             ) {
-                FirstRow(channelTitle, channelLastTime)
-                SecondRow(channelLastContent, hasNewMessages)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = remember { Modifier.padding(bottom = 4.dp) }
+                ) {
+                    FirstRow(channelTitle, channelLastTime, remember { Modifier.weight(1f) })
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    SecondRow(channelLastContent, hasNewMessages, remember { Modifier.weight(1f) })
+                }
             }
         }
 
@@ -359,60 +384,56 @@ fun ChannelName(
 }
 
 @Composable
-private fun SecondRow(channelLastContent: String?, hasNewMessages: MutableState<Boolean>) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (channelLastContent != null) {
-            Text(
-                channelLastContent,
-                color = MaterialTheme.colors.grayText,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
-                modifier = remember { Modifier.weight(1f) }
-            )
-        } else {
-            Text(
-                stringResource(R.string.referenced_event_not_found),
-                color = MaterialTheme.colors.grayText,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = remember { Modifier.weight(1f) }
-            )
-        }
+private fun SecondRow(channelLastContent: String?, hasNewMessages: MutableState<Boolean>, modifier: Modifier) {
+    if (channelLastContent != null) {
+        Text(
+            channelLastContent,
+            color = MaterialTheme.colors.grayText,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+            modifier = modifier
+        )
+    } else {
+        Text(
+            stringResource(R.string.referenced_event_not_found),
+            color = MaterialTheme.colors.grayText,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = modifier
+        )
+    }
 
-        if (hasNewMessages.value) {
-            NewItemsBubble()
-        }
+    if (hasNewMessages.value) {
+        NewItemsBubble()
     }
 }
 
 @Composable
 private fun FirstRow(
     channelTitle: @Composable (Modifier) -> Unit,
-    channelLastTime: Long?
+    channelLastTime: Long?,
+    modifier: Modifier
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = remember { Modifier.padding(bottom = 4.dp) }
-    ) {
-        channelTitle(
-            remember {
-                Modifier.weight(1f)
-            }
-        )
+    channelTitle(modifier)
+    TimeAgo(channelLastTime)
+}
 
-        channelLastTime?.let {
-            val context = LocalContext.current
-            val timeAgo = remember(channelLastTime) { timeAgo(channelLastTime, context) }
-            Text(
-                timeAgo,
-                color = MaterialTheme.colors.grayText
-            )
+@Composable
+private fun TimeAgo(channelLastTime: Long?) {
+    if (channelLastTime == null) return
+
+    val context = LocalContext.current
+    val timeAgo by remember(channelLastTime) {
+        derivedStateOf {
+            timeAgo(channelLastTime, context)
         }
     }
+    Text(
+        text = timeAgo,
+        color = MaterialTheme.colors.grayText,
+        maxLines = 1
+    )
 }
 
 @Composable
@@ -431,6 +452,7 @@ fun NewItemsBubble() {
             color = Color.White,
             textAlign = TextAlign.Center,
             fontSize = 12.sp,
+            maxLines = 1,
             modifier = Modifier
                 .wrapContentHeight()
                 .align(Alignment.Center)
