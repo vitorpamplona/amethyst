@@ -35,13 +35,13 @@ class HomeLiveActivitiesFeedFilter(val account: Account) : AdditiveFeedFilter<No
         val followingKeySet = account.selectedUsersFollowList(account.defaultHomeFollowList) ?: emptySet()
         val followingTagSet = account.selectedTagsFollowList(account.defaultHomeFollowList) ?: emptySet()
 
-        val fortyEightHrs = (Date().time / 1000) - 60 * 60 * 48 // hrs
+        val twoHrs = (Date().time / 1000) - 60 * 60 * 2 // hrs
 
         return collection
             .asSequence()
             .filter { it ->
                 val noteEvent = it.event
-                (noteEvent is LiveActivitiesEvent && noteEvent.createdAt > fortyEightHrs && noteEvent.status() == "live" && checkIfOnline(noteEvent.streaming())) &&
+                (noteEvent is LiveActivitiesEvent && noteEvent.createdAt > twoHrs && noteEvent.status() == "live" && checkIfOnline(noteEvent.streaming())) &&
                     (it.author?.pubkeyHex in followingKeySet || (noteEvent.isTaggedHashes(followingTagSet))) &&
                     // && account.isAcceptable(it)  // This filter follows only. No need to check if acceptable
                     it.author?.let { !account.isHidden(it.pubkeyHex) } ?: true
