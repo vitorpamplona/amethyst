@@ -187,34 +187,34 @@ class User(val pubkeyHex: String) {
     }
 
     @Synchronized
-    private fun getOrCreatePrivateChatroom(user: User): Chatroom {
+    private fun getOrCreatePrivateChatroomSync(user: User): Chatroom {
         checkNotInMainThread()
 
         return privateChatrooms[user] ?: run {
-            val privateChatroom = Chatroom(setOf<Note>())
+            val privateChatroom = Chatroom()
             privateChatrooms = privateChatrooms + Pair(user, privateChatroom)
             privateChatroom
         }
     }
 
-    @Synchronized
-    fun addMessage(user: User, msg: Note) {
-        checkNotInMainThread()
+    private fun getOrCreatePrivateChatroom(user: User): Chatroom {
+        return privateChatrooms[user] ?: getOrCreatePrivateChatroomSync(user)
+    }
 
+    fun addMessage(user: User, msg: Note) {
         val privateChatroom = getOrCreatePrivateChatroom(user)
         if (msg !in privateChatroom.roomMessages) {
-            privateChatroom.roomMessages = privateChatroom.roomMessages + msg
+            privateChatroom.addMessageSync(msg)
             liveSet?.messages?.invalidateData()
         }
     }
 
-    @Synchronized
     fun removeMessage(user: User, msg: Note) {
         checkNotInMainThread()
 
         val privateChatroom = getOrCreatePrivateChatroom(user)
         if (msg in privateChatroom.roomMessages) {
-            privateChatroom.roomMessages = privateChatroom.roomMessages - msg
+            privateChatroom.removeMessageSync(msg)
             liveSet?.messages?.invalidateData()
         }
     }
@@ -373,7 +373,27 @@ data class RelayInfo(
     var counter: Long
 )
 
-data class Chatroom(var roomMessages: Set<Note>)
+class Chatroom() {
+    var roomMessages: Set<Note> = setOf()
+
+    @Synchronized
+    fun addMessageSync(msg: Note) {
+        checkNotInMainThread()
+
+        if (msg !in roomMessages) {
+            roomMessages = roomMessages + msg
+        }
+    }
+
+    @Synchronized
+    fun removeMessageSync(msg: Note) {
+        checkNotInMainThread()
+
+        if (msg !in roomMessages) {
+            roomMessages = roomMessages + msg
+        }
+    }
+}
 
 @Stable
 class UserMetadata {
