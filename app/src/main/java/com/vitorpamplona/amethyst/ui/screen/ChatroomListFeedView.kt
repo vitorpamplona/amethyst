@@ -11,11 +11,11 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.ui.note.ChatroomCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -39,7 +39,7 @@ private fun CorssFadeState(
     nav: (String) -> Unit,
     markAsRead: MutableState<Boolean>
 ) {
-    val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
+    val feedState by viewModel.feedContent.collectAsState()
     Crossfade(
         targetState = feedState,
         animationSpec = tween(durationMillis = 100)
