@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.ui.note
 import android.content.Context
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.slideInVertically
@@ -502,16 +503,16 @@ fun ReplyReaction(
 fun ReplyCounter(baseNote: Note, textColor: Color) {
     val repliesState by baseNote.live().replies.map {
         it.note.replies.size
-    }.distinctUntilChanged().observeAsState()
+    }.observeAsState(0)
 
-    SlidingAnimation(repliesState ?: 0, textColor)
+    SlidingAnimation(repliesState, textColor)
 }
 
 @Composable
 @OptIn(ExperimentalAnimationApi::class)
-private fun SlidingAnimation(count: Int, textColor: Color) {
+private fun SlidingAnimation(baseCount: Int, textColor: Color) {
     AnimatedContent<Int>(
-        targetState = count,
+        targetState = baseCount,
         transitionSpec = {
             if (targetState > initialState) {
                 slideInVertically { -it } with slideOutVertically { it }
@@ -521,10 +522,11 @@ private fun SlidingAnimation(count: Int, textColor: Color) {
         }
     ) { count ->
         Text(
-            text = showCount(count),
+            text = remember { showCount(count) },
             fontSize = Font14SP,
             color = textColor,
-            modifier = HalfStartPadding
+            modifier = HalfStartPadding,
+            maxLines = 1
         )
     }
 }
@@ -543,10 +545,10 @@ private fun SlidingAnimation(amount: String, textColor: Color) {
         }
     ) { count ->
         Text(
-            text = amount,
+            text = count,
             fontSize = Font14SP,
             color = textColor,
-            modifier = HalfStartPadding
+            maxLines = 1
         )
     }
 }
