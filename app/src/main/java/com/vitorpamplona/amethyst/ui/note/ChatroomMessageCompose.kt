@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.ChatBubbleMaxSizeModifier
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeMe
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeThem
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
@@ -239,7 +240,7 @@ fun NormalChatNote(
 ) {
     val drawAuthorInfo by remember {
         derivedStateOf {
-            (innerQuote || !accountViewModel.isLoggedUser(note.author)) && note.event !is PrivateDmEvent
+            note.event !is PrivateDmEvent && (innerQuote || !accountViewModel.isLoggedUser(note.author))
         }
     }
 
@@ -302,7 +303,7 @@ fun NormalChatNote(
             var popupExpanded by remember { mutableStateOf(false) }
 
             val modif2 = remember {
-                if (innerQuote) Modifier else Modifier.fillMaxWidth(0.85f)
+                if (innerQuote) Modifier else ChatBubbleMaxSizeModifier
             }
 
             val clickableModifier = remember {
