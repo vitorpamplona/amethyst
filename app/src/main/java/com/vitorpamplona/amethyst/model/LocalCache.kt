@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.model
 import android.util.Log
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.service.HexValidator
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.nip19.Nip19
@@ -12,7 +13,6 @@ import fr.acinq.secp256k1.Hex
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import nostr.postr.toNpub
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -110,13 +110,7 @@ object LocalCache {
     private fun isValidHexNpub(key: String): Boolean {
         if (key.contains(":")) return false
 
-        return try {
-            Hex.decode(key).toNpub()
-            true
-        } catch (e: IllegalArgumentException) {
-            Log.e("LocalCache", "Invalid Key to create user: $key", e)
-            false
-        }
+        return HexValidator.isHex(key)
     }
 
     fun getOrCreateChannel(key: String, channelFactory: (String) -> Channel): Channel {
