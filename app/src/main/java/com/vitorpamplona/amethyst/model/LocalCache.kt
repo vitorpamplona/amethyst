@@ -5,7 +5,6 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.*
-import com.vitorpamplona.amethyst.service.model.ATag.Companion.isATag
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.BundledInsert
@@ -42,14 +41,12 @@ object LocalCache {
         return null
     }
 
-    @Synchronized
     fun getOrCreateUser(key: HexKey): User {
         // checkNotInMainThread()
 
         return users[key] ?: run {
-            val answer = User(key)
-            users.put(key, answer)
-            answer
+            val newObject = User(key)
+            users.putIfAbsent(key, newObject) ?: newObject
         }
     }
 
@@ -84,14 +81,13 @@ object LocalCache {
         return null
     }
 
-    @Synchronized
     fun getOrCreateNote(idHex: String): Note {
         checkNotInMainThread()
 
-        return notes[idHex] ?: run {
-            val answer = Note(idHex)
-            notes.put(idHex, answer)
-            answer
+        return notes.get(idHex) ?: run {
+            val newObject = Note(idHex)
+            notes.putIfAbsent(idHex, newObject) ?: newObject
+            newObject
         }
     }
 
@@ -124,14 +120,12 @@ object LocalCache {
         }
     }
 
-    @Synchronized
     fun getOrCreateChannel(key: String, channelFactory: (String) -> Channel): Channel {
         checkNotInMainThread()
 
         return channels[key] ?: run {
-            val answer = channelFactory(key)
-            channels.put(key, answer)
-            answer
+            val newObject = channelFactory(key)
+            channels.putIfAbsent(key, newObject) ?: newObject
         }
     }
 
@@ -149,16 +143,14 @@ object LocalCache {
         }
     }
 
-    @Synchronized
     fun getOrCreateAddressableNoteInternal(key: ATag): AddressableNote {
         checkNotInMainThread()
 
         // we can't use naddr here because naddr might include relay info and
         // the preferred relay should not be part of the index.
         return addressables[key.toTag()] ?: run {
-            val answer = AddressableNote(key)
-            addressables.put(key.toTag(), answer)
-            answer
+            val newObject = AddressableNote(key)
+            addressables.putIfAbsent(key.toTag(), newObject) ?: newObject
         }
     }
 
@@ -547,8 +539,7 @@ object LocalCache {
 
         // Log.d("PM", "${author.toBestDisplayName()} to ${recipient?.toBestDisplayName()}")
 
-        val repliesTo = event.tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
-            .mapNotNull { checkGetOrCreateNote(it) }
+        val repliesTo = event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) }
 
         note.loadEvent(event, author, repliesTo)
 
