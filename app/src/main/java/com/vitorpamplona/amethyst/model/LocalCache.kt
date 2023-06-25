@@ -87,7 +87,6 @@ object LocalCache {
         return notes.get(idHex) ?: run {
             val newObject = Note(idHex)
             notes.putIfAbsent(idHex, newObject) ?: newObject
-            newObject
         }
     }
 
