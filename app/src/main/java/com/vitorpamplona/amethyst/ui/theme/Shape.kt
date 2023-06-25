@@ -79,3 +79,7 @@ val ReactionRowHeight = Modifier.height(24.dp).padding(start = 10.dp)
 val Height4dpModifier = Modifier.height(4.dp)
 
 val AccountPictureModifier = Modifier.width(55.dp).height(55.dp).clip(shape = CircleShape)
+
+val ShowMoreRelaysButtonIconButtonModifier = Modifier.size(24.dp)
+val ShowMoreRelaysButtonIconModifier = Modifier.size(15.dp)
+val ShowMoreRelaysButtonBoxModifer = Modifier.fillMaxWidth().height(25.dp)

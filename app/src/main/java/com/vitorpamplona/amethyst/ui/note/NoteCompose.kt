@@ -157,6 +157,9 @@ import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.ShowMoreRelaysButtonBoxModifer
+import com.vitorpamplona.amethyst.ui.theme.ShowMoreRelaysButtonIconButtonModifier
+import com.vitorpamplona.amethyst.ui.theme.ShowMoreRelaysButtonIconModifier
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size30dp
@@ -2931,27 +2934,21 @@ private fun VerticalRelayPanelWithFlow(
     }
 }
 
-val showMoreRelaysButtonIconButtonModifier = Modifier.size(24.dp)
-val showMoreRelaysButtonIconModifier = Modifier.size(15.dp)
-val showMoreRelaysButtonBoxModifer = Modifier
-    .fillMaxWidth()
-    .height(25.dp)
-
 @Composable
 private fun ShowMoreRelaysButton(onClick: () -> Unit) {
     Row(
-        modifier = showMoreRelaysButtonBoxModifer,
+        modifier = ShowMoreRelaysButtonBoxModifer,
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.Top
     ) {
         IconButton(
-            modifier = showMoreRelaysButtonIconButtonModifier,
+            modifier = ShowMoreRelaysButtonIconButtonModifier,
             onClick = onClick
         ) {
             Icon(
                 imageVector = Icons.Default.ExpandMore,
                 null,
-                modifier = showMoreRelaysButtonIconModifier,
+                modifier = ShowMoreRelaysButtonIconModifier,
                 tint = MaterialTheme.colors.placeholderText
             )
         }
