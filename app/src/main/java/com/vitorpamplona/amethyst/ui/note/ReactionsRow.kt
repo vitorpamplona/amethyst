@@ -726,10 +726,12 @@ fun LikeIcon(
         }
     }
 
-    if (reactionType != null) {
-        RenderReactionType(reactionType!!, iconSize, iconFontSize)
-    } else {
-        RenderLikeIcon(iconSize, grayTint)
+    Crossfade(targetState = reactionType) {
+        if (it != null) {
+            RenderReactionType(it, iconSize, iconFontSize)
+        } else {
+            RenderLikeIcon(iconSize, grayTint)
+        }
     }
 }
 
@@ -1023,20 +1025,22 @@ private fun ZapIcon(
         }
     }
 
-    if (wasZappedByLoggedInUser) {
-        Icon(
-            imageVector = Icons.Default.Bolt,
-            contentDescription = stringResource(R.string.zaps),
-            modifier = remember { Modifier.size(iconSize) },
-            tint = BitcoinOrange
-        )
-    } else {
-        Icon(
-            imageVector = Icons.Outlined.Bolt,
-            contentDescription = stringResource(id = R.string.zaps),
-            modifier = remember { Modifier.size(iconSize) },
-            tint = grayTint
-        )
+    Crossfade(targetState = wasZappedByLoggedInUser) {
+        if (it) {
+            Icon(
+                imageVector = Icons.Default.Bolt,
+                contentDescription = stringResource(R.string.zaps),
+                modifier = remember { Modifier.size(iconSize) },
+                tint = BitcoinOrange
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Outlined.Bolt,
+                contentDescription = stringResource(id = R.string.zaps),
+                modifier = remember { Modifier.size(iconSize) },
+                tint = grayTint
+            )
+        }
     }
 }
 
