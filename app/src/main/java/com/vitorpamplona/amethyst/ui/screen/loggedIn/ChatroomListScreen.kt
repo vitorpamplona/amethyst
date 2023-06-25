@@ -71,8 +71,6 @@ fun ChatroomListScreen(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 NostrChatroomListDataSource.start()
-                knownFeedViewModel.invalidateData(true)
-                newFeedViewModel.invalidateData(true)
             }
         }
 
