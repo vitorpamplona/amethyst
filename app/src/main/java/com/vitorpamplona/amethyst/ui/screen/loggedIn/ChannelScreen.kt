@@ -605,7 +605,7 @@ fun ChannelHeader(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            channel.toBestDisplayName() + channel.idHex.split(":")[2],
+                            text = remember(channelState) { channel.toBestDisplayName() },
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
