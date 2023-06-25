@@ -18,7 +18,6 @@ class AntiSpamFilter {
     val recentMessages = LruCache<Int, String>(1000)
     val spamMessages = LruCache<Int, Spammer>(1000)
 
-    @Synchronized
     fun isSpam(event: Event, relay: Relay?): Boolean {
         checkNotInMainThread()
 
@@ -45,15 +44,9 @@ class AntiSpamFilter {
             Log.w("Potential SPAM Message", "${event.id} ${recentMessages[hash]} ${spamMessages[hash] != null} ${relay?.url} ${event.content.replace("\n", " | ")}")
 
             // Log down offenders
-            if (spamMessages.get(hash) == null) {
-                spamMessages.put(hash, Spammer(event.pubKey, setOf(recentMessages[hash], event.id)))
-                liveSpam.invalidateData()
-            } else {
-                val spammer = spamMessages.get(hash)
-                spammer.duplicatedMessages = spammer.duplicatedMessages + event.id
+            logOffender(hash, event)
 
-                liveSpam.invalidateData()
-            }
+            liveSpam.invalidateData()
 
             return true
         }
@@ -61,6 +54,16 @@ class AntiSpamFilter {
         recentMessages.put(hash, idHex)
 
         return false
+    }
+
+    @Synchronized
+    private fun logOffender(hashCode: Int, event: Event) {
+        if (spamMessages.get(hashCode) == null) {
+            spamMessages.put(hashCode, Spammer(event.pubKey, setOf(recentMessages[hashCode], event.id)))
+        } else {
+            val spammer = spamMessages.get(hashCode)
+            spammer.duplicatedMessages = spammer.duplicatedMessages + event.id
+        }
     }
 
     val liveSpam: AntiSpamLiveData = AntiSpamLiveData(this)
