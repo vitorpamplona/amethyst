@@ -13,7 +13,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
@@ -28,18 +27,19 @@ fun ChatroomListFeedView(
     markAsRead: MutableState<Boolean>
 ) {
     RefresheableView(viewModel, true) {
-        CorssFadeState(viewModel, accountViewModel, nav, markAsRead)
+        CrossFadeState(viewModel, accountViewModel, nav, markAsRead)
     }
 }
 
 @Composable
-private fun CorssFadeState(
+private fun CrossFadeState(
     viewModel: FeedViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     markAsRead: MutableState<Boolean>
 ) {
     val feedState by viewModel.feedContent.collectAsState()
+
     Crossfade(
         targetState = feedState,
         animationSpec = tween(durationMillis = 100)
