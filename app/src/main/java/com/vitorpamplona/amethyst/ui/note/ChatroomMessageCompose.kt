@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.note
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -27,7 +28,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
@@ -50,9 +50,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.RelayInformation
@@ -75,21 +75,19 @@ import com.vitorpamplona.amethyst.ui.theme.ChatBubbleMaxSizeModifier
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeMe
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeThem
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChat
 import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
 import com.vitorpamplona.amethyst.ui.theme.Size13dp
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size15dp
-import com.vitorpamplona.amethyst.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentSetOf
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -103,30 +101,33 @@ fun ChatroomMessageCompose(
     nav: (String) -> Unit,
     onWantsToReply: (Note) -> Unit
 ) {
-    val noteState by baseNote.live().metadata.observeAsState()
-    val noteEvent = remember(noteState) { noteState?.note?.event }
+    val isBlank by baseNote.live().metadata.map {
+        it.note.event == null
+    }.observeAsState(baseNote.event == null)
 
-    if (noteEvent == null) {
-        LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
-            BlankNote(
-                remember {
-                    Modifier.combinedClickable(
-                        onClick = { },
-                        onLongClick = showPopup
-                    )
-                }
+    Crossfade(targetState = isBlank) {
+        if (it) {
+            LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
+                BlankNote(
+                    remember {
+                        Modifier.combinedClickable(
+                            onClick = { },
+                            onLongClick = showPopup
+                        )
+                    }
+                )
+            }
+        } else {
+            CheckHiddenChatMessage(
+                baseNote,
+                routeForLastRead,
+                innerQuote,
+                parentBackgroundColor,
+                accountViewModel,
+                nav,
+                onWantsToReply
             )
         }
-    } else {
-        CheckHiddenChatMessage(
-            baseNote,
-            routeForLastRead,
-            innerQuote,
-            parentBackgroundColor,
-            accountViewModel,
-            nav,
-            onWantsToReply
-        )
     }
 }
 
@@ -197,32 +198,34 @@ fun LoadedChatMessageCompose(
         }
     }
 
-    if (showHiddenNote) {
-        HiddenNote(
-            state.relevantReports,
-            accountViewModel,
-            Modifier,
-            innerQuote,
-            nav,
-            onClick = { showReportedNote = true }
-        )
-    } else {
-        val canPreview by remember(state, showReportedNote) {
-            derivedStateOf {
-                (!state.isAcceptable && showReportedNote) || state.canPreview
+    Crossfade(targetState = showHiddenNote) {
+        if (it) {
+            HiddenNote(
+                state.relevantReports,
+                accountViewModel,
+                Modifier,
+                innerQuote,
+                nav,
+                onClick = { showReportedNote = true }
+            )
+        } else {
+            val canPreview by remember(state, showReportedNote) {
+                derivedStateOf {
+                    (!state.isAcceptable && showReportedNote) || state.canPreview
+                }
             }
-        }
 
-        NormalChatNote(
-            baseNote,
-            routeForLastRead,
-            innerQuote,
-            canPreview,
-            parentBackgroundColor,
-            accountViewModel,
-            nav,
-            onWantsToReply
-        )
+            NormalChatNote(
+                baseNote,
+                routeForLastRead,
+                innerQuote,
+                canPreview,
+                parentBackgroundColor,
+                accountViewModel,
+                nav,
+                onWantsToReply
+            )
+        }
     }
 }
 
@@ -299,7 +302,7 @@ fun NormalChatNote(
             modifier = modif,
             horizontalArrangement = alignment
         ) {
-            val availableBubbleSize = remember { mutableStateOf(IntSize.Zero) }
+            val availableBubbleSize = remember { mutableStateOf(0) }
             var popupExpanded by remember { mutableStateOf(false) }
 
             val modif2 = remember {
@@ -321,7 +324,9 @@ fun NormalChatNote(
             Row(
                 horizontalArrangement = alignment,
                 modifier = modif2.onSizeChanged {
-                    availableBubbleSize.value = it
+                    if (availableBubbleSize.value != it.width) {
+                        availableBubbleSize.value = it.width
+                    }
                 }
             ) {
                 Surface(
@@ -363,17 +368,19 @@ private fun RenderBubble(
     backgroundBubbleColor: MutableState<Color>,
     onWantsToReply: (Note) -> Unit,
     canPreview: Boolean,
-    availableBubbleSize: MutableState<IntSize>,
+    availableBubbleSize: MutableState<Int>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val bubbleSize = remember { mutableStateOf(IntSize.Zero) }
+    val bubbleSize = remember { mutableStateOf(0) }
 
     val bubbleModifier = remember {
         Modifier
             .padding(start = 10.dp, end = 5.dp, bottom = 5.dp)
             .onSizeChanged {
-                bubbleSize.value = it
+                if (bubbleSize.value != it.width) {
+                    bubbleSize.value = it.width
+                }
             }
     }
 
@@ -405,8 +412,8 @@ private fun MessageBubbleLines(
     accountViewModel: AccountViewModel,
     onWantsToReply: (Note) -> Unit,
     canPreview: Boolean,
-    bubbleSize: MutableState<IntSize>,
-    availableBubbleSize: MutableState<IntSize>
+    bubbleSize: MutableState<Int>,
+    availableBubbleSize: MutableState<Int>
 ) {
     if (drawAuthorInfo) {
         DrawAuthorInfo(
@@ -459,7 +466,7 @@ private fun RenderReplyRow(
 ) {
     val hasReply by remember {
         derivedStateOf {
-            innerQuote && note.replyTo?.lastOrNull() != null
+            !innerQuote && note.replyTo?.lastOrNull() != null
         }
     }
 
@@ -529,23 +536,22 @@ private fun NoteRow(
 
 @Composable
 private fun ConstrainedStatusRow(
-    bubbleSize: MutableState<IntSize>,
-    availableBubbleSize: MutableState<IntSize>,
+    bubbleSize: MutableState<Int>,
+    availableBubbleSize: MutableState<Int>,
     content: @Composable () -> Unit
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
-        modifier = Modifier
-            .padding(top = 5.dp)
-            .then(
-                with(LocalDensity.current) {
-                    Modifier.widthIn(
-                        bubbleSize.value.width.toDp(),
-                        availableBubbleSize.value.width.toDp()
-                    )
-                }
-            )
+        modifier = with(LocalDensity.current) {
+            Modifier
+                .height(26.dp)
+                .padding(top = 5.dp)
+                .widthIn(
+                    bubbleSize.value.toDp(),
+                    availableBubbleSize.value.toDp()
+                )
+        }
     ) {
         content()
     }
@@ -558,29 +564,30 @@ private fun StatusRow(
     nav: (String) -> Unit,
     onWantsToReply: (Note) -> Unit
 ) {
-    Column {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+    Column(modifier = ReactionRowHeightChat) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = ReactionRowHeightChat) {
             ChatTimeAgo(baseNote)
             RelayBadges(baseNote, accountViewModel, nav = nav)
             Spacer(modifier = DoubleHorzSpacer)
         }
     }
 
-    Column {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+    Column(modifier = ReactionRowHeightChat) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = ReactionRowHeightChat) {
             LikeReaction(baseNote, MaterialTheme.colors.placeholderText, accountViewModel)
             Spacer(modifier = StdHorzSpacer)
             ZapReaction(baseNote, MaterialTheme.colors.placeholderText, accountViewModel)
-            Spacer(modifier = StdHorzSpacer)
+            Spacer(modifier = DoubleHorzSpacer)
             ReplyReaction(
                 baseNote = baseNote,
                 grayTint = MaterialTheme.colors.placeholderText,
                 accountViewModel = accountViewModel,
                 showCounter = false,
-                iconSize = Size16dp
+                iconSize = Size15dp
             ) {
                 onWantsToReply(baseNote)
             }
+            Spacer(modifier = StdHorzSpacer)
         }
     }
 }
@@ -800,52 +807,61 @@ private fun DisplayMessageUsername(
     DrawPlayName(userDisplayName)
 }
 
-@Immutable
-data class RelayBadgesState(
-    val shouldDisplayExpandButton: Boolean,
-    val noteRelays: ImmutableList<String>,
-    val noteRelaysSimple: ImmutableList<String>
-)
+@Composable
+private fun RelayBadges(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    val expanded = remember { mutableStateOf(false) }
+
+    RenderRelayList(baseNote, expanded, accountViewModel, nav)
+
+    RenderExpandButton(baseNote, expanded) {
+        ChatRelayExpandButton { expanded.value = true }
+    }
+}
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun RelayBadges(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val noteRelaysState by baseNote.live().relays.observeAsState()
+fun RenderRelayList(baseNote: Note, expanded: MutableState<Boolean>, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    val noteRelays by baseNote.live().relays.map {
+        it.note.relays
+    }.observeAsState(baseNote.relays)
 
-    val state: RelayBadgesState by remember(noteRelaysState) {
-        val newShouldDisplayExpandButton = (noteRelaysState?.note?.relays?.size ?: 0) > 3
-        val noteRelays = noteRelaysState?.note?.relays?.toImmutableList() ?: persistentListOf()
-        val noteRelaysSimple = noteRelaysState?.note?.relays?.take(3)?.toImmutableList() ?: persistentListOf()
-
-        mutableStateOf(RelayBadgesState(newShouldDisplayExpandButton, noteRelays, noteRelaysSimple))
-    }
-
-    var expanded by remember { mutableStateOf(false) }
-
-    val relaysToDisplay by remember(noteRelaysState) {
-        derivedStateOf {
-            if (expanded) state.noteRelays else state.noteRelaysSimple
+    FlowRow(StdStartPadding) {
+        val relaysToDisplay = remember(noteRelays, expanded.value) {
+            if (expanded.value) noteRelays else noteRelays.take(3)
         }
-    }
-
-    FlowRow(Modifier.padding(start = 10.dp)) {
         relaysToDisplay.forEach {
             RenderRelay(it, accountViewModel, nav)
         }
     }
+}
 
-    if (state.shouldDisplayExpandButton && !expanded) {
-        IconButton(
+@Composable
+fun RenderExpandButton(
+    baseNote: Note,
+    expanded: MutableState<Boolean>,
+    content: @Composable () -> Unit
+) {
+    val showExpandButton by baseNote.live().relays.map {
+        it.note.relays.size > 3
+    }.observeAsState(baseNote.relays.size > 3)
+
+    if (showExpandButton && !expanded.value) {
+        content()
+    }
+}
+
+@Composable
+fun ChatRelayExpandButton(onClick: () -> Unit) {
+    IconButton(
+        modifier = Size15Modifier,
+        onClick = onClick
+    ) {
+        Icon(
+            imageVector = Icons.Default.ChevronRight,
+            null,
             modifier = Size15Modifier,
-            onClick = { expanded = true }
-        ) {
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                null,
-                modifier = Size15Modifier,
-                tint = MaterialTheme.colors.placeholderText
-            )
-        }
+            tint = MaterialTheme.colors.placeholderText
+        )
     }
 }
 
