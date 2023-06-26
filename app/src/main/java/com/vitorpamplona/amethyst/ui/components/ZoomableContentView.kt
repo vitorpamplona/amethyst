@@ -38,9 +38,9 @@ import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Report
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -443,6 +443,24 @@ private fun DisplayBlurHash(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ZoomableImageDialog(imageUrl: ZoomableContent, allImages: ImmutableList<ZoomableContent> = listOf(imageUrl).toImmutableList(), onDismiss: () -> Unit) {
+    val view = LocalView.current
+
+    DisposableEffect(key1 = Unit) {
+        if (Build.VERSION.SDK_INT >= 30) {
+            view.windowInsetsController?.hide(
+                android.view.WindowInsets.Type.systemBars()
+            )
+        }
+
+        onDispose {
+            if (Build.VERSION.SDK_INT >= 30) {
+                view.windowInsetsController?.show(
+                    android.view.WindowInsets.Type.systemBars()
+                )
+            }
+        }
+    }
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
@@ -450,16 +468,6 @@ fun ZoomableImageDialog(imageUrl: ZoomableContent, allImages: ImmutableList<Zoom
             decorFitsSystemWindows = false
         )
     ) {
-        val view = LocalView.current
-
-        SideEffect {
-            if (Build.VERSION.SDK_INT >= 30) {
-                view.windowInsetsController?.hide(
-                    android.view.WindowInsets.Type.systemBars()
-                )
-            }
-        }
-
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
                 val pagerState: PagerState = remember { PagerState() }
