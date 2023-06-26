@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.ui.components
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,41 +20,51 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat.startActivity
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.google.gson.JsonObject
-import com.google.gson.JsonParser
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.service.CashuProcessor
+import com.vitorpamplona.amethyst.service.CashuToken
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-import java.util.Base64
 
 @Composable
 fun CashuPreview(cashutoken: String, accountViewModel: AccountViewModel) {
+    var cachuData by remember { mutableStateOf<CashuToken?>(null) }
+
+    LaunchedEffect(key1 = cashutoken) {
+        launch(Dispatchers.IO) {
+            cachuData = CashuProcessor().parse(cashutoken)
+        }
+    }
+
+    Crossfade(targetState = cachuData) {
+        if (it != null) {
+            CashuPreview(it, accountViewModel)
+        } else {
+            Text(
+                text = "$cashutoken ",
+                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+            )
+        }
+    }
+}
+
+@Composable
+fun CashuPreview(token: CashuToken, accountViewModel: AccountViewModel) {
+    val lud16 = remember(accountViewModel) {
+        accountViewModel.account.userProfile().info?.lud16
+    }
+
     val useWebService = false
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val lud16 = accountViewModel.account.userProfile().info?.lud16
-    val base64token = cashutoken.replace("cashuA", "")
-    val cashu = JsonParser.parseString(String(Base64.getDecoder().decode(base64token)))
-    val token = cashu.asJsonObject.get("token").asJsonArray[0].asJsonObject
-    val proofs = token["proofs"].asJsonArray
-    val mint = token["mint"]
 
-    var totalamount = 0
-    for (proof in proofs) {
-        totalamount += proof.asJsonObject["amount"].asInt
-    }
-    var fees = Math.max(((totalamount * 0.02).toInt()), 2)
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -89,7 +100,7 @@ fun CashuPreview(cashutoken: String, accountViewModel: AccountViewModel) {
 
             Divider()
 
-            totalamount?.let {
+            token.totalAmount.let {
                 Text(
                     text = "$it ${stringResource(id = R.string.sats)}",
                     fontSize = 25.sp,
@@ -107,54 +118,25 @@ fun CashuPreview(cashutoken: String, accountViewModel: AccountViewModel) {
                 onClick = {
                     // Just in case we want to use a webservice instead of directly contacting the mint
                     if (useWebService) {
-                        val url = "https://redeem.cashu.me?token=$cashutoken&lightning=$lud16&autopay=true"
+                        val url = "https://redeem.cashu.me?token=$token&lightning=$lud16&autopay=true"
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                         startActivity(context, intent, null)
                     } else {
                         if (lud16 != null) {
-                            runCatching {
-                                LightningAddressResolver().lnAddressInvoice(
-                                    lud16,
-                                    ((totalamount - fees) * 1000).toLong(), // Make invoice and leave room for fees
-                                    "Reedem Cashu",
-                                    onSuccess = {
-                                        val invoice = it
-                                        val client = OkHttpClient()
-                                        var url = mint.asString + "/melt" // Melt cashu tokens at Mint
-
-                                        val jsonObject = JsonObject()
-                                        jsonObject.add("proofs", proofs)
-                                        jsonObject.addProperty("pr", invoice)
-
-                                        val mediaType = "application/json; charset=utf-8".toMediaType()
-                                        val requestBody = jsonObject.toString().toRequestBody(mediaType)
-                                        val request = Request.Builder()
-                                            .url(url)
-                                            .post(requestBody)
-                                            .build()
-
-                                        val response = client.newCall(request).execute()
-                                        val body = response.body?.string()
-                                        val tree = jacksonObjectMapper().readTree(body)
-                                        if (tree?.get("paid")?.asText() == "true") {
-                                            scope.launch {
-                                                Toast.makeText(context, "Redeemed " + (totalamount - fees) + " Sats" + " (Fees: " + fees + " Sats)", Toast.LENGTH_SHORT).show()
-                                            }
-                                        } else {
-                                            scope.launch {
-                                                Toast.makeText(context, tree?.get("detail")?.asText()?.split('.')?.get(0) + "." ?: "Error", Toast.LENGTH_SHORT).show()
-                                            }
-                                        }
-                                    },
-                                    onProgress = {
-                                    },
-                                    onError = {
-                                        scope.launch {
-                                            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
-                                        }
+                            CashuProcessor().melt(
+                                token,
+                                lud16,
+                                onSuccess = {
+                                    scope.launch {
+                                        Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
                                     }
-                                )
-                            }
+                                },
+                                onError = {
+                                    scope.launch {
+                                        Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            )
                         } else {
                             scope.launch {
                                 Toast.makeText(context, "No Lightning Address set", Toast.LENGTH_SHORT).show()
