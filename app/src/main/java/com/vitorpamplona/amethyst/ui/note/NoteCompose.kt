@@ -1539,7 +1539,7 @@ fun RenderRepost(
     boostedNote?.let {
         NoteCompose(
             it,
-            modifier = remember { Modifier },
+            modifier = Modifier,
             isBoostedNote = true,
             unPackReply = false,
             parentBackgroundColor = backgroundColor,
