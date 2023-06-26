@@ -466,5 +466,5 @@
 
     <string name="live_stream_is_offline">Livestream is Offline</string>
     <string name="live_stream_has_ended">Livestream Ended</string>
-    <string name="are_you_sure_you_want_to_log_out">Are you sure you want to logout?</string>
+    <string name="are_you_sure_you_want_to_log_out">Logging out deletes all your local information. Make sure to have your private keys backed up to avoid losing your account. Do you want to continue?</string>
 </resources>
