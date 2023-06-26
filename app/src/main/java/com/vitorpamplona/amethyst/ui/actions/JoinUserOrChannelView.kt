@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SearchBarViewModel
+import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
@@ -389,7 +390,7 @@ fun UserComposeForChat(
                 ),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            ClickableUserPicture(baseUser, 55.dp, accountViewModel)
+            ClickableUserPicture(baseUser, Size55dp, accountViewModel)
 
             Column(
                 modifier = Modifier

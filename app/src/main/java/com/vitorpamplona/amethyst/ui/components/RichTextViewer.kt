@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.ui.components
 import android.util.Log
 import android.util.LruCache
 import android.util.Patterns
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.ClickableText
@@ -26,6 +27,8 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.distinctUntilChanged
+import androidx.lifecycle.map
 import com.halilibo.richtext.markdown.Markdown
 import com.halilibo.richtext.markdown.MarkdownParseOptions
 import com.halilibo.richtext.ui.HeadingStyle
@@ -40,7 +43,6 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.checkForHashtagWithIcon
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
-import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.MarkdownTextStyle
@@ -751,7 +753,11 @@ fun BechLink(word: String, canPreview: Boolean, backgroundColor: MutableState<Co
                     }
                 }
 
-                loadedLink = LoadedBechLink(returningNote, it)
+                val newLink = LoadedBechLink(returningNote, it)
+
+                launch(Dispatchers.Main) {
+                    loadedLink = newLink
+                }
             }
         }
     }
@@ -838,7 +844,9 @@ fun HashTag(word: String, nav: (String) -> Unit) {
             }
 
             if (myTag != null) {
-                tagSuffixPair = Pair(myTag, mySuffix)
+                launch(Dispatchers.Main) {
+                    tagSuffixPair = Pair(myTag, mySuffix)
+                }
             }
         }
     }
@@ -922,11 +930,15 @@ fun TagLink(word: String, tags: ImmutableListOfLists<String>, canPreview: Boolea
                     if (tag.size > 1) {
                         if (tag[0] == "p") {
                             LocalCache.checkGetOrCreateUser(tag[1])?.let {
-                                loadedTag = LoadedTag(it, null, suffix)
+                                launch(Dispatchers.Main) {
+                                    loadedTag = LoadedTag(it, null, suffix)
+                                }
                             }
                         } else if (tag[0] == "e" || tag[0] == "a") {
                             LocalCache.checkGetOrCreateNote(tag[1])?.let {
-                                loadedTag = LoadedTag(null, it, suffix)
+                                launch(Dispatchers.Main) {
+                                    loadedTag = LoadedTag(null, it, suffix)
+                                }
                             }
                         }
                     }
@@ -995,25 +1007,23 @@ private fun DisplayUserFromTag(
 ) {
     val route = remember { "User/${baseUser.pubkeyHex}" }
     val suffix = remember { "$addedChars " }
+    val hex = remember { baseUser.pubkeyDisplayHex() }
 
-    val innerUserState by baseUser.live().metadata.observeAsState()
-    val displayName by remember(innerUserState) {
-        derivedStateOf {
-            innerUserState?.user?.toBestDisplayName() ?: ""
-        }
-    }
-    val userTags by remember(innerUserState) {
-        derivedStateOf {
-            innerUserState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists()
-        }
-    }
+    val meta by baseUser.live().metadata.map {
+        it.user.info
+    }.distinctUntilChanged().observeAsState(baseUser.info)
 
-    CreateClickableTextWithEmoji(
-        clickablePart = displayName,
-        suffix = suffix,
-        maxLines = 1,
-        route = route,
-        nav = nav,
-        tags = userTags
-    )
+    Crossfade(targetState = meta) {
+        val displayName = remember(it) {
+            it?.bestDisplayName() ?: hex
+        }
+        CreateClickableTextWithEmoji(
+            clickablePart = displayName,
+            suffix = suffix,
+            maxLines = 1,
+            route = route,
+            nav = nav,
+            tags = it?.tags ?: ImmutableListOfLists()
+        )
+    }
 }

@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.components
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -28,6 +29,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -109,21 +111,16 @@ fun ObserveDisplayNip05Status(baseNote: Note, columnModifier: Modifier = Modifie
 
 @Composable
 fun ObserveDisplayNip05Status(baseUser: User, columnModifier: Modifier = Modifier) {
-    val userState by baseUser.live().metadata.observeAsState()
-    val isValidNIP05 by remember(userState) {
-        derivedStateOf {
-            userState?.user?.nip05()?.split("@")?.size == 2
-        }
-    }
-    val nip05 by remember(userState) {
-        derivedStateOf {
-            userState?.user?.nip05()
-        }
-    }
+    val nip05 by baseUser.live().metadata.map {
+        it.user.nip05()
+    }.observeAsState()
 
-    if (isValidNIP05) {
-        nip05?.let {
-            DisplayNIP05Line(it, baseUser, columnModifier)
+    Crossfade(targetState = nip05, modifier = columnModifier) {
+        if (it != null) {
+            val isValid = it.split("@").size == 2
+            if (isValid) {
+                DisplayNIP05Line(it, baseUser, columnModifier)
+            }
         }
     }
 }
@@ -131,9 +128,11 @@ fun ObserveDisplayNip05Status(baseUser: User, columnModifier: Modifier = Modifie
 @Composable
 private fun DisplayNIP05Line(nip05: String, baseUser: User, columnModifier: Modifier = Modifier) {
     Column(modifier = columnModifier) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            val nip05Verified = nip05VerificationAsAState(baseUser.info!!, baseUser.pubkeyHex)
-            DisplayNIP05(nip05, nip05Verified)
+        val nip05Verified = nip05VerificationAsAState(baseUser.info!!, baseUser.pubkeyHex)
+        Crossfade(targetState = nip05Verified) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                DisplayNIP05(nip05, it)
+            }
         }
     }
 }
@@ -150,7 +149,7 @@ private fun DisplayNIP05(
 
     if (user != "_") {
         Text(
-            text = AnnotatedString(user),
+            text = remember(nip05) { AnnotatedString(user) },
             color = MaterialTheme.colors.placeholderText,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -160,7 +159,7 @@ private fun DisplayNIP05(
     NIP05VerifiedSymbol(nip05Verified)
 
     ClickableText(
-        text = AnnotatedString(domain),
+        text = remember(nip05) { AnnotatedString(domain) },
         onClick = { runCatching { uri.openUri("https://$domain") } },
         style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(0.52f)),
         maxLines = 1,

@@ -2,6 +2,8 @@ package com.vitorpamplona.amethyst.ui.note
 
 import android.content.Context
 import android.util.Log
+import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
@@ -20,13 +22,11 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.tts.TextToSpeechHelper
 import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
-import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.theme.StdButtonSizeModifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
@@ -36,38 +36,34 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 fun NoteUsernameDisplay(baseNote: Note, weight: Modifier = Modifier) {
     val authorState by baseNote.live().metadata.map {
         it.note.author
-    }.distinctUntilChanged().observeAsState()
+    }.observeAsState(baseNote.author)
 
-    authorState?.let {
-        UsernameDisplay(it, weight)
+    Crossfade(targetState = authorState, modifier = weight) {
+        it?.let {
+            UsernameDisplay(it, weight)
+        }
     }
 }
 
 @Composable
 fun UsernameDisplay(baseUser: User, weight: Modifier = Modifier) {
-    val userState by baseUser.live().metadata.observeAsState()
-    val bestUserName by remember(userState) {
-        derivedStateOf {
-            userState?.user?.bestUsername()
-        }
-    }
-    val bestDisplayName by remember(userState) {
-        derivedStateOf {
-            userState?.user?.bestDisplayName()
-        }
-    }
     val npubDisplay by remember {
         derivedStateOf {
             baseUser.pubkeyDisplayHex()
         }
     }
-    val tags by remember(userState) {
-        derivedStateOf {
-            userState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists()
+
+    val userMetadata by baseUser.live().metadata.map {
+        it.user.info
+    }.observeAsState(baseUser.info)
+
+    Crossfade(targetState = userMetadata, modifier = weight) {
+        if (it != null) {
+            UserNameDisplay(it.bestUsername(), it.bestDisplayName(), npubDisplay, it.tags, weight)
+        } else {
+            NPubDisplay(npubDisplay, weight)
         }
     }
-
-    UserNameDisplay(bestUserName, bestDisplayName, npubDisplay, tags, weight)
 }
 
 @Composable
@@ -106,16 +102,18 @@ private fun UserDisplay(
     tags: ImmutableListOfLists<String>?,
     modifier: Modifier
 ) {
-    CreateTextWithEmoji(
-        text = bestDisplayName,
-        tags = tags,
-        fontWeight = FontWeight.Bold,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        modifier = modifier
-    )
-    Spacer(StdHorzSpacer)
-    DrawPlayName(bestDisplayName)
+    Row(modifier = modifier) {
+        CreateTextWithEmoji(
+            text = bestDisplayName,
+            tags = tags,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = modifier
+        )
+        Spacer(StdHorzSpacer)
+        DrawPlayName(bestDisplayName)
+    }
 }
 
 @Composable
@@ -125,22 +123,24 @@ private fun UserAndUsernameDisplay(
     bestUserName: String,
     modifier: Modifier
 ) {
-    CreateTextWithEmoji(
-        text = bestDisplayName,
-        tags = tags,
-        fontWeight = FontWeight.Bold,
-        maxLines = 1
-    )
-    CreateTextWithEmoji(
-        text = remember { "@$bestUserName" },
-        tags = tags,
-        color = MaterialTheme.colors.placeholderText,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        modifier = modifier
-    )
-    Spacer(StdHorzSpacer)
-    DrawPlayName(bestDisplayName)
+    Row(modifier = modifier) {
+        CreateTextWithEmoji(
+            text = bestDisplayName,
+            tags = tags,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1
+        )
+        CreateTextWithEmoji(
+            text = remember { "@$bestUserName" },
+            tags = tags,
+            color = MaterialTheme.colors.placeholderText,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = modifier
+        )
+        Spacer(StdHorzSpacer)
+        DrawPlayName(bestDisplayName)
+    }
 }
 
 @Composable

@@ -33,7 +33,7 @@ class PublicChatChannel(idHex: String) : Channel(idHex) {
     }
 
     override fun profilePicture(): String? {
-        if (info.picture.isNullOrBlank()) return null
+        if (info.picture.isNullOrBlank()) return super.profilePicture()
         return info.picture ?: super.profilePicture()
     }
 
@@ -65,7 +65,7 @@ class LiveActivitiesChannel(val address: ATag) : Channel(address.toTag()) {
     }
 
     override fun profilePicture(): String? {
-        return info?.image()?.ifBlank { null } ?: super.profilePicture()
+        return info?.image()?.ifBlank { null }
     }
 
     override fun anyNameStartsWith(prefix: String): Boolean {

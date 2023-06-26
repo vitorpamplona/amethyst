@@ -586,16 +586,18 @@ fun ChannelHeader(
                     )
                 }
 
-                RobohashAsyncImageProxy(
-                    robot = channel.idHex,
-                    model = channel.profilePicture(),
-                    contentDescription = stringResource(R.string.profile_image),
-                    modifier = Modifier
-                        .width(Size35dp)
-                        .height(Size35dp)
-                        .padding(start = 10.dp)
-                        .clip(shape = CircleShape)
-                )
+                channel.profilePicture()?.let {
+                    RobohashAsyncImageProxy(
+                        robot = channel.idHex,
+                        model = it,
+                        contentDescription = stringResource(R.string.profile_image),
+                        modifier = Modifier
+                            .width(Size35dp)
+                            .height(Size35dp)
+                            .padding(start = 10.dp)
+                            .clip(shape = CircleShape)
+                    )
+                }
 
                 Column(
                     modifier = Modifier

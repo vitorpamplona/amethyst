@@ -50,7 +50,7 @@ fun RobohashAsyncImage(
 @Composable
 fun RobohashFallbackAsyncImage(
     robot: String,
-    model: String,
+    model: String?,
     contentDescription: String?,
     modifier: Modifier = Modifier,
     alignment: Alignment = Alignment.Center,
@@ -91,28 +91,15 @@ fun RobohashAsyncImageProxy(
     colorFilter: ColorFilter? = null,
     filterQuality: FilterQuality = DrawScope.DefaultFilterQuality
 ) {
-    if (model == null) {
-        RobohashAsyncImage(
-            robot = robot,
-            contentDescription = contentDescription,
-            modifier = modifier,
-            alignment = alignment,
-            contentScale = contentScale,
-            alpha = alpha,
-            colorFilter = colorFilter,
-            filterQuality = filterQuality
-        )
-    } else {
-        RobohashFallbackAsyncImage(
-            robot = robot,
-            model = model,
-            contentDescription = contentDescription,
-            modifier = modifier,
-            alignment = alignment,
-            contentScale = contentScale,
-            alpha = alpha,
-            colorFilter = colorFilter,
-            filterQuality = filterQuality
-        )
-    }
+    RobohashFallbackAsyncImage(
+        robot = robot,
+        model = model,
+        contentDescription = contentDescription,
+        modifier = modifier,
+        alignment = alignment,
+        contentScale = contentScale,
+        alpha = alpha,
+        colorFilter = colorFilter,
+        filterQuality = filterQuality
+    )
 }

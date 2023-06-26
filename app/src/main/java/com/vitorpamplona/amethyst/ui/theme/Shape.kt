@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.ui.theme
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -62,6 +63,7 @@ val StdPadding = Modifier.padding(10.dp)
 val Size15Modifier = Modifier.size(15.dp)
 val Size20Modifier = Modifier.size(20.dp)
 val Size22Modifier = Modifier.size(22.dp)
+val Size24Modifier = Modifier.size(24.dp)
 val Size30Modifier = Modifier.size(30.dp)
 val Size55Modifier = Modifier.size(55.dp)
 
@@ -76,6 +78,8 @@ val DiviserThickness = 0.25.dp
 
 val ReactionRowHeight = Modifier.height(24.dp).padding(start = 10.dp)
 val ReactionRowHeightChat = Modifier.height(25.dp)
+val UserNameRowHeight = Modifier.height(22.dp).fillMaxWidth()
+val UserNameMaxRowHeight = Modifier.heightIn(max = 22.dp).fillMaxWidth()
 
 val Height4dpModifier = Modifier.height(4.dp)
 

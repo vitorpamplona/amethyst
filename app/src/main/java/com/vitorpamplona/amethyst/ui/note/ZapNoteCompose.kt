@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.ShowUserButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.UnfollowButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -106,7 +107,7 @@ private fun RenderZapNote(
         },
         verticalAlignment = Alignment.CenterVertically
     ) {
-        UserPicture(baseAuthor, 55.dp, accountViewModel = accountViewModel, nav = nav)
+        UserPicture(baseAuthor, Size55dp, accountViewModel = accountViewModel, nav = nav)
 
         Column(
             modifier = remember {

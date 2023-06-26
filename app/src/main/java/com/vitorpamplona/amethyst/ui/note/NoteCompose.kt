@@ -83,6 +83,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.graphics.get
+import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
@@ -160,6 +161,8 @@ import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.ShowMoreRelaysButtonBoxModifer
 import com.vitorpamplona.amethyst.ui.theme.ShowMoreRelaysButtonIconButtonModifier
 import com.vitorpamplona.amethyst.ui.theme.ShowMoreRelaysButtonIconModifier
+import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size30dp
@@ -168,12 +171,16 @@ import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
+import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.UserNameMaxRowHeight
+import com.vitorpamplona.amethyst.ui.theme.UserNameRowHeight
 import com.vitorpamplona.amethyst.ui.theme.WidthAuthorPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyBackground
+import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.theme.repostProfileBorder
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import kotlinx.collections.immutable.ImmutableList
@@ -195,7 +202,7 @@ import java.util.Locale
 fun NoteCompose(
     baseNote: Note,
     routeForLastRead: String? = null,
-    modifier: Modifier = remember { Modifier },
+    modifier: Modifier = Modifier,
     isBoostedNote: Boolean = false,
     isQuotedNote: Boolean = false,
     unPackReply: Boolean = true,
@@ -207,34 +214,36 @@ fun NoteCompose(
 ) {
     val isBlank by baseNote.live().metadata.map {
         it.note.event == null
-    }.observeAsState(baseNote.event == null)
+    }.distinctUntilChanged().observeAsState(baseNote.event == null)
 
-    if (isBlank) {
-        LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
-            BlankNote(
-                remember {
-                    modifier.combinedClickable(
-                        onClick = { },
-                        onLongClick = showPopup
-                    )
-                },
-                isBoostedNote || isQuotedNote
+    Crossfade(targetState = isBlank) {
+        if (it) {
+            LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
+                BlankNote(
+                    remember {
+                        modifier.combinedClickable(
+                            onClick = { },
+                            onLongClick = showPopup
+                        )
+                    },
+                    isBoostedNote || isQuotedNote
+                )
+            }
+        } else {
+            CheckHiddenNoteCompose(
+                baseNote,
+                routeForLastRead,
+                modifier,
+                isBoostedNote,
+                isQuotedNote,
+                unPackReply,
+                makeItShort,
+                addMarginTop,
+                parentBackgroundColor,
+                accountViewModel,
+                nav
             )
         }
-    } else {
-        CheckHiddenNoteCompose(
-            baseNote,
-            routeForLastRead,
-            modifier,
-            isBoostedNote,
-            isQuotedNote,
-            unPackReply,
-            makeItShort,
-            addMarginTop,
-            parentBackgroundColor,
-            accountViewModel,
-            nav
-        )
     }
 }
 
@@ -261,20 +270,22 @@ fun CheckHiddenNoteCompose(
         }
     }
 
-    if (!isHidden) {
-        LoadedNoteCompose(
-            note,
-            routeForLastRead,
-            modifier,
-            isBoostedNote,
-            isQuotedNote,
-            unPackReply,
-            makeItShort,
-            addMarginTop,
-            parentBackgroundColor,
-            accountViewModel,
-            nav
-        )
+    Crossfade(targetState = isHidden) {
+        if (!it) {
+            LoadedNoteCompose(
+                note,
+                routeForLastRead,
+                modifier,
+                isBoostedNote,
+                isQuotedNote,
+                unPackReply,
+                makeItShort,
+                addMarginTop,
+                parentBackgroundColor,
+                accountViewModel,
+                nav
+            )
+        }
     }
 }
 
@@ -309,37 +320,19 @@ fun LoadedNoteCompose(
         )
     }
 
+    val scope = rememberCoroutineScope()
+
     WatchForReports(note, accountViewModel) { newIsAcceptable, newCanPreview, newRelevantReports ->
         if (newIsAcceptable != state.isAcceptable || newCanPreview != state.canPreview) {
-            state = NoteComposeReportState(newIsAcceptable, newCanPreview, newRelevantReports)
-        }
-    }
-
-    var showReportedNote by remember { mutableStateOf(false) }
-
-    val showHiddenNote by remember(state, showReportedNote) {
-        derivedStateOf {
-            !state.isAcceptable && !showReportedNote
-        }
-    }
-
-    if (showHiddenNote) {
-        HiddenNote(
-            state.relevantReports,
-            accountViewModel,
-            modifier,
-            isBoostedNote,
-            nav,
-            onClick = { showReportedNote = true }
-        )
-    } else {
-        val canPreview by remember(state, showReportedNote) {
-            derivedStateOf {
-                (!state.isAcceptable && showReportedNote) || state.canPreview
+            scope.launch(Dispatchers.Main) {
+                state = NoteComposeReportState(newIsAcceptable, newCanPreview, newRelevantReports)
             }
         }
+    }
 
-        NormalNote(
+    Crossfade(targetState = state) {
+        RenderReportState(
+            it,
             note,
             routeForLastRead,
             modifier,
@@ -348,11 +341,58 @@ fun LoadedNoteCompose(
             unPackReply,
             makeItShort,
             addMarginTop,
-            canPreview,
             parentBackgroundColor,
             accountViewModel,
             nav
         )
+    }
+}
+
+@Composable
+fun RenderReportState(
+    state: NoteComposeReportState,
+    note: Note,
+    routeForLastRead: String? = null,
+    modifier: Modifier = Modifier,
+    isBoostedNote: Boolean = false,
+    isQuotedNote: Boolean = false,
+    unPackReply: Boolean = true,
+    makeItShort: Boolean = false,
+    addMarginTop: Boolean = true,
+    parentBackgroundColor: MutableState<Color>? = null,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    var showReportedNote by remember { mutableStateOf(false) }
+
+    Crossfade(targetState = !state.isAcceptable && !showReportedNote) { showHiddenNote ->
+        if (showHiddenNote) {
+            HiddenNote(
+                state.relevantReports,
+                accountViewModel,
+                modifier,
+                isBoostedNote,
+                nav,
+                onClick = { showReportedNote = true }
+            )
+        } else {
+            val canPreview = (!state.isAcceptable && showReportedNote) || state.canPreview
+
+            NormalNote(
+                note,
+                routeForLastRead,
+                modifier,
+                isBoostedNote,
+                isQuotedNote,
+                unPackReply,
+                makeItShort,
+                addMarginTop,
+                canPreview,
+                parentBackgroundColor,
+                accountViewModel,
+                nav
+            )
+        }
     }
 }
 
@@ -368,18 +408,30 @@ fun WatchForReports(
     LaunchedEffect(key1 = noteReportsState, key2 = userFollowsState) {
         launch(Dispatchers.Default) {
             accountViewModel.account.let { loggedIn ->
-                val newCanPreview = note.author?.pubkeyHex == loggedIn.userProfile().pubkeyHex ||
-                    (note.author?.let { loggedIn.userProfile().isFollowingCached(it) } ?: true) ||
-                    noteReportsState?.note?.hasAnyReports() != true
+                val isFromLoggedIn = note.author?.pubkeyHex == loggedIn.userProfile().pubkeyHex
+                val isFromLoggedInFollow = note.author?.let { loggedIn.userProfile().isFollowingCached(it) } ?: true
 
-                val newIsAcceptable = noteReportsState?.note?.let {
-                    loggedIn.isAcceptable(it)
-                } ?: true
-                val newRelevantReports = noteReportsState?.note?.let {
-                    loggedIn.getRelevantReports(it)
-                } ?: emptySet()
+                if (isFromLoggedIn || isFromLoggedInFollow) {
+                    // No need to process if from trusted people
+                    onChange(true, true, persistentSetOf())
+                } else {
+                    val newCanPreview = noteReportsState?.note?.hasAnyReports() != true
 
-                onChange(newIsAcceptable, newCanPreview, newRelevantReports.toImmutableSet())
+                    val newIsAcceptable = noteReportsState?.note?.let {
+                        loggedIn.isAcceptable(it)
+                    } ?: true
+
+                    if (newCanPreview && newIsAcceptable) {
+                        // No need to process reports if nothing is wrong
+                        onChange(true, true, persistentSetOf())
+                    } else {
+                        val newRelevantReports = noteReportsState?.note?.let {
+                            loggedIn.getRelevantReports(it)
+                        } ?: emptySet()
+
+                        onChange(newIsAcceptable, newCanPreview, newRelevantReports.toImmutableSet())
+                    }
+                }
             }
         }
     }
@@ -400,46 +452,35 @@ fun NormalNote(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val noteEvent = remember { baseNote.event }
-
-    val isChannelHeader by remember {
-        derivedStateOf {
-            (baseNote.event is ChannelCreateEvent || baseNote.event is ChannelMetadataEvent) && baseNote.channelHex() != null
-        }
-    }
-
-    if (isChannelHeader) {
-        ChannelHeader(
+    when (baseNote.event) {
+        is ChannelCreateEvent, is ChannelMetadataEvent -> ChannelHeader(
             channelNote = baseNote,
             showVideo = !makeItShort,
             showBottomDiviser = true,
             accountViewModel = accountViewModel,
             nav = nav
         )
-    } else if (noteEvent is BadgeDefinitionEvent) {
-        BadgeDisplay(baseNote = baseNote)
-    } else if (noteEvent is FileHeaderEvent) {
-        FileHeaderDisplay(baseNote)
-    } else if (noteEvent is FileStorageHeaderEvent) {
-        FileStorageHeaderDisplay(baseNote)
-    } else {
-        LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
-            CheckNewAndRenderNote(
-                baseNote,
-                routeForLastRead,
-                modifier,
-                isBoostedNote,
-                isQuotedNote,
-                unPackReply,
-                makeItShort,
-                addMarginTop,
-                canPreview,
-                parentBackgroundColor,
-                accountViewModel,
-                showPopup,
-                nav
-            )
-        }
+        is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote)
+        is FileHeaderEvent -> FileHeaderDisplay(baseNote)
+        is FileStorageHeaderEvent -> FileStorageHeaderDisplay(baseNote)
+        else ->
+            LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
+                CheckNewAndRenderNote(
+                    baseNote,
+                    routeForLastRead,
+                    modifier,
+                    isBoostedNote,
+                    isQuotedNote,
+                    unPackReply,
+                    makeItShort,
+                    addMarginTop,
+                    canPreview,
+                    parentBackgroundColor,
+                    accountViewModel,
+                    showPopup,
+                    nav
+                )
+            }
     }
 }
 
@@ -534,7 +575,7 @@ private fun ClickableNote(
 ) {
     val scope = rememberCoroutineScope()
 
-    val updatedModifier = remember(backgroundColor.value) {
+    val updatedModifier = remember(backgroundColor) {
         modifier
             .combinedClickable(
                 onClick = {
@@ -569,17 +610,8 @@ fun InnerNoteWithReactions(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val notBoostedNorQuote by remember {
-        derivedStateOf {
-            !isBoostedNote && !isQuotedNote
-        }
-    }
-
-    val showSecondRow by remember {
-        derivedStateOf {
-            baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent && !isBoostedNote && !isQuotedNote
-        }
-    }
+    val notBoostedNorQuote = !isBoostedNote && !isQuotedNote
+    val showSecondRow = baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent && !isBoostedNote && !isQuotedNote
 
     Row(
         modifier = remember {
@@ -593,28 +625,28 @@ fun InnerNoteWithReactions(
         }
     ) {
         if (notBoostedNorQuote) {
-            AuthorAndRelayInformation(baseNote, accountViewModel, nav)
+            Column(WidthAuthorPictureModifier) {
+                AuthorAndRelayInformation(baseNote, accountViewModel, nav)
+            }
             Spacer(modifier = DoubleHorzSpacer)
         }
 
-        NoteBody(
-            baseNote = baseNote,
-            showAuthorPicture = isQuotedNote,
-            unPackReply = unPackReply,
-            makeItShort = makeItShort,
-            canPreview = canPreview,
-            showSecondRow = showSecondRow,
-            backgroundColor = backgroundColor,
-            accountViewModel = accountViewModel,
-            nav = nav
-        )
-    }
-
-    val isNotRepost by remember {
-        derivedStateOf {
-            baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent
+        Column(Modifier.fillMaxWidth()) {
+            NoteBody(
+                baseNote = baseNote,
+                showAuthorPicture = isQuotedNote,
+                unPackReply = unPackReply,
+                makeItShort = makeItShort,
+                canPreview = canPreview,
+                showSecondRow = showSecondRow,
+                backgroundColor = backgroundColor,
+                accountViewModel = accountViewModel,
+                nav = nav
+            )
         }
     }
+
+    val isNotRepost = baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent
 
     if (isNotRepost) {
         if (makeItShort) {
@@ -651,43 +683,41 @@ private fun NoteBody(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    Column(Modifier.fillMaxWidth()) {
-        FirstUserInfoRow(
-            baseNote = baseNote,
-            showAuthorPicture = showAuthorPicture,
-            accountViewModel = accountViewModel,
-            nav = nav
-        )
+    FirstUserInfoRow(
+        baseNote = baseNote,
+        showAuthorPicture = showAuthorPicture,
+        accountViewModel = accountViewModel,
+        nav = nav
+    )
 
-        if (showSecondRow) {
-            SecondUserInfoRow(
-                baseNote,
-                accountViewModel,
-                nav
-            )
-        }
-
-        Spacer(modifier = HalfVertSpacer)
-
-        if (!makeItShort) {
-            ReplyRow(
-                baseNote,
-                unPackReply,
-                backgroundColor,
-                accountViewModel,
-                nav
-            )
-        }
-
-        RenderNoteRow(
+    if (showSecondRow) {
+        SecondUserInfoRow(
             baseNote,
-            backgroundColor,
-            makeItShort,
-            canPreview,
             accountViewModel,
             nav
         )
     }
+
+    Spacer(modifier = HalfVertSpacer)
+
+    if (!makeItShort) {
+        ReplyRow(
+            baseNote,
+            unPackReply,
+            backgroundColor,
+            accountViewModel,
+            nav
+        )
+    }
+
+    RenderNoteRow(
+        baseNote,
+        backgroundColor,
+        makeItShort,
+        canPreview,
+        accountViewModel,
+        nav
+    )
 }
 
 @Composable
@@ -1711,37 +1741,39 @@ private fun ReplyRow(
         }
     }
 
-    val showChannelReply by remember {
-        derivedStateOf {
-            (noteEvent is ChannelMessageEvent && (note.replyTo != null || noteEvent.hasAnyTaggedUser())) ||
-                (noteEvent is LiveActivitiesChatMessageEvent && (note.replyTo != null || noteEvent.hasAnyTaggedUser()))
-        }
-    }
-
     if (showReply) {
         val replyingDirectlyTo = remember { note.replyTo?.lastOrNull() }
         if (replyingDirectlyTo != null && unPackReply) {
             ReplyNoteComposition(replyingDirectlyTo, backgroundColor, accountViewModel, nav)
-            Spacer(modifier = Modifier.height(5.dp))
+            Spacer(modifier = StdVertSpacer)
         } else {
             // ReplyInformation(note.replyTo, noteEvent.mentions(), accountViewModel, nav)
         }
-    } else if (showChannelReply) {
-        val channelHex = note.channelHex()
-        channelHex?.let {
-            ChannelHeader(
-                channelHex = channelHex,
-                showVideo = false,
-                showBottomDiviser = false,
-                modifier = remember { Modifier.padding(vertical = 5.dp) },
-                accountViewModel = accountViewModel,
-                nav = nav
-            )
+    } else {
+        val showChannelReply by remember {
+            derivedStateOf {
+                (noteEvent is ChannelMessageEvent && (note.replyTo != null || noteEvent.hasAnyTaggedUser())) ||
+                    (noteEvent is LiveActivitiesChatMessageEvent && (note.replyTo != null || noteEvent.hasAnyTaggedUser()))
+            }
+        }
 
-            val replies = remember { note.replyTo?.toImmutableList() }
-            val mentions = remember { (note.event as? BaseTextNoteEvent)?.mentions()?.toImmutableList() ?: persistentListOf() }
+        if (showChannelReply) {
+            val channelHex = note.channelHex()
+            channelHex?.let {
+                ChannelHeader(
+                    channelHex = channelHex,
+                    showVideo = false,
+                    showBottomDiviser = false,
+                    modifier = remember { Modifier.padding(vertical = 5.dp) },
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
 
-            ReplyInformationChannel(replies, mentions, accountViewModel, nav)
+                val replies = remember { note.replyTo?.toImmutableList() }
+                val mentions = remember { (note.event as? BaseTextNoteEvent)?.mentions()?.toImmutableList() ?: persistentListOf() }
+
+                ReplyInformationChannel(replies, mentions, accountViewModel, nav)
+            }
         }
     }
 }
@@ -1759,7 +1791,7 @@ private fun ReplyNoteComposition(
     val defaultReplyBackground = MaterialTheme.colors.replyBackground
 
     LaunchedEffect(key1 = backgroundColor.value, key2 = defaultReplyBackground) {
-        launch(Dispatchers.IO) {
+        launch(Dispatchers.Default) {
             val newReplyBackgroundColor =
                 defaultReplyBackground.compositeOver(backgroundColor.value)
             if (replyBackgroundColor.value != newReplyBackgroundColor) {
@@ -1768,22 +1800,10 @@ private fun ReplyNoteComposition(
         }
     }
 
-    val borderColor = MaterialTheme.colors.subtleBorder
-
     NoteCompose(
         baseNote = replyingDirectlyTo,
         isQuotedNote = true,
-        modifier = remember {
-            Modifier
-                .padding(top = 5.dp)
-                .fillMaxWidth()
-                .clip(shape = QuoteBorder)
-                .border(
-                    1.dp,
-                    borderColor,
-                    QuoteBorder
-                )
-        },
+        modifier = MaterialTheme.colors.replyModifier,
         unPackReply = false,
         makeItShort = true,
         parentBackgroundColor = replyBackgroundColor,
@@ -1801,7 +1821,7 @@ private fun SecondUserInfoRow(
     val noteEvent = remember { note.event } ?: return
     val noteAuthor = remember { note.author } ?: return
 
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(verticalAlignment = CenterVertically, modifier = UserNameMaxRowHeight) {
         ObserveDisplayNip05Status(noteAuthor, remember { Modifier.weight(1f) })
 
         val baseReward = remember { noteEvent.getReward()?.let { Reward(it) } }
@@ -1823,7 +1843,7 @@ private fun FirstUserInfoRow(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    Row(verticalAlignment = CenterVertically, modifier = Modifier.fillMaxWidth()) {
+    Row(verticalAlignment = CenterVertically, modifier = remember { UserNameRowHeight }) {
         val isRepost by remember {
             derivedStateOf {
                 baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent
@@ -1869,13 +1889,13 @@ private fun MoreOptionsButton(
     var moreActionsExpanded by remember { mutableStateOf(false) }
 
     IconButton(
-        modifier = remember { Modifier.size(24.dp) },
+        modifier = Size24Modifier,
         onClick = { moreActionsExpanded = true }
     ) {
         Icon(
             imageVector = Icons.Default.MoreVert,
             null,
-            modifier = remember { Modifier.size(15.dp) },
+            modifier = Size15Modifier,
             tint = MaterialTheme.colors.placeholderText
         )
 
@@ -1908,14 +1928,12 @@ fun TimeAgo(time: Long) {
 
 @Composable
 private fun AuthorAndRelayInformation(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    Column(WidthAuthorPictureModifier) {
-        // Draws the boosted picture outside the boosted card.
-        Box(modifier = Size55Modifier, contentAlignment = Alignment.BottomEnd) {
-            RenderAuthorImages(baseNote, nav, accountViewModel)
-        }
-
-        BadgeBox(baseNote, accountViewModel, nav)
+    // Draws the boosted picture outside the boosted card.
+    Box(modifier = Size55Modifier, contentAlignment = Alignment.BottomEnd) {
+        RenderAuthorImages(baseNote, nav, accountViewModel)
     }
+
+    BadgeBox(baseNote, accountViewModel, nav)
 }
 
 @Composable
@@ -1950,11 +1968,7 @@ private fun RenderAuthorImages(
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
-    val isRepost by remember {
-        derivedStateOf {
-            baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent
-        }
-    }
+    val isRepost = baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent
 
     NoteAuthorPicture(baseNote, nav, accountViewModel, Size55dp)
 
@@ -1962,11 +1976,7 @@ private fun RenderAuthorImages(
         RepostNoteAuthorPicture(baseNote, accountViewModel, nav)
     }
 
-    val isChannel by remember {
-        derivedStateOf {
-            baseNote.event is ChannelMessageEvent && baseNote.channelHex() != null
-        }
-    }
+    val isChannel = baseNote.event is ChannelMessageEvent && baseNote.channelHex() != null
 
     if (isChannel) {
         val baseChannelHex = remember { baseNote.channelHex() }
@@ -2001,7 +2011,7 @@ fun LoadChannel(baseChannelHex: String, content: @Composable (Channel) -> Unit) 
 private fun ChannelNotePicture(baseChannel: Channel) {
     val model by baseChannel.live.map {
         it.channel.profilePicture()
-    }.observeAsState()
+    }.distinctUntilChanged().observeAsState()
 
     val backgroundColor = MaterialTheme.colors.background
 
@@ -2879,16 +2889,20 @@ private fun RelayBadges(baseNote: Note, accountViewModel: AccountViewModel, nav:
         mutableStateOf(lazyRelayList.take(3).toImmutableList())
     }
 
-    WatchRelayLists(baseNote) { relayList ->
-        if (!equalImmutableLists(relayList, lazyRelayList)) {
-            lazyRelayList = relayList
-            shortRelayList = relayList.take(3).toImmutableList()
-        }
+    val scope = rememberCoroutineScope()
 
-        val nextShowMore = relayList.size > 3
-        if (nextShowMore != showShowMore) {
-            // only triggers recomposition when actually different
-            showShowMore = nextShowMore
+    WatchRelayLists(baseNote) { relayList ->
+        scope.launch(Dispatchers.Main) {
+            if (!equalImmutableLists(relayList, lazyRelayList)) {
+                lazyRelayList = relayList
+                shortRelayList = relayList.take(3).toImmutableList()
+            }
+
+            val nextShowMore = relayList.size > 3
+            if (nextShowMore != showShowMore) {
+                // only triggers recomposition when actually different
+                showShowMore = nextShowMore
+            }
         }
     }
 
@@ -2982,12 +2996,14 @@ fun NoteAuthorPicture(
 ) {
     val author by baseNote.live().metadata.map {
         it.note.author
-    }.observeAsState()
+    }.distinctUntilChanged().observeAsState(baseNote.author)
 
-    if (author == null) {
-        DisplayBlankAuthor(size, modifier)
-    } else {
-        ClickableUserPicture(author!!, size, accountViewModel, modifier, onClick)
+    Crossfade(targetState = author) {
+        if (it == null) {
+            DisplayBlankAuthor(size, modifier)
+        } else {
+            ClickableUserPicture(it, size, accountViewModel, modifier, onClick)
+        }
     }
 }
 
@@ -3111,15 +3127,23 @@ fun BaseUserPicture(
 
     val userProfile by baseUser.live().metadata.map {
         it.user.profilePicture()
-    }.observeAsState()
+    }.distinctUntilChanged().observeAsState(baseUser.profilePicture())
 
-    PictureAndFollowingMark(
-        userHex = userPubkey,
-        userPicture = userProfile,
-        size = size,
-        modifier = modifier,
-        accountViewModel = accountViewModel
-    )
+    val myBoxModifier = remember {
+        Modifier.size(size)
+    }
+
+    Crossfade(targetState = userProfile) {
+        Box(myBoxModifier, contentAlignment = TopEnd) {
+            PictureAndFollowingMark(
+                userHex = userPubkey,
+                userPicture = it,
+                size = size,
+                modifier = modifier,
+                accountViewModel = accountViewModel
+            )
+        }
+    }
 }
 
 @Composable
@@ -3157,12 +3181,16 @@ fun PictureAndFollowingMark(
 private fun ObserveAndDisplayFollowingMark(userHex: String, iconSize: Dp, accountViewModel: AccountViewModel) {
     val showFollowingMark by accountViewModel.userFollows.map {
         it.user.isFollowingCached(userHex) || (userHex == accountViewModel.account.userProfile().pubkeyHex)
-    }.observeAsState(
+    }.distinctUntilChanged().observeAsState(
         accountViewModel.account.userProfile().isFollowingCached(userHex) || (userHex == accountViewModel.account.userProfile().pubkeyHex)
     )
 
-    if (showFollowingMark) {
-        FollowingIcon(iconSize)
+    Crossfade(targetState = showFollowingMark) {
+        if (it) {
+            Box(contentAlignment = TopEnd) {
+                FollowingIcon(iconSize)
+            }
+        }
     }
 }
 

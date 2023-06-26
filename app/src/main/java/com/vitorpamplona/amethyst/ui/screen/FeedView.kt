@@ -197,8 +197,7 @@ private fun FeedLoaded(
     ) {
         itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
             val defaultModifier = remember {
-                Modifier
-                    .fillMaxWidth().animateItemPlacement()
+                Modifier.fillMaxWidth().animateItemPlacement()
             }
 
             Row(defaultModifier) {

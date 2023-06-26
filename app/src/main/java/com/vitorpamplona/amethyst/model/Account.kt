@@ -1134,7 +1134,7 @@ class Account(
             user.countReportAuthorsBy(followingKeySet()) < 5
     }
 
-    fun isAcceptableDirect(note: Note): Boolean {
+    private fun isAcceptableDirect(note: Note): Boolean {
         if (!warnAboutPostsWithReports) {
             return note.reportsBy(userProfile()).isEmpty()
         }

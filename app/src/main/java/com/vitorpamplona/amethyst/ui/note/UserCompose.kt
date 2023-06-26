@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.Size55dp
 
 @Composable
 fun UserCompose(
@@ -38,9 +39,9 @@ fun UserCompose(
             modifier = overallModifier,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            UserPicture(baseUser, 55.dp, accountViewModel = accountViewModel, nav = nav)
+            UserPicture(baseUser, Size55dp, accountViewModel = accountViewModel, nav = nav)
 
-            Column(modifier = Modifier.padding(start = 10.dp).weight(1f)) {
+            Column(modifier = remember { Modifier.padding(start = 10.dp).weight(1f) }) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     UsernameDisplay(baseUser)
                 }
@@ -48,7 +49,7 @@ fun UserCompose(
                 AboutDisplay(baseUser)
             }
 
-            Column(modifier = Modifier.padding(start = 10.dp)) {
+            Column(modifier = remember { Modifier.padding(start = 10.dp) }) {
                 UserActionOptions(baseUser, accountViewModel)
             }
         }

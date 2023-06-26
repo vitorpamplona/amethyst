@@ -12,6 +12,8 @@ import com.vitorpamplona.amethyst.service.model.MetadataEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.relays.EOSETime
 import com.vitorpamplona.amethyst.service.relays.Relay
+import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
+import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import fr.acinq.secp256k1.Hex
@@ -237,6 +239,7 @@ class User(val pubkeyHex: String) {
         info = newUserInfo
         info?.latestMetadata = latestMetadata
         info?.updatedMetadataAt = latestMetadata.createdAt
+        info?.tags = latestMetadata.tags.toImmutableListOfLists()
 
         if (newUserInfo.lud16.isNullOrBlank() && newUserInfo.lud06?.lowercase()?.startsWith("lnurl") == true) {
             try {
@@ -421,6 +424,7 @@ class UserMetadata {
 
     var updatedMetadataAt: Long = 0
     var latestMetadata: MetadataEvent? = null
+    var tags: ImmutableListOfLists<String>? = null
 
     fun anyName(): String? {
         return display_name ?: displayName ?: name ?: username
@@ -433,6 +437,23 @@ class UserMetadata {
 
     fun lnAddress(): String? {
         return (lud16?.trim() ?: lud06?.trim())?.ifBlank { null }
+    }
+
+    fun bestUsername(): String? {
+        return name?.ifBlank { null } ?: username?.ifBlank { null }
+    }
+
+    fun bestDisplayName(): String? {
+        return displayName?.ifBlank { null } ?: display_name?.ifBlank { null }
+    }
+
+    fun nip05(): String? {
+        return nip05?.ifBlank { null }
+    }
+
+    fun profilePicture(): String? {
+        if (picture.isNullOrBlank()) picture = null
+        return picture
     }
 }
 

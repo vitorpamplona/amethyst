@@ -121,6 +121,26 @@ val LightImageModifier = Modifier
         QuoteBorder
     )
 
+val DarkReplyBorderModifier = Modifier
+    .padding(top = 5.dp)
+    .fillMaxWidth()
+    .clip(shape = QuoteBorder)
+    .border(
+        1.dp,
+        DarkSubtleBorder,
+        QuoteBorder
+    )
+
+val LightReplyBorderModifier = Modifier
+    .padding(top = 5.dp)
+    .fillMaxWidth()
+    .clip(shape = QuoteBorder)
+    .border(
+        1.dp,
+        LightSubtleBorder,
+        QuoteBorder
+    )
+
 val MarkDownStyleOnDark = richTextDefaults.copy(
     paragraphSpacing = DefaultParagraphSpacing,
     headingStyle = DefaultHeadingStyle,
@@ -242,6 +262,9 @@ val Colors.repostProfileBorder: Modifier
 
 val Colors.imageModifier: Modifier
     get() = if (isLight) LightImageModifier else DarkImageModifier
+
+val Colors.replyModifier: Modifier
+    get() = if (isLight) LightReplyBorderModifier else DarkReplyBorderModifier
 
 @Composable
 fun AmethystTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
