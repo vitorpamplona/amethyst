@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -89,7 +88,6 @@ import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.PostButton
 import com.vitorpamplona.amethyst.ui.actions.ServersAvailable
 import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
-import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
@@ -550,11 +548,14 @@ fun ChannelHeader(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
+    val scope = rememberCoroutineScope()
     Column(
         Modifier
             .fillMaxWidth()
             .clickable {
-                nav("Channel/${baseChannel.idHex}")
+                scope.launch {
+                    nav("Channel/${baseChannel.idHex}")
+                }
             }
     ) {
         val channelState by baseChannel.live.observeAsState()
@@ -586,18 +587,20 @@ fun ChannelHeader(
                     )
                 }
 
+                /*
                 channel.profilePicture()?.let {
                     RobohashAsyncImageProxy(
                         robot = channel.idHex,
                         model = it,
                         contentDescription = stringResource(R.string.profile_image),
-                        modifier = Modifier
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.padding(start = 10.dp)
                             .width(Size35dp)
                             .height(Size35dp)
-                            .padding(start = 10.dp)
                             .clip(shape = CircleShape)
                     )
                 }
+                 */
 
                 Column(
                     modifier = Modifier
@@ -634,7 +637,7 @@ fun ChannelHeader(
                 Row(
                     modifier = Modifier
                         .height(Size35dp)
-                        .padding(bottom = 3.dp),
+                        .padding(bottom = 3.dp, start = 5.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (channel is PublicChatChannel) {
