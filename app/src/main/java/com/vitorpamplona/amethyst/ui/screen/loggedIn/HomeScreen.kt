@@ -222,8 +222,10 @@ fun CheckIfLiveActivityIsOnline(note: Note, whenOnline: @Composable () -> Unit) 
         }
     }
 
-    if (online) {
-        whenOnline()
+    Crossfade(targetState = online) {
+        if (it) {
+            whenOnline()
+        }
     }
 }
 
