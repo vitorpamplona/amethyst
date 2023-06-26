@@ -115,7 +115,7 @@ fun ChannelScreen(
 ) {
     if (channelId == null) return
 
-    var channelBase by remember { mutableStateOf<Channel?>(null) }
+    var channelBase by remember { mutableStateOf<Channel?>(LocalCache.getChannelIfExists(channelId)) }
 
     LaunchedEffect(channelId) {
         withContext(Dispatchers.IO) {
