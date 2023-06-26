@@ -456,6 +456,8 @@
     <string name="minimum_pow">Minimum PoW</string>
     <string name="auth">Auth</string>
     <string name="payment">Payment</string>
+    <string name="cashu">Cashu ecash</string>
+    <string name="cashu_redeem">Redeem Sats</string>
 
     <string name="live_stream_live_tag">LIVE</string>
     <string name="live_stream_offline_tag">OFFLINE</string>
