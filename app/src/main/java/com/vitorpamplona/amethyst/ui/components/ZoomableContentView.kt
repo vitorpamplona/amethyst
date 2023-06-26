@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.components
 
 import android.content.Context
+import android.os.Build
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -10,10 +11,10 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.PagerState
@@ -38,6 +40,7 @@ import androidx.compose.material.icons.filled.Report
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,6 +53,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.Placeholder
@@ -441,10 +445,23 @@ private fun DisplayBlurHash(
 fun ZoomableImageDialog(imageUrl: ZoomableContent, allImages: ImmutableList<ZoomableContent> = listOf(imageUrl).toImmutableList(), onDismiss: () -> Unit) {
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false
+        )
     ) {
+        val view = LocalView.current
+
+        SideEffect {
+            if (Build.VERSION.SDK_INT >= 30) {
+                view.windowInsetsController?.hide(
+                    android.view.WindowInsets.Type.systemBars()
+                )
+            }
+        }
+
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background) {
-            Column() {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
                 val pagerState: PagerState = remember { PagerState() }
 
                 LaunchedEffect(key1 = pagerState, key2 = imageUrl) {
@@ -452,6 +469,18 @@ fun ZoomableImageDialog(imageUrl: ZoomableContent, allImages: ImmutableList<Zoom
                     if (page > -1) {
                         pagerState.scrollToPage(page)
                     }
+                }
+
+                if (allImages.size > 1) {
+                    SlidingCarousel(
+                        pagerState = pagerState,
+                        itemsCount = allImages.size,
+                        itemContent = { index ->
+                            RenderImageOrVideo(allImages[index])
+                        }
+                    )
+                } else {
+                    RenderImageOrVideo(imageUrl)
                 }
 
                 Row(
@@ -469,18 +498,6 @@ fun ZoomableImageDialog(imageUrl: ZoomableContent, allImages: ImmutableList<Zoom
                     } else if (myContent is ZoomableLocalImage && myContent.localFile != null) {
                         SaveToGallery(localFile = myContent.localFile, mimeType = myContent.mimeType)
                     }
-                }
-
-                if (allImages.size > 1) {
-                    SlidingCarousel(
-                        pagerState = pagerState,
-                        itemsCount = allImages.size,
-                        itemContent = { index ->
-                            RenderImageOrVideo(allImages[index])
-                        }
-                    )
-                } else {
-                    RenderImageOrVideo(imageUrl)
                 }
             }
         }

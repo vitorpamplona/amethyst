@@ -39,6 +39,7 @@ import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
 class MainActivity : FragmentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
