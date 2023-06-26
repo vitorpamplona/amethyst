@@ -260,7 +260,7 @@ private fun parseUrls(
 }
 
 enum class WordType {
-    IMAGE, LINK, EMOJI, INVOICE, WITHDRAW, EMAIL, PHONE, BECH, HASH_INDEX, HASHTAG, SCHEMELESS_URL, OTHER
+    IMAGE, LINK, EMOJI, INVOICE, WITHDRAW, CASHU, EMAIL, PHONE, BECH, HASH_INDEX, HASHTAG, SCHEMELESS_URL, OTHER
 }
 
 @Composable
@@ -284,6 +284,8 @@ private fun RenderWord(
             WordType.INVOICE
         } else if (word.startsWith("lnurl", true)) {
             WordType.WITHDRAW
+        } else if (word.startsWith("cashu", true) && word.endsWith("==", true)) {
+            WordType.CASHU
         } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
             WordType.EMAIL
         } else if (word.length > 6 && Patterns.PHONE.matcher(word).matches()) {
@@ -339,6 +341,7 @@ private fun RenderWordWithoutPreview(
         WordType.INVOICE -> NormalWord(wordSpace)
         // Don't offer to withdraw
         WordType.WITHDRAW -> NormalWord(wordSpace)
+        WordType.CASHU -> NormalWord(wordSpace)
         WordType.EMAIL -> ClickableEmail(word)
         WordType.PHONE -> ClickablePhone(word)
         WordType.BECH -> BechLink(word, false, backgroundColor, accountViewModel, nav)
@@ -369,6 +372,7 @@ private fun RenderWordWithPreview(
         WordType.EMOJI -> RenderCustomEmoji(word, state)
         WordType.INVOICE -> MayBeInvoicePreview(word)
         WordType.WITHDRAW -> MayBeWithdrawal(word)
+        WordType.CASHU -> CashuPreview(word, accountViewModel)
         WordType.EMAIL -> ClickableEmail(word)
         WordType.PHONE -> ClickablePhone(word)
         WordType.BECH -> BechLink(word, true, backgroundColor, accountViewModel, nav)
