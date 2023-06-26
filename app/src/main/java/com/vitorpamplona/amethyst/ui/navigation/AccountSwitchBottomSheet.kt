@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.AlertDialog
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
@@ -246,8 +247,42 @@ private fun LogoutButton(
     acc: AccountInfo,
     accountStateViewModel: AccountStateViewModel
 ) {
+    var logoutDialog by remember { mutableStateOf(false) }
+    if (logoutDialog) {
+        AlertDialog(
+            title = {
+                Text(text = stringResource(R.string.log_out))
+            },
+            text = {
+                Text(text = stringResource(R.string.are_you_sure_you_want_to_log_out))
+            },
+            onDismissRequest = {
+                logoutDialog = false
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        logoutDialog = false
+                        accountStateViewModel.logOff(acc.npub)
+                    }
+                ) {
+                    Text(text = stringResource(R.string.log_out))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        logoutDialog = false
+                    }
+                ) {
+                    Text(text = stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
     IconButton(
-        onClick = { accountStateViewModel.logOff(acc.npub) }
+        onClick = { logoutDialog = true }
     ) {
         Icon(
             imageVector = Icons.Default.Logout,
