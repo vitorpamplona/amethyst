@@ -189,9 +189,7 @@ private fun FeedLoaded(
     val listState = rememberLazyListState()
 
     LazyColumn(
-        contentPadding = PaddingValues(
-            top = 10.dp
-        ),
+        contentPadding = PaddingValues(),
         state = listState
     ) {
         itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
