@@ -166,6 +166,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size30dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
 import com.vitorpamplona.amethyst.ui.theme.WidthAuthorPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
@@ -2660,9 +2661,12 @@ fun RenderLiveActivityEventInner(baseNote: Note, accountViewModel: AccountViewMo
                 text = it,
                 fontWeight = FontWeight.Bold,
                 maxLines = 3,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
             )
         }
+
+        Spacer(modifier = StdHorzSpacer)
 
         Crossfade(targetState = status) {
             when (it) {
