@@ -88,7 +88,8 @@ import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.PostButton
 import com.vitorpamplona.amethyst.ui.actions.ServersAvailable
 import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
-import com.vitorpamplona.amethyst.ui.components.VideoView
+import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
+import com.vitorpamplona.amethyst.ui.components.ZoomableUrlVideo
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
@@ -563,15 +564,21 @@ fun ChannelHeader(
 
         val streamingUrl by remember(channelState) {
             derivedStateOf {
-                (channel as? LiveActivitiesChannel)?.info?.streaming()
+                val activity = channel as? LiveActivitiesChannel
+                val description = activity?.info?.title()
+                val url = activity?.info?.streaming()
+                if (url != null) {
+                    ZoomableUrlVideo(url, description = description)
+                } else {
+                    null
+                }
             }
         }
 
         if (streamingUrl != null && showVideo) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = remember { Modifier.heightIn(max = 300.dp) }) {
-                VideoView(
-                    videoUri = streamingUrl!!,
-                    description = null
+                ZoomableContentView(
+                    content = streamingUrl!!
                 )
             }
         }
@@ -637,7 +644,7 @@ fun ChannelHeader(
                 Row(
                     modifier = Modifier
                         .height(Size35dp)
-                        .padding(bottom = 3.dp, start = 5.dp),
+                        .padding(start = 5.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (channel is PublicChatChannel) {
