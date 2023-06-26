@@ -284,7 +284,7 @@ private fun RenderWord(
             WordType.INVOICE
         } else if (word.startsWith("lnurl", true)) {
             WordType.WITHDRAW
-        } else if (word.startsWith("cashu", true) && word.endsWith("==", true)) {
+        } else if (word.startsWith("cashuA", true)) {
             WordType.CASHU
         } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
             WordType.EMAIL

@@ -71,7 +71,7 @@ fun CashuPreview(cashutoken: String, accountViewModel: AccountViewModel) {
                     .padding(vertical = 10.dp),
                 onClick = {
                     runCatching {
-                        val url = "https://redeem.cashu.me?token=$cashutoken&lightning=$lnaddress"
+                        val url = "https://redeem.cashu.me?token=$cashutoken&lightning=$lnaddress&autopay=true"
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                         startActivity(context, intent, null)
                     }
