@@ -3166,7 +3166,8 @@ fun PictureAndFollowingMark(
         robot = userHex,
         model = userPicture,
         contentDescription = stringResource(id = R.string.profile_image),
-        modifier = myImageModifier
+        modifier = myImageModifier,
+        contentScale = ContentScale.Crop
     )
 
     val myIconSize by remember(size) {
