@@ -84,7 +84,7 @@ fun ChatroomComposeChannelOrUser(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val channelHex by remember {
+    val channelHex by remember(baseNote) {
         derivedStateOf {
             baseNote.channelHex()
         }
@@ -103,7 +103,7 @@ private fun ChatroomDirectMessage(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val userRoomHex by remember {
+    val userRoomHex by remember(baseNote) {
         derivedStateOf {
             (baseNote.event as? PrivateDmEvent)?.talkingWith(accountViewModel.userProfile().pubkeyHex)
         }
