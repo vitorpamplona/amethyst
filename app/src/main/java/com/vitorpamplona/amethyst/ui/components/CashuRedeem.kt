@@ -35,7 +35,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun CashuPreview(cashutoken: String, accountViewModel: AccountViewModel) {
-    var cachuData by remember { mutableStateOf<CashuToken?>(null) }
+    var cachuData by remember { mutableStateOf<GenericLoadable<CashuToken>>(GenericLoadable.Loading<CashuToken>()) }
 
     LaunchedEffect(key1 = cashutoken) {
         launch(Dispatchers.IO) {
@@ -44,13 +44,13 @@ fun CashuPreview(cashutoken: String, accountViewModel: AccountViewModel) {
     }
 
     Crossfade(targetState = cachuData) {
-        if (it != null) {
-            CashuPreview(it, accountViewModel)
-        } else {
-            Text(
+        when (it) {
+            is GenericLoadable.Loaded<CashuToken> -> CashuPreview(it.loaded, accountViewModel)
+            is GenericLoadable.Error<CashuToken> -> Text(
                 text = "$cashutoken ",
                 style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
             )
+            else -> {}
         }
     }
 }

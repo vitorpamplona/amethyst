@@ -6,6 +6,7 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -21,21 +22,25 @@ data class CashuToken(
 )
 
 class CashuProcessor {
-    fun parse(cashutoken: String): CashuToken {
-        val base64token = cashutoken.replace("cashuA", "")
-        val cashu = JsonParser.parseString(String(Base64.getDecoder().decode(base64token)))
-        val token = cashu.asJsonObject.get("token").asJsonArray[0].asJsonObject
-        val proofs = token["proofs"].asJsonArray
-        val mint = token["mint"].asString
+    fun parse(cashuToken: String): GenericLoadable<CashuToken> {
+        try {
+            val base64token = cashuToken.replace("cashuA", "")
+            val cashu = JsonParser.parseString(String(Base64.getDecoder().decode(base64token)))
+            val token = cashu.asJsonObject.get("token").asJsonArray[0].asJsonObject
+            val proofs = token["proofs"].asJsonArray
+            val mint = token["mint"].asString
 
-        var totalAmount = 0L
-        for (proof in proofs) {
-            totalAmount += proof.asJsonObject["amount"].asLong
+            var totalAmount = 0L
+            for (proof in proofs) {
+                totalAmount += proof.asJsonObject["amount"].asLong
+            }
+            val fees = Math.max(((totalAmount * 0.02).toInt()), 2)
+            val redeemInvoiceAmount = totalAmount - fees
+
+            return GenericLoadable.Loaded(CashuToken(mint, totalAmount, fees, redeemInvoiceAmount, proofs))
+        } catch (e: Exception) {
+            return GenericLoadable.Error<CashuToken>("Could not parse this cashu token")
         }
-        val fees = Math.max(((totalAmount * 0.02).toInt()), 2)
-        val redeemInvoiceAmount = totalAmount - fees
-
-        return CashuToken(mint, totalAmount, fees, redeemInvoiceAmount, proofs)
     }
 
     fun melt(token: CashuToken, lud16: String, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
