@@ -195,6 +195,8 @@ import java.io.File
 import java.math.BigDecimal
 import java.net.URL
 import java.util.Locale
+import kotlin.time.ExperimentalTime
+import kotlin.time.measureTimedValue
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -571,6 +573,7 @@ private fun ClickableNote(
     }
 }
 
+@OptIn(ExperimentalTime::class)
 @Composable
 fun InnerNoteWithReactions(
     baseNote: Note,
@@ -599,24 +602,30 @@ fun InnerNoteWithReactions(
     ) {
         if (notBoostedNorQuote) {
             Column(WidthAuthorPictureModifier) {
-                AuthorAndRelayInformation(baseNote, accountViewModel, nav)
+                val (value, elapsed) = measureTimedValue {
+                    AuthorAndRelayInformation(baseNote, accountViewModel, nav)
+                }
+                println("AAA Rendering Auth $elapsed - ${baseNote.event?.content()?.take(10)}")
             }
             Spacer(modifier = DoubleHorzSpacer)
         }
 
         Column(Modifier.fillMaxWidth()) {
             val showSecondRow = baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent && !isBoostedNote && !isQuotedNote
-            NoteBody(
-                baseNote = baseNote,
-                showAuthorPicture = isQuotedNote,
-                unPackReply = unPackReply,
-                makeItShort = makeItShort,
-                canPreview = canPreview,
-                showSecondRow = showSecondRow,
-                backgroundColor = backgroundColor,
-                accountViewModel = accountViewModel,
-                nav = nav
-            )
+            val (value, elapsed) = measureTimedValue {
+                NoteBody(
+                    baseNote = baseNote,
+                    showAuthorPicture = isQuotedNote,
+                    unPackReply = unPackReply,
+                    makeItShort = makeItShort,
+                    canPreview = canPreview,
+                    showSecondRow = showSecondRow,
+                    backgroundColor = backgroundColor,
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
+            }
+            println("AAA Rendering Body $elapsed - ${baseNote.event?.content()?.take(10)}")
         }
     }
 
@@ -629,12 +638,15 @@ fun InnerNoteWithReactions(
                 Spacer(modifier = DoubleVertSpacer)
             }
         } else {
-            ReactionsRow(
-                baseNote = baseNote,
-                showReactionDetail = notBoostedNorQuote,
-                accountViewModel = accountViewModel,
-                nav = nav
-            )
+            val (value, elapsed) = measureTimedValue {
+                ReactionsRow(
+                    baseNote = baseNote,
+                    showReactionDetail = notBoostedNorQuote,
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
+            }
+            println("AAA Rendering Reac $elapsed - ${baseNote.event?.content()?.take(10)}")
         }
     }
 

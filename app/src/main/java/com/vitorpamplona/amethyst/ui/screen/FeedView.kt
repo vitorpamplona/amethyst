@@ -35,6 +35,8 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import kotlin.time.ExperimentalTime
+import kotlin.time.measureTimedValue
 
 @Composable
 fun RefresheableFeedView(
@@ -175,7 +177,7 @@ private fun WatchScrollToTop(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalTime::class)
 @Composable
 private fun FeedLoaded(
     state: FeedState.Loaded,
@@ -196,20 +198,24 @@ private fun FeedLoaded(
         state = listState
     ) {
         itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
-            val defaultModifier = remember {
-                Modifier.fillMaxWidth().animateItemPlacement()
+            val (value, elapsed) = measureTimedValue {
+                val defaultModifier = remember {
+                    Modifier.fillMaxWidth().animateItemPlacement()
+                }
+
+                Row(defaultModifier) {
+                    NoteCompose(
+                        item,
+                        routeForLastRead = routeForLastRead,
+                        modifier = baseModifier,
+                        isBoostedNote = false,
+                        accountViewModel = accountViewModel,
+                        nav = nav
+                    )
+                }
             }
 
-            Row(defaultModifier) {
-                NoteCompose(
-                    item,
-                    routeForLastRead = routeForLastRead,
-                    modifier = baseModifier,
-                    isBoostedNote = false,
-                    accountViewModel = accountViewModel,
-                    nav = nav
-                )
-            }
+            println("AAA Rendering $elapsed - ${item.event?.content()?.take(10)}")
         }
     }
 }
