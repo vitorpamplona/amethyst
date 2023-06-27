@@ -55,7 +55,7 @@ open class Event(
     }
 
     override fun zapraiserAmount() = tags.firstOrNull() {
-        (it.size > 1 && it[0].equals("zapraiser", true))
+        (it.size > 1 && it[0] == "zapraiser")
     }?.get(1)?.toLongOrNull()
 
     override fun zapAddress() = tags.firstOrNull { it.size > 1 && it[0] == "zap" }?.get(1)

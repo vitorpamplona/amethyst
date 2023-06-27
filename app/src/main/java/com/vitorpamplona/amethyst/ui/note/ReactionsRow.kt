@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.CircularProgressIndicator
@@ -83,6 +82,7 @@ import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.Height4dpModifier
+import com.vitorpamplona.amethyst.ui.theme.ModifierWidth3dp
 import com.vitorpamplona.amethyst.ui.theme.NoSoTinyBorders
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowExpandButton
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeight
@@ -522,7 +522,7 @@ private fun SlidingAnimation(baseCount: Int, textColor: Color) {
         }
     ) { count ->
         Text(
-            text = remember { showCount(count) },
+            text = remember(count) { showCount(count) },
             fontSize = Font14SP,
             color = textColor,
             modifier = HalfStartPadding,
@@ -723,7 +723,9 @@ fun LikeIcon(
         launch(Dispatchers.Default) {
             val newReactionType = reactionsState?.note?.isReactedBy(accountViewModel.userProfile())?.firstFullChar()
             if (reactionType != newReactionType) {
-                reactionType = newReactionType
+                launch(Dispatchers.Main) {
+                    reactionType = newReactionType
+                }
             }
         }
     }
@@ -791,7 +793,9 @@ fun LikeText(baseNote: Note, grayTint: Color) {
         launch(Dispatchers.Default) {
             val newReactionsCount = reactionsState?.note?.countReactions() ?: 0
             if (reactionsCount != newReactionsCount) {
-                reactionsCount = newReactionsCount
+                launch(Dispatchers.Main) {
+                    reactionsCount = newReactionsCount
+                }
             }
         }
     }
@@ -923,7 +927,7 @@ fun ZapReaction(
         }
 
         if (zappingProgress > 0.00001 && zappingProgress < 0.99999) {
-            Spacer(Modifier.width(3.dp))
+            Spacer(ModifierWidth3dp)
 
             CircularProgressIndicator(
                 progress = animateFloatAsState(
@@ -1020,7 +1024,9 @@ private fun ZapIcon(
                     val newWasZapped = accountViewModel.calculateIfNoteWasZappedByAccount(it)
 
                     if (wasZappedByLoggedInUser != newWasZapped) {
-                        wasZappedByLoggedInUser = newWasZapped
+                        launch(Dispatchers.Main) {
+                            wasZappedByLoggedInUser = newWasZapped
+                        }
                     }
                 }
             }
@@ -1061,7 +1067,9 @@ private fun ZapAmountText(
             zapsState?.note?.let {
                 val newZapAmount = showAmount(accountViewModel.calculateZapAmount(it))
                 if (newZapAmount != zapAmountTxt) {
-                    zapAmountTxt = newZapAmount
+                    launch(Dispatchers.Main) {
+                        zapAmountTxt = newZapAmount
+                    }
                 }
             }
         }
