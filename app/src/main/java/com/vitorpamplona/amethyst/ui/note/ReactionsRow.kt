@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -50,6 +51,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.Center
+import androidx.compose.ui.Alignment.Companion.CenterStart
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -223,13 +225,12 @@ private fun LoadAndDisplayZapraiser(
 
     if (zapraiserAmount > 0) {
         Spacer(modifier = Height4dpModifier)
-        Row(
-            verticalAlignment = CenterVertically,
+        Box(
             modifier = remember {
                 ReactionRowZapraiserSize
                     .padding(start = if (showReactionDetail) Size75dp else Size0dp)
             },
-            horizontalArrangement = Arrangement.Start
+            contentAlignment = CenterStart
         ) {
             RenderZapRaiser(baseNote, zapraiserAmount, wantsToSeeReactions.value, accountViewModel)
         }
@@ -278,7 +279,7 @@ fun RenderZapRaiser(baseNote: Note, zapraiserAmount: Long, details: Boolean, acc
     }
 
     LinearProgressIndicator(
-        modifier = ReactionRowZapraiserSize,
+        modifier = Modifier.fillMaxWidth().height(if (details) 24.dp else 4.dp),
         color = color,
         progress = zapraiserProgress
     )
@@ -298,7 +299,8 @@ fun RenderZapRaiser(baseNote: Note, zapraiserAmount: Long, details: Boolean, acc
                 text = stringResource(id = R.string.sats_to_complete, totalPercentage, zapraiserLeft),
                 modifier = NoSoTinyBorders,
                 color = MaterialTheme.colors.placeholderText,
-                fontSize = Font14SP
+                fontSize = Font14SP,
+                maxLines = 1
             )
         }
     }
