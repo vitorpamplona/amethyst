@@ -159,7 +159,6 @@ data class RichTextViewerState(
     val customEmoji: ImmutableMap<String, String>
 )
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun RenderRegular(
     content: String,

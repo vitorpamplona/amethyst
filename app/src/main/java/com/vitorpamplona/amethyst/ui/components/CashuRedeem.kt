@@ -39,7 +39,10 @@ fun CashuPreview(cashutoken: String, accountViewModel: AccountViewModel) {
 
     LaunchedEffect(key1 = cashutoken) {
         launch(Dispatchers.IO) {
-            cachuData = CashuProcessor().parse(cashutoken)
+            val newCachuData = CashuProcessor().parse(cashutoken)
+            launch(Dispatchers.Main) {
+                cachuData = newCachuData
+            }
         }
     }
 

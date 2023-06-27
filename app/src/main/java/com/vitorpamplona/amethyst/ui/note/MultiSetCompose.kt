@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.note
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -59,6 +60,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
+import com.vitorpamplona.amethyst.ui.theme.WidthAuthorPictureModifierWithPadding
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.overPictureBackground
 import kotlinx.collections.immutable.ImmutableList
@@ -90,7 +92,9 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
             }
 
             if (backgroundColor.value != newBackgroundColor) {
-                backgroundColor.value = newBackgroundColor
+                launch(Dispatchers.Main) {
+                    backgroundColor.value = newBackgroundColor
+                }
             }
         }
     }
@@ -120,7 +124,7 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
         Galeries(multiSetCard, backgroundColor, nav, accountViewModel)
 
         Row(remember { Modifier.fillMaxWidth() }) {
-            Spacer(modifier = remember { Modifier.width(65.dp) })
+            Spacer(modifier = WidthAuthorPictureModifierWithPadding)
 
             NoteCompose(
                 baseNote = baseNote,
@@ -336,28 +340,33 @@ private fun AuthorPictureAndComment(
                 val amount = (zapEvent?.event as? LnZapEvent)?.amount
                 if (decryptedContent != null) {
                     val newAuthor = LocalCache.getOrCreateUser(decryptedContent.pubKey)
-                    content.value = ZapAmountCommentNotification(newAuthor, decryptedContent.content.ifBlank { null }, showAmountAxis(amount))
+                    val newState = ZapAmountCommentNotification(newAuthor, decryptedContent.content.ifBlank { null }, showAmountAxis(amount))
+
+                    launch(Dispatchers.Main) { content.value = newState }
                 } else {
                     if (!zapRequest.event?.content().isNullOrBlank() || amount != null) {
-                        content.value = ZapAmountCommentNotification(zapRequest.author, zapRequest.event?.content()?.ifBlank { null }, showAmountAxis(amount))
+                        val newState = ZapAmountCommentNotification(zapRequest.author, zapRequest.event?.content()?.ifBlank { null }, showAmountAxis(amount))
+                        launch(Dispatchers.Main) { content.value = newState }
                     }
                 }
             }
         }
     }
 
-    Row(
-        modifier = Modifier.clickable {
-            nav("User/${content.value.user?.pubkeyHex}")
-        },
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        AuthorPictureAndComment(
-            authorComment = content,
-            backgroundColor = backgroundColor,
-            nav = nav,
-            accountViewModel = accountViewModel
-        )
+    Crossfade(targetState = content) {
+        Row(
+            modifier = Modifier.clickable {
+                nav("User/${it.value.user?.pubkeyHex}")
+            },
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AuthorPictureAndComment(
+                authorComment = it,
+                backgroundColor = backgroundColor,
+                nav = nav,
+                accountViewModel = accountViewModel
+            )
+        }
     }
 }
 
@@ -365,7 +374,9 @@ val amountBoxModifier = Modifier
     .fillMaxSize()
     .clip(shape = CircleShape)
 
-val textBoxModifier = Modifier.padding(start = 5.dp).fillMaxWidth()
+val textBoxModifier = Modifier
+    .padding(start = 5.dp)
+    .fillMaxWidth()
 
 val simpleModifier = Modifier
 
@@ -562,7 +573,9 @@ fun WatchUserMetadata(userBase: User, onMetadataChanges: (UserMetadata) -> Unit)
     LaunchedEffect(key1 = userState) {
         launch(Dispatchers.Default) {
             userState?.user?.info?.let {
-                onMetadataChanges(it)
+                launch(Dispatchers.Main) {
+                    onMetadataChanges(it)
+                }
             }
         }
     }

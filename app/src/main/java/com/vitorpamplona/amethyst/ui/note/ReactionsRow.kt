@@ -64,6 +64,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import coil.compose.AsyncImage
@@ -148,7 +150,7 @@ private fun InnerReactionRow(
                 modifier = ReactionRowExpandButton
             ) {
                 Row(verticalAlignment = CenterVertically) {
-                    ExpandButton(baseNote) {
+                    WatchReactionsZapsBoostsAndDisplayIfExists(baseNote) {
                         RenderShowIndividualReactionsButton(wantsToSeeReactions)
                     }
                 }
@@ -163,6 +165,7 @@ private fun InnerReactionRow(
                 ReplyReactionWithDialog(baseNote, MaterialTheme.colors.placeholderText, accountViewModel, nav)
             }
         }
+
         Column(
             verticalArrangement = Arrangement.Center,
             modifier = remember { Modifier.weight(1f) }
@@ -171,6 +174,7 @@ private fun InnerReactionRow(
                 BoostWithDialog(baseNote, MaterialTheme.colors.placeholderText, accountViewModel, nav)
             }
         }
+
         Column(
             verticalArrangement = Arrangement.Center,
             modifier = remember { Modifier.weight(1f) }
@@ -179,6 +183,7 @@ private fun InnerReactionRow(
                 LikeReaction(baseNote, MaterialTheme.colors.placeholderText, accountViewModel)
             }
         }
+
         Column(
             verticalArrangement = Arrangement.Center,
             modifier = remember { Modifier.weight(1f) }
@@ -187,6 +192,7 @@ private fun InnerReactionRow(
                 ZapReaction(baseNote, MaterialTheme.colors.placeholderText, accountViewModel)
             }
         }
+
         Column(
             verticalArrangement = Arrangement.Center,
             modifier = remember { Modifier.weight(1f) }
@@ -299,22 +305,44 @@ fun RenderZapRaiser(baseNote: Note, zapraiserAmount: Long, details: Boolean, acc
 }
 
 @Composable
-private fun ExpandButton(baseNote: Note, content: @Composable () -> Unit) {
-    val zapsState by baseNote.live().zaps.observeAsState()
-    val boostsState by baseNote.live().boosts.observeAsState()
-    val reactionsState by baseNote.live().reactions.observeAsState()
+private fun WatchReactionsZapsBoostsAndDisplayIfExists(baseNote: Note, content: @Composable () -> Unit) {
+    val hasReactions by baseNote.live().zaps.combineWith(
+        liveData1 = baseNote.live().boosts,
+        liveData2 = baseNote.live().reactions,
+        block = { zapsState, boostsState, reactionsState ->
+            zapsState?.note?.zaps?.isNotEmpty() == true ||
+                boostsState?.note?.boosts?.isNotEmpty() == true ||
+                reactionsState?.note?.reactions?.isNotEmpty() == true
+        }
+    ).observeAsState(
+        baseNote.zaps.isNotEmpty() ||
+            baseNote.boosts.isNotEmpty() ||
+            baseNote.reactions.isNotEmpty()
+    )
 
-    val hasReactions by remember(zapsState, boostsState, reactionsState) {
-        derivedStateOf {
-            baseNote.zaps.isNotEmpty() ||
-                baseNote.boosts.isNotEmpty() ||
-                baseNote.reactions.isNotEmpty()
+    Crossfade(targetState = hasReactions) {
+        if (it) {
+            content()
         }
     }
+}
 
-    if (hasReactions) {
-        content()
+fun <T, K, P, R> LiveData<T>.combineWith(
+    liveData1: LiveData<K>,
+    liveData2: LiveData<P>,
+    block: (T?, K?, P?) -> R
+): LiveData<R> {
+    val result = MediatorLiveData<R>()
+    result.addSource(this) {
+        result.value = block(this.value, liveData1.value, liveData2.value)
     }
+    result.addSource(liveData1) {
+        result.value = block(this.value, liveData1.value, liveData2.value)
+    }
+    result.addSource(liveData2) {
+        result.value = block(this.value, liveData1.value, liveData2.value)
+    }
+    return result
 }
 
 @Composable
@@ -325,20 +353,22 @@ private fun RenderShowIndividualReactionsButton(wantsToSeeReactions: MutableStat
         },
         modifier = Size20Modifier
     ) {
-        if (wantsToSeeReactions.value) {
-            Icon(
-                imageVector = Icons.Default.ExpandLess,
-                null,
-                modifier = Size22Modifier,
-                tint = MaterialTheme.colors.subtleButton
-            )
-        } else {
-            Icon(
-                imageVector = Icons.Default.ExpandMore,
-                null,
-                modifier = Size22Modifier,
-                tint = MaterialTheme.colors.subtleButton
-            )
+        Crossfade(targetState = wantsToSeeReactions.value) {
+            if (it) {
+                Icon(
+                    imageVector = Icons.Default.ExpandLess,
+                    null,
+                    modifier = Size22Modifier,
+                    tint = MaterialTheme.colors.subtleButton
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.ExpandMore,
+                    null,
+                    modifier = Size22Modifier,
+                    tint = MaterialTheme.colors.subtleButton
+                )
+            }
         }
     }
 }
@@ -503,7 +533,7 @@ fun ReplyReaction(
 fun ReplyCounter(baseNote: Note, textColor: Color) {
     val repliesState by baseNote.live().replies.map {
         it.note.replies.size
-    }.observeAsState(0)
+    }.observeAsState(baseNote.replies.size)
 
     SlidingAnimation(repliesState, textColor)
 }
@@ -521,14 +551,19 @@ private fun SlidingAnimation(baseCount: Int, textColor: Color) {
             }
         }
     ) { count ->
-        Text(
-            text = remember(count) { showCount(count) },
-            fontSize = Font14SP,
-            color = textColor,
-            modifier = HalfStartPadding,
-            maxLines = 1
-        )
+        TextCount(count, textColor)
     }
+}
+
+@Composable
+private fun TextCount(count: Int, textColor: Color) {
+    Text(
+        text = remember(count) { showCount(count) },
+        fontSize = Font14SP,
+        color = textColor,
+        modifier = HalfStartPadding,
+        maxLines = 1
+    )
 }
 
 @Composable
@@ -634,7 +669,7 @@ fun BoostIcon(baseNote: Note, iconSize: Dp = Size20dp, grayTint: Color, accountV
 fun BoostText(baseNote: Note, grayTint: Color) {
     val boostState by baseNote.live().boosts.map {
         it.note.boosts.size
-    }.distinctUntilChanged().observeAsState(0)
+    }.distinctUntilChanged().observeAsState(baseNote.boosts.size)
 
     SlidingAnimation(boostState, grayTint)
 }
@@ -786,7 +821,7 @@ fun LikeText(baseNote: Note, grayTint: Color) {
     val reactionsState by baseNote.live().reactions.observeAsState()
 
     var reactionsCount by remember(baseNote) {
-        mutableStateOf(0)
+        mutableStateOf(baseNote.reactions.size)
     }
 
     LaunchedEffect(key1 = reactionsState) {

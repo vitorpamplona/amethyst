@@ -73,8 +73,9 @@ val ReactionRowZapraiserSize = Modifier.defaultMinSize(minHeight = 4.dp).fillMax
 val ReactionRowExpandButton = Modifier.width(65.dp).padding(start = 31.dp)
 
 val WidthAuthorPictureModifier = Modifier.width(55.dp)
+val WidthAuthorPictureModifierWithPadding = Modifier.width(65.dp)
 
-val DiviserThickness = 0.25.dp
+val DividerThickness = 0.25.dp
 
 val ReactionRowHeight = Modifier.height(24.dp).padding(start = 10.dp)
 val ReactionRowHeightChat = Modifier.height(25.dp)

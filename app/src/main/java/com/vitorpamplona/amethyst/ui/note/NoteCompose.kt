@@ -150,7 +150,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.LiveFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ScheduledFlag
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
-import com.vitorpamplona.amethyst.ui.theme.DiviserThickness
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Following
@@ -188,7 +188,6 @@ import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import nostr.postr.toNpub
@@ -261,14 +260,9 @@ fun CheckHiddenNoteCompose(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-
-    val isHidden by remember(accountState) {
-        derivedStateOf {
-            val isSensitive = note.event?.isSensitive() ?: false
-            accountState?.account?.isHidden(note.author!!) == true || (isSensitive && accountState?.account?.showSensitiveContent == false)
-        }
-    }
+    val isHidden by accountViewModel.accountLiveData.map {
+        accountViewModel.isNoteHidden(note)
+    }.distinctUntilChanged().observeAsState(accountViewModel.isNoteHidden(note))
 
     Crossfade(targetState = isHidden) {
         if (!it) {
@@ -324,8 +318,9 @@ fun LoadedNoteCompose(
 
     WatchForReports(note, accountViewModel) { newIsAcceptable, newCanPreview, newRelevantReports ->
         if (newIsAcceptable != state.isAcceptable || newCanPreview != state.canPreview) {
+            val newState = NoteComposeReportState(newIsAcceptable, newCanPreview, newRelevantReports)
             scope.launch(Dispatchers.Main) {
-                state = NoteComposeReportState(newIsAcceptable, newCanPreview, newRelevantReports)
+                state = newState
             }
         }
     }
@@ -407,32 +402,7 @@ fun WatchForReports(
 
     LaunchedEffect(key1 = noteReportsState, key2 = userFollowsState) {
         launch(Dispatchers.Default) {
-            accountViewModel.account.let { loggedIn ->
-                val isFromLoggedIn = note.author?.pubkeyHex == loggedIn.userProfile().pubkeyHex
-                val isFromLoggedInFollow = note.author?.let { loggedIn.userProfile().isFollowingCached(it) } ?: true
-
-                if (isFromLoggedIn || isFromLoggedInFollow) {
-                    // No need to process if from trusted people
-                    onChange(true, true, persistentSetOf())
-                } else {
-                    val newCanPreview = noteReportsState?.note?.hasAnyReports() != true
-
-                    val newIsAcceptable = noteReportsState?.note?.let {
-                        loggedIn.isAcceptable(it)
-                    } ?: true
-
-                    if (newCanPreview && newIsAcceptable) {
-                        // No need to process reports if nothing is wrong
-                        onChange(true, true, persistentSetOf())
-                    } else {
-                        val newRelevantReports = noteReportsState?.note?.let {
-                            loggedIn.getRelevantReports(it)
-                        } ?: emptySet()
-
-                        onChange(newIsAcceptable, newCanPreview, newRelevantReports.toImmutableSet())
-                    }
-                }
-            }
+            accountViewModel.isNoteAcceptable(note, onChange)
         }
     }
 }
@@ -526,14 +496,18 @@ private fun CheckNewAndRenderNote(
                     }
 
                     if (newBackgroundColor != backgroundColor.value) {
-                        backgroundColor.value = newBackgroundColor
+                        launch(Dispatchers.Main) {
+                            backgroundColor.value = newBackgroundColor
+                        }
                     }
                 }
             } ?: run {
                 val newBackgroundColor = parentBackgroundColor?.value ?: defaultBackgroundColor
 
                 if (newBackgroundColor != backgroundColor.value) {
-                    backgroundColor.value = newBackgroundColor
+                    launch(Dispatchers.Main) {
+                        backgroundColor.value = newBackgroundColor
+                    }
                 }
             }
         }
@@ -611,11 +585,10 @@ fun InnerNoteWithReactions(
     nav: (String) -> Unit
 ) {
     val notBoostedNorQuote = !isBoostedNote && !isQuotedNote
-    val showSecondRow = baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent && !isBoostedNote && !isQuotedNote
 
     Row(
         modifier = remember {
-            Modifier
+            Modifier.fillMaxWidth()
                 .padding(
                     start = if (!isBoostedNote) 12.dp else 0.dp,
                     end = if (!isBoostedNote) 12.dp else 0.dp,
@@ -632,6 +605,7 @@ fun InnerNoteWithReactions(
         }
 
         Column(Modifier.fillMaxWidth()) {
+            val showSecondRow = baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent && !isBoostedNote && !isQuotedNote
             NoteBody(
                 baseNote = baseNote,
                 showAuthorPicture = isQuotedNote,
@@ -666,7 +640,7 @@ fun InnerNoteWithReactions(
 
     if (notBoostedNorQuote) {
         Divider(
-            thickness = DiviserThickness
+            thickness = DividerThickness
         )
     }
 }
@@ -1968,9 +1942,9 @@ private fun RenderAuthorImages(
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
-    val isRepost = baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent
-
     NoteAuthorPicture(baseNote, nav, accountViewModel, Size55dp)
+
+    val isRepost = baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent
 
     if (isRepost) {
         RepostNoteAuthorPicture(baseNote, accountViewModel, nav)
@@ -1997,7 +1971,10 @@ fun LoadChannel(baseChannelHex: String, content: @Composable (Channel) -> Unit) 
     if (channel == null) {
         LaunchedEffect(key1 = baseChannelHex) {
             launch(Dispatchers.IO) {
-                channel = LocalCache.checkGetOrCreateChannel(baseChannelHex)
+                val newChannel = LocalCache.checkGetOrCreateChannel(baseChannelHex)
+                launch(Dispatchers.Main) {
+                    channel = newChannel
+                }
             }
         }
     }
@@ -2108,7 +2085,10 @@ private fun DisplayQuoteAuthor(
     LaunchedEffect(Unit) {
         if (userBase == null) {
             launch(Dispatchers.IO) {
-                userBase = LocalCache.checkGetOrCreateUser(authorHex)
+                val newUserBase = LocalCache.checkGetOrCreateUser(authorHex)
+                launch(Dispatchers.Main) {
+                    userBase = newUserBase
+                }
             }
         }
     }
@@ -2181,7 +2161,9 @@ fun DisplayFollowingHashtagsInPost(
             val newFirstTag = noteEvent.firstIsTaggedHashes(followingTags)
 
             if (firstTag != newFirstTag) {
-                firstTag = newFirstTag
+                launch(Dispatchers.Main) {
+                    firstTag = newFirstTag
+                }
             }
         }
     }
@@ -2328,7 +2310,9 @@ private fun RenderPledgeAmount(
             }
             val newHasPledge = repliesState?.note?.hasPledgeBy(accountViewModel.userProfile()) == true
             if (hasPledge != newHasPledge) {
-                hasPledge = newHasPledge
+                launch(Dispatchers.Main) {
+                    hasPledge = newHasPledge
+                }
             }
         }
     }
@@ -2379,7 +2363,9 @@ fun BadgeDisplay(baseNote: Note) {
                     darkColors().onBackground
                 }
 
-                backgroundFromImage = Pair(colorFromImage, textBackground)
+                launch(Dispatchers.Main) {
+                    backgroundFromImage = Pair(colorFromImage, textBackground)
+                }
             }
         }
     }
@@ -2475,23 +2461,28 @@ fun FileHeaderDisplay(note: Note) {
                 val removedParamsFromUrl = fullUrl.split("?")[0].lowercase()
                 val isImage = imageExtensions.any { removedParamsFromUrl.endsWith(it) }
                 val uri = "nostr:" + note.toNEvent()
-                content = if (isImage) {
+                val newContent = if (isImage) {
                     ZoomableUrlImage(fullUrl, description, hash, blurHash, dimensions, uri)
                 } else {
                     ZoomableUrlVideo(fullUrl, description, hash, uri)
+                }
+
+                launch(Dispatchers.Main) {
+                    content = newContent
                 }
             }
         }
     }
 
-    content?.let {
-        ZoomableContentView(content = it)
+    Crossfade(targetState = content) {
+        if (it != null) {
+            ZoomableContentView(content = it)
+        }
     }
 }
 
 @Composable
 fun FileStorageHeaderDisplay(baseNote: Note) {
-    val appContext = LocalContext.current.applicationContext
     val eventHeader = (baseNote.event as? FileStorageHeaderEvent) ?: return
 
     var fileNote by remember { mutableStateOf<Note?>(null) }
@@ -2499,52 +2490,75 @@ fun FileStorageHeaderDisplay(baseNote: Note) {
     if (fileNote == null) {
         LaunchedEffect(key1 = eventHeader.id) {
             launch(Dispatchers.IO) {
-                fileNote = eventHeader.dataEventId()?.let { LocalCache.checkGetOrCreateNote(it) }
+                val newFileNote = eventHeader.dataEventId()?.let { LocalCache.checkGetOrCreateNote(it) }
+                launch(Dispatchers.Main) {
+                    fileNote = newFileNote
+                }
             }
         }
     }
 
-    fileNote?.let { fileNote2 ->
-        val noteState by fileNote2.live().metadata.observeAsState()
-        val note = remember(noteState) { noteState?.note }
+    Crossfade(targetState = fileNote) {
+        if (it != null) {
+            RenderNIP95(it, eventHeader, baseNote)
+        }
+    }
+}
 
-        var content by remember { mutableStateOf<ZoomableContent?>(null) }
+@Composable
+private fun RenderNIP95(
+    it: Note,
+    eventHeader: FileStorageHeaderEvent,
+    baseNote: Note
+) {
+    val appContext = LocalContext.current.applicationContext
 
-        if (content == null) {
-            LaunchedEffect(key1 = eventHeader.id, key2 = noteState, key3 = note?.event) {
-                launch(Dispatchers.IO) {
-                    val uri = "nostr:" + baseNote.toNEvent()
-                    val localDir = note?.idHex?.let { File(File(appContext.externalCacheDir, "NIP95"), it) }
-                    val blurHash = eventHeader.blurhash()
-                    val dimensions = eventHeader.dimensions()
-                    val description = eventHeader.content
-                    val mimeType = eventHeader.mimeType()
+    val noteState by it.live().metadata.observeAsState()
+    val note = remember(noteState) { noteState?.note }
 
-                    content = if (mimeType?.startsWith("image") == true) {
-                        ZoomableLocalImage(
-                            localFile = localDir,
-                            mimeType = mimeType,
-                            description = description,
-                            blurhash = blurHash,
-                            dim = dimensions,
-                            isVerified = true,
-                            uri = uri
-                        )
-                    } else {
-                        ZoomableLocalVideo(
-                            localFile = localDir,
-                            mimeType = mimeType,
-                            description = description,
-                            dim = dimensions,
-                            isVerified = true,
-                            uri = uri
-                        )
-                    }
+    var content by remember { mutableStateOf<ZoomableContent?>(null) }
+
+    if (content == null) {
+        LaunchedEffect(key1 = eventHeader.id, key2 = noteState, key3 = note?.event) {
+            launch(Dispatchers.IO) {
+                val uri = "nostr:" + baseNote.toNEvent()
+                val localDir =
+                    note?.idHex?.let { File(File(appContext.externalCacheDir, "NIP95"), it) }
+                val blurHash = eventHeader.blurhash()
+                val dimensions = eventHeader.dimensions()
+                val description = eventHeader.content
+                val mimeType = eventHeader.mimeType()
+
+                val newContent = if (mimeType?.startsWith("image") == true) {
+                    ZoomableLocalImage(
+                        localFile = localDir,
+                        mimeType = mimeType,
+                        description = description,
+                        blurhash = blurHash,
+                        dim = dimensions,
+                        isVerified = true,
+                        uri = uri
+                    )
+                } else {
+                    ZoomableLocalVideo(
+                        localFile = localDir,
+                        mimeType = mimeType,
+                        description = description,
+                        dim = dimensions,
+                        isVerified = true,
+                        uri = uri
+                    )
+                }
+
+                launch(Dispatchers.Main) {
+                    content = newContent
                 }
             }
         }
+    }
 
-        content?.let {
+    Crossfade(targetState = content) {
+        if (it != null) {
             ZoomableContentView(content = it)
         }
     }
@@ -2892,14 +2906,16 @@ private fun RelayBadges(baseNote: Note, accountViewModel: AccountViewModel, nav:
     val scope = rememberCoroutineScope()
 
     WatchRelayLists(baseNote) { relayList ->
-        scope.launch(Dispatchers.Main) {
-            if (!equalImmutableLists(relayList, lazyRelayList)) {
+        if (!equalImmutableLists(relayList, lazyRelayList)) {
+            scope.launch(Dispatchers.Main) {
                 lazyRelayList = relayList
                 shortRelayList = relayList.take(3).toImmutableList()
             }
+        }
 
-            val nextShowMore = relayList.size > 3
-            if (nextShowMore != showShowMore) {
+        val nextShowMore = relayList.size > 3
+        if (nextShowMore != showShowMore) {
+            scope.launch(Dispatchers.Main) {
                 // only triggers recomposition when actually different
                 showShowMore = nextShowMore
             }
@@ -3393,16 +3409,20 @@ fun WatchBookmarksFollowsAndAccount(note: Note, accountViewModel: AccountViewMod
 
     LaunchedEffect(key1 = followState, key2 = bookmarkState, key3 = accountState) {
         launch(Dispatchers.IO) {
-            onNew(
-                DropDownParams(
-                    isFollowingAuthor = accountViewModel.isFollowing(note.author),
-                    isPrivateBookmarkNote = accountViewModel.isInPrivateBookmarks(note),
-                    isPublicBookmarkNote = accountViewModel.isInPublicBookmarks(note),
-                    isLoggedUser = accountViewModel.isLoggedUser(note.author),
-                    isSensitive = note.event?.isSensitive() ?: false,
-                    showSensitiveContent = accountState?.account?.showSensitiveContent
-                )
+            val newState = DropDownParams(
+                isFollowingAuthor = accountViewModel.isFollowing(note.author),
+                isPrivateBookmarkNote = accountViewModel.isInPrivateBookmarks(note),
+                isPublicBookmarkNote = accountViewModel.isInPublicBookmarks(note),
+                isLoggedUser = accountViewModel.isLoggedUser(note.author),
+                isSensitive = note.event?.isSensitive() ?: false,
+                showSensitiveContent = accountState?.account?.showSensitiveContent
             )
+
+            launch(Dispatchers.Main) {
+                onNew(
+                    newState
+                )
+            }
         }
     }
 }
