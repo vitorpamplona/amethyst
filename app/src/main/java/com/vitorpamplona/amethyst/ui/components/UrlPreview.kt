@@ -25,7 +25,9 @@ fun UrlPreview(url: String, urlText: String) {
         LaunchedEffect(url) {
             launch(Dispatchers.IO) {
                 UrlCachedPreviewer.previewInfo(url) {
-                    urlPreviewState = it
+                    launch(Dispatchers.Main) {
+                        urlPreviewState = it
+                    }
                 }
             }
         }
