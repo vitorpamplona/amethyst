@@ -16,9 +16,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
@@ -67,6 +69,7 @@ fun CashuPreview(token: CashuToken, accountViewModel: AccountViewModel) {
     val useWebService = false
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val clipboardManager = LocalClipboardManager.current
 
     Column(
         modifier = Modifier
@@ -114,17 +117,17 @@ fun CashuPreview(token: CashuToken, accountViewModel: AccountViewModel) {
                 )
             }
 
-            Button(
+            Row(
+
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 10.dp),
-                onClick = {
-                    // Just in case we want to use a webservice instead of directly contacting the mint
-                    if (useWebService) {
-                        val url = "https://redeem.cashu.me?token=$token&lightning=$lud16&autopay=true"
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                        startActivity(context, intent, null)
-                    } else {
+                    .padding(bottom = 10.dp)
+            ) {
+                Button(
+
+                    modifier = Modifier
+                        .padding(vertical = 10.dp).padding(horizontal = 2.dp),
+                    onClick = {
                         if (lud16 != null) {
                             CashuProcessor().melt(
                                 token,
@@ -142,17 +145,50 @@ fun CashuPreview(token: CashuToken, accountViewModel: AccountViewModel) {
                             )
                         } else {
                             scope.launch {
-                                Toast.makeText(context, "No Lightning Address set", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(
+                                    context,
+                                    "No Lightning Address set",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             }
                         }
-                    }
-                },
-                shape = QuoteBorder,
-                colors = ButtonDefaults.buttonColors(
-                    backgroundColor = MaterialTheme.colors.primary
-                )
-            ) {
-                Text(stringResource(R.string.cashu_redeem), color = Color.White, fontSize = 20.sp)
+                    },
+                    shape = QuoteBorder,
+                    colors = ButtonDefaults.buttonColors(
+                        backgroundColor = MaterialTheme.colors.primary
+                    )
+                ) {
+                    Text(
+                        stringResource(R.string.cashu_redeem),
+                        color = Color.White,
+                        fontSize = 18.sp
+                    )
+                }
+                Button(
+                    modifier = Modifier
+                        .padding(vertical = 10.dp).padding(horizontal = 1.dp),
+                    onClick = {
+                        if (useWebService) {
+                            // In case we want to use the cashu.me webservice
+                            val url = "https://redeem.cashu.me?token=$token&lightning=$lud16&autopay=false"
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                            startActivity(context, intent, null)
+                        } else {
+                            // Copying the token to clipboard for now
+                            var orignaltoken = token.token
+                            clipboardManager.setText(AnnotatedString("$orignaltoken"))
+                            scope.launch {
+                                Toast.makeText(context, "Copied token to clipboard", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    shape = QuoteBorder,
+                    colors = ButtonDefaults.buttonColors(
+                        backgroundColor = MaterialTheme.colors.primary
+                    )
+                ) {
+                    Text("⎘", color = Color.White, fontSize = 18.sp)
+                }
             }
         }
     }
