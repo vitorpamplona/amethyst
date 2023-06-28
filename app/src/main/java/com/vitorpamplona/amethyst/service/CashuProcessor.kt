@@ -14,6 +14,7 @@ import java.util.Base64
 
 @Immutable
 data class CashuToken(
+    val token: String,
     val mint: String,
     val totalAmount: Long,
     val fees: Int,
@@ -39,7 +40,7 @@ class CashuProcessor {
             val fees = Math.max(((totalAmount * 0.02).toInt()), 2)
             val redeemInvoiceAmount = totalAmount - fees
 
-            return GenericLoadable.Loaded(CashuToken(mint, totalAmount, fees, redeemInvoiceAmount, proofs))
+            return GenericLoadable.Loaded(CashuToken(cashuToken, mint, totalAmount, fees, redeemInvoiceAmount, proofs))
         } catch (e: Exception) {
             return GenericLoadable.Error<CashuToken>("Could not parse this cashu token")
         }
@@ -88,7 +89,7 @@ class CashuProcessor {
             if (successful) {
                 onSuccess("Redeemed ${token.totalAmount} Sats" + " (Fees: ${token.fees} Sats)")
             } else {
-                onError(tree?.get("detail")?.asText()?.split('.')?.getOrNull(0) ?: "Error")
+                onError(tree?.get("detail")?.asText()?.split('.')?.getOrNull(0) ?: "Cashu: Tokens already spent.")
             }
         } catch (e: Exception) {
             onError("Token melt failure: " + e.message)

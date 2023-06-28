@@ -330,6 +330,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="upload_server_nostrfilesdev">nostrfiles.dev - vertrauenswürdig</string>
     <string name="upload_server_nostrfilesdev_explainer">Nostrfiles.dev kann die Datei ändern</string>
 
+    <string name="upload_server_nostrcheckme">nostrcheck.me - vertrauenswürdig</string>
+    <string name="upload_server_nostrcheckme_explainer">nostrcheck.me kann die Datei ändern</string>
 
     <string name="upload_server_imgur_nip94">Verifizierbares Imgur (NIP-94)</string>
     <string name="upload_server_imgur_nip94_explainer">Überprüft, ob Imgur die Datei geändert hat. Neuer NIP: Andere Clients sehen es möglicherweise nicht</string>
@@ -343,6 +345,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="upload_server_nostrfilesdev_nip94">Verifizierbares Nostrfiles.dev (NIP-94)</string>
     <string name="upload_server_nostrfilesdev_nip94_explainer">Überprüft, ob Nostrfiles.dev die Datei geändert hat. Neuer NIP: Andere Clients sehen es möglicherweise nicht</string>
 
+    <string name="upload_server_nostrcheckme_nip94">Verifizierbares Nostrcheck.me (NIP-94)</string>
+    <string name="upload_server_nostrcheckme_nip94_explainer">Überprüft, ob Nostrcheck.me die Datei geändert hat. Neuer NIP: Andere Clients sehen es möglicherweise nicht</string>
 
     <string name="upload_server_relays_nip95">Deine Relays (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Dateien werden von deinen Relays gehostet. Neuer NIP: Überprüfe, ob sie unterstützt werden</string>
@@ -400,9 +404,51 @@ anz der Bedingungen ist erforderlich</string>
 
     <string name="recommended_apps">Empfohlene Apps: </string>
 
+    <string name="filter_spam_from_strangers">Spam von Fremden filtern</string>
+    <string name="warn_when_posts_have_reports_from_your_follows">Warnung bei Meldungen von deinen Abonnements</string>
 
+    <string name="new_reaction_symbol">Neues Reaktionssymbol</string>
+    <string name="no_reaction_type_setup_long_press_to_change">Keine Reaktionstypen ausgewählt. Lange drücken, um zu ändern</string>
 
+    <string name="zapraiser">Zapraiser</string>
+    <string name="zapraiser_explainer">Fügt einen Zielbetrag in Sats für diesen Beitrag hinzu. Unterstützende Clients können dies als Fortschrittsbalken anzeigen, um Spenden zu fördern</string>
+    <string name="zapraiser_target_amount_in_sats">Zielbetrag in Sats</string>
 
+    <string name="sats_to_complete">Zapraiser bei %1$s. %2$s Sats bis zum Ziel</string>
+    <string name="read_from_relay">Von Relay lesen</string>
+    <string name="write_to_relay">In Relay schreiben</string>
+    <string name="an_error_ocurred_trying_to_get_relay_information">Ein Fehler ist beim Abrufen von Relay-Informationen von %1$s aufgetreten</string>
+    <string name="owner">Inhaber</string>
+    <string name="version">Version</string>
+    <string name="software">Software</string>
+    <string name="contact">Kontakt</string>
+    <string name="supports">Unterstützte NIPs</string>
+    <string name="admission_fees">Eintrittsgebühren</string>
+    <string name="payments_url">Zahlungs-URL</string>
+    <string name="limitations">Einschränkungen</string>
+    <string name="countries">Länder</string>
+    <string name="languages">Sprachen</string>
+    <string name="tags">Tags</string>
+    <string name="posting_policy">Veröffentlichungsrichtlinie</string>
+    <string name="message_length">Nachrichtenlänge</string>
+    <string name="subscriptions">Abonnements</string>
+    <string name="filters">Filter</string>
+    <string name="subscription_id_length">Länge der Abonnement-ID</string>
+    <string name="minimum_prefix">Mindestpräfix</string>
+    <string name="maximum_event_tags">Maximale Anzahl von Ereignis-Tags</string>
+    <string name="content_length">Inhaltslänge</string>
+    <string name="minimum_pow">Mindest-PoW</string>
+    <string name="auth">Authentifizierung</string>
+    <string name="payment">Zahlung</string>
+    <string name="cashu">Cashu-Token</string>
+    <string name="cashu_redeem">Einlösen</string>
 
+    <string name="live_stream_live_tag">LIVE</string>
+    <string name="live_stream_offline_tag">OFFLINE</string>
+    <string name="live_stream_ended_tag">BEENDET</string>
+    <string name="live_stream_planned_tag">GEPLANT</string>
 
+    <string name="live_stream_is_offline">Livestream ist offline</string>
+    <string name="live_stream_has_ended">Livestream beendet</string>
+    <string name="are_you_sure_you_want_to_log_out">Das Abmelden löscht alle Ihre lokalen Informationen. Stellen Sie sicher, dass Sie Ihre privaten Schlüssel gesichert haben, um einen Kontoverlust zu vermeiden. Möchten Sie fortfahren?</string>
 </resources>
