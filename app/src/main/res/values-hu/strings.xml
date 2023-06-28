@@ -391,7 +391,7 @@
     <string name="content_warning_hide_all_sensitive_content">Az érzékeny tartalmat mindig rejtse el</string>
     <string name="content_warning_show_all_sensitive_content">Az érzékeny tartalmat mindig jelenítse meg</string>
     <string name="content_warning_see_warnings">A tartalomra vonatkozó figyelmeztetéseket mindig jelenítse meg</string>
-    
+
     <string name="recommended_apps">Ajánlottak: </string>
     <string name="filter_spam_from_strangers">Idegenektől SPAM szűrése</string>
     <string name="warn_when_posts_have_reports_from_your_follows">Figyelmeztessen ha a bejegyzések azok által akiket követek jelentve vannak</string>
@@ -406,4 +406,38 @@
     <string name="sats_to_complete">A ZapGyűjtés %1$s-nál. %2$s sats kell a célig</string>
     <string name="read_from_relay">Olvassás a csomópontból</string>
     <string name="write_to_relay">Írás a csomópontra</string>
+    <string name="an_error_ocurred_trying_to_get_relay_information">Hiba történt a csomópont információ szerzés közben a %1$s -tól</string>
+    <string name="owner">Tulajdonos</string>
+    <string name="version">Verzió</string>
+    <string name="software">Szoftver</string>
+    <string name="contact">Kapcsolat</string>
+    <string name="supports">Támogatott NIP-ek</string>
+    <string name="admission_fees">Csatlakozás díja</string>
+    <string name="payments_url">Fizetési cím</string>
+    <string name="limitations">Korlátok</string>
+    <string name="countries">Országok</string>
+    <string name="languages">Nyelvek</string>
+    <string name="tags">Címkék</string>
+    <string name="posting_policy">Szabályzat</string>
+    <string name="message_length">Üzenet hossza</string>
+    <string name="subscriptions">Feliratkozások</string>
+    <string name="filters">Filterek</string>
+    <string name="subscription_id_length">Feliratkozás azonosítójának hossza</string>
+    <string name="minimum_prefix">Minimális előtag</string>
+    <string name="maximum_event_tags">Maximális eseménycímkék</string>
+    <string name="content_length">Tartalom hossza</string>
+    <string name="minimum_pow">Minimális PoW</string>
+    <string name="auth">Azonosítás</string>
+    <string name="payment">Fizetés</string>
+    <string name="cashu">Cashu Token</string>
+    <string name="cashu_redeem">Beváltás</string>
+
+    <string name="live_stream_live_tag">ÉLŐ</string>
+    <string name="live_stream_offline_tag">OFFLINE</string>
+    <string name="live_stream_ended_tag">VÉGE</string>
+    <string name="live_stream_planned_tag">ÜTEMEZETT</string>
+
+    <string name="live_stream_is_offline">Az élő közvetítés offline</string>
+    <string name="live_stream_has_ended">Az élő közvetítésnek vége</string>
+    <string name="are_you_sure_you_want_to_log_out">A Kijelentkezés minden helyben tárolt információt töröl. Bizonyosodj meg róla, hogy a privát kulcsod le van mentve, ezzel elkerülve a fiókod elvesztését. Folytatni akarod?</string>
 </resources>
