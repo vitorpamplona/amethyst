@@ -296,7 +296,9 @@ fun TranslateAndWatchLanguageChanges(content: String, accountViewModel: AccountV
                 if (task.isSuccessful && content != task.result.result) {
                     if (task.result.sourceLang != null && task.result.targetLang != null) {
                         val preference = account.preferenceBetween(task.result.sourceLang!!, task.result.targetLang!!)
-                        onTranslated(task.result, preference == task.result.sourceLang)
+                        launch(Dispatchers.Main) {
+                            onTranslated(task.result, preference == task.result.sourceLang)
+                        }
                     }
                 }
             }
