@@ -788,24 +788,10 @@ private fun DisplayFullNote(
     nav: (String) -> Unit,
     loadedLink: LoadedBechLink
 ) {
-    val borderColor = MaterialTheme.colors.subtleBorder
-
-    val modifier = remember {
-        Modifier
-            .padding(top = 2.dp, bottom = 0.dp, start = 0.dp, end = 0.dp)
-            .fillMaxWidth()
-            .clip(shape = QuoteBorder)
-            .border(
-                1.dp,
-                borderColor,
-                QuoteBorder
-            )
-    }
-
     NoteCompose(
         baseNote = it,
         accountViewModel = accountViewModel,
-        modifier = modifier,
+        modifier = MaterialTheme.colors.replyModifier,
         parentBackgroundColor = backgroundColor,
         isQuotedNote = true,
         nav = nav
@@ -976,15 +962,7 @@ private fun DisplayNoteFromTag(
         NoteCompose(
             baseNote = baseNote,
             accountViewModel = accountViewModel,
-            modifier = Modifier
-                .padding(top = 2.dp, bottom = 0.dp, start = 0.dp, end = 0.dp)
-                .fillMaxWidth()
-                .clip(shape = QuoteBorder)
-                .border(
-                    1.dp,
-                    MaterialTheme.colors.subtleBorder,
-                    QuoteBorder
-                ),
+            modifier = MaterialTheme.colors.innerPostModifier,
             parentBackgroundColor = backgroundColor,
             isQuotedNote = true,
             nav = nav

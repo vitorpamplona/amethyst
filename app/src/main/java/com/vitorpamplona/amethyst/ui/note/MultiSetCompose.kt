@@ -393,7 +393,7 @@ private fun AuthorPictureAndComment(
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
-    Box(modifier = sizedModifier, contentAlignment = Alignment.BottomCenter) {
+    Box(modifier = Size35Modifier, contentAlignment = Alignment.BottomCenter) {
         DisplayPicture(authorComment, accountViewModel)
         DisplayAmount(authorComment)
     }
@@ -469,7 +469,7 @@ fun AuthorGallery(
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
-    Column(modifier = remember { Modifier.padding(start = 10.dp) }) {
+    Column(modifier = StdStartPadding) {
         FlowRow() {
             authorNotes.forEach { note ->
                 BoxedAuthor(note, backgroundColor, nav, accountViewModel)

@@ -132,6 +132,26 @@ val DarkReplyBorderModifier = Modifier
     )
 
 val LightReplyBorderModifier = Modifier
+    .padding(top = 2.dp, bottom = 0.dp, start = 0.dp, end = 0.dp)
+    .fillMaxWidth()
+    .clip(shape = QuoteBorder)
+    .border(
+        1.dp,
+        LightSubtleBorder,
+        QuoteBorder
+    )
+
+val DarkInnerPostBorderModifier = Modifier
+    .padding(top = 2.dp, bottom = 0.dp, start = 0.dp, end = 0.dp)
+    .fillMaxWidth()
+    .clip(shape = QuoteBorder)
+    .border(
+        1.dp,
+        DarkSubtleBorder,
+        QuoteBorder
+    )
+
+val LightInnerPostBorderModifier = Modifier
     .padding(top = 5.dp)
     .fillMaxWidth()
     .clip(shape = QuoteBorder)
@@ -265,6 +285,9 @@ val Colors.imageModifier: Modifier
 
 val Colors.replyModifier: Modifier
     get() = if (isLight) LightReplyBorderModifier else DarkReplyBorderModifier
+
+val Colors.innerPostModifier: Modifier
+    get() = if (isLight) LightInnerPostBorderModifier else DarkInnerPostBorderModifier
 
 @Composable
 fun AmethystTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
