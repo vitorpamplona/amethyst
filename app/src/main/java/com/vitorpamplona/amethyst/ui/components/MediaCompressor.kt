@@ -10,6 +10,7 @@ import com.abedelazizshe.lightcompressorlibrary.VideoCompressor
 import com.abedelazizshe.lightcompressorlibrary.VideoQuality
 import com.abedelazizshe.lightcompressorlibrary.config.AppSpecificStorageConfiguration
 import com.abedelazizshe.lightcompressorlibrary.config.Configuration
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import id.zelory.compressor.Compressor
 import id.zelory.compressor.constraint.default
 import java.io.File
@@ -24,6 +25,8 @@ class MediaCompressor {
         onReady: (Uri, String?, Long?) -> Unit,
         onError: (String) -> Unit
     ) {
+        checkNotInMainThread()
+
         if (contentType?.startsWith("video", true) == true) {
             VideoCompressor.start(
                 context = applicationContext, // => This is required

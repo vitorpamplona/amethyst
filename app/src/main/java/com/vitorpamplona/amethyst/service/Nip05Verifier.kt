@@ -31,7 +31,7 @@ class Nip05Verifier() {
     }
 
     private suspend fun fetchNip05JsonSuspend(nip05: String, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
-        // checkNotInMainThread()
+        checkNotInMainThread()
 
         val url = assembleUrl(nip05)
 
@@ -49,6 +49,8 @@ class Nip05Verifier() {
 
                 HttpClient.getHttpClient().newCall(request).enqueue(object : Callback {
                     override fun onResponse(call: Call, response: Response) {
+                        checkNotInMainThread()
+
                         response.use {
                             if (it.isSuccessful) {
                                 onSuccess(it.body.string())
@@ -71,13 +73,15 @@ class Nip05Verifier() {
 
     fun verifyNip05(nip05: String, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
         // check fails on tests
-        // checkNotInMainThread()
+        checkNotInMainThread()
 
         val mapper = jacksonObjectMapper()
 
         fetchNip05Json(
             nip05,
             onSuccess = {
+                checkNotInMainThread()
+
                 // NIP05 usernames are case insensitive, but JSON properties are not
                 // converts the json to lowercase and then tries to access the username via a
                 // lowercase version of the username.

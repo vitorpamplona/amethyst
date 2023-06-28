@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.Divider
 import androidx.compose.material.Icon
@@ -25,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
+import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
@@ -33,12 +33,10 @@ fun ZapRaiserRequest(
     newPostViewModel: NewPostViewModel
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
+            modifier = Modifier.fillMaxWidth()
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -49,7 +47,7 @@ fun ZapRaiserRequest(
                 Icon(
                     painter = painterResource(R.drawable.lightning),
                     null,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Size20Modifier,
                     tint = Color.Unspecified
                 )
 

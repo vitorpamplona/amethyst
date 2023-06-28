@@ -4,7 +4,6 @@ import android.util.Log
 import android.util.LruCache
 import android.util.Patterns
 import androidx.compose.animation.Crossfade
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.text.InlineTextContent
@@ -17,26 +16,19 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.*
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
-import androidx.compose.ui.unit.TextUnit
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import com.halilibo.richtext.markdown.Markdown
 import com.halilibo.richtext.markdown.MarkdownParseOptions
-import com.halilibo.richtext.ui.HeadingStyle
-import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.material.MaterialRichText
-import com.halilibo.richtext.ui.resolveDefaults
 import com.linkedin.urls.detection.UrlDetector
 import com.linkedin.urls.detection.UrlDetectorOptions
+import com.vitorpamplona.amethyst.model.HashtagIcon
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -45,10 +37,11 @@ import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.Font17SP
 import com.vitorpamplona.amethyst.ui.theme.MarkdownTextStyle
-import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
 import com.vitorpamplona.amethyst.ui.theme.markdownStyle
-import com.vitorpamplona.amethyst.ui.theme.subtleBorder
+import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.uriToRoute
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
@@ -88,38 +81,6 @@ fun isValidURL(url: String?): Boolean {
         false
     }
 }
-
-internal val DefaultHeadingStyle: HeadingStyle = { level, textStyle ->
-    when (level) {
-        0 -> textStyle.copy(
-            fontSize = 30.sp,
-            fontWeight = FontWeight.Light
-        )
-        1 -> textStyle.copy(
-            fontSize = 26.sp,
-            fontWeight = FontWeight.Light
-        )
-        2 -> textStyle.copy(
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Light
-        )
-        3 -> textStyle.copy(
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
-        )
-        4 -> textStyle.copy(
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold
-        )
-        5 -> textStyle.copy(
-            fontWeight = FontWeight.Bold
-        )
-        else -> textStyle
-    }
-}
-
-internal val DefaultParagraphSpacing: TextUnit = 12.sp
-val richTextDefaults = RichTextStyle().resolveDefaults()
 
 fun isMarkdown(content: String): Boolean {
     return content.startsWith("> ") ||
@@ -399,6 +360,9 @@ private fun NormalWord(word: String) {
     )
 }
 
+@Immutable
+data class UrlWithExtraChars(val url: String, val extraChars: String)
+
 @Composable
 private fun NoProtocolUrlRenderer(word: String) {
     val wordSpace = remember(word) {
@@ -406,7 +370,7 @@ private fun NoProtocolUrlRenderer(word: String) {
     }
 
     var linkedUrl by remember(word) {
-        mutableStateOf<Pair<String, String>?>(null)
+        mutableStateOf<UrlWithExtraChars?>(null)
     }
 
     LaunchedEffect(key1 = word) {
@@ -416,19 +380,30 @@ private fun NoProtocolUrlRenderer(word: String) {
                 val url = matcher.group(1) // url
                 val additionalChars = matcher.group(4) ?: "" // additional chars
 
-                linkedUrl = Pair(url, additionalChars)
+                launch(Dispatchers.Main) {
+                    linkedUrl = UrlWithExtraChars(url, additionalChars)
+                }
             }
         }
     }
 
-    if (linkedUrl != null) {
-        ClickableUrl(linkedUrl!!.first, "https://${linkedUrl!!.first}")
-        Text("${linkedUrl!!.second} ")
-    } else {
-        Text(
-            text = wordSpace,
-            style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-        )
+    Crossfade(targetState = linkedUrl) {
+        if (it != null) {
+            RenderUrl(it)
+        } else {
+            Text(
+                text = wordSpace,
+                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+            )
+        }
+    }
+}
+
+@Composable
+private fun RenderUrl(it: UrlWithExtraChars) {
+    Row() {
+        ClickableUrl(it.url, "https://${it.url}")
+        Text("${it.extraChars} ")
     }
 }
 
@@ -443,14 +418,16 @@ fun RenderCustomEmoji(word: String, state: RichTextViewerState) {
 @Composable
 private fun RenderContentAsMarkdown(content: String, backgroundColor: MutableState<Color>, tags: ImmutableListOfLists<String>?, nav: (String) -> Unit) {
     val uri = LocalUriHandler.current
-    val onClick = { link: String ->
-        val route = uriToRoute(link)
-        if (route != null) {
-            nav(route)
-        } else {
-            runCatching { uri.openUri(link) }
+    val onClick = remember {
+        { link: String ->
+            val route = uriToRoute(link)
+            if (route != null) {
+                nav(route)
+            } else {
+                runCatching { uri.openUri(link) }
+            }
+            Unit
         }
-        Unit
     }
 
     ProvideTextStyle(MarkdownTextStyle) {
@@ -522,7 +499,7 @@ private fun ObserveNIP19Event(
             launch(Dispatchers.IO) {
                 if (it.type == Nip19.Type.NOTE || it.type == Nip19.Type.EVENT || it.type == Nip19.Type.ADDRESS) {
                     LocalCache.checkGetOrCreateNote(it.hex)?.let { note ->
-                        baseNote = note
+                        launch(Dispatchers.Main) { baseNote = note }
                     }
                 }
             }
@@ -559,7 +536,7 @@ private fun ObserveNIP19User(
             launch(Dispatchers.IO) {
                 if (it.type == Nip19.Type.USER) {
                     LocalCache.checkGetOrCreateUser(it.hex)?.let { user ->
-                        baseUser = user
+                        launch(Dispatchers.Main) { baseUser = user }
                     }
                 }
             }
@@ -761,21 +738,25 @@ fun BechLink(word: String, canPreview: Boolean, backgroundColor: MutableState<Co
         }
     }
 
-    if (canPreview) {
-        loadedLink?.let { loadedLink ->
-            loadedLink.baseNote?.let {
-                DisplayFullNote(it, accountViewModel, backgroundColor, nav, loadedLink)
-            } ?: run {
-                ClickableRoute(loadedLink.nip19, nav)
+    Crossfade(targetState = loadedLink) {
+        if (canPreview && it?.baseNote != null) {
+            Row() {
+                DisplayFullNote(it.baseNote, accountViewModel, backgroundColor, nav, it)
             }
-        } ?: run {
-            Text(text = remember { "$word " })
-        }
-    } else {
-        loadedLink?.let {
-            ClickableRoute(it.nip19, nav)
-        } ?: run {
-            Text(text = remember { "$word " })
+        } else if (it?.nip19 != null) {
+            Row() {
+                ClickableRoute(it.nip19, nav)
+            }
+        } else {
+            val text = remember {
+                if (word.length > 16) {
+                    word.replaceRange(8, word.length - 8, ":")
+                } else {
+                    "$word "
+                }
+            }
+
+            Text(text = text, maxLines = 1)
         }
     }
 }
@@ -812,9 +793,11 @@ private fun DisplayFullNote(
     }
 }
 
+data class HashWordWithExtra(val hashtag: String, val extras: String?)
+
 @Composable
 fun HashTag(word: String, nav: (String) -> Unit) {
-    var tagSuffixPair by remember { mutableStateOf<Pair<String, String?>?>(null) }
+    var tagSuffixPair by remember { mutableStateOf<HashWordWithExtra?>(null) }
 
     LaunchedEffect(key1 = word) {
         launch(Dispatchers.IO) {
@@ -830,66 +813,79 @@ fun HashTag(word: String, nav: (String) -> Unit) {
 
             if (myTag != null) {
                 launch(Dispatchers.Main) {
-                    tagSuffixPair = Pair(myTag, mySuffix)
+                    tagSuffixPair = HashWordWithExtra(myTag, mySuffix)
                 }
             }
         }
     }
 
-    tagSuffixPair?.let { tagPair ->
-        val hashtagIcon = remember(tagPair.first) { checkForHashtagWithIcon(tagPair.first) }
-        ClickableText(
-            text = buildAnnotatedString {
-                withStyle(
-                    LocalTextStyle.current.copy(color = MaterialTheme.colors.primary).toSpanStyle()
-                ) {
-                    append("#${tagPair.first}")
-                }
-            },
-            onClick = { nav("Hashtag/${tagPair.first}") }
-        )
-
-        if (hashtagIcon != null) {
-            val myId = "inlineContent"
-            val emptytext = buildAnnotatedString {
-                withStyle(
-                    LocalTextStyle.current.copy(color = MaterialTheme.colors.primary).toSpanStyle()
-                ) {
-                    append("")
-                    appendInlineContent(myId, "[icon]")
-                }
+    Crossfade(targetState = tagSuffixPair) {
+        if (it != null) {
+            Row() {
+                RenderHashtag(it, nav)
             }
-            val inlineContent = mapOf(
-                Pair(
-                    myId,
-                    InlineTextContent(
-                        Placeholder(
-                            width = 17.sp,
-                            height = 17.sp,
-                            placeholderVerticalAlign = PlaceholderVerticalAlign.Center
-                        )
-                    ) {
-                        Icon(
-                            painter = painterResource(hashtagIcon.icon),
-                            contentDescription = hashtagIcon.description,
-                            tint = hashtagIcon.color,
-                            modifier = hashtagIcon.modifier
-                        )
-                    }
-                )
-            )
-
-            // Empty Text for Size of Icon
-            Text(
-                text = emptytext,
-                inlineContent = inlineContent
-            )
+        } else {
+            Text(text = remember { "$word " })
         }
-        tagPair.second?.ifBlank { "" }?.let {
-            Text(text = "$it ")
-        }
-    } ?: Text(text = "$word ")
+    }
 }
+
+@Composable
+private fun RenderHashtag(
+    tagPair: HashWordWithExtra,
+    nav: (String) -> Unit
+) {
+    val hashtagIcon = remember(tagPair.hashtag) { checkForHashtagWithIcon(tagPair.hashtag) }
+    ClickableText(
+        text = buildAnnotatedString {
+            withStyle(
+                LocalTextStyle.current.copy(color = MaterialTheme.colors.primary).toSpanStyle()
+            ) {
+                append("#${tagPair.hashtag}")
+            }
+        },
+        onClick = { nav("Hashtag/${tagPair.hashtag}") }
+    )
+
+    if (hashtagIcon != null) {
+        val myId = "inlineContent"
+        val emptytext = buildAnnotatedString {
+            withStyle(
+                LocalTextStyle.current.copy(color = MaterialTheme.colors.primary).toSpanStyle()
+            ) {
+                append("")
+                appendInlineContent(myId, "[icon]")
+            }
+        }
+        // Empty Text for Size of Icon
+        Text(
+            text = emptytext,
+            inlineContent = mapOf(
+                myId to InlineIcon(hashtagIcon)
+            )
+        )
+    }
+    tagPair.extras?.ifBlank { "" }?.let {
+        Text(text = "$it ")
+    }
+}
+
+@Composable
+private fun InlineIcon(hashtagIcon: HashtagIcon) =
+    InlineTextContent(
+        Placeholder(
+            width = Font17SP,
+            height = Font17SP,
+            placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+        )
+    ) {
+        Icon(
+            painter = painterResource(hashtagIcon.icon),
+            contentDescription = hashtagIcon.description,
+            tint = hashtagIcon.color,
+            modifier = hashtagIcon.modifier
+        )
+    }
 
 data class LoadedTag(val user: User?, val note: Note?, val addedChars: String)
 
@@ -932,19 +928,28 @@ fun TagLink(word: String, tags: ImmutableListOfLists<String>, canPreview: Boolea
         }
     }
 
-    if (loadedTag == null) {
-        Text(
-            text = remember {
-                "$word "
+    Crossfade(targetState = loadedTag) {
+        if (it == null) {
+            Text(
+                text = remember {
+                    "$word "
+                }
+            )
+        } else if (it.user != null) {
+            Row() {
+                DisplayUserFromTag(it.user, loadedTag?.addedChars ?: "", nav)
             }
-        )
-    } else {
-        loadedTag?.user?.let {
-            DisplayUserFromTag(it, loadedTag?.addedChars ?: "", nav)
-        }
-
-        loadedTag?.note?.let {
-            DisplayNoteFromTag(it, loadedTag?.addedChars ?: "", canPreview, accountViewModel, backgroundColor, nav)
+        } else if (it.note != null) {
+            Row() {
+                DisplayNoteFromTag(
+                    it.note,
+                    loadedTag?.addedChars ?: "",
+                    canPreview,
+                    accountViewModel,
+                    backgroundColor,
+                    nav
+                )
+            }
         }
     }
 }
@@ -991,16 +996,18 @@ private fun DisplayUserFromTag(
     }.distinctUntilChanged().observeAsState(baseUser.info)
 
     Crossfade(targetState = meta) {
-        val displayName = remember(it) {
-            it?.bestDisplayName() ?: hex
+        Row() {
+            val displayName = remember(it) {
+                it?.bestDisplayName() ?: hex
+            }
+            CreateClickableTextWithEmoji(
+                clickablePart = displayName,
+                suffix = suffix,
+                maxLines = 1,
+                route = route,
+                nav = nav,
+                tags = it?.tags
+            )
         }
-        CreateClickableTextWithEmoji(
-            clickablePart = displayName,
-            suffix = suffix,
-            maxLines = 1,
-            route = route,
-            nav = nav,
-            tags = it?.tags ?: ImmutableListOfLists()
-        )
     }
 }

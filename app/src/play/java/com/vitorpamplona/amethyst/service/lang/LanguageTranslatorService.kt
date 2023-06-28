@@ -12,6 +12,8 @@ import com.google.mlkit.nl.translate.Translator
 import com.google.mlkit.nl.translate.TranslatorOptions
 import com.linkedin.urls.detection.UrlDetector
 import com.linkedin.urls.detection.UrlDetectorOptions
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import java.util.concurrent.Executors
 import java.util.regex.Pattern
 
 @Immutable
@@ -22,7 +24,9 @@ data class ResultOrError(
 )
 
 object LanguageTranslatorService {
-    private val options = LanguageIdentificationOptions.Builder().setConfidenceThreshold(0.6f).build()
+    var executorService = Executors.newScheduledThreadPool(5)
+
+    private val options = LanguageIdentificationOptions.Builder().setExecutor(executorService).setConfidenceThreshold(0.6f).build()
     private val languageIdentification = LanguageIdentification.getClient(options)
     val lnRegex = Pattern.compile("\\blnbc[a-z0-9]+\\b", Pattern.CASE_INSENSITIVE)
     val tagRegex = Pattern.compile("(nostr:)?@?(nsec1|npub1|nevent1|naddr1|note1|nprofile1|nrelay1)([qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)", Pattern.CASE_INSENSITIVE)
@@ -48,6 +52,7 @@ object LanguageTranslatorService {
     }
 
     fun translate(text: String, source: String, target: String): Task<ResultOrError> {
+        checkNotInMainThread()
         val sourceLangCode = TranslateLanguage.fromLanguageTag(source)
         val targetLangCode = TranslateLanguage.fromLanguageTag(target)
 
@@ -62,19 +67,22 @@ object LanguageTranslatorService {
 
         val translator = translators[options]
 
-        return translator.downloadModelIfNeeded().onSuccessTask {
-            val tasks = mutableListOf<Task<String>>()
+        return translator.downloadModelIfNeeded().onSuccessTask(executorService) {
+            checkNotInMainThread()
 
+            val tasks = mutableListOf<Task<String>>()
             val dict = lnDictionary(text) + urlDictionary(text) + tagDictionary(text)
 
             for (paragraph in encodeDictionary(text, dict).split("\n")) {
                 tasks.add(translator.translate(paragraph))
             }
 
-            Tasks.whenAll(tasks).continueWith {
+            Tasks.whenAll(tasks).continueWith(executorService) {
+                checkNotInMainThread()
+
                 val results: MutableList<String> = ArrayList()
                 for (task in tasks) {
-                    var fixedText = task.result.replace("# [", "#[") // fixes tags that always return with a space
+                    val fixedText = task.result.replace("# [", "#[") // fixes tags that always return with a space
                     results.add(decodeDictionary(fixedText, dict))
                 }
                 ResultOrError(results.joinToString("\n"), source, target)
@@ -140,7 +148,7 @@ object LanguageTranslatorService {
     }
 
     fun autoTranslate(text: String, dontTranslateFrom: Set<String>, translateTo: String): Task<ResultOrError> {
-        return identifyLanguage(text).onSuccessTask {
+        return identifyLanguage(text).onSuccessTask(executorService) {
             if (it == translateTo) {
                 Tasks.forCanceled()
             } else if (it != "und" && !dontTranslateFrom.contains(it)) {

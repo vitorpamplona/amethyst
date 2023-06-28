@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.components
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
@@ -25,13 +26,16 @@ fun MayBeWithdrawal(lnurlWord: String) {
         }
     }
 
-    lnWithdrawal?.let {
-        ClickableWithdrawal(withdrawalString = it)
+    Crossfade(targetState = lnWithdrawal) {
+        if (it != null) {
+            ClickableWithdrawal(withdrawalString = it)
+        } else {
+            Text(
+                text = "$lnurlWord ",
+                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+            )
+        }
     }
-        ?: Text(
-            text = "$lnurlWord ",
-            style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-        )
 }
 
 @Composable

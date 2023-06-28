@@ -605,7 +605,7 @@ fun InnerNoteWithReactions(
                 val (value, elapsed) = measureTimedValue {
                     AuthorAndRelayInformation(baseNote, accountViewModel, nav)
                 }
-                println("AAA Rendering Auth $elapsed - ${baseNote.event?.content()?.take(10)}")
+                Log.d("Rendering Metrics", "Author:   ${baseNote.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
             }
             Spacer(modifier = DoubleHorzSpacer)
         }
@@ -625,7 +625,7 @@ fun InnerNoteWithReactions(
                     nav = nav
                 )
             }
-            println("AAA Rendering Body $elapsed - ${baseNote.event?.content()?.take(10)}")
+            Log.d("Rendering Metrics", "TextBody: ${baseNote.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
         }
     }
 
@@ -646,7 +646,7 @@ fun InnerNoteWithReactions(
                     nav = nav
                 )
             }
-            println("AAA Rendering Reac $elapsed - ${baseNote.event?.content()?.take(10)}")
+            Log.d("Rendering Metrics", "Reaction: ${baseNote.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
         }
     }
 
@@ -828,6 +828,14 @@ fun routeFor(note: Note, loggedIn: User): String? {
     }
 
     return null
+}
+
+fun routeFor(user: User): String {
+    return "User/${user.pubkeyHex}"
+}
+
+fun authorRouteFor(note: Note): String {
+    return "User/${note.author?.pubkeyHex}"
 }
 
 @Composable
@@ -3036,7 +3044,7 @@ fun NoteAuthorPicture(
 }
 
 @Composable
-private fun DisplayBlankAuthor(size: Dp, modifier: Modifier) {
+fun DisplayBlankAuthor(size: Dp, modifier: Modifier = Modifier) {
     val backgroundColor = MaterialTheme.colors.background
 
     val nullModifier = remember {
@@ -3161,16 +3169,14 @@ fun BaseUserPicture(
         Modifier.size(size)
     }
 
-    Crossfade(targetState = userProfile) {
-        Box(myBoxModifier, contentAlignment = TopEnd) {
-            PictureAndFollowingMark(
-                userHex = userPubkey,
-                userPicture = it,
-                size = size,
-                modifier = modifier,
-                accountViewModel = accountViewModel
-            )
-        }
+    Box(myBoxModifier, contentAlignment = TopEnd) {
+        PictureAndFollowingMark(
+            userHex = userPubkey,
+            userPicture = userProfile,
+            size = size,
+            modifier = modifier,
+            accountViewModel = accountViewModel
+        )
     }
 }
 
@@ -3207,50 +3213,56 @@ fun PictureAndFollowingMark(
 }
 
 @Composable
-private fun ObserveAndDisplayFollowingMark(userHex: String, iconSize: Dp, accountViewModel: AccountViewModel) {
-    val showFollowingMark by accountViewModel.userFollows.map {
-        it.user.isFollowingCached(userHex) || (userHex == accountViewModel.account.userProfile().pubkeyHex)
-    }.distinctUntilChanged().observeAsState(
-        accountViewModel.account.userProfile().isFollowingCached(userHex) || (userHex == accountViewModel.account.userProfile().pubkeyHex)
-    )
-
-    Crossfade(targetState = showFollowingMark) {
-        if (it) {
-            Box(contentAlignment = TopEnd) {
-                FollowingIcon(iconSize)
+fun ObserveAndDisplayFollowingMark(userHex: String, iconSize: Dp, accountViewModel: AccountViewModel) {
+    WatchFollows(userHex, accountViewModel) {
+        Crossfade(targetState = it) {
+            if (it) {
+                Box(contentAlignment = TopEnd) {
+                    FollowingIcon(iconSize)
+                }
             }
         }
     }
 }
 
 @Composable
-private fun FollowingIcon(iconSize: Dp) {
-    val myIconBoxModifier = remember {
+fun WatchFollows(userHex: String, accountViewModel: AccountViewModel, onFollowChanges: @Composable (Boolean) -> Unit) {
+    val showFollowingMark by accountViewModel.userFollows.map {
+        it.user.isFollowingCached(userHex) || (userHex == accountViewModel.account.userProfile().pubkeyHex)
+    }.distinctUntilChanged().observeAsState(
+        accountViewModel.account.userProfile().isFollowingCached(userHex) || (userHex == accountViewModel.account.userProfile().pubkeyHex)
+    )
+
+    onFollowChanges(showFollowingMark)
+}
+
+@Composable
+fun FollowingIcon(iconSize: Dp) {
+    val modifier = remember {
         Modifier.size(iconSize)
     }
 
-    Box(myIconBoxModifier, contentAlignment = Alignment.Center) {
-        val backgroundColor = MaterialTheme.colors.background
+    val backgroundColor = MaterialTheme.colors.background
 
-        val myIconBackgroundModifier = remember {
-            Modifier
-                .clip(CircleShape)
-                .size(iconSize.times(0.6f))
-                .drawBehind { drawRect(backgroundColor) }
-        }
+    val myIconBackgroundModifier = remember {
+        Modifier
+            .clip(CircleShape)
+            .size(iconSize.times(0.6f))
+            .drawBehind { drawRect(backgroundColor) }
+    }
 
-        Box(
-            myIconBackgroundModifier
-        )
+    FollowingIcon(modifier, myIconBackgroundModifier)
+}
 
-        val myIconModifier = remember {
-            Modifier.size(iconSize)
-        }
+@Composable
+fun FollowingIcon(modifier: Modifier, myIconBackgroundModifier: Modifier) {
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        Box(myIconBackgroundModifier)
 
         Icon(
             painter = painterResource(R.drawable.ic_verified),
             stringResource(id = R.string.following),
-            modifier = myIconModifier,
+            modifier = modifier,
             tint = Following
         )
     }

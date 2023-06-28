@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Colors
 import androidx.compose.material.MaterialTheme
@@ -25,9 +26,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.halilibo.richtext.ui.RichTextStyle
-import com.vitorpamplona.amethyst.ui.components.DefaultHeadingStyle
-import com.vitorpamplona.amethyst.ui.components.DefaultParagraphSpacing
-import com.vitorpamplona.amethyst.ui.components.richTextDefaults
+import com.halilibo.richtext.ui.resolveDefaults
 
 private val DarkColorPalette = darkColors(
     primary = Purple200,
@@ -121,6 +120,16 @@ val LightImageModifier = Modifier
         QuoteBorder
     )
 
+val DarkProfile35dpModifier = Modifier
+    .size(Size35dp)
+    .clip(shape = CircleShape)
+    .drawBehind { drawRect(DarkColorPalette.background) }
+
+val LightProfile35dpModifier = Modifier
+    .fillMaxWidth()
+    .clip(shape = CircleShape)
+    .drawBehind { drawRect(LightColorPalette.background) }
+
 val DarkReplyBorderModifier = Modifier
     .padding(top = 5.dp)
     .fillMaxWidth()
@@ -161,10 +170,12 @@ val LightInnerPostBorderModifier = Modifier
         QuoteBorder
     )
 
-val MarkDownStyleOnDark = richTextDefaults.copy(
+val RichTextDefaults = RichTextStyle().resolveDefaults()
+
+val MarkDownStyleOnDark = RichTextDefaults.copy(
     paragraphSpacing = DefaultParagraphSpacing,
     headingStyle = DefaultHeadingStyle,
-    codeBlockStyle = richTextDefaults.codeBlockStyle?.copy(
+    codeBlockStyle = RichTextDefaults.codeBlockStyle?.copy(
         textStyle = TextStyle(
             fontFamily = FontFamily.Monospace,
             fontSize = Font14SP
@@ -182,7 +193,7 @@ val MarkDownStyleOnDark = richTextDefaults.copy(
                 drawRect(DarkColorPalette.onSurface.copy(alpha = 0.05f))
             }
     ),
-    stringStyle = richTextDefaults.stringStyle?.copy(
+    stringStyle = RichTextDefaults.stringStyle?.copy(
         linkStyle = SpanStyle(
             color = DarkColorPalette.primary
         ),
@@ -194,10 +205,10 @@ val MarkDownStyleOnDark = richTextDefaults.copy(
     )
 )
 
-val MarkDownStyleOnLight = richTextDefaults.copy(
+val MarkDownStyleOnLight = RichTextDefaults.copy(
     paragraphSpacing = DefaultParagraphSpacing,
     headingStyle = DefaultHeadingStyle,
-    codeBlockStyle = richTextDefaults.codeBlockStyle?.copy(
+    codeBlockStyle = RichTextDefaults.codeBlockStyle?.copy(
         textStyle = TextStyle(
             fontFamily = FontFamily.Monospace,
             fontSize = Font14SP
@@ -215,7 +226,7 @@ val MarkDownStyleOnLight = richTextDefaults.copy(
                 drawRect(LightColorPalette.onSurface.copy(alpha = 0.05f))
             }
     ),
-    stringStyle = richTextDefaults.stringStyle?.copy(
+    stringStyle = RichTextDefaults.stringStyle?.copy(
         linkStyle = SpanStyle(
             color = LightColorPalette.primary
         ),
@@ -282,6 +293,9 @@ val Colors.repostProfileBorder: Modifier
 
 val Colors.imageModifier: Modifier
     get() = if (isLight) LightImageModifier else DarkImageModifier
+
+val Colors.profile35dpModifier: Modifier
+    get() = if (isLight) LightProfile35dpModifier else DarkProfile35dpModifier
 
 val Colors.replyModifier: Modifier
     get() = if (isLight) LightReplyBorderModifier else DarkReplyBorderModifier

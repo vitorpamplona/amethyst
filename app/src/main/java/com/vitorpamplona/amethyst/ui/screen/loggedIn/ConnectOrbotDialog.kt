@@ -34,8 +34,8 @@ import com.halilibo.richtext.markdown.Markdown
 import com.halilibo.richtext.ui.material.MaterialRichText
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
-import com.vitorpamplona.amethyst.ui.components.richTextDefaults
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.RichTextDefaults
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.launch
 
@@ -86,8 +86,8 @@ fun ConnectOrbotDialog(onClose: () -> Unit, onPost: () -> Unit, portNumber: Muta
                 Column(
                     modifier = Modifier.padding(30.dp)
                 ) {
-                    val myMarkDownStyle = richTextDefaults.copy(
-                        stringStyle = richTextDefaults.stringStyle?.copy(
+                    val myMarkDownStyle = RichTextDefaults.copy(
+                        stringStyle = RichTextDefaults.stringStyle?.copy(
                             linkStyle = SpanStyle(
                                 textDecoration = TextDecoration.Underline,
                                 color = MaterialTheme.colors.primary

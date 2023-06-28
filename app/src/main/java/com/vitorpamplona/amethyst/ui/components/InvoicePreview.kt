@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.components
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -27,7 +28,7 @@ import com.vitorpamplona.amethyst.service.lnurl.LnInvoiceUtil
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 import java.text.NumberFormat
 
 @Composable
@@ -35,7 +36,7 @@ fun MayBeInvoicePreview(lnbcWord: String) {
     var lnInvoice by remember { mutableStateOf<Pair<String, String?>?>(null) }
 
     LaunchedEffect(key1 = lnbcWord) {
-        withContext(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             val myInvoice = LnInvoiceUtil.findInvoice(lnbcWord)
             if (myInvoice != null) {
                 val myInvoiceAmount = try {
@@ -50,13 +51,16 @@ fun MayBeInvoicePreview(lnbcWord: String) {
         }
     }
 
-    lnInvoice?.let {
-        InvoicePreview(it.first, it.second)
+    Crossfade(targetState = lnInvoice) {
+        if (it != null) {
+            InvoicePreview(it.first, it.second)
+        } else {
+            Text(
+                text = "$lnbcWord ",
+                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+            )
+        }
     }
-        ?: Text(
-            text = "$lnbcWord ",
-            style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-        )
 }
 
 @Composable

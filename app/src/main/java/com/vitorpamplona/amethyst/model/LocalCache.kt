@@ -51,7 +51,7 @@ object LocalCache {
     }
 
     fun getUserIfExists(key: String): User? {
-        return users[key]
+        return users.get(key)
     }
 
     fun getNoteIfExists(key: String): Note? {
@@ -230,7 +230,7 @@ object LocalCache {
 
         note.loadEvent(event, author, replyTo)
 
-        // Log.d("TN", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${note.event?.content()?.take(100)} ${formattedDateTime(event.createdAt)}")
+        // Log.d("TN", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${note.event?.content()?.split("\n")?.take(100)} ${formattedDateTime(event.createdAt)}")
 
         // Prepares user's profile view.
         author.addNote(note)
@@ -302,7 +302,7 @@ object LocalCache {
 
         note.loadEvent(event, author, replyTo)
 
-        // Log.d("TN", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${note.event?.content()?.take(100)} ${formattedDateTime(event.createdAt)}")
+        // Log.d("TN", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${note.event?.content()?.split("\n")?.take(100)} ${formattedDateTime(event.createdAt)}")
 
         // Prepares user's profile view.
         author.addNote(note)

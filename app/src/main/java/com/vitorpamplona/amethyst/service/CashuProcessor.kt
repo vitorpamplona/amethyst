@@ -23,6 +23,8 @@ data class CashuToken(
 
 class CashuProcessor {
     fun parse(cashuToken: String): GenericLoadable<CashuToken> {
+        checkNotInMainThread()
+
         try {
             val base64token = cashuToken.replace("cashuA", "")
             val cashu = JsonParser.parseString(String(Base64.getDecoder().decode(base64token)))
@@ -44,6 +46,8 @@ class CashuProcessor {
     }
 
     fun melt(token: CashuToken, lud16: String, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
+        checkNotInMainThread()
+
         runCatching {
             LightningAddressResolver().lnAddressInvoice(
                 lnaddress = lud16,

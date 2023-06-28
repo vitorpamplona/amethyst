@@ -62,6 +62,8 @@ import com.vitorpamplona.amethyst.VideoCache
 import com.vitorpamplona.amethyst.service.HttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlin.time.ExperimentalTime
+import kotlin.time.measureTimedValue
 
 public var DefaultMutedSetting = mutableStateOf(true)
 
@@ -97,8 +99,22 @@ fun LoadThumbAndThenVideoView(videoUri: String, description: String? = null, thu
     }
 }
 
+@OptIn(ExperimentalTime::class)
 @Composable
 fun VideoView(
+    videoUri: String,
+    description: String? = null,
+    thumb: VideoThumb? = null,
+    onDialog: ((Boolean) -> Unit)? = null
+) {
+    val (value, elapsed) = measureTimedValue {
+        VideoView1(videoUri, description, thumb, onDialog)
+    }
+    Log.d("Rendering Metrics", "VideoView $elapsed $videoUri")
+}
+
+@Composable
+fun VideoView1(
     videoUri: String,
     description: String? = null,
     thumb: VideoThumb? = null,
@@ -127,8 +143,24 @@ fun VideoView(
     }
 }
 
+@OptIn(ExperimentalTime::class)
 @Composable
 fun VideoView(
+    videoUri: String,
+    description: String? = null,
+    exoPlayerData: VideoPlayer,
+    defaultToStart: Boolean = false,
+    thumb: VideoThumb? = null,
+    onDialog: ((Boolean) -> Unit)? = null
+) {
+    val (value, elapsed) = measureTimedValue {
+        VideoView1(videoUri, description, exoPlayerData, defaultToStart, thumb, onDialog)
+    }
+    Log.d("Rendering Metrics", "VideoView $elapsed $videoUri")
+}
+
+@Composable
+fun VideoView1(
     videoUri: String,
     description: String? = null,
     exoPlayerData: VideoPlayer,

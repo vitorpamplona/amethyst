@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen
 
+import android.util.Log
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.PaddingValues
@@ -18,6 +19,8 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.ui.note.ChatroomCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import kotlin.time.ExperimentalTime
+import kotlin.time.measureTimedValue
 
 @Composable
 fun ChatroomListFeedView(
@@ -68,6 +71,7 @@ private fun CrossFadeState(
     }
 }
 
+@OptIn(ExperimentalTime::class)
 @Composable
 private fun FeedLoaded(
     state: FeedState.Loaded,
@@ -108,11 +112,14 @@ private fun FeedLoaded(
             key = { index, item -> if (index == 0) index else item.idHex }
         ) { _, item ->
             Row(Modifier.fillMaxWidth()) {
-                ChatroomCompose(
-                    item,
-                    accountViewModel = accountViewModel,
-                    nav = nav
-                )
+                val (value, elapsed) = measureTimedValue {
+                    ChatroomCompose(
+                        item,
+                        accountViewModel = accountViewModel,
+                        nav = nav
+                    )
+                }
+                Log.d("Rendering Metrics", "Chat Header Complete: ${item.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
             }
         }
     }

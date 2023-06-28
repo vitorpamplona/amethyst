@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.components
 
 import android.content.res.Resources
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.Divider
@@ -13,6 +14,7 @@ import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
@@ -33,13 +35,20 @@ import androidx.compose.ui.unit.dp
 import androidx.core.os.ConfigurationCompat
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
-import com.vitorpamplona.amethyst.service.lang.ResultOrError
 import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.Locale
+
+@Immutable
+data class TranslationConfig(
+    val result: String?,
+    val sourceLang: String?,
+    val targetLang: String?,
+    val showOriginal: Boolean
+)
 
 @Composable
 fun TranslatableRichTextViewer(
@@ -51,32 +60,53 @@ fun TranslatableRichTextViewer(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
+    var translatedTextState by remember {
+        mutableStateOf(TranslationConfig(content, null, null, false))
+    }
+
+    TranslateAndWatchLanguageChanges(content, accountViewModel) { result ->
+        if (!translatedTextState.result.equals(result.result, true) ||
+            translatedTextState.sourceLang != result.sourceLang ||
+            translatedTextState.targetLang != result.targetLang
+        ) {
+            translatedTextState = result
+        }
+    }
+
+    Crossfade(targetState = translatedTextState) {
+        RenderText(
+            it,
+            content,
+            canPreview,
+            modifier,
+            tags,
+            backgroundColor,
+            accountViewModel,
+            nav
+        )
+    }
+}
+
+@Composable
+private fun RenderText(
+    translatedTextState: TranslationConfig,
+    content: String,
+    canPreview: Boolean,
+    modifier: Modifier,
+    tags: ImmutableListOfLists<String>,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    var showOriginal by remember(translatedTextState) { mutableStateOf(translatedTextState.showOriginal) }
+
+    val toBeViewed by remember(translatedTextState) {
+        derivedStateOf {
+            if (showOriginal) content else translatedTextState.result ?: content
+        }
+    }
+
     Column {
-        var translatedTextState by remember {
-            mutableStateOf(ResultOrError(content, null, null))
-        }
-
-        var showOriginal by remember { mutableStateOf(false) }
-
-        TranslateAndWatchLanguageChanges(content, accountViewModel) { result, newShowOriginal ->
-            if (!translatedTextState.result.equals(result.result, true) ||
-                translatedTextState.sourceLang != result.sourceLang ||
-                translatedTextState.targetLang != result.targetLang
-            ) {
-                translatedTextState = result
-            }
-
-            if (showOriginal != newShowOriginal) {
-                showOriginal = newShowOriginal
-            }
-        }
-
-        val toBeViewed by remember(translatedTextState) {
-            derivedStateOf {
-                if (showOriginal) content else translatedTextState.result ?: content
-            }
-        }
-
         ExpandableRichTextViewer(
             toBeViewed,
             canPreview,
@@ -92,8 +122,8 @@ fun TranslatableRichTextViewer(
             translatedTextState.sourceLang != translatedTextState.targetLang
         ) {
             TranslationMessage(
-                translatedTextState.sourceLang!!,
-                translatedTextState.targetLang!!,
+                translatedTextState.sourceLang,
+                translatedTextState.targetLang,
                 accountViewModel
             ) {
                 showOriginal = it
@@ -280,25 +310,30 @@ private fun TranslationMessage(
 }
 
 @Composable
-fun TranslateAndWatchLanguageChanges(content: String, accountViewModel: AccountViewModel, onTranslated: (ResultOrError, Boolean) -> Unit) {
+fun TranslateAndWatchLanguageChanges(content: String, accountViewModel: AccountViewModel, onTranslated: (TranslationConfig) -> Unit) {
     val accountState by accountViewModel.accountLanguagesLiveData.observeAsState()
     val account = remember(accountState) { accountState?.account } ?: return
 
-    val scope = rememberCoroutineScope()
-
     LaunchedEffect(accountState) {
-        scope.launch(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             LanguageTranslatorService.autoTranslate(
                 content,
                 account.dontTranslateFrom,
                 account.translateTo
             ).addOnCompleteListener { task ->
-                if (task.isSuccessful && content != task.result.result) {
+                if (task.isSuccessful && !content.equals(task.result.result, true)) {
                     if (task.result.sourceLang != null && task.result.targetLang != null) {
                         val preference = account.preferenceBetween(task.result.sourceLang!!, task.result.targetLang!!)
-                        launch(Dispatchers.Main) {
-                            onTranslated(task.result, preference == task.result.sourceLang)
-                        }
+                        val newConfig = TranslationConfig(
+                            result = task.result.result,
+                            sourceLang = task.result.sourceLang,
+                            targetLang = task.result.targetLang,
+                            showOriginal = preference == task.result.sourceLang
+                        )
+
+                        // withContext(Dispatchers.Main) {
+                        onTranslated(newConfig)
+                        // }
                     }
                 }
             }

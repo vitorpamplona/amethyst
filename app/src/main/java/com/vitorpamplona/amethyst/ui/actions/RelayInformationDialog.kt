@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.ui.actions
 import android.content.Context
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,6 +30,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.RelayInformation
 import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.components.ClickableEmail
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.note.LoadUser
@@ -246,7 +248,11 @@ private fun DisplayOwnerInformation(
     nav: (String) -> Unit
 ) {
     LoadUser(baseUserHex = userHex) {
-        UserCompose(baseUser = it, accountViewModel = accountViewModel, showDiviser = false, nav = nav)
+        Crossfade(it) {
+            if (it != null) {
+                UserCompose(baseUser = it, accountViewModel = accountViewModel, showDiviser = false, nav = nav)
+            }
+        }
     }
 }
 
@@ -305,6 +311,7 @@ fun loadRelayInfo(
         .enqueue(
             object : Callback {
                 override fun onResponse(call: Call, response: Response) {
+                    checkNotInMainThread()
                     response.use {
                         val body = it.body.string()
                         try {

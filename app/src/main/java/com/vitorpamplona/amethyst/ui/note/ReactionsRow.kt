@@ -419,7 +419,6 @@ private fun ReactionDetailGallery(
                 if (hasBoostEvents) {
                     RenderBoostGallery(
                         boostEvents,
-                        backgroundColor,
                         nav,
                         accountViewModel
                     )
@@ -431,7 +430,6 @@ private fun ReactionDetailGallery(
                         RenderLikeGallery(
                             it.key,
                             reactions,
-                            backgroundColor,
                             nav,
                             accountViewModel
                         )

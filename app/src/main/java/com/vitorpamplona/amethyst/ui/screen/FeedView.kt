@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen
 
+import android.util.Log
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -215,7 +216,7 @@ private fun FeedLoaded(
                 }
             }
 
-            println("AAA Rendering $elapsed - ${item.event?.content()?.take(10)}")
+            Log.d("Rendering Metrics", "Complete: ${item.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
         }
     }
 }

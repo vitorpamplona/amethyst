@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Shapes
@@ -19,6 +20,8 @@ val Shapes = Shapes(
     medium = RoundedCornerShape(4.dp),
     large = RoundedCornerShape(0.dp)
 )
+
+val RippleRadius45dp = 45.dp // Ripple should be +10.dp over the component size
 
 val SmallBorder = RoundedCornerShape(7.dp)
 val QuoteBorder = RoundedCornerShape(15.dp)
@@ -40,6 +43,7 @@ val DoubleVertSpacer = Modifier.height(10.dp)
 val HalfDoubleVertSpacer = Modifier.height(7.dp)
 
 val Size0dp = 0.dp
+val Size10dp = 10.dp
 val Size13dp = 13.dp
 val Size15dp = 15.dp
 val Size16dp = 16.dp
@@ -56,15 +60,20 @@ val Size75dp = 75.dp
 
 val HalfStartPadding = Modifier.padding(start = 5.dp)
 val StdStartPadding = Modifier.padding(start = 10.dp)
+val StdTopPadding = Modifier.padding(top = 10.dp)
 
 val HalfPadding = Modifier.padding(5.dp)
 val StdPadding = Modifier.padding(10.dp)
 
+val Size6Modifier = Modifier.size(6.dp)
+val Size10Modifier = Modifier.size(10.dp)
 val Size15Modifier = Modifier.size(15.dp)
+val Size18Modifier = Modifier.size(18.dp)
 val Size20Modifier = Modifier.size(20.dp)
 val Size22Modifier = Modifier.size(22.dp)
 val Size24Modifier = Modifier.size(24.dp)
 val Size30Modifier = Modifier.size(30.dp)
+val Size35Modifier = Modifier.size(35.dp)
 val Size55Modifier = Modifier.size(55.dp)
 
 val TinyBorders = Modifier.padding(2.dp)
@@ -93,3 +102,9 @@ val ShowMoreRelaysButtonBoxModifer = Modifier.fillMaxWidth().height(25.dp)
 val ChatBubbleMaxSizeModifier = Modifier.fillMaxWidth(0.85f)
 
 val ModifierWidth3dp = Modifier.width(3.dp)
+
+val NotificationIconModifier = Modifier.width(55.dp).padding(end = 5.dp)
+val NotificationIconModifierSmaller = Modifier.width(55.dp).padding(end = 4.dp)
+
+val ZapPictureCommentModifier = Modifier.height(35.dp).widthIn(min = 35.dp)
+val ChatHeadlineBorders = Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp)

@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.model
 import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -21,6 +22,8 @@ fun checkForHashtagWithIcon(tag: String): HashtagIcon? {
         else -> null
     }
 }
+
+@Immutable
 class HashtagIcon(
     val icon: Int,
     val description: String,

@@ -77,11 +77,20 @@ open class Note(val idHex: String) {
     open fun idDisplayNote() = idNote().toShortenHex()
 
     fun channelHex(): HexKey? {
-        return (event as? ChannelMessageEvent)?.channel()
-            ?: (event as? ChannelMetadataEvent)?.channel()
-            ?: (event as? ChannelCreateEvent)?.id
-            ?: (event as? LiveActivitiesChatMessageEvent)?.activity()?.toTag()
-            ?: (event as? LiveActivitiesEvent)?.address()?.toTag()
+        return if (event is ChannelMessageEvent ||
+            event is ChannelMetadataEvent ||
+            event is ChannelCreateEvent ||
+            event is LiveActivitiesChatMessageEvent ||
+            event is LiveActivitiesEvent
+        ) {
+            (event as? ChannelMessageEvent)?.channel()
+                ?: (event as? ChannelMetadataEvent)?.channel()
+                ?: (event as? ChannelCreateEvent)?.id
+                ?: (event as? LiveActivitiesChatMessageEvent)?.activity()?.toTag()
+                ?: (event as? LiveActivitiesEvent)?.address()?.toTag()
+        } else {
+            null
+        }
     }
 
     open fun address(): ATag? = null

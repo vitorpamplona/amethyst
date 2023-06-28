@@ -126,20 +126,22 @@ fun CashuPreview(token: CashuToken, accountViewModel: AccountViewModel) {
                         startActivity(context, intent, null)
                     } else {
                         if (lud16 != null) {
-                            CashuProcessor().melt(
-                                token,
-                                lud16,
-                                onSuccess = {
-                                    scope.launch {
-                                        Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+                            scope.launch(Dispatchers.IO) {
+                                CashuProcessor().melt(
+                                    token,
+                                    lud16,
+                                    onSuccess = {
+                                        scope.launch {
+                                            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    onError = {
+                                        scope.launch {
+                                            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+                                        }
                                     }
-                                },
-                                onError = {
-                                    scope.launch {
-                                        Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                            )
+                                )
+                            }
                         } else {
                             scope.launch {
                                 Toast.makeText(context, "No Lightning Address set", Toast.LENGTH_SHORT).show()

@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.note
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -53,9 +54,14 @@ import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.ChatHeadlineBorders
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.Height4dpModifier
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
+import com.vitorpamplona.amethyst.ui.theme.Size75dp
+import com.vitorpamplona.amethyst.ui.theme.StdTopPadding
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
@@ -110,8 +116,16 @@ private fun ChatroomDirectMessage(
     }
 
     userRoomHex?.let {
-        LoadUser(it) { user ->
-            UserRoomCompose(baseNote, user, accountViewModel, nav)
+        LoadUser(it) { baseUser ->
+            Crossfade(baseUser) { user ->
+                if (user != null) {
+                    UserRoomCompose(baseNote, user, accountViewModel, nav)
+                } else {
+                    Box(Modifier.height(Size75dp).fillMaxWidth()) {
+                        // Makes sure just a max amount of objects are loaded.
+                    }
+                }
+            }
         }
     }
 }
@@ -246,6 +260,7 @@ private fun UserRoomCompose(
             accountViewModel.decrypt(note)
         }
     }
+
     WatchNotificationChanges(note, route, accountViewModel) { newHasNewMessages ->
         if (hasNewMessages.value != newHasNewMessages) {
             hasNewMessages.value = newHasNewMessages
@@ -288,7 +303,7 @@ private fun WatchNotificationChanges(
 }
 
 @Composable
-fun LoadUser(baseUserHex: String, content: @Composable (User) -> Unit) {
+fun LoadUser(baseUserHex: String, content: @Composable (User?) -> Unit) {
     var user by remember(baseUserHex) {
         mutableStateOf<User?>(LocalCache.getUserIfExists(baseUserHex))
     }
@@ -301,9 +316,7 @@ fun LoadUser(baseUserHex: String, content: @Composable (User) -> Unit) {
         }
     }
 
-    user?.let {
-        content(it)
-    }
+    content(user)
 }
 
 @Composable
@@ -348,9 +361,7 @@ fun ChannelName(
     onClick: () -> Unit
 ) {
     Column(modifier = remember { Modifier.clickable(onClick = onClick) }) {
-        Row(
-            modifier = remember { Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp) }
-        ) {
+        Row(modifier = ChatHeadlineBorders) {
             Column(Size55Modifier) {
                 channelPicture()
             }
@@ -362,11 +373,13 @@ fun ChannelName(
                 verticalArrangement = Arrangement.SpaceAround
             ) {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = remember { Modifier.padding(bottom = 4.dp) }
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     FirstRow(channelTitle, channelLastTime, remember { Modifier.weight(1f) })
                 }
+
+                Spacer(modifier = Height4dpModifier)
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
@@ -377,8 +390,8 @@ fun ChannelName(
         }
 
         Divider(
-            modifier = remember { Modifier.padding(top = 10.dp) },
-            thickness = 0.25.dp
+            modifier = StdTopPadding,
+            thickness = DividerThickness
         )
     }
 }
