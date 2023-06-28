@@ -426,8 +426,9 @@ private fun CreateAndRenderPages(
         3 -> TabFollowers(baseUser, followersFeedViewModel, accountViewModel, nav)
         4 -> TabReceivedZaps(baseUser, zapFeedViewModel, accountViewModel, nav)
         5 -> TabBookmarks(bookmarksFeedViewModel, accountViewModel, nav)
-        6 -> TabReports(baseUser, reportsFeedViewModel, accountViewModel, nav)
-        7 -> TabRelays(baseUser, accountViewModel, nav)
+        6 -> TabFollowedTags(baseUser, accountViewModel, nav)
+        7 -> TabReports(baseUser, reportsFeedViewModel, accountViewModel, nav)
+        8 -> TabRelays(baseUser, accountViewModel, nav)
     }
 }
 
@@ -446,6 +447,7 @@ private fun CreateAndRenderTabs(
         { FollowersTabHeader(baseUser) },
         { ZapTabHeader(baseUser) },
         { BookmarkTabHeader(baseUser) },
+        { FollowedTagsTabHeader(baseUser) },
         { ReportsTabHeader(baseUser) },
         { RelaysTabHeader(baseUser) }
     )
@@ -488,6 +490,25 @@ private fun ReportsTabHeader(baseUser: User) {
     }
 
     Text(text = "$userReports ${stringResource(R.string.reports)}")
+}
+
+@Composable
+private fun FollowedTagsTabHeader(baseUser: User) {
+    var usertags by remember { mutableStateOf(0) }
+
+    LaunchedEffect(key1 = baseUser) {
+        launch(Dispatchers.IO) {
+            val contactList = baseUser?.latestContactList
+
+            val newTags = (contactList?.verifiedFollowTagSet?.count() ?: 0)
+
+            if (newTags != usertags) {
+                usertags = newTags
+            }
+        }
+    }
+
+    Text(text = "$usertags ${stringResource(R.string.followed_tags)}")
 }
 
 @Composable
@@ -1273,6 +1294,27 @@ fun TabNotesConversations(feedViewModel: NostrUserProfileConversationsFeedViewMo
                 accountViewModel = accountViewModel,
                 nav = nav
             )
+        }
+    }
+}
+
+@Composable
+fun TabFollowedTags(baseUser: User, account: AccountViewModel, nav: (String) -> Unit) {
+    Column(Modifier.fillMaxHeight()) {
+        Column(
+            modifier = Modifier.padding(vertical = 0.dp)
+        ) {
+            baseUser.latestContactList?.let {
+                it.unverifiedFollowTagSet().forEach { hashtag ->
+                    HashtagHeader(
+                        tag = hashtag,
+                        account = account,
+                        onClick = {
+                            nav("Hashtag/$hashtag")
+                        }
+                    )
+                }
+            }
         }
     }
 }
