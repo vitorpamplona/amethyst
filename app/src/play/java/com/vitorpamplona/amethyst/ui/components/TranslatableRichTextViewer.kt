@@ -59,7 +59,7 @@ fun TranslatableRichTextViewer(
         var showOriginal by remember { mutableStateOf(false) }
 
         TranslateAndWatchLanguageChanges(content, accountViewModel) { result, newShowOriginal ->
-            if (translatedTextState.result != result.result ||
+            if (!translatedTextState.result.equals(result.result, true) ||
                 translatedTextState.sourceLang != result.sourceLang ||
                 translatedTextState.targetLang != result.targetLang
             ) {
