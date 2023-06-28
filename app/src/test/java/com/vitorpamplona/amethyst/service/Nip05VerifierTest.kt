@@ -12,9 +12,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.fail
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TestRule
 
 class Nip05VerifierTest {
     private val ALL_UPPER_CASE_USER_NAME = "ONETWO"
