@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.PagerState
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
@@ -470,7 +471,7 @@ fun ZoomableImageDialog(imageUrl: ZoomableContent, allImages: ImmutableList<Zoom
     ) {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-                val pagerState: PagerState = remember { PagerState() }
+                val pagerState: PagerState = rememberPagerState()
 
                 LaunchedEffect(key1 = pagerState, key2 = imageUrl) {
                     val page = allImages.indexOf(imageUrl)
