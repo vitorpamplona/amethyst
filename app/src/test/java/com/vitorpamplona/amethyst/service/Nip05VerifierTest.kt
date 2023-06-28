@@ -1,15 +1,20 @@
 package com.vitorpamplona.amethyst.service
 
+import android.os.Looper
 import io.mockk.MockKAnnotations
 import io.mockk.every
 import io.mockk.impl.annotations.SpyK
+import io.mockk.mockk
+import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.fail
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TestRule
 
 class Nip05VerifierTest {
     private val ALL_UPPER_CASE_USER_NAME = "ONETWO"
@@ -19,7 +24,12 @@ class Nip05VerifierTest {
     var nip05Verifier = Nip05Verifier()
 
     @Before
-    fun setUp() = MockKAnnotations.init(this)
+    fun setUp() {
+        mockkStatic(Looper::class)
+        every { Looper.myLooper() } returns mockk<Looper>()
+        every { Looper.getMainLooper() } returns mockk<Looper>()
+        MockKAnnotations.init(this)
+    }
 
     @Test
     fun `test with matching case on user name`() {
