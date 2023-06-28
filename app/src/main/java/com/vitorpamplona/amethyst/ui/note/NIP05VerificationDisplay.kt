@@ -113,7 +113,7 @@ fun ObserveDisplayNip05Status(baseNote: Note, columnModifier: Modifier = Modifie
 fun ObserveDisplayNip05Status(baseUser: User, columnModifier: Modifier = Modifier) {
     val nip05 by baseUser.live().metadata.map {
         it.user.nip05()
-    }.observeAsState()
+    }.observeAsState(baseUser.nip05())
 
     Crossfade(targetState = nip05, modifier = columnModifier) {
         if (it != null) {
