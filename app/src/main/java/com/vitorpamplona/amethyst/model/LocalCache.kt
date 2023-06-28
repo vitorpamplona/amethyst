@@ -51,6 +51,7 @@ object LocalCache {
     }
 
     fun getUserIfExists(key: String): User? {
+        if (key.isEmpty()) return null
         return users[key]
     }
 
@@ -108,6 +109,7 @@ object LocalCache {
     }
 
     private fun isValidHexNpub(key: String): Boolean {
+        if (key.isBlank()) return false
         if (key.contains(":")) return false
 
         return HexValidator.isHex(key)

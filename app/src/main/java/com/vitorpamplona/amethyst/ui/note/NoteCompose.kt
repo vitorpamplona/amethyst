@@ -2081,9 +2081,7 @@ fun DisplayHighlight(
         nav
     )
 
-    authorHex?.let {
-        DisplayQuoteAuthor(authorHex, url, nav)
-    }
+    DisplayQuoteAuthor(authorHex ?: "", url, nav)
 }
 
 @Composable
@@ -2105,7 +2103,7 @@ private fun DisplayQuoteAuthor(
         }
     }
 
-    Row() {
+    Row {
         userBase?.let { userBase ->
             LoadAndDisplayUser(userBase, nav)
         }
