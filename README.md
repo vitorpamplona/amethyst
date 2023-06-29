@@ -194,6 +194,13 @@ Information that you share is publicly visible to anyone reading from relays tha
 ## Information Permanence ##
 Information shared on nostr should be assumed permanent for privacy purposes. There is no way to guarantee deleting or editing any content once posted. 
 
+# Screenshots
+
+| Home                             | Messages                             | Live Stream                         | Notifications                             |
+|----------------------------------|--------------------------------------|-------------------------------------|-------------------------------------------|
+| ![](./docs/screenshots/home.png) | ![](./docs/screenshots/messages.png) | ![](./docs/screenshots/replies.png) | ![](./docs/screenshots/notifications.png) |
+
+
 # Contributing
 
 [Issues](https://github.com/vitorpamplona/amethyst/issues) and [pull requests](https://github.com/vitorpamplona/amethyst/pulls) are very welcome.
