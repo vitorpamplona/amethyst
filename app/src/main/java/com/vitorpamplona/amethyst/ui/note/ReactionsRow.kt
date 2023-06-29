@@ -1,11 +1,17 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import android.content.Context
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedContentScope
+import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.with
@@ -112,6 +118,8 @@ import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.math.RoundingMode
 import kotlin.math.roundToInt
+import kotlin.time.ExperimentalTime
+import kotlin.time.measureTimedValue
 
 @Composable
 fun ReactionsRow(
@@ -137,6 +145,7 @@ fun ReactionsRow(
     Spacer(modifier = HalfDoubleVertSpacer)
 }
 
+@OptIn(ExperimentalTime::class)
 @Composable
 private fun InnerReactionRow(
     baseNote: Note,
@@ -163,49 +172,69 @@ private fun InnerReactionRow(
             verticalArrangement = Arrangement.Center,
             modifier = remember { Modifier.weight(1f) }
         ) {
-            Row(verticalAlignment = CenterVertically) {
-                ReplyReactionWithDialog(baseNote, MaterialTheme.colors.placeholderText, accountViewModel, nav)
+            val (value, elapsed) = measureTimedValue {
+                Row(verticalAlignment = CenterVertically) {
+                    ReplyReactionWithDialog(baseNote, MaterialTheme.colors.placeholderText, accountViewModel, nav)
+                }
             }
+            Log.d("Rendering Metrics", "Reaction Reply: ${baseNote.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
         }
 
         Column(
             verticalArrangement = Arrangement.Center,
             modifier = remember { Modifier.weight(1f) }
         ) {
-            Row(verticalAlignment = CenterVertically) {
-                BoostWithDialog(baseNote, MaterialTheme.colors.placeholderText, accountViewModel, nav)
+            val (value, elapsed) = measureTimedValue {
+                Row(verticalAlignment = CenterVertically) {
+                    BoostWithDialog(
+                        baseNote,
+                        MaterialTheme.colors.placeholderText,
+                        accountViewModel,
+                        nav
+                    )
+                }
             }
+            Log.d("Rendering Metrics", "Reaction Boost: ${baseNote.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
         }
 
         Column(
             verticalArrangement = Arrangement.Center,
             modifier = remember { Modifier.weight(1f) }
         ) {
-            Row(verticalAlignment = CenterVertically) {
-                LikeReaction(baseNote, MaterialTheme.colors.placeholderText, accountViewModel)
+            val (value, elapsed) = measureTimedValue {
+                Row(verticalAlignment = CenterVertically) {
+                    LikeReaction(baseNote, MaterialTheme.colors.placeholderText, accountViewModel)
+                }
             }
+            Log.d("Rendering Metrics", "Reaction Likes: ${baseNote.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
         }
 
         Column(
             verticalArrangement = Arrangement.Center,
             modifier = remember { Modifier.weight(1f) }
         ) {
-            Row(verticalAlignment = CenterVertically) {
-                ZapReaction(baseNote, MaterialTheme.colors.placeholderText, accountViewModel)
+            val (value, elapsed) = measureTimedValue {
+                Row(verticalAlignment = CenterVertically) {
+                    ZapReaction(baseNote, MaterialTheme.colors.placeholderText, accountViewModel)
+                }
             }
+            Log.d("Rendering Metrics", "Reaction Zaps:  ${baseNote.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
         }
 
         Column(
             verticalArrangement = Arrangement.Center,
             modifier = remember { Modifier.weight(1f) }
         ) {
-            Row(verticalAlignment = CenterVertically) {
-                ViewCountReaction(
-                    note = baseNote,
-                    grayTint = MaterialTheme.colors.placeholderText,
-                    viewCountColorFilter = MaterialTheme.colors.placeholderTextColorFilter
-                )
+            val (value, elapsed) = measureTimedValue {
+                Row(verticalAlignment = CenterVertically) {
+                    ViewCountReaction(
+                        note = baseNote,
+                        grayTint = MaterialTheme.colors.placeholderText,
+                        viewCountColorFilter = MaterialTheme.colors.placeholderTextColorFilter
+                    )
+                }
             }
+            Log.d("Rendering Metrics", "Reaction Views: ${baseNote.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
         }
     }
 }
@@ -492,16 +521,10 @@ fun ReplyReaction(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    val iconButtonModifier = remember {
-        Modifier.size(iconSize)
-    }
-
-    val iconModifier = remember {
-        Modifier.size(iconSize)
-    }
-
     IconButton(
-        modifier = iconButtonModifier,
+        modifier = remember {
+            Modifier.size(iconSize)
+        },
         onClick = {
             if (accountViewModel.isWriteable()) {
                 onPress()
@@ -518,8 +541,8 @@ fun ReplyReaction(
     ) {
         Icon(
             painter = painterResource(R.drawable.ic_comment),
-            null,
-            modifier = iconModifier,
+            contentDescription = null,
+            modifier = remember { Modifier.size(iconSize) },
             tint = grayTint
         )
     }
@@ -538,22 +561,28 @@ fun ReplyCounter(baseNote: Note, textColor: Color) {
     SlidingAnimation(repliesState, textColor)
 }
 
-@Composable
 @OptIn(ExperimentalAnimationApi::class)
+@Composable
 private fun SlidingAnimation(baseCount: Int, textColor: Color) {
     AnimatedContent<Int>(
         targetState = baseCount,
-        transitionSpec = {
-            if (targetState > initialState) {
-                slideInVertically { -it } with slideOutVertically { it }
-            } else {
-                slideInVertically { it } with slideOutVertically { -it }
-            }
-        }
+        transitionSpec = AnimatedContentScope<Int>::transitionSpec
     ) { count ->
         TextCount(count, textColor)
     }
 }
+
+@OptIn(ExperimentalAnimationApi::class)
+private fun <S> AnimatedContentScope<S>.transitionSpec(): ContentTransform {
+    return slideAnimation
+}
+
+@ExperimentalAnimationApi
+val slideAnimation: ContentTransform = slideInVertically(animationSpec = tween(durationMillis = 100)) { height -> height } + fadeIn(
+    animationSpec = tween(durationMillis = 100)
+) with slideOutVertically(animationSpec = tween(durationMillis = 100)) { height -> -height } + fadeOut(
+    animationSpec = tween(durationMillis = 100)
+)
 
 @Composable
 private fun TextCount(count: Int, textColor: Color) {
@@ -569,15 +598,9 @@ private fun TextCount(count: Int, textColor: Color) {
 @Composable
 @OptIn(ExperimentalAnimationApi::class)
 private fun SlidingAnimation(amount: String, textColor: Color) {
-    AnimatedContent<String>(
+    AnimatedContent(
         targetState = amount,
-        transitionSpec = {
-            if (targetState > initialState) {
-                slideInVertically { -it } with slideOutVertically { it }
-            } else {
-                slideInVertically { it } with slideOutVertically { -it }
-            }
-        }
+        transitionSpec = AnimatedContentScope<String>::transitionSpec
     ) { count ->
         Text(
             text = count,
