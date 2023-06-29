@@ -6,7 +6,7 @@ Amethyst brings the best social network to your Android phone. Just insert your 
 
 [<img src="./docs/design/obtainium.png"
 alt="Get it on Obtaininum"
-height="75">](https://github.com/ImranR98/Obtainium)
+height="80">](https://github.com/ImranR98/Obtainium)
 [<img src="https://github.com/machiav3lli/oandbackupx/raw/034b226cea5c1b30eb4f6a6f313e4dadcbb0ece4/badge_github.png" alt="Get it on GitHub"
 height="80">](https://github.com/vitorpamplona/amethyst/releases)
 
