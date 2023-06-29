@@ -16,8 +16,6 @@ height="80">](https://github.com/vitorpamplona/amethyst/releases)
      alt="Get it on Google Play"
      height="80">](https://play.google.com/store/apps/details?id=com.vitorpamplona.amethyst)
 
-Or get the latest APK from the [Releases Section](https://github.com/vitorpamplona/amethyst/releases/latest).
-
 # Current Features
 
 - [x] Event Builders / WebSocket Subscriptions (NIP-01)
