@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,7 +21,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.PagerState
@@ -42,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -63,12 +62,12 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.isFinite
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.AsyncImage
+import coil.compose.AsyncImagePainter
 import coil.imageLoader
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.toHexKey
@@ -77,6 +76,7 @@ import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.actions.SaveToGallery
 import com.vitorpamplona.amethyst.ui.note.BlankNote
+import com.vitorpamplona.amethyst.ui.theme.Font17SP
 import com.vitorpamplona.amethyst.ui.theme.hashVerified
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import kotlinx.collections.immutable.ImmutableList
@@ -211,90 +211,57 @@ fun ZoomableContentView(content: ZoomableContent, images: ImmutableList<Zoomable
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun LocalImageView(
     content: ZoomableLocalImage,
     mainImageModifier: Modifier
 ) {
-    BoxWithConstraints(contentAlignment = Alignment.Center) {
-        // store the dialog open or close state
-        var imageLoadingState by remember {
-            mutableStateOf<Boolean?>(null)
-        }
+    if (content.localFile != null && content.localFile.exists()) {
+        BoxWithConstraints(contentAlignment = Alignment.Center) {
+            val myModifier = remember {
+                mainImageModifier
+                    .widthIn(max = maxWidth)
+                    .heightIn(max = maxHeight)
+                    .run {
+                        aspectRatio(content.dim)?.let { ratio ->
+                            this.aspectRatio(ratio, false)
+                        } ?: this
+                    }
+            }
 
-        val myModifier = remember {
-            mainImageModifier
-                .widthIn(max = maxWidth)
-                .heightIn(max = maxHeight)
-                .run {
-                    aspectRatio(content.dim)?.let { ratio ->
-                        this.aspectRatio(ratio, false)
-                    } ?: this
-                }
-        }
+            val contentScale = remember {
+                if (maxHeight.isFinite) ContentScale.Fit else ContentScale.FillWidth
+            }
 
-        val contentScale = remember {
-            if (maxHeight.isFinite) ContentScale.Fit else ContentScale.FillWidth
-        }
+            val verifierModifier = Modifier.align(Alignment.TopEnd)
 
-        if (content.localFile != null && content.localFile.exists()) {
+            val painterState = remember {
+                mutableStateOf<AsyncImagePainter.State?>(null)
+            }
+
             AsyncImage(
                 model = content.localFile,
                 contentDescription = content.description,
                 contentScale = contentScale,
                 modifier = myModifier,
-                onError = {
-                    if (imageLoadingState != false) {
-                        imageLoadingState = false
-                    }
-                },
-                onSuccess = {
-                    if (imageLoadingState != true) {
-                        imageLoadingState = true
-                    }
+                onState = {
+                    painterState.value = it
                 }
             )
-        }
 
-        if (imageLoadingState == true) {
-            if (content.isVerified != null) {
-                HashVerificationSymbol(content.isVerified, Modifier.align(Alignment.TopEnd))
-            }
-        } else if (imageLoadingState == false || content.localFile == null || !content.localFile.exists()) {
-            BlankNote()
-        } else {
-            if (content.blurhash != null) {
-                DisplayBlurHash(content.blurhash, content.description, contentScale, myModifier)
-            } else {
-                FlowRow() {
-                    DisplayUrlWithLoadingSymbol(content)
-                }
-            }
+            AddedImageFeatures(painterState, content, contentScale, myModifier, verifierModifier)
         }
+    } else {
+        BlankNote()
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun UrlImageView(
     content: ZoomableUrlImage,
     mainImageModifier: Modifier
 ) {
-    val scope = rememberCoroutineScope()
-
     BoxWithConstraints(contentAlignment = Alignment.Center) {
-        val context = LocalContext.current
-
-        // store the dialog open or close state
-        var imageLoadingStatus by remember {
-            mutableStateOf<Boolean?>(null)
-        }
-
-        var verifiedHash by remember {
-            mutableStateOf<Boolean?>(null)
-        }
-
         val myModifier = remember {
             mainImageModifier
                 .widthIn(max = maxWidth)
@@ -308,6 +275,12 @@ private fun UrlImageView(
 
         val contentScale = remember {
             if (maxHeight.isFinite) ContentScale.Fit else ContentScale.FillWidth
+        }
+
+        val verifierModifier = Modifier.align(Alignment.TopEnd)
+
+        val painterState = remember {
+            mutableStateOf<AsyncImagePainter.State?>(null)
         }
 
         AsyncImage(
@@ -315,30 +288,26 @@ private fun UrlImageView(
             contentDescription = content.description,
             contentScale = contentScale,
             modifier = myModifier,
-            onError = {
-                if (imageLoadingStatus != false) {
-                    imageLoadingStatus = false
-                }
-            },
-            onSuccess = {
-                if (verifiedHash == null) {
-                    scope.launch(Dispatchers.IO) {
-                        verifiedHash = verifyHash(content, context)
-                    }
-                }
-                if (imageLoadingStatus != true) {
-                    imageLoadingStatus = true
-                }
+            onState = {
+                painterState.value = it
             }
         )
 
-        if (imageLoadingStatus == true) {
-            verifiedHash?.let {
-                HashVerificationSymbol(it, Modifier.align(Alignment.TopEnd))
-            }
-        } else if (imageLoadingStatus == false) {
-            ClickableUrl(urlText = "${content.url} ", url = content.url)
-        } else {
+        AddedImageFeatures(painterState, content, contentScale, myModifier, verifierModifier)
+    }
+}
+
+@Composable
+@OptIn(ExperimentalLayoutApi::class)
+private fun AddedImageFeatures(
+    painter: MutableState<AsyncImagePainter.State?>,
+    content: ZoomableLocalImage,
+    contentScale: ContentScale,
+    myModifier: Modifier,
+    verifiedModifier: Modifier
+) {
+    when (painter.value) {
+        null, is AsyncImagePainter.State.Loading -> {
             if (content.blurhash != null) {
                 DisplayBlurHash(content.blurhash, content.description, contentScale, myModifier)
             } else {
@@ -346,6 +315,70 @@ private fun UrlImageView(
                     DisplayUrlWithLoadingSymbol(content)
                 }
             }
+        }
+
+        is AsyncImagePainter.State.Error -> {
+            BlankNote()
+        }
+
+        is AsyncImagePainter.State.Success -> {
+            if (content.isVerified != null) {
+                HashVerificationSymbol(content.isVerified, verifiedModifier)
+            }
+        }
+
+        else -> {
+        }
+    }
+}
+
+@Composable
+@OptIn(ExperimentalLayoutApi::class)
+private fun AddedImageFeatures(
+    painter: MutableState<AsyncImagePainter.State?>,
+    content: ZoomableUrlImage,
+    contentScale: ContentScale,
+    myModifier: Modifier,
+    verifiedModifier: Modifier
+) {
+    var verifiedHash by remember {
+        mutableStateOf<Boolean?>(null)
+    }
+
+    when (painter.value) {
+        null, is AsyncImagePainter.State.Loading -> {
+            if (content.blurhash != null) {
+                DisplayBlurHash(content.blurhash, content.description, contentScale, myModifier)
+            } else {
+                FlowRow() {
+                    DisplayUrlWithLoadingSymbol(content)
+                }
+            }
+        }
+
+        is AsyncImagePainter.State.Error -> {
+            ClickableUrl(urlText = "${content.url} ", url = content.url)
+        }
+
+        is AsyncImagePainter.State.Success -> {
+            if (content.hash != null) {
+                val context = LocalContext.current
+                LaunchedEffect(key1 = content.url) {
+                    launch(Dispatchers.IO) {
+                        val newVerifiedHash = verifyHash(content, context)
+                        if (newVerifiedHash != verifiedHash) {
+                            verifiedHash = newVerifiedHash
+                        }
+                    }
+                }
+            }
+
+            verifiedHash?.let {
+                HashVerificationSymbol(it, verifiedModifier)
+            }
+        }
+
+        else -> {
         }
     }
 }
@@ -382,7 +415,7 @@ private fun DisplayUrlWithLoadingSymbol(content: ZoomableContent) {
 @Composable
 private fun DisplayUrlWithLoadingSymbolWait(content: ZoomableContent) {
     if (content is ZoomableUrlContent) {
-        ClickableUrl(urlText = "${content.url} ", url = content.url)
+        ClickableUrl(urlText = remember { "${content.url} " }, url = content.url)
     } else {
         Text("Loading content... ")
     }
@@ -401,8 +434,8 @@ private fun DisplayUrlWithLoadingSymbolWait(content: ZoomableContent) {
             myId,
             InlineTextContent(
                 Placeholder(
-                    width = 17.sp,
-                    height = 17.sp,
+                    width = Font17SP,
+                    height = Font17SP,
                     placeholderVerticalAlign = PlaceholderVerticalAlign.Center
                 )
             ) {
