@@ -296,8 +296,8 @@ private fun RenderWordWithoutPreview(
 
     when (type) {
         // Don't preview Images
-        WordType.IMAGE -> UrlPreview(word, wordSpace)
-        WordType.LINK -> UrlPreview(word, wordSpace)
+        WordType.IMAGE -> ClickableUrl(wordSpace, word)
+        WordType.LINK -> ClickableUrl(wordSpace, word)
         WordType.EMOJI -> RenderCustomEmoji(word, state)
         // Don't offer to pay invoices
         WordType.INVOICE -> NormalWord(wordSpace)
