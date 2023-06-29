@@ -196,10 +196,13 @@ Information shared on nostr should be assumed permanent for privacy purposes. Th
 
 # Screenshots
 
-| Home                             | Messages                             | Live Stream                         | Notifications                             |
-|----------------------------------|--------------------------------------|-------------------------------------|-------------------------------------------|
-| ![](./docs/screenshots/home.png) | ![](./docs/screenshots/messages.png) | ![](./docs/screenshots/replies.png) | ![](./docs/screenshots/notifications.png) |
+| Home                             | Messages                             |
+|----------------------------------|--------------------------------------|
+| ![](./docs/screenshots/home.png) | ![](./docs/screenshots/messages.png) | 
 
+| Live Stream                         | Notifications                             |
+|-------------------------------------|-------------------------------------------|
+| ![](./docs/screenshots/replies.png) | ![](./docs/screenshots/notifications.png) |
 
 # Contributing
 
