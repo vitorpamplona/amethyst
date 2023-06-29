@@ -42,9 +42,14 @@ sealed class Route(
         hasNewItems = { accountViewModel, newNotes -> HomeLatestItem.hasNewItems(accountViewModel, newNotes) }
     )
 
+    object Global : Route(
+        route = "Global",
+        icon = R.drawable.ic_globe
+    )
+
     object Search : Route(
         route = "Search",
-        icon = R.drawable.ic_globe
+        icon = R.drawable.ic_search
     )
 
     object Video : Route(

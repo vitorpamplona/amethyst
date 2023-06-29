@@ -22,7 +22,6 @@ import com.vitorpamplona.amethyst.ui.dal.ChatroomFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ChatroomListKnownFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ChatroomListNewFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
-import com.vitorpamplona.amethyst.ui.dal.GlobalFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HashtagFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeLiveActivitiesFeedFilter
@@ -59,13 +58,6 @@ class NostrChatroomFeedViewModel(val user: User, val account: Account) : FeedVie
     }
 }
 
-class NostrGlobalFeedViewModel(val account: Account) : FeedViewModel(GlobalFeedFilter(account)) {
-    class Factory(val account: Account) : ViewModelProvider.Factory {
-        override fun <NostrGlobalFeedViewModel : ViewModel> create(modelClass: Class<NostrGlobalFeedViewModel>): NostrGlobalFeedViewModel {
-            return NostrGlobalFeedViewModel(account) as NostrGlobalFeedViewModel
-        }
-    }
-}
 class NostrVideoFeedViewModel(val account: Account) : FeedViewModel(VideoFeedFilter(account)) {
     class Factory(val account: Account) : ViewModelProvider.Factory {
         override fun <NostrVideoFeedViewModel : ViewModel> create(modelClass: Class<NostrVideoFeedViewModel>): NostrVideoFeedViewModel {
@@ -201,8 +193,8 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), I
     fun refreshSuspended() {
         checkNotInMainThread()
 
-        val notes = localFilter.loadTop().toImmutableList()
         lastFeedKey = localFilter.feedKey()
+        val notes = localFilter.loadTop().toImmutableList()
 
         val oldNotesState = _feedContent.value
         if (oldNotesState is FeedState.Loaded) {
@@ -231,16 +223,14 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), I
 
     fun refreshFromOldState(newItems: Set<Note>) {
         val oldNotesState = _feedContent.value
-        if (localFilter is AdditiveFeedFilter) {
+        if (localFilter is AdditiveFeedFilter && lastFeedKey != localFilter.feedKey()) {
             if (oldNotesState is FeedState.Loaded) {
                 val newList = localFilter.updateListWith(oldNotesState.feed.value, newItems.toSet()).toImmutableList()
-                lastFeedKey = localFilter.feedKey()
                 if (!equalImmutableLists(newList, oldNotesState.feed.value)) {
                     updateFeed(newList)
                 }
             } else if (oldNotesState is FeedState.Empty) {
                 val newList = localFilter.updateListWith(emptyList(), newItems.toSet()).toImmutableList()
-                lastFeedKey = localFilter.feedKey()
                 if (newList.isNotEmpty()) {
                     updateFeed(newList)
                 }

@@ -51,13 +51,13 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
     }
 
     fun createFollowAccountsFilter(): TypedFilter {
-        val follows = account.selectedUsersFollowList(account.defaultHomeFollowList) ?: emptySet()
+        val follows = account.selectedUsersFollowList(account.defaultHomeFollowList)
 
-        val followKeys = follows.map {
+        val followKeys = follows?.map {
             it.substring(0, 6)
         }
 
-        val followSet = followKeys.plus(account.userProfile().pubkeyHex.substring(0, 6))
+        val followSet = followKeys?.plus(account.userProfile().pubkeyHex.substring(0, 6))
 
         return TypedFilter(
             types = setOf(FeedType.FOLLOWS),

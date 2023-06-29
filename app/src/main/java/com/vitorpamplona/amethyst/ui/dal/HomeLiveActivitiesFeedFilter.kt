@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.OnlineChecker
@@ -29,6 +30,8 @@ class HomeLiveActivitiesFeedFilter(val account: Account) : AdditiveFeedFilter<No
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         checkNotInMainThread()
 
+        val isGlobal = account.defaultHomeFollowList == GLOBAL_FOLLOWS
+
         val followingKeySet = account.selectedUsersFollowList(account.defaultHomeFollowList) ?: emptySet()
         val followingTagSet = account.selectedTagsFollowList(account.defaultHomeFollowList) ?: emptySet()
 
@@ -39,7 +42,7 @@ class HomeLiveActivitiesFeedFilter(val account: Account) : AdditiveFeedFilter<No
             .filter { it ->
                 val noteEvent = it.event
                 (noteEvent is LiveActivitiesEvent && noteEvent.createdAt > twoHrs && noteEvent.status() == "live" && OnlineChecker.isOnline(noteEvent.streaming())) &&
-                    (it.author?.pubkeyHex in followingKeySet || (noteEvent.isTaggedHashes(followingTagSet))) &&
+                    (isGlobal || it.author?.pubkeyHex in followingKeySet || noteEvent.isTaggedHashes(followingTagSet)) &&
                     // && account.isAcceptable(it)  // This filter follows only. No need to check if acceptable
                     it.author?.let { !account.isHidden(it.pubkeyHex) } ?: true
             }

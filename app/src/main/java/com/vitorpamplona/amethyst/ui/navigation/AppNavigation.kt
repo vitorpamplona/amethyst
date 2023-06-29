@@ -12,7 +12,6 @@ import androidx.navigation.compose.composable
 import com.vitorpamplona.amethyst.ui.note.UserReactionsViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListKnownFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListNewFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrGlobalFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedLiveActivitiesViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
@@ -42,7 +41,6 @@ fun AppNavigation(
     liveActivitiesViewModel: NostrHomeFeedLiveActivitiesViewModel,
     knownFeedViewModel: NostrChatroomListKnownFeedViewModel,
     newFeedViewModel: NostrChatroomListNewFeedViewModel,
-    searchFeedViewModel: NostrGlobalFeedViewModel,
     videoFeedViewModel: NostrVideoFeedViewModel,
     notifFeedViewModel: NotificationViewModel,
     userReactionsStatsModel: UserReactionsViewModel,
@@ -111,7 +109,6 @@ fun AppNavigation(
         Route.Search.let { route ->
             composable(route.route, route.arguments, content = {
                 SearchScreen(
-                    searchFeedViewModel = searchFeedViewModel,
                     accountViewModel = accountViewModel,
                     nav = nav
                 )

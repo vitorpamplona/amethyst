@@ -48,7 +48,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import coil.Coil
@@ -61,7 +60,6 @@ import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
 import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
-import com.vitorpamplona.amethyst.service.NostrGlobalDataSource
 import com.vitorpamplona.amethyst.service.NostrHashtagDataSource
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
@@ -74,9 +72,7 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.PeopleListEvent
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.RelayPool
-import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
-import com.vitorpamplona.amethyst.ui.screen.RelayPoolViewModel
 import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SpinnerSelectionDialog
@@ -158,7 +154,7 @@ fun HomeTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, a
         FollowList(
             followLists,
             list,
-            false
+            true
         ) { listName ->
             accountViewModel.account.changeDefaultHomeFollowList(listName)
         }
@@ -194,14 +190,6 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel,
 fun GenericTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel, nav: (String) -> Unit, content: @Composable (AccountViewModel) -> Unit) {
     val coroutineScope = rememberCoroutineScope()
 
-    var wantsToEditRelays by remember {
-        mutableStateOf(false)
-    }
-
-    if (wantsToEditRelays) {
-        NewRelayListView({ wantsToEditRelays = false }, accountViewModel, nav = nav)
-    }
-
     Column(modifier = Modifier.height(50.dp)) {
         TopAppBar(
             elevation = 0.dp,
@@ -222,10 +210,6 @@ fun GenericTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewMod
                         ) {
                             content(accountViewModel)
                         }
-
-                        RelayStatus(
-                            { wantsToEditRelays = true }
-                        )
                     }
                 }
             },
@@ -237,7 +221,9 @@ fun GenericTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewMod
                 }
             },
             actions = {
-                RelayIcon { wantsToEditRelays = true }
+                SearchIcon() {
+                    nav(Route.Search.route)
+                }
             }
         )
         Divider(thickness = 0.25.dp)
@@ -245,80 +231,14 @@ fun GenericTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewMod
 }
 
 @Composable
-private fun RelayStatus(
-    onClick: () -> Unit
-) {
-    val relayViewModel: RelayPoolViewModel = viewModel { RelayPoolViewModel() }
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .fillMaxHeight(),
-        horizontalAlignment = Alignment.End
-    ) {
-        Row(
-            modifier = Modifier.fillMaxHeight(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            RelayStatus(relayViewModel, onClick)
-        }
-    }
-}
-
-@Composable
-private fun RelayStatus(
-    relayViewModel: RelayPoolViewModel,
-    onClick: () -> Unit
-) {
-    val connectedRelaysLiveData = relayViewModel.connectedRelaysLiveData.observeAsState()
-    val availableRelaysLiveData = relayViewModel.availableRelaysLiveData.observeAsState()
-
-    val connectedRelaysText by remember(connectedRelaysLiveData, availableRelaysLiveData) {
-        derivedStateOf {
-            "${connectedRelaysLiveData.value ?: "--"}/${availableRelaysLiveData.value ?: "--"}"
-        }
-    }
-
-    val isConnected by remember(connectedRelaysLiveData) {
-        derivedStateOf {
-            (connectedRelaysLiveData.value ?: 0) > 0
-        }
-    }
-
-    RenderRelayStatus(connectedRelaysText, isConnected, onClick)
-}
-
-@Composable
-private fun RenderRelayStatus(
-    connectedRelaysText: String,
-    isConnected: Boolean,
-    onClick: () -> Unit
-) {
-    Text(
-        text = connectedRelaysText,
-        color = if (isConnected) {
-            MaterialTheme.colors.onSurface.copy(
-                alpha = 0.32f
-            )
-        } else {
-            Color.Red
-        },
-        style = MaterialTheme.typography.subtitle1,
-        modifier = Modifier.clickable(
-            onClick = onClick
-        )
-    )
-}
-
-@Composable
-private fun RelayIcon(onClick: () -> Unit) {
+private fun SearchIcon(onClick: () -> Unit) {
     IconButton(
-        onClick = onClick,
-        modifier = Modifier
+        onClick = onClick
     ) {
         Icon(
-            painter = painterResource(R.drawable.relays),
-            null,
-            modifier = Modifier.size(24.dp),
+            painter = painterResource(R.drawable.ic_search),
+            contentDescription = null,
+            modifier = Modifier.size(22.dp),
             tint = Color.Unspecified
         )
     }
@@ -534,7 +454,6 @@ fun AmethystIcon() {
             NostrChannelDataSource.printCounter()
             NostrChatroomDataSource.printCounter()
             NostrChatroomListDataSource.printCounter()
-            NostrGlobalDataSource.printCounter()
             NostrHashtagDataSource.printCounter()
             NostrHomeDataSource.printCounter()
             NostrSearchEventOrUserDataSource.printCounter()

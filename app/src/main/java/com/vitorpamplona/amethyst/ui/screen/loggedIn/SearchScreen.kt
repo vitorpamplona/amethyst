@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -56,7 +57,6 @@ import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.NostrGlobalDataSource
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
@@ -66,9 +66,6 @@ import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
-import com.vitorpamplona.amethyst.ui.screen.NostrGlobalFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
-import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -86,7 +83,6 @@ import kotlinx.coroutines.channels.Channel as CoroutineChannel
 
 @Composable
 fun SearchScreen(
-    searchFeedViewModel: NostrGlobalFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -97,33 +93,29 @@ fun SearchScreen(
         )
     )
 
-    SearchScreen(searchFeedViewModel, searchBarViewModel, accountViewModel, nav)
+    SearchScreen(searchBarViewModel, accountViewModel, nav)
 }
 
 @Composable
 fun SearchScreen(
-    searchFeedViewModel: NostrGlobalFeedViewModel,
     searchBarViewModel: SearchBarViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
     val lifeCycleOwner = LocalLifecycleOwner.current
 
-    WatchAccountForSearchScreen(searchFeedViewModel, accountViewModel)
+    WatchAccountForSearchScreen(accountViewModel)
 
     DisposableEffect(accountViewModel) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                println("Global Start")
-                NostrGlobalDataSource.start()
+                println("Search Start")
                 NostrSearchEventOrUserDataSource.start()
-                searchFeedViewModel.invalidateData()
             }
             if (event == Lifecycle.Event.ON_PAUSE) {
-                println("Global Stop")
+                println("Search Stop")
                 NostrSearchEventOrUserDataSource.clear()
                 NostrSearchEventOrUserDataSource.stop()
-                NostrGlobalDataSource.stop()
             }
         }
 
@@ -133,29 +125,19 @@ fun SearchScreen(
         }
     }
 
-    Column(Modifier.fillMaxHeight()) {
-        Column(
-            modifier = Modifier.padding(vertical = 0.dp)
-        ) {
-            SearchBar(searchBarViewModel, accountViewModel, nav)
-            RefresheableFeedView(
-                searchFeedViewModel,
-                null,
-                scrollStateKey = ScrollStateKeys.GLOBAL_SCREEN,
-                accountViewModel = accountViewModel,
-                nav = nav
-            )
-        }
+    val listState = rememberLazyListState()
+
+    Column(Modifier.fillMaxSize()) {
+        SearchBar(searchBarViewModel, listState)
+        DisplaySearchResults(searchBarViewModel, listState, nav, accountViewModel)
     }
 }
 
 @Composable
-fun WatchAccountForSearchScreen(searchFeedViewModel: NostrGlobalFeedViewModel, accountViewModel: AccountViewModel) {
+fun WatchAccountForSearchScreen(accountViewModel: AccountViewModel) {
     LaunchedEffect(accountViewModel) {
         launch(Dispatchers.IO) {
-            NostrGlobalDataSource.resetFilters()
             NostrSearchEventOrUserDataSource.start()
-            searchFeedViewModel.invalidateData(true)
         }
     }
 }
@@ -228,11 +210,9 @@ class SearchBarViewModel(val account: Account) : ViewModel() {
 @Composable
 private fun SearchBar(
     searchBarViewModel: SearchBarViewModel,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
+    listState: LazyListState
 ) {
     val scope = rememberCoroutineScope()
-    val listState = rememberLazyListState()
 
     // Create a channel for processing search queries.
     val searchTextChanges = remember {
@@ -283,8 +263,6 @@ private fun SearchBar(
             searchTextChanges.trySend(it)
         }
     }
-
-    DisplaySearchResults(listState, searchBarViewModel, nav, accountViewModel)
 }
 
 @Composable
@@ -352,8 +330,8 @@ private fun SearchTextField(
 
 @Composable
 private fun DisplaySearchResults(
-    listState: LazyListState,
     searchBarViewModel: SearchBarViewModel,
+    listState: LazyListState,
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {

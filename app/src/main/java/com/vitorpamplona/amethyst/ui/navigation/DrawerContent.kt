@@ -34,6 +34,7 @@ import androidx.compose.material.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -52,6 +53,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
@@ -60,13 +62,17 @@ import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
 import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
+import com.vitorpamplona.amethyst.ui.screen.RelayPoolViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountBackupDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.Size16dp
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -301,6 +307,12 @@ fun ListContent(
     var conectOrbotDialogOpen by remember { mutableStateOf(false) }
     var proxyPort = remember { mutableStateOf(account.proxyPort.toString()) }
 
+    val relayViewModel: RelayPoolViewModel = viewModel { RelayPoolViewModel() }
+
+    var wantsToEditRelays by remember {
+        mutableStateOf(false)
+    }
+
     Column(
         modifier = modifier
             .fillMaxHeight()
@@ -322,6 +334,16 @@ fun ListContent(
             nav = nav,
             scaffoldState = scaffoldState,
             route = Route.Bookmarks.route
+        )
+
+        IconRowRelays(
+            relayViewModel = relayViewModel,
+            onClick = {
+                coroutineScope.launch {
+                    scaffoldState.drawerState.close()
+                }
+                wantsToEditRelays = true
+            }
         )
 
         NavigationRow(
@@ -431,6 +453,10 @@ fun ListContent(
             }
         )
     }
+
+    if (wantsToEditRelays) {
+        NewRelayListView({ wantsToEditRelays = false }, accountViewModel, nav = nav)
+    }
 }
 
 private fun enableTor(
@@ -444,6 +470,44 @@ private fun enableTor(
     LocalPreferences.saveToEncryptedStorage(account)
     ServiceManager.pause()
     ServiceManager.start(context)
+}
+
+@Composable
+private fun RelayStatus(
+    relayViewModel: RelayPoolViewModel
+) {
+    val connectedRelaysLiveData = relayViewModel.connectedRelaysLiveData.observeAsState()
+    val availableRelaysLiveData = relayViewModel.availableRelaysLiveData.observeAsState()
+
+    val connectedRelaysText by remember(connectedRelaysLiveData, availableRelaysLiveData) {
+        derivedStateOf {
+            "${connectedRelaysLiveData.value ?: "--"}/${availableRelaysLiveData.value ?: "--"}"
+        }
+    }
+
+    val isConnected by remember(connectedRelaysLiveData) {
+        derivedStateOf {
+            (connectedRelaysLiveData.value ?: 0) > 0
+        }
+    }
+
+    RenderRelayStatus(connectedRelaysText, isConnected)
+}
+
+@Composable
+private fun RenderRelayStatus(
+    connectedRelaysText: String,
+    isConnected: Boolean
+) {
+    Text(
+        text = connectedRelaysText,
+        color = if (isConnected) {
+            MaterialTheme.colors.placeholderText
+        } else {
+            Color.Red
+        },
+        style = MaterialTheme.typography.subtitle1
+    )
 }
 
 @Composable
@@ -492,6 +556,39 @@ fun IconRow(title: String, icon: Int, tint: Color, onClick: () -> Unit, onLongCl
                 text = title,
                 fontSize = 18.sp
             )
+        }
+    }
+}
+
+@Composable
+fun IconRowRelays(relayViewModel: RelayPoolViewModel, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 15.dp, horizontal = 25.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.relays),
+                null,
+                modifier = Modifier.size(22.dp),
+                tint = MaterialTheme.colors.onSurface
+            )
+
+            Text(
+                modifier = Modifier.padding(start = 16.dp),
+                text = stringResource(id = R.string.relays),
+                fontSize = 18.sp
+            )
+
+            Spacer(modifier = Modifier.width(Size16dp))
+
+            RelayStatus(relayViewModel = relayViewModel)
         }
     }
 }

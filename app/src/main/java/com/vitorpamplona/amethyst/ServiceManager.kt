@@ -14,7 +14,6 @@ import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
-import com.vitorpamplona.amethyst.service.NostrGlobalDataSource
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
@@ -89,7 +88,6 @@ object ServiceManager {
         NostrChannelDataSource.stop()
         NostrChatroomListDataSource.stop()
 
-        NostrGlobalDataSource.stop()
         NostrSingleChannelDataSource.stop()
         NostrSingleEventDataSource.stop()
         NostrSingleUserDataSource.stop()

@@ -48,7 +48,6 @@ val bottomNavigationItems = listOf(
     Route.Home,
     Route.Message,
     Route.Video,
-    Route.Search,
     Route.Notification
 )
 

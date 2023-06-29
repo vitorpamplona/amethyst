@@ -38,13 +38,11 @@ import com.vitorpamplona.amethyst.ui.navigation.AppNavigation
 import com.vitorpamplona.amethyst.ui.navigation.AppTopBar
 import com.vitorpamplona.amethyst.ui.navigation.DrawerContent
 import com.vitorpamplona.amethyst.ui.navigation.Route
-import com.vitorpamplona.amethyst.ui.navigation.currentRoute
 import com.vitorpamplona.amethyst.ui.note.UserReactionsViewModel
 import com.vitorpamplona.amethyst.ui.screen.AccountState
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListKnownFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListNewFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrGlobalFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedLiveActivitiesViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
@@ -95,11 +93,6 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
         factory = NostrHomeFeedLiveActivitiesViewModel.Factory(accountViewModel.account)
     )
 
-    val searchFeedViewModel: NostrGlobalFeedViewModel = viewModel(
-        key = accountViewModel.userProfile().pubkeyHex + "NostrGlobalFeedViewModel",
-        factory = NostrGlobalFeedViewModel.Factory(accountViewModel.account)
-    )
-
     val videoFeedViewModel: NostrVideoFeedViewModel = viewModel(
         key = accountViewModel.userProfile().pubkeyHex + "NostrVideoFeedViewModel",
         factory = NostrVideoFeedViewModel.Factory(accountViewModel.account)
@@ -139,9 +132,6 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
                     Route.Home.base -> {
                         homeFeedViewModel.sendToTop()
                         repliesFeedViewModel.sendToTop()
-                    }
-                    Route.Search.base -> {
-                        searchFeedViewModel.sendToTop()
                     }
                     Route.Video.base -> {
                         videoFeedViewModel.sendToTop()
@@ -193,7 +183,6 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
                     liveActivitiesViewModel,
                     knownFeedViewModel,
                     newFeedViewModel,
-                    searchFeedViewModel,
                     videoFeedViewModel,
                     notifFeedViewModel,
                     userReactionsStatsModel,
