@@ -835,7 +835,8 @@ private fun RenderHashtag(
     tagPair: HashWordWithExtra,
     nav: (String) -> Unit
 ) {
-    val hashtagIcon = remember(tagPair.hashtag) { checkForHashtagWithIcon(tagPair.hashtag) }
+    val primary = MaterialTheme.colors.primary
+    val hashtagIcon = remember(tagPair.hashtag) { checkForHashtagWithIcon(tagPair.hashtag, primary) }
     ClickableText(
         text = buildAnnotatedString {
             withStyle(

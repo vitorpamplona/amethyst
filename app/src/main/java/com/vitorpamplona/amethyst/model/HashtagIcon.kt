@@ -5,7 +5,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-fun checkForHashtagWithIcon(tag: String): HashtagIcon? {
+fun checkForHashtagWithIcon(tag: String, primary: Color): HashtagIcon? {
     return when (tag.lowercase()) {
         "bitcoin", "btc", "timechain" -> HashtagIcon(R.drawable.ht_btc, "Bitcoin", Color.Unspecified, Modifier.padding(2.dp, 2.dp, 0.dp, 0.dp))
         "nostr", "nostrich", "nostriches" -> HashtagIcon(R.drawable.ht_nostr, "Nostr", Color.Unspecified, Modifier.padding(1.dp, 2.dp, 0.dp, 0.dp))
@@ -18,6 +18,7 @@ fun checkForHashtagWithIcon(tag: String): HashtagIcon? {
         "skullofsatoshi" -> HashtagIcon(R.drawable.skull, "SkullofSatoshi", Color.Unspecified, Modifier.padding(2.dp, 1.dp, 0.dp, 0.dp))
         "grownostr", "gardening", "garden" -> HashtagIcon(R.drawable.grownostr, "GrowNostr", Color.Unspecified, Modifier.padding(0.dp, 1.dp, 0.dp, 1.dp))
         "footstr" -> HashtagIcon(R.drawable.footstr, "Footstr", Color.Unspecified, Modifier.padding(1.dp, 1.dp, 0.dp, 0.dp))
+        "tunestr", "music", "nowplaying" -> HashtagIcon(R.drawable.tunestr, "Tunestr", primary, Modifier.padding(1.dp, 1.dp, 0.dp, 0.dp))
         "weed", "weedstr", "420", "cannabis", "marijuana" -> HashtagIcon(R.drawable.weed, "Weed", Color.Unspecified, Modifier.padding(0.dp, 0.dp, 0.dp, 0.dp))
         else -> null
     }
