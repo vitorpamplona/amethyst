@@ -938,13 +938,13 @@ fun TagLink(word: String, tags: ImmutableListOfLists<String>, canPreview: Boolea
             )
         } else if (it.user != null) {
             Row() {
-                DisplayUserFromTag(it.user, loadedTag?.addedChars ?: "", nav)
+                DisplayUserFromTag(it.user, it.addedChars ?: "", nav)
             }
         } else if (it.note != null) {
             Row() {
                 DisplayNoteFromTag(
                     it.note,
-                    loadedTag?.addedChars ?: "",
+                    it.addedChars ?: "",
                     canPreview,
                     accountViewModel,
                     backgroundColor,
@@ -999,7 +999,7 @@ private fun DisplayUserFromTag(
     Crossfade(targetState = meta) {
         Row() {
             val displayName = remember(it) {
-                it?.bestDisplayName() ?: hex
+                it?.bestDisplayName() ?: it?.bestUsername() ?: hex
             }
             CreateClickableTextWithEmoji(
                 clickablePart = displayName,
