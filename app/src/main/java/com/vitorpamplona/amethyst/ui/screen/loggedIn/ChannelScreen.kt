@@ -633,7 +633,7 @@ fun ChannelHeader(
                             Text(
                                 text = summary,
                                 color = MaterialTheme.colors.placeholderText,
-                                maxLines = 2,
+                                maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 fontSize = 12.sp
                             )
