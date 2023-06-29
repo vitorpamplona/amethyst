@@ -163,6 +163,8 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
     fun today() = sdf.format(LocalDateTime.now())
 
     private suspend fun initializeSuspend() {
+        checkNotInMainThread()
+
         val currentUser = user.pubkeyHex
 
         val reactions = mutableMapOf<String, Int>()
@@ -212,6 +214,8 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
     }
 
     suspend fun addToStatsSuspend(newNotes: Set<Note>) {
+        checkNotInMainThread()
+
         val currentUser = user.pubkeyHex
 
         val reactions = this._reactions.value.toMutableMap()
@@ -268,6 +272,8 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
     }
 
     private suspend fun refreshChartModel() {
+        checkNotInMainThread()
+
         val day = 24 * 60 * 60L
         val now = LocalDateTime.now()
         val displayAxisFormatter = DateTimeFormatter.ofPattern("EEE")
