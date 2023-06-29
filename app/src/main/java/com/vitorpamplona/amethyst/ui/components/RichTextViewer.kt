@@ -162,9 +162,9 @@ private fun RenderParagraph(
 ) {
     val s = remember(paragraph) {
         if (isArabic(paragraph)) {
-            paragraph.trim().split(' ').reversed().toImmutableList()
+            paragraph.split(' ').reversed().toImmutableList()
         } else {
-            paragraph.trim().split(' ').toImmutableList()
+            paragraph.split(' ').toImmutableList()
         }
     }
 
@@ -236,6 +236,9 @@ private fun RenderWord(
     tags: ImmutableListOfLists<String>
 ) {
     val type = remember(word) {
+        if (word == "") {
+            WordType.OTHER
+        }
         if (state.imagesForPager[word] != null) {
             WordType.IMAGE
         } else if (state.urlSet.contains(word)) {
@@ -799,21 +802,23 @@ data class HashWordWithExtra(val hashtag: String, val extras: String?)
 fun HashTag(word: String, nav: (String) -> Unit) {
     var tagSuffixPair by remember { mutableStateOf<HashWordWithExtra?>(null) }
 
-    LaunchedEffect(key1 = word) {
-        launch(Dispatchers.IO) {
-            val hashtagMatcher = hashTagsPattern.matcher(word)
+    if (tagSuffixPair == null) {
+        LaunchedEffect(key1 = word) {
+            launch(Dispatchers.IO) {
+                val hashtagMatcher = hashTagsPattern.matcher(word)
 
-            val (myTag, mySuffix) = try {
-                hashtagMatcher.find()
-                Pair(hashtagMatcher.group(1), hashtagMatcher.group(2))
-            } catch (e: Exception) {
-                Log.e("Hashtag Parser", "Couldn't link hashtag $word", e)
-                Pair(null, null)
-            }
+                val (myTag, mySuffix) = try {
+                    hashtagMatcher.find()
+                    Pair(hashtagMatcher.group(1), hashtagMatcher.group(2))
+                } catch (e: Exception) {
+                    Log.e("Hashtag Parser", "Couldn't link hashtag $word", e)
+                    Pair(null, null)
+                }
 
-            if (myTag != null) {
-                launch(Dispatchers.Main) {
-                    tagSuffixPair = HashWordWithExtra(myTag, mySuffix)
+                if (myTag != null) {
+                    launch(Dispatchers.Main) {
+                        tagSuffixPair = HashWordWithExtra(myTag, mySuffix)
+                    }
                 }
             }
         }
